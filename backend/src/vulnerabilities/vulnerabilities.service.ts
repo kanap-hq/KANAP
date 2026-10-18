@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
+import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
 import { TechnologyReachService } from '../technologies/technology-reach.service';
+import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
@@ -22,10 +26,67 @@ export type VulnerabilityFilters = {
   q?: unknown;
   limit?: unknown;
   offset?: unknown;
+  /** The list grid (lot T6b): its JSON filter model, `field:DIR` sort and page from 1. */
+  filters?: unknown;
+  sort?: unknown;
+  page?: unknown;
 };
 
+/** At most this many rows (technology version and CVE) in one change of state in bulk. */
+export const BULK_MAX_ROWS = 5000;
+/** Rows written by one statement of a bulk change. */
+const BULK_BATCH = 500;
+
+/** The grid's sortable columns. */
+const GRID_SORTS: Record<string, string> = {
+  severity: 'severity', // SEVERITY_ORDER, then the score
+  cvss_score: 'c.cvss_score',
+  published_at: 'c.published_at',
+  cve_id: 'c.cve_id',
+  technology: 'lower(t.name)',
+};
+
+/** A grid date filter (`equals`, `greaterThan`, `lessThan`, `inRange`) on a day column. */
+function gridDateClause(expr: string, model: any, push: (value: unknown) => string): string | null {
+  if (!model || model.filterType !== 'date') return null;
+  // A real day or nothing: `2026-02-31` parses in JavaScript but not in PostgreSQL (a 400, never a 500).
+  const day = (value: unknown) => {
+    if (value === null || value === undefined || value === '') return null;
+    const text = String(value).slice(0, 10);
+    if (!DAY_RE.test(text) || Number.isNaN(Date.parse(text)) || new Date(`${text}T00:00:00Z`).toISOString().slice(0, 10) !== text) {
+      throw new BadRequestException('The publication date filter must be a day (YYYY-MM-DD).');
+    }
+    return text;
+  };
+  const from = day(model.dateFrom);
+  const to = day(model.dateTo);
+  switch (model.type) {
+    case 'blank': return `${expr} IS NULL`;
+    case 'notBlank': return `${expr} IS NOT NULL`;
+    case 'greaterThan': return from ? `${expr} >= (${push(from)}::date + 1)` : null;
+    case 'lessThan': return from ? `${expr} < ${push(from)}::date` : null;
+    case 'inRange': return from && to ? `${expr} >= ${push(from)}::date AND ${expr} < (${push(to)}::date + 1)` : null;
+    default: return from ? `${expr} >= ${push(from)}::date AND ${expr} < (${push(from)}::date + 1)` : null;
+  }
+}
+
+/** A grid number filter on `expr`. */
+function gridNumberClause(expr: string, model: any, push: (value: unknown) => string): string | null {
+  if (!model || model.filterType !== 'number') return null;
+  const n = Number(model.filter);
+  const ok = model.filter !== null && model.filter !== '' && Number.isFinite(n);
+  const ops: Record<string, string> = { equals: '=', notEqual: '<>', lessThan: '<', lessThanOrEqual: '<=', greaterThan: '>', greaterThanOrEqual: '>=' };
+  if (model.type === 'blank') return `${expr} IS NULL`;
+  if (model.type === 'notBlank') return `${expr} IS NOT NULL`;
+  if (model.type === 'inRange') {
+    const to = Number(model.filterTo);
+    return ok && Number.isFinite(to) ? `${expr} BETWEEN ${push(n)}::numeric AND ${push(to)}::numeric` : null;
+  }
+  return ok && ops[model.type ?? 'equals'] ? `${expr} ${ops[model.type ?? 'equals']} ${push(n)}::numeric` : null;
+}
+
 const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
-/** At most this many CVE in one exported file. */
+/** At most this many rows in one exported file. */
 const EXPORT_LIMIT = 10000;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const SEVERITY_ORDER = `CASE c.severity WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 WHEN 'none' THEN 1 ELSE 0 END`;
@@ -47,6 +108,9 @@ type Row = {
   editor: string | null;
   version_label: string | null;
 };
+
+/** A row of the list grid: the row, with its CVE. */
+type GridRow = Row & Omit<Cve, 'cvss_vector' | 'reference_urls'>;
 
 type Cve = {
   cve_id: string;
@@ -72,7 +136,7 @@ function cveIdOrThrow(value: unknown): string {
   return id;
 }
 
-function presentCve(c: Cve) {
+function presentCve(c: Omit<Cve, 'cvss_vector' | 'reference_urls'>) {
   return {
     cve_id: c.cve_id,
     summary: c.summary,
@@ -118,21 +182,11 @@ function groupByTechnology(rows: Row[]) {
   }
   const list = Array.from(byTech.values());
   for (const t of list) {
+    // Newest number first (`version-order.ts`), the unknown version last.
     t.versions.sort((a, b) => (a.version_label == null ? 1 : 0) - (b.version_label == null ? 1 : 0)
-      || String(a.version_label ?? '').localeCompare(String(b.version_label ?? ''), 'en', { numeric: true }));
+      || compareVersionLabels(a.version_label, b.version_label));
   }
   return list.sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }));
-}
-
-/** The rows of each CVE, in their order. */
-function rowsByCve(rows: Row[]): Map<string, Row[]> {
-  const byCve = new Map<string, Row[]>();
-  for (const r of rows) {
-    const list = byCve.get(r.cve_id);
-    if (list) list.push(r);
-    else byCve.set(r.cve_id, [r]);
-  }
-  return byCve;
 }
 
 const rowKey = (technologyId: string, versionId: string | null) => `${technologyId}|${versionId ?? ''}`;
@@ -149,6 +203,7 @@ export class VulnerabilitiesService {
     private readonly reach: TechnologyReachService,
     private readonly matcher: VulnerabilityMatchService,
     private readonly audit: AuditService,
+    @Optional() private readonly feed?: NvdFeedService,
   ) {}
 
   /** The WHERE clause of the filters, on `tv` (rows), `t` (technologies) and `c` (cache). */
@@ -196,25 +251,91 @@ export class VulnerabilitiesService {
       const like = push(`%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
       where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
     }
+    where.push(...this.gridClauses(filters.filters, push));
     return where.length ? `AND ${where.join(' AND ')}` : '';
   }
 
+  /**
+   * The list grid's filter model (lots T6b, T6c), on rows: set filters on `severity`, `state`,
+   * `editor` (without case), `technology` (id or `TEC-n`; an unknown one matches nothing) and
+   * `version` (labels, `null` for the rows without version), text filters on `cve_id` and
+   * `summary`, a number filter on `cvss_score`, a date filter on `published_at`. An unreadable
+   * model or another column is ignored; `technologies` (the name before T6c) reads as `technology`;
+   * a set filter in exclude mode is a 400.
+   */
+  private gridClauses(raw: unknown, push: (value: unknown) => string): string[] {
+    let model: Record<string, any>;
+    try {
+      model = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, any>);
+    } catch {
+      return [];
+    }
+    if (!model || typeof model !== 'object') return [];
+    // These set filters read the ticked values: an exclude model is a 400, never read as an include.
+    assertSetFilterModes(model);
+    // The column's name before lot T6c, in filters saved then (a link, a list context).
+    if (model.technology === undefined && model.technologies !== undefined) model = { ...model, technology: model.technologies };
+    const out: string[] = [];
+    const setValues = (column: string): string[] | null => {
+      const m = model[column];
+      if (!m || m.filterType !== 'set' || !Array.isArray(m.values)) return null;
+      return m.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => v.trim());
+    };
+    for (const [column, expr] of [['severity', 'c.severity'], ['state', 'tv.state']] as const) {
+      const values = setValues(column);
+      if (values) out.push(values.length ? `${expr} = ANY(${push(values)}::text[])` : 'false');
+    }
+    const editors = setValues('editor');
+    if (editors) out.push(editors.length ? `lower(t.editor) = ANY(${push(editors.map((e) => e.toLowerCase()))}::text[])` : 'false');
+    const technologies = setValues('technology');
+    if (technologies) {
+      if (technologies.length === 0) out.push('false');
+      else {
+        const p = push(technologies.map((v) => v.toUpperCase()));
+        out.push(`(upper(t.id::text) = ANY(${p}::text[]) OR ('TEC-' || t.item_number) = ANY(${p}::text[]))`);
+      }
+    }
+    // Versions by label (one label may name a version of several technologies); `null`: not recorded.
+    const versions = setValues('version');
+    if (versions) {
+      const parts: string[] = [];
+      if (versions.length) parts.push(`v.label = ANY(${push(versions)}::text[])`);
+      if ((model.version.values as unknown[]).some((value) => value === null)) parts.push('tv.technology_version_id IS NULL');
+      out.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
+    }
+    const json = typeof raw === 'string' ? raw : JSON.stringify(model);
+    for (const [column, expr] of [['cve_id', 'tv.cve_id'], ['summary', 'c.summary']] as const) {
+      const clause = gridTextClause(expr, gridTextModel(json, column), push);
+      if (clause) out.push(clause);
+    }
+    const score = gridNumberClause('c.cvss_score', model.cvss_score, push);
+    if (score) out.push(score);
+    const published = gridDateClause('c.published_at', model.published_at, push);
+    if (published) out.push(`(${published})`);
+    return out;
+  }
+
+  /** The rows with their technology, CVE and version (`v`, none for the rows without version). */
   private readonly rowsFrom = `
     FROM technology_vulnerabilities tv
     JOIN technologies t ON t.tenant_id = tv.tenant_id AND t.id = tv.technology_id
-    JOIN vulnerability_cves c ON c.cve_id = tv.cve_id`;
+    JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+    LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id`;
+
+  private readonly rowColumns = `tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.match_basis, tv.matching,
+    tv.detected_at, tv.state_changed_at,
+    NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS state_changed_by_name,
+    t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label`;
+
+  private readonly usersJoin = `LEFT JOIN users u ON u.tenant_id = tv.tenant_id AND u.id = tv.state_changed_by`;
 
   private async rowsOf(mg: EntityManager, tenantId: string, extraWhere: string, params: unknown[]): Promise<Row[]> {
     return mg.query(
-      `SELECT tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.match_basis, tv.matching,
-              tv.detected_at, tv.state_changed_at,
-              NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS state_changed_by_name,
-              t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label
+      `SELECT ${this.rowColumns}
          ${this.rowsFrom}
-         LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id
-         LEFT JOIN users u ON u.tenant_id = tv.tenant_id AND u.id = tv.state_changed_by
+         ${this.usersJoin}
         WHERE tv.tenant_id = $1 ${extraWhere}
-        ORDER BY t.name, v.label NULLS LAST`,
+        ORDER BY t.name, ${versionOrderSql('v.label')}`,
       params,
     );
   }
@@ -282,50 +403,116 @@ export class VulnerabilitiesService {
     return { servers: servers.size, applications: reach.apps ? apps.size : null };
   }
 
-  /** The CVE that concern the tenant, filtered, most severe first, paged by CVE. */
+  /**
+   * The rows (technology, version and CVE) that concern the tenant, filtered, most severe first,
+   * paged by row (lot T6c: the unit that carries the state).
+   */
   async list(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess) {
-    const { items, total, limit, offset } = await this.listWithRows(filters, opts, applications, true);
-    return { items, total, limit, offset };
+    const { items, total, cves, limit, offset } = await this.listRows(filters, opts, applications, true);
+    return { items, total, cves, limit, offset };
   }
 
-  private async listWithRows(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess, paging: boolean) {
+  private async listRows(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess, paging: boolean) {
     const { manager: mg, tenantId } = opts;
     const whole = (value: unknown, fallback: number, max: number) => {
       const n = Math.floor(Number(value));
       return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : fallback;
     };
     const limit = paging ? Math.max(whole(filters.limit, 50, 200), 1) : EXPORT_LIMIT;
-    const offset = paging ? whole(filters.offset, 0, 1_000_000_000) : 0;
+    // `offset`, or the grid's `page` (from 1).
+    const offset = !paging ? 0
+      : filters.offset !== undefined ? whole(filters.offset, 0, 1_000_000_000)
+        : Math.max(whole(filters.page, 1, 10_000_000) - 1, 0) * limit;
+    // The grid's `field:DIR`; most severe first by default.
+    const [sortField, sortDir] = String(filters.sort ?? '').split(':');
+    // Own keys only (`constructor` or `__proto__` would read the prototype); another column is a 400.
+    if (sortField && !Object.prototype.hasOwnProperty.call(GRID_SORTS, sortField)) {
+      throw new BadRequestException('sort must be severity, cvss_score, published_at, cve_id or technology.');
+    }
+    const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
+    // Then by CVE, technology, version and row: a stable order, so the pages neither repeat nor skip a row.
+    const tail = `c.cve_id DESC, lower(t.name), t.id, ${versionOrderSql('v.label')}, tv.id`;
+    // Another column: most severe first among equals (a technology's rows most severe first).
+    const primary = sortField === 'technology' ? `lower(t.name) ${direction}, t.id` : `${GRID_SORTS[sortField]} ${direction} NULLS LAST`;
+    const order = sortField && sortField !== 'severity'
+      ? `${primary}, ${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST, ${tail}`
+      : `${SEVERITY_ORDER} ${sortField ? direction : 'DESC'}, c.cvss_score ${sortField ? direction : 'DESC'} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`;
     const params: unknown[] = [tenantId];
     const where = await this.filterSql(mg, tenantId, filters, params);
-    const page: Array<{ cve_id: string; total: string }> = await mg.query(
-      `SELECT c.cve_id, count(*) OVER () AS total
-         FROM (SELECT DISTINCT tv.cve_id ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}) x
-         JOIN vulnerability_cves c ON c.cve_id = x.cve_id
-        ORDER BY ${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST, c.published_at DESC NULLS LAST, c.cve_id DESC
+    // The rows and the distinct CVE among them: the grid's total speaks of both.
+    const [counted] = await mg.query(
+      `SELECT count(*)::int AS rows, count(DISTINCT tv.cve_id)::int AS cves ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
+      params,
+    );
+    const total = Number(counted?.rows ?? 0);
+    const cves = Number(counted?.cves ?? 0);
+    if (!paging && total > EXPORT_LIMIT) {
+      throw new BadRequestException(`More than ${EXPORT_LIMIT} rows match: narrow the filters to export them.`);
+    }
+    const rows: GridRow[] = total === 0 ? [] : await mg.query(
+      `SELECT ${this.rowColumns},
+              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status
+         ${this.rowsFrom}
+         ${this.usersJoin}
+        WHERE tv.tenant_id = $1 ${where}
+        ORDER BY ${order}
         LIMIT ${limit} OFFSET ${offset}`,
       params,
     );
-    const total = Number(page[0]?.total ?? 0);
-    if (!paging && total > EXPORT_LIMIT) {
-      throw new BadRequestException(`More than ${EXPORT_LIMIT} vulnerabilities match: narrow the filters to export them.`);
-    }
-    const ids = page.map((p) => p.cve_id);
-    if (ids.length === 0) return { items: [], total, limit, offset, byCve: new Map<string, Row[]>(), reach: null };
-    params.push(ids);
-    const rows = await this.rowsOf(mg, tenantId, `${where} AND tv.cve_id = ANY($${params.length}::text[])`, params);
-    const cves = await this.cves(mg, ids);
+    // A page past the end (the grid refreshing a block emptied by a change in bulk) keeps the real
+    // total, never 0, or the grid would empty itself.
+    if (rows.length === 0) return { items: [], total, cves, limit, offset, rows: [] as GridRow[] };
     const reach = await this.reachOf(mg, tenantId, rows, applications);
-    const byCve = rowsByCve(rows);
-    const items = ids.map((id) => {
-      const cveRows = byCve.get(id) ?? [];
-      return {
-        ...presentCve(cves.get(id)!),
-        technologies: groupByTechnology(cveRows),
-        ...this.counts(cveRows, reach),
-      };
-    });
-    return { items, total, limit, offset, byCve, reach };
+    const items = rows.map((r) => ({
+      id: r.id,
+      ...presentCve(r),
+      technology: { id: r.technology_id, reference: technologyReference(r.technology_item_number), name: r.technology_name },
+      editor: r.editor,
+      /** The version's label; null: none recorded, potentially concerned. */
+      version: r.version_label,
+      technology_version_id: r.technology_version_id,
+      potential: r.match_basis === 'version_unknown',
+      match_basis: r.match_basis,
+      matching: r.matching,
+      state: r.state,
+      note: r.note,
+      state_changed_at: r.state_changed_at,
+      state_changed_by_name: r.state_changed_by_name,
+      detected_at: r.detected_at,
+      // The servers and applications of this version.
+      ...this.counts([r], reach),
+    }));
+    return { items, total, cves, limit, offset, rows };
+  }
+
+  /**
+   * The values of the grid's set filters that depend on the rows (`fields`: `version`): the labels
+   * of the versions the other filters reach, newest number first, `null` last when a row has no version.
+   */
+  async filterValues(query: VulnerabilityFilters & { fields?: unknown }, opts: VulnOpts): Promise<Record<string, Array<string | null>>> {
+    const { manager: mg, tenantId } = opts;
+    const out: Record<string, Array<string | null>> = {};
+    if (!commaList(query.fields).includes('version')) return out;
+    // The column's own filter does not narrow its values.
+    let grid = query.filters;
+    try {
+      const model = typeof grid === 'string' ? JSON.parse(grid) : grid;
+      if (model && typeof model === 'object') {
+        const { version: _own, ...others } = model as Record<string, unknown>;
+        grid = JSON.stringify(others);
+      }
+    } catch {
+      grid = undefined;
+    }
+    const params: unknown[] = [tenantId];
+    const where = await this.filterSql(mg, tenantId, { ...query, filters: grid }, params);
+    const rows: Array<{ value: string | null }> = await mg.query(
+      `SELECT DISTINCT v.label AS value ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
+      params,
+    );
+    // Newest number first (`version-order.ts`), as the grid; null last.
+    out.version = rows.map((r) => r.value).sort((a, b) => (a == null ? 1 : 0) - (b == null ? 1 : 0) || compareVersionLabels(a, b));
+    return out;
   }
 
   /** One CVE: its record, the technologies and versions it concerns, the servers and applications reached. */
@@ -406,7 +593,31 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
-    return { technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) }, items };
+    return {
+      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      products: await this.productStates(mg, tech.cpe_products),
+      items,
+    };
+  }
+
+  /**
+   * Where the feed stands on each CPE product of a technology (lot T6b): `collected` (its CVE are in
+   * the cache), `failed` (never collected, the last attempt failed), `pending` (never collected yet:
+   * the section says the search is under way).
+   */
+  private async productStates(mg: EntityManager, cpeProducts: unknown) {
+    const products = Array.from(new Set((Array.isArray(cpeProducts) ? cpeProducts : []).map((p) => String(p).toLowerCase())));
+    if (products.length === 0) return [];
+    const rows: Array<{ product: string; last_success_at: Date | null; last_error: string | null }> = await mg.query(
+      `SELECT product, last_success_at, last_error FROM vulnerability_feed_products WHERE product = ANY($1::text[])`,
+      [products],
+    );
+    const byProduct = new Map(rows.map((r) => [r.product, r]));
+    return products.map((product) => {
+      const row = byProduct.get(product);
+      const status = row?.last_success_at ? 'collected' : row?.last_error ? 'failed' : 'pending';
+      return { product, status };
+    });
   }
 
   /**
@@ -473,48 +684,179 @@ export class VulnerabilitiesService {
     return { ok: true, changed, ...(await this.ofTechnology(tech.id, opts)) };
   }
 
+  /**
+   * Changes in bulk (lots T6b, T6c) the state, and the note when one is sent, of grid rows
+   * (technology, version and CVE): the chosen ones (`ids`, row ids), or every row the list's
+   * filters reach (`all: true` with `filters`, the list's parameters, grid model included), less
+   * the rows the user unticked (`exclude_ids`). The chosen rows are taken as they are: the filters
+   * do not narrow them. The rows are locked in the matching's order (technology, version, CVE),
+   * written in batches of 500, and each changed row is audited on `technology_vulnerabilities`.
+   * `dry_run` counts without writing and returns `as_of`, the instant of the count: the write that
+   * sends it back changes only the rows detected by then, so a row found after the count (a new CVE
+   * matched while the user confirms) stays to review; `changed` says how many really changed. The
+   * write also sends `expected_rows`, the rows of the count (required with `all`): when the locked
+   * rows are more (a matching that began before the count committed after it), nothing is written
+   * and the answer is a 409 `bulk_list_changed`. More than `BULK_MAX_ROWS` rows is a 400.
+   */
+  async bulkState(body: Record<string, unknown>, opts: VulnOpts) {
+    const { manager: mg, tenantId } = opts;
+    const state = String(body.state ?? '');
+    if (!(VULNERABILITY_STATES as readonly string[]).includes(state)) {
+      throw new BadRequestException('state must be to_review, handled or not_affected.');
+    }
+    let note: string | null | undefined;
+    if (body.note !== undefined) {
+      if (body.note !== null && typeof body.note !== 'string') throw new BadRequestException('note must be text.');
+      const text = typeof body.note === 'string' ? body.note.trim() : '';
+      if (text.length > 4000) throw new BadRequestException('note must be at most 4000 characters.');
+      note = text || null;
+    }
+    const all = body.all === true;
+    const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
+      const raw = body[name];
+      if (raw === undefined || raw === null) return [];
+      if (!Array.isArray(raw)) throw new BadRequestException(`${name} must be a list of row ids.`);
+      const ids = Array.from(new Set(raw.map((v) => String(v ?? '').trim().toLowerCase())));
+      if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(`${name} must be row ids.`);
+      if (ids.length > BULK_MAX_ROWS) throw new BadRequestException({ code: 'bulk_too_many', message: `At most ${BULK_MAX_ROWS} rows at once: narrow the filters.` });
+      return ids;
+    };
+    const ids = rowIds('ids');
+    const excluded = rowIds('exclude_ids');
+    if (all && ids.length > 0) throw new BadRequestException('Send the chosen rows (ids) or every row of the filter (all: true), not both.');
+    if (!all && excluded.length > 0) throw new BadRequestException('exclude_ids goes with all: true.');
+    if (!all && ids.length === 0) throw new BadRequestException('Choose the rows (ids), or every row of the filter (all: true).');
+    const filters = (body.filters && typeof body.filters === 'object' ? body.filters : {}) as VulnerabilityFilters;
+
+    const params: unknown[] = [tenantId];
+    let where: string;
+    if (all) {
+      where = await this.filterSql(mg, tenantId, { ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, params);
+      if (excluded.length > 0) {
+        params.push(excluded);
+        where += ` AND tv.id <> ALL($${params.length}::uuid[])`;
+      }
+    } else {
+      params.push(ids);
+      where = ` AND tv.id = ANY($${params.length}::uuid[])`;
+    }
+    // Every one of the filter: only what the user confirmed, so the count's instant is required.
+    if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
+      throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
+    }
+    // The rows the user confirmed (the dry run's `rows`): required with all, checked under the lock.
+    let expectedRows: number | null = null;
+    if (body.expected_rows !== undefined && body.expected_rows !== null) {
+      expectedRows = Number(body.expected_rows);
+      if (!Number.isSafeInteger(expectedRows) || expectedRows < 0) throw new BadRequestException('expected_rows must be the rows the dry run counted.');
+    } else if (all && body.dry_run !== true) {
+      throw new BadRequestException('expected_rows is required with all: send the rows the dry run counted.');
+    }
+    if (body.as_of !== undefined && body.as_of !== null) {
+      const asOf = new Date(String(body.as_of));
+      if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
+      params.push(asOf.toISOString());
+      where += ` AND tv.detected_at <= $${params.length}::timestamptz`;
+    }
+    const scopeParams = [...params];
+    const noteChanges = note !== undefined;
+    params.push(state, note ?? null);
+    const changeSql = `tv.state <> $${params.length - 1}::text${noteChanges ? ` OR tv.note IS DISTINCT FROM $${params.length}::text` : ` OR $${params.length}::text IS NOT NULL`}`;
+    const [count] = await mg.query(
+      `SELECT count(*)::int AS rows, count(DISTINCT tv.cve_id)::int AS cves, count(*) FILTER (WHERE ${changeSql})::int AS changes
+         ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
+      params,
+    );
+    const rows = Number(count?.rows ?? 0);
+    if (rows > BULK_MAX_ROWS) {
+      // A code: the page says the cap in its own words, and any other refusal by its message.
+      throw new BadRequestException({ code: 'bulk_too_many', message: `These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.` });
+    }
+    const summary = { rows, cves: Number(count?.cves ?? 0) };
+    if (body.dry_run === true) {
+      const [{ as_of: asOf }] = await mg.query(`SELECT clock_timestamp() AS as_of`);
+      return { ok: true, dry_run: true, ...summary, changes: Number(count?.changes ?? 0), as_of: new Date(asOf).toISOString() };
+    }
+
+    const before: Array<Record<string, unknown>> = await mg.query(
+      `SELECT tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.state_changed_by, tv.state_changed_at
+         ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}
+        ORDER BY tv.technology_id, tv.technology_version_id NULLS LAST, tv.cve_id
+        FOR UPDATE OF tv`,
+      scopeParams,
+    );
+    // More rows than confirmed: one the count did not see (a matching that began before the count and
+    // committed after it has a detection instant before `as_of`). Nothing is written; the user counts again.
+    if (expectedRows !== null && before.length > expectedRows) {
+      throw new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
+    }
+    const toChange = before.filter((row) => row.state !== state || (noteChanges && row.note !== note));
+    let changed = 0;
+    for (let i = 0; i < toChange.length; i += BULK_BATCH) {
+      const batch = toChange.slice(i, i + BULK_BATCH);
+      // An UPDATE answers [rows, rowCount], RETURNING included.
+      const [afterRows] = await mg.query(
+        `UPDATE technology_vulnerabilities
+            SET state = $3,
+                note = CASE WHEN $4::boolean THEN $5 ELSE note END,
+                state_changed_by = CASE WHEN state <> $3 THEN $6::uuid ELSE state_changed_by END,
+                state_changed_at = CASE WHEN state <> $3 THEN now() ELSE state_changed_at END,
+                updated_at = now()
+          WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+          RETURNING id, technology_id, technology_version_id, cve_id, state, note, state_changed_by, state_changed_at`,
+        [tenantId, batch.map((row) => row.id), state, noteChanges, note ?? null, opts.userId ?? null],
+      );
+      const afterById = new Map((afterRows as Array<Record<string, unknown>>).map((row) => [String(row.id), row]));
+      for (const row of batch) {
+        const after = afterById.get(String(row.id));
+        if (!after) continue;
+        await this.audit.log(
+          { table: 'technology_vulnerabilities', recordId: String(row.id), action: 'update', before: row, after, userId: opts.userId ?? null },
+          { manager: mg },
+        );
+        changed += 1;
+      }
+    }
+    return { ok: true, ...summary, changed };
+  }
+
   /** Matches the technology again with the cache, under a lock of its row. */
   async rematch(idOrRef: string, opts: VulnOpts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const result = await this.matcher.matchTenant(mg, tenantId, tech.id);
-    return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched };
+    // Its products the feed never collected are collected once this transaction has committed, in
+    // the background (then matched).
+    const fresh = this.feed ? await this.feed.neverCollected((tech.cpe_products ?? []) as string[]) : [];
+    if (fresh.length > 0) await this.feed!.onCpeProductsAdded({ manager: mg, tenantId, technologyId: tech.id, products: fresh });
+    return { ok: true, added: result.added, updated: result.updated, removed: result.removed, unmatched: result.unmatched, collecting: fresh };
   }
 
-  /** The list as a CSV file, one line per technology version and CVE, with the same filters. */
+  /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
-    const result = await this.listWithRows(filters, opts, applications, false);
-    const cves = await this.cves(opts.manager, result.items.map((i) => i.cve_id));
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Editor', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
+    const { items } = await this.listRows(filters, opts, applications, false);
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
       version_unknown: 'Version unknown',
     };
     const stateLabel: Record<VulnerabilityState, string> = { to_review: 'To review', handled: 'Handled', not_affected: 'Not affected' };
-    const lines: string[][] = [];
-    for (const item of result.items) {
-      const cve = cves.get(item.cve_id);
-      const cveRows = result.byCve.get(item.cve_id) ?? [];
-      for (const r of cveRows) {
-        const counts = this.counts([r], result.reach!);
-        lines.push([
-          item.cve_id,
-          item.severity ?? '',
-          item.cvss_score == null ? '' : String(item.cvss_score),
-          cve?.published_at ? new Date(cve.published_at).toISOString().slice(0, 10) : '',
-          technologyReference(r.technology_item_number) ?? '',
-          r.technology_name,
-          r.editor ?? '',
-          r.version_label ?? 'Unknown',
-          basisLabel[r.match_basis],
-          stateLabel[r.state],
-          r.note ?? '',
-          String(counts.servers),
-          counts.applications == null ? '' : String(counts.applications),
-        ]);
-      }
-    }
+    const lines = items.map((item) => [
+      item.cve_id,
+      item.severity ?? '',
+      item.cvss_score == null ? '' : String(item.cvss_score),
+      item.published_at ? new Date(item.published_at).toISOString().slice(0, 10) : '',
+      item.technology.reference ?? '',
+      item.technology.name,
+      item.editor ?? '',
+      item.version ?? 'Unknown',
+      basisLabel[item.match_basis],
+      stateLabel[item.state],
+      item.note ?? '',
+      String(item.servers),
+      item.applications == null ? '' : String(item.applications),
+    ]);
     const content = writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows: lines });
     return { filename: 'vulnerabilities.csv', content };
   }

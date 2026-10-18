@@ -1,10 +1,14 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
-import { languageOf, writeCsv } from '../common/csv-sheet';
+import { languageOf, writeCsv, type CsvLanguage } from '../common/csv-sheet';
 import { MANUAL_PROVENANCE, provenanceParams, type LinkProvenance } from '../common/link-provenance';
 import { withSavepoint } from '../common/savepoint.util';
+import { SHIPPED_CATALOG_LABELS } from '../it-ops-settings/catalog-shipped-labels';
+import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
+import { catalogFromMetadata } from '../it-ops-settings/classification-catalog';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { assetInServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
 import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './technology-rows';
@@ -27,6 +31,52 @@ export type LinkInput = {
 type LinkSide = 'asset' | 'application';
 
 const NOTES_MAX = 2000;
+
+type ApplicationsCsvCopy = {
+  headers: string[];
+  declared: string;
+  hosted: string;
+  unknown: string;
+  yes: string;
+  no: string;
+  /** Application environments (`app_instances.environment`), as the screen writes them (`it:enums.environment`). */
+  environments: Record<string, string>;
+};
+
+/** The words of the Applications export, the screen's (`workspace.technology.applications` in the `it` locale files). */
+const APPLICATIONS_CSV_COPY: Record<CsvLanguage, ApplicationsCsvCopy> = {
+  en: {
+    headers: ['Reference', 'Application', 'Link', 'Environment', 'Server', 'Installed on', 'Version', 'Criticality', 'External', 'IT owners', 'Notes'],
+    declared: 'Declared', hosted: 'Hosted', unknown: 'Version unknown', yes: 'Yes', no: 'No',
+    environments: { prod: 'Prod', pre_prod: 'Pre-prod', qa: 'QA', test: 'Test', dev: 'Dev', sandbox: 'Sandbox' },
+  },
+  fr: {
+    headers: ['Référence', 'Application', 'Lien', 'Environnement', 'Serveur', 'Installée sur', 'Version', 'Criticité', 'Externe', 'Responsables IT', 'Notes'],
+    declared: 'Déclarée', hosted: 'Hébergée', unknown: 'Version inconnue', yes: 'Oui', no: 'Non',
+    environments: { prod: 'Prod', pre_prod: 'Pré-prod', qa: 'QA', test: 'Test', dev: 'Dev', sandbox: 'Bac à sable' },
+  },
+  de: {
+    headers: ['Referenz', 'Anwendung', 'Verknüpfung', 'Umgebung', 'Server', 'Installiert auf', 'Version', 'Kritikalität', 'Extern', 'IT-Verantwortliche', 'Notizen'],
+    declared: 'Deklariert', hosted: 'Gehostet', unknown: 'Version unbekannt', yes: 'Ja', no: 'Nein',
+    environments: { prod: 'Prod', pre_prod: 'Pre-Prod', qa: 'QA', test: 'Test', dev: 'Dev', sandbox: 'Sandbox' },
+  },
+  es: {
+    headers: ['Referencia', 'Aplicación', 'Vínculo', 'Entorno', 'Servidor', 'Instalada en', 'Versión', 'Criticidad', 'Externa', 'Responsables de TI', 'Notas'],
+    declared: 'Declarada', hosted: 'Alojada', unknown: 'Versión desconocida', yes: 'Sí', no: 'No',
+    environments: { prod: 'Prod', pre_prod: 'Pre-prod', qa: 'QA', test: 'Test', dev: 'Dev', sandbox: 'Sandbox' },
+  },
+};
+
+/**
+ * A catalog value as the screen shows it in `language`: the tenant's translation, else the shipped
+ * translation while the tenant keeps the shipped label, else the tenant's label.
+ */
+function catalogLabelIn(list: string, option: { code: string; label: string; translations?: CatalogTranslations }, language: CsvLanguage): string {
+  const translated = option.translations?.[language]?.label;
+  if (translated) return translated;
+  const shipped = SHIPPED_CATALOG_LABELS[list]?.[option.code];
+  return shipped && shipped.source === option.label ? shipped[language] : option.label;
+}
 
 function notesOf(value: unknown): string | null {
   if (value === undefined || value === null) return null;
@@ -58,7 +108,13 @@ export class TechnologyLinksService {
     private readonly audit: AuditService,
     private readonly reach: TechnologyReachService,
     private readonly itOps: ItOpsSettingsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
+
+  /** A link changed: the technology is matched again with the vulnerabilities, after the commit (lot T6b). */
+  private linksChanged(mg: EntityManager, tenantId: string, technologyId: string) {
+    return this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: [] });
+  }
 
   // ==================== ASSETS ====================
 
@@ -217,25 +273,36 @@ export class TechnologyLinksService {
     return { technology, items };
   }
 
-  /** The Applications tab as a file to send to the teams: one line per row of the tab. */
+  /**
+   * The Applications tab as a file to send to the teams: one line per row of the tab, in the
+   * language asked (headers, words, environments, and the criticality as the tenant's catalog
+   * names it in that language).
+   */
   async applicationsCsv(idOrRef: string, language: unknown, opts: LinkOpts, applications: { scope?: ParticipationAccessScope }): Promise<{ filename: string; content: string }> {
+    const lang = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language);
     const { technology, items } = await this.applicationsOfTechnology(idOrRef, opts, applications);
-    const headers = ['Reference', 'Application', 'Link', 'Environment', 'Server', 'Installed on', 'Version', 'Criticality', 'External facing', 'IT owners', 'Notes'];
+    const copy = APPLICATIONS_CSV_COPY[lang];
+    const [settings]: Array<{ it_ops: Record<string, any> | null }> = await opts.manager.query(
+      `SELECT metadata->'it_ops' AS it_ops FROM tenants WHERE id = $1`,
+      [opts.tenantId],
+    );
+    const criticality = new Map(catalogFromMetadata(settings?.it_ops ?? {}).businessCriticalityLevels
+      .map((level) => [level.code, catalogLabelIn('businessCriticalityLevels', level, lang)]));
     const rows = (items ?? []).map((item) => [
       item.application_reference ?? '',
       item.application_name ?? '',
-      item.kind === 'declared' ? 'Declared' : 'Hosted',
-      item.environment ?? '',
+      item.kind === 'declared' ? copy.declared : copy.hosted,
+      item.environment ? copy.environments[item.environment] ?? item.environment : '',
       item.asset_name ?? '',
       item.via_asset_name ?? '',
-      item.version_label ?? 'Unknown',
-      item.criticality ?? '',
-      item.external_facing ? 'Yes' : 'No',
+      item.version_label ?? copy.unknown,
+      item.criticality ? criticality.get(item.criticality) ?? item.criticality : '',
+      item.external_facing ? copy.yes : copy.no,
       item.it_owner_names.join(', '),
       item.notes ?? '',
     ]);
     const safeName = String(technology.reference ?? 'technology').replace(/[^A-Za-z0-9_-]/g, '_');
-    return { filename: `${safeName}_applications.csv`, content: writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows }) };
+    return { filename: `${safeName}_applications.csv`, content: writeCsv({ language: lang, headers: copy.headers, rows }) };
   }
 
   /**
@@ -265,6 +332,7 @@ export class TechnologyLinksService {
         table: 'application_technologies', recordId: tech.id, action: 'update',
         before: null, after: { added }, userId: opts.userId ?? null,
       }, { manager: mg });
+      await this.linksChanged(mg, tenantId, tech.id);
     }
     return { ok: true, added: added.length };
   }
@@ -452,6 +520,7 @@ export class TechnologyLinksService {
         before: before ? { ...before, [`${side}_id`]: subjectId, technology_version_id: versionId } : null, after, userId: opts.userId ?? null,
       }, { manager: mg });
     }
+    if (changed) await this.linksChanged(mg, tenantId, technologyId);
     return { ok: true, link_id: row.id, created: !before, changed };
   }
 
@@ -482,6 +551,7 @@ export class TechnologyLinksService {
     await this.audit.log({
       table, recordId: tech.id, action: 'update', before, after: { id, technology_version_id: versionId, notes, source: 'manual' }, userId: opts.userId ?? null,
     }, { manager: mg });
+    if (versionId !== before.technology_version_id) await this.linksChanged(mg, tenantId, tech.id);
     return { ok: true };
   }
 
@@ -501,6 +571,7 @@ export class TechnologyLinksService {
     );
     if (removed[0]) {
       await this.audit.log({ table, recordId: technologyId, action: 'delete', before: removed[0], after: null, userId: opts.userId ?? null }, { manager: mg });
+      await this.linksChanged(mg, tenantId, technologyId);
     }
     return { ok: true, changed: removed.length > 0 };
   }
@@ -514,6 +585,7 @@ export class TechnologyLinksService {
        SELECT id::text AS id FROM d ORDER BY id`,
       [tenantId, technologyId, applicationId],
     );
+    if (rows.length > 0) await this.linksChanged(mg, tenantId, technologyId);
     return rows.map((row) => row.id);
   }
 

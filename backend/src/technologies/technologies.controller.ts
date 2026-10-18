@@ -246,6 +246,22 @@ export class TechnologiesController {
     return this.svc.bulkReplaceOwners(id, body?.owners ?? [], this.opts(ctx));
   }
 
+  // ==================== SUPPORT CONTACTS ====================
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get(':id/support-contacts')
+  listSupportContacts(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.listSupportContacts(id, this.opts(ctx));
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Post(':id/support-contacts/bulk-replace')
+  replaceSupportContacts(@Param('id') id: string, @Body() body: { contacts?: Array<{ contact_id?: string; role?: string | null }> }, @Tenant() ctx: TenantRequest) {
+    return this.svc.bulkReplaceSupportContacts(id, body?.contacts ?? [], this.opts(ctx));
+  }
+
   // ==================== WEB LINKS AND ATTACHMENTS ====================
 
   @UseGuards(PermissionGuard)

@@ -281,6 +281,7 @@
     },
     "exportResources": {
       "accounts": "Konten",
+      "administrationView": "Administrationssicht",
       "analyticsCategories": "Analysedimensionen",
       "applications": "Anwendungen",
       "assets": "Assets",
@@ -437,6 +438,7 @@
       "document_tasks": "Aufgaben von Dokumenten",
       "document_versions": "Dokumentversionen",
       "documents": "Dokumente",
+      "expiry_reminders": "Gesendete Ablauferinnerungen",
       "export": "Export",
       "incident_attachments": "Vorfallanhänge",
       "incident_technologies": "Technologien von Vorfällen",
@@ -515,6 +517,7 @@
       "technology_owners": "Technologieverantwortliche",
       "technology_projects": "Projekte der Technologie",
       "technology_spend_items": "Budgetzeilen der Technologie",
+      "technology_support_contacts": "Support-Kontakte der Technologie",
       "technology_versions": "Technologieversionen",
       "technology_vulnerabilities": "Schwachstellen der Technologie",
       "tenants": "Arbeitsbereiche",
@@ -522,6 +525,7 @@
       "tenants_plan": "Tarife der Arbeitsbereiche",
       "user_roles": "Benutzerrollen",
       "users": "Benutzer",
+      "vulnerability_notifications": "Gesendete Schwachstellen-E-Mails",
       "working_day_profiles": "Arbeitstagekalender"
     },
     "title": "Audit-Protokoll",

@@ -110,6 +110,19 @@ export const de: EmailStrings = {
       bodyHtml: 'Das Element <strong>{{itemName}}</strong> ({{itemTypeLower}}) hat am <strong>{{expirationDate}}</strong> einen {{warningLabel}} (noch {{daysRemaining}} Tage).',
       text: '{{itemType}} "{{itemName}}": {{warningLabel}} am {{expirationDate}} ({{daysRemaining}} Tage).',
     },
+    vulnerabilities: {
+      subject: 'Neue Schwachstellen in Ihren Technologien ({{count}})',
+      heading: 'Neue Schwachstellen in Ihren Technologien',
+      intro: 'KANAP hat kritische oder hohe Schwachstellen in Technologien gefunden, für die Sie IT-verantwortlich sind ({{count}}). Prüfen Sie sie und legen Sie ihren Status fest.',
+      severities: {
+        critical: 'Kritisch',
+        high: 'Hoch',
+      },
+      versions: 'Versionen: {{versions}}',
+      unknownVersion: 'Version nicht erfasst (möglicherweise betroffen)',
+      view: 'Schwachstellen öffnen',
+      more: 'Und {{count}} weitere: Öffnen Sie die Seite, um alle zu sehen.',
+    },
     weeklyReview: {
       subject: 'Ihr wöchentlicher KANAP-Rückblick — Woche vom {{weekLabel}}',
       introHtml: 'Hallo {{userName}}, hier ist Ihre Zusammenfassung für die Woche vom <strong>{{weekLabel}}</strong>.',

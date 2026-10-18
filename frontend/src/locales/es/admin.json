@@ -281,6 +281,7 @@
     },
     "exportResources": {
       "accounts": "Cuentas",
+      "administrationView": "Vista de la administración",
       "analyticsCategories": "Dimensiones analíticas",
       "applications": "Aplicaciones",
       "assets": "Activos",
@@ -437,6 +438,7 @@
       "document_tasks": "Tareas de documento",
       "document_versions": "Versiones de documento",
       "documents": "Documentos",
+      "expiry_reminders": "Recordatorios de vencimiento enviados",
       "export": "Exportación",
       "incident_attachments": "Adjuntos de incidente",
       "incident_technologies": "Tecnologías de incidentes",
@@ -515,6 +517,7 @@
       "technology_owners": "Responsables de tecnología",
       "technology_projects": "Proyectos de tecnología",
       "technology_spend_items": "Líneas presupuestarias de tecnología",
+      "technology_support_contacts": "Contactos de soporte de tecnología",
       "technology_versions": "Versiones de tecnología",
       "technology_vulnerabilities": "Vulnerabilidades de tecnología",
       "tenants": "Espacios de trabajo",
@@ -522,6 +525,7 @@
       "tenants_plan": "Planes de espacios de trabajo",
       "user_roles": "Roles de usuarios",
       "users": "Usuarios",
+      "vulnerability_notifications": "Correos de vulnerabilidades enviados",
       "working_day_profiles": "Calendarios laborales"
     },
     "title": "Registro de auditoría",

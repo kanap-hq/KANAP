@@ -108,6 +108,19 @@ export const en = {
       bodyHtml: 'The {{itemTypeLower}} <strong>{{itemName}}</strong> has a {{warningLabel}} coming up on <strong>{{expirationDate}}</strong> ({{daysRemaining}} days remaining).',
       text: '{{itemType}} "{{itemName}}" {{warningLabel}} on {{expirationDate}} ({{daysRemaining}} days).',
     },
+    vulnerabilities: {
+      subject: 'New vulnerabilities on your technologies ({{count}})',
+      heading: 'New vulnerabilities on your technologies',
+      intro: 'KANAP found critical or high vulnerabilities on technologies you own for IT ({{count}}). Review them and set their state.',
+      severities: {
+        critical: 'Critical',
+        high: 'High',
+      },
+      versions: 'Versions: {{versions}}',
+      unknownVersion: 'version not recorded (potentially concerned)',
+      view: 'Open vulnerabilities',
+      more: 'And {{count}} more: open the page to see them all.',
+    },
     weeklyReview: {
       subject: 'Your KANAP Weekly Review - Week of {{weekLabel}}',
       introHtml: `Hi {{userName}}, here's your summary for the week of <strong>{{weekLabel}}</strong>.`,

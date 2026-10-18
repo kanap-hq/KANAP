@@ -1,0 +1,74 @@
+import React from 'react';
+import { fireEvent, render, screen, within } from '@testing-library/react';
+import { ThemeProvider } from '@mui/material/styles';
+import { describe, expect, it, vi } from 'vitest';
+import { createAppTheme } from '../../../config/ThemeContext';
+import TechnologyComplianceTab from './TechnologyComplianceTab';
+import type { TechnologyDetail } from './TechnologyOverviewTab';
+
+const catalog = {
+  businessCriticalityLevels: [],
+  dataClasses: [],
+  cyberCriticalityLevels: [
+    { code: 'moderate', label: 'Moderate', description: 'Significant but contained harm', rank: 2 },
+    { code: 'critical', label: 'Critical', description: 'Catastrophic consequences', rank: 4 },
+  ],
+  recoveryWaves: [
+    { code: 'foundation', label: 'V0 — Foundation', description: 'Shared prerequisites', order: 0 },
+    { code: 'vital', label: 'V1 — Vital activities', description: 'Restore vital activities', order: 1 },
+  ],
+};
+vi.mock('../../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: catalog }) }));
+
+const TECHNOLOGY = {
+  id: 'tech-1', reference: 'TEC-1', name: 'Active Directory', editor: 'Microsoft', family: 'directory', mode: 'installed', lifecycle: 'active',
+  description: null, notes: null, cpe_products: [], replaced_by_id: null, replaced_by: null, versions: [], owners: [],
+  cyber_criticality: 'critical', recovery_wave: null, rto_minutes: null, rpo_minutes: 60,
+} as TechnologyDetail;
+
+function renderTab(canManage = true, technology: TechnologyDetail = TECHNOLOGY) {
+  const onPatch = vi.fn();
+  render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={onPatch} />
+    </ThemeProvider>,
+  );
+  return { onPatch };
+}
+
+describe('TechnologyComplianceTab', () => {
+  it('shows the continuity classification without the business, data and review parts of the application', () => {
+    renderTab();
+    expect(screen.getByText('Critical')).toBeInTheDocument();
+    expect(screen.getByText('Choose a recovery wave')).toBeInTheDocument();
+    expect(screen.getByRole('spinbutton', { name: 'Recovery point objective' })).toHaveValue(1);
+    expect(screen.queryByText('Business criticality')).not.toBeInTheDocument();
+    expect(screen.queryByText('Data confidentiality')).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Mark as reviewed' })).not.toBeInTheDocument();
+  });
+
+  it('saves the recovery wave and the cyber criticality as soon as they are chosen', () => {
+    const { onPatch } = renderTab();
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Recovery wave' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('V1 — Vital activities'));
+    expect(onPatch).toHaveBeenLastCalledWith({ recovery_wave: 'vital' });
+
+    fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Cyber criticality' }));
+    fireEvent.click(within(screen.getByRole('listbox')).getByText('Moderate'));
+    expect(onPatch).toHaveBeenLastCalledWith({ cyber_criticality: 'moderate' });
+  });
+
+  it('saves the RTO in minutes when the field loses focus', () => {
+    const { onPatch } = renderTab();
+    const rto = screen.getByRole('spinbutton', { name: 'Recovery time objective' });
+    fireEvent.change(rto, { target: { value: '4' } });
+    fireEvent.blur(rto);
+    expect(onPatch).toHaveBeenLastCalledWith({ rto_minutes: 240 });
+  });
+
+  it('is read-only without the right to manage the technology', () => {
+    renderTab(false);
+    expect(screen.getByRole('combobox', { name: 'Recovery wave' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('spinbutton', { name: 'Recovery time objective' })).toBeDisabled();
+  });
+});

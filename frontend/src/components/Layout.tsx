@@ -10,6 +10,7 @@ import WorkOutlineIcon from '@mui/icons-material/WorkOutline';
 import HubIcon from '@mui/icons-material/Hub';
 import DnsIcon from '@mui/icons-material/Dns';
 import LayersOutlinedIcon from '@mui/icons-material/LayersOutlined';
+import GppMaybeOutlinedIcon from '@mui/icons-material/GppMaybeOutlined';
 import EventBusyIcon from '@mui/icons-material/EventBusy';
 import BusinessIcon from '@mui/icons-material/Business';
 import AccountTreeIcon from '@mui/icons-material/AccountTree';
@@ -177,6 +178,7 @@ export default function Layout() {
     { to: '/it/technologies', label: t('nav:sidebar.it.technologies'), icon: <LayersOutlinedIcon />, resource: 'infrastructure' },
     { to: '/it/connections', label: t('nav:sidebar.it.connections'), icon: <LanIcon />, resource: 'infrastructure' },
     { to: '/it/connection-map', label: t('nav:sidebar.it.connectionMap'), icon: <LanIcon />, resource: 'infrastructure' },
+    { to: '/it/administration-view', label: t('nav:sidebar.it.administrationView'), icon: <AdminPanelSettingsIcon />, resource: 'infrastructure' },
     { to: '/it/netbox', label: t('nav:sidebar.it.netbox'), icon: <SyncIcon />, resource: 'infrastructure', level: 'admin' as const },
     { divider: t('nav:sidebar.it.sections.applications') },
     { to: '/it/applications', label: t('nav:sidebar.it.applications'), icon: <WorkOutlineIcon />, resource: 'applications' },
@@ -185,6 +187,9 @@ export default function Layout() {
     { divider: t('nav:sidebar.it.sections.operations') },
     { to: '/it/incidents', label: t('nav:sidebar.it.incidents'), icon: <ReportProblemOutlinedIcon />, resource: 'incidents' },
     { to: '/it/technologies/end-of-support', label: t('nav:sidebar.it.endOfSupport'), icon: <EventBusyIcon />, resource: 'infrastructure' },
+    ...(config.features.vulnerabilityFeed
+      ? [{ to: '/it/vulnerabilities', label: t('nav:sidebar.it.vulnerabilities'), icon: <GppMaybeOutlinedIcon />, resource: 'infrastructure' }]
+      : []),
     { divider: '' },
     { to: '/it/settings', label: t('nav:sidebar.it.settings'), icon: <SettingsIcon />, resource: 'settings' },
   ].filter((entry) => (

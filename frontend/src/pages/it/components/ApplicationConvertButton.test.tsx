@@ -15,7 +15,7 @@ const settings = { data: { technologyFamilies: [{ code: 'hypervisor', label: 'Hy
 vi.mock('../../../hooks/useLocalizedItOpsSettings', () => ({ useLocalizedItOpsSettings: () => settings }));
 
 const zeroLosses = {
-  instances: 2, disabled_instance_servers: 0, suites: 0, predecessor: 0, successors: 0, data_residency: 0, support_contacts: 0,
+  instances: 2, disabled_instance_servers: 0, suites: 0, predecessor: 0, successors: 0, data_residency: 0,
   audience: 1, links_without_url: 0, knowledge_links: 0, tasks: 0, requests: 0, business_processes: 0, technologies: 0,
 };
 
@@ -24,7 +24,7 @@ function preview(extra: Partial<ConversionPreview> = {}): ConversionPreview {
     application: { id: 'app-1', name: 'vSphere', reference: 'APP-7' },
     mode: 'installed',
     refusals: [],
-    moves: { owners: 2, contracts: 1, budget_lines: 2, projects: 0, links: 0, attachments: 1, incidents: 0, servers: 3 },
+    moves: { owners: 2, support_contacts: 2, contracts: 1, budget_lines: 2, projects: 0, links: 0, attachments: 1, incidents: 0, servers: 3 },
     unlinked: { managed_documents: 0 },
     losses: zeroLosses,
     ...extra,
@@ -65,6 +65,9 @@ describe('ApplicationConvertButton', () => {
     const ownersRow = within(dialog).getByText('Owners').parentElement!;
     expect(within(ownersRow).getByText('2')).toBeInTheDocument();
     expect(within(within(dialog).getByText('Servers').parentElement!).getByText('3')).toBeInTheDocument();
+    // The support contacts move with their first role; nothing about them is lost.
+    expect(within(within(dialog).getByText('Support contacts').parentElement!).getByText('2')).toBeInTheDocument();
+    expect(within(dialog).getAllByText('Support contacts')).toHaveLength(1);
     expect(within(dialog).queryByText('Projects')).not.toBeInTheDocument();
     expect(within(within(dialog).getByText('Deployments and environments').parentElement!).getByText('2')).toBeInTheDocument();
     expect(within(dialog).getByText(/the reference APP-7/)).toBeInTheDocument();

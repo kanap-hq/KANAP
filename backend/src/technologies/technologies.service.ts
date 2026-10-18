@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { addedCpeProducts, lockTechnologyMatching, TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -9,6 +10,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import {
@@ -40,8 +42,8 @@ const SORTS: Record<string, string> = {
 /** Fields a create or a PATCH may carry; anything else in the body is ignored. */
 type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; mode: unknown; lifecycle: unknown; description: unknown; notes: unknown;
-  cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
-  rto_minutes: unknown; rpo_minutes: unknown;
+  support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
+  rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
 }>;
 
 type VersionInput = Partial<{
@@ -51,13 +53,28 @@ type VersionInput = Partial<{
 
 const LINK_URL_MAX = 2000;
 
+/** A scheme before the address (`javascript:`, `ftp:`), not a port after a host (`intranet:8080`). */
+const URL_SCHEME_RE = /^([a-z][a-z0-9+.-]*):(?!\d)/i;
+
+/**
+ * The address of a web link: trimmed, required, and http or https when it names a scheme (400
+ * otherwise). An address without one (`www.vmware.com/support`) opens as https, as the screens do.
+ */
+export function webLinkUrl(value: unknown): string {
+  const url = optionalText(value, 'URL', LINK_URL_MAX);
+  if (!url) throw new BadRequestException('url is required');
+  const scheme = URL_SCHEME_RE.exec(url)?.[1]?.toLowerCase();
+  if (scheme && scheme !== 'http' && scheme !== 'https') throw new BadRequestException('A web link must be an http or https address.');
+  return url;
+}
+
 /** Columns the list grid filters with a set filter. */
 const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
 
 /** Columns the list grid filters with a text filter, and what they compare. */
 const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
 
-function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
+export function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
   try {
     const model = JSON.parse(raw)?.[column];
@@ -68,7 +85,7 @@ function gridTextModel(raw: unknown, column: string): { type?: string; filter?: 
 }
 
 /** A grid text filter (contains, equals, starts or ends with, blank) on `expr`, without case. */
-function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
+export function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
   if (!model) return null;
   const type = model.type || 'contains';
   if (type === 'blank') return `(${expr} IS NULL OR ${expr} = '')`;
@@ -121,6 +138,7 @@ export class TechnologiesService {
     private readonly itOps: ItOpsSettingsService,
     private readonly reach: TechnologyReachService,
     private readonly storage: StorageService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   // ==================== LIST AND RECORD ====================
@@ -173,8 +191,22 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null; it_owner_names: string[] | null }> = await mg.query(
-      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total,
+    // The CVE still to review of each technology, and those critical or high (lot T6b), while the
+    // vulnerability feed is on; null otherwise.
+    // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
+    // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
+    const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
+      ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
+            FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review') AS vulnerability_counts`
+      : 'NULL::int[] AS vulnerability_counts';
+    const rows: Array<TechnologyRow & {
+      total: string;
+      owner_names: string[] | null;
+      it_owner_names: string[] | null;
+      vulnerability_counts: number[] | null;
+    }> = await mg.query(
+      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total, ${vulnerabilityCounts},
               ARRAY(
                 SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
                   FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
@@ -195,8 +227,10 @@ export class TechnologiesService {
     );
     const counts = await this.reach.countsOfTechnologies(mg, tenantId, rows.map((row) => row.id));
     return {
-      items: rows.map(({ total: _total, owner_names, it_owner_names, ...row }) => ({
+      items: rows.map(({ total: _total, owner_names, it_owner_names, vulnerability_counts, ...row }) => ({
         ...this.present(row),
+        vulnerabilities_to_review: vulnerability_counts ? Number(vulnerability_counts[0]) : null,
+        vulnerabilities_severe: vulnerability_counts ? Number(vulnerability_counts[1]) : null,
         owner_names: (owner_names ?? []).filter(Boolean),
         it_owner_names: (it_owner_names ?? []).filter(Boolean),
         servers: counts.get(row.id)?.servers ?? 0,
@@ -249,6 +283,7 @@ export class TechnologiesService {
     );
     const row = await readTechnology(mg, tenantId, created.id);
     await this.audit.log({ table: 'technologies', recordId: row.id, action: 'create', before: null, after: row, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: row.id, products: addedCpeProducts([], row.cpe_products) });
     return this.get(row.id, opts);
   }
 
@@ -269,6 +304,7 @@ export class TechnologiesService {
       );
       const after = await readTechnology(mg, tenantId, before.id);
       await this.audit.log({ table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: before.id, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     }
     return this.get(before.id, opts);
   }
@@ -282,6 +318,7 @@ export class TechnologiesService {
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
+    if (has('support_notes')) out.support_notes = optionalText(body.support_notes, 'Support notes', 20000);
     // `catalog_key` is written by the adoption only: a typed technology cannot take a catalog entry's key.
     if (has('mode')) {
       const mode = String(body.mode ?? '').trim();
@@ -309,7 +346,7 @@ export class TechnologiesService {
         out.replaced_by_id = replacement.id;
       }
     }
-    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave');
+    const needsSettings = has('family') || has('lifecycle') || has('cyber_criticality') || has('recovery_wave') || has('admin_zone');
     if (needsSettings) {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       const codeIn = (list: Array<{ code: string }> | undefined, value: unknown, field: string, nullable: boolean) => {
@@ -322,6 +359,7 @@ export class TechnologiesService {
       if (has('lifecycle')) out.lifecycle = codeIn(settings.lifecycleStates, body.lifecycle, 'lifecycle', false);
       if (has('cyber_criticality')) out.cyber_criticality = codeIn((settings as any).cyberCriticalityLevels, body.cyber_criticality, 'cyber criticality', true);
       if (has('recovery_wave')) out.recovery_wave = codeIn((settings as any).recoveryWaves, body.recovery_wave, 'recovery wave', true);
+      if (has('admin_zone')) out.admin_zone = codeIn(settings.adminZones, body.admin_zone, 'administration zone', true);
     }
     return out;
   }
@@ -433,6 +471,7 @@ export class TechnologiesService {
     );
     const version = await this.readVersion(mg, tenantId, tech.id, created.id);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'create', before: null, after: version, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return version;
   }
 
@@ -458,6 +497,7 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
       return after;
     }
     return before;
@@ -472,6 +512,8 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const before = await this.readVersion(mg, tenantId, tech.id, versionId);
+    // Not while a matching writes rows that name this version (they would wait on each other).
+    await lockTechnologyMatching(mg, tenantId, tech.id);
     let merged = 0;
     for (const side of ['asset', 'application'] as const) {
       const [{ n }] = await mg.query(
@@ -489,6 +531,7 @@ export class TechnologiesService {
     }
     await mg.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return { ok: true, merged_links: merged };
   }
 
@@ -590,6 +633,76 @@ export class TechnologiesService {
     return this.listOwnersOf(mg, tenantId, tech.id);
   }
 
+  // ==================== SUPPORT CONTACTS ====================
+
+  async listSupportContacts(idOrRef: string, opts: Opts) {
+    const tech = await readTechnology(opts.manager, opts.tenantId, idOrRef);
+    return this.listSupportContactsOf(opts.manager, opts.tenantId, tech.id);
+  }
+
+  /** The support contacts in the order they were added, with what the Operations tab shows of the contact. */
+  private async listSupportContactsOf(mg: EntityManager, tenantId: string, technologyId: string) {
+    const rows: Array<{ id: string; contact_id: string; role: string | null; first_name: string | null; last_name: string | null; email: string | null; phone: string | null; mobile: string | null }> = await mg.query(
+      `SELECT sc.id, sc.contact_id, sc.role, c.first_name, c.last_name, c.email, c.phone, c.mobile
+         FROM technology_support_contacts sc
+         JOIN contacts c ON c.tenant_id = sc.tenant_id AND c.id = sc.contact_id
+        WHERE sc.tenant_id = $1 AND sc.technology_id = $2
+        ORDER BY sc.created_at ASC, sc.id ASC`,
+      [tenantId, technologyId],
+    );
+    return rows.map((r) => ({
+      id: r.id,
+      contact_id: r.contact_id,
+      role: r.role,
+      contact: { id: r.contact_id, first_name: r.first_name, last_name: r.last_name, email: r.email, phone: r.phone, mobile: r.mobile },
+    }));
+  }
+
+  /**
+   * Replace the support contacts (as the applications' `support-contacts/bulk-replace`): one row per
+   * contact (the first role given wins), every contact of the tenant (400 otherwise), the order of
+   * the list kept, one audit row when the set changes. The technology's row is locked first, so a
+   * concurrent replacement waits and the last one wins.
+   */
+  async bulkReplaceSupportContacts(idOrRef: string, contacts: Array<{ contact_id?: unknown; role?: unknown }>, opts: Opts) {
+    const { manager: mg, tenantId } = opts;
+    const tech = await readTechnology(mg, tenantId, idOrRef, true);
+    const wanted: Array<{ contact_id: string; role: string | null }> = [];
+    const seen = new Set<string>();
+    for (const item of Array.isArray(contacts) ? contacts : []) {
+      const contactId = String(item?.contact_id ?? '').trim().toLowerCase();
+      if (!contactId) continue;
+      if (!UUID_RE.test(contactId)) throw new BadRequestException('One or more contacts not found');
+      if (seen.has(contactId)) continue;
+      seen.add(contactId);
+      wanted.push({ contact_id: contactId, role: optionalText(item?.role, 'Role', 200) });
+    }
+    if (wanted.length) {
+      const found = await mg.query(`SELECT id FROM contacts WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, wanted.map((c) => c.contact_id)]);
+      if (found.length !== wanted.length) throw new BadRequestException('One or more contacts not found');
+    }
+    const existing: Array<{ contact_id: string; role: string | null }> = await mg.query(
+      `SELECT contact_id, role FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 ORDER BY created_at ASC, id ASC`,
+      [tenantId, tech.id],
+    );
+    const before = existing.map((c) => `${c.contact_id}:${c.role ?? ''}`);
+    const after = wanted.map((c) => `${c.contact_id}:${c.role ?? ''}`);
+    if (JSON.stringify(before) !== JSON.stringify(after)) {
+      await mg.query(`DELETE FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2`, [tenantId, tech.id]);
+      if (wanted.length) {
+        // created_at follows the list order, which is the display order.
+        await mg.query(
+          `INSERT INTO technology_support_contacts (tenant_id, technology_id, contact_id, role, created_at)
+           SELECT $1, $2, w.contact_id, w.role, now() + (w.ord * interval '1 microsecond')
+             FROM unnest($3::uuid[], $4::text[]) WITH ORDINALITY AS w(contact_id, role, ord)`,
+          [tenantId, tech.id, wanted.map((c) => c.contact_id), wanted.map((c) => c.role)],
+        );
+      }
+      await this.audit.log({ table: 'technology_support_contacts', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+    }
+    return this.listSupportContactsOf(mg, tenantId, tech.id);
+  }
+
   // ==================== WEB LINKS ====================
 
   async listLinks(idOrRef: string, opts: Opts) {
@@ -604,8 +717,7 @@ export class TechnologiesService {
   async createLink(idOrRef: string, body: { url?: unknown; description?: unknown }, opts: Opts) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
-    const url = optionalText(body?.url, 'URL', LINK_URL_MAX);
-    if (!url) throw new BadRequestException('url is required');
+    const url = webLinkUrl(body?.url);
     const [saved] = await mg.query(
       `INSERT INTO technology_links (tenant_id, technology_id, description, url) VALUES ($1, $2, $3, $4)
        RETURNING id, technology_id, description, url, created_at`,
@@ -619,12 +731,14 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef);
     const before = await this.readLink(mg, tenantId, tech.id, linkId);
-    const url = body?.url !== undefined ? optionalText(body.url, 'URL', LINK_URL_MAX) : before.url;
-    if (!url) throw new BadRequestException('url is required');
+    const url = body?.url !== undefined ? webLinkUrl(body.url) : before.url;
     const description = body?.description !== undefined ? optionalText(body.description, 'Description', 2000) : before.description;
+    // Through a CTE: an UPDATE through the query runner answers [rows, count], not the rows.
     const [saved] = await mg.query(
-      `UPDATE technology_links SET url = $4, description = $5 WHERE tenant_id = $1 AND technology_id = $2 AND id = $3
-       RETURNING id, technology_id, description, url, created_at`,
+      `WITH u AS (
+         UPDATE technology_links SET url = $4, description = $5 WHERE tenant_id = $1 AND technology_id = $2 AND id = $3
+         RETURNING id, technology_id, description, url, created_at)
+       SELECT * FROM u`,
       [tenantId, tech.id, before.id, url, description],
     );
     await this.audit.log({ table: 'technology_links', recordId: before.id, action: 'update', before, after: saved, userId: opts.userId ?? null }, { manager: mg });

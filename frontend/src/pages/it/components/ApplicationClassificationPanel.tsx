@@ -71,12 +71,12 @@ const rowSx = { display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)', co
 const valueSx = { maxWidth: 520 } as const;
 const sectionTitleSx = (theme: any) => ({ fontSize: 16, fontWeight: 500, color: theme.palette.kanap.text.primary, mb: 1.25 });
 
-function HelpLabel({ text, help }: { text: string; help: string }) {
+export function HelpLabel({ text, help }: { text: string; help: string }) {
   return <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>{classificationText(text)}<Tooltip title={classificationText(help)} enterTouchDelay={0}><IconButton size="small" aria-label={classificationText(text)} sx={{ p: 0.25 }}><HelpOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip></Box>;
 }
 
 /** Naked select over a tenant catalog: label at 13px, definition at 11px under each option. */
-function LevelSelect({ value, options, placeholder, ariaLabel, disabled, onChange }: { value: string | null; options: Option[]; placeholder: string; ariaLabel: string; disabled: boolean; onChange: (value: string | null) => void }) {
+export function LevelSelect({ value, options, placeholder, ariaLabel, disabled, onChange }: { value: string | null; options: Option[]; placeholder: string; ariaLabel: string; disabled: boolean; onChange: (value: string | null) => void }) {
   const visible = options.filter((item) => !item.deprecated || item.code === value);
   return <Select value={value || ''} renderValue={(selected) => options.find((item) => item.code === selected)?.label || selected || placeholder} onChange={(event) => onChange(event.target.value || null)} disabled={disabled} displayEmpty variant="standard" sx={drawerSelectSx} inputProps={{ 'aria-label': ariaLabel }}>
     <MenuItem value="" sx={drawerMenuItemSx}>{placeholder}</MenuItem>

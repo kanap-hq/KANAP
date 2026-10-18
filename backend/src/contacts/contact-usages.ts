@@ -11,8 +11,8 @@ const typedRoles = (alias: string) => `array_agg(DISTINCT ${alias}.role ORDER BY
 
 /**
  * The objects a contact is linked to (`GET /contacts/:id/usages`), one row per object with the
- * contact's roles on it: suppliers, budget lines of both natures, contracts, applications and
- * assets (support contacts), locations, projects and requests.
+ * contact's roles on it: suppliers, budget lines of both natures, contracts, applications, assets
+ * and technologies (support contacts), locations, projects and requests.
  */
 export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
   {
@@ -74,6 +74,19 @@ export const CONTACT_USAGE_QUERIES: readonly UsageQuery[] = [
            WHERE l.tenant_id = $1 AND l.contact_id = $2
            GROUP BY a.id
            ORDER BY lower(a.name), a.id
+           LIMIT $3`,
+  },
+  {
+    type: 'technologies',
+    resource: 'infrastructure',
+    // A retired technology is inactive: listed after the others, marked as such.
+    sql: `SELECT t.id, 'TEC-' || t.item_number::text AS reference, t.name, t.lifecycle AS status, t.lifecycle <> 'retired' AS active,
+                 ${textRoles('l')} AS roles, count(*) OVER () AS total
+            FROM technology_support_contacts l
+            JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
+           WHERE l.tenant_id = $1 AND l.contact_id = $2
+           GROUP BY t.id
+           ORDER BY active DESC, lower(t.name), t.id
            LIMIT $3`,
   },
   {

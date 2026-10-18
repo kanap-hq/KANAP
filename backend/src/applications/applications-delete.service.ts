@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { TechnologyCpeEvents } from '../technologies/technology-cpe-events';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Application } from './application.entity';
@@ -20,6 +21,7 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     audit: AuditService,
     storage: StorageService,
     private readonly integratedDocuments: IntegratedDocumentsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {
     super(repository, storage, audit, {
       entityName: 'Application',
@@ -95,6 +97,8 @@ export class ApplicationsDeleteService extends BaseDeleteService<Application> {
     const [counts] = await this.readCounts([applicationId], manager);
     const refusal = counts ? this.refusalOf(counts) : null;
     if (refusal) throw refusal;
+    // Its technology declarations go with it: those technologies are matched again after the commit.
+    if (this.cpeEvents) await this.cpeEvents.emitForSubjects(manager, (app as any).tenant_id, 'application', [applicationId]);
 
     // Attachment paths are read before the DB cascade removes their rows; the
     // files go only once the delete has gone through, so a failed delete keeps them.

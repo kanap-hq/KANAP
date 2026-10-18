@@ -20,11 +20,16 @@ import TechnologyOverviewTab, {
   type TechnologyDetail,
   type TechnologyPatch,
 } from './workspace/TechnologyOverviewTab';
+import TechnologyServersTab, { countServers, technologyServersKey, type TechnologyServerRow } from './workspace/TechnologyServersTab';
+import TechnologyApplicationsTab, { countApplications, technologyApplicationsKey, type TechnologyApplicationsData } from './workspace/TechnologyApplicationsTab';
+import TechnologyComplianceTab from './workspace/TechnologyComplianceTab';
+import TechnologyOperationsTab from './workspace/TechnologyOperationsTab';
+import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCount, technologyRelationsKey } from './workspace/TechnologyRelationsTab';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations'];
-// The tabs other than the Overview arrive with the next lots of the technology layer.
-const READY_TABS = new Set<TabKey>(['overview']);
+// The tabs not listed here arrive with the next lots of the technology layer.
+const READY_TABS = new Set<TabKey>(['overview', 'servers', 'applications', 'operations', 'compliance', 'relations']);
 
 function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   technology: TechnologyDetail;
@@ -102,6 +107,29 @@ export default function TechnologyWorkspacePage() {
     placeholderData: (previous) => previous,
   });
   const technology = technologyQuery.data || null;
+  // One read per tab: the badges and the tabs share these queries.
+  const technologyId = technology?.id ?? '';
+  const serversQuery = useQuery({
+    queryKey: technologyServersKey(technologyId),
+    queryFn: async () => (await api.get<{ items: TechnologyServerRow[] }>(`/technologies/${technologyId}/assets`)).data,
+    enabled: !!technologyId,
+  });
+  const applicationsQuery = useQuery({
+    queryKey: technologyApplicationsKey(technologyId),
+    queryFn: async () => (await api.get<TechnologyApplicationsData>(`/technologies/${technologyId}/applications`)).data,
+    enabled: !!technologyId,
+  });
+  // The Relations badge counts the rows of the sections the caller sees; the tab reads the same cache.
+  const relationsQuery = useQuery({
+    queryKey: technologyRelationsKey(technologyId),
+    queryFn: () => fetchTechnologyRelations(technologyId),
+    enabled: !!technologyId,
+  });
+  const badges: Partial<Record<TabKey, number>> = {
+    servers: serversQuery.data ? countServers(serversQuery.data.items) : undefined,
+    applications: applicationsQuery.data?.items ? countApplications(applicationsQuery.data.items) : undefined,
+    relations: technologyRelationsCount(relationsQuery.data),
+  };
 
   const listSearch = searchParams.toString();
   const closeWorkspace = React.useCallback(() => {
@@ -160,6 +188,7 @@ export default function TechnologyWorkspacePage() {
     key,
     label: t(`workspace.technology.tabs.${key}`),
     disabled: !READY_TABS.has(key),
+    badge: badges[key],
   }));
 
   return (
@@ -220,6 +249,24 @@ export default function TechnologyWorkspacePage() {
             onError={setError}
           />
         )}
+        {routeTab === 'servers' && (
+          <TechnologyServersTab technologyId={technology.id} versions={technology.versions} canManage={canManage} />
+        )}
+        {routeTab === 'applications' && (
+          <TechnologyApplicationsTab
+            technologyId={technology.id}
+            technologyReference={technology.reference}
+            versions={technology.versions}
+            canManage={canManage}
+          />
+        )}
+        {routeTab === 'operations' && (
+          <TechnologyOperationsTab technology={technology} canManage={canManage} onPatch={patchTechnology} onError={setError} />
+        )}
+        {routeTab === 'compliance' && (
+          <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={patchTechnology} />
+        )}
+        {routeTab === 'relations' && <TechnologyRelationsTab id={technology.id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

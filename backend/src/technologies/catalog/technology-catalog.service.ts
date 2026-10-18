@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { addedCpeProducts, TechnologyCpeEvents } from '../technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../../audit/audit.service';
 import { languageOf } from '../../common/csv-sheet/request-options';
@@ -53,6 +54,7 @@ export class TechnologyCatalogService {
   constructor(
     private readonly audit: AuditService,
     private readonly itOps: ItOpsSettingsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   /** Every product of the catalog. */
@@ -150,6 +152,7 @@ export class TechnologyCatalogService {
       );
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       const family = (settings.technologyFamilies ?? []).some((item) => item.code === product.family) ? product.family : 'other';
@@ -163,6 +166,7 @@ export class TechnologyCatalogService {
       created = true;
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'create', before: null, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts([], after.cpe_products) });
     }
 
     const versions = product.versions;

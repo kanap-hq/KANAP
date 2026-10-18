@@ -20,6 +20,11 @@ export interface WorkspaceSettings {
     status_changes: boolean;
     comments: boolean;
   };
+  /** Technologies (lot T6b): the critical or high vulnerabilities found on a technology the user owns for IT. */
+  technologies: {
+    enabled: boolean;
+    vulnerabilities: boolean;
+  };
 }
 
 export interface NotificationPreferencesData {
@@ -54,6 +59,12 @@ export const DEFAULT_NOTIFICATION_PREFERENCES: NotificationPreferencesData = {
       expiration_warnings: false,
       status_changes: false,
       comments: false,
+    },
+    // On by default: an owner who receives emails hears of a critical flaw on his technology, and
+    // can turn it off.
+    technologies: {
+      enabled: true,
+      vulnerabilities: true,
     },
   },
   weekly_review_enabled: false,

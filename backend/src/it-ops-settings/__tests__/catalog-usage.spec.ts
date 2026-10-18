@@ -23,6 +23,7 @@ assert.match(usageSql(CATALOG_USAGE.subnets[0]), /t\.location_id = \$3/);
 assert.match(usageSql(CATALOG_USAGE.connectionTypes[0]), /connection_protocols r WHERE r\.tenant_id = \$1 AND r\.connection_id = t\.id AND r\.connection_type_code = \$2/);
 assert.match(usageSql(CATALOG_USAGE.connectionTypes[0]), /\$2 = ANY\(r\.protocol_codes\)/);
 assert.equal(CATALOG_USAGE.interfaceProtocols.length, 0);
+assert.equal(usageSql(CATALOG_USAGE.adminZones[0]), 'SELECT COUNT(DISTINCT t.id)::int AS count FROM technologies t WHERE t.tenant_id = $1 AND ((t.admin_zone = $2))');
 
 // Deep links only where the list page filters from the URL, values are codes.
 assert.equal(usageListPath(CATALOG_USAGE.applicationCategories[0], 'lob'), '/it/applications?filters=%7B%22category%22%3A%7B%22filterType%22%3A%22set%22%2C%22values%22%3A%5B%22lob%22%5D%7D%7D&appScope=all');

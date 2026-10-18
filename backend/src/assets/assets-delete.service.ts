@@ -1,4 +1,5 @@
-import { Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { TechnologyCpeEvents } from '../technologies/technology-cpe-events';
+import { Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from './asset.entity';
@@ -15,6 +16,7 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
   constructor(
     @InjectRepository(Asset) repository: Repository<Asset>,
     audit: AuditService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {
     super(repository, null, audit, {
       entityName: 'Asset',
@@ -129,6 +131,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     const refusal = await this.refusalOf(asset, tenantId, manager);
     if (refusal) throw refusal;
 
+    // Its technology links go with it: those technologies are matched again after the commit.
+    await this.cpeEvents?.emitForSubjects(manager, tenantId, 'asset', [id]);
     await this.getRepo(manager).delete({ id } as any);
 
     await this.audit.log(

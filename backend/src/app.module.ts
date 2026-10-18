@@ -41,6 +41,7 @@ import { AppInstancesModule } from './app-instances/app-instances.module';
 import { AssetsModule } from './assets/assets.module';
 import { TechnologiesModule } from './technologies/technologies.module';
 import { VulnerabilitiesModule } from './vulnerabilities/vulnerabilities.module';
+import { AdministrationViewModule } from './technologies/reports/administration-view.module';
 import { IncidentsModule } from './incidents/incidents.module';
 import { AppAssetAssignmentsModule } from './app-asset-assignments/app-asset-assignments.module';
 import { InterfacesModule } from './interfaces/interfaces.module';
@@ -145,6 +146,7 @@ import { readPoolMax } from './common/db-pool-budget';
     AssetsModule,
     TechnologiesModule,
     VulnerabilitiesModule,
+    AdministrationViewModule,
     IncidentsModule,
     AppAssetAssignmentsModule,
     InterfacesModule,

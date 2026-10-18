@@ -35,6 +35,17 @@ vi.mock('../components/ServerDataGrid', async (importOriginal) => {
   };
 });
 vi.mock('../components/PageHeader', () => ({ default: () => null }));
+// The vulnerabilities list exists only while its feed is on (`features.vulnerabilityFeed`).
+vi.mock('../config/FeaturesContext', async (importOriginal) => {
+  const actual: any = await importOriginal();
+  return {
+    ...actual,
+    useFeatures: () => {
+      const value = actual.useFeatures();
+      return { ...value, config: { ...value.config, features: { ...value.config.features, vulnerabilityFeed: true } } };
+    },
+  };
+});
 vi.mock('../api', () => {
   // An empty answer for every request: an empty list that also reads as an empty page.
   const empty = () => ({ data: Object.assign([], { items: [], total: 0, rows: [] }) });
@@ -88,6 +99,7 @@ const PAGES: Page[] = [
   { name: 'DepartmentsPage', load: () => import('./DepartmentsPage') },
   { name: 'AssetsPage', load: () => import('./it/AssetsPage') },
   { name: 'TechnologiesPage', load: () => import('./it/TechnologiesPage') },
+  { name: 'VulnerabilitiesPage', load: () => import('./it/VulnerabilitiesPage') },
   { name: 'BudgetListPage', load: () => import('./budget/BudgetListPage') },
   { name: 'AuditLogsPage', load: () => import('./admin/AuditLogsPage') },
   { name: 'KnowledgePage', load: () => import('./knowledge/KnowledgePage') },

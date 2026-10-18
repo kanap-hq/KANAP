@@ -23,13 +23,15 @@ import {
   EmailContent,
   buildSsoUserProvisionedEmail,
   buildWorkspaceResetEmail,
+  buildVulnerabilityDigestEmail,
+  type VulnerabilityDigestItem,
 } from './notification-templates';
 import { renderCommentEmail } from '../common/markdown-worker';
 import { EmailBranding, resolveEmailBranding } from '../email/email-branding';
 import { getEmailStrings, resolveEmailLocale } from '../i18n/email-i18n';
 
 type ItemType = 'request' | 'project' | 'task' | 'contract' | 'opex' | 'capex' | 'asset' | 'application' | 'location' | 'connection' | 'interface' | 'document';
-type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'comment' | 'assignment' | 'expiration_warning';
+type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'comment' | 'assignment' | 'expiration_warning' | 'vulnerability';
 
 /**
  * First key of the expiry claim's two-key advisory lock (the second is the
@@ -39,6 +41,24 @@ type TriggerType = 'status_change' | 'team_added' | 'team_change_as_lead' | 'com
  * value ('EXPR' in ASCII).
  */
 const EXPIRY_REMINDER_LOCK_NAMESPACE = 0x45585052;
+
+/** First key of the vulnerability notification claim's two-key advisory lock ('VULN' in ASCII). */
+const VULNERABILITY_NOTIFICATION_LOCK_NAMESPACE = 0x56554c4e;
+
+/** A critical or high CVE newly found on a technology, for one of its IT owners (lot T6b). */
+export type VulnerabilityCandidate = {
+  userId: string;
+  email: string;
+  locale: string | null;
+  technologyId: string;
+  item: VulnerabilityDigestItem;
+};
+
+/** What one recipient is told at the end of a run of the feed. */
+export type VulnerabilityDigest = {
+  recipient: { userId: string; email: string; locale: string | null };
+  items: VulnerabilityDigestItem[];
+};
 
 interface NotificationRecipient {
   userId: string;
@@ -262,11 +282,16 @@ export class NotificationsService {
    */
   private checkPreferences(
     prefs: NotificationPreferencesData,
-    workspace: 'portfolio' | 'tasks' | 'budget',
+    workspace: 'portfolio' | 'tasks' | 'budget' | 'technologies',
     trigger: TriggerType,
     role?: 'assignee' | 'requestor' | 'viewer' | 'owner',
   ): boolean {
     if (!prefs.emails_enabled) return false;
+
+    if (workspace === 'technologies') {
+      const technologies = prefs.workspace_settings.technologies;
+      return Boolean(technologies?.enabled && trigger === 'vulnerability' && technologies.vulnerabilities);
+    }
 
     const ws = prefs.workspace_settings[workspace];
     if (!ws.enabled) return false;
@@ -1350,6 +1375,88 @@ export class NotificationsService {
       }
       return fresh;
     });
+  }
+
+  /**
+   * The vulnerability notifications of one run of the feed for one tenant (lot T6b), claimed in the
+   * caller's transaction (the run's matching), before any email goes out:
+   * - only the recipients whose preferences let them through (emails on, Technologies ›
+   *   vulnerabilities on) are kept and recorded;
+   * - each recipient hears of a CVE on a technology once: the claim is a system row of the
+   *   tenant's audit log (`vulnerability_notifications`, key user:technology:CVE), so a row deleted
+   *   and found again later, or a second run, sends nothing twice; the advisory lock serialises
+   *   two claims of the tenant;
+   * - one digest per recipient, every CVE of a technology listed once with its versions.
+   */
+  async claimVulnerabilityDigests(
+    manager: EntityManager,
+    tenantId: string,
+    candidates: VulnerabilityCandidate[],
+  ): Promise<VulnerabilityDigest[]> {
+    if (candidates.length === 0) return [];
+    const allowed = new Map<string, boolean>();
+    for (const userId of new Set(candidates.map((c) => c.userId))) {
+      const prefs = await this.preferencesService.getForUser(userId, tenantId, { manager });
+      allowed.set(userId, this.checkPreferences(prefs, 'technologies', 'vulnerability'));
+    }
+    const keyOf = (c: VulnerabilityCandidate) => `${c.userId}:${c.technologyId}:${c.item.cveId}`;
+    const optedIn = candidates.filter((c) => allowed.get(c.userId));
+    if (optedIn.length === 0) return [];
+
+    await manager.query(
+      `SELECT pg_advisory_xact_lock($1::int, hashtext($2))`,
+      [VULNERABILITY_NOTIFICATION_LOCK_NAMESPACE, tenantId],
+    );
+    const keys = optedIn.map(keyOf);
+    const sent: Array<{ key: string }> = await manager.query(
+      `SELECT after_json->>'key' AS key FROM audit_log
+        WHERE tenant_id = $1 AND table_name = 'vulnerability_notifications'
+          AND record_id = ANY($2::uuid[]) AND after_json->>'key' = ANY($3::text[])`,
+      [tenantId, Array.from(new Set(optedIn.map((c) => c.technologyId))), keys],
+    );
+    // Already sent, or twice in this run: kept once (a Set, linear in the number of candidates).
+    const seen = new Set(sent.map((row) => row.key));
+    const fresh = optedIn.filter((_c, index) => {
+      if (seen.has(keys[index])) return false;
+      seen.add(keys[index]);
+      return true;
+    });
+    if (fresh.length === 0) return [];
+    await manager.query(
+      `INSERT INTO audit_log (tenant_id, table_name, record_id, action, after_json, source, source_ref)
+       SELECT $1::uuid, 'vulnerability_notifications', r.technology_id, 'create',
+              jsonb_build_object('key', r.key, 'recipient_user_id', r.user_id, 'cve_id', r.cve_id),
+              'system', 'vulnerability-feed'
+         FROM unnest($2::text[], $3::uuid[], $4::uuid[], $5::text[]) AS r(key, user_id, technology_id, cve_id)`,
+      [tenantId, fresh.map(keyOf), fresh.map((c) => c.userId), fresh.map((c) => c.technologyId), fresh.map((c) => c.item.cveId)],
+    );
+
+    const digests = new Map<string, VulnerabilityDigest>();
+    for (const c of fresh) {
+      const digest = digests.get(c.userId);
+      if (digest) digest.items.push(c.item);
+      else digests.set(c.userId, { recipient: { userId: c.userId, email: c.email, locale: c.locale }, items: [c.item] });
+    }
+    return Array.from(digests.values());
+  }
+
+  /** Sends the claimed digests (fire-and-forget after the run's commit): one email per recipient. */
+  @NeverRejects()
+  async sendVulnerabilityDigests(tenantId: string, digests: VulnerabilityDigest[]): Promise<void> {
+    if (digests.length === 0) return;
+    const slug = await this.getTenantSlug(tenantId);
+    // The page on what such an email announces: to review (its default), published within 30 days.
+    const pageUrl = `${resolveNotificationBaseUrl(slug)}/it/vulnerabilities?period=30`;
+    const branding = await this.resolveBranding(tenantId);
+    for (const digest of digests) {
+      const content = buildVulnerabilityDigestEmail({
+        items: digest.items,
+        pageUrl,
+        branding,
+        locale: resolveEmailLocale(digest.recipient.locale),
+      });
+      await this.sendNotification(digest.recipient.email, content);
+    }
   }
 
   /**

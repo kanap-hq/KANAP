@@ -178,6 +178,10 @@ export class NotificationPreferencesService {
         ...defaults.budget,
         ...(userSettings?.budget ?? {}),
       },
+      technologies: {
+        ...defaults.technologies,
+        ...(userSettings?.technologies ?? {}),
+      },
     };
   }
 
@@ -200,6 +204,11 @@ export class NotificationPreferencesService {
       budget: {
         ...existing.budget,
         ...(updates.budget ?? {}),
+      },
+      technologies: {
+        ...DEFAULT_NOTIFICATION_PREFERENCES.workspace_settings.technologies,
+        ...(existing.technologies ?? {}),
+        ...(updates.technologies ?? {}),
       },
     };
   }
