@@ -10,10 +10,11 @@ import { TechnologyReachService } from '../technology-reach.service';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { application, asset, contains, installed, one, technology } from './technologies.fixtures';
 
-// The administration view (lot A1a), against a real database in transactions rolled back at the end:
+// The administration view (lot A1a, A1b), against a real database in transactions rolled back at the end:
 // - a zone lists its attributes, its technologies with the servers that carry them (direct and
-//   through the graph), and its directory services; a retired technology and a retired server are
-//   left out; a retired zone without technologies is hidden;
+//   through the graph), the assets attached to the zone themselves, and its directory services; a
+//   retired technology and a retired server are left out; a retired zone without technologies or
+//   assets is hidden;
 // - the technologies without a zone form the last group (`code: null`), counted as data to complete;
 // - the domains carry forest, trusts (with the trusted domain's name), typed counts, and the domain
 //   controllers deduced from the server role `domain-controller` on an instance in service, or
@@ -85,6 +86,10 @@ async function seed(runner: QueryRunner) {
   await installed(runner, a, dcRetired, ad);
   await installed(runner, a, app1, sql);
   await installed(runner, a, host, vsphere);
+  const fw1 = await asset(runner, a, 'fw1');
+  await runner.query(`UPDATE assets SET admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, fw1]);
+  const fwRetired = await asset(runner, a, 'fw-old');
+  await runner.query(`UPDATE assets SET admin_zone = 'tier_0', status = 'retired' WHERE tenant_id = $1 AND id = $2`, [a, fwRetired]);
 
   // Another tenant: same zone and domain codes, its own technology and controller.
   const b = await seedTenant(runner, 'adm-b');
@@ -117,12 +122,15 @@ async function testView() {
       ['TEC-2', 'SQL Server', ['app1', 'dc-disabled']],
     ], 'retired technology and retired server left out');
     assert.deepEqual(tier0.directory_services.map((t) => t.name), ['Active Directory']);
-    assert.equal(tier0.server_count, 4);
+    assert.deepEqual(tier0.assets.map((item) => [item.name, item.kind]), [['fw1', 'vm']], 'direct assets of the zone, retired left out');
+    assert.equal(tier0.server_count, 5, 'union of technology servers and direct assets');
     assert.deepEqual(tier1.technologies, []);
+    assert.deepEqual(tier1.assets, []);
     assert.equal(tier1.secrets_location, null);
 
     assert.equal(none.label, null);
     assert.deepEqual(none.technologies.map((t) => t.name), ['vSphere']);
+    assert.deepEqual(none.assets, [], 'assets without a zone stay off the no-zone group');
     assert.deepEqual(none.technologies[0].servers.map((server) => [server.name, server.via_name]), [['host1', null], ['vm1', 'host1']], 'carried servers keep the carrier');
     assert.equal(view.unplaced_count, 1);
 
@@ -157,8 +165,12 @@ async function testUnknownZoneAndEmptyCatalog() {
     const a = await seedTenant(runner, 'adm-c');
     const tech = await technology(runner, a, 1, 'Stray', 'other');
     await runner.query(`UPDATE technologies SET admin_zone = 'gone' WHERE tenant_id = $1 AND id = $2`, [a, tech]);
+    const ghost = await asset(runner, a, 'ghost-srv');
+    await runner.query(`UPDATE assets SET admin_zone = 'ghost' WHERE tenant_id = $1 AND id = $2`, [a, ghost]);
     const view = await service(new Map()).view({ manager: runner.manager, tenantId: a });
-    assert.deepEqual(view.zones.map((zone) => [zone.code, zone.label, zone.unknown]), [['gone', 'gone', true]]);
+    assert.deepEqual(view.zones.map((zone) => [zone.code, zone.label, zone.unknown]), [['ghost', 'ghost', true], ['gone', 'gone', true]]);
+    assert.deepEqual(view.zones[0].assets.map((item) => item.name), ['ghost-srv']);
+    assert.deepEqual(view.zones[1].technologies.map((item) => item.name), ['Stray']);
     assert.deepEqual(view.domains, []);
   });
 }
@@ -171,10 +183,10 @@ async function testCsv() {
     const zones = await svc.csv({ list: 'zones', language: 'en' }, opts);
     assert.equal(zones.filename, 'administration_view_zones.csv');
     const zoneLines = zones.content.replace(/^﻿/, '').trim().split(/\r?\n/);
-    assert.equal(zoneLines[0], 'Zone,Administrator group,Privilege level,Secrets location,Technology reference,Technology,Family,Directory service,Servers');
-    assert.ok(zoneLines.includes('Tier 0,Domain admins,Tier 0,Vault A,TEC-1,Active Directory,Directory and identity,Yes,"dc1, dc2"'), zones.content);
-    assert.ok(zoneLines.includes('Tier 1,Server admins,Tier 1,,,,,,'), 'a zone without technologies has its own row');
-    assert.ok(zoneLines.includes('No zone (to complete),,,,TEC-3,vSphere,Hypervisor,No,"host1, vm1"'), zones.content);
+    assert.equal(zoneLines[0], 'Zone,Administrator group,Privilege level,Secrets location,Technology reference,Technology,Family,Directory service,Servers,Servers in this zone');
+    assert.ok(zoneLines.includes('Tier 0,Domain admins,Tier 0,Vault A,TEC-1,Active Directory,Directory and identity,Yes,"dc1, dc2",fw1'), zones.content);
+    assert.ok(zoneLines.includes('Tier 1,Server admins,Tier 1,,,,,,,'), 'a zone without technologies has its own row');
+    assert.ok(zoneLines.includes('No zone (to complete),,,,TEC-3,vSphere,Hypervisor,No,"host1, vm1",'), zones.content);
     const domains = await svc.csv({ list: 'domains', language: 'en' }, opts);
     const domainLines = domains.content.replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');

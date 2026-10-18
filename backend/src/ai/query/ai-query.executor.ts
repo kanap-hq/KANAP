@@ -965,6 +965,7 @@ export class AiQueryExecutor {
         os: scalar(row.operating_system),
         hostname: scalar(row.hostname),
         domain: scalar(row.domain),
+        admin_zone: scalar(row.admin_zone),
         fqdn: scalar(row.fqdn),
         aliases: scalar(Array.isArray(row.aliases) ? row.aliases.join(', ') : null),
         network_segment: scalar(row.network_segment),

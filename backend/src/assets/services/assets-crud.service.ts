@@ -202,6 +202,7 @@ export class AssetsCrudService extends AssetsBaseService {
 
     // Handle domain, hostname, and FQDN
     const domain = await this.validation.resolveDomain((body as any).domain, tenant, opts?.manager);
+    const admin_zone = await this.validation.resolveAdminZone((body as any).admin_zone, tenant, opts?.manager);
     const hostname = this.normalizeNullable(body.hostname);
 
     // Validate hostname if domain requires it
@@ -229,6 +230,7 @@ export class AssetsCrudService extends AssetsBaseService {
       zone: this.normalizeNullable(body.zone),
       hostname,
       domain,
+      admin_zone,
       fqdn,
       aliases,
       ip_addresses,
@@ -297,6 +299,9 @@ export class AssetsCrudService extends AssetsBaseService {
     // Handle domain, hostname, aliases, and FQDN together
     if (has('domain')) {
       existing.domain = await this.validation.resolveDomain((body as any).domain, tenant, opts?.manager);
+    }
+    if (has('admin_zone')) {
+      existing.admin_zone = await this.validation.resolveAdminZone((body as any).admin_zone, tenant, opts?.manager);
     }
     if (has('hostname')) {
       existing.hostname = this.normalizeNullable((body as any).hostname);

@@ -6,12 +6,13 @@ import { technologyReference } from '../technology-rows';
 import { TechnologyReachService, inServiceSql } from '../technology-reach.service';
 
 /**
- * The administration view (lot A1a): the view 4 of the ANSSI mapping guide ("vue de
+ * The administration view (lot A1a, A1b): the view 4 of the ANSSI mapping guide ("vue de
  * l'administration") at its minimal grain. Per administration zone of the tenant's catalog: its
  * attributes, the technologies placed in it with the servers that carry them (the deduction of
- * `TechnologyReachService`), and its directory services (technologies of the `directory` family).
- * The technologies without a zone form a last group, `code: null`, flagged as data to complete.
- * Then the domains of the catalog with their forest, trusts, typed counts and domain controllers.
+ * `TechnologyReachService`), the assets attached to the zone themselves, and its directory
+ * services (technologies of the `directory` family). The technologies without a zone form a last
+ * group, `code: null`, flagged as data to complete. Then the domains of the catalog with their
+ * forest, trusts, typed counts and domain controllers.
  *
  * A domain controller is an asset of the domain (`assets.domain`), not retired, that is assigned with
  * the server role `domain-controller` (`app_asset_assignments.role`, the shipped code of that role)
@@ -27,6 +28,8 @@ export const DOMAIN_CONTROLLER_ROLE = 'domain-controller';
 export type AdministrationOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
 export type AdministrationServer = { id: string; name: string; reference: string | null; via_name: string | null };
+
+export type AdministrationAsset = { id: string; name: string; reference: string | null; kind: string };
 
 export type AdministrationTechnology = {
   id: string;
@@ -46,9 +49,11 @@ export type AdministrationZone = {
   secrets_location: string | null;
   description: string | null;
   deprecated: boolean;
-  /** A zone code a technology carries that the catalog no longer has. */
+  /** A zone code a technology or an asset carries that the catalog no longer has. */
   unknown: boolean;
   technologies: AdministrationTechnology[];
+  /** Assets attached to the zone themselves (not retired), besides the servers of its technologies. */
+  assets: AdministrationAsset[];
   directory_services: Array<{ id: string; reference: string | null; name: string }>;
   server_count: number;
 };
@@ -134,8 +139,23 @@ export class AdministrationViewService {
       technologiesByZone.set(row.admin_zone, list);
     }
 
+    const assetRows: Array<{ id: string; name: string; kind: string; asset_reference: string | null; admin_zone: string }> = await mg.query(
+      `SELECT a.id, a.name, a.kind, a.asset_reference, NULLIF(btrim(a.admin_zone), '') AS admin_zone
+         FROM assets a
+        WHERE a.tenant_id = $1 AND a.status <> 'retired' AND NULLIF(btrim(a.admin_zone), '') IS NOT NULL
+        ORDER BY lower(a.name), a.id`,
+      [tenantId],
+    );
+    const assetsByZone = new Map<string, AdministrationAsset[]>();
+    for (const row of assetRows) {
+      const list = assetsByZone.get(row.admin_zone) ?? [];
+      list.push({ id: row.id, name: row.name, reference: row.asset_reference, kind: row.kind });
+      assetsByZone.set(row.admin_zone, list);
+    }
+
     const zone = (option: AdminZoneOption | null, code: string | null, unknown = false): AdministrationZone => {
       const technologies = technologiesByZone.get(code) ?? [];
+      const assets = code === null ? [] : (assetsByZone.get(code) ?? []);
       return {
         code,
         label: option?.label ?? code,
@@ -146,16 +166,24 @@ export class AdministrationViewService {
         deprecated: !!option?.deprecated,
         unknown,
         technologies,
+        assets,
         directory_services: technologies.filter((item) => item.directory).map(({ id, reference, name }) => ({ id, reference, name })),
-        server_count: new Set(technologies.flatMap((item) => item.servers.map((server) => server.id))).size,
+        server_count: new Set([
+          ...technologies.flatMap((item) => item.servers.map((server) => server.id)),
+          ...assets.map((asset) => asset.id),
+        ]).size,
       };
     };
     const catalog = settings.adminZones ?? [];
     const known = new Set(catalog.map((option) => option.code));
     const zones: AdministrationZone[] = catalog
-      .filter((option) => !option.deprecated || technologiesByZone.has(option.code))
+      .filter((option) => !option.deprecated || technologiesByZone.has(option.code) || assetsByZone.has(option.code))
       .map((option) => zone(option, option.code));
-    const strays = [...technologiesByZone.keys()].filter((code): code is string => code !== null && !known.has(code)).sort();
+    const strayCodes = new Set<string>([
+      ...[...technologiesByZone.keys()].filter((code): code is string => code !== null && !known.has(code)),
+      ...[...assetsByZone.keys()].filter((code) => !known.has(code)),
+    ]);
+    const strays = [...strayCodes].sort();
     for (const code of strays) zones.push(zone(null, code, true));
     zones.sort((a, b) => String(a.label).localeCompare(String(b.label), undefined, { sensitivity: 'base' }));
     const unplaced = technologiesByZone.get(null) ?? [];
@@ -236,11 +264,12 @@ export class AdministrationViewService {
     }
     const settings = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const familyLabel = new Map((settings.technologyFamilies ?? []).map((option) => [option.code, option.label]));
-    const headers = ['Zone', 'Administrator group', 'Privilege level', 'Secrets location', 'Technology reference', 'Technology', 'Family', 'Directory service', 'Servers'];
+    const headers = ['Zone', 'Administrator group', 'Privilege level', 'Secrets location', 'Technology reference', 'Technology', 'Family', 'Directory service', 'Servers', 'Servers in this zone'];
     const rows: string[][] = [];
     for (const zone of view.zones) {
       const head = [zone.code === null ? 'No zone (to complete)' : zone.label ?? '', zone.admin_group ?? '', zone.privilege_level ?? '', zone.secrets_location ?? ''];
-      if (!zone.technologies.length) rows.push([...head, '', '', '', '', '']);
+      const zoneServers = zone.assets.map((asset) => asset.name).join(', ');
+      if (!zone.technologies.length) rows.push([...head, '', '', '', '', '', zoneServers]);
       for (const technology of zone.technologies) {
         rows.push([
           ...head,
@@ -249,6 +278,7 @@ export class AdministrationViewService {
           familyLabel.get(technology.family) ?? technology.family,
           technology.directory ? 'Yes' : 'No',
           technology.servers.map((server) => server.name).join(', '),
+          zoneServers,
         ]);
       }
     }
