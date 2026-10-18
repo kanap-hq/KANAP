@@ -692,11 +692,6 @@
           "description": "Categorías utilizadas para clasificar las entradas del registro de incidentes.",
           "usage": "Incidentes / Selector de categoría"
         },
-        "operatingSystems": {
-          "title": "Sistemas operativos",
-          "description": "Catálogo de sistemas operativos disponibles para los servidores, con las fechas de fin del soporte estándar y extendido.",
-          "usage": "Servidores / Pestaña técnica"
-        },
         "connectionTypes": {
           "title": "Tipos de conexión",
           "description": "Catálogo de dos niveles (categoría y entrada) con los puertos típicos.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Soporte estándar",
-        "extendedSupport": "Soporte extendido",
         "typicalPorts": "Puertos típicos",
         "location": "Ubicación",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Ubicación de los secretos"
       },
       "placeholders": {
-        "osName": "p. ej., Windows Server 2025",
         "connectionName": "p. ej., HTTPS",
         "typicalPorts": "p. ej., 80, 443",
         "cidr": "p. ej., 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "No hay zonas de administración definidas.",
-        "operatingSystems": "Aún no hay sistemas operativos configurados.",
         "connectionTypes": "No hay tipos de conexión definidos.",
         "subnets": "No hay subredes definidas.",
         "domains": "No hay dominios definidos."
@@ -1617,8 +1608,6 @@
         "operatingSystem": "Sistema operativo",
         "osClusterHint": "El sistema operativo está definido por los activos miembros del clúster.",
         "osChooseHint": "Elija de la lista de sistemas operativos en Configuración.",
-        "standardSupportEnds": "El soporte estándar finaliza el {{date}}",
-        "extendedSupportEnds": "El soporte extendido finaliza el {{date}}",
         "ipAddresses": "Direcciones IP",
         "addIpAddress": "Agregar dirección IP",
         "noIpAddresses": "No hay direcciones IP configuradas.",

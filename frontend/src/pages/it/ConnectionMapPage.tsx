@@ -1212,9 +1212,7 @@ export default function ConnectionMapPage() {
                         </Typography>
                         <Typography variant="body2">
                           <strong>{t('pages.connectionMap.operatingSystem')}</strong>{' '}
-                          {summary?.data?.operating_system
-                            ? labelFor('operatingSystem', summary.data.operating_system) || summary.data.operating_system
-                            : '—'}
+                          {summary?.data?.operating_system || '—'}
                         </Typography>
                         <Typography variant="body2">
                           <strong>{t('pages.connectionMap.networkSegment')}</strong>{' '}

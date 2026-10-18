@@ -1201,6 +1201,9 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
                         sx={pageSelectSx}
                       >
                         <MenuItem value="" sx={drawerMenuItemSx}>{t('pages.netbox.mappings.noOperatingSystem')}</MenuItem>
+                        {(osMap[platform.slug] && !(data.operating_systems ?? []).some((option) => option.code === osMap[platform.slug])) ? (
+                          <MenuItem value={osMap[platform.slug]} sx={drawerMenuItemSx}>{osMap[platform.slug]}</MenuItem>
+                        ) : null}
                         {(data.operating_systems ?? []).map((option) => (
                           <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
                         ))}

@@ -692,11 +692,6 @@
           "description": "Catégories utilisées pour classer les entrées du registre des incidents.",
           "usage": "Incidents / Choix de la catégorie"
         },
-        "operatingSystems": {
-          "title": "Systèmes d'exploitation",
-          "description": "Catalogue des systèmes d'exploitation proposés pour les serveurs, avec les dates de fin de support standard et étendu.",
-          "usage": "Serveurs / Onglet technique"
-        },
         "connectionTypes": {
           "title": "Types de connexion",
           "description": "Catalogue à deux niveaux (catégorie et entrée) avec les ports courants.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Support standard",
-        "extendedSupport": "Support étendu",
         "typicalPorts": "Ports courants",
         "location": "Site",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Emplacement des secrets"
       },
       "placeholders": {
-        "osName": "ex. : Windows Server 2025",
         "connectionName": "ex. : HTTPS",
         "typicalPorts": "ex. : 80, 443",
         "cidr": "ex. : 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "Aucune zone d'administration définie.",
-        "operatingSystems": "Aucun système d'exploitation configuré pour le moment.",
         "connectionTypes": "Aucun type de connexion défini.",
         "subnets": "Aucun sous-réseau défini.",
         "domains": "Aucun domaine défini."
@@ -1617,8 +1608,6 @@
         "operatingSystem": "Système d'exploitation",
         "osClusterHint": "Le système d'exploitation est défini par les actifs membres du cluster.",
         "osChooseHint": "Choisissez dans la liste des systèmes d'exploitation dans les paramètres.",
-        "standardSupportEnds": "Fin du support standard le {{date}}",
-        "extendedSupportEnds": "Fin du support étendu le {{date}}",
         "ipAddresses": "Adresses IP",
         "addIpAddress": "Ajouter une adresse IP",
         "noIpAddresses": "Aucune adresse IP configurée.",

@@ -692,11 +692,6 @@
           "description": "Kategorien zur Einordnung der Einträge im Vorfallsregister.",
           "usage": "Vorfälle / Kategorieauswahl"
         },
-        "operatingSystems": {
-          "title": "Betriebssysteme",
-          "description": "Katalog der für Server verfügbaren Betriebssysteme mit Enddaten für Standard- und erweiterten Support.",
-          "usage": "Server / Registerkarte Technik"
-        },
         "connectionTypes": {
           "title": "Verbindungstypen",
           "description": "Zweistufiger Katalog (Kategorie und Eintrag) mit typischen Ports.",
@@ -719,8 +714,6 @@
         }
       },
       "columns": {
-        "standardSupport": "Standard-Support",
-        "extendedSupport": "Erweiterter Support",
         "typicalPorts": "Typische Ports",
         "location": "Standort",
         "cidr": "CIDR",
@@ -737,7 +730,6 @@
         "secretsLocation": "Ablageort der Geheimnisse"
       },
       "placeholders": {
-        "osName": "z. B. Windows Server 2025",
         "connectionName": "z. B. HTTPS",
         "typicalPorts": "z. B. 80, 443",
         "cidr": "z. B. 192.168.1.0/24",
@@ -755,7 +747,6 @@
       },
       "empty": {
         "adminZones": "Keine Administrationszonen definiert.",
-        "operatingSystems": "Noch keine Betriebssysteme konfiguriert.",
         "connectionTypes": "Keine Verbindungstypen definiert.",
         "subnets": "Keine Subnetze definiert.",
         "domains": "Keine Domänen definiert."
@@ -1617,8 +1608,6 @@
         "operatingSystem": "Betriebssystem",
         "osClusterHint": "Das Betriebssystem wird von den Mitglieds-Assets des Clusters definiert.",
         "osChooseHint": "Wählen Sie aus der Betriebssystemliste in den Einstellungen.",
-        "standardSupportEnds": "Standard-Support endet am {{date}}",
-        "extendedSupportEnds": "Erweiterter Support endet am {{date}}",
         "ipAddresses": "IP-Adressen",
         "addIpAddress": "IP-Adresse hinzufügen",
         "noIpAddresses": "Keine IP-Adressen konfiguriert.",

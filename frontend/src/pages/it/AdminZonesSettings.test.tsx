@@ -28,7 +28,7 @@ function wrap(children: React.ReactNode) {
 
 const settings = {
   adminZones: [{ code: 'tier_0', label: 'Tier 0', deprecated: false, admin_group: 'Domain admins', privilege_level: 'Tier 0' }],
-  operatingSystems: [], connectionTypes: [], subnets: [], domains: [], lockedCodes: {}, protectedCodes: {},
+  connectionTypes: [], subnets: [], domains: [], lockedCodes: {}, protectedCodes: {},
 } as unknown as ItOpsSettings;
 
 describe('Administration zones settings', () => {

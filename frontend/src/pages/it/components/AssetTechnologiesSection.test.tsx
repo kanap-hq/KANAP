@@ -28,6 +28,7 @@ const ROWS: AssetTechnologyRow[] = [
   {
     kind: 'installed', removable: true, link_id: 'l-1', technology_id: 'sql', technology_name: 'SQL Server', technology_reference: 'TEC-3',
     family: 'database', technology_version_id: 'v19', version_label: '2019', via_asset_id: null, via_asset_name: null,
+    is_operating_system: true,
   },
   {
     kind: 'carried', removable: false, link_id: null, technology_id: 'vsphere', technology_name: 'vSphere', technology_reference: 'TEC-1',
@@ -76,6 +77,8 @@ describe('AssetTechnologiesSection', () => {
     const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
     expect(rows.map((tr) => tr.querySelector('td')?.textContent)).toEqual(['TEC-3', 'TEC-1']);
     expect(within(rows[0]).getByText('Database')).toBeTruthy();
+    expect(within(rows[0]).getByText(`${K}.operatingSystem`)).toBeTruthy();
+    expect(within(rows[1]).queryByText(`${K}.operatingSystem`)).toBeNull();
     expect(within(rows[0]).getByText('2019')).toBeTruthy();
     expect(within(rows[1]).getByText('virtualization')).toBeTruthy();
     expect(within(rows[1]).getByTitle('workspace.technology.versionPicker.unknown').textContent).toBe('—');

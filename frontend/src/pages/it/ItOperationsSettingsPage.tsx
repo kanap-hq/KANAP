@@ -19,7 +19,6 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
-import DateEUField from '../../components/fields/DateEUField';
 import { SettingsSection, SettingsControls, SettingsGroup } from '../../components/settings';
 import { EnumEditor, HostingTypeEditor, AssetKindEditor, ServerRoleEditor, EntityEditor } from '../../components/settings';
 import type {
@@ -45,7 +44,6 @@ import {
   DomainOption,
   ItOpsEnumOption,
   ItOpsSettings,
-  OperatingSystemOption,
   SubnetOption,
   updateItOpsSettings,
 } from '../../services/itOpsSettings';
@@ -71,9 +69,6 @@ const stripLocalIds = <T extends { localId?: string }>(list: T[]): Omit<T, 'loca
   list.map(({ localId, ...rest }) => rest as Omit<T, 'localId'>);
 
 const sortEnum = (list: ItOpsEnumOption[]) =>
-  [...list].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { sensitivity: 'base' }));
-
-const sortOperatingSystems = (list: OperatingSystemOption[]) =>
   [...list].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { sensitivity: 'base' }));
 
 const sortConnectionTypes = (list: ConnectionTypeOption[]) =>
@@ -118,21 +113,6 @@ const listsEqual = (a: ItOpsEnumOption[], b: ItOpsEnumOption[]): boolean => {
   return true;
 };
 
-const osListsEqual = (a: OperatingSystemOption[], b: OperatingSystemOption[]): boolean => {
-  if (a.length !== b.length) return false;
-  for (let i = 0; i < a.length; i += 1) {
-    const left = a[i];
-    const right = b[i];
-    if (!left || !right) return false;
-    if (left.code !== right.code || left.label !== right.label) return false;
-    if (!!left.deprecated !== !!right.deprecated) return false;
-    if ((left.standardSupportEnd || '') !== (right.standardSupportEnd || '')) return false;
-    if ((left.extendedSupportEnd || '') !== (right.extendedSupportEnd || '')) return false;
-    if (JSON.stringify((left as any).translations ?? null) !== JSON.stringify((right as any).translations ?? null)) return false;
-  }
-  return true;
-};
-
 // ============================================================================
 // Type Definitions
 // ============================================================================
@@ -159,7 +139,7 @@ type EnumListId =
   | 'incidentCategories'
   | 'technologyFamilies';
 
-type ListId = EnumListId | 'operatingSystems' | 'connectionTypes' | 'subnets' | 'domains';
+type ListId = EnumListId | 'connectionTypes' | 'subnets' | 'domains';
 type GroupId = 'locations' | 'serversConnections' | 'appsInterfaces' | 'incidents';
 
 // ============================================================================
@@ -209,12 +189,6 @@ const enumSections: EnumSectionConfig[] = [
 // Specialized Editors
 // ============================================================================
 
-interface OperatingSystemsEditorProps {
-  items: OperatingSystemOption[];
-  onChange: (items: OperatingSystemOption[]) => void;
-  hideAddButton?: boolean;
-}
-
 const listTitleKey = (id: ListId) => `pages.settings.lists.${id}.title`;
 const listDescriptionKey = (id: ListId) => `pages.settings.lists.${id}.description`;
 const listUsageKey = (id: ListId) => `pages.settings.lists.${id}.usage`;
@@ -228,117 +202,6 @@ function IssueText({ issue }: { issue?: string }) {
   const { t } = useTranslation('common');
   return issue ? <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issue}`)}</Typography> : null;
 }
-
-const OperatingSystemsEditor = React.memo(function OperatingSystemsEditor({
-  items,
-  onChange,
-  hideAddButton,
-}: OperatingSystemsEditorProps) {
-  const itemsWithIds = React.useMemo(() => withLocalIds(items, 'os'), [items]);
-  const [localItems, setLocalItems] = React.useState(itemsWithIds);
-  const pendingCommitRef = React.useRef(false);
-  const { containerRef, onScroll, useVirtual, visibleItems, paddingTop, paddingBottom, maxHeight } =
-    useVirtualRows({ items: localItems, rowHeight: 64 });
-
-  // Sync down from parent - skip if we just committed to avoid loops
-  React.useEffect(() => {
-    if (pendingCommitRef.current) {
-      pendingCommitRef.current = false;
-      return;
-    }
-    setLocalItems(itemsWithIds);
-  }, [itemsWithIds]);
-
-  const commitToParent = React.useCallback(
-    (next: OperatingSystemOption[]) => {
-      pendingCommitRef.current = true;
-      React.startTransition(() => onChange(next));
-    },
-    [onChange]
-  );
-
-  const handleUpdate = (localId: string, patch: Partial<OperatingSystemOption>) => {
-    setLocalItems((prev) => {
-      const next = prev.map((item) => ((item as any).localId === localId ? { ...item, ...patch } : item));
-      commitToParent(next);
-      return next;
-    });
-  };
-
-  const handleRemove = (localId: string) => {
-    setLocalItems((prev) => {
-      const next = prev.filter((row) => (row as any).localId !== localId);
-      commitToParent(next);
-      return next;
-    });
-  };
-  const { t } = useTranslation(['it', 'common']);
-  const removal = useCatalogRemoval('operatingSystems');
-  const translations = useCatalogTranslations();
-  const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
-
-  return (
-    <Paper variant="outlined" sx={{ p: 2 }}>
-      <Stack spacing={0.5} sx={{ mb: 1 }}>
-        <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('operatingSystems'))}</Typography>
-        <Typography variant="body2" color="text.secondary">
-          {t(listDescriptionKey('operatingSystems'))}
-        </Typography>
-      </Stack>
-      <TableContainer ref={containerRef as any} onScroll={onScroll} sx={{ maxHeight }}>
-        <Table size="small" stickyHeader={useVirtual}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: '30%' }}>{t('common:enumEditor.name')}</TableCell>
-              <TableCell sx={{ width: '20%' }}>{t('pages.settings.columns.standardSupport')}</TableCell>
-              <TableCell sx={{ width: '20%' }}>{t('pages.settings.columns.extendedSupport')}</TableCell>
-              <TableCell sx={{ width: '15%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '15%' }}>{t('common:labels.actions')}</TableCell>
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {useVirtual && paddingTop > 0 && (
-              <TableRow><TableCell colSpan={6} sx={{ p: 0, height: paddingTop, border: 0 }} /></TableRow>
-            )}
-            {localItems.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={6}>
-                  <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.operatingSystems')}</Typography>
-                </TableCell>
-              </TableRow>
-            )}
-            {visibleItems.map((item: any) => (
-              <TableRow key={item.localId}>
-                <TableCell sx={{ verticalAlign: 'top' }}>
-                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.osName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} />
-                  <IssueText issue={issues.get(localItems.indexOf(item))} />
-                </TableCell>
-                <TableCell>
-                  <DateEUField label={t('pages.settings.columns.standardSupport')} valueYmd={item.standardSupportEnd || ''} onChangeYmd={(next) => handleUpdate(item.localId, { standardSupportEnd: next })} />
-                </TableCell>
-                <TableCell>
-                  <DateEUField label={t('pages.settings.columns.extendedSupport')} valueYmd={item.extendedSupportEnd || ''} onChangeYmd={(next) => handleUpdate(item.localId, { extendedSupportEnd: next })} />
-                </TableCell>
-                <TableCell>
-                  <Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} />
-                </TableCell>
-                <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
-                  {item.code && <TranslateButton label={item.label} onClick={() => translations.openTranslations({ item, onSave: (next) => handleUpdate(item.localId, { translations: next } as any) })} />}
-                  <Button size="small" color="error" onClick={() => void removal.requestRemoval({ name: item.label || item.code, key: item.code ? { code: item.code } : null, onRemove: () => handleRemove(item.localId), onRetire: () => handleUpdate(item.localId, { deprecated: true }) })}>{t('common:enumEditor.remove')}</Button>
-                </TableCell>
-              </TableRow>
-            ))}
-            {useVirtual && paddingBottom > 0 && (
-              <TableRow><TableCell colSpan={6} sx={{ p: 0, height: paddingBottom, border: 0 }} /></TableRow>
-            )}
-          </TableBody>
-        </Table>
-      </TableContainer>
-      {removal.dialog}
-      {translations.dialog}
-    </Paper>
-  );
-});
 
 interface ConnectionTypesEditorProps {
   items: ConnectionTypeOption[];
@@ -837,7 +700,6 @@ const emptyEnums = enumListIds.reduce((acc, id) => ({ ...acc, [id]: [] }), {} as
 
 type SettingsState = {
   enums: Record<EnumListId, ItOpsEnumOption[]>;
-  operatingSystems: OperatingSystemOption[];
   connectionTypes: ConnectionTypeOption[];
   subnets: SubnetOption[];
   domains: DomainOption[];
@@ -852,7 +714,6 @@ type SettingsState = {
 
 export const initialState: SettingsState = {
   enums: emptyEnums,
-  operatingSystems: [],
   connectionTypes: [],
   subnets: [],
   domains: [],
@@ -867,12 +728,10 @@ export const initialState: SettingsState = {
 type Action =
   | { type: 'hydrate'; payload: ItOpsSettings }
   | { type: 'setEnum'; id: EnumListId; items: ItOpsEnumOption[] }
-  | { type: 'setOperatingSystems'; items: OperatingSystemOption[] }
   | { type: 'setConnectionTypes'; items: ConnectionTypeOption[] }
   | { type: 'setSubnets'; items: SubnetOption[] }
   | { type: 'setDomains'; items: DomainOption[] }
   | { type: 'resetEnum'; id: EnumListId }
-  | { type: 'resetOperatingSystems' }
   | { type: 'resetConnectionTypes' }
   | { type: 'resetSubnets' }
   | { type: 'resetDomains' }
@@ -890,7 +749,6 @@ function hydrateFromSettings(settings: ItOpsSettings) {
   });
   return {
     enums,
-    operatingSystems: withLocalIds(sortOperatingSystems(settings.operatingSystems || []), 'os'),
     connectionTypes: withLocalIds(sortConnectionTypes(settings.connectionTypes || []), 'ct'),
     subnets: withLocalIds(sortSubnets(settings.subnets || []), 'subnet'),
     domains: withLocalIds(sortDomains(settings.domains || []), 'domain'),
@@ -909,11 +767,6 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
       const baselineList = state.baseline ? (state.baseline as any)[action.id] || [] : [];
       const dirtyFlag = !listsEqual(stripLocalIds(action.items), baselineList);
       return { ...state, enums, dirty: { ...state.dirty, [action.id]: dirtyFlag } };
-    }
-    case 'setOperatingSystems': {
-      const baselineList = state.baseline?.operatingSystems || [];
-      const dirtyFlag = !osListsEqual(stripLocalIds(action.items), baselineList);
-      return { ...state, operatingSystems: action.items, dirty: { ...state.dirty, operatingSystems: dirtyFlag } };
     }
     case 'setConnectionTypes': {
       const baselineList = state.baseline?.connectionTypes || [];
@@ -935,11 +788,6 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
       const baselineList = withLocalIds(sortEnum((state.baseline as any)[action.id] || []), action.id);
       return { ...state, enums: { ...state.enums, [action.id]: baselineList }, dirty: { ...state.dirty, [action.id]: false } };
     }
-    case 'resetOperatingSystems': {
-      if (!state.baseline) return state;
-      const os = withLocalIds(sortOperatingSystems(state.baseline.operatingSystems || []), 'os');
-      return { ...state, operatingSystems: os, dirty: { ...state.dirty, operatingSystems: false } };
-    }
     case 'resetConnectionTypes': {
       if (!state.baseline) return state;
       const conn = withLocalIds(sortConnectionTypes(state.baseline.connectionTypes || []), 'ct');
@@ -960,13 +808,13 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
       // the server). A draft edited since the send keeps its edits and stays dirty; it just learns its generated codes.
       const savedList: any[] = ((action.saved as any)[action.id] as any[]) || [];
       const baseline = { ...(state.baseline || action.saved), [action.id]: savedList, lockedCodes: action.saved.lockedCodes, protectedCodes: action.saved.protectedCodes } as ItOpsSettings;
-      const currentList: any[] = action.id === 'operatingSystems' ? state.operatingSystems : action.id === 'connectionTypes' ? state.connectionTypes : action.id === 'subnets' ? state.subnets : action.id === 'domains' ? state.domains : state.enums[action.id as EnumListId] || [];
+      const currentList: any[] = action.id === 'connectionTypes' ? state.connectionTypes : action.id === 'subnets' ? state.subnets : action.id === 'domains' ? state.domains : state.enums[action.id as EnumListId] || [];
       const untouched = JSON.stringify(stripLocalIds(currentList)) === JSON.stringify(action.sent);
       const matchSaved = (row: any, index: number) => (row.code ? savedList.find((candidate) => candidate.code === row.code) : undefined) ?? savedList[index];
       const nextList = untouched
         ? currentList.map((row: any, index: number) => ({ ...(matchSaved(row, index) ?? row), localId: row.localId }))
         : currentList.map((row: any, index: number) => (!row.code && action.sent[index] && !action.sent[index].code && savedList[index]?.code ? { ...row, code: savedList[index].code } : row));
-      const listState = action.id === 'operatingSystems' ? { operatingSystems: nextList } : action.id === 'connectionTypes' ? { connectionTypes: nextList } : action.id === 'subnets' ? { subnets: nextList } : action.id === 'domains' ? { domains: nextList } : { enums: { ...state.enums, [action.id]: nextList } };
+      const listState = action.id === 'connectionTypes' ? { connectionTypes: nextList } : action.id === 'subnets' ? { subnets: nextList } : action.id === 'domains' ? { domains: nextList } : { enums: { ...state.enums, [action.id]: nextList } };
       const { [action.id]: _accepted, ...rejected } = state.rejected;
       return { ...state, ...listState, baseline, rejected, dirty: { ...state.dirty, [action.id]: !untouched }, pending: null, errorMessage: null };
     }
@@ -984,7 +832,6 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
 }
 
 function listRows(state: SettingsState, id: ListId): any[] {
-  if (id === 'operatingSystems') return state.operatingSystems;
   if (id === 'connectionTypes') return state.connectionTypes;
   if (id === 'subnets') return state.subnets;
   if (id === 'domains') return state.domains;
@@ -1043,13 +890,6 @@ export default function ItOperationsSettingsPage() {
     mutation.mutate({ id, rows: stripLocalIds(sorted) });
   };
 
-  const handleSaveOperatingSystems = () => {
-    const sorted = withLocalIds(sortOperatingSystems(state.operatingSystems), 'os');
-    dispatch({ type: 'setOperatingSystems', items: sorted });
-    dispatch({ type: 'setPending', id: 'operatingSystems' });
-    mutation.mutate({ id: 'operatingSystems', rows: stripLocalIds(sorted) });
-  };
-
   const handleSaveConnections = () => {
     const sorted = withLocalIds(sortConnectionTypes(state.connectionTypes), 'ct');
     dispatch({ type: 'setConnectionTypes', items: sorted });
@@ -1077,7 +917,7 @@ export default function ItOperationsSettingsPage() {
   // (unique, not another row's code, no comma where the CSV serializes the list with commas).
   const listReadyToSave = (id: ListId): boolean => {
     if (id === 'subnets') return state.subnets.every((row) => String(row.cidr || '').trim() !== '');
-    const rows: any[] = id === 'operatingSystems' ? state.operatingSystems : id === 'connectionTypes' ? state.connectionTypes : id === 'domains' ? state.domains : state.enums[id as EnumListId] || [];
+    const rows: any[] = id === 'connectionTypes' ? state.connectionTypes : id === 'domains' ? state.domains : state.enums[id as EnumListId] || [];
     const skipCodes = new Set((state.baseline?.lockedCodes?.[id] || []).map((code) => code.toLowerCase()));
     return catalogListIssues(rows, { forbidComma: id === 'accessMethods', skipCodes }).size === 0;
   };
@@ -1090,8 +930,7 @@ export default function ItOperationsSettingsPage() {
     if (dirtyIds.length === 0) return undefined;
     const timer = setTimeout(() => {
       dirtyIds.forEach((id) => {
-        if (id === 'operatingSystems') handleSaveOperatingSystems();
-        else if (id === 'connectionTypes') handleSaveConnections();
+        if (id === 'connectionTypes') handleSaveConnections();
         else if (id === 'subnets') handleSaveSubnets();
         else if (id === 'domains') handleSaveDomains();
         else handleSaveEnum(id);
@@ -1131,7 +970,7 @@ export default function ItOperationsSettingsPage() {
         {listGroupIds.map((groupId, groupIndex) => {
           const groupEnumSections = enumSections.filter((section) => section.group === groupId);
           const extraSections = groupId === 'serversConnections'
-            ? [{ id: 'connectionTypes' as const }, { id: 'domains' as const }, { id: 'operatingSystems' as const }, { id: 'subnets' as const }]
+            ? [{ id: 'connectionTypes' as const }, { id: 'domains' as const }, { id: 'subnets' as const }]
             : [];
 
           const groupSections = [...groupEnumSections, ...extraSections]
@@ -1141,18 +980,6 @@ export default function ItOperationsSettingsPage() {
           return (
             <SettingsGroup key={groupId} title={t(`pages.settings.groups.${groupId}.title`)} subtitle={t(`pages.settings.groups.${groupId}.subtitle`)} showDivider={groupIndex > 0}>
               {groupSections.map((section) => {
-                if (section.id === 'operatingSystems') {
-                  return (
-                    <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('operatingSystems'))}>
-                      <SettingsControls
-                        onAdd={() => dispatch({ type: 'setOperatingSystems', items: [{ code: '', label: '', standardSupportEnd: '', extendedSupportEnd: '', deprecated: false, localId: makeLocalId('os') }, ...state.operatingSystems] })}
-                        saving={state.pending === 'operatingSystems' && submitting}
-                        dirty={!!state.dirty.operatingSystems}
-                      />
-                      <OperatingSystemsEditor items={state.operatingSystems} onChange={(next) => dispatch({ type: 'setOperatingSystems', items: withLocalIds(next, 'os') })} hideAddButton />
-                    </SettingsSection>
-                  );
-                }
                 if (section.id === 'connectionTypes') {
                   return (
                     <SettingsSection key={section.id} title={section.title} description={t(listUsageKey('connectionTypes'))}>

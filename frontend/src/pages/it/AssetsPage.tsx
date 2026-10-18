@@ -359,10 +359,10 @@ export default function AssetsPage() {
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: {
-        getValues: getAssetFilterValues('operating_system', { labelFn: (v) => labelFor('operatingSystem', v) }),
-        searchable: false,
+        getValues: getAssetFilterValues('operating_system'),
+        searchable: true,
       },
-      valueFormatter: (p) => labelFor('operatingSystem', p.value) || p.value,
+      valueFormatter: (p) => p.value || '',
       cellRenderer: ClickToWorkspace,
     },
     {

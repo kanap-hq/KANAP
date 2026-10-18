@@ -59,12 +59,13 @@ const ENDPOINT = '/technologies/reports/end-of-support';
 
 const RECORD_PATHS: Record<string, string> = {
   technology: '/it/technologies',
+  operating_system: '/it/technologies',
   application: '/it/applications',
   asset: '/it/assets',
   hardware: '/it/assets',
 };
 
-/** The page of a record of the report, or null (an operating system has none yet). */
+/** The page of a record of the report. An operating system is a technology. */
 function recordPath(type: string, id: string | null): string | null {
   const base = RECORD_PATHS[type];
   return base && id ? `${base}/${id}` : null;

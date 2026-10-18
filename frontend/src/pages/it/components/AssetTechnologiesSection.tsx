@@ -23,6 +23,8 @@ export type AssetTechnologyRow = {
   version_label: string | null;
   via_asset_id: string | null;
   via_asset_name: string | null;
+  /** The server's operating system. The list already puts that link first. */
+  is_operating_system?: boolean;
 };
 
 export const assetTechnologiesKey = (assetId: string) => ['asset-technologies', assetId] as const;
@@ -103,7 +105,16 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
   const dash = '—';
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
-    { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span> },
+    { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => (
+      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+        <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span>
+        {row.is_operating_system && (
+          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, flex: 'none' }}>
+            {t('workspace.asset.technologies.operatingSystem')}
+          </Box>
+        )}
+      </Box>
+    ) },
     { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180,
       render: (row) => {
         const family = row.family ? labelFor('technologyFamily', row.family) || row.family : dash;
