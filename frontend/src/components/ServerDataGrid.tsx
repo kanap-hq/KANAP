@@ -580,6 +580,8 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   // Set once the first page of the current query came back empty: 'filtered' when a search, a filter
   // or a Show scope other than the default narrows it. Never while loading or after an error.
   const [emptyResult, setEmptyResult] = useState<null | 'empty' | 'filtered'>(null);
+  // The last loaded list had a search, a column filter or a Show scope other than the default.
+  const [narrowed, setNarrowed] = useState(false);
 
   const gridApiRef = useRef<any>(null);
   const columnApiRef = useRef<any>(null); // deprecated in AG Grid v32+, keep for backward compat (unused)
@@ -1025,8 +1027,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           setRowCountAnswer(answer);
         }
         if (startRow === 0) {
-          const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
-          setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
+          const narrowedList = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
+          setNarrowed(narrowedList);
+          setEmptyResult(total === 0 ? (narrowedList ? 'filtered' : 'empty') : null);
         }
         onTotalChangeRef.current?.(total);
         if (startRow === 0 && onListRequestChangeRef.current) {
@@ -1227,7 +1230,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [abortOtherQueries, adoptStatusFilter, defaultSort, enablePagination, onQueryStateChange, syncFiltersInUrl]);
 
 
-  // The empty list's one-click way out: no search, no column filter, the default Show scope.
+  // One click back to the whole list (toolbar and empty list): no search, no column filter, the default Show scope.
   const clearSearchAndFilters = useCallback(() => {
     setSearch('');
     searchRef.current = '';
@@ -1518,7 +1521,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           </Alert>
         )}
         {!!loadError && <Alert severity="error">{getApiErrorMessage(loadError, t, t('common:messages.loadFailed'))}</Alert>}
-        {(enableColumnChooser || showResultCount) && (
+        {(enableColumnChooser || showResultCount || narrowed) && (
           <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap" alignItems="center">
             {enableColumnChooser && (
               <>
@@ -1529,6 +1532,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
                   {t('common:buttons.resetColumns')}
                 </Button>
               </>
+            )}
+            {narrowed && (
+              <Button size="small" onClick={clearSearchAndFilters}>
+                {t('common:buttons.resetFilters')}
+              </Button>
             )}
             {showResultCount && (
               <Typography sx={{ ml: 'auto', fontSize: 12, color: 'kanap.text.tertiary', fontVariantNumeric: 'tabular-nums' }}>

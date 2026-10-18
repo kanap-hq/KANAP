@@ -122,6 +122,28 @@ describe('ServerDataGrid', () => {
     }, 20_000);
   });
 
+  describe('reset filters', () => {
+    it('offers to reset the filters only while one narrows the list, and brings every row back', async () => {
+      get.mockImplementation(async (_url: string, config: Config) => (config.params.filters ? page(['Alpha']) : page(['Alpha', 'Beta'])));
+      let gridApi: any = null;
+      const view = render(<Grid withScope onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByText('common:filters.resultCount:2')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'common:buttons.resetColumns' })).toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument();
+
+      await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'al' } }); });
+      expect(await screen.findByText('common:filters.resultCount:1')).toBeInTheDocument();
+      fireEvent.click(screen.getByRole('radio', { name: 'common:labels.all' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
+
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument());
+      expect(await screen.findByText('common:filters.resultCount:2')).toBeInTheDocument();
+      expect(gridApi.getFilterModel()).toEqual({});
+      expect(screen.getByRole('radio', { name: 'common:labels.enabled' })).toBeChecked();
+      view.unmount();
+    }, 20_000);
+  });
+
   describe('status column and Show scope', () => {
     it('keeps the status column filter and the Show scope in step, both ways', async () => {
       get.mockImplementation(async () => page(['Alpha']));
