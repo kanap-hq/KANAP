@@ -77,6 +77,11 @@ import contactFr from './contact/fr';
 import contactDe from './contact/de';
 import contactEs from './contact/es';
 
+import aboutEn from './about/en';
+import aboutFr from './about/fr';
+import aboutDe from './about/de';
+import aboutEs from './about/es';
+
 import legalEn from './legal/en';
 import legalFr from './legal/fr';
 
@@ -90,6 +95,7 @@ import type { SecurityContent } from './security/types';
 import type { ChangelogContent } from './changelog/types';
 import type { ContactContent } from './contact/types';
 import type { LegalContent } from './legal/types';
+import type { AboutContent } from './about/types';
 
 const HOME: Record<Locale, HomeContent> = {
   en: homeEn,
@@ -219,4 +225,10 @@ export function getContactContent(locale: Locale): ContactContent {
 const LEGAL: Partial<Record<Locale, LegalContent>> = { en: legalEn, fr: legalFr };
 export function getLegalContent(locale: Locale): LegalContent {
   return LEGAL[locale] ?? LEGAL[DEFAULT_LOCALE]!;
+}
+
+const ABOUT: Record<Locale, AboutContent> = { en: aboutEn, fr: aboutFr, de: aboutDe, es: aboutEs };
+
+export function getAboutContent(locale: Locale): AboutContent {
+  return ABOUT[locale] ?? ABOUT[DEFAULT_LOCALE];
 }

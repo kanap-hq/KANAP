@@ -1,0 +1,125 @@
+---
+import BaseLayout from '../layouts/BaseLayout.astro';
+import { Section, PageHeader, CTABand } from './sections';
+import { getLocaleFromUrl, localePath } from '../i18n/ui';
+import { getAboutContent } from '../content/resolve';
+import { personLd } from '../lib/jsonld';
+
+const locale = getLocaleFromUrl(Astro.url);
+const c = getAboutContent(locale);
+const site = Astro.site?.href ?? 'https://kanap.net/';
+
+const LINKEDIN = 'https://www.linkedin.com/in/friedrich-eva/';
+const PHOTO = '/about/friedrich-eva-2026-10.webp';
+---
+
+<BaseLayout title={c.meta.title} description={c.meta.description}>
+  <Fragment slot="head">
+    <script type="application/ld+json" set:html={JSON.stringify(personLd(site, {
+      name: c.founder.name,
+      jobTitle: c.founder.jobTitle,
+      image: PHOTO,
+      sameAs: [LINKEDIN],
+    }))} />
+  </Fragment>
+
+  <PageHeader eyebrow={c.header.eyebrow} title={c.header.title} lead={c.header.lead} />
+
+  <Section tone="default">
+    <div class="mk-about__founder">
+      <img
+        class="mk-about__photo"
+        src={PHOTO}
+        alt={c.founder.photoAlt}
+        width="128"
+        height="128"
+        loading="eager"
+      />
+      <div class="mk-about__text">
+        <h2>{c.founder.name}, {c.founder.role}</h2>
+        {c.founder.paragraphs.map((p) => <p>{p}</p>)}
+        <p>
+          <a href={LINKEDIN} rel="noopener" target="_blank">{c.founder.linkedinLabel}</a>
+        </p>
+      </div>
+    </div>
+  </Section>
+
+  {c.sections.map((s, i) => (
+    <Section tone={i % 2 === 0 ? 'sunken' : 'default'}>
+      <div class="mk-about__text">
+        <h2>{s.title}</h2>
+        {s.paragraphs.map((p) => <p set:html={p} />)}
+      </div>
+    </Section>
+  ))}
+
+  <Section tone="default" compact>
+    <CTABand
+      title={c.cta.title}
+      body={c.cta.body}
+      primaryHref={localePath(locale, '/trial/start')}
+      primaryLabel={c.cta.primary}
+      secondaryHref={localePath(locale, '/contact')}
+      secondaryLabel={c.cta.secondary}
+    />
+  </Section>
+</BaseLayout>
+
+<style>
+  /* Same column as the page header (an 820px container, gutters included). */
+  .mk-about__founder,
+  .mk-about__text {
+    max-width: calc(820px - 2 * var(--mk-gutter));
+    margin-inline: auto;
+  }
+
+  .mk-about__founder {
+    display: flex;
+    gap: 32px;
+    align-items: flex-start;
+  }
+
+  .mk-about__photo {
+    flex: none;
+    width: 128px;
+    height: 128px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--kanap-border-default);
+  }
+
+  .mk-about__text {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+
+  .mk-about__text h2 {
+    margin: 0;
+    font-size: clamp(24px, 2.6vw, 30px);
+    line-height: 1.2;
+  }
+
+  .mk-about__founder .mk-about__text {
+    margin-inline: 0;
+  }
+
+  .mk-about__text p {
+    margin: 0;
+    font-size: 16px;
+    line-height: 1.7;
+  }
+
+  @media (max-width: 640px) {
+    .mk-about__founder {
+      flex-direction: column;
+      gap: 24px;
+    }
+
+    .mk-about__photo {
+      width: 120px;
+      height: 120px;
+    }
+  }
+</style>

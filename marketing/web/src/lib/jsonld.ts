@@ -48,3 +48,19 @@ export function breadcrumbLd(
     })),
   };
 }
+
+export function personLd(
+  site: string,
+  person: { name: string; jobTitle: string; image: string; sameAs: string[] },
+) {
+  return {
+    '@context': 'https://schema.org',
+    '@type': 'Person',
+    name: person.name,
+    jobTitle: person.jobTitle,
+    image: new URL(person.image, site).href,
+    url: new URL('/about', site).href,
+    sameAs: person.sameAs,
+    worksFor: { '@type': 'Organization', name: 'KANAP', url: site },
+  };
+}
