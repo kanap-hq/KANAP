@@ -43,7 +43,9 @@ function renderField(props: Partial<React.ComponentProps<typeof OperatingSystemF
       ] } } as never;
     }
     if (url === '/technologies/catalog') return { data: { items: [{ key: 'debian', name: 'Debian', editor: 'Debian' }] } } as never;
-    if (url === '/technologies/ubuntu/versions') return { data: { items: [{ id: 'v22', label: '22.04 LTS' }] } } as never;
+    if (url === '/technologies/ubuntu/versions') {
+      return { data: { items: [{ id: 'v22', label: '22.04 LTS', standard_support_end: '2027-06-01', extended_support_end: '2032-04-21' }] } } as never;
+    }
     if (url === '/technologies/deb-id/versions') return { data: { items: [{ id: 'v12', label: '12 (Bookworm)' }] } } as never;
     if (url.endsWith('/versions')) return { data: { items: [] } } as never;
     throw new Error(`unexpected GET ${url}`);
@@ -76,6 +78,23 @@ describe('OperatingSystemField', () => {
     renderField();
     expect(await screen.findByDisplayValue('Ubuntu')).toBeTruthy();
     expect(screen.getByDisplayValue('22.04 LTS')).toBeTruthy();
+  });
+
+  it('shows the support dates of the version chosen', async () => {
+    renderField();
+    const dates = await screen.findByTestId('os-support-dates');
+    expect(dates.textContent).toContain('workspace.asset.technical.standardSupportEnds(date=');
+    expect(dates.textContent).toContain('2027');
+    expect(dates.textContent).toContain('workspace.asset.technical.extendedSupportEnds(date=');
+    expect(dates.textContent).toContain('2032');
+    expect(screen.queryByText('workspace.asset.technical.osChooseHint')).toBeNull();
+  });
+
+  it('keeps the cluster hint instead of the dates', async () => {
+    renderField({ isCluster: true });
+    expect(await screen.findByDisplayValue('22.04 LTS')).toBeTruthy();
+    expect(screen.getByText('workspace.asset.technical.osClusterHint')).toBeTruthy();
+    expect(screen.queryByTestId('os-support-dates')).toBeNull();
   });
 
   it('offers operating systems first, then other technologies, then the catalog', async () => {

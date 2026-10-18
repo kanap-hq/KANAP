@@ -1608,6 +1608,8 @@
         "operatingSystem": "Betriebssystem",
         "osClusterHint": "Das Betriebssystem wird von den Mitglieds-Assets des Clusters definiert.",
         "osChooseHint": "Wählen Sie aus der Betriebssystemliste in den Einstellungen.",
+        "standardSupportEnds": "Standard-Support endet am {{date}}",
+        "extendedSupportEnds": "Erweiterter Support endet am {{date}}",
         "ipAddresses": "IP-Adressen",
         "addIpAddress": "IP-Adresse hinzufügen",
         "noIpAddresses": "Keine IP-Adressen konfiguriert.",

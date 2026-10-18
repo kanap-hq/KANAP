@@ -1,11 +1,14 @@
 import React from 'react';
 import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { screenLanguage } from '../../../components/csv/readings';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
+import { useLocale } from '../../../i18n/useLocale';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { formatSupportDate, supportStateColor, supportStateOf } from '../../../utils/supportState';
 import { assetTechnologiesKey, type AssetTechnologyRow } from './AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './technologyLinkQueries';
 import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from './TechnologyVersionPicker';
@@ -22,6 +25,9 @@ type ListedTechnology = {
 type CatalogEntry = { key: string; name: string; editor: string | null };
 
 type Choice = { id: string; name: string; versionLabel: string | null; versionId: string | null };
+
+/** A version as `GET /technologies/:id/versions` returns it, with its support dates. */
+type DatedVersion = VersionOption & { standard_support_end?: string | null; extended_support_end?: string | null };
 
 type Props = {
   /** Absent while the server is being created: the choice stays local and is reported as a label. */
@@ -55,6 +61,8 @@ function composedLabel(name: string, choice: VersionChoice, versions: VersionOpt
  */
 export default function OperatingSystemField({ assetId, disabled, isCluster, label, onLabelChange, onSaved }: Props) {
   const { t, i18n } = useTranslation(['it', 'common']);
+  const theme = useTheme();
+  const locale = useLocale();
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const queryClient = useQueryClient();
   const versionBox = React.useRef<HTMLDivElement | null>(null);
@@ -85,7 +93,7 @@ export default function OperatingSystemField({ assetId, disabled, isCluster, lab
 
   const { data: versions } = useQuery({
     queryKey: ['technology-versions', technologyId],
-    queryFn: async () => (await api.get<{ items: VersionOption[] }>(`/technologies/${technologyId}/versions`)).data.items,
+    queryFn: async () => (await api.get<{ items: DatedVersion[] }>(`/technologies/${technologyId}/versions`)).data.items,
     enabled: !!technologyId,
   });
 
@@ -200,6 +208,18 @@ export default function OperatingSystemField({ assetId, disabled, isCluster, lab
     }
   };
 
+  // The support dates of the version chosen, as the former operating-system field showed them.
+  const shownVersion = shown?.versionId
+    ? versions?.find((item) => item.id === shown.versionId)
+    : (shown?.versionLabel ? versions?.find((item) => item.label.toLowerCase() === shown.versionLabel!.toLowerCase()) : undefined);
+  const standardEnd = shownVersion?.standard_support_end ?? null;
+  const extendedEnd = shownVersion?.extended_support_end ?? null;
+  const supportLine = [
+    standardEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatSupportDate(standardEnd, locale) }) : '',
+    extendedEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatSupportDate(extendedEnd, locale) }) : '',
+  ].filter(Boolean).join(' / ');
+  const supportColor = supportStateColor(supportStateOf(standardEnd, extendedEnd), theme);
+
   const locked = !!disabled || busy;
   const versionMissing = !!shown?.id && !shown.versionLabel;
   const fieldSx = {
@@ -274,9 +294,15 @@ export default function OperatingSystemField({ assetId, disabled, isCluster, lab
           {t('workspace.asset.technical.osClear')}
         </Button>
       )}
-      <Typography variant="caption" sx={{ color: 'kanap.text.tertiary' }}>
-        {isCluster ? t('workspace.asset.technical.osClusterHint') : t('workspace.asset.technical.osChooseHint')}
-      </Typography>
+      {!isCluster && supportLine ? (
+        <Typography variant="caption" sx={{ color: supportColor }} data-testid="os-support-dates">
+          {supportLine}
+        </Typography>
+      ) : (
+        <Typography variant="caption" sx={{ color: 'kanap.text.tertiary' }}>
+          {isCluster ? t('workspace.asset.technical.osClusterHint') : t('workspace.asset.technical.osChooseHint')}
+        </Typography>
+      )}
     </Stack>
   );
 }

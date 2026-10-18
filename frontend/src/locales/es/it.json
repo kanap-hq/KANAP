@@ -1608,6 +1608,8 @@
         "operatingSystem": "Sistema operativo",
         "osClusterHint": "El sistema operativo está definido por los activos miembros del clúster.",
         "osChooseHint": "Elija de la lista de sistemas operativos en Configuración.",
+        "standardSupportEnds": "El soporte estándar finaliza el {{date}}",
+        "extendedSupportEnds": "El soporte extendido finaliza el {{date}}",
         "ipAddresses": "Direcciones IP",
         "addIpAddress": "Agregar dirección IP",
         "noIpAddresses": "No hay direcciones IP configuradas.",

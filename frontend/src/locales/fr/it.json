@@ -1608,6 +1608,8 @@
         "operatingSystem": "Système d'exploitation",
         "osClusterHint": "Le système d'exploitation est défini par les actifs membres du cluster.",
         "osChooseHint": "Choisissez dans la liste des systèmes d'exploitation dans les paramètres.",
+        "standardSupportEnds": "Fin du support standard le {{date}}",
+        "extendedSupportEnds": "Fin du support étendu le {{date}}",
         "ipAddresses": "Adresses IP",
         "addIpAddress": "Ajouter une adresse IP",
         "noIpAddresses": "Aucune adresse IP configurée.",

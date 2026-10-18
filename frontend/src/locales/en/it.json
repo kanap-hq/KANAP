@@ -1608,6 +1608,8 @@
         "operatingSystem": "Operating system",
         "osClusterHint": "Operating system is defined by cluster member assets.",
         "osChooseHint": "Choose a technology, then its version.",
+        "standardSupportEnds": "Standard support ends {{date}}",
+        "extendedSupportEnds": "Extended support ends {{date}}",
         "osTechnology": "Technology",
         "osVersion": "Version",
         "osClear": "Clear",
