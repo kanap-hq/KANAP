@@ -1,0 +1,551 @@
+{
+  "source": "Short descriptions of the catalog entries, written for KANAP (lot C3), kept apart from technologies.catalog.json, which scripts/technologies/build-catalog.mjs rebuilds.",
+  "descriptions": {
+    "active-directory": {
+      "en": "Microsoft directory service for Windows domains: user and computer accounts, groups, authentication and group policies.",
+      "fr": "Service d’annuaire de Microsoft pour les domaines Windows : comptes d’utilisateurs et d’ordinateurs, groupes, authentification et stratégies de groupe.",
+      "de": "Verzeichnisdienst von Microsoft für Windows-Domänen: Benutzer- und Computerkonten, Gruppen, Authentifizierung und Gruppenrichtlinien.",
+      "es": "Servicio de directorio de Microsoft para dominios Windows: cuentas de usuarios y equipos, grupos, autenticación y directivas de grupo."
+    },
+    "amazon-corretto": {
+      "en": "Amazon’s free distribution of OpenJDK, the Java runtime and development kit, with long-term support.",
+      "fr": "Distribution gratuite d’OpenJDK par Amazon, l’environnement d’exécution et de développement Java, avec support à long terme.",
+      "de": "Kostenlose OpenJDK-Distribution von Amazon, Laufzeit- und Entwicklungsumgebung für Java, mit Langzeitsupport.",
+      "es": "Distribución gratuita de OpenJDK de Amazon, el entorno de ejecución y desarrollo de Java, con soporte a largo plazo."
+    },
+    "amazon-eks": {
+      "en": "Managed Kubernetes service of Amazon Web Services: AWS runs the control plane, the customer runs the workloads.",
+      "fr": "Service Kubernetes géré d’Amazon Web Services : AWS exploite le plan de contrôle, le client exploite ses charges de travail.",
+      "de": "Verwalteter Kubernetes-Dienst von Amazon Web Services: AWS betreibt die Steuerungsebene, der Kunde seine Workloads.",
+      "es": "Servicio de Kubernetes gestionado de Amazon Web Services: AWS opera el plano de control y el cliente sus cargas de trabajo."
+    },
+    "ansible-automation-platform": {
+      "en": "Red Hat platform for automating the configuration and deployment of servers, network devices and applications with Ansible.",
+      "fr": "Plateforme de Red Hat pour automatiser la configuration et le déploiement de serveurs, d’équipements réseau et d’applications avec Ansible.",
+      "de": "Plattform von Red Hat zur Automatisierung von Konfiguration und Bereitstellung von Servern, Netzwerkgeräten und Anwendungen mit Ansible.",
+      "es": "Plataforma de Red Hat para automatizar la configuración y el despliegue de servidores, equipos de red y aplicaciones con Ansible."
+    },
+    "apache-activemq": {
+      "en": "Open-source message broker that passes messages between applications over JMS, AMQP, MQTT and STOMP.",
+      "fr": "Courtier de messages open source qui transmet les messages entre applications via JMS, AMQP, MQTT et STOMP.",
+      "de": "Open-Source-Message-Broker, der Nachrichten zwischen Anwendungen über JMS, AMQP, MQTT und STOMP vermittelt.",
+      "es": "Intermediario de mensajes de código abierto que transmite mensajes entre aplicaciones mediante JMS, AMQP, MQTT y STOMP."
+    },
+    "apache-apisix": {
+      "en": "Open-source API gateway: routes, secures and limits the calls made to an organization’s APIs.",
+      "fr": "Passerelle d’API open source : route, sécurise et limite les appels faits aux API d’une organisation.",
+      "de": "Open-Source-API-Gateway: leitet, sichert und begrenzt die Aufrufe der APIs einer Organisation.",
+      "es": "Pasarela de API de código abierto: enruta, protege y limita las llamadas a las API de una organización."
+    },
+    "apache-artemis": {
+      "en": "High-performance open-source message broker of the ActiveMQ family, the base of Red Hat AMQ Broker.",
+      "fr": "Courtier de messages open source à haute performance de la famille ActiveMQ, base de Red Hat AMQ Broker.",
+      "de": "Leistungsstarker Open-Source-Message-Broker der ActiveMQ-Familie, Grundlage von Red Hat AMQ Broker.",
+      "es": "Intermediario de mensajes de código abierto de alto rendimiento de la familia ActiveMQ, base de Red Hat AMQ Broker."
+    },
+    "apache-cassandra": {
+      "en": "Distributed open-source NoSQL database built for large volumes written across many servers and data centers.",
+      "fr": "Base de données NoSQL distribuée et open source, conçue pour de gros volumes écrits sur de nombreux serveurs et centres de données.",
+      "de": "Verteilte Open-Source-NoSQL-Datenbank für große Datenmengen, die über viele Server und Rechenzentren geschrieben werden.",
+      "es": "Base de datos NoSQL distribuida de código abierto, diseñada para grandes volúmenes escritos en muchos servidores y centros de datos."
+    },
+    "apache-http-server": {
+      "en": "Open-source web server of the Apache Software Foundation, often used as a reverse proxy in front of applications.",
+      "fr": "Serveur web open source de l’Apache Software Foundation, souvent utilisé comme proxy inverse devant les applications.",
+      "de": "Open-Source-Webserver der Apache Software Foundation, oft als Reverse Proxy vor Anwendungen eingesetzt.",
+      "es": "Servidor web de código abierto de la Apache Software Foundation, a menudo usado como proxy inverso delante de las aplicaciones."
+    },
+    "apache-kafka": {
+      "en": "Distributed event streaming platform: applications publish and read streams of records, kept in order and replicated.",
+      "fr": "Plateforme distribuée de flux d’événements : les applications publient et lisent des flux d’enregistrements, ordonnés et répliqués.",
+      "de": "Verteilte Plattform für Ereignisströme: Anwendungen veröffentlichen und lesen geordnete, replizierte Datensatzströme.",
+      "es": "Plataforma distribuida de flujos de eventos: las aplicaciones publican y leen flujos de registros ordenados y replicados."
+    },
+    "apache-nifi": {
+      "en": "Open-source tool for building data flows between systems in a visual editor: collect, transform and route data.",
+      "fr": "Outil open source pour construire des flux de données entre systèmes dans un éditeur visuel : collecter, transformer et router les données.",
+      "de": "Open-Source-Werkzeug zum Aufbau von Datenflüssen zwischen Systemen in einem visuellen Editor: Daten erfassen, umwandeln und weiterleiten.",
+      "es": "Herramienta de código abierto para construir flujos de datos entre sistemas en un editor visual: recoger, transformar y enrutar datos."
+    },
+    "authentik": {
+      "en": "Open-source identity provider: single sign-on, multi-factor authentication and user management over SAML, OAuth2 and LDAP.",
+      "fr": "Fournisseur d’identité open source : authentification unique, authentification multifacteur et gestion des utilisateurs via SAML, OAuth2 et LDAP.",
+      "de": "Open-Source-Identitätsanbieter: Single Sign-on, Mehrfaktor-Authentifizierung und Benutzerverwaltung über SAML, OAuth2 und LDAP.",
+      "es": "Proveedor de identidad de código abierto: inicio de sesión único, autenticación multifactor y gestión de usuarios mediante SAML, OAuth2 y LDAP."
+    },
+    "azure-kubernetes-service": {
+      "en": "Managed Kubernetes service of Microsoft Azure: Microsoft runs the control plane, the customer runs the workloads.",
+      "fr": "Service Kubernetes géré de Microsoft Azure : Microsoft exploite le plan de contrôle, le client exploite ses charges de travail.",
+      "de": "Verwalteter Kubernetes-Dienst von Microsoft Azure: Microsoft betreibt die Steuerungsebene, der Kunde seine Workloads.",
+      "es": "Servicio de Kubernetes gestionado de Microsoft Azure: Microsoft opera el plano de control y el cliente sus cargas de trabajo."
+    },
+    "bind-9": {
+      "en": "ISC’s open-source DNS server: answers name resolution queries and hosts the DNS zones of an organization.",
+      "fr": "Serveur DNS open source de l’ISC : répond aux requêtes de résolution de noms et héberge les zones DNS d’une organisation.",
+      "de": "Open-Source-DNS-Server des ISC: beantwortet Namensauflösungen und hostet die DNS-Zonen einer Organisation.",
+      "es": "Servidor DNS de código abierto del ISC: responde a las consultas de resolución de nombres y aloja las zonas DNS de una organización."
+    },
+    "caddy": {
+      "en": "Open-source web server and reverse proxy that obtains and renews its HTTPS certificates by itself.",
+      "fr": "Serveur web et proxy inverse open source qui obtient et renouvelle lui-même ses certificats HTTPS.",
+      "de": "Open-Source-Webserver und Reverse Proxy, der seine HTTPS-Zertifikate selbst bezieht und erneuert.",
+      "es": "Servidor web y proxy inverso de código abierto que obtiene y renueva por sí mismo sus certificados HTTPS."
+    },
+    "centreon": {
+      "en": "Monitoring platform for IT infrastructure and applications: checks, alerts, dashboards and reports.",
+      "fr": "Plateforme de supervision de l’infrastructure et des applications : contrôles, alertes, tableaux de bord et rapports.",
+      "de": "Überwachungsplattform für IT-Infrastruktur und Anwendungen: Prüfungen, Alarme, Dashboards und Berichte.",
+      "es": "Plataforma de supervisión de la infraestructura y las aplicaciones: comprobaciones, alertas, paneles e informes."
+    },
+    "ceph": {
+      "en": "Open-source distributed storage system that provides block, file and object storage on standard servers.",
+      "fr": "Système de stockage distribué open source qui fournit du stockage en mode bloc, fichier et objet sur des serveurs standard.",
+      "de": "Verteiltes Open-Source-Speichersystem, das Block-, Datei- und Objektspeicher auf Standardservern bereitstellt.",
+      "es": "Sistema de almacenamiento distribuido de código abierto que ofrece almacenamiento de bloques, archivos y objetos en servidores estándar."
+    },
+    "checkmk": {
+      "en": "Monitoring software for servers, networks, applications and cloud services, with automatic discovery of what to check.",
+      "fr": "Logiciel de supervision des serveurs, réseaux, applications et services cloud, qui découvre lui-même les points à contrôler.",
+      "de": "Überwachungssoftware für Server, Netzwerke, Anwendungen und Cloud-Dienste, die zu prüfende Elemente selbst erkennt.",
+      "es": "Software de supervisión de servidores, redes, aplicaciones y servicios en la nube, que descubre por sí mismo qué comprobar."
+    },
+    "citrix-vad": {
+      "en": "Citrix platform that delivers Windows applications and virtual desktops to users from the data center or the cloud.",
+      "fr": "Plateforme de Citrix qui met à disposition des utilisateurs des applications Windows et des postes virtuels depuis le centre de données ou le cloud.",
+      "de": "Citrix-Plattform, die Benutzern Windows-Anwendungen und virtuelle Desktops aus dem Rechenzentrum oder der Cloud bereitstellt.",
+      "es": "Plataforma de Citrix que pone a disposición de los usuarios aplicaciones Windows y escritorios virtuales desde el centro de datos o la nube."
+    },
+    "clickhouse": {
+      "en": "Open-source column-oriented database for fast analytical queries on large volumes of data.",
+      "fr": "Base de données orientée colonnes et open source pour des requêtes analytiques rapides sur de gros volumes de données.",
+      "de": "Spaltenorientierte Open-Source-Datenbank für schnelle Analyseabfragen auf großen Datenmengen.",
+      "es": "Base de datos columnar de código abierto para consultas analíticas rápidas sobre grandes volúmenes de datos."
+    },
+    "commvault": {
+      "en": "Data protection software: backup, recovery and archiving of servers, databases, applications and cloud workloads.",
+      "fr": "Logiciel de protection des données : sauvegarde, restauration et archivage des serveurs, bases de données, applications et charges cloud.",
+      "de": "Datensicherungssoftware: Backup, Wiederherstellung und Archivierung von Servern, Datenbanken, Anwendungen und Cloud-Workloads.",
+      "es": "Software de protección de datos: copia de seguridad, recuperación y archivado de servidores, bases de datos, aplicaciones y cargas en la nube."
+    },
+    "containerd": {
+      "en": "Container runtime that runs and manages containers on a host; Kubernetes and Docker Engine rely on it.",
+      "fr": "Moteur d’exécution de conteneurs qui lance et gère les conteneurs sur un hôte ; Kubernetes et Docker Engine s’appuient dessus.",
+      "de": "Container-Laufzeit, die Container auf einem Host startet und verwaltet; Kubernetes und Docker Engine bauen darauf auf.",
+      "es": "Entorno de ejecución de contenedores que lanza y gestiona contenedores en un host; Kubernetes y Docker Engine se basan en él."
+    },
+    "couchbase-server": {
+      "en": "Distributed NoSQL document database with a built-in cache, SQL-like queries and full-text search.",
+      "fr": "Base de données NoSQL distribuée orientée documents, avec cache intégré, requêtes proches du SQL et recherche plein texte.",
+      "de": "Verteilte NoSQL-Dokumentendatenbank mit integriertem Cache, SQL-ähnlichen Abfragen und Volltextsuche.",
+      "es": "Base de datos NoSQL distribuida de documentos, con caché integrada, consultas similares a SQL y búsqueda de texto completo."
+    },
+    "docker-engine": {
+      "en": "Software that builds container images and runs containers on a server or a workstation.",
+      "fr": "Logiciel qui construit les images de conteneurs et exécute les conteneurs sur un serveur ou un poste de travail.",
+      "de": "Software, die Container-Images erstellt und Container auf einem Server oder Arbeitsplatz ausführt.",
+      "es": "Software que construye imágenes de contenedores y ejecuta contenedores en un servidor o un puesto de trabajo."
+    },
+    "dotnet": {
+      "en": "Microsoft’s open-source, cross-platform development platform and runtime for web, desktop and service applications.",
+      "fr": "Plateforme de développement et environnement d’exécution open source et multiplateforme de Microsoft, pour les applications web, de bureau et les services.",
+      "de": "Plattformübergreifende Open-Source-Entwicklungsplattform und Laufzeit von Microsoft für Web-, Desktop- und Dienstanwendungen.",
+      "es": "Plataforma de desarrollo y entorno de ejecución multiplataforma de código abierto de Microsoft, para aplicaciones web, de escritorio y servicios."
+    },
+    "dotnetfx": {
+      "en": "Microsoft’s Windows-only runtime and class library for .NET applications, shipped as a component of Windows.",
+      "fr": "Environnement d’exécution et bibliothèque de classes de Microsoft pour les applications .NET sous Windows, livré comme composant de Windows.",
+      "de": "Laufzeit und Klassenbibliothek von Microsoft für .NET-Anwendungen unter Windows, als Bestandteil von Windows ausgeliefert.",
+      "es": "Entorno de ejecución y biblioteca de clases de Microsoft para aplicaciones .NET en Windows, distribuido como componente de Windows."
+    },
+    "dovecot": {
+      "en": "Open-source IMAP and POP3 server that stores mailboxes and lets mail clients read them.",
+      "fr": "Serveur IMAP et POP3 open source qui stocke les boîtes aux lettres et permet aux clients de messagerie de les lire.",
+      "de": "Open-Source-IMAP- und POP3-Server, der Postfächer speichert und E-Mail-Programmen den Zugriff darauf gibt.",
+      "es": "Servidor IMAP y POP3 de código abierto que almacena los buzones y permite a los clientes de correo leerlos."
+    },
+    "eclipse-jetty": {
+      "en": "Lightweight open-source Java web server and servlet container, often embedded in applications.",
+      "fr": "Serveur web et conteneur de servlets Java open source et léger, souvent intégré aux applications.",
+      "de": "Leichtgewichtiger Open-Source-Java-Webserver und Servlet-Container, häufig in Anwendungen eingebettet.",
+      "es": "Servidor web y contenedor de servlets Java ligero y de código abierto, a menudo integrado en las aplicaciones."
+    },
+    "eclipse-temurin": {
+      "en": "Free OpenJDK distribution of the Eclipse Adoptium project: the Java runtime and development kit, with long-term support.",
+      "fr": "Distribution gratuite d’OpenJDK du projet Eclipse Adoptium : l’environnement d’exécution et de développement Java, avec support à long terme.",
+      "de": "Kostenlose OpenJDK-Distribution des Projekts Eclipse Adoptium: Laufzeit- und Entwicklungsumgebung für Java, mit Langzeitsupport.",
+      "es": "Distribución gratuita de OpenJDK del proyecto Eclipse Adoptium: el entorno de ejecución y desarrollo de Java, con soporte a largo plazo."
+    },
+    "elasticsearch": {
+      "en": "Distributed search and analytics engine: full-text search, log analysis and metrics over JSON documents.",
+      "fr": "Moteur de recherche et d’analyse distribué : recherche plein texte, analyse de journaux et de métriques sur des documents JSON.",
+      "de": "Verteilte Such- und Analyse-Engine: Volltextsuche, Log- und Metrikanalyse über JSON-Dokumente.",
+      "es": "Motor de búsqueda y análisis distribuido: búsqueda de texto completo y análisis de registros y métricas sobre documentos JSON."
+    },
+    "entra-id": {
+      "en": "Microsoft’s cloud identity service, formerly Azure Active Directory: sign-in, single sign-on and access control for Microsoft 365 and other applications.",
+      "fr": "Service d’identité cloud de Microsoft, anciennement Azure Active Directory : connexion, authentification unique et contrôle d’accès pour Microsoft 365 et d’autres applications.",
+      "de": "Cloud-Identitätsdienst von Microsoft, früher Azure Active Directory: Anmeldung, Single Sign-on und Zugriffskontrolle für Microsoft 365 und andere Anwendungen.",
+      "es": "Servicio de identidad en la nube de Microsoft, antes Azure Active Directory: inicio de sesión, inicio de sesión único y control de acceso para Microsoft 365 y otras aplicaciones."
+    },
+    "go": {
+      "en": "Google’s open-source programming language and toolchain, compiled to standalone executables.",
+      "fr": "Langage de programmation open source de Google et sa chaîne d’outils, compilé en exécutables autonomes.",
+      "de": "Open-Source-Programmiersprache von Google mit Werkzeugkette, kompiliert zu eigenständigen ausführbaren Dateien.",
+      "es": "Lenguaje de programación de código abierto de Google y sus herramientas, compilado en ejecutables autónomos."
+    },
+    "google-kubernetes-engine": {
+      "en": "Managed Kubernetes service of Google Cloud: Google runs the control plane, the customer runs the workloads.",
+      "fr": "Service Kubernetes géré de Google Cloud : Google exploite le plan de contrôle, le client exploite ses charges de travail.",
+      "de": "Verwalteter Kubernetes-Dienst von Google Cloud: Google betreibt die Steuerungsebene, der Kunde seine Workloads.",
+      "es": "Servicio de Kubernetes gestionado de Google Cloud: Google opera el plano de control y el cliente sus cargas de trabajo."
+    },
+    "grafana": {
+      "en": "Open-source dashboarding tool that charts metrics, logs and traces from many data sources and raises alerts.",
+      "fr": "Outil de tableaux de bord open source qui représente métriques, journaux et traces issus de nombreuses sources et déclenche des alertes.",
+      "de": "Open-Source-Dashboard-Werkzeug, das Metriken, Logs und Traces aus vielen Datenquellen darstellt und Alarme auslöst.",
+      "es": "Herramienta de paneles de código abierto que representa métricas, registros y trazas de muchas fuentes de datos y lanza alertas."
+    },
+    "graylog": {
+      "en": "Log management platform: collects, indexes and searches the logs of servers, applications and network devices.",
+      "fr": "Plateforme de gestion des journaux : collecte, indexe et recherche les journaux des serveurs, applications et équipements réseau.",
+      "de": "Log-Management-Plattform: sammelt, indiziert und durchsucht die Logs von Servern, Anwendungen und Netzwerkgeräten.",
+      "es": "Plataforma de gestión de registros: recoge, indexa y busca los registros de servidores, aplicaciones y equipos de red."
+    },
+    "haproxy": {
+      "en": "Open-source load balancer and reverse proxy for TCP and HTTP traffic, used in front of web applications.",
+      "fr": "Répartiteur de charge et proxy inverse open source pour le trafic TCP et HTTP, placé devant les applications web.",
+      "de": "Open-Source-Load-Balancer und Reverse Proxy für TCP- und HTTP-Verkehr vor Webanwendungen.",
+      "es": "Balanceador de carga y proxy inverso de código abierto para tráfico TCP y HTTP, situado delante de las aplicaciones web."
+    },
+    "harbor": {
+      "en": "Open-source container image registry with access control, vulnerability scanning and image signing.",
+      "fr": "Registre d’images de conteneurs open source avec contrôle d’accès, analyse de vulnérabilités et signature des images.",
+      "de": "Open-Source-Registry für Container-Images mit Zugriffskontrolle, Schwachstellenscan und Image-Signierung.",
+      "es": "Registro de imágenes de contenedores de código abierto con control de acceso, análisis de vulnerabilidades y firma de imágenes."
+    },
+    "hashicorp-vault": {
+      "en": "Secrets management tool: stores and issues passwords, keys and certificates, and encrypts data for applications.",
+      "fr": "Outil de gestion des secrets : stocke et délivre mots de passe, clés et certificats, et chiffre des données pour les applications.",
+      "de": "Werkzeug zur Verwaltung von Geheimnissen: speichert und vergibt Passwörter, Schlüssel und Zertifikate und verschlüsselt Daten für Anwendungen.",
+      "es": "Herramienta de gestión de secretos: almacena y emite contraseñas, claves y certificados, y cifra datos para las aplicaciones."
+    },
+    "ibm-db2": {
+      "en": "IBM relational database for transactional and analytical workloads on Linux, Unix and Windows.",
+      "fr": "Base de données relationnelle d’IBM pour les charges transactionnelles et analytiques sous Linux, Unix et Windows.",
+      "de": "Relationale Datenbank von IBM für Transaktions- und Analyse-Workloads unter Linux, Unix und Windows.",
+      "es": "Base de datos relacional de IBM para cargas transaccionales y analíticas en Linux, Unix y Windows."
+    },
+    "ibm-mq": {
+      "en": "IBM messaging middleware that carries messages between applications with guaranteed, once-only delivery.",
+      "fr": "Middleware de messagerie d’IBM qui transporte les messages entre applications avec une livraison garantie et unique.",
+      "de": "Messaging-Middleware von IBM, die Nachrichten zwischen Anwendungen garantiert und genau einmal zustellt.",
+      "es": "Middleware de mensajería de IBM que transporta mensajes entre aplicaciones con entrega garantizada y única."
+    },
+    "icinga": {
+      "en": "Open-source monitoring system that checks hosts and services and sends alerts when they fail.",
+      "fr": "Système de supervision open source qui contrôle hôtes et services et alerte en cas de défaillance.",
+      "de": "Open-Source-Überwachungssystem, das Hosts und Dienste prüft und bei Ausfällen alarmiert.",
+      "es": "Sistema de supervisión de código abierto que comprueba hosts y servicios y avisa cuando fallan."
+    },
+    "influxdb": {
+      "en": "Time series database for metrics, sensor data and events, with time-based queries and retention rules.",
+      "fr": "Base de données de séries temporelles pour les métriques, données de capteurs et événements, avec requêtes temporelles et règles de rétention.",
+      "de": "Zeitreihendatenbank für Metriken, Sensordaten und Ereignisse, mit zeitbasierten Abfragen und Aufbewahrungsregeln.",
+      "es": "Base de datos de series temporales para métricas, datos de sensores y eventos, con consultas temporales y reglas de retención."
+    },
+    "jenkins": {
+      "en": "Open-source automation server for continuous integration and delivery: builds, tests and deploys code.",
+      "fr": "Serveur d’automatisation open source pour l’intégration et la livraison continues : compile, teste et déploie le code.",
+      "de": "Open-Source-Automatisierungsserver für Continuous Integration und Delivery: baut, testet und verteilt Code.",
+      "es": "Servidor de automatización de código abierto para integración y entrega continuas: compila, prueba y despliega código."
+    },
+    "keycloak": {
+      "en": "Open-source identity and access management: single sign-on, user federation and authentication over OpenID Connect and SAML.",
+      "fr": "Gestion des identités et des accès open source : authentification unique, fédération d’utilisateurs et authentification via OpenID Connect et SAML.",
+      "de": "Open-Source-Identitäts- und Zugriffsverwaltung: Single Sign-on, Benutzerföderation und Authentifizierung über OpenID Connect und SAML.",
+      "es": "Gestión de identidades y accesos de código abierto: inicio de sesión único, federación de usuarios y autenticación mediante OpenID Connect y SAML."
+    },
+    "kong-gateway": {
+      "en": "API gateway built on NGINX: routes, secures, limits and observes the calls made to APIs.",
+      "fr": "Passerelle d’API construite sur NGINX : route, sécurise, limite et observe les appels faits aux API.",
+      "de": "Auf NGINX aufgebautes API-Gateway: leitet, sichert, begrenzt und beobachtet API-Aufrufe.",
+      "es": "Pasarela de API construida sobre NGINX: enruta, protege, limita y observa las llamadas a las API."
+    },
+    "kubernetes": {
+      "en": "Open-source container orchestration: deploys, scales and restarts containerised applications across a cluster of servers.",
+      "fr": "Orchestration de conteneurs open source : déploie, dimensionne et relance les applications conteneurisées sur une grappe de serveurs.",
+      "de": "Open-Source-Container-Orchestrierung: verteilt, skaliert und startet containerisierte Anwendungen auf einem Servercluster neu.",
+      "es": "Orquestación de contenedores de código abierto: despliega, escala y reinicia aplicaciones en contenedores en un clúster de servidores."
+    },
+    "mariadb": {
+      "en": "Open-source relational database, a fork of MySQL kept compatible with it.",
+      "fr": "Base de données relationnelle open source, dérivée de MySQL et restée compatible avec lui.",
+      "de": "Relationale Open-Source-Datenbank, eine mit MySQL kompatibel gebliebene Abspaltung.",
+      "es": "Base de datos relacional de código abierto, derivada de MySQL y compatible con ella."
+    },
+    "memcached": {
+      "en": "In-memory key-value cache that speeds up applications by keeping the results of frequent queries.",
+      "fr": "Cache clé-valeur en mémoire qui accélère les applications en gardant le résultat des requêtes fréquentes.",
+      "de": "Schlüssel-Wert-Cache im Arbeitsspeicher, der Anwendungen beschleunigt, indem er Ergebnisse häufiger Abfragen vorhält.",
+      "es": "Caché clave-valor en memoria que acelera las aplicaciones al guardar los resultados de las consultas frecuentes."
+    },
+    "microsoft-build-of-openjdk": {
+      "en": "Microsoft’s free distribution of OpenJDK, the Java runtime and development kit, with long-term support.",
+      "fr": "Distribution gratuite d’OpenJDK par Microsoft, l’environnement d’exécution et de développement Java, avec support à long terme.",
+      "de": "Kostenlose OpenJDK-Distribution von Microsoft, Laufzeit- und Entwicklungsumgebung für Java, mit Langzeitsupport.",
+      "es": "Distribución gratuita de OpenJDK de Microsoft, el entorno de ejecución y desarrollo de Java, con soporte a largo plazo."
+    },
+    "mongodb": {
+      "en": "Document-oriented NoSQL database that stores JSON-like documents with flexible schemas.",
+      "fr": "Base de données NoSQL orientée documents qui stocke des documents proches du JSON à schéma souple.",
+      "de": "Dokumentenorientierte NoSQL-Datenbank, die JSON-ähnliche Dokumente mit flexiblem Schema speichert.",
+      "es": "Base de datos NoSQL orientada a documentos que almacena documentos similares a JSON con esquema flexible."
+    },
+    "msexchange": {
+      "en": "Microsoft mail and calendar server installed on premises: mailboxes, calendars and contacts for Outlook clients.",
+      "fr": "Serveur de messagerie et d’agenda de Microsoft installé sur site : boîtes aux lettres, agendas et contacts pour les clients Outlook.",
+      "de": "Lokal installierter Mail- und Kalenderserver von Microsoft: Postfächer, Kalender und Kontakte für Outlook-Clients.",
+      "es": "Servidor de correo y calendario de Microsoft instalado en las instalaciones: buzones, calendarios y contactos para clientes Outlook."
+    },
+    "mssqlserver": {
+      "en": "Microsoft relational database for transactional, reporting and analytical workloads on Windows and Linux.",
+      "fr": "Base de données relationnelle de Microsoft pour les charges transactionnelles, de reporting et d’analyse sous Windows et Linux.",
+      "de": "Relationale Datenbank von Microsoft für Transaktions-, Reporting- und Analyse-Workloads unter Windows und Linux.",
+      "es": "Base de datos relacional de Microsoft para cargas transaccionales, de informes y analíticas en Windows y Linux."
+    },
+    "mulesoft-runtime": {
+      "en": "Salesforce integration engine that runs the Mule applications connecting systems, APIs and data.",
+      "fr": "Moteur d’intégration de Salesforce qui exécute les applications Mule reliant systèmes, API et données.",
+      "de": "Integrations-Engine von Salesforce, die Mule-Anwendungen zur Verbindung von Systemen, APIs und Daten ausführt.",
+      "es": "Motor de integración de Salesforce que ejecuta las aplicaciones Mule que conectan sistemas, API y datos."
+    },
+    "mysql": {
+      "en": "Open-source relational database maintained by Oracle, widely used behind web applications.",
+      "fr": "Base de données relationnelle open source maintenue par Oracle, très utilisée derrière les applications web.",
+      "de": "Von Oracle gepflegte relationale Open-Source-Datenbank, häufig hinter Webanwendungen eingesetzt.",
+      "es": "Base de datos relacional de código abierto mantenida por Oracle, muy usada detrás de las aplicaciones web."
+    },
+    "neo4j": {
+      "en": "Graph database that stores nodes and their relationships, queried with the Cypher language.",
+      "fr": "Base de données orientée graphe qui stocke des nœuds et leurs relations, interrogée en langage Cypher.",
+      "de": "Graphdatenbank, die Knoten und ihre Beziehungen speichert und mit der Sprache Cypher abgefragt wird.",
+      "es": "Base de datos de grafos que almacena nodos y sus relaciones, consultada con el lenguaje Cypher."
+    },
+    "nginx": {
+      "en": "Web server, reverse proxy and load balancer, widely used in front of web applications and APIs.",
+      "fr": "Serveur web, proxy inverse et répartiteur de charge, très utilisé devant les applications web et les API.",
+      "de": "Webserver, Reverse Proxy und Load Balancer, weit verbreitet vor Webanwendungen und APIs.",
+      "es": "Servidor web, proxy inverso y balanceador de carga, muy usado delante de las aplicaciones web y las API."
+    },
+    "nodejs": {
+      "en": "JavaScript runtime for servers and command-line tools, built on Chrome’s V8 engine.",
+      "fr": "Environnement d’exécution JavaScript pour les serveurs et les outils en ligne de commande, construit sur le moteur V8 de Chrome.",
+      "de": "JavaScript-Laufzeit für Server und Kommandozeilenwerkzeuge, aufgebaut auf der V8-Engine von Chrome.",
+      "es": "Entorno de ejecución de JavaScript para servidores y herramientas de línea de comandos, basado en el motor V8 de Chrome."
+    },
+    "nutanix-files": {
+      "en": "Nutanix file storage service: SMB and NFS shares hosted on a Nutanix cluster.",
+      "fr": "Service de stockage de fichiers de Nutanix : partages SMB et NFS hébergés sur une grappe Nutanix.",
+      "de": "Dateispeicherdienst von Nutanix: SMB- und NFS-Freigaben auf einem Nutanix-Cluster.",
+      "es": "Servicio de almacenamiento de archivos de Nutanix: recursos compartidos SMB y NFS alojados en un clúster Nutanix."
+    },
+    "nutanix-prism": {
+      "en": "Management console of Nutanix clusters: virtual machines, storage, monitoring and upgrades of the hyperconverged infrastructure.",
+      "fr": "Console d’administration des grappes Nutanix : machines virtuelles, stockage, supervision et mises à jour de l’infrastructure hyperconvergée.",
+      "de": "Verwaltungskonsole für Nutanix-Cluster: virtuelle Maschinen, Speicher, Überwachung und Updates der hyperkonvergenten Infrastruktur.",
+      "es": "Consola de administración de los clústeres Nutanix: máquinas virtuales, almacenamiento, supervisión y actualizaciones de la infraestructura hiperconvergente."
+    },
+    "opensearch": {
+      "en": "Open-source search and analytics engine derived from Elasticsearch: full-text search, logs and metrics.",
+      "fr": "Moteur de recherche et d’analyse open source dérivé d’Elasticsearch : recherche plein texte, journaux et métriques.",
+      "de": "Von Elasticsearch abgeleitete Open-Source-Such- und Analyse-Engine: Volltextsuche, Logs und Metriken.",
+      "es": "Motor de búsqueda y análisis de código abierto derivado de Elasticsearch: búsqueda de texto completo, registros y métricas."
+    },
+    "opnsense": {
+      "en": "Open-source firewall and router based on FreeBSD, with VPN, intrusion detection and web filtering.",
+      "fr": "Pare-feu et routeur open source basé sur FreeBSD, avec VPN, détection d’intrusion et filtrage web.",
+      "de": "Open-Source-Firewall und Router auf FreeBSD-Basis, mit VPN, Angriffserkennung und Webfilter.",
+      "es": "Cortafuegos y enrutador de código abierto basado en FreeBSD, con VPN, detección de intrusiones y filtrado web."
+    },
+    "oracle-database": {
+      "en": "Oracle’s relational database for transactional and analytical workloads, on premises or in Oracle Cloud.",
+      "fr": "Base de données relationnelle d’Oracle pour les charges transactionnelles et analytiques, sur site ou dans Oracle Cloud.",
+      "de": "Relationale Datenbank von Oracle für Transaktions- und Analyse-Workloads, lokal oder in Oracle Cloud.",
+      "es": "Base de datos relacional de Oracle para cargas transaccionales y analíticas, en las instalaciones o en Oracle Cloud."
+    },
+    "oracle-jdk": {
+      "en": "Oracle’s Java runtime and development kit, licensed by Oracle for commercial use.",
+      "fr": "Environnement d’exécution et de développement Java d’Oracle, sous licence Oracle pour l’usage commercial.",
+      "de": "Java-Laufzeit- und Entwicklungsumgebung von Oracle, für die kommerzielle Nutzung von Oracle lizenziert.",
+      "es": "Entorno de ejecución y desarrollo de Java de Oracle, con licencia de Oracle para uso comercial."
+    },
+    "ovirt": {
+      "en": "Open-source virtualization management for KVM: hosts, virtual machines, storage and networks from one console.",
+      "fr": "Gestion de virtualisation open source pour KVM : hôtes, machines virtuelles, stockage et réseaux depuis une seule console.",
+      "de": "Open-Source-Virtualisierungsverwaltung für KVM: Hosts, virtuelle Maschinen, Speicher und Netzwerke in einer Konsole.",
+      "es": "Gestión de virtualización de código abierto para KVM: hosts, máquinas virtuales, almacenamiento y redes desde una sola consola."
+    },
+    "php": {
+      "en": "Scripting language for web applications, run by a web server or by PHP-FPM.",
+      "fr": "Langage de script pour les applications web, exécuté par un serveur web ou par PHP-FPM.",
+      "de": "Skriptsprache für Webanwendungen, ausgeführt von einem Webserver oder von PHP-FPM.",
+      "es": "Lenguaje de scripts para aplicaciones web, ejecutado por un servidor web o por PHP-FPM."
+    },
+    "podman": {
+      "en": "Container engine that runs containers without a central daemon and without root rights, compatible with Docker commands.",
+      "fr": "Moteur de conteneurs qui exécute les conteneurs sans démon central ni droits root, compatible avec les commandes Docker.",
+      "de": "Container-Engine, die Container ohne zentralen Daemon und ohne Root-Rechte ausführt, kompatibel mit Docker-Befehlen.",
+      "es": "Motor de contenedores que ejecuta contenedores sin demonio central ni permisos de root, compatible con los comandos de Docker."
+    },
+    "postfix": {
+      "en": "Open-source mail transfer agent: sends, receives and routes email between servers.",
+      "fr": "Agent de transfert de courrier open source : envoie, reçoit et achemine les courriels entre serveurs.",
+      "de": "Open-Source-Mail-Transfer-Agent: sendet, empfängt und leitet E-Mails zwischen Servern weiter.",
+      "es": "Agente de transferencia de correo de código abierto: envía, recibe y enruta el correo entre servidores."
+    },
+    "postgresql": {
+      "en": "Open-source relational database known for its standards support, extensions and reliability.",
+      "fr": "Base de données relationnelle open source reconnue pour son respect des standards, ses extensions et sa fiabilité.",
+      "de": "Relationale Open-Source-Datenbank, bekannt für Standardtreue, Erweiterungen und Zuverlässigkeit.",
+      "es": "Base de datos relacional de código abierto conocida por su respeto de los estándares, sus extensiones y su fiabilidad."
+    },
+    "powershell": {
+      "en": "Microsoft’s command shell and scripting language for automating the administration of Windows, Linux and cloud services.",
+      "fr": "Interpréteur de commandes et langage de script de Microsoft pour automatiser l’administration de Windows, Linux et des services cloud.",
+      "de": "Kommandozeile und Skriptsprache von Microsoft zur Automatisierung der Verwaltung von Windows, Linux und Cloud-Diensten.",
+      "es": "Intérprete de comandos y lenguaje de scripts de Microsoft para automatizar la administración de Windows, Linux y servicios en la nube."
+    },
+    "prometheus": {
+      "en": "Open-source monitoring system that collects metrics as time series, queries them and raises alerts.",
+      "fr": "Système de supervision open source qui collecte des métriques en séries temporelles, les interroge et déclenche des alertes.",
+      "de": "Open-Source-Überwachungssystem, das Metriken als Zeitreihen sammelt, abfragt und Alarme auslöst.",
+      "es": "Sistema de supervisión de código abierto que recoge métricas como series temporales, las consulta y lanza alertas."
+    },
+    "proxmox-backup-server": {
+      "en": "Backup server for Proxmox VE virtual machines, containers and hosts, with deduplication and encryption.",
+      "fr": "Serveur de sauvegarde des machines virtuelles, conteneurs et hôtes Proxmox VE, avec déduplication et chiffrement.",
+      "de": "Backup-Server für virtuelle Maschinen, Container und Hosts von Proxmox VE, mit Deduplizierung und Verschlüsselung.",
+      "es": "Servidor de copias de seguridad de máquinas virtuales, contenedores y hosts de Proxmox VE, con deduplicación y cifrado."
+    },
+    "puppet": {
+      "en": "Configuration management tool that keeps servers in a declared state: packages, files, services and settings.",
+      "fr": "Outil de gestion de configuration qui maintient les serveurs dans un état déclaré : paquets, fichiers, services et paramètres.",
+      "de": "Konfigurationsmanagement-Werkzeug, das Server in einem deklarierten Zustand hält: Pakete, Dateien, Dienste und Einstellungen.",
+      "es": "Herramienta de gestión de la configuración que mantiene los servidores en un estado declarado: paquetes, archivos, servicios y parámetros."
+    },
+    "python": {
+      "en": "General-purpose programming language and interpreter, used for scripts, automation, web services and data processing.",
+      "fr": "Langage de programmation généraliste et son interpréteur, utilisé pour les scripts, l’automatisation, les services web et le traitement de données.",
+      "de": "Universelle Programmiersprache mit Interpreter, eingesetzt für Skripte, Automatisierung, Webdienste und Datenverarbeitung.",
+      "es": "Lenguaje de programación de uso general y su intérprete, usado para scripts, automatización, servicios web y tratamiento de datos."
+    },
+    "rabbitmq": {
+      "en": "Open-source message broker that queues and routes messages between applications, mainly over AMQP.",
+      "fr": "Courtier de messages open source qui met en file et achemine les messages entre applications, surtout via AMQP.",
+      "de": "Open-Source-Message-Broker, der Nachrichten zwischen Anwendungen einreiht und weiterleitet, vor allem über AMQP.",
+      "es": "Intermediario de mensajes de código abierto que encola y enruta mensajes entre aplicaciones, sobre todo mediante AMQP."
+    },
+    "rancher": {
+      "en": "SUSE platform for deploying and managing several Kubernetes clusters from one console.",
+      "fr": "Plateforme de SUSE pour déployer et administrer plusieurs grappes Kubernetes depuis une seule console.",
+      "de": "SUSE-Plattform zur Bereitstellung und Verwaltung mehrerer Kubernetes-Cluster aus einer Konsole.",
+      "es": "Plataforma de SUSE para desplegar y administrar varios clústeres de Kubernetes desde una sola consola."
+    },
+    "red-hat-openshift": {
+      "en": "Red Hat’s Kubernetes platform with built-in tools to build, deploy and run containerised applications.",
+      "fr": "Plateforme Kubernetes de Red Hat, avec des outils intégrés pour construire, déployer et exploiter des applications conteneurisées.",
+      "de": "Kubernetes-Plattform von Red Hat mit integrierten Werkzeugen zum Bauen, Bereitstellen und Betreiben containerisierter Anwendungen.",
+      "es": "Plataforma de Kubernetes de Red Hat con herramientas integradas para construir, desplegar y operar aplicaciones en contenedores."
+    },
+    "redhat-jboss-eap": {
+      "en": "Red Hat’s Java application server for Jakarta EE applications, based on WildFly.",
+      "fr": "Serveur d’applications Java de Red Hat pour les applications Jakarta EE, basé sur WildFly.",
+      "de": "Java-Anwendungsserver von Red Hat für Jakarta-EE-Anwendungen, basierend auf WildFly.",
+      "es": "Servidor de aplicaciones Java de Red Hat para aplicaciones Jakarta EE, basado en WildFly."
+    },
+    "redhat-satellite": {
+      "en": "Red Hat tool for managing a fleet of Red Hat Enterprise Linux servers: provisioning, updates, subscriptions and configuration.",
+      "fr": "Outil de Red Hat pour gérer un parc de serveurs Red Hat Enterprise Linux : provisionnement, mises à jour, abonnements et configuration.",
+      "de": "Red-Hat-Werkzeug zur Verwaltung einer Flotte von Red-Hat-Enterprise-Linux-Servern: Bereitstellung, Updates, Subskriptionen und Konfiguration.",
+      "es": "Herramienta de Red Hat para gestionar un parque de servidores Red Hat Enterprise Linux: aprovisionamiento, actualizaciones, suscripciones y configuración."
+    },
+    "redis": {
+      "en": "In-memory data store used as a cache, message broker and fast key-value database.",
+      "fr": "Magasin de données en mémoire utilisé comme cache, courtier de messages et base clé-valeur rapide.",
+      "de": "Datenspeicher im Arbeitsspeicher, genutzt als Cache, Message-Broker und schnelle Schlüssel-Wert-Datenbank.",
+      "es": "Almacén de datos en memoria usado como caché, intermediario de mensajes y base clave-valor rápida."
+    },
+    "ruby": {
+      "en": "Dynamic programming language and interpreter, used notably by the Ruby on Rails web framework.",
+      "fr": "Langage de programmation dynamique et son interpréteur, utilisé notamment par le framework web Ruby on Rails.",
+      "de": "Dynamische Programmiersprache mit Interpreter, unter anderem vom Web-Framework Ruby on Rails genutzt.",
+      "es": "Lenguaje de programación dinámico y su intérprete, usado en particular por el framework web Ruby on Rails."
+    },
+    "samba": {
+      "en": "Open-source software that provides Windows file and print sharing on Linux and can act as an Active Directory domain controller.",
+      "fr": "Logiciel open source qui fournit le partage de fichiers et d’imprimantes Windows sous Linux et peut servir de contrôleur de domaine Active Directory.",
+      "de": "Open-Source-Software für Windows-Datei- und Druckerfreigaben unter Linux, auch als Active-Directory-Domänencontroller einsetzbar.",
+      "es": "Software de código abierto que ofrece el uso compartido de archivos e impresoras de Windows en Linux y puede actuar como controlador de dominio de Active Directory."
+    },
+    "splunk": {
+      "en": "Platform that collects, indexes and searches machine data such as logs and events, for monitoring and security.",
+      "fr": "Plateforme qui collecte, indexe et recherche les données machine comme les journaux et les événements, pour la supervision et la sécurité.",
+      "de": "Plattform, die Maschinendaten wie Logs und Ereignisse sammelt, indiziert und durchsucht, für Überwachung und Sicherheit.",
+      "es": "Plataforma que recoge, indexa y busca datos de máquinas como registros y eventos, para supervisión y seguridad."
+    },
+    "squid": {
+      "en": "Open-source caching and forwarding web proxy, used to filter and speed up web access.",
+      "fr": "Proxy web open source avec cache, utilisé pour filtrer et accélérer l’accès au web.",
+      "de": "Open-Source-Web-Proxy mit Cache, eingesetzt zum Filtern und Beschleunigen des Webzugriffs.",
+      "es": "Proxy web de código abierto con caché, usado para filtrar y acelerar el acceso a la web."
+    },
+    "tomcat": {
+      "en": "Open-source Java web server and servlet container of the Apache Software Foundation, running Java web applications.",
+      "fr": "Serveur web Java et conteneur de servlets open source de l’Apache Software Foundation, qui exécute les applications web Java.",
+      "de": "Open-Source-Java-Webserver und Servlet-Container der Apache Software Foundation, der Java-Webanwendungen ausführt.",
+      "es": "Servidor web Java y contenedor de servlets de código abierto de la Apache Software Foundation, que ejecuta aplicaciones web Java."
+    },
+    "traefik": {
+      "en": "Open-source reverse proxy and load balancer that configures its routes from Docker and Kubernetes by itself.",
+      "fr": "Proxy inverse et répartiteur de charge open source qui configure lui-même ses routes à partir de Docker et Kubernetes.",
+      "de": "Open-Source-Reverse-Proxy und Load Balancer, der seine Routen selbst aus Docker und Kubernetes konfiguriert.",
+      "es": "Proxy inverso y balanceador de carga de código abierto que configura por sí mismo sus rutas a partir de Docker y Kubernetes."
+    },
+    "valkey": {
+      "en": "Open-source in-memory key-value store of the Linux Foundation, a fork of Redis kept compatible with it.",
+      "fr": "Magasin clé-valeur en mémoire open source de la Linux Foundation, dérivé de Redis et resté compatible avec lui.",
+      "de": "Open-Source-Schlüssel-Wert-Speicher im Arbeitsspeicher der Linux Foundation, eine mit Redis kompatibel gebliebene Abspaltung.",
+      "es": "Almacén clave-valor en memoria de código abierto de la Linux Foundation, derivado de Redis y compatible con él."
+    },
+    "veeam-backup-and-replication": {
+      "en": "Veeam backup software for virtual machines, physical servers and applications, with replication and restore.",
+      "fr": "Logiciel de sauvegarde de Veeam pour les machines virtuelles, serveurs physiques et applications, avec réplication et restauration.",
+      "de": "Backup-Software von Veeam für virtuelle Maschinen, physische Server und Anwendungen, mit Replikation und Wiederherstellung.",
+      "es": "Software de copia de seguridad de Veeam para máquinas virtuales, servidores físicos y aplicaciones, con replicación y restauración."
+    },
+    "veeam-backup-for-microsoft-365": {
+      "en": "Veeam software that backs up and restores Exchange Online, SharePoint Online, OneDrive and Teams data.",
+      "fr": "Logiciel de Veeam qui sauvegarde et restaure les données d’Exchange Online, SharePoint Online, OneDrive et Teams.",
+      "de": "Veeam-Software, die Daten von Exchange Online, SharePoint Online, OneDrive und Teams sichert und wiederherstellt.",
+      "es": "Software de Veeam que hace copia de seguridad y restaura los datos de Exchange Online, SharePoint Online, OneDrive y Teams."
+    },
+    "veeam-one": {
+      "en": "Veeam monitoring and reporting tool for virtual environments and Veeam backups.",
+      "fr": "Outil de supervision et de reporting de Veeam pour les environnements virtuels et les sauvegardes Veeam.",
+      "de": "Überwachungs- und Reporting-Werkzeug von Veeam für virtuelle Umgebungen und Veeam-Backups.",
+      "es": "Herramienta de supervisión e informes de Veeam para entornos virtuales y copias de seguridad de Veeam."
+    },
+    "vsphere": {
+      "en": "VMware virtualization platform: ESXi hypervisors running the virtual machines and vCenter managing them.",
+      "fr": "Plateforme de virtualisation de VMware : les hyperviseurs ESXi exécutent les machines virtuelles et vCenter les administre.",
+      "de": "Virtualisierungsplattform von VMware: ESXi-Hypervisoren führen die virtuellen Maschinen aus, vCenter verwaltet sie.",
+      "es": "Plataforma de virtualización de VMware: los hipervisores ESXi ejecutan las máquinas virtuales y vCenter las administra."
+    },
+    "zabbix": {
+      "en": "Open-source monitoring software for servers, networks, applications and services, with alerts and dashboards.",
+      "fr": "Logiciel de supervision open source des serveurs, réseaux, applications et services, avec alertes et tableaux de bord.",
+      "de": "Open-Source-Überwachungssoftware für Server, Netzwerke, Anwendungen und Dienste, mit Alarmen und Dashboards.",
+      "es": "Software de supervisión de código abierto de servidores, redes, aplicaciones y servicios, con alertas y paneles."
+    }
+  }
+}

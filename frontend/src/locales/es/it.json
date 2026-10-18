@@ -1866,7 +1866,7 @@
         "empty": "Aún no hay identificadores.",
         "add": "Añadir un identificador de producto CPE",
         "remove": "Quitar {{value}}",
-        "invalid": "Use la forma parte:proveedor:producto, p. ej., a:microsoft:sql_server.",
+        "invalid": "Use la forma parte:proveedor:producto, p. ej., a:microsoft:sql_server. Copie el identificador como lo escribe la NVD, con la barra invertida delante de un signo: veeam_backup_\\&_replication.",
         "hint": "Dónde encontrar este valor: busque el producto en el diccionario CPE del NIST y conserve su parte, proveedor y producto.",
         "dictionary": "Diccionario CPE del NIST"
       },

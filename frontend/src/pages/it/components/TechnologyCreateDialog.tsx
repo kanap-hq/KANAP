@@ -3,6 +3,7 @@ import { Alert, Autocomplete, Box, CircularProgress, MenuItem, Select, Stack, Te
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
+import { screenLanguage } from '../../../components/csv/readings';
 import { KanapDialog, PropertyRow } from '../../../components/design';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../../theme/formSx';
@@ -16,6 +17,8 @@ type CatalogEntry = {
   mode: string | null;
   versions: number;
   latest_version: string | null;
+  /** What the product is and what it is for, in the screen language. */
+  description?: string | null;
 };
 
 type Props = {
@@ -69,7 +72,8 @@ export function EditorField({ value, onChange, disabled, placeholder, onBlur }: 
  * it with its versions), then a free entry for a product the catalog does not know.
  */
 export default function TechnologyCreateDialog({ open, onClose, onCreated }: Props) {
-  const { t } = useTranslation(['it', 'common']);
+  const { t, i18n } = useTranslation(['it', 'common']);
+  const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
   const queryClient = useQueryClient();
   const { byField, labelFor } = useItOpsEnumOptions();
   const [manual, setManual] = React.useState(false);
@@ -90,8 +94,8 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   }, [open]);
 
   const catalogQuery = useQuery({
-    queryKey: ['technology-catalog', debouncedSearch],
-    queryFn: async () => (await api.get<{ items: CatalogEntry[] }>('/technologies/catalog', { params: { q: debouncedSearch || undefined } })).data.items || [],
+    queryKey: ['technology-catalog', debouncedSearch, language],
+    queryFn: async () => (await api.get<{ items: CatalogEntry[] }>('/technologies/catalog', { params: { q: debouncedSearch || undefined, language } })).data.items || [],
     enabled: open && !manual,
     placeholderData: (previous) => previous,
   });
@@ -105,7 +109,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
     setBusy(true);
     setError(null);
     try {
-      const res = await api.post<{ technology: { reference: string } }>('/technologies/adopt', { catalog_key: entry.key });
+      const res = await api.post<{ technology: { reference: string } }>('/technologies/adopt', { catalog_key: entry.key, language });
       await finish(res.data.technology.reference);
     } catch (err) {
       setError(getApiErrorMessage(err, t, t('workspace.technology.messages.createFailed')));
@@ -191,10 +195,8 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                   disabled={busy}
                   onClick={() => { void adopt(entry); }}
                   sx={(theme) => ({
-                    display: 'flex',
+                    display: 'block',
                     width: '100%',
-                    alignItems: 'baseline',
-                    gap: 1,
                     border: 0,
                     borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
                     bgcolor: 'transparent',
@@ -208,10 +210,35 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                     '&:hover': { bgcolor: theme.palette.kanap.bg.hover },
                   })}
                 >
-                  <Box component="span" sx={{ flex: 1, minWidth: 0 }}>{entry.name}</Box>
-                  <Box component="span" sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.tertiary })}>
-                    {[entry.editor, labelFor('technologyFamily', entry.family)].filter(Boolean).join(' · ')}
+                  {/* Top: the name at its full width, then the secondary facts on the right. */}
+                  <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
+                    <Box component="span" sx={{ flex: '1 0 auto' }}>{entry.name}</Box>
+                    <Box
+                      component="span"
+                      sx={(theme) => ({ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12, color: theme.palette.kanap.text.tertiary })}
+                    >
+                      {/* The hosting type (lot H1) joins this list, after the family. */}
+                      {[entry.editor, labelFor('technologyFamily', entry.family)].filter(Boolean).join(' · ')}
+                    </Box>
                   </Box>
+                  {/* Below: the description across the row, cut at its end, whole on hover. */}
+                  {entry.description && (
+                    <Box
+                      component="span"
+                      title={entry.description}
+                      sx={(theme) => ({
+                        display: 'block',
+                        mt: 0.25,
+                        fontSize: 12,
+                        color: theme.palette.kanap.text.tertiary,
+                        overflow: 'hidden',
+                        textOverflow: 'ellipsis',
+                        whiteSpace: 'nowrap',
+                      })}
+                    >
+                      {entry.description}
+                    </Box>
+                  )}
                 </Box>
               ))}
             </Box>

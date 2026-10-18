@@ -36,6 +36,10 @@ async function testCreateAndValidate() {
     await assert.rejects(technologies.create({ name: 'sql server' }, opts), /already exists/);
     await assert.rejects(technologies.create({ name: 'X', family: 'nope' }, opts), BadRequestException);
     await assert.rejects(technologies.create({ name: 'Y', cpe_products: ['microsoft sql'] }, opts), BadRequestException);
+    // The NVD escapes punctuation in its names: `veeam_backup_\&_replication` is kept as written.
+    const escaped = await technologies.create({ name: 'Veeam', cpe_products: ['a:veeam:veeam_backup_\\&_replication'] }, opts);
+    assert.deepEqual(escaped.cpe_products, ['a:veeam:veeam_backup_\\&_replication']);
+    await assert.rejects(technologies.create({ name: 'Z', cpe_products: ['a:veeam:backup_&_replication'] }, opts), BadRequestException);
     const byRef = await technologies.get('TEC-1', opts);
     assert.equal(byRef.id, created.id);
     await assert.rejects(technologies.update(created.id, { replaced_by_id: created.id }, opts), /cannot replace itself/);
@@ -127,7 +131,12 @@ async function testAdoption() {
     const again = await catalog.adopt('mssqlserver', opts);
     assert.deepEqual({ created: again.created, added: again.versions_added, id: again.technology.id }, { created: false, added: 0, id: first.technology.id });
     const [row] = await runner.query(`SELECT catalog_key, cpe_products, family FROM technologies WHERE id = $1`, [first.technology.id]);
-    assert.deepEqual(row, { catalog_key: 'mssqlserver', cpe_products: ['a:microsoft:sql_server'], family: 'database' });
+    assert.deepEqual(row, {
+      catalog_key: 'mssqlserver',
+      // The NVD names SQL Server once for all releases (until 2024), then once per release.
+      cpe_products: ['a:microsoft:sql_server', 'a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'],
+      family: 'database',
+    });
     const after = await catalog.notAdopted({ q: 'sql server' }, opts);
     assert.ok(!after.items.some((item) => item.key === 'mssqlserver'), 'an adopted entry is no longer offered');
     // A technology typed before under the same name receives the key instead of a duplicate.
@@ -463,12 +472,62 @@ async function cleanupTenant(setup: any, others: any[], tenantId: string, tables
   for (const runner of [setup, ...others]) await runner.release();
 }
 
+/**
+ * The short description an adoption gives: in the language asked, in English when that one is
+ * missing, kept when a technology of the same name already has one; every entry has one in the
+ * four languages, without dash.
+ */
+async function testAdoptionDescription() {
+  const { catalog } = services();
+  for (const product of catalog.all()) {
+    for (const language of ['en', 'fr', 'de', 'es'] as const) {
+      const text = (catalog as any).descriptions[product.key]?.[language] as string | undefined;
+      assert.ok(text && text.trim().length > 20, `${product.key}: ${language} description`);
+      assert.ok(!/[\u2013\u2014]/.test(text), `${product.key}: ${language} without dash`);
+    }
+  }
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-adopt-desc');
+    const opts = { manager: runner.manager, tenantId };
+    const descriptionOf = async (id: string) =>
+      (await runner.query(`SELECT description FROM technologies WHERE id = $1`, [id]))[0].description as string | null;
+    const fr = await catalog.adopt('postgresql', { ...opts, language: 'fr' });
+    assert.match(String(await descriptionOf(fr.technology.id)), /^Base de données relationnelle open source/);
+    const en = await catalog.adopt('mysql', opts);
+    assert.match(String(await descriptionOf(en.technology.id)), /^Open-source relational database/, 'no language, no user: English');
+    await assert.rejects(catalog.adopt('redis', { ...opts, language: 'it' }), BadRequestException);
+    // A technology of the same name keeps its own description.
+    await technology(runner, tenantId, 60, 'Apache Tomcat', 'application_server');
+    await runner.query(`UPDATE technologies SET description = 'Our Tomcat' WHERE tenant_id = $1 AND item_number = 60`, [tenantId]);
+    const merged = await catalog.adopt('tomcat', { ...opts, language: 'de' });
+    assert.equal(await descriptionOf(merged.technology.id), 'Our Tomcat');
+    // An empty one receives the catalog's.
+    await technology(runner, tenantId, 61, 'Grafana', 'monitoring');
+    await runner.query(`UPDATE technologies SET description = '  ' WHERE tenant_id = $1 AND item_number = 61`, [tenantId]);
+    const filled = await catalog.adopt('grafana', { ...opts, language: 'es' });
+    assert.match(String(await descriptionOf(filled.technology.id)), /^Herramienta de paneles/);
+    // The list offers the description in the language asked.
+    const listed = await catalog.notAdopted({ q: 'redis', language: 'de' }, opts);
+    assert.match(String(listed.items.find((item) => item.key === 'redis')?.description), /^Datenspeicher im Arbeitsspeicher/);
+  });
+  // A language missing from the file falls back to English.
+  const original = (catalog as any).descriptions;
+  (catalog as any).descriptions = { x: { en: 'English text' } };
+  try {
+    assert.equal(catalog.description('x', 'fr'), 'English text');
+    assert.equal(catalog.description('y', 'fr'), null);
+  } finally {
+    (catalog as any).descriptions = original;
+  }
+}
+
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
   ['version labels', testVersionLabels],
   ['version order', testVersionOrder],
   ['links and version delete', testLinksAndVersionDelete],
   ['catalog adoption', testAdoption],
+  ['catalog adoption: description', testAdoptionDescription],
   ['single links', testSingleLinks],
   ['concurrent single links', testConcurrentSingleLinks],
   ['unlink what is not linked', testUnlinkWhatIsNotLinked],

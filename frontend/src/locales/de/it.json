@@ -1866,7 +1866,7 @@
         "empty": "Noch keine Kennung.",
         "add": "CPE-Produktkennung hinzufügen",
         "remove": "{{value}} entfernen",
-        "invalid": "Verwenden Sie die Form Teil:Hersteller:Produkt, z. B. a:microsoft:sql_server.",
+        "invalid": "Verwenden Sie die Form Teil:Hersteller:Produkt, z. B. a:microsoft:sql_server. Übernehmen Sie die Kennung so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: veeam_backup_\\&_replication.",
         "hint": "Wo Sie diesen Wert finden: Suchen Sie das Produkt im CPE-Wörterbuch des NIST und übernehmen Sie Teil, Hersteller und Produkt.",
         "dictionary": "CPE-Wörterbuch des NIST"
       },

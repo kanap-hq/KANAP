@@ -2,11 +2,14 @@ import { BadRequestException, Injectable, NotFoundException, Optional } from '@n
 import { addedCpeProducts, TechnologyCpeEvents } from '../technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../../audit/audit.service';
+import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { readTechnology, technologyReference } from '../technology-rows';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
+// Written for KANAP and kept apart from the catalog, which the script rebuilds from endoflife.date.
+import * as shippedDescriptions from './technologies.descriptions.json';
 
 export type CatalogVersion = {
   key: string;
@@ -31,6 +34,10 @@ export type CatalogProduct = {
 
 type Opts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
+/** The languages of the catalog descriptions. */
+export type CatalogLanguage = 'en' | 'fr' | 'de' | 'es';
+type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
+
 /**
  * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built from
  * endoflife.date by `scripts/technologies/build-catalog.mjs`, MIT license). It is offered, never
@@ -42,6 +49,7 @@ type Opts = { manager: EntityManager; tenantId: string; userId?: string | null }
 export class TechnologyCatalogService {
   private readonly products: CatalogProduct[] = (shipped as unknown as { products: CatalogProduct[] }).products;
   private readonly byKey = new Map(this.products.map((product) => [product.key, product]));
+  private readonly descriptions = (shippedDescriptions as unknown as { descriptions: Descriptions }).descriptions;
 
   constructor(
     private readonly audit: AuditService,
@@ -54,6 +62,12 @@ export class TechnologyCatalogService {
     return this.products;
   }
 
+  /** The short description of an entry in `language`, in English when that one is missing. */
+  description(key: string, language: CatalogLanguage): string | null {
+    const texts = this.descriptions[key];
+    return texts?.[language]?.trim() || texts?.en?.trim() || null;
+  }
+
   /** The editors the catalog names, once each. */
   editors(): string[] {
     return Array.from(new Set(this.products.map((product) => product.editor)));
@@ -63,7 +77,8 @@ export class TechnologyCatalogService {
    * The entries the tenant has not adopted (no technology with its catalog key or its name),
    * filtered by `q` (name, editor) and `family`, sorted by name.
    */
-  async notAdopted(filters: { q?: string; family?: string }, opts: Opts) {
+  async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
+    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
     const rows: Array<{ catalog_key: string | null; name: string }> = await opts.manager.query(
       `SELECT catalog_key, name FROM technologies WHERE tenant_id = $1`,
       [opts.tenantId],
@@ -86,22 +101,26 @@ export class TechnologyCatalogService {
         cpe_products: product.cpe_products,
         versions: product.versions.length,
         latest_version: product.versions[0]?.label ?? null,
+        description: this.description(product.key, language),
       }));
     return { items };
   }
 
   /**
    * Adopt the entry `key`: the technology with its catalog key, editor, family (`other` when the
-   * tenant's catalog no longer has it), mode and CPE identifiers, and its versions with their dates.
-   * Idempotent: an entry already adopted returns its technology and adds nothing (a version the
-   * tenant deleted stays deleted); a technology of the same name (typed before) receives the key,
-   * the identifiers it lacks and the missing versions. Two
+   * tenant's catalog no longer has it), mode, CPE identifiers and short description, and its
+   * versions with their dates. The description is in `opts.language`, failing that the user's
+   * stored language, failing that English. Idempotent: an entry already adopted returns its
+   * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
+   * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
+   * the description when it has none. Two
    * adoptions of one entry at once run one after the other (transaction-level advisory lock).
    */
-  async adopt(key: string, opts: Opts) {
+  async adopt(key: string, opts: Opts & { language?: unknown }) {
     const { manager: mg, tenantId } = opts;
     const product = this.byKey.get(String(key || '').trim());
     if (!product) throw new NotFoundException('Catalog entry not found');
+    const description = this.description(product.key, await languageOf(mg, tenantId, opts.userId ?? null, opts.language));
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);
 
     const existing: Array<{ id: string; catalog_key: string | null }> = await mg.query(
@@ -126,9 +145,10 @@ export class TechnologyCatalogService {
         `UPDATE technologies
             SET catalog_key = $3,
                 cpe_products = ARRAY(SELECT DISTINCT unnest(cpe_products || $4::text[]) ORDER BY 1),
-                editor = COALESCE(editor, $5), updated_at = now()
+                editor = COALESCE(editor, $5),
+                description = COALESCE(NULLIF(btrim(description), ''), $6), updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, technologyId, product.key, product.cpe_products, product.editor],
+        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
@@ -138,9 +158,9 @@ export class TechnologyCatalogService {
       const family = (settings.technologyFamilies ?? []).some((item) => item.code === product.family) ? product.family : 'other';
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, mode, catalog_key, cpe_products)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, product.mode, product.key, product.cpe_products],
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, mode, catalog_key, cpe_products, description)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9) RETURNING id`,
+        [tenantId, itemNumber, product.name, product.editor, family, product.mode, product.key, product.cpe_products, description],
       );
       technologyId = row.id;
       created = true;
