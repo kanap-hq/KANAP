@@ -173,8 +173,10 @@
         "servers": "Server",
         "applications": "Anwendungen",
         "itOwner": "IT-Verantwortlicher",
-        "nextSupportEnd": "Nächstes Supportende"
+        "nextSupportEnd": "Nächstes Supportende",
+        "vulnerabilities": "Zu prüfende Schwachstellen"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} kritisch oder hoch",
       "delete": {
         "warning_one": "Diese Technologie und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
         "warning_other": "Diese {{count}} Technologien und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
@@ -288,6 +290,111 @@
         "gaps": "Keine fehlenden Daten."
       },
       "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut."
+    },
+    "vulnerabilities": {
+      "title": "Schwachstellen",
+      "subtitle": "Veröffentlichte Schwachstellen (NVD), die die eingesetzten Technologien betreffen, und die Server und Anwendungen, die sie erreichen.",
+      "total_one": "Gesamt: {{count, count}} Zeile ({{cves, count}} CVE)",
+      "total_other": "Gesamt: {{count, count}} Zeilen ({{cves, count}} CVE)",
+      "actions": {
+        "changeState": "Status ändern",
+        "changeStateSelected_one": "Status ändern ({{count}})",
+        "changeStateSelected_other": "Status ändern ({{count}})",
+        "export": "CSV exportieren"
+      },
+      "bulk": {
+        "title": "Status ändern",
+        "state": "Status",
+        "note": "Gemeinsame Notiz",
+        "scopeAll": "Alle Zeilen des aktuellen Filters.",
+        "scopeAllBut_one": "Alle Zeilen des aktuellen Filters außer {{count}}.",
+        "scopeAllBut_other": "Alle Zeilen des aktuellen Filters außer {{count}}.",
+        "scopeSelected_one": "Die ausgewählte Zeile.",
+        "scopeSelected_other": "Die {{count}} ausgewählten Zeilen.",
+        "count_one": "Dies ändert den Status von {{count}} von {{rows}} Zeilen,",
+        "count_other": "Dies ändert den Status von {{count}} von {{rows}} Zeilen,",
+        "countCves_one": "bei {{count}} Schwachstelle.",
+        "countCves_other": "bei {{count}} Schwachstellen.",
+        "counting": "Zeilen werden gezählt…",
+        "tooMany": "Mehr als 5.000 Zeilen: Grenzen Sie die Filter ein oder wählen Sie weniger Zeilen aus.",
+        "countFailed": "Die Zeilen konnten nicht gezählt werden. Versuchen Sie es erneut.",
+        "failed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+        "changed": "Die Liste hat sich seit der Zählung geändert. Prüfen Sie die neue Zählung und bestätigen Sie erneut.",
+        "save": "Status ändern",
+        "noteKept": "Ohne Notiz behält jede Zeile ihre eigene.",
+        "noteAll_one": "Die Notiz gilt für die Zeile.",
+        "noteAll_other": "Die Notiz gilt für die {{count}} Zeilen."
+      },
+      "selection": {
+        "all": "Alle Zeilen des Filters auswählen",
+        "row": "{{cve}}, {{technology}} {{version}} auswählen",
+        "whole_one": "{{count}} Zeile ausgewählt, ganzer Filter",
+        "whole_other": "{{count}} Zeilen ausgewählt, ganzer Filter",
+        "some_one": "{{count}} Zeile ausgewählt",
+        "some_other": "{{count}} Zeilen ausgewählt",
+        "clear": "Auswahl aufheben"
+      },
+      "panel": {
+        "close": "Schließen"
+      },
+      "exportFailed": "Der Export ist fehlgeschlagen. Versuchen Sie es erneut.",
+      "saveFailed": "Die Änderung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+      "unknownVersion": "Version nicht erfasst (möglicherweise betroffen)",
+      "versionNone": "Nicht erfasst",
+      "versionNoneHint": "Keine Version erfasst: möglicherweise betroffen",
+      "empty": {
+        "none": "Keine Schwachstelle zu prüfen. Schwachstellen erscheinen für Technologien mit CPE-Kennungen: Tragen Sie diese bei einer Technologie ein oder übernehmen Sie die Technologie aus dem Katalog.",
+        "filtered": "Keine Schwachstelle entspricht diesen Filtern."
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Schweregrad",
+        "summary": "Zusammenfassung",
+        "technology": "Technologie",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "state": "Status",
+        "published": "Veröffentlicht",
+        "version": "Version",
+        "score": "Score",
+        "editor": "Hersteller",
+        "note": "Notiz"
+      },
+      "severities": {
+        "critical": "Kritisch",
+        "high": "Hoch",
+        "medium": "Mittel",
+        "low": "Niedrig",
+        "none": "Keine",
+        "unknown": "Nicht bewertet"
+      },
+      "states": {
+        "to_review": "Zu prüfen",
+        "handled": "Behandelt",
+        "not_affected": "Nicht betroffen"
+      },
+      "detail": {
+        "vector": "CVSS-Vektor",
+        "versions": "Technologien und Versionen",
+        "servers": "Server",
+        "applications": "Anwendungen",
+        "noServers": "Kein Server trägt eine betroffene Version.",
+        "noApplications": "Keine Anwendung nutzt eine betroffene Version.",
+        "applicationsHidden": "Die Anwendungen sind ausgeblendet: Dafür ist Zugriff auf die Anwendungen nötig.",
+        "via": "über {{name}}",
+        "stateOf": "Status von {{version}}",
+        "noteOf": "Notiz zu {{version}}",
+        "notePlaceholder": "z. B. am 12. März gepatcht"
+      },
+      "section": {
+        "title": "Schwachstellen",
+        "empty": "Keine bekannte Schwachstelle betrifft diese Technologie.",
+        "searching": "Suche nach Schwachstellen läuft…",
+        "loadFailed": "Die Schwachstellen konnten nicht geladen werden.",
+        "rematch": "Erneut abgleichen",
+        "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
+        "rematchFailed": "Der Abgleich konnte nicht ausgeführt werden. Versuchen Sie es erneut."
+      }
     },
     "interfaces": {
       "title": "Schnittstellen",

@@ -438,6 +438,7 @@
       "document_tasks": "Tâches de document",
       "document_versions": "Versions de document",
       "documents": "Documents",
+      "expiry_reminders": "Rappels d'échéance envoyés",
       "export": "Export",
       "incident_attachments": "Pièces jointes d'incident",
       "incident_technologies": "Technologies d'incident",
@@ -524,6 +525,7 @@
       "tenants_plan": "Offres des espaces de travail",
       "user_roles": "Rôles des utilisateurs",
       "users": "Utilisateurs",
+      "vulnerability_notifications": "E-mails de vulnérabilités envoyés",
       "working_day_profiles": "Calendriers de jours ouvrés"
     },
     "title": "Journal d'audit",

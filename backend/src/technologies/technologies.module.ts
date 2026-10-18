@@ -13,6 +13,7 @@ import { TechnologyCatalogService } from './catalog/technology-catalog.service';
 import { TechnologiesController } from './technologies.controller';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService } from './technologies-relations.service';
+import { TechnologyCpeEvents } from './technology-cpe-events';
 import { TechnologiesService } from './technologies.service';
 import { TechnologyLinksService } from './technology-links.service';
 import { TechnologyReachService } from './technology-reach.service';
@@ -37,9 +38,10 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     TechnologiesRelationsService,
     TechnologiesDeleteService,
     TechnologyCatalogService,
+    TechnologyCpeEvents,
     EndOfSupportService,
     ApplicationConversionService,
   ],
-  exports: [TechnologiesService, TechnologyLinksService, TechnologyReachService, TechnologyCatalogService],
+  exports: [TechnologiesService, TechnologyLinksService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents],
 })
 export class TechnologiesModule {}

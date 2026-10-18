@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { TechnologyCpeEvents } from '../../technologies/technology-cpe-events';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
@@ -21,6 +22,7 @@ export class AssetsCrudService extends AssetsBaseService {
     private readonly audit: AuditService,
     private readonly validation: AssetsValidationService,
     private readonly notifications: NotificationsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {
     super(assetRepo);
   }
@@ -336,6 +338,8 @@ export class AssetsCrudService extends AssetsBaseService {
       { table: 'assets', recordId: saved.id, action: 'update', before, after: saved, userId, ...this.auditSource(opts) },
       { manager: opts?.manager },
     );
+    // Retired or back in service: its technologies are matched again with the vulnerabilities.
+    if (before.status !== saved.status) await this.cpeEvents?.emitForSubjects(opts?.manager ?? repo.manager, tenant, 'asset', [saved.id]);
     return saved;
   }
 

@@ -61,6 +61,7 @@
       "assets": "Assets",
       "technologies": "Technologien",
       "endOfSupport": "Supportende",
+      "vulnerabilities": "Schwachstellen",
       "connections": "Verbindungen",
       "connectionMap": "Verbindungskarte",
       "administrationView": "Administrationssicht",

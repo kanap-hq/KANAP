@@ -61,6 +61,7 @@
       "assets": "Activos",
       "technologies": "Tecnologías",
       "endOfSupport": "Fin de soporte",
+      "vulnerabilities": "Vulnerabilidades",
       "connections": "Conexiones",
       "connectionMap": "Mapa de conexiones",
       "administrationView": "Vista de la administración",

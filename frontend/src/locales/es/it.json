@@ -173,8 +173,10 @@
         "servers": "Servidores",
         "applications": "Aplicaciones",
         "itOwner": "Responsable de TI",
-        "nextSupportEnd": "Próximo fin de soporte"
+        "nextSupportEnd": "Próximo fin de soporte",
+        "vulnerabilities": "Vulnerabilidades por revisar"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} críticas o altas",
       "delete": {
         "warning_one": "Se eliminarán esta tecnología y sus vínculos con servidores y aplicaciones.",
         "warning_other": "Se eliminarán estas {{count}} tecnologías y sus vínculos con servidores y aplicaciones.",
@@ -288,6 +290,111 @@
         "gaps": "No faltan datos."
       },
       "exportFailed": "La exportación ha fallado. Inténtelo de nuevo."
+    },
+    "vulnerabilities": {
+      "title": "Vulnerabilidades",
+      "subtitle": "Vulnerabilidades publicadas (NVD) que afectan a las tecnologías en uso, y los servidores y aplicaciones a los que llegan.",
+      "total_one": "Total: {{count, count}} fila ({{cves, count}} CVE)",
+      "total_other": "Total: {{count, count}} filas ({{cves, count}} CVE)",
+      "actions": {
+        "changeState": "Cambiar el estado",
+        "changeStateSelected_one": "Cambiar el estado ({{count}})",
+        "changeStateSelected_other": "Cambiar el estado ({{count}})",
+        "export": "Exportar CSV"
+      },
+      "bulk": {
+        "title": "Cambiar el estado",
+        "state": "Estado",
+        "note": "Nota común",
+        "scopeAll": "Todas las filas del filtro actual.",
+        "scopeAllBut_one": "Todas las filas del filtro actual, salvo {{count}}.",
+        "scopeAllBut_other": "Todas las filas del filtro actual, salvo {{count}}.",
+        "scopeSelected_one": "La fila seleccionada.",
+        "scopeSelected_other": "Las {{count}} filas seleccionadas.",
+        "count_one": "Esto cambia el estado de {{count}} fila de {{rows}},",
+        "count_other": "Esto cambia el estado de {{count}} filas de {{rows}},",
+        "countCves_one": "en {{count}} vulnerabilidad.",
+        "countCves_other": "en {{count}} vulnerabilidades.",
+        "counting": "Contando las filas…",
+        "tooMany": "Más de 5000 filas: acote los filtros o seleccione menos filas.",
+        "countFailed": "No se pudieron contar las filas. Inténtelo de nuevo.",
+        "failed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
+        "changed": "La lista ha cambiado desde el recuento. Revise el nuevo recuento y vuelva a confirmar.",
+        "save": "Cambiar el estado",
+        "noteKept": "Sin nota, cada fila conserva la suya.",
+        "noteAll_one": "La nota se aplica a la fila.",
+        "noteAll_other": "La nota se aplica a las {{count}} filas."
+      },
+      "selection": {
+        "all": "Seleccionar todas las filas del filtro",
+        "row": "Seleccionar {{cve}}, {{technology}} {{version}}",
+        "whole_one": "{{count}} fila seleccionada, todo el filtro",
+        "whole_other": "{{count}} filas seleccionadas, todo el filtro",
+        "some_one": "{{count}} fila seleccionada",
+        "some_other": "{{count}} filas seleccionadas",
+        "clear": "Quitar la selección"
+      },
+      "panel": {
+        "close": "Cerrar"
+      },
+      "exportFailed": "La exportación falló. Inténtelo de nuevo.",
+      "saveFailed": "No se pudo guardar el cambio. Inténtelo de nuevo.",
+      "unknownVersion": "Versión no registrada (potencialmente afectada)",
+      "versionNone": "Sin registrar",
+      "versionNoneHint": "Ninguna versión registrada: potencialmente afectada",
+      "empty": {
+        "none": "Ninguna vulnerabilidad por revisar. Las vulnerabilidades aparecen para las tecnologías que indican sus identificadores CPE: complételos en una tecnología o adóptela desde el catálogo.",
+        "filtered": "Ninguna vulnerabilidad coincide con estos filtros."
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Gravedad",
+        "summary": "Resumen",
+        "technology": "Tecnología",
+        "servers": "Servidores",
+        "applications": "Aplicaciones",
+        "state": "Estado",
+        "published": "Publicación",
+        "version": "Versión",
+        "score": "Puntuación",
+        "editor": "Editor",
+        "note": "Nota"
+      },
+      "severities": {
+        "critical": "Crítica",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "none": "Ninguna",
+        "unknown": "Sin evaluar"
+      },
+      "states": {
+        "to_review": "Por revisar",
+        "handled": "Tratada",
+        "not_affected": "No afectada"
+      },
+      "detail": {
+        "vector": "Vector CVSS",
+        "versions": "Tecnologías y versiones",
+        "servers": "Servidores",
+        "applications": "Aplicaciones",
+        "noServers": "Ningún servidor tiene una versión afectada.",
+        "noApplications": "Ninguna aplicación usa una versión afectada.",
+        "applicationsHidden": "Las aplicaciones están ocultas: leerlas requiere acceso a las aplicaciones.",
+        "via": "a través de {{name}}",
+        "stateOf": "Estado de {{version}}",
+        "noteOf": "Nota sobre {{version}}",
+        "notePlaceholder": "p. ej., parcheado el 12 de marzo"
+      },
+      "section": {
+        "title": "Vulnerabilidades",
+        "empty": "Ninguna vulnerabilidad conocida afecta a esta tecnología.",
+        "searching": "Búsqueda de vulnerabilidades en curso…",
+        "loadFailed": "No se pudieron cargar las vulnerabilidades.",
+        "rematch": "Volver a cotejar",
+        "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
+        "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo."
+      }
     },
     "interfaces": {
       "title": "Interfaces",

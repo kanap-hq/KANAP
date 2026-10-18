@@ -40,3 +40,14 @@ export function compareVersionLabels(a: string | null | undefined, b: string | n
 export function sortVersions<T extends { label: string | null }>(versions: readonly T[]): T[] {
   return [...versions].sort((a, b) => compareVersionLabels(a.label, b.label));
 }
+
+/**
+ * The same order in SQL, for `ORDER BY` on a label column or expression (`label`, trusted text of
+ * the query, never a value of the request): newest number first, equal numbers by label descending
+ * (the qualifier first), then the labels without a number alphabetically, then no label (null).
+ */
+export function versionOrderSql(label: string): string {
+  const text = `btrim(${label})`;
+  const number = `string_to_array(substring(${text} from '^[vV]?([0-9]+(?:\\.[0-9]+)*)'), '.')::numeric[]`;
+  return `${number} DESC NULLS LAST, CASE WHEN ${number} IS NULL THEN lower(${text}) END, lower(${text}) DESC`;
+}

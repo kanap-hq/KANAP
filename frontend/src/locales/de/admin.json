@@ -438,6 +438,7 @@
       "document_tasks": "Aufgaben von Dokumenten",
       "document_versions": "Dokumentversionen",
       "documents": "Dokumente",
+      "expiry_reminders": "Gesendete Ablauferinnerungen",
       "export": "Export",
       "incident_attachments": "Vorfallanhänge",
       "incident_technologies": "Technologien von Vorfällen",
@@ -524,6 +525,7 @@
       "tenants_plan": "Tarife der Arbeitsbereiche",
       "user_roles": "Benutzerrollen",
       "users": "Benutzer",
+      "vulnerability_notifications": "Gesendete Schwachstellen-E-Mails",
       "working_day_profiles": "Arbeitstagekalender"
     },
     "title": "Audit-Protokoll",

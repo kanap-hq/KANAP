@@ -438,6 +438,7 @@
       "document_tasks": "Document tasks",
       "document_versions": "Document versions",
       "documents": "Documents",
+      "expiry_reminders": "Expiry reminders sent",
       "export": "Export",
       "incident_attachments": "Incident attachments",
       "incident_technologies": "Incident technologies",
@@ -524,6 +525,7 @@
       "tenants_plan": "Workspace plans",
       "user_roles": "User roles",
       "users": "Users",
+      "vulnerability_notifications": "Vulnerability emails sent",
       "working_day_profiles": "Working-day calendars"
     },
     "title": "Audit log",

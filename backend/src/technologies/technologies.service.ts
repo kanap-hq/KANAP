@@ -1,4 +1,5 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { addedCpeProducts, lockTechnologyMatching, TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { randomUUID } from 'crypto';
 import * as path from 'path';
@@ -9,6 +10,7 @@ import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
+import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import {
@@ -72,7 +74,7 @@ const GRID_SET_COLUMNS = ['family', 'editor', 'lifecycle'] as const;
 /** Columns the list grid filters with a text filter, and what they compare. */
 const GRID_TEXT_COLUMNS: Record<string, string> = { name: 't.name', reference: `('TEC-' || t.item_number)` };
 
-function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
+export function gridTextModel(raw: unknown, column: string): { type?: string; filter?: unknown } | null {
   if (typeof raw !== 'string' || !raw.trim()) return null;
   try {
     const model = JSON.parse(raw)?.[column];
@@ -83,7 +85,7 @@ function gridTextModel(raw: unknown, column: string): { type?: string; filter?: 
 }
 
 /** A grid text filter (contains, equals, starts or ends with, blank) on `expr`, without case. */
-function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
+export function gridTextClause(expr: string, model: { type?: string; filter?: unknown } | null, bind: (value: unknown) => string): string | null {
   if (!model) return null;
   const type = model.type || 'contains';
   if (type === 'blank') return `(${expr} IS NULL OR ${expr} = '')`;
@@ -136,6 +138,7 @@ export class TechnologiesService {
     private readonly itOps: ItOpsSettingsService,
     private readonly reach: TechnologyReachService,
     private readonly storage: StorageService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   // ==================== LIST AND RECORD ====================
@@ -188,8 +191,22 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    const rows: Array<TechnologyRow & { total: string; owner_names: string[] | null; it_owner_names: string[] | null }> = await mg.query(
-      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total,
+    // The CVE still to review of each technology, and those critical or high (lot T6b), while the
+    // vulnerability feed is on; null otherwise.
+    // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
+    // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
+    const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
+      ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
+            FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review') AS vulnerability_counts`
+      : 'NULL::int[] AS vulnerability_counts';
+    const rows: Array<TechnologyRow & {
+      total: string;
+      owner_names: string[] | null;
+      it_owner_names: string[] | null;
+      vulnerability_counts: number[] | null;
+    }> = await mg.query(
+      `SELECT ${TECHNOLOGY_COLUMNS}, count(*) OVER () AS total, ${vulnerabilityCounts},
               ARRAY(
                 SELECT NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '')
                   FROM technology_owners o JOIN users u ON u.id = o.user_id AND u.tenant_id = o.tenant_id
@@ -210,8 +227,10 @@ export class TechnologiesService {
     );
     const counts = await this.reach.countsOfTechnologies(mg, tenantId, rows.map((row) => row.id));
     return {
-      items: rows.map(({ total: _total, owner_names, it_owner_names, ...row }) => ({
+      items: rows.map(({ total: _total, owner_names, it_owner_names, vulnerability_counts, ...row }) => ({
         ...this.present(row),
+        vulnerabilities_to_review: vulnerability_counts ? Number(vulnerability_counts[0]) : null,
+        vulnerabilities_severe: vulnerability_counts ? Number(vulnerability_counts[1]) : null,
         owner_names: (owner_names ?? []).filter(Boolean),
         it_owner_names: (it_owner_names ?? []).filter(Boolean),
         servers: counts.get(row.id)?.servers ?? 0,
@@ -264,6 +283,7 @@ export class TechnologiesService {
     );
     const row = await readTechnology(mg, tenantId, created.id);
     await this.audit.log({ table: 'technologies', recordId: row.id, action: 'create', before: null, after: row, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: row.id, products: addedCpeProducts([], row.cpe_products) });
     return this.get(row.id, opts);
   }
 
@@ -284,6 +304,7 @@ export class TechnologiesService {
       );
       const after = await readTechnology(mg, tenantId, before.id);
       await this.audit.log({ table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: before.id, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     }
     return this.get(before.id, opts);
   }
@@ -450,6 +471,7 @@ export class TechnologiesService {
     );
     const version = await this.readVersion(mg, tenantId, tech.id, created.id);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'create', before: null, after: version, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return version;
   }
 
@@ -475,6 +497,7 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
       return after;
     }
     return before;
@@ -489,6 +512,8 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const before = await this.readVersion(mg, tenantId, tech.id, versionId);
+    // Not while a matching writes rows that name this version (they would wait on each other).
+    await lockTechnologyMatching(mg, tenantId, tech.id);
     let merged = 0;
     for (const side of ['asset', 'application'] as const) {
       const [{ n }] = await mg.query(
@@ -506,6 +531,7 @@ export class TechnologiesService {
     }
     await mg.query(`DELETE FROM technology_versions WHERE tenant_id = $1 AND technology_id = $2 AND id = $3`, [tenantId, tech.id, before.id]);
     await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'delete', before, after: null, userId: opts.userId ?? null }, { manager: mg });
+    await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
     return { ok: true, merged_links: merged };
   }
 

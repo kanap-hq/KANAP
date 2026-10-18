@@ -86,6 +86,7 @@ const TechnologiesPage = React.lazy(() => import('./pages/it/TechnologiesPage'))
 const AdministrationViewPage = React.lazy(() => import('./pages/it/AdministrationViewPage'));
 const TechnologyWorkspacePage = React.lazy(() => import('./pages/it/TechnologyWorkspacePage'));
 const EndOfSupportReportPage = React.lazy(() => import('./pages/it/EndOfSupportReportPage'));
+const VulnerabilitiesPage = React.lazy(() => import('./pages/it/VulnerabilitiesPage'));
 const IncidentsPage = React.lazy(() => import('./pages/it/IncidentsPage'));
 const NetboxSyncPage = React.lazy(() => import('./pages/it/NetboxSyncPage'));
 const IncidentWorkspacePage = React.lazy(() => import('./pages/it/IncidentWorkspacePage'));
@@ -270,6 +271,7 @@ function AppRoutes() {
           <Route path="/it/technologies/:id/:tab" element={<TechnologyWorkspacePage />} />
           <Route path="/it/technologies/end-of-support" element={<EndOfSupportReportPage />} />
           <Route path="/it/administration-view" element={<AdministrationViewPage />} />
+          {config.features.vulnerabilityFeed && <Route path="/it/vulnerabilities" element={<VulnerabilitiesPage />} />}
           <Route path="/it/incidents" element={<IncidentsPage />} />
           <Route path="/it/incidents/:id" element={<IncidentWorkspacePage />} />
           <Route path="/it/incidents/:id/:tab" element={<IncidentWorkspacePage />} />

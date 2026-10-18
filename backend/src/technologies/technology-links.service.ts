@@ -1,4 +1,5 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { TechnologyCpeEvents } from './technology-cpe-events';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
@@ -107,7 +108,13 @@ export class TechnologyLinksService {
     private readonly audit: AuditService,
     private readonly reach: TechnologyReachService,
     private readonly itOps: ItOpsSettingsService,
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
+
+  /** A link changed: the technology is matched again with the vulnerabilities, after the commit (lot T6b). */
+  private linksChanged(mg: EntityManager, tenantId: string, technologyId: string) {
+    return this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: [] });
+  }
 
   // ==================== ASSETS ====================
 
@@ -325,6 +332,7 @@ export class TechnologyLinksService {
         table: 'application_technologies', recordId: tech.id, action: 'update',
         before: null, after: { added }, userId: opts.userId ?? null,
       }, { manager: mg });
+      await this.linksChanged(mg, tenantId, tech.id);
     }
     return { ok: true, added: added.length };
   }
@@ -512,6 +520,7 @@ export class TechnologyLinksService {
         before: before ? { ...before, [`${side}_id`]: subjectId, technology_version_id: versionId } : null, after, userId: opts.userId ?? null,
       }, { manager: mg });
     }
+    if (changed) await this.linksChanged(mg, tenantId, technologyId);
     return { ok: true, link_id: row.id, created: !before, changed };
   }
 
@@ -542,6 +551,7 @@ export class TechnologyLinksService {
     await this.audit.log({
       table, recordId: tech.id, action: 'update', before, after: { id, technology_version_id: versionId, notes, source: 'manual' }, userId: opts.userId ?? null,
     }, { manager: mg });
+    if (versionId !== before.technology_version_id) await this.linksChanged(mg, tenantId, tech.id);
     return { ok: true };
   }
 
@@ -561,6 +571,7 @@ export class TechnologyLinksService {
     );
     if (removed[0]) {
       await this.audit.log({ table, recordId: technologyId, action: 'delete', before: removed[0], after: null, userId: opts.userId ?? null }, { manager: mg });
+      await this.linksChanged(mg, tenantId, technologyId);
     }
     return { ok: true, changed: removed.length > 0 };
   }
@@ -574,6 +585,7 @@ export class TechnologyLinksService {
        SELECT id::text AS id FROM d ORDER BY id`,
       [tenantId, technologyId, applicationId],
     );
+    if (rows.length > 0) await this.linksChanged(mg, tenantId, technologyId);
     return rows.map((row) => row.id);
   }
 

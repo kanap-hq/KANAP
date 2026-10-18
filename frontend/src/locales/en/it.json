@@ -173,8 +173,10 @@
         "servers": "Servers",
         "applications": "Applications",
         "itOwner": "IT owner",
-        "nextSupportEnd": "Next end of support"
+        "nextSupportEnd": "Next end of support",
+        "vulnerabilities": "Vulnerabilities to review"
       },
+      "vulnerabilityCount": "{{count}} · {{severe}} critical or high",
       "delete": {
         "warning_one": "This technology and its links to servers and applications will be deleted.",
         "warning_other": "These {{count}} technologies and their links to servers and applications will be deleted.",
@@ -288,6 +290,111 @@
         "gaps": "No missing data."
       },
       "exportFailed": "The export failed. Try again."
+    },
+    "vulnerabilities": {
+      "title": "Vulnerabilities",
+      "subtitle": "Published vulnerabilities (NVD) that concern the technologies in use, and the servers and applications they reach.",
+      "total_one": "Total: {{count, count}} row ({{cves, count}} CVE)",
+      "total_other": "Total: {{count, count}} rows ({{cves, count}} CVE)",
+      "actions": {
+        "changeState": "Change state",
+        "changeStateSelected_one": "Change state ({{count}})",
+        "changeStateSelected_other": "Change state ({{count}})",
+        "export": "Export CSV"
+      },
+      "bulk": {
+        "title": "Change the state",
+        "state": "State",
+        "note": "Common note",
+        "scopeAll": "Every row of the current filter.",
+        "scopeAllBut_one": "Every row of the current filter but {{count}}.",
+        "scopeAllBut_other": "Every row of the current filter but {{count}}.",
+        "scopeSelected_one": "The selected row.",
+        "scopeSelected_other": "The {{count}} selected rows.",
+        "count_one": "This changes the state of {{count}} row of {{rows}},",
+        "count_other": "This changes the state of {{count}} rows of {{rows}},",
+        "countCves_one": "on {{count}} vulnerability.",
+        "countCves_other": "on {{count}} vulnerabilities.",
+        "counting": "Counting the rows…",
+        "tooMany": "More than 5,000 rows: narrow the filters, or select fewer rows.",
+        "countFailed": "The rows could not be counted. Try again.",
+        "failed": "The change could not be saved. Try again.",
+        "changed": "The list changed since the count. Check the new count, then confirm again.",
+        "save": "Change state",
+        "noteKept": "Without a note, each row keeps its own.",
+        "noteAll_one": "The note goes on the row.",
+        "noteAll_other": "The note goes on the {{count}} rows."
+      },
+      "selection": {
+        "all": "Select every row of the filter",
+        "row": "Select {{cve}}, {{technology}} {{version}}",
+        "whole_one": "{{count}} row selected, whole filter",
+        "whole_other": "{{count}} rows selected, whole filter",
+        "some_one": "{{count}} row selected",
+        "some_other": "{{count}} rows selected",
+        "clear": "Clear selection"
+      },
+      "panel": {
+        "close": "Close"
+      },
+      "exportFailed": "The export failed. Try again.",
+      "saveFailed": "The change could not be saved. Try again.",
+      "unknownVersion": "Version not recorded (potentially concerned)",
+      "versionNone": "Not recorded",
+      "versionNoneHint": "No version recorded: potentially concerned",
+      "empty": {
+        "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
+        "filtered": "No vulnerability matches these filters."
+      },
+      "columns": {
+        "cve": "CVE",
+        "severity": "Severity",
+        "summary": "Summary",
+        "technology": "Technology",
+        "servers": "Servers",
+        "applications": "Applications",
+        "state": "State",
+        "published": "Published",
+        "version": "Version",
+        "score": "Score",
+        "editor": "Publisher",
+        "note": "Note"
+      },
+      "severities": {
+        "critical": "Critical",
+        "high": "High",
+        "medium": "Medium",
+        "low": "Low",
+        "none": "None",
+        "unknown": "Not rated"
+      },
+      "states": {
+        "to_review": "To review",
+        "handled": "Handled",
+        "not_affected": "Not affected"
+      },
+      "detail": {
+        "vector": "CVSS vector",
+        "versions": "Technologies and versions",
+        "servers": "Servers",
+        "applications": "Applications",
+        "noServers": "No server carries a concerned version.",
+        "noApplications": "No application uses a concerned version.",
+        "applicationsHidden": "The applications are hidden: reading them needs access to the applications.",
+        "via": "through {{name}}",
+        "stateOf": "State of {{version}}",
+        "noteOf": "Note on {{version}}",
+        "notePlaceholder": "e.g., patched on 12 March"
+      },
+      "section": {
+        "title": "Vulnerabilities",
+        "empty": "No known vulnerability concerns this technology.",
+        "searching": "Searching for vulnerabilities…",
+        "loadFailed": "The vulnerabilities could not be loaded.",
+        "rematch": "Match again",
+        "rematched": "Matched again: {{added}} new, {{removed}} removed.",
+        "rematchFailed": "The match could not run. Try again."
+      }
     },
     "interfaces": {
       "title": "Interfaces",
