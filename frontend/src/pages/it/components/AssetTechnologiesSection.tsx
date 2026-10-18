@@ -135,7 +135,8 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
           {row.technology_name ?? dash}
         </Box>
         {row.is_operating_system && (
-          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, flex: 'none' }}>
+          // In a narrow table the mark gives way before the name.
+          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, minWidth: 0, flexShrink: 100, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('workspace.asset.technologies.operatingSystem')}
           </Box>
         )}
