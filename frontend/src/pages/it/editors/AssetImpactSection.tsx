@@ -98,7 +98,6 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
     totals.assets > 0 && t(k('summary.assets'), { count: totals.assets }),
     down > 0 && t(k('summary.clustersDown'), { count: down }),
     degraded > 0 && t(k('summary.clustersDegraded'), { count: degraded }),
-    totals.technologies > 0 && t(k('summary.technologies'), { count: totals.technologies }),
     totals.processes > 0 && t(k('summary.processes'), { count: totals.processes }),
   ].filter(Boolean) as string[];
   const shown = <T,>(rows: T[]) => rows.slice(0, IMPACT_ROWS_SHOWN);
@@ -138,12 +137,6 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
       ),
     },
     { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => viaNames(row) },
-  ];
-  const technologyColumns: Array<RelationsColumn<ImpactTechnology>> = [
-    { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
-    { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
-    { key: 'versions', header: t(k('columns.versions')), width: 130, render: (row) => row.versions.join(', ') },
-    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
   ];
   const processColumns: Array<RelationsColumn<ImpactProcess>> = [
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
@@ -192,18 +185,6 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
                 rowHref={(row) => `/it/assets/${row.id}/overview`}
               />
               {more(totals.clusters)}
-            </RelationsSection>
-          )}
-          {data.technologies.length > 0 && (
-            <RelationsSection title={t(k('sections.technologies'))} count={totals.technologies}>
-              <RelationsTable
-                ariaLabel={t(k('sections.technologies'))}
-                columns={technologyColumns}
-                rows={shown(data.technologies)}
-                rowKey={(row) => row.id}
-                rowHref={(row) => `/it/technologies/${row.id}`}
-              />
-              {more(totals.technologies)}
             </RelationsSection>
           )}
           {processes.length > 0 && (

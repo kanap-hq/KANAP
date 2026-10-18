@@ -1735,8 +1735,6 @@
           "clustersDown_other": "{{count}} clusters down",
           "clustersDegraded_one": "{{count}} cluster degraded",
           "clustersDegraded_other": "{{count}} clusters degraded",
-          "technologies_one": "{{count}} technology",
-          "technologies_other": "{{count}} technologies",
           "processes_one": "{{count}} business process",
           "processes_other": "{{count}} business processes"
         },
@@ -1744,7 +1742,6 @@
           "applications": "Applications",
           "assets": "Assets",
           "clusters": "Clusters",
-          "technologies": "Technologies",
           "processes": "Business processes"
         },
         "columns": {
@@ -1754,7 +1751,6 @@
           "criticality": "Criticality",
           "type": "Type",
           "state": "State",
-          "versions": "Versions",
           "via": "Via"
         },
         "via": {

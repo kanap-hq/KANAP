@@ -1733,8 +1733,6 @@
           "clustersDown_other": "{{count}} Cluster ausgefallen",
           "clustersDegraded_one": "{{count}} Cluster beeinträchtigt",
           "clustersDegraded_other": "{{count}} Cluster beeinträchtigt",
-          "technologies_one": "{{count}} Technologie",
-          "technologies_other": "{{count}} Technologien",
           "processes_one": "{{count}} Geschäftsprozess",
           "processes_other": "{{count}} Geschäftsprozesse"
         },
@@ -1742,7 +1740,6 @@
           "applications": "Anwendungen",
           "assets": "Assets",
           "clusters": "Cluster",
-          "technologies": "Technologien",
           "processes": "Geschäftsprozesse"
         },
         "columns": {
@@ -1752,7 +1749,6 @@
           "criticality": "Kritikalität",
           "type": "Typ",
           "state": "Zustand",
-          "versions": "Versionen",
           "via": "Über"
         },
         "via": {

@@ -1733,8 +1733,6 @@
           "clustersDown_other": "{{count}} clústeres caídos",
           "clustersDegraded_one": "{{count}} clúster degradado",
           "clustersDegraded_other": "{{count}} clústeres degradados",
-          "technologies_one": "{{count}} tecnología",
-          "technologies_other": "{{count}} tecnologías",
           "processes_one": "{{count}} proceso de negocio",
           "processes_other": "{{count}} procesos de negocio"
         },
@@ -1742,7 +1740,6 @@
           "applications": "Aplicaciones",
           "assets": "Activos",
           "clusters": "Clústeres",
-          "technologies": "Tecnologías",
           "processes": "Procesos de negocio"
         },
         "columns": {
@@ -1752,7 +1749,6 @@
           "criticality": "Criticidad",
           "type": "Tipo",
           "state": "Estado",
-          "versions": "Versiones",
           "via": "Vía"
         },
         "via": {

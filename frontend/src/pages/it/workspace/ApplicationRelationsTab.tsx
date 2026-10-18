@@ -6,7 +6,6 @@ import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
-import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { formatAmount } from '../../../i18n/formatters';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
@@ -23,7 +22,7 @@ type ProjectRow = { id: string; item_number: number | null; name: string; status
 type RequestRow = { id: string; item_number: number | null; name: string; status: string | null; target_delivery_date: string | null };
 type TaskRow = { id: string; item_number: number | null; title: string; status: string | null; assignee_name: string | null; due_date: string | null };
 /** One technology, declared (removable) and/or hosted by a server of the application (lot T2a). */
-type TechnologyRow = {
+export type TechnologyRow = {
   id: string;
   reference: string | null;
   name: string | null;
@@ -111,18 +110,16 @@ type Props = {
 };
 
 /**
- * The linked sections of an application's Relations tab (lot R1, technologies and business
- * processes from lot T2a): one dense table per kind, read
- * in one round trip (`GET /applications/:id/relations`). A row opens its object; managers add by
- * server search and unlink on hover, each saved at once. Then the suggestions and the counts of
- * what is related elsewhere.
+ * The linked sections of an application's Relations tab (lot R1, business processes from lot T2a).
+ * Technologies are on the Operations tab. One dense table per kind, read in one round trip
+ * (`GET /applications/:id/relations`). A row opens its object; managers add by server search and
+ * unlink on hover, each saved at once. Then the suggestions and the counts of what is related
+ * elsewhere.
  */
 export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenKnowledge }: Props) {
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('applications', 'manager');
-  // Families in the user's language; the raw code when the catalog does not know it.
-  const { labelFor } = useItOpsEnumOptions();
   const queryClient = useQueryClient();
   const budgetColumns = useBudgetColumns();
   const [adding, setAdding] = React.useState<{ kind: RelationKind; anchor: HTMLElement } | null>(null);
@@ -162,13 +159,6 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     queryClient.setQueryData<ApplicationRelationsData>(key, (prev) => {
       if (!prev) return prev;
       const rows = prev[kind] as AnyRow[] | null;
-      if (kind === 'technologies' && rows) {
-        // A technology also hosted by a server stays, as hosted only.
-        const next = (rows as TechnologyRow[])
-          .map((row) => (row.id === targetId ? { ...row, declared: false } : row))
-          .filter((row) => row.declared || row.hosted);
-        return { ...prev, technologies: next };
-      }
       return { ...prev, [kind]: rows ? rows.filter((row) => row.id !== targetId) : rows };
     });
     try {
@@ -345,70 +335,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     },
   ];
 
-  const familyLabel = (code: string | null) => (code ? labelFor('technologyFamily', code) || code : dash);
-  const serverLabel = (via: TechnologyRow['via'][number]) => (via.host_name
-    ? t('workspace.application.relations.viaHost', { server: via.asset_name ?? dash, host: via.host_name })
-    : via.asset_name ?? dash);
-  const technologyLink = (row: TechnologyRow) => (row.declared && row.hosted ? 'both' : row.declared ? 'declared' : 'hosted');
-
   sections.push(
-    {
-      kind: 'technologies',
-      title: t('workspace.application.relations.sections.technologies'),
-      empty: t('workspace.application.relations.empty.technologies'),
-      searchPlaceholder: t('workspace.application.relations.search.technologies'),
-      rows: data ? data.technologies : [],
-      href: (row: TechnologyRow) => `/it/technologies/${row.reference ?? row.id}`,
-      label: (row: TechnologyRow) => row.name ?? row.reference ?? '',
-      editable: hasLevel('infrastructure', 'manager'),
-      removable: (row: TechnologyRow) => row.declared,
-      // A technology only hosted can still be declared.
-      linkedIds: (rows: TechnologyRow[]) => new Set(rows.filter((row) => row.declared).map((row) => row.id)),
-      columns: [
-        { key: 'ref', header: t('workspace.application.relations.columns.ref'), width: 72, render: (row: TechnologyRow) => <RelationRef>{row.reference ?? dash}</RelationRef> },
-        // The name takes the free width; the short columns stay narrow, a cut value shows in full on hover.
-        { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: TechnologyRow) => <span title={row.name ?? undefined}>{row.name ?? dash}</span> },
-        { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, render: (row: TechnologyRow) => familyLabel(row.family) },
-        {
-          key: 'version', header: t('workspace.application.relations.columns.version'), width: 72,
-          render: (row: TechnologyRow) => (row.versions.length > 0
-            ? <span title={row.versions.join(', ')}>{row.versions.join(', ')}</span>
-            : <Box component="span" title={t('workspace.application.relations.versionUnknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>),
-        },
-        {
-          key: 'link', header: t('workspace.application.relations.columns.link'), width: 120,
-          render: (row: TechnologyRow) => {
-            const label = t(`workspace.application.relations.technologyLink.${technologyLink(row)}`);
-            return <span title={label}>{label}</span>;
-          },
-        },
-        {
-          key: 'via', header: t('workspace.application.relations.columns.via'), width: 140,
-          render: (row: TechnologyRow) => {
-            const servers = row.via.map(serverLabel).join(', ');
-            return <span title={servers || undefined}>{servers}</span>;
-          },
-        },
-        {
-          key: 'supportEnd', header: t('workspace.application.relations.columns.supportEnd'), width: 100,
-          render: (row: TechnologyRow) => {
-            const ended = !!row.standard_support_end && row.standard_support_end < today;
-            return (
-              <Box component="span" sx={ended ? { color: 'kanap.orange' } : undefined}>
-                {row.standard_support_end ? formatShortDate(row.standard_support_end, lang, { year: 'always' }) : dash}
-              </Box>
-            );
-          },
-        },
-      ],
-      search: async (q, signal) => {
-        const res = await api.get<{ items: Array<{ id: string; name: string; reference: string | null; editor: string | null }> }>('/technologies/lookup', {
-          params: { limit: PAGE, ...(q ? { q } : {}) },
-          signal,
-        });
-        return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: row.reference, hint: row.editor }));
-      },
-    },
     {
       kind: 'processes',
       title: t('workspace.application.relations.sections.processes'),
