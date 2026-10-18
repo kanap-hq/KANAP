@@ -32,7 +32,9 @@ export class AssetTechnologiesController {
 
   /**
    * Install a technology: `{ technology_id, technology_version_id? | version_label?, notes?, is_operating_system? }`.
-   * `is_operating_system` marks the link as the server's operating system.
+   * A technology of family `operating_system` is marked as the OS when the asset is not a cluster
+   * and has no marked link yet. `is_operating_system` still forces the mark (the previous marked
+   * link is deleted).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
@@ -40,8 +42,10 @@ export class AssetTechnologiesController {
   async add(@Param('id') id: string, @Body() body: LinkInput & { technology_id?: string; is_operating_system?: boolean }, @Tenant() ctx: TenantRequest) {
     const opts = this.opts(ctx);
     const result = await this.links.addAssetLink(String(body?.technology_id ?? ''), id, body ?? {}, opts);
-    if (body?.is_operating_system && result.link_id) {
-      await this.operatingSystems.markLinkById(opts.manager, opts.tenantId, result.link_id, 'manual', opts.userId);
+    if (result.link_id) {
+      await this.operatingSystems.onAssetLinkAdded(
+        opts.manager, opts.tenantId, id, result.link_id, 'manual', opts.userId, body?.is_operating_system === true,
+      );
     }
     return result;
   }
@@ -66,6 +70,24 @@ export class AssetTechnologiesController {
   clearOperatingSystem(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     const opts = this.opts(ctx);
     return this.operatingSystems.setOperatingSystem(opts.manager, opts.tenantId, id, null, 'manual', opts.userId);
+  }
+
+  /**
+   * Mark or unmark an installed link as the operating system: `{ is_operating_system }`.
+   * `true` moves the mark onto this link and keeps the previous marked link. A cluster and a
+   * carried (inherited) row are refused.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Put(':id/technologies/:linkId/operating-system')
+  setMarkedOnLink(
+    @Param('id') id: string,
+    @Param('linkId') linkId: string,
+    @Body() body: { is_operating_system?: boolean },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const opts = this.opts(ctx);
+    return this.operatingSystems.setMarkedOnLink(opts.manager, opts.tenantId, id, linkId, body?.is_operating_system, opts.userId);
   }
 
   @UseGuards(PermissionGuard)

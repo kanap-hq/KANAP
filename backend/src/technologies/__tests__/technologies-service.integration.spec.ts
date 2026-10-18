@@ -362,8 +362,14 @@ async function testProcessAndAssetSides() {
     const server = await asset(runner, tenantId, 'SRV-2');
     const tech = await technology(runner, tenantId, 1, 'PostgreSQL', 'database');
     const link = await links.addAssetLink(tech, server, { version_label: '16' }, opts);
+    await runner.query(
+      `UPDATE technology_versions SET standard_support_end = '2028-11-09', extended_support_end = '2030-11-09'
+        WHERE tenant_id = $1 AND technology_id = $2 AND lower(label) = '16'`,
+      [tenantId, tech],
+    );
     const ofAsset = await links.technologiesOfAsset(server, opts);
-    assert.deepEqual(ofAsset.items.map((i) => [i.technology_id, i.kind, i.removable, i.version_label]), [[tech, 'installed', true, '16']]);
+    assert.deepEqual(ofAsset.items.map((i) => [i.technology_id, i.kind, i.removable, i.version_label, i.standard_support_end, i.extended_support_end]),
+      [[tech, 'installed', true, '16', '2028-11-09', '2030-11-09']]);
     const other = await asset(runner, tenantId, 'SRV-3');
     assert.deepEqual(await links.removeAssetLinkOfAsset(other, link.link_id!, opts), { ok: true, changed: false }, 'a link of another asset');
     assert.deepEqual(await links.removeAssetLinkOfAsset(server, link.link_id!, opts), { ok: true, changed: true });

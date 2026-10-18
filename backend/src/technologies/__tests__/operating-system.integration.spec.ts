@@ -4,6 +4,7 @@ import { DEFAULT_HOSTING_TYPES, DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { TechnologyCatalogService } from '../catalog/technology-catalog.service';
 import { OperatingSystemService } from '../operating-system.service';
+import { NotFoundException } from '@nestjs/common';
 import { asset, installed, services, technology, version } from './technologies.fixtures';
 
 // The resolver and the mark, on a database that already has migration 1854330000000 applied.
@@ -187,9 +188,93 @@ async function testDeletingTheMarkedVersion() {
   });
 }
 
+async function testAutoMarkOnAdd() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'os-auto');
+    const os = service();
+    const { links } = services();
+    const mg = runner.manager;
+    const opts = { manager: mg, tenantId };
+    const server = await asset(runner, tenantId, 'srv');
+    const cluster = await asset(runner, tenantId, 'cl', true);
+    const ubuntu = await technology(runner, tenantId, 1, 'Ubuntu', 'operating_system');
+    const debian = await technology(runner, tenantId, 2, 'Debian', 'operating_system');
+    const sql = await technology(runner, tenantId, 3, 'SQL Server', 'database');
+    const v2204 = await version(runner, tenantId, ubuntu, '22.04 LTS');
+
+    const first = await links.addAssetLink(ubuntu, server, { technology_version_id: v2204 }, opts);
+    const marked = await os.onAssetLinkAdded(mg, tenantId, server, first.link_id!, 'manual');
+    assert.equal(marked.changed, true);
+    assert.equal(marked.link_id, first.link_id);
+    let rows = await marks(runner, tenantId, server);
+    assert.deepEqual(rows.map((row: any) => [row.technology_id, row.version, row.os]), [[ubuntu, '22.04 LTS', true]]);
+
+    const second = await links.addAssetLink(debian, server, {}, opts);
+    const skipped = await os.onAssetLinkAdded(mg, tenantId, server, second.link_id!, 'manual');
+    assert.equal(skipped.changed, false);
+    rows = await marks(runner, tenantId, server);
+    assert.equal(rows.filter((row: any) => row.os).length, 1);
+    assert.equal(rows.find((row: any) => row.os).technology_id, ubuntu, 'a second operating system stays unmarked');
+
+    const other = await asset(runner, tenantId, 'db');
+    const db = await links.addAssetLink(sql, other, {}, opts);
+    const notOs = await os.onAssetLinkAdded(mg, tenantId, other, db.link_id!, 'manual');
+    assert.equal(notOs.changed, false);
+    assert.equal((await marks(runner, tenantId, other)).filter((row: any) => row.os).length, 0);
+
+    const onCluster = await links.addAssetLink(ubuntu, cluster, { technology_version_id: v2204 }, opts);
+    const clusterMark = await os.onAssetLinkAdded(mg, tenantId, cluster, onCluster.link_id!, 'manual');
+    assert.equal(clusterMark.changed, false);
+    assert.equal((await marks(runner, tenantId, cluster)).filter((row: any) => row.os).length, 0);
+  });
+}
+
+async function testSetMarkedOnLink() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'os-row');
+    const os = service();
+    const mg = runner.manager;
+    const server = await asset(runner, tenantId, 'srv');
+    const cluster = await asset(runner, tenantId, 'cl', true);
+    const host = await asset(runner, tenantId, 'esx');
+    const ubuntu = await technology(runner, tenantId, 1, 'Ubuntu', 'operating_system');
+    const esxi = await technology(runner, tenantId, 2, 'ESXi', 'hypervisor');
+    const v2204 = await version(runner, tenantId, ubuntu, '22.04 LTS');
+    const v8 = await version(runner, tenantId, esxi, '8.0');
+    const osLink = await installed(runner, tenantId, server, ubuntu, v2204);
+    const otherLink = await installed(runner, tenantId, server, esxi, v8);
+    const hostLink = await installed(runner, tenantId, host, esxi, v8);
+    const clusterLink = await installed(runner, tenantId, cluster, ubuntu, v2204);
+
+    await os.setOperatingSystem(mg, tenantId, server, { technology_id: ubuntu, technology_version_id: v2204 }, 'manual');
+    const moved = await os.setMarkedOnLink(mg, tenantId, server, otherLink, true);
+    assert.equal(moved.changed, true);
+    assert.equal(moved.link_id, otherLink);
+    let rows = await marks(runner, tenantId, server);
+    assert.equal(rows.length, 2, 'the previous marked link stays installed');
+    assert.deepEqual(rows.map((row: any) => [row.id, row.os]).sort(), [[osLink, false], [otherLink, true]].sort());
+
+    const again = await os.setMarkedOnLink(mg, tenantId, server, otherLink, true);
+    assert.equal(again.changed, false);
+
+    const cleared = await os.setMarkedOnLink(mg, tenantId, server, otherLink, false);
+    assert.equal(cleared.changed, true);
+    rows = await marks(runner, tenantId, server);
+    assert.equal(rows.length, 2);
+    assert.ok(rows.every((row: any) => row.os === false), 'unmarking keeps the link');
+
+    await assert.rejects(os.setMarkedOnLink(mg, tenantId, cluster, clusterLink, true), /A cluster has no operating system/);
+    await assert.rejects(os.setMarkedOnLink(mg, tenantId, server, hostLink, true), /An inherited technology cannot be the operating system/);
+    await assert.rejects(os.setMarkedOnLink(mg, tenantId, server, otherLink, 'yes'), /is_operating_system must be a boolean/);
+    await assert.rejects(os.setMarkedOnLink(mg, tenantId, server, 'not-a-uuid', true), NotFoundException);
+  });
+}
+
 void runSpecs('Operating system resolver', [
   ['resolve and mark', testResolveAndMark],
   ['changing the operating system removes the old link', testChangingTheOperatingSystem],
   ['the longest prefix wins between tenant and catalog', testLongestPrefixWins],
   ['deleting the marked version keeps an operating system', testDeletingTheMarkedVersion],
+  ['adding an operating-system technology marks it when none is set', testAutoMarkOnAdd],
+  ['marking a link moves the flag and keeps the previous link', testSetMarkedOnLink],
 ]);

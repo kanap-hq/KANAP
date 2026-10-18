@@ -209,7 +209,7 @@ export class OperatingSystemService {
     source: LinkSource,
     userId?: string | null,
   ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
-    const id = await this.lockAsset(mg, tenantId, assetId);
+    const { id } = await this.lockAsset(mg, tenantId, assetId);
     const provenance = linkProvenance(source);
     const [marked]: Array<LinkRow> = await mg.query(
       `SELECT id, technology_id, technology_version_id, source, source_ref, notes
@@ -284,8 +284,65 @@ export class OperatingSystemService {
   }
 
   /**
+   * After POST `/assets/:id/technologies`: mark the new link when the asset is not a cluster,
+   * has no marked link yet, and the technology is of family `operating_system`. An explicit
+   * `is_operating_system` still goes through `markLinkById` (the previous marked link is deleted).
+   */
+  async onAssetLinkAdded(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+    linkId: string,
+    source: LinkSource,
+    userId?: string | null,
+    requested?: boolean,
+  ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
+    if (requested) return this.markLinkById(mg, tenantId, linkId, source, userId);
+    return this.maybeMarkAddedLink(mg, tenantId, assetId, linkId, userId);
+  }
+
+  /**
+   * Mark or unmark an installed link as the operating system, without deleting the previous
+   * marked link. The screen uses this to choose which of the server's technologies is the OS.
+   * A cluster, and a link that is not installed on this asset (a carried row), are refused.
+   */
+  async setMarkedOnLink(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+    linkId: string,
+    marked: unknown,
+    userId?: string | null,
+  ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
+    if (typeof marked !== 'boolean') throw new BadRequestException('is_operating_system must be a boolean.');
+    const id = String(linkId || '').trim().toLowerCase();
+    if (!UUID_RE.test(id)) throw new NotFoundException('Link not found');
+    const { id: lockedId, is_cluster } = await this.lockAsset(mg, tenantId, assetId);
+    if (is_cluster) throw new BadRequestException('A cluster has no operating system.');
+    const [row]: Array<LinkRow & { asset_id: string; is_operating_system: boolean }> = await mg.query(
+      `SELECT id, asset_id, technology_id, technology_version_id, source, source_ref, notes, is_operating_system
+         FROM asset_technologies WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, id],
+    );
+    if (!row) throw new NotFoundException('Link not found');
+    if (row.asset_id !== lockedId) throw new BadRequestException('An inherited technology cannot be the operating system.');
+    if (row.is_operating_system === marked) return { ok: true, link_id: row.id, changed: false };
+    if (marked) {
+      const previous: Array<LinkRow> = await mg.query(
+        `SELECT id, technology_id, technology_version_id, source, source_ref, notes
+           FROM asset_technologies
+          WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system AND id <> $3`,
+        [tenantId, lockedId, row.id],
+      );
+      for (const other of previous) await this.writeMark(mg, tenantId, other, false, userId);
+    }
+    await this.writeMark(mg, tenantId, row, marked, userId);
+    return { ok: true, link_id: row.id, changed: true };
+  }
+
+  /**
    * Mark the link `linkId` (already installed on the asset) as the operating system.
-   * The screen posts the link, then marks it.
+   * The previous marked link is deleted, the rule of `setOperatingSystem`.
    */
   async markLinkById(
     mg: EntityManager,
@@ -513,16 +570,76 @@ export class OperatingSystemService {
     return null;
   }
 
-  private async lockAsset(mg: EntityManager, tenantId: string, assetId: string): Promise<string> {
+  private async lockAsset(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+  ): Promise<{ id: string; is_cluster: boolean }> {
     const raw = String(assetId || '').trim();
-    const rows: Array<{ id: string }> = UUID_RE.test(raw)
-      ? await mg.query(`SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`, [tenantId, raw.toLowerCase()])
+    const rows: Array<{ id: string; is_cluster: boolean }> = UUID_RE.test(raw)
+      ? await mg.query(
+        `SELECT id, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+        [tenantId, raw.toLowerCase()],
+      )
       : await mg.query(
-        `SELECT id FROM assets WHERE tenant_id = $1 AND upper(asset_reference) = upper($2) FOR UPDATE`,
+        `SELECT id, COALESCE(is_cluster, false) AS is_cluster FROM assets
+          WHERE tenant_id = $1 AND upper(asset_reference) = upper($2) FOR UPDATE`,
         [tenantId, raw],
       );
     if (!rows[0]) throw new NotFoundException('Asset not found');
-    return rows[0].id;
+    return rows[0];
+  }
+
+  /**
+   * Mark the newly installed link when nothing else is the OS yet and the technology is an
+   * operating system. Runs under the asset row lock. A cluster, another family, or an existing
+   * mark leave the link as a regular installation.
+   */
+  private async maybeMarkAddedLink(
+    mg: EntityManager,
+    tenantId: string,
+    assetId: string,
+    linkId: string,
+    userId?: string | null,
+  ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
+    const id = String(linkId || '').trim().toLowerCase();
+    if (!UUID_RE.test(id)) return { ok: true, link_id: null, changed: false };
+    const { id: lockedId, is_cluster } = await this.lockAsset(mg, tenantId, assetId);
+    if (is_cluster) return { ok: true, link_id: id, changed: false };
+    const [marked]: Array<{ id: string }> = await mg.query(
+      `SELECT id FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system`,
+      [tenantId, lockedId],
+    );
+    if (marked) return { ok: true, link_id: marked.id, changed: false };
+    const [row]: Array<LinkRow & { family: string }> = await mg.query(
+      `SELECT at.id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes, t.family
+         FROM asset_technologies at
+         JOIN technologies t ON t.tenant_id = at.tenant_id AND t.id = at.technology_id
+        WHERE at.tenant_id = $1 AND at.asset_id = $2 AND at.id = $3`,
+      [tenantId, lockedId, id],
+    );
+    if (!row || row.family !== 'operating_system') return { ok: true, link_id: id, changed: false };
+    await this.writeMark(mg, tenantId, row, true, userId);
+    return { ok: true, link_id: row.id, changed: true };
+  }
+
+  private async writeMark(
+    mg: EntityManager,
+    tenantId: string,
+    row: LinkRow,
+    marked: boolean,
+    userId?: string | null,
+  ) {
+    await mg.query(
+      `UPDATE asset_technologies SET is_operating_system = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, row.id, marked],
+    );
+    await this.audit.log({
+      table: 'asset_technologies', recordId: row.technology_id, action: 'update',
+      before: { id: row.id, is_operating_system: !marked },
+      after: { id: row.id, is_operating_system: marked },
+      userId: userId ?? null,
+    }, { manager: mg });
   }
 
   private async markLink(

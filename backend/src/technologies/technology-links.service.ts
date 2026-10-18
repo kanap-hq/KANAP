@@ -628,7 +628,8 @@ export class TechnologyLinksService {
         hosting_type: tech?.hosting_type ?? null,
         technology_version_id: r.technology_version_id,
         version_label: r.technology_version_id ? versions.get(r.technology_version_id) ?? null : null,
-        standard_support_end: r.technology_version_id ? versionDates.get(r.technology_version_id) ?? null : null,
+        standard_support_end: r.technology_version_id ? versionDates.get(r.technology_version_id)?.standard ?? null : null,
+        extended_support_end: r.technology_version_id ? versionDates.get(r.technology_version_id)?.extended ?? null : null,
         environment: r.environment,
         asset_id: r.asset_id,
         asset_name: r.asset_id ? assets.get(r.asset_id)?.name ?? null : null,
@@ -721,13 +722,15 @@ export class TechnologyLinksService {
 
   private async versionDates(mg: EntityManager, tenantId: string, ids: Array<string | null>) {
     const wanted = Array.from(new Set(ids.filter((id): id is string => !!id)));
-    const rows: Array<{ id: string; day: string | null }> = wanted.length
+    const rows: Array<{ id: string; standard: string | null; extended: string | null }> = wanted.length
       ? await mg.query(
-        `SELECT id, to_char(standard_support_end, 'YYYY-MM-DD') AS day FROM technology_versions WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        `SELECT id, to_char(standard_support_end, 'YYYY-MM-DD') AS standard,
+                to_char(extended_support_end, 'YYYY-MM-DD') AS extended
+           FROM technology_versions WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
         [tenantId, wanted],
       )
       : [];
-    return new Map(rows.map((row) => [row.id, row.day]));
+    return new Map(rows.map((row) => [row.id, { standard: row.standard, extended: row.extended }]));
   }
 
   private async linkNotes(mg: EntityManager, tenantId: string, side: LinkSide, ids: Array<string | null>) {
