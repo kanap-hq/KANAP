@@ -60,9 +60,11 @@ Mapping a site also brings its Netbox Locations across as sub-locations of the l
 
 ### Operating systems
 
-The third table matches each Netbox platform with an operating system from your catalogue. Netbox says "Debian 12" where KANAP holds "Debian 12 (bookworm)", and this is where the two are tied together. Every row shows how many objects run that platform.
+The third table matches each Netbox platform with a technology. Netbox says "Debian 12" where KANAP holds the technology Debian with its version "12 (Bookworm)", and this is where the two are tied together. Every row shows how many objects run that platform.
 
-Rows are pre-filled when KANAP can see the answer: the same name, or the single operating system whose name starts with the platform name. "Debian 12" suggests "Debian 12 (bookworm)". As with the other tables, a suggestion counts only once you press **Save mappings**.
+The list offers your technologies of the **Operating system** family, alone and with each of their versions, then the operating systems of the technology catalog you have not added yet. The value kept is the technology name, with its version when you pick one. At the next run, KANAP records that technology and version as the server's operating system, and adds a catalog entry to your technologies when you picked one.
+
+Rows are pre-filled when KANAP can see the answer: the same name, or the single choice whose name starts with the platform name. "Debian 12" suggests "Debian 12 (Bookworm)". As with the other tables, a suggestion counts only once you press **Save mappings**.
 
 This table is not a filter. A platform left on **No match** never keeps anything out of the import. The equipment comes in and its operating system is left exactly as it is in KANAP. Match the platform later and the next run fills the field.
 
@@ -82,7 +84,7 @@ The preview is grouped:
 - **Needs a decision**: objects KANAP will not decide on its own. Nothing happens to them until you settle them, here or later on the page.
 - **Skipped**: objects out of scope, counted by reason (role not mapped, site not mapped, no name in Netbox, ignored by you).
 - **Missing from Netbox**: assets a previous run linked whose Netbox object is gone.
-- **Warnings**: values Netbox reports that KANAP could not take over, for example an operating system that is not in your catalogue. An object with nothing to change but something to report appears here too.
+- **Warnings**: values Netbox reports that KANAP could not take over, for example an operating system KANAP cannot find among its technologies. An object with nothing to change but something to report appears here too.
 
 Read it, then press **Apply**. Objects that are already identical are counted as unchanged and not touched at all. A large inventory is reviewed in batches of 500. **Apply this batch** writes only what the preview lists; everything else is left exactly as it is. The page then says how many objects still wait and offers **Review the next batch**, until nothing is left. Nothing you have not been shown is ever created or updated by a run you start yourself. Objects out of scope are counted by reason and not listed, so they never take the place of an object you need to read. The filter at the top narrows the list to an object or an asset name.
 
@@ -177,7 +179,7 @@ A synchronisation never sets an asset to **Retired**. Retiring equipment is a de
 
 **Environment is set once.** New assets get the environment chosen on the integration card. Later runs never touch it, so you can correct it in KANAP and it stays corrected.
 
-**Values KANAP does not know are skipped, never invented.** A lifecycle status with no equivalent, or an operating system with no match in **Mappings** and no entry of that name in **IT Landscape > Settings**, is left unchanged and reported as a warning. Match the platform, or add the entry in the settings, then run again. An IPv6 primary address is left out the same way, with the notice "The primary address is an IPv6 address, which is not imported yet."
+**Values KANAP does not know are skipped, never invented.** A lifecycle status with no equivalent, or an operating system with no match in **Mappings** and no technology of that name in the **Operating system** family or the catalog, is left unchanged and reported as a warning. Match the platform, or add the technology, then run again. An IPv6 primary address is left out the same way, with the notice "The primary address is an IPv6 address, which is not imported yet."
 
 **Sub-locations are shared between equipment.** A sub-location is one row at a location, and every asset placed there points at it. Renaming the Location in Netbox renames that one row, so all the equipment carrying it follows at once, including equipment you filed there yourself. Nothing moves asset by asset.
 
@@ -258,7 +260,7 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 | The certificate could not be verified | Netbox presents a certificate KANAP does not trust. Install a trusted certificate, or turn on **Ignore certificate errors** if the certificate is one of yours. |
 | The Netbox server did not answer in time | Netbox is slow, unreachable, or behind a firewall that drops the call. Check from the KANAP server, then raise the request timeout if the instance is simply large. |
 | Objects show as skipped, reason "Role not mapped" or "Site not mapped" | Expected for anything you left on **Do not import**. If it was not meant to be skipped, map the role or the site and run again. |
-| A warning says an operating system is not in your catalogue | The Netbox platform has no match in **Mappings > Operating systems** and no entry of that name in **IT Landscape > Settings**. Match it in the Mappings tab, or add the operating system in the settings, then run again. The field is left unchanged until you do. |
+| A warning says an operating system is not in your catalogue | The Netbox platform has no match in **Mappings > Operating systems**, and its name matches no technology of the **Operating system** family and no operating system of the catalog. Match it in the Mappings tab, or add the technology in **IT Landscape > Technologies**, then run again. The operating system is left unchanged until you do. |
 | "Netbox did not return its platforms" | The API token cannot read platforms. Give it permission on `dcim.platform` in Netbox, or leave it: the equipment still imports, and only the operating system matching is out of reach. |
 | An asset ends up with the whole Netbox name as its host name | The name does not end with a DNS suffix from your domain list, so KANAP keeps it as it is. That is the expected result for a name whose dots are part of the name. If it really is a domain, add it in **IT Landscape > Settings** and run again. |
 | The run failed after a handful of objects | Ten objects in a row could not be saved, so the run stopped. The cause is usually the same for all of them, and the details are in the server log. |

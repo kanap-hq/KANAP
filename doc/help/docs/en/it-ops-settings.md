@@ -119,6 +119,8 @@ What kind of technology each one is: database, hypervisor, directory and identit
 **Where used**:
 - Technologies workspace → header and properties drawer → **Family**, and the new technology window
 
+The **Operating system** family marks the operating systems: a technology of that family added to a server without one becomes its operating system. See [Technologies](technologies.md#operating-systems).
+
 ### Connection types
 
 A two-level catalog (category and entry) of connection protocols, with typical ports.
@@ -216,19 +218,6 @@ Define network subnets with CIDR notation and optional VLAN assignments. Each su
 - CIDR and VLAN numbers are unique per location (same values can exist at different locations)
 
 **Auto-population**: When you select a subnet on an Asset, the Network Zone is automatically populated from the subnet's configuration.
-
-### Operating systems
-
-Catalog of operating systems available for servers, with standard and extended support end dates.
-
-**Columns**: Name, Standard support, Extended support, No longer offered
-
-**Where used**:
-- Assets workspace → Technical tab → **Operating System** selector (helper text shows support dates)
-
-Dates are stored as `YYYY-MM-DD` but displayed and edited as `DD/MM/YYYY`.
-
-Default entries include Windows Server versions, Ubuntu LTS, RHEL, Debian, and SLES with appropriate support dates.
 
 ### Server roles
 
@@ -426,7 +415,6 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **IP address types** | Assets (Technical tab → IP Addresses → Type) |
 | **Lifecycle statuses** | Applications, App Instances, Interfaces, Bindings, Assets |
 | **Network zones** | Subnets (Network Zone), Assets (auto-populated from subnet) |
-| **Operating systems** | Assets (Technical tab) |
 | **Subnets** | Assets (Technical tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
 | **Asset types** | Assets (Overview → Type) |

@@ -200,7 +200,8 @@ Go to the **Technical** tab to add:
 | Section | Fields | Details |
 |---------|--------|---------|
 | **Cluster management** | Cluster switch | Turn it on if this asset is a cluster, then add its member servers |
-| **Identity** | Hostname, Domain, FQDN, Aliases, Operating system | FQDN is auto-computed from Hostname + Domain |
+| **Identity** | Hostname, Domain, FQDN, Aliases | FQDN is auto-computed from Hostname + Domain |
+| **Technologies** | Operating system and other technologies, with their versions | Add Windows Server, Ubuntu or another technology of the **Operating system** family: it becomes the server's operating system |
 | **IP addresses** | Type, IP address, Subnet | Network zone and VLAN are derived from Subnet |
 
 !!! info "Multiple IP addresses"
