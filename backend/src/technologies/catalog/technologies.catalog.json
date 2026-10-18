@@ -4,7 +4,7 @@
     "url": "https://endoflife.date",
     "license": "MIT",
     "copyright": "Copyright 2020 endoflife.date contributors",
-    "retrieved_on": "2026-10-16",
+    "retrieved_on": "2026-10-18",
     "script": "scripts/technologies/build-catalog.mjs"
   },
   "products": [
@@ -5155,6 +5155,591 @@
           "release_date": "2023-01-25",
           "standard_support_end": "2023-07-28",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "almalinux",
+      "name": "AlmaLinux",
+      "editor": "AlmaLinux OS Foundation",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/almalinux",
+      "versions": [
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-27",
+          "standard_support_end": "2030-05-31",
+          "extended_support_end": "2035-05-31"
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-05-26",
+          "standard_support_end": "2027-05-31",
+          "extended_support_end": "2032-05-31"
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-03-30",
+          "standard_support_end": "2024-05-31",
+          "extended_support_end": "2029-05-31"
+        }
+      ]
+    },
+    {
+      "key": "centos",
+      "name": "CentOS",
+      "editor": "The CentOS Project",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/centos",
+      "versions": [
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-07-07",
+          "standard_support_end": "2020-08-06",
+          "extended_support_end": "2024-06-30"
+        }
+      ]
+    },
+    {
+      "key": "debian",
+      "name": "Debian",
+      "editor": "Debian",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/debian",
+      "versions": [
+        {
+          "key": "13",
+          "label": "13 (Trixie)",
+          "cpe_version": "13",
+          "build_prefixes": [
+            "13"
+          ],
+          "release_date": "2025-08-09",
+          "standard_support_end": "2028-08-09",
+          "extended_support_end": "2035-06-30"
+        },
+        {
+          "key": "12",
+          "label": "12 (Bookworm)",
+          "cpe_version": "12",
+          "build_prefixes": [
+            "12"
+          ],
+          "release_date": "2023-06-10",
+          "standard_support_end": "2026-07-11",
+          "extended_support_end": "2033-06-30"
+        },
+        {
+          "key": "11",
+          "label": "11 (Bullseye)",
+          "cpe_version": "11",
+          "build_prefixes": [
+            "11"
+          ],
+          "release_date": "2021-08-14",
+          "standard_support_end": "2024-08-14",
+          "extended_support_end": "2031-06-30"
+        },
+        {
+          "key": "10",
+          "label": "10 (Buster)",
+          "cpe_version": "10",
+          "build_prefixes": [
+            "10"
+          ],
+          "release_date": "2019-07-06",
+          "standard_support_end": "2022-09-10",
+          "extended_support_end": "2029-06-30"
+        },
+        {
+          "key": "9",
+          "label": "9 (Stretch)",
+          "cpe_version": "9",
+          "build_prefixes": [
+            "9"
+          ],
+          "release_date": "2017-06-17",
+          "standard_support_end": "2020-07-18",
+          "extended_support_end": "2027-06-30"
+        },
+        {
+          "key": "8",
+          "label": "8 (Jessie)",
+          "cpe_version": "8",
+          "build_prefixes": [
+            "8"
+          ],
+          "release_date": "2015-04-25",
+          "standard_support_end": "2018-06-17",
+          "extended_support_end": "2025-06-30"
+        }
+      ]
+    },
+    {
+      "key": "oracle-linux",
+      "name": "Oracle Linux",
+      "editor": "Oracle",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/oracle-linux",
+      "versions": [
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-26",
+          "standard_support_end": "2035-06-30",
+          "extended_support_end": "2038-06-30"
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-07-06",
+          "standard_support_end": "2032-06-30",
+          "extended_support_end": "2035-06-30"
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-07-19",
+          "standard_support_end": "2029-07-31",
+          "extended_support_end": "2032-07-31"
+        },
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-07-23",
+          "standard_support_end": "2024-12-31",
+          "extended_support_end": "2029-07-31"
+        },
+        {
+          "key": "6",
+          "label": "6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2011-02-12",
+          "standard_support_end": "2021-03-31",
+          "extended_support_end": "2024-12-31"
+        }
+      ]
+    },
+    {
+      "key": "rhel",
+      "name": "Red Hat Enterprise Linux",
+      "editor": "Red Hat",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/rhel",
+      "versions": [
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-20",
+          "standard_support_end": "2030-05-31",
+          "extended_support_end": "2039-05-31"
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-05-18",
+          "standard_support_end": "2027-05-31",
+          "extended_support_end": "2036-05-31"
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-05-07",
+          "standard_support_end": "2024-05-31",
+          "extended_support_end": "2033-05-31"
+        },
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-06-10",
+          "standard_support_end": "2019-08-06",
+          "extended_support_end": "2029-05-31"
+        },
+        {
+          "key": "6",
+          "label": "6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-11-10",
+          "standard_support_end": "2016-05-10",
+          "extended_support_end": "2024-06-30"
+        }
+      ]
+    },
+    {
+      "key": "rocky-linux",
+      "name": "Rocky Linux",
+      "editor": "Rocky Enterprise Software Foundation",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/rocky-linux",
+      "versions": [
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-11",
+          "standard_support_end": "2030-05-31",
+          "extended_support_end": "2035-05-31"
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-07-14",
+          "standard_support_end": "2027-05-31",
+          "extended_support_end": "2032-05-31"
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-05-01",
+          "standard_support_end": "2024-05-31",
+          "extended_support_end": "2029-05-31"
+        }
+      ]
+    },
+    {
+      "key": "sles",
+      "name": "SUSE Linux Enterprise Server",
+      "editor": "SUSE",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/sles",
+      "versions": [
+        {
+          "key": "16.0",
+          "label": "16.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-04",
+          "standard_support_end": "2027-11-30",
+          "extended_support_end": "2030-11-30"
+        },
+        {
+          "key": "15.7",
+          "label": "15 SP7",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.7"
+          ],
+          "release_date": "2025-06-17",
+          "standard_support_end": "2031-07-31",
+          "extended_support_end": "2034-07-31"
+        },
+        {
+          "key": "15.6",
+          "label": "15 SP6",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.6"
+          ],
+          "release_date": "2024-06-26",
+          "standard_support_end": "2025-12-31",
+          "extended_support_end": "2028-12-31"
+        },
+        {
+          "key": "15.5",
+          "label": "15 SP5",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.5"
+          ],
+          "release_date": "2023-06-20",
+          "standard_support_end": "2024-12-31",
+          "extended_support_end": "2027-12-31"
+        },
+        {
+          "key": "15.4",
+          "label": "15 SP4",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.4"
+          ],
+          "release_date": "2022-06-21",
+          "standard_support_end": "2023-12-31",
+          "extended_support_end": "2026-12-31"
+        },
+        {
+          "key": "15.3",
+          "label": "15 SP3",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.3"
+          ],
+          "release_date": "2021-06-22",
+          "standard_support_end": "2022-12-31",
+          "extended_support_end": "2025-12-31"
+        },
+        {
+          "key": "15.2",
+          "label": "15 SP2",
+          "cpe_version": "15",
+          "build_prefixes": [
+            "15.2"
+          ],
+          "release_date": "2020-07-21",
+          "standard_support_end": "2021-12-31",
+          "extended_support_end": "2024-12-31"
+        },
+        {
+          "key": "12.5",
+          "label": "12 SP5",
+          "cpe_version": "12",
+          "build_prefixes": [
+            "12.5"
+          ],
+          "release_date": "2019-12-09",
+          "standard_support_end": "2024-10-31",
+          "extended_support_end": "2027-10-31"
+        }
+      ]
+    },
+    {
+      "key": "ubuntu",
+      "name": "Ubuntu",
+      "editor": "Canonical",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/ubuntu",
+      "versions": [
+        {
+          "key": "26.04",
+          "label": "26.04 LTS",
+          "cpe_version": "26.04",
+          "build_prefixes": [
+            "26.04"
+          ],
+          "release_date": "2026-04-23",
+          "standard_support_end": "2031-05-29",
+          "extended_support_end": "2036-04-23"
+        },
+        {
+          "key": "25.10",
+          "label": "25.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-09",
+          "standard_support_end": "2026-07-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "25.04",
+          "label": "25.04",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-17",
+          "standard_support_end": "2026-01-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "24.10",
+          "label": "24.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-10",
+          "standard_support_end": "2025-07-10",
+          "extended_support_end": null
+        },
+        {
+          "key": "24.04",
+          "label": "24.04 LTS",
+          "cpe_version": "24.04",
+          "build_prefixes": [
+            "24.04"
+          ],
+          "release_date": "2024-04-25",
+          "standard_support_end": "2029-05-31",
+          "extended_support_end": "2034-04-25"
+        },
+        {
+          "key": "23.10",
+          "label": "23.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-10-12",
+          "standard_support_end": "2024-07-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "23.04",
+          "label": "23.04",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-04-20",
+          "standard_support_end": "2024-01-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "22.10",
+          "label": "22.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-10-20",
+          "standard_support_end": "2023-07-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "22.04",
+          "label": "22.04 LTS",
+          "cpe_version": "22.04",
+          "build_prefixes": [
+            "22.04"
+          ],
+          "release_date": "2022-04-21",
+          "standard_support_end": "2024-09-30",
+          "extended_support_end": "2032-04-21"
+        },
+        {
+          "key": "20.04",
+          "label": "20.04 LTS",
+          "cpe_version": "20.04",
+          "build_prefixes": [
+            "20.04"
+          ],
+          "release_date": "2020-04-23",
+          "standard_support_end": "2022-10-01",
+          "extended_support_end": "2030-04-23"
+        },
+        {
+          "key": "18.04",
+          "label": "18.04 LTS",
+          "cpe_version": "18.04",
+          "build_prefixes": [
+            "18.04"
+          ],
+          "release_date": "2018-04-26",
+          "standard_support_end": "2023-05-31",
+          "extended_support_end": "2028-04-26"
+        }
+      ]
+    },
+    {
+      "key": "windows-server",
+      "name": "Windows Server",
+      "editor": "Microsoft",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [],
+      "source_url": "https://endoflife.date/windows-server",
+      "versions": [
+        {
+          "key": "2025",
+          "label": "2025",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-01",
+          "standard_support_end": "2029-11-13",
+          "extended_support_end": "2034-11-14"
+        },
+        {
+          "key": "23h2-ac",
+          "label": "23H2 AC",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-10-24",
+          "standard_support_end": "2026-05-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "2022",
+          "label": "2022",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-08-18",
+          "standard_support_end": "2026-10-13",
+          "extended_support_end": "2031-10-14"
+        },
+        {
+          "key": "2019",
+          "label": "2019",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-11-13",
+          "standard_support_end": "2024-01-09",
+          "extended_support_end": "2029-01-09"
+        },
+        {
+          "key": "2016",
+          "label": "2016",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-10-15",
+          "standard_support_end": "2022-01-11",
+          "extended_support_end": "2030-01-12"
+        },
+        {
+          "key": "2012-r2",
+          "label": "2012 R2",
+          "cpe_version": "2012",
+          "build_prefixes": [],
+          "release_date": "2013-11-25",
+          "standard_support_end": "2018-10-09",
+          "extended_support_end": "2026-10-13"
+        },
+        {
+          "key": "2012",
+          "label": "2012",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2012-10-30",
+          "standard_support_end": "2018-10-09",
+          "extended_support_end": "2026-10-13"
+        },
+        {
+          "key": "2008-r2-sp1",
+          "label": "2008 R2 SP1",
+          "cpe_version": "2008",
+          "build_prefixes": [],
+          "release_date": "2011-02-22",
+          "standard_support_end": "2015-01-13",
+          "extended_support_end": "2023-01-10"
         }
       ]
     },

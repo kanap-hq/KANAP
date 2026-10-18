@@ -7,6 +7,9 @@
       "de": "Verzeichnisdienst von Microsoft für Windows-Domänen: Benutzer- und Computerkonten, Gruppen, Authentifizierung und Gruppenrichtlinien.",
       "es": "Servicio de directorio de Microsoft para dominios Windows: cuentas de usuarios y equipos, grupos, autenticación y directivas de grupo."
     },
+    "almalinux": {
+      "en": "Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the AlmaLinux OS Foundation."
+    },
     "amazon-corretto": {
       "en": "Amazon’s free distribution of OpenJDK, the Java runtime and development kit, with long-term support.",
       "fr": "Distribution gratuite d’OpenJDK par Amazon, l’environnement d’exécution et de développement Java, avec support à long terme.",
@@ -91,6 +94,9 @@
       "de": "Open-Source-Webserver und Reverse Proxy, der seine HTTPS-Zertifikate selbst bezieht und erneuert.",
       "es": "Servidor web y proxy inverso de código abierto que obtiene y renueva por sí mismo sus certificados HTTPS."
     },
+    "centos": {
+      "en": "Community Linux distribution rebuilt from Red Hat Enterprise Linux. CentOS Linux ended with version 7; later builds are CentOS Stream."
+    },
     "centreon": {
       "en": "Monitoring platform for IT infrastructure and applications: checks, alerts, dashboards and reports.",
       "fr": "Plateforme de supervision de l’infrastructure et des applications : contrôles, alertes, tableaux de bord et rapports.",
@@ -138,6 +144,9 @@
       "fr": "Base de données NoSQL distribuée orientée documents, avec cache intégré, requêtes proches du SQL et recherche plein texte.",
       "de": "Verteilte NoSQL-Dokumentendatenbank mit integriertem Cache, SQL-ähnlichen Abfragen und Volltextsuche.",
       "es": "Base de datos NoSQL distribuida de documentos, con caché integrada, consultas similares a SQL y búsqueda de texto completo."
+    },
+    "debian": {
+      "en": "Community Linux distribution, published about every two years as a stable release named after a Toy Story character."
     },
     "docker-engine": {
       "en": "Software that builds container images and runs containers on a server or a workstation.",
@@ -379,6 +388,9 @@
       "de": "Java-Laufzeit- und Entwicklungsumgebung von Oracle, für die kommerzielle Nutzung von Oracle lizenziert.",
       "es": "Entorno de ejecución y desarrollo de Java de Oracle, con licencia de Oracle para uso comercial."
     },
+    "oracle-linux": {
+      "en": "Linux distribution from Oracle, rebuilt from Red Hat Enterprise Linux, with optional paid support."
+    },
     "ovirt": {
       "en": "Open-source virtualization management for KVM: hosts, virtual machines, storage and networks from one console.",
       "fr": "Gestion de virtualisation open source pour KVM : hôtes, machines virtuelles, stockage et réseaux depuis une seule console.",
@@ -475,6 +487,12 @@
       "de": "Datenspeicher im Arbeitsspeicher, genutzt als Cache, Message-Broker und schnelle Schlüssel-Wert-Datenbank.",
       "es": "Almacén de datos en memoria usado como caché, intermediario de mensajes y base clave-valor rápida."
     },
+    "rhel": {
+      "en": "Commercial Linux distribution from Red Hat, with ten years of maintenance and an optional extended life cycle."
+    },
+    "rocky-linux": {
+      "en": "Community Linux distribution rebuilt from Red Hat Enterprise Linux, published by the Rocky Enterprise Software Foundation."
+    },
     "ruby": {
       "en": "Dynamic programming language and interpreter, used notably by the Ruby on Rails web framework.",
       "fr": "Langage de programmation dynamique et son interpréteur, utilisé notamment par le framework web Ruby on Rails.",
@@ -486,6 +504,9 @@
       "fr": "Logiciel open source qui fournit le partage de fichiers et d’imprimantes Windows sous Linux et peut servir de contrôleur de domaine Active Directory.",
       "de": "Open-Source-Software für Windows-Datei- und Druckerfreigaben unter Linux, auch als Active-Directory-Domänencontroller einsetzbar.",
       "es": "Software de código abierto que ofrece el uso compartido de archivos e impresoras de Windows en Linux y puede actuar como controlador de dominio de Active Directory."
+    },
+    "sles": {
+      "en": "Commercial Linux distribution from SUSE for servers, published as a major version and its service packs."
     },
     "splunk": {
       "en": "Platform that collects, indexes and searches machine data such as logs and events, for monitoring and security.",
@@ -510,6 +531,9 @@
       "fr": "Proxy inverse et répartiteur de charge open source qui configure lui-même ses routes à partir de Docker et Kubernetes.",
       "de": "Open-Source-Reverse-Proxy und Load Balancer, der seine Routen selbst aus Docker und Kubernetes konfiguriert.",
       "es": "Proxy inverso y balanceador de carga de código abierto que configura por sí mismo sus rutas a partir de Docker y Kubernetes."
+    },
+    "ubuntu": {
+      "en": "Linux distribution from Canonical, published twice a year, with a long-term support release every two years."
     },
     "valkey": {
       "en": "Open-source in-memory key-value store of the Linux Foundation, a fork of Redis kept compatible with it.",
@@ -540,6 +564,9 @@
       "fr": "Plateforme de virtualisation de VMware : les hyperviseurs ESXi exécutent les machines virtuelles et vCenter les administre.",
       "de": "Virtualisierungsplattform von VMware: ESXi-Hypervisoren führen die virtuellen Maschinen aus, vCenter verwaltet sie.",
       "es": "Plataforma de virtualización de VMware: los hipervisores ESXi ejecutan las máquinas virtuales y vCenter las administra."
+    },
+    "windows-server": {
+      "en": "Microsoft operating system for servers, in long-term releases with a standard support period and an extended one."
     },
     "zabbix": {
       "en": "Open-source monitoring software for servers, networks, applications and services, with alerts and dashboards.",

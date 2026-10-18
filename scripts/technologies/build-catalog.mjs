@@ -7,7 +7,14 @@
 // published under the MIT license (Copyright 2020 endoflife.date contributors; the notice is in
 // backend/src/technologies/catalog/LICENSE-endoflife-date.txt). The products kept are listed below
 // (PRODUCTS); a few have no endoflife.date page and are written from this list only (`slug` null).
-// Operating systems are not in this catalog: they come with lot T3.
+// Operating systems are in this catalog since lot T3. Their version labels are rewritten
+// (`versionLabel`) so they match the former IT settings catalog (`2012 R2`, `22.04 LTS`,
+// `12 (Bookworm)`, `15 SP5`). endoflife.date names a SUSE service pack `15.5`: the label stored
+// is `15 SP5`, which is what the shipped operating-system codes resolve to. A release named in
+// `retain` is kept even past the eight newest, when the shipped codes need it (Ubuntu LTS
+// releases sit behind the interim ones). The living catalog (catalog-releases.ts) is unchanged:
+// a cycle already shipped keeps this label, and a cycle published later takes the shared
+// cleanLabel.
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
@@ -73,8 +80,46 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * `noCpe`: why an entry has no identifier (checked by --check-cpe); it drops any published one. Every identifier kept was
  * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17): it exists in the CPE
  * dictionary and CVE name it.
+ * `versionLabel(release)`: the label stored, when cleanLabel would not match the names KANAP
+ * already shows. `retain`: cycle names kept beyond the eight newest.
  */
+const OS_NO_CPE = 'OS vulnerabilities are a separate decision: KANAP does not know the patch level, and Windows Server uses one CPE product per version';
+
+/** "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2". */
+function windowsServerLabel(release) {
+  const cleaned = cleanLabel(release.label, release.name);
+  return cleaned.replace(/^Windows Server\s+/i, '') || cleaned;
+}
+
+/** "22.04 'Jammy Jellyfish' (LTS)" → "22.04 LTS"; an interim release keeps its number. */
+function ubuntuLabel(release) {
+  return /\(LTS\)/i.test(String(release.label ?? '')) ? `${release.name} LTS` : cleanLabel(release.label, release.name);
+}
+
+/** "12 (Bookworm)" stays, parentheses included: cleanLabel would leave "12". */
+function debianLabel(release) {
+  const raw = String(release.label ?? '').replace(/\s+/g, ' ').trim();
+  return raw || String(release.name);
+}
+
+/** endoflife.date names a service pack "15.5". "15.0" and "16.0" stay as published. */
+function slesLabel(release) {
+  const match = /^(\d+)\.(\d+)$/.exec(String(release.name));
+  if (match && match[2] !== '0') return `${match[1]} SP${Number(match[2])}`;
+  return cleanLabel(release.label, release.name);
+}
+
 const PRODUCTS = [
+  // Operating systems (lot T3). No CPE: see OS_NO_CPE.
+  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: windowsServerLabel, retain: ['2012-r2', '2016', '2019', '2022', '2025'] },
+  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: ubuntuLabel, retain: ['18.04', '20.04', '22.04'] },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', noCpe: OS_NO_CPE, retain: ['7', '8', '9'] },
+  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: debianLabel, retain: ['10', '11', '12'] },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: slesLabel, retain: ['12.5', '15.5', '15.6', '15.7'] },
+  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', noCpe: OS_NO_CPE },
+  { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', noCpe: OS_NO_CPE },
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
@@ -256,6 +301,7 @@ function versionsOf(releases, today, entry) {
   const cutoff = `${Number(today.slice(0, 4)) - ENDED_YEARS_KEPT}${today.slice(4)}`;
   const out = [];
   const seen = new Set();
+  const retain = new Set(entry.retain ?? []);
   const sorted = [...releases].sort((a, b) => String(b.releaseDate ?? '').localeCompare(String(a.releaseDate ?? '')));
   for (const release of sorted) {
     if (!release.releaseDate || release.releaseDate > today) continue;
@@ -264,15 +310,17 @@ function versionsOf(releases, today, entry) {
     const eoes = day(release.eoesFrom);
     const lastEnd = [eoas, eol, eoes].filter(Boolean).sort().at(-1) ?? null;
     if (lastEnd && lastEnd < cutoff) continue;
-    const label = cleanLabel(release.label, release.name);
-    if (seen.has(label.toLowerCase())) continue;
+    const name = String(release.name);
+    // The eight newest, plus a cycle named in `retain` (a shipped operating-system code).
+    if (out.length >= MAX_VERSIONS && !retain.has(name)) continue;
+    const label = entry.versionLabel ? entry.versionLabel(release) : cleanLabel(release.label, release.name);
+    if (!label || seen.has(label.toLowerCase())) continue;
     seen.add(label.toLowerCase());
     // Standard support: the end of active support when the product has one, else the end of life.
     // Extended: the paid extension when published, else the end of life after an active support.
     const standard = eoas ?? eol;
     let extended = eoes ?? (eoas ? eol : null);
     if (standard && extended && extended < standard) extended = null;
-    const name = String(release.name);
     out.push({
       key: name,
       label,
@@ -282,7 +330,6 @@ function versionsOf(releases, today, entry) {
       standard_support_end: standard,
       extended_support_end: extended === standard ? null : extended,
     });
-    if (out.length >= MAX_VERSIONS) break;
   }
   return out;
 }
