@@ -130,8 +130,10 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-        <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span>
+      <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+        <Box component="span" title={row.technology_name ?? undefined} sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {row.technology_name ?? dash}
+        </Box>
         {row.is_operating_system && (
           <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, flex: 'none' }}>
             {t('workspace.asset.technologies.operatingSystem')}
