@@ -46,7 +46,8 @@ La vue **Données manquantes** liste les fiches à compléter pour que les éch�
 |---|---|
 | **Application hébergée sans serveur** | Une application hébergée sur site ou en cloud privé n'a aucun serveur sur un déploiement en service |
 | **Machine virtuelle sans hôte** | Aucun actif ne contient cette machine virtuelle |
-| **Technologie installée sur aucun serveur** | Une technologie en mode **Installée** ne tourne sur aucun serveur |
+| **Technologie sur site sur aucun serveur** | Une technologie dont le type d'hébergement est sur site (Sur site, Colocation) ne tourne sur aucun serveur |
+| **Technologie sans type d'hébergement des réglages IT** | Le type d'hébergement de la technologie n'est plus dans la liste **Types d'hébergement** des paramètres. Choisissez-en un autre sur la technologie |
 | **Serveur de base de données sans technologie de base de données** | Un serveur tient un rôle de base de données pour une application, mais ne porte aucune technologie de la famille **Base de données** |
 | **Application avec SSO sans technologie d'identité** | Une application utilise le SSO et n'a aucune technologie de la famille **Annuaire et identité** |
 | **Lien de technologie sans version** | Un serveur ou une application utilise une technologie sans dire quelle version |

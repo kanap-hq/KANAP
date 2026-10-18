@@ -46,7 +46,8 @@ La vista **Datos que faltan** lista las fichas que hay que completar para que lo
 |---|---|
 | **Aplicación alojada sin servidor** | Una aplicación alojada en sus instalaciones o en una nube privada no tiene ningún servidor en un despliegue en servicio |
 | **Máquina virtual sin host** | Ningún activo contiene esta máquina virtual |
-| **Tecnología instalada en ningún servidor** | Una tecnología en modo **Instalada** no se ejecuta en ningún servidor |
+| **Tecnología local en ningún servidor** | Una tecnología cuyo tipo de alojamiento es local (Local, Colocation) no se ejecuta en ningún servidor |
+| **Tecnología sin tipo de alojamiento de los ajustes de TI** | El tipo de alojamiento de la tecnología ya no está en la lista **Tipos de alojamiento** de la configuración. Elija otro en la tecnología |
 | **Servidor de base de datos sin tecnología de base de datos** | Un servidor tiene un rol de base de datos para una aplicación, pero no lleva ninguna tecnología de la familia **Base de datos** |
 | **Aplicación con SSO sin tecnología de identidad** | Una aplicación usa SSO y no tiene ninguna tecnología de la familia **Directorio e identidad** |
 | **Vínculo de tecnología sin versión** | Un servidor o una aplicación usa una tecnología sin indicar qué versión |

@@ -40,12 +40,19 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Technologies](technologies.md) - Suivez les produits sur lesquels tournent vos applications, leurs versions et leur fin de support
 - [Connexions](connections.md) - Suivez les connexions réseau et système
 - [Carte des connexions](connection-map.md) - Visualisez la topologie des connexions
+- [Vue de l'administration](administration-view.md) - Voyez qui administre quoi : zones, domaines et contrôleurs de domaine
 
 **Applications**
 
 - [Applications](applications.md) - Documentez votre cartographie applicative
 - [Interfaces](interfaces.md) - Cartographiez les flux de données entre les applications
 - [Carte des interfaces](interface-map.md) - Visualisez les relations entre interfaces
+
+**Exploitation**
+
+- [Incidents](incidents.md) - Enregistrez les incidents et ce qu'ils touchent
+- [Fins de support](end-of-support.md) - Voyez ce qui atteint sa fin de support et ce que cela touche
+- [Vulnérabilités](vulnerabilities.md) - Traitez les vulnérabilités publiées des technologies en service
 
 **Paramètres**
 

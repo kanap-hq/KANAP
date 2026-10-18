@@ -40,12 +40,19 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Tecnologías](technologies.md) - Seguimiento de los productos sobre los que funcionan sus aplicaciones, sus versiones y su fin de soporte
 - [Conexiones](connections.md) - Seguimiento de conexiones de red y sistemas
 - [Mapa de conexiones](connection-map.md) - Visualización de la topología de conexiones
+- [Vista de la administración](administration-view.md) - Quién administra qué: zonas, dominios y controladores de dominio
 
 **Aplicaciones**
 
 - [Aplicaciones](applications.md) - Documentación de su panorama de aplicaciones
 - [Interfaces](interfaces.md) - Mapeo de flujos de datos entre aplicaciones
 - [Mapa de interfaces](interface-map.md) - Visualización de las relaciones entre interfaces
+
+**Operaciones**
+
+- [Incidentes](incidents.md) - Registro de los incidentes y de lo que afectan
+- [Fin de soporte](end-of-support.md) - Lo que llega a su fin de soporte y lo que afecta
+- [Vulnerabilidades](vulnerabilities.md) - Revisión de las vulnerabilidades publicadas de las tecnologías en uso
 
 **Configuración**
 

@@ -104,6 +104,10 @@ Cada proveedor tiene una pestaña de **Contactos** que muestra todos los contact
 
 En el espacio de trabajo de Aplicaciones, la pestaña **Técnico y soporte** referencia contactos para la escalación del soporte.
 
+### Soporte de tecnologías
+
+En el espacio de trabajo de Tecnologías, la pestaña **Operación** lista los contactos de soporte de una tecnología. Consulte [Tecnologías](technologies.md#operacion). En la sección **Usado en** del contacto, una tecnología retirada aparece al final, marcada como **Desactivado**.
+
 ### Contactos de ubicación
 
 Las ubicaciones pueden tener contactos de soporte (gestores de instalaciones, contactos del NOC, etc.).

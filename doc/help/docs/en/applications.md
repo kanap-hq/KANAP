@@ -336,13 +336,13 @@ You need `applications:admin` and `infrastructure:member`.
 
 The window first checks what the conversion changes. Choose a **Family**, then read the three lists:
 
-- **Moves to the technology**: owners, contracts, budget lines, projects, web links, documents, incidents, and the servers of its active deployments. Each server becomes a server that carries the technology, with an unknown version. Links in modules you cannot read move too.
+- **Moves to the technology**: owners, support contacts, contracts, budget lines, projects, web links, documents, incidents, and the servers of its active deployments. Each server becomes a server that carries the technology, with an unknown version. Links in modules you cannot read move too.
 - **Kept, without its link to the application**: managed documents stay in their library, among the unfiled documents.
-- **Lost with the application**: deployments and environments, suite membership, predecessor and successors, data residency, support contacts, the companies and departments using it, knowledge links, linked tasks and requests, business processes, the technologies it depends on, and the fields only applications have (users, access methods, SSO, MFA, personal data). Its `APP` reference goes too.
+- **Lost with the application**: deployments and environments, suite membership, predecessor and successors, data residency, the companies and departments using it, knowledge links, linked tasks and requests, business processes, the technologies it depends on, and the fields only applications have (users, access methods, SSO, MFA, personal data). Its `APP` reference goes too.
 
-The technology is installed when the application had servers, subscribed otherwise. **Convert** creates the technology, deletes the application and opens the new record. The audit log keeps the old reference.
+The technology keeps the name, publisher, description, notes, support notes, lifecycle, cyber criticality and recovery fields. Each support contact is listed once, with the first role it had. The window names the hosting type the technology takes. With servers, it is the hosting type of their locations (the one with the most servers), otherwise **On-prem**. Without servers, it is the application's own **Hosting**, otherwise **SaaS**. You can change it afterwards on the technology. **Convert** creates the technology, deletes the application and opens the new record. The audit log keeps the old reference.
 
-**When it is refused**: the window lists the reasons and **Convert** stays unavailable. An application cannot convert while it is the source, target or middleware of interfaces, an integration tool of interface bindings, a suite with components, or has interface bindings on its deployments. A technology with the same name, values a technology cannot take, or files missing from storage also block it. Remove these links first, or keep the record as an application.
+**When it is refused**: the window lists the reasons and **Convert** stays unavailable. An application cannot convert while it is the source, target or middleware of interfaces, an integration tool of interface bindings, a suite with components, or has interface bindings on its deployments. A technology with the same name, values a technology cannot take (including a **Hosting types** list without any type in use), or files missing from storage also block it. Remove these links first, or keep the record as an application.
 
 ---
 

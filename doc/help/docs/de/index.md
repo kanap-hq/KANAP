@@ -40,12 +40,19 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende
 - [Verbindungen](connections.md) - Netzwerk- und Systemverbindungen verfolgen
 - [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
+- [Administrationssicht](administration-view.md) - Sehen, wer was verwaltet: Zonen, Domänen und Domänencontroller
 
 **Anwendungen**
 
 - [Anwendungen](applications.md) - Ihre Anwendungslandschaft dokumentieren
 - [Schnittstellen](interfaces.md) - Datenflüsse zwischen Anwendungen abbilden
 - [Schnittstellenkarte](interface-map.md) - Schnittstellenbeziehungen visualisieren
+
+**Betrieb**
+
+- [Vorfälle](incidents.md) - Vorfälle erfassen und was sie betreffen
+- [Supportende](end-of-support.md) - Sehen, was sein Supportende erreicht und was es betrifft
+- [Schwachstellen](vulnerabilities.md) - Die veröffentlichten Schwachstellen der Technologien im Einsatz prüfen
 
 **Einstellungen**
 

@@ -23,6 +23,8 @@ El editor **Clasificaciones y continuidad** está en la parte superior de la pá
 3. **Aplicaciones, servicios e interfaces** - Listas utilizadas en aplicaciones, instancias de aplicación, interfaces y enlaces.
 4. **Incidentes** - Listas utilizadas por el registro de incidentes.
 
+Las listas de las tecnologías están en dos secciones: **Familias de tecnologías** y **Zonas de administración** en **Servidores y conexiones**, **Tipos de alojamiento** en **Ubicaciones**. Otras pantallas llaman a esta página los ajustes de TI.
+
 Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece como un panel expandible con una breve indicación de dónde se usan sus valores (por ejemplo, *Aplicaciones / Selector de categoría*). Haga clic en el encabezado de un panel para expandirlo y ver los valores. Solo una sección carga su contenido cuando la expande por primera vez, lo que mantiene la página rápida incluso cuando tiene muchas listas.
 
 ### Controles del editor
@@ -74,12 +76,15 @@ Proveedores cloud utilizados por los servidores y las ubicaciones (p. ej., AWS, 
 
 ### Tipos de alojamiento
 
-Modelos de alojamiento disponibles al crear ubicaciones (p. ej., on-premise, colocation, nube pública, SaaS).
+Dónde se alojan las ubicaciones y las tecnologías. Valores por defecto: Local, Colocation, Cloud público, Cloud privado, SaaS.
 
 **Columnas**: Nombre, Categoría (**Local / colocación** o **Nube / SaaS**), Dejar de proponer
 
 **Dónde se usa**:
 - Espacio de trabajo de Ubicaciones → pestaña Visión general → campo **Tipo de alojamiento**
+- Espacio de trabajo de Tecnologías → panel de propiedades → **Tipo de alojamiento**, y la ventana de nueva tecnología. Consulte [Tecnologías](technologies.md#tipo-de-alojamiento).
+
+Un tipo que usa una tecnología no se puede eliminar: márquelo con **Dejar de proponer**.
 
 La categoría determina qué campos aparecen al editar una Ubicación:
 - **Local / colocación** muestra campos de Empresa operadora y Centro de datos
@@ -88,6 +93,31 @@ La categoría determina qué campos aparecen al editar una Ubicación:
 ---
 
 ## Servidores y conexiones
+
+### Zonas de administración
+
+Las zonas de su modelo de administración, por ejemplo el tier 0 para el directorio y sus controladores, el tier 1 para los servidores, el tier 2 para los puestos de trabajo. Figuran en su política de administración o en su modelo de acceso privilegiado.
+
+**Columnas**: Nombre, Grupo de administradores, Nivel de privilegios, Ubicación de los secretos, Descripción, Dejar de proponer
+
+- **Grupo de administradores**: quién administra la zona, por ejemplo «Admins. del dominio».
+- **Nivel de privilegios**: el nivel de la zona en su modelo, por ejemplo «Tier 0».
+- **Ubicación de los secretos**: dónde se guardan los secretos de administración de la zona, por ejemplo un almacén de contraseñas.
+
+**Dónde se usa**:
+- Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**
+- **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías y sus servidores. Consulte [Vista de la administración](administration-view.md).
+
+Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías ya situadas en ella.
+
+### Familias de tecnologías
+
+El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, etc. La lista de tecnologías y los informes agrupan las tecnologías por familia, y la [Vista de la administración](administration-view.md) encuentra los servicios de directorio por la familia **Directorio e identidad**.
+
+**Columnas**: Nombre, Dejar de proponer
+
+**Dónde se usa**:
+- Espacio de trabajo de Tecnologías → cabecera y panel de propiedades → **Familia**, y la ventana de nueva tecnología
 
 ### Tipos de conexión
 
@@ -106,11 +136,16 @@ Las categorías predeterminadas incluyen: Aplicación, Autenticación, Respaldo,
 
 Dominios Active Directory o DNS de los activos. Las entradas integradas no se pueden modificar. El sufijo DNS se usa para calcular el nombre de dominio completamente cualificado (FQDN) de cada activo.
 
-**Columnas**: Nombre, Sufijo DNS, Dejar de proponer
+**Columnas**: Nombre, Sufijo DNS, Bosque, Cuentas, Equipos, Confianzas, Dejar de proponer
+
+- **Bosque**: el bosque de Active Directory del dominio, tal como aparece en Dominios y confianzas de Active Directory.
+- **Cuentas** y **Equipos**: el número de cuentas de usuario y de equipos del dominio, tal como se cuentan en Usuarios y equipos de Active Directory. Solo números enteros.
+- **Confianzas**: el botón indica cuántas confianzas tiene el dominio. Haga clic en él para listar los otros dominios con los que tiene una relación de confianza, tal como aparecen en Dominios y confianzas de Active Directory. **Añadir un dominio de confianza** añade uno; elija su **Dirección**: **saliente** (este dominio confía en el otro, cuyas cuentas pueden acceder a sus recursos), **entrante** (el otro dominio confía en este) o **bidireccional** (ambos). El cuadro de diálogo muestra también, en solo lectura, las confianzas declaradas en otros dominios hacia este. El botón aparece una vez guardado el dominio, y necesita al menos otro dominio en la lista.
 
 **Dónde se usa**:
 - Espacio de trabajo de Activos → pestaña Técnico → selector de **Dominio**
 - Espacio de trabajo de Activos → pestaña Técnico → **FQDN** (calculado automáticamente desde hostname + sufijo DNS)
+- **Panorama IT > Vista de la administración**: bosque, confianzas, recuentos y controladores de dominio. Consulte [Vista de la administración](administration-view.md#dominios).
 
 **Entradas del sistema** (no pueden modificarse ni eliminarse):
 - **Workgroup** - Para activos independientes no unidos a un dominio
@@ -252,7 +287,7 @@ Categorías que describen el propósito principal de cada aplicación o servicio
 
 ### Clasificaciones y continuidad
 
-Este editor configura los niveles utilizados para clasificar las aplicaciones. Está disponible para usuarios `settings:admin` en la parte superior de la página y se abre como un único cuadro de diálogo con una lista por catálogo:
+Este editor configura los niveles utilizados para clasificar las aplicaciones, y las tecnologías en su pestaña Cumplimiento. Está disponible para usuarios `settings:admin` en la parte superior de la página y se abre como un único cuadro de diálogo con una lista por catálogo:
 
 - **Criticidad de negocio**: los niveles que se pueden asignar a una aplicación. Cada nivel tiene un nombre, una descripción que se muestra bajo el nombre al elegir un nivel, una **duración máxima tolerable de interrupción (MTD)** opcional en minutos y una marca **Dejar de proponer**. La duración documenta el nivel y activa una advertencia en una aplicación cuyo RTO la alcanza; es un atributo del nivel, no un valor que se introduce en las aplicaciones.
 - **Criticidad cibernética**: niveles de consecuencias independientes.
@@ -375,11 +410,12 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 |-------|--------------|
 | **Métodos de acceso** | Aplicaciones (pestaña Técnico y soporte → Métodos de acceso) |
 | **Categorías de aplicación** | Aplicaciones (Categoría) |
+| **Zonas de administración** | Tecnologías (panel de propiedades → Zona de administración), Vista de la administración |
 | **Proveedores cloud** | Activos (Proveedor), Ubicaciones (Proveedor cloud) |
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
-| **Dominios** | Activos (pestaña Técnico → Dominio, FQDN) |
+| **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), Vista de la administración |
 | **Entidades** | Conexiones (Entidad de origen/destino), Mapa de conexiones (ubicación por nivel del grafo) |
-| **Tipos de alojamiento** | Ubicaciones (Visión general) |
+| **Tipos de alojamiento** | Ubicaciones (Visión general), Tecnologías (Tipo de alojamiento) |
 | **Patrones de integración** | Segmentos de interfaz (Patrón) |
 | **Modos de autenticación de interfaz** | Enlaces de interfaz (Modo de autenticación) |
 | **Categorías de datos de interfaz** | Interfaces (Categoría de datos) |
@@ -394,6 +430,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Subredes** | Activos (pestaña Técnico → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de activo** | Activos (Visión general → Tipo) |
+| **Familias de tecnologías** | Tecnologías (Familia), Vista de la administración (servicios de directorio) |
 
 ---
 

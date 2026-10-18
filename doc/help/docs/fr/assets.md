@@ -150,7 +150,7 @@ Si cet actif est un cluster, une notification en ligne remplace le tableau d'ass
 
 ### Technique
 
-L'onglet Technique organise le cluster, l'identité réseau et la configuration IP.
+L'onglet Technique organise le cluster, l'identité réseau, les technologies que porte le serveur et la configuration IP.
 
 **Gestion du cluster** :
 - Bascule **Cluster** : marquer cet actif comme cluster.
@@ -163,6 +163,14 @@ L'onglet Technique organise le cluster, l'identité réseau et la configuration 
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
 - **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters : l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.
+
+**Technologies** : ce que porte le serveur, par exemple SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
+
+- Une technologie installée sur ce serveur se retire avec la croix au bout de sa ligne.
+- Une technologie installée sur le serveur ou le cluster dans lequel celui-ci tourne affiche ce serveur sous **Via**. Elle suit l'installation et se retire là-bas.
+- **Ajouter** (`infrastructure:member`) ouvre une recherche de technologie, puis le choix de la version : choisissez une version, **Version inconnue**, ou tapez un nouveau libellé et choisissez **Ajouter la version « … »** pour la créer. Chaque modification s'enregistre aussitôt.
+
+La version et les notes d'une installation se changent depuis l'onglet **Serveurs** de la technologie. Voir [Technologies](technologies.md#lier-une-technologie-a-un-serveur).
 
 **Adresses IP** :
 

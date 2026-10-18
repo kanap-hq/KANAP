@@ -443,6 +443,38 @@ Each user opens it, confirms, then signs in to KANAP as described in [Connecting
 - API keys, from any client that reaches the server.
 - Claude Code over OAuth, when the user's computer reaches the server over HTTPS and the server reaches `claude.ai` over HTTPS. The sign-in returns to the user's own computer.
 
+## Optional: vulnerabilities { #optional-vulnerabilities }
+
+The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads the vulnerabilities published by the NVD (the US National Vulnerability Database) every 6 hours, for the CPE products your technologies name.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `VULNERABILITY_FEED_ENABLED` | Turns the vulnerabilities on. | `false` on-premise |
+| `NVD_API_BASE_URL` | Address of a mirror of the NVD CVE API 2.0, when the server cannot reach the NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
+| `NVD_API_KEY` | Optional key that raises the request rate from 5 to 50 requests per 30 seconds, so the first reading finishes sooner. Request it free of charge on the [NVD website](https://nvd.nist.gov/developers/request-an-api-key). | *unset* |
+
+Notes:
+
+- The API needs outbound HTTPS access to `services.nvd.nist.gov`, or to your mirror (see [Firewall rules](#firewall-rules)).
+- The email notifications also need email to be configured (Resend or SMTP).
+- Restart the API after changing these values.
+
+## Optional: technology catalog { #optional-technology-catalog }
+
+Technologies adopted from the catalog follow its new versions, end of support dates and CPE identifiers (see [Versions from the catalog](../technologies.md#versions-from-the-catalog)). By default on-premise, each KANAP version brings its own catalog: the adopted technologies receive what it adds at the first start of that version. Turn on the daily check to follow the publishers between two KANAP versions.
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Reads the versions and end of support dates of the catalog products your technologies come from on endoflife.date, every day. | `false` on-premise |
+| `ENDOFLIFE_API_BASE_URL` | Address of a mirror of the endoflife.date API v1, when the server cannot reach endoflife.date. | `https://endoflife.date/api/v1` |
+
+Notes:
+
+- The API needs outbound HTTPS access to `endoflife.date`, or to your mirror (see [Firewall rules](#firewall-rules)).
+- Both modes go through the scheduled task **technology-catalog** (each day and at start). While that task is disabled in the scheduled tasks, nothing is brought up to date.
+- A value changed in KANAP, or a version deleted there, is never overwritten or brought back.
+- Restart the API after changing these values.
+
 ## Optional: advanced
 
 | Variable | Description | Default |
@@ -559,6 +591,15 @@ S3_FORCE_PATH_STYLE=false
 # AI_SETTINGS_ENABLED=false
 # AI_SETTINGS_ENCRYPTION_SECRET=
 
+# VULNERABILITIES (optional - off by default)
+# VULNERABILITY_FEED_ENABLED=false
+# NVD_API_KEY=
+# NVD_API_BASE_URL=
+
+# TECHNOLOGY CATALOG (optional - off by default)
+# TECHNOLOGY_CATALOG_SYNC_ENABLED=false
+# ENDOFLIFE_API_BASE_URL=
+
 # ADVANCED (optional - defaults are fine)
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
@@ -574,7 +615,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Firewall rules
 
-After the initial build, KANAP can run fully air-gapped if email, SSO, AI and FX rate features are all disabled.
+After the initial build, KANAP can run fully air-gapped if email, SSO, AI, FX rate, vulnerability and technology catalog features are all disabled.
 
 ### Inbound
 
@@ -618,6 +659,8 @@ Only required if the corresponding feature is enabled.
 | The AI provider you configure (or your own model server) | 443 or your server's port | Chat, agents | If AI features are enabled and a model is set up |
 | `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP without a key | If `AI_MCP_ENABLED=true` and users connect over OAuth (not needed for API keys) |
 | `chatgpt.com`, `grok.com` | 443 | Reads the description of ChatGPT or Grok when a user connects it over MCP without a key | Same as `claude.ai` |
+| `services.nvd.nist.gov`, or your mirror | 443 | Published vulnerabilities (NVD) | If `VULNERABILITY_FEED_ENABLED=true` |
+| `endoflife.date`, or your mirror | 443 | Versions and end of support dates of the technology catalog | If `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
 | `open.er-api.com` | 443 | Spot FX rates | Optional |
 

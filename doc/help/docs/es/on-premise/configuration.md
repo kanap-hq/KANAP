@@ -443,6 +443,38 @@ Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe 
 - Las claves API, desde cualquier cliente que llegue al servidor.
 - Claude Code mediante OAuth, cuando el ordenador del usuario llega al servidor por HTTPS y el servidor llega a `claude.ai` por HTTPS. El inicio de sesión vuelve al propio ordenador del usuario.
 
+## Opcional: vulnerabilidades { #optional-vulnerabilities }
+
+La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo y los recuentos de vulnerabilidades de las tecnologías están desactivados por defecto en una instalación local. Una vez activados, KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías.
+
+| Variable | Descripción | Valor predeterminado |
+|----------|-------------|---------|
+| `VULNERABILITY_FEED_ENABLED` | Activa las vulnerabilidades. | `false` en local |
+| `NVD_API_BASE_URL` | Dirección de una réplica de la API CVE 2.0 de la NVD, cuando el servidor no puede alcanzar la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
+| `NVD_API_KEY` | Clave opcional que eleva el ritmo de 5 a 50 solicitudes por 30 segundos, de modo que la primera lectura termina antes. Solicítela gratis en el [sitio de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *sin definir* |
+
+Notas:
+
+- La API necesita acceso HTTPS saliente a `services.nvd.nist.gov`, o a su réplica (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- Las notificaciones por correo requieren además que el envío de correo esté configurado (Resend o SMTP).
+- Reinicie la API después de cambiar estos valores.
+
+## Opcional: catálogo de tecnologías { #optional-technology-catalog }
+
+Las tecnologías adoptadas desde el catálogo siguen sus nuevas versiones, sus fechas de fin de soporte y sus identificadores CPE (consulte [Versiones del catálogo](../technologies.md#versiones-del-catalogo)). Por defecto en una instalación local, cada versión de KANAP trae su propio catálogo: las tecnologías adoptadas reciben lo que añade en el primer arranque de esa versión. Active la comprobación diaria para seguir a los editores entre dos versiones de KANAP.
+
+| Variable | Descripción | Valor predeterminado |
+|----------|-------------|---------|
+| `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Lee cada día en endoflife.date las versiones y las fechas de fin de soporte de los productos del catálogo de los que proceden sus tecnologías. | `false` en local |
+| `ENDOFLIFE_API_BASE_URL` | Dirección de una réplica de la API v1 de endoflife.date, cuando el servidor no puede alcanzar endoflife.date. | `https://endoflife.date/api/v1` |
+
+Notas:
+
+- La API necesita acceso HTTPS saliente a `endoflife.date`, o a su réplica (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- Ambos modos pasan por la tarea programada **technology-catalog** (cada día y al arrancar). Mientras esa tarea esté desactivada en las tareas programadas, no se actualiza nada.
+- Un valor cambiado en KANAP, o una versión eliminada allí, nunca se sobrescribe ni se vuelve a crear.
+- Reinicie la API después de cambiar estos valores.
+
 ## Opcional: avanzado
 
 | Variable | Descripción | Valor predeterminado |
@@ -559,6 +591,15 @@ S3_FORCE_PATH_STYLE=false
 # AI_SETTINGS_ENABLED=false
 # AI_SETTINGS_ENCRYPTION_SECRET=
 
+# VULNERABILIDADES (opcional - desactivadas por defecto)
+# VULNERABILITY_FEED_ENABLED=false
+# NVD_API_KEY=
+# NVD_API_BASE_URL=
+
+# CATÁLOGO DE TECNOLOGÍAS (opcional - desactivado por defecto)
+# TECHNOLOGY_CATALOG_SYNC_ENABLED=false
+# ENDOFLIFE_API_BASE_URL=
+
 # AVANZADO (opcional - los valores predeterminados son adecuados)
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
@@ -574,7 +615,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Reglas de cortafuegos
 
-Tras la compilación inicial, KANAP puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA y tipos de cambio están todas desactivadas.
+Tras la compilación inicial, KANAP puede funcionar completamente aislado de la red si las funciones de correo, SSO, IA, tipos de cambio, vulnerabilidades y catálogo de tecnologías están todas desactivadas.
 
 ### Entrante
 
@@ -618,6 +659,8 @@ Solo es necesario si la función correspondiente está activada.
 | El proveedor de IA que configure (o su propio servidor de modelos) | 443 o el puerto de su servidor | Chat, agentes | Si las funciones de IA están activadas y hay un modelo configurado |
 | `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP sin clave | Si `AI_MCP_ENABLED=true` y los usuarios se conectan mediante OAuth (no es necesario para las claves API) |
 | `chatgpt.com`, `grok.com` | 443 | Lee la descripción de ChatGPT o Grok cuando un usuario lo conecta mediante MCP sin clave | Igual que para `claude.ai` |
+| `services.nvd.nist.gov`, o su réplica | 443 | Vulnerabilidades publicadas (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `endoflife.date`, o su réplica | 443 | Versiones y fechas de fin de soporte del catálogo de tecnologías | Si `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Tipos de cambio anuales | Opcional |
 | `open.er-api.com` | 443 | Tipos de cambio al contado | Opcional |
 

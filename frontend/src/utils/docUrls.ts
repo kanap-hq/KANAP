@@ -51,6 +51,8 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/it\/assets\/[^/]+/, 'assets'],
   [/^\/it\/assets/, 'assets'],
   [/^\/it\/technologies\/end-of-support/, 'end-of-support'],
+  [/^\/it\/vulnerabilities/, 'vulnerabilities'],
+  [/^\/it\/administration-view/, 'administration-view'],
   [/^\/it\/incidents\/[^/]+/, 'incidents'],
   [/^\/it\/incidents/, 'incidents'],
   [/^\/it\/technologies\/[^/]+/, 'technologies'],

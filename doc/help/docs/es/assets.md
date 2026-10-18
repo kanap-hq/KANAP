@@ -150,7 +150,7 @@ Si este activo es un clúster, un aviso en línea reemplaza la tabla de asignaci
 
 ### Técnico
 
-La pestaña Técnico organiza el clúster, la identidad de red y la configuración de IP.
+La pestaña Técnico organiza el clúster, la identidad de red, las tecnologías que lleva el servidor y la configuración de IP.
 
 **Gestión de clúster**:
 - Conmutador **Clúster**: marcar este activo como clúster.
@@ -163,6 +163,14 @@ La pestaña Técnico organiza el clúster, la identidad de red y la configuraci�
 - **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
 - **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
 - **Sistema operativo**: Tipo y versión del SO (p. ej., Windows Server 2022, Ubuntu 24.04 LTS). Deshabilitado para clústeres: el SO se define por miembro. Cuando se selecciona, muestra debajo las fechas de fin de soporte estándar y extendido.
+
+**Tecnologías**: lo que lleva el servidor, por ejemplo SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
+
+- Una tecnología instalada en este servidor se quita con la cruz al final de su fila.
+- Una tecnología instalada en el servidor o clúster en el que se ejecuta este muestra ese servidor en **Vía**. Sigue a la instalación y se quita allí.
+- **Añadir** (`infrastructure:member`) abre una búsqueda de tecnología y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
+
+La versión y las notas de una instalación se cambian desde la pestaña **Servidores** de la tecnología. Consulte [Tecnologías](technologies.md#vincular-una-tecnologia-a-un-servidor).
 
 **Direcciones IP**:
 

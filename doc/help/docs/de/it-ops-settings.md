@@ -23,6 +23,8 @@ Der Editor **Einstufungen und Kontinuität** steht oben auf der Seite. Darunter 
 3. **Anwendungen, Services und Schnittstellen** - Listen für Anwendungen, Anwendungsinstanzen, Schnittstellen und Bindungen.
 4. **Vorfälle** - Listen für das Vorfallsregister.
 
+Die Listen der Technologien stehen in zwei Abschnitten: **Technologiefamilien** und **Administrationszonen** unter **Server und Verbindungen**, **Hosting-Typen** unter **Standorte**. Andere Seiten nennen diese Seite die IT-Einstellungen.
+
 Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste erscheint als aufklappbares Panel mit einem kurzen Hinweis, wo ihre Werte verwendet werden (zum Beispiel *Anwendungen / Kategorieauswahl*). Klicken Sie auf die Kopfzeile eines Panels, um es aufzuklappen und die Werte zu sehen. Ein Abschnitt lädt seinen Inhalt erst beim ersten Aufklappen. So bleibt die Seite auch bei vielen Listen schnell.
 
 ### Editor-Steuerungen
@@ -74,12 +76,15 @@ Cloud-Anbieter, die von Servern und Standorten verwendet werden (z. B. AWS, Azur
 
 ### Hosting-Typen
 
-Hosting-Modelle, die beim Anlegen von Standorten verfügbar sind (z. B. On-Premises, Colocation, Public Cloud, SaaS).
+Wo Standorte und Technologien gehostet werden. Standardwerte: On-Premise, Colocation, Public Cloud, Private Cloud, SaaS.
 
 **Spalten**: Name, Kategorie (**Vor Ort / Colocation** oder **Cloud / SaaS**), Nicht mehr anbieten
 
 **Verwendung**:
 - Standorte-Arbeitsbereich → Reiter Übersicht → Feld **Hosting-Typ**
+- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Hosting-Typ**, und das Fenster für neue Technologien. Siehe [Technologien](technologies.md#hosting-typ).
+
+Ein Typ, den eine Technologie nutzt, kann nicht entfernt werden: Markieren Sie ihn stattdessen als **Nicht mehr anbieten**.
 
 Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen:
 - **Vor Ort / Colocation** zeigt die Felder Betreiberunternehmen und Rechenzentrum
@@ -88,6 +93,31 @@ Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen
 ---
 
 ## Server und Verbindungen
+
+### Administrationszonen
+
+Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller, Tier 1 für die Server, Tier 2 für die Arbeitsplätze. Sie finden sie in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.
+
+**Spalten**: Name, Administratorgruppe, Berechtigungsstufe, Ablageort der Geheimnisse, Beschreibung, Nicht mehr anbieten
+
+- **Administratorgruppe**: wer die Zone verwaltet, zum Beispiel „Domänen-Admins“.
+- **Berechtigungsstufe**: die Stufe der Zone in Ihrem Modell, zum Beispiel „Tier 0“.
+- **Ablageort der Geheimnisse**: wo die Administrationsgeheimnisse der Zone aufbewahrt werden, zum Beispiel ein Passwort-Tresor.
+
+**Verwendung**:
+- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**
+- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Technologien und Servern listet. Siehe [Administrationssicht](administration-view.md).
+
+Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien, die ihr bereits zugeordnet sind.
+
+### Technologiefamilien
+
+Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw. Die Technologieliste und die Berichte gruppieren Technologien nach Familie, und die [Administrationssicht](administration-view.md) findet die Verzeichnisdienste über die Familie **Verzeichnis und Identität**.
+
+**Spalten**: Name, Nicht mehr anbieten
+
+**Verwendung**:
+- Technologie-Arbeitsbereich → Kopfzeile und Eigenschaftenfeld → **Familie**, und das Fenster für neue Technologien
 
 ### Verbindungstypen
 
@@ -106,11 +136,16 @@ Zu den Standardkategorien gehören: Anwendung, Authentifizierung, Backup, Datenb
 
 Active-Directory- oder DNS-Domänen für Assets. Integrierte Einträge können nicht geändert werden. Das DNS-Suffix dient zur Berechnung des vollqualifizierten Domänennamens (FQDN) jedes Assets.
 
-**Spalten**: Name, DNS-Suffix, Nicht mehr anbieten
+**Spalten**: Name, DNS-Suffix, Gesamtstruktur, Konten, Computer, Vertrauensstellungen, Nicht mehr anbieten
+
+- **Gesamtstruktur**: die Active Directory-Gesamtstruktur der Domäne, wie in „Active Directory-Domänen und -Vertrauensstellungen“ angezeigt.
+- **Konten** und **Computer**: die Anzahl der Benutzerkonten und Computer der Domäne, wie in „Active Directory-Benutzer und -Computer“ gezählt. Nur ganze Zahlen.
+- **Vertrauensstellungen**: Die Schaltfläche zeigt, wie viele Vertrauensstellungen die Domäne hat. Ein Klick listet die anderen Domänen, mit denen sie eine Vertrauensstellung hat, wie in „Active Directory-Domänen und -Vertrauensstellungen“ angezeigt. **Vertrauenswürdige Domäne hinzufügen** fügt eine hinzu; wählen Sie ihre **Richtung**: **ausgehend** (diese Domäne vertraut der anderen, deren Konten auf ihre Ressourcen zugreifen können), **eingehend** (die andere Domäne vertraut dieser) oder **bidirektional** (beides). Der Dialog zeigt außerdem, nur lesend, die Vertrauensstellungen, die in anderen Domänen zu dieser erfasst sind. Die Schaltfläche erscheint, sobald die Domäne gespeichert ist, und braucht mindestens eine weitere Domäne in der Liste.
 
 **Verwendung**:
 - Assets-Arbeitsbereich → Reiter Technik → Auswahl **Domäne**
 - Assets-Arbeitsbereich → Reiter Technik → **FQDN** (automatisch aus Hostname + DNS-Suffix berechnet)
+- **IT-Landschaft > Administrationssicht**: Gesamtstruktur, Vertrauensstellungen, Anzahlen und Domänencontroller. Siehe [Administrationssicht](administration-view.md#domanen).
 
 **Systemeinträge** (können weder geändert noch gelöscht werden):
 - **Workgroup** - Für eigenständige Assets, die keiner Domäne beigetreten sind
@@ -252,7 +287,7 @@ Kategorien, die den Hauptzweck jeder Anwendung oder jedes Service beschreiben.
 
 ### Einstufungen und Kontinuität
 
-Dieser Editor konfiguriert die Stufen, mit denen Anwendungen klassifiziert werden. Er steht Benutzern mit `settings:admin` oben auf der Seite zur Verfügung und öffnet sich als einzelner Dialog mit einer Liste pro Katalog:
+Dieser Editor konfiguriert die Stufen, mit denen Anwendungen klassifiziert werden, und Technologien in ihrem Reiter Compliance. Er steht Benutzern mit `settings:admin` oben auf der Seite zur Verfügung und öffnet sich als einzelner Dialog mit einer Liste pro Katalog:
 
 - **Geschäftskritikalität**: die Stufen, die einer Anwendung zugewiesen werden können. Jede Stufe hat einen Namen, eine Beschreibung, die bei der Auswahl unter dem Namen angezeigt wird, eine optionale **maximal tolerierbare Ausfallzeit** in Minuten und die Markierung **Nicht mehr anbieten**. Die Ausfallzeit dokumentiert die Stufe und löst bei einer Anwendung, deren RTO sie erreicht, einen Hinweis aus; sie ist ein Attribut der Stufe, kein Wert, der auf Anwendungen eingegeben wird.
 - **Cyberkritikalität**: unabhängige Folgenstufen.
@@ -375,11 +410,12 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 |------|-----------------|
 | **Zugriffsmethoden** | Anwendungen (Reiter Technik und Support → Zugriffsmethoden) |
 | **Anwendungskategorien** | Anwendungen (Kategorie) |
+| **Administrationszonen** | Technologien (Eigenschaftenfeld → Administrationszone), Administrationssicht |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
-| **Domänen** | Assets (Reiter Technik → Domäne, FQDN) |
+| **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Administrationssicht |
 | **Entitäten** | Verbindungen (Quell-/Zielentität), Verbindungskarte (Platzierung nach Graph-Ebene) |
-| **Hosting-Typen** | Standorte (Übersicht) |
+| **Hosting-Typen** | Standorte (Übersicht), Technologien (Hosting-Typ) |
 | **Integrationsmuster** | Schnittstellenabschnitte (Muster) |
 | **Authentifizierungsmodi für Schnittstellen** | Schnittstellenbindungen (Authentifizierungsmodus) |
 | **Datenkategorien für Schnittstellen** | Schnittstellen (Datenkategorie) |
@@ -394,6 +430,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Subnetze** | Assets (Reiter Technik → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Asset-Typen** | Assets (Übersicht → Typ) |
+| **Technologiefamilien** | Technologien (Familie), Administrationssicht (Verzeichnisdienste) |
 
 ---
 

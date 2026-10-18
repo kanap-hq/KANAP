@@ -104,6 +104,10 @@ Chaque fournisseur dispose d'un onglet **Contacts** affichant tous les contacts 
 
 Dans l'espace de travail Applications, l'onglet **Technique & Support** référence les contacts pour l'escalade du support.
 
+### Support des technologies
+
+Dans l'espace de travail Technologies, l'onglet **Exploitation** liste les contacts de support d'une technologie. Voir [Technologies](technologies.md#exploitation). Dans la section **Lié à** du contact, une technologie retirée vient en dernier, marquée **Désactivé**.
+
 ### Contacts de site
 
 Les sites peuvent avoir des contacts de support (responsables d'installations, contacts NOC, etc.).

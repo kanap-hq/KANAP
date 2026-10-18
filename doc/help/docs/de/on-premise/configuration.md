@@ -443,6 +443,38 @@ Jeder Benutzer öffnet ihn, bestätigt und meldet sich dann bei KANAP an, wie un
 - API-Schlüssel, von jedem Client aus, der den Server erreicht.
 - Claude Code über OAuth, wenn der Computer des Benutzers den Server über HTTPS erreicht und der Server `claude.ai` über HTTPS erreicht. Die Anmeldung kehrt zum eigenen Computer des Benutzers zurück.
 
+## Optional: Schwachstellen { #optional-vulnerabilities }
+
+Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen.
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `VULNERABILITY_FEED_ENABLED` | Schaltet die Schwachstellen ein. | `false` On-Premise |
+| `NVD_API_BASE_URL` | Adresse eines Spiegels der CVE API 2.0 der NVD, wenn der Server die NVD nicht erreicht. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
+| `NVD_API_KEY` | Optionaler Schlüssel, der die Rate von 5 auf 50 Anfragen pro 30 Sekunden anhebt, sodass das erste Einlesen schneller fertig ist. Beantragen Sie ihn kostenlos auf der [Website der NVD](https://nvd.nist.gov/developers/request-an-api-key). | *nicht gesetzt* |
+
+Hinweise:
+
+- Die API braucht ausgehenden HTTPS-Zugriff auf `services.nvd.nist.gov` oder auf Ihren Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Die E-Mail-Benachrichtigungen setzen außerdem einen eingerichteten E-Mail-Versand voraus (Resend oder SMTP).
+- Starten Sie die API nach einer Änderung dieser Werte neu.
+
+## Optional: Technologiekatalog { #optional-technology-catalog }
+
+Aus dem Katalog übernommene Technologien folgen seinen neuen Versionen, Supportende-Daten und CPE-Kennungen (siehe [Versionen aus dem Katalog](../technologies.md#versionen-aus-dem-katalog)). On-Premise bringt standardmäßig jede KANAP-Version ihren eigenen Katalog mit: Die übernommenen Technologien erhalten beim ersten Start dieser Version, was er hinzufügt. Schalten Sie die tägliche Prüfung ein, um den Herstellern zwischen zwei KANAP-Versionen zu folgen.
+
+| Variable | Beschreibung | Standard |
+|----------|-------------|---------|
+| `TECHNOLOGY_CATALOG_SYNC_ENABLED` | Liest täglich auf endoflife.date die Versionen und Supportende-Daten der Katalogprodukte, aus denen Ihre Technologien stammen. | `false` On-Premise |
+| `ENDOFLIFE_API_BASE_URL` | Adresse eines Spiegels der API v1 von endoflife.date, wenn der Server endoflife.date nicht erreicht. | `https://endoflife.date/api/v1` |
+
+Hinweise:
+
+- Die API braucht ausgehenden HTTPS-Zugriff auf `endoflife.date` oder auf Ihren Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Beide Modi laufen über die geplante Aufgabe **technology-catalog** (täglich und beim Start). Solange diese Aufgabe in den geplanten Aufgaben deaktiviert ist, wird nichts aktualisiert.
+- Ein in KANAP geänderter Wert oder eine dort gelöschte Version wird nie überschrieben oder wiederhergestellt.
+- Starten Sie die API nach einer Änderung dieser Werte neu.
+
 ## Optional: Erweitert
 
 | Variable | Beschreibung | Standard |
@@ -559,6 +591,15 @@ S3_FORCE_PATH_STYLE=false
 # AI_SETTINGS_ENABLED=false
 # AI_SETTINGS_ENCRYPTION_SECRET=
 
+# SCHWACHSTELLEN (optional - standardmäßig aus)
+# VULNERABILITY_FEED_ENABLED=false
+# NVD_API_KEY=
+# NVD_API_BASE_URL=
+
+# TECHNOLOGIEKATALOG (optional - standardmäßig aus)
+# TECHNOLOGY_CATALOG_SYNC_ENABLED=false
+# ENDOFLIFE_API_BASE_URL=
+
 # ERWEITERT (optional - die Standardwerte passen)
 # JWT_ACCESS_TOKEN_TTL=15m
 # JWT_REFRESH_TOKEN_TTL=4h
@@ -574,7 +615,7 @@ S3_FORCE_PATH_STYLE=false
 
 ## Firewall-Regeln
 
-Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-Mail, SSO, KI und Wechselkursfunktionen alle deaktiviert sind.
+Nach dem ersten Build kann KANAP vollständig vom Netz getrennt laufen, wenn E-Mail, SSO, KI, Wechselkurs-, Schwachstellen- und Technologiekatalogfunktionen alle deaktiviert sind.
 
 ### Eingehend
 
@@ -618,6 +659,8 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | Der KI-Anbieter, den Sie konfigurieren (oder Ihr eigener Modellserver) | 443 oder der Port Ihres Servers | Chat, Agenten | Wenn KI-Funktionen aktiviert sind und ein Modell eingerichtet ist |
 | `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
 | `chatgpt.com`, `grok.com` | 443 | Liest die Beschreibung von ChatGPT oder Grok, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wie bei `claude.ai` |
+| `services.nvd.nist.gov` oder Ihr Spiegel | 443 | Veröffentlichte Schwachstellen (NVD) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `endoflife.date` oder Ihr Spiegel | 443 | Versionen und Supportende-Daten des Technologiekatalogs | Wenn `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |
 

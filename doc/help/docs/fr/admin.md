@@ -637,8 +637,11 @@ Contrôlez quelles notifications par e-mail vous recevez.
 | **Portefeuille** | Changements de statut, ajout à une équipe, changements d'équipe sur les éléments que vous pilotez, commentaires |
 | **Tâches** | Assignation (comme responsable, demandeur ou observateur), changements de statut, commentaires |
 | **Budget** | Alertes d'expiration, changements de statut, commentaires |
+| **Technologies** | Vulnérabilités critiques ou élevées trouvées sur les technologies dont vous êtes responsable IT. Affiché quand les vulnérabilités sont suivies |
 
 Les **Alertes d'expiration** envoient un e-mail aux responsables d'un contrat, d'une ligne OPEX ou d'une ligne CAPEX 30, 14, 7 et 1 jour(s) avant ses dates : la prochaine date limite de résiliation d'un contrat, la fin d'un contrat qui ne sera pas reconduit (la fin de son terme, ou sa fin de validité si elle vient avant), la fin de validité d'une ligne OPEX ou CAPEX. Un contrat à reconduction tacite n'est pas averti de la fin de chaque terme. Seuls les responsables qui ont activé les notifications Budget et les **Alertes d'expiration** les reçoivent. La vérification a lieu chaque jour à 08h00 UTC. Chaque rappel est envoyé une seule fois par jour à chaque destinataire, même si la vérification s'exécute à nouveau ce jour-là, par exemple après un redémarrage.
+
+Les **Notifications des technologies** envoient un e-mail aux responsables IT d'une technologie sur ses nouvelles vulnérabilités critiques ou élevées, après la vérification qui les trouve. Voir [Vulnérabilités](vulnerabilities.md#notifications-par-e-mail) pour ce qui est annoncé.
 
 **E-mail de revue hebdomadaire** : Recevez un résumé périodique de votre activité et des éléments à venir. Configurez :
 - **Jour de la semaine** (ex. : lundi)

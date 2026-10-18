@@ -23,6 +23,8 @@ L'éditeur **Classifications et continuité** se trouve en haut de la page. En d
 3. **Applications, services et interfaces** - Listes utilisées pour les applications, les instances d'application, les interfaces et les liaisons.
 4. **Incidents** - Listes utilisées par le registre des incidents.
 
+Les listes des technologies sont dans deux sections : **Familles de technologies** et **Zones d'administration** sous **Serveurs et connexions**, **Types d'hébergement** sous **Sites**. Les autres écrans appellent cette page les réglages IT.
+
 Dans une section, les listes sont triées par nom. Chaque liste apparaît comme un panneau extensible, avec une courte indication de l'endroit où ses valeurs sont utilisées (par exemple, *Applications / Choix de la catégorie*). Cliquez sur un en-tête de panneau pour le développer et voir les valeurs. Le contenu de chaque section ne se charge que lorsque vous la développez pour la première fois, ce qui maintient la rapidité de la page même avec de nombreuses listes.
 
 ### Contrôles de l'éditeur
@@ -74,12 +76,15 @@ Fournisseurs cloud utilisés par les serveurs et les sites (ex. : AWS, Azure, GC
 
 ### Types d'hébergement
 
-Modèles d'hébergement proposés à la création d'un site (ex. : sur site, colocation, cloud public, SaaS).
+Où sont hébergés les sites et les technologies. Valeurs par défaut : Sur site, Colocation, Cloud public, Cloud privé, SaaS.
 
 **Colonnes** : Nom, Catégorie (**Sur site / colocation** ou **Cloud / SaaS**), Ne plus proposer
 
 **Où c'est utilisé** :
 - Espace de travail Sites > Onglet Vue d'ensemble > Champ **Type d'hébergement**
+- Espace de travail Technologies > panneau de propriétés > **Type d'hébergement**, et la fenêtre de nouvelle technologie. Voir [Technologies](technologies.md#type-dhebergement).
+
+Un type utilisé par une technologie ne peut pas être supprimé : marquez-le plutôt **Ne plus proposer**.
 
 La catégorie détermine quels champs apparaissent lors de la modification d'un Site :
 - **Sur site / colocation** affiche Société d'exploitation et champs Datacenter
@@ -88,6 +93,31 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 ---
 
 ## Serveurs et connexions
+
+### Zones d'administration
+
+Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs, le tier 1 pour les serveurs, le tier 2 pour les postes de travail. Elles figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.
+
+**Colonnes** : Nom, Groupe d'administrateurs, Niveau de privilèges, Emplacement des secrets, Description, Ne plus proposer
+
+- **Groupe d'administrateurs** : qui administre la zone, par exemple « Admins du domaine ».
+- **Niveau de privilèges** : le niveau de la zone dans votre modèle, par exemple « Tier 0 ».
+- **Emplacement des secrets** : où sont conservés les secrets d'administration de la zone, par exemple un coffre de mots de passe.
+
+**Où c'est utilisé** :
+- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**
+- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies et ses serveurs. Voir [Vue de l'administration](administration-view.md).
+
+Une zone marquée **Ne plus proposer** reste sur les technologies déjà placées dedans.
+
+### Familles de technologies
+
+Le genre de chaque technologie : base de données, hyperviseur, annuaire et identité, etc. La liste des technologies et les rapports regroupent les technologies par famille, et la [Vue de l'administration](administration-view.md) trouve les services d'annuaire par la famille **Annuaire et identité**.
+
+**Colonnes** : Nom, Ne plus proposer
+
+**Où c'est utilisé** :
+- Espace de travail Technologies > en-tête et panneau de propriétés > **Famille**, et la fenêtre de nouvelle technologie
 
 ### Types de connexion
 
@@ -106,11 +136,16 @@ Les catégories par défaut incluent : Application, Authentification, Sauvegarde
 
 Domaines Active Directory ou DNS des actifs. Les entrées intégrées ne peuvent pas être modifiées. Le suffixe DNS sert à calculer le nom de domaine complet (FQDN) de chaque actif.
 
-**Colonnes** : Nom, Suffixe DNS, Ne plus proposer
+**Colonnes** : Nom, Suffixe DNS, Forêt, Comptes, Machines, Approbations, Ne plus proposer
+
+- **Forêt** : la forêt Active Directory du domaine, telle qu'affichée dans Domaines et approbations Active Directory.
+- **Comptes** et **Machines** : le nombre de comptes utilisateurs et d'ordinateurs du domaine, tels que comptés dans Utilisateurs et ordinateurs Active Directory. Nombres entiers uniquement.
+- **Approbations** : le bouton indique combien d'approbations a le domaine. Cliquez dessus pour lister les autres domaines avec lesquels il a une relation d'approbation, tels qu'affichés dans Domaines et approbations Active Directory. **Ajouter un domaine approuvé** en ajoute un ; choisissez son **Sens** : **sortante** (ce domaine approuve l'autre, dont les comptes peuvent accéder à ses ressources), **entrante** (l'autre domaine approuve celui-ci) ou **bidirectionnelle** (les deux). La boîte de dialogue montre aussi, en lecture seule, les approbations déclarées sur d'autres domaines envers celui-ci. Le bouton apparaît une fois le domaine enregistré, et demande au moins un autre domaine dans la liste.
 
 **Où c'est utilisé** :
 - Espace de travail Actifs > Onglet Technique > Sélecteur **Domaine**
 - Espace de travail Actifs > Onglet Technique > **FQDN** (auto-calculé depuis hostname + suffixe DNS)
+- **Cartographie SI > Vue de l'administration** : forêt, approbations, comptages et contrôleurs de domaine. Voir [Vue de l'administration](administration-view.md#domaines).
 
 **Entrées système** (ne peuvent pas être modifiées ni supprimées) :
 - **Workgroup** - Pour les actifs autonomes non joints à un domaine
@@ -252,7 +287,7 @@ Catégories qui décrivent la finalité principale de chaque application ou serv
 
 ### Classifications et continuité
 
-Cet éditeur configure les niveaux utilisés pour classifier les applications. Il est disponible aux utilisateurs `settings:admin` en haut de la page et s'ouvre dans une seule boîte de dialogue, avec une liste par catalogue :
+Cet éditeur configure les niveaux utilisés pour classifier les applications, et les technologies dans leur onglet Conformité. Il est disponible aux utilisateurs `settings:admin` en haut de la page et s'ouvre dans une seule boîte de dialogue, avec une liste par catalogue :
 
 - **Criticité business** : les niveaux qu'une application peut recevoir. Chaque niveau a un nom, une description affichée sous le nom au moment du choix, une **durée maximale tolérable d'interruption (DMIA)** facultative en minutes et un indicateur **Ne plus proposer**. La DMIA documente le niveau et déclenche un avertissement sur une application dont le RTO l'atteint ; c'est un attribut du niveau, pas une valeur saisie sur les applications.
 - **Criticité cyber** : niveaux de conséquences indépendants.
@@ -375,11 +410,12 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
+| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Vue de l'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
-| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN) |
+| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |
 | **Entités** | Connexions (Entité source/cible), Carte des connexions (placement par niveau du graphe) |
-| **Types d'hébergement** | Sites (Vue d'ensemble) |
+| **Types d'hébergement** | Sites (Vue d'ensemble), Technologies (Type d'hébergement) |
 | **Modèles d'intégration** | Segments d'interface (Modèle) |
 | **Modes d'authentification d'interface** | Liaisons d'interfaces (Mode d'auth.) |
 | **Catégories de données d'interface** | Interfaces (Catégorie de données) |
@@ -394,6 +430,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Sous-réseaux** | Actifs (Onglet Technique > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
 | **Types d'actif** | Actifs (Vue d'ensemble > Type) |
+| **Familles de technologies** | Technologies (Famille), Vue de l'administration (services d'annuaire) |
 
 ---
 
