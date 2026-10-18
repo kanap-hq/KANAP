@@ -26,7 +26,7 @@ const content: AboutContent = {
     {
       title: 'Por qué KANAP',
       paragraphs: [
-        'En cada uno de esos puestos me encontré con los mismos problemas: el presupuesto repartido en varios archivos de Excel, uno o varios mapas de aplicaciones empezados y rara vez mantenidos, los proyectos en otro sitio, los contratos dispersos entre compras, jurídico y TI. Y antes de cada comité, horas conciliándolo todo a mano.',
+        'A menudo me he encontrado con los mismos problemas: el presupuesto repartido en varios archivos de Excel, uno o varios mapas de aplicaciones empezados y rara vez mantenidos, los proyectos en otro sitio, los contratos dispersos entre compras, jurídico y TI. Y antes de cada comité, horas conciliándolo todo a mano.',
         'Por eso empecé KANAP: para reunir en un mismo lugar las herramientas esenciales del gobierno de TI. Primero el presupuesto, después la cartera de proyectos, el mapa de aplicaciones, los contratos, la documentación. Luego llegaron las necesidades de reporting y, por último, un agente de IA integrado que facilita la búsqueda y la síntesis de la información. Hoy, KANAP es una plataforma modular para pymes y medianas empresas: se puede usar un solo módulo o varios, según el contexto y las necesidades.',
       ],
     },

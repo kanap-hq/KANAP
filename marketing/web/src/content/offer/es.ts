@@ -2,13 +2,13 @@ import type { OfferContent } from './types';
 
 const content: OfferContent = {
   meta: {
-    title: 'Precios',
+    title: 'Oferta',
     description:
       'Gratis y open source. Autoaloje sin límites, añada soporte cuando lo necesite o elija KANAP alojado. Todas las funcionalidades en cada plan, agentes incluidos. AGPL v3.',
   },
 
   header: {
-    eyebrow: 'Precios simples y transparentes',
+    eyebrow: 'Una oferta simple y transparente',
     title: 'Gratis y open source.\nAutoaloje, o déjenos operarlo.',
     lead: 'Todas las funcionalidades en cada plan. Sin feature gates, sin tasa por asiento, sin bloqueo. Pague solo por las operaciones y el soporte que no quiere llevar usted mismo.',
   },
@@ -16,9 +16,9 @@ const content: OfferContent = {
   /* -------------------- Self-hosted (primary) -------------------- */
   selfHosted: {
     eyebrow: 'Elija su camino',
-    title: 'El mismo producto.\nTres formas de ejecutarlo.',
+    title: 'Tres formas de usar KANAP',
     intro:
-      'Empiece con la plataforma open source completa. Añada soporte de producción cuando la soberanía importe, o elija KANAP alojado cuando quiera que operemos por usted.',
+      'Empiece con la plataforma open source completa y autoalojada. Añada soporte si lo desea, cuando pase a producción, o elija la versión alojada si prefiere confiarnos la operación.',
     plans: [
       {
         name: 'Autoalojado',
@@ -108,7 +108,7 @@ const content: OfferContent = {
     items: [
       {
         title: 'Autoalojado · gratis',
-        body: 'Tiene capacidad de TI y quiere el control total. La mejor relación calidad-precio, sin ataduras. Soporte comunitario.',
+        body: 'Tiene capacidad de TI y quiere el control total. Instálelo en su infraestructura y acceda a todas las funcionalidades. Soporte comunitario.',
       },
       {
         title: 'Autoalojado · con soporte',
@@ -122,12 +122,12 @@ const content: OfferContent = {
   },
 
   services: {
-    title: 'Ayuda experta, cuando la quiera',
+    title: 'Experiencia y asesoría a su ritmo',
     intro: 'KANAP está diseñado para una adopción autoservicio. Si quiere ir más rápido, los planes de pago incluyen soporte prioritario y una tarifa de consultoría reducida.',
     support: {
       title: 'Soporte prioritario',
       subtitle: 'Incluido con cualquier plan de pago',
-      body: 'Manténgalo funcionando con fluidez. Personas reales, tiempos de respuesta razonables, sin teatro de SLA.',
+      body: 'Le garantizamos un soporte operativo de calidad, sin chatbot, formularios interminables ni centros de llamadas en el extranjero.',
       items: [
         'Bugs, errores, caídas, problemas de acceso',
         'Ayuda con la instalación on-prem',
@@ -160,7 +160,7 @@ const content: OfferContent = {
       'Configuración de Plaid y de los agentes',
       'Puesta en marcha de las integraciones (Entra ID, Claude o ChatGPT, NetBox…)',
     ],
-    ctaLabel: 'Hable con nosotros',
+    ctaLabel: 'Contáctenos',
     ctaHref: '/contact',
     note: 'Lo definimos juntos en una llamada de 30 minutos.',
   },

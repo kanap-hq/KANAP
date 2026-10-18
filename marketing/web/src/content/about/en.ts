@@ -26,7 +26,7 @@ const content: AboutContent = {
     {
       title: 'Why KANAP',
       paragraphs: [
-        'In each of these roles, I ran into the same pain points: the budget spread across several Excel files, one or two application maps started and rarely kept up to date, projects somewhere else, contracts scattered between purchasing, legal and IT. And before every committee meeting, hours spent reconciling it all by hand.',
+        'I have often run into the same pain points: the budget spread across several Excel files, one or two application maps started and rarely kept up to date, projects somewhere else, contracts scattered between purchasing, legal and IT. And before every committee meeting, hours spent reconciling it all by hand.',
         'So I started KANAP to bring the essential tools of IT governance together in one place. First the budget, then the project portfolio, the application map, contracts, documentation. Reporting needs came next, and finally a built-in AI agent that makes it easier to find and summarize information. Today, KANAP is a modular platform for small and mid-sized companies: you can use a single module or several, depending on your context and needs.',
       ],
     },

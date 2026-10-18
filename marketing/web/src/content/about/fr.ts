@@ -26,7 +26,7 @@ const content: AboutContent = {
     {
       title: 'Pourquoi KANAP',
       paragraphs: [
-        "Dans chacun de ces postes, j'ai retrouvé les mêmes irritants : le budget dans plusieurs fichiers Excel, un ou plusieurs débuts de cartographie applicative, rarement maintenus, les projets ailleurs, les contrats éparpillés aux achats, au juridique et à la DSI. Et avant chaque comité, des heures à tout réconcilier à la main.",
+        "J'ai souvent retrouvé les mêmes irritants : le budget dans plusieurs fichiers Excel, un ou plusieurs débuts de cartographie applicative, rarement maintenus, les projets ailleurs, les contrats éparpillés aux achats, au juridique et à la DSI. Et avant chaque comité, des heures à tout réconcilier à la main.",
         "J'ai donc commencé KANAP pour réunir au même endroit les outils vitaux de la gouvernance d'une DSI. D'abord le budget, puis le portefeuille de projets, la cartographie des applications, les contrats, la documentation. Sont ensuite venus les besoins de reporting, et finalement, un agent IA intégré qui facilite la recherche et la synthèse des informations. Aujourd'hui, KANAP est une plateforme modulaire pour PME et ETI : on peut n'en utiliser qu'un module ou plusieurs, selon le contexte et les besoins.",
       ],
     },

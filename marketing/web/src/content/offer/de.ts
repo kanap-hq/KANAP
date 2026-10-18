@@ -2,22 +2,22 @@ import type { OfferContent } from './types';
 
 const content: OfferContent = {
   meta: {
-    title: 'Preise',
+    title: 'Angebot',
     description:
       'Kostenlos und Open Source. Selbsthosting ohne Limits, Support bei Bedarf oder Hosted KANAP. Alle Funktionen in jedem Plan, Agenten inklusive. AGPL v3.',
   },
 
   header: {
-    eyebrow: 'Einfache, transparente Preise',
+    eyebrow: 'Ein einfaches, transparentes Angebot',
     title: 'Kostenlos und Open Source.\nSelbst hosten oder von uns betreiben lassen.',
     lead: 'Alle Funktionen in jedem Plan. Keine Feature-Gates, keine Sitzplatzsteuer, kein Lock-in. Sie zahlen nur für Betrieb und Support, die Sie nicht selbst übernehmen möchten.',
   },
 
   selfHosted: {
     eyebrow: 'Wählen Sie Ihren Weg',
-    title: 'Dasselbe Produkt.\nDrei Betriebsarten.',
+    title: 'Drei Wege, KANAP zu nutzen',
     intro:
-      'Starten Sie mit der vollständigen Open-Source-Plattform. Ergänzen Sie Produktionssupport, wenn Souveränität zählt, oder wählen Sie Hosted KANAP, wenn wir den Betrieb übernehmen sollen.',
+      'Starten Sie mit der vollständigen, selbst gehosteten Open-Source-Plattform. Ergänzen Sie Support, wenn Sie möchten, sobald Sie in Produktion gehen, oder wählen Sie die gehostete Version, wenn Sie uns den Betrieb lieber anvertrauen.',
     plans: [
       {
         name: 'Self-Hosted',
@@ -106,7 +106,7 @@ const content: OfferContent = {
     items: [
       {
         title: 'Self-Hosted · kostenlos',
-        body: 'Sie haben IT-Kapazität und wollen volle Kontrolle. Bestes Preis-Leistungs-Verhältnis ohne Haken. Community-Support.',
+        body: 'Sie haben IT-Kapazität und wollen volle Kontrolle. Installieren Sie KANAP in Ihrer Infrastruktur und nutzen Sie alle Funktionen. Community-Support.',
       },
       {
         title: 'Self-Hosted · mit Support',
@@ -120,12 +120,12 @@ const content: OfferContent = {
   },
 
   services: {
-    title: 'Expertenhilfe, wenn Sie sie wollen',
+    title: 'Expertise und Beratung in Ihrem Tempo',
     intro: 'KANAP ist für selbstständige Einführung gebaut. Wenn Sie schneller vorankommen möchten, enthalten bezahlte Angebote prioritären Support und einen reduzierten Beratungstarif.',
     support: {
       title: 'Prioritärer Support',
       subtitle: 'In jedem kostenpflichtigen Plan enthalten',
-      body: 'Wir halten alles am Laufen. Echte Menschen, faire Reaktionszeiten, kein SLA-Theater.',
+      body: 'Wir sichern Ihnen einen hochwertigen Betriebssupport zu, ohne Chatbot, endlose Formulare oder Callcenter im Ausland.',
       items: [
         'Bugs, Fehler, Ausfälle, Zugriffsprobleme',
         'Hilfe bei On-Premise-Installation',
@@ -158,7 +158,7 @@ const content: OfferContent = {
       'Konfiguration von Plaid und Agenten',
       'Einrichtung der Integrationen (Entra ID, Claude oder ChatGPT, NetBox…)',
     ],
-    ctaLabel: 'Sprechen Sie mit uns',
+    ctaLabel: 'Kontaktieren Sie uns',
     ctaHref: '/contact',
     note: 'Den Rahmen stecken wir vorab gemeinsam in einem 30-minütigen Gespräch ab.',
   },
