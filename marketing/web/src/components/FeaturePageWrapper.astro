@@ -7,10 +7,10 @@
 
 import FeatureDeepDive from './FeatureDeepDive.astro';
 import { getLocaleFromUrl } from '../i18n/ui';
-import { getFeatureContent, type FeatureSlug } from '../content/resolve';
+import { getFeatureContent, type DeepDiveSlug } from '../content/resolve';
 
 interface Props {
-  slug: FeatureSlug;
+  slug: DeepDiveSlug;
 }
 
 const { slug } = Astro.props;

@@ -8,7 +8,8 @@
 title: "Article title in sentence case"
 description: "One or two sentences. Shown on the index, in search results and in the RSS feed."
 date: 2026-01-31            # YYYY-MM-DD. Future dates are not built.
-topic: agents               # agents | self-hosting | cost | glpi | product
+topic: agents               # agents | self-hosting | cost | glpi | product | portfolio | compliance | release
+# features: [budget]        # optional: budget | portfolio | it-landscape | knowledge | ai | agents
 author: "Your name"
 authorRole: "Founder, CIO"  # optional
 draft: true                 # switch to false to publish

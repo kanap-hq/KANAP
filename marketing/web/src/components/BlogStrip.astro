@@ -1,0 +1,94 @@
+---
+/**
+ * BlogStrip — compact "from the blog" list (date + title).
+ * Shared by the homepage and the feature pages.
+ */
+
+import { formatDate, type BlogItem } from '../lib/blog';
+import type { Locale } from '../i18n/ui';
+
+interface Props {
+  posts: BlogItem[];
+  locale: Locale;
+  eyebrow: string;
+  allLabel: string;
+  allHref: string;
+}
+
+const { posts, locale, eyebrow, allLabel, allHref } = Astro.props;
+---
+
+<div class="mk-blog-strip">
+  <div class="mk-blog-strip__head">
+    <span class="mk-eyebrow">{eyebrow}</span>
+    <a href={allHref} class="mk-blog-strip__all">{allLabel} →</a>
+  </div>
+  <ul class="mk-blog-strip__list">
+    {posts.map((item) => (
+      <li>
+        <time datetime={item.post.data.date.toISOString()}>{formatDate(item.post.data.date, locale)}</time>
+        <a href={item.href}>{item.post.data.title}</a>
+      </li>
+    ))}
+  </ul>
+</div>
+
+<style>
+  .mk-blog-strip {
+    max-width: 900px;
+  }
+
+  .mk-blog-strip__head {
+    display: flex;
+    justify-content: space-between;
+    align-items: baseline;
+    gap: 16px;
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--kanap-border-soft);
+  }
+
+  .mk-blog-strip__all {
+    font-size: 13px;
+    font-weight: 500;
+  }
+
+  .mk-blog-strip__list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .mk-blog-strip__list li {
+    display: grid;
+    grid-template-columns: 120px 1fr;
+    gap: 20px;
+    align-items: baseline;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--kanap-border-soft);
+  }
+
+  .mk-blog-strip__list time {
+    font-family: 'JetBrains Mono', ui-monospace, monospace;
+    font-size: 12px;
+    letter-spacing: 0.02em;
+    color: var(--kanap-text-tertiary);
+    white-space: nowrap;
+  }
+
+  .mk-blog-strip__list a {
+    font-size: 16px;
+    line-height: 1.4;
+    color: var(--kanap-text-primary);
+  }
+
+  .mk-blog-strip__list a:hover {
+    color: var(--kanap-teal);
+  }
+
+  @media (max-width: 560px) {
+    .mk-blog-strip__list li {
+      grid-template-columns: 1fr;
+      gap: 2px;
+    }
+  }
+</style>

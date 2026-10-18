@@ -8,6 +8,7 @@
 
 import type { Locale } from '../i18n/ui';
 import { DEFAULT_LOCALE } from '../i18n/ui';
+import type { FeatureSlug } from './features/types';
 
 import homeEn from './home/en';
 import homeFr from './home/fr';
@@ -125,14 +126,15 @@ export function getOnPremContent(locale: Locale): OnPremContent {
 
 /* ---------------- Features ---------------- */
 
-export type FeatureSlug = 'budget' | 'it-landscape' | 'portfolio' | 'knowledge' | 'ai';
+/** Pages rendered by FeatureDeepDive. Agents has its own page. */
+export type DeepDiveSlug = Exclude<FeatureSlug, 'agents'>;
 
 /**
  * Feature content resolution. DE/ES fall back to EN until the translation
  * pass writes per-locale files; the resolver is forward-compatible and
  * picks them up automatically when they exist.
  */
-const FEATURE_MAP: Record<FeatureSlug, Record<Locale, FeatureContent>> = {
+const FEATURE_MAP: Record<DeepDiveSlug, Record<Locale, FeatureContent>> = {
   budget: { en: budgetEn, fr: budgetFr, de: budgetDe, es: budgetEs },
   'it-landscape': { en: itLandscapeEn, fr: itLandscapeFr, de: itLandscapeDe, es: itLandscapeEs },
   portfolio: { en: portfolioEn, fr: portfolioFr, de: portfolioDe, es: portfolioEs },
@@ -140,7 +142,7 @@ const FEATURE_MAP: Record<FeatureSlug, Record<Locale, FeatureContent>> = {
   ai: { en: aiEn, fr: aiFr, de: aiDe, es: aiEs },
 };
 
-export function getFeatureContent(slug: FeatureSlug, locale: Locale): FeatureContent {
+export function getFeatureContent(slug: DeepDiveSlug, locale: Locale): FeatureContent {
   return FEATURE_MAP[slug][locale] ?? FEATURE_MAP[slug][DEFAULT_LOCALE];
 }
 

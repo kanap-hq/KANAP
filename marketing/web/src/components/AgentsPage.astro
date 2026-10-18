@@ -18,13 +18,17 @@ import {
   FeatureGrid,
   CTABand,
 } from './sections';
-import { getLocaleFromUrl, localePath } from '../i18n/ui';
+import { getLocaleFromUrl, localePath, useTranslations } from '../i18n/ui';
 import { getAgentsContent } from '../content/resolve';
 import { AGENT_SCREENSHOTS } from '../content/screenshots';
+import { getPostsForFeature } from '../lib/blog';
+import BlogStrip from './BlogStrip.astro';
 
 const locale = getLocaleFromUrl(Astro.url);
 const content = getAgentsContent(locale);
 const t = content.transparency;
+const tr = useTranslations(locale);
+const agentPosts = await getPostsForFeature('agents', locale);
 ---
 
 <BaseLayout title={content.meta.title} description={content.meta.description} ogImage="/og/agents.png">
@@ -80,6 +84,18 @@ const t = content.transparency;
       </ul>
     </nav>
   </Section>
+
+  {agentPosts.length > 0 && (
+    <Section tone="default" compact>
+      <BlogStrip
+        posts={agentPosts}
+        locale={locale}
+        eyebrow={tr('blog.home.eyebrow')}
+        allLabel={tr('blog.home.all')}
+        allHref={localePath(locale, '/blog')}
+      />
+    </Section>
+  )}
 
   <Section tone="sunken" compact>
     <CTABand

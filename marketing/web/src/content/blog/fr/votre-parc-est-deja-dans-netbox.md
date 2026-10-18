@@ -3,6 +3,7 @@ title: Votre inventaire matériel existe déjà, il est dans Netbox
 description: "L'équipe infrastructure tient Netbox à jour. KANAP le lit, aligne ses fiches d'actifs sans ressaisie, et y ajoute ce que Netbox ignore : applications, contrats, coûts."
 date: 2026-09-23
 topic: product
+features: [it-landscape]
 author: Friedrich
 authorRole: Fondateur, DSI
 draft: false

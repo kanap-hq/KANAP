@@ -1,56 +1,143 @@
 ---
 /**
- * BlogIndexPage — /blog for the current locale.
+ * BlogIndexPage — /blog for the current locale, and /blog/topic/<key>.
  *
- * One column: the newest article featured at full size, the rest as a dated
- * list that mirrors the changelog's rhythm (mono date left, title right).
- * Nothing on the page counts anything, so it reads the same at 3 posts
- * and at 30. Locales without their own posts list the English ones with a
- * small "English" chip.
+ * One column: topic chips, then the newest article featured at full size,
+ * then the rest as a dated list. A topic page highlights that chip and
+ * lists every matching article as a row. Locales without their own posts
+ * list the English ones with a small "English" chip.
  */
 
 import BaseLayout from '../layouts/BaseLayout.astro';
 import { PageHeader, Section } from './sections';
-import { getLocaleFromUrl, useTranslations, localePath, DEFAULT_LOCALE } from '../i18n/ui';
-import { getPostsWithFallback, formatDate } from '../lib/blog';
+import {
+  getLocaleFromUrl,
+  useTranslations,
+  localePath,
+  DEFAULT_LOCALE,
+  LOCALES,
+  type Locale,
+} from '../i18n/ui';
+import {
+  getPostsWithFallback,
+  getTopicsWithPosts,
+  formatDate,
+  topicPath,
+  type BlogTopic,
+} from '../lib/blog';
 import { breadcrumbLd } from '../lib/jsonld';
+
+interface Props {
+  /** Set on /blog/topic/<key>. The index leaves it empty. */
+  topic?: BlogTopic;
+}
+
+const { topic } = Astro.props;
 
 const locale = getLocaleFromUrl(Astro.url);
 const t = useTranslations(locale);
 const site = (Astro.site ?? new URL('https://kanap.net')).href.replace(/\/$/, '');
 
-const posts = await getPostsWithFallback(locale);
-const [featured, ...rest] = posts;
+const allPosts = await getPostsWithFallback(locale);
+const posts = topic ? allPosts.filter((item) => item.post.data.topic === topic) : allPosts;
+const featured = topic ? undefined : posts[0];
+const listed = topic ? posts : posts.slice(1);
 
 const topicLabel = (key: string) => t(`blog.topic.${key}`);
 const minutes = (n: number, key: 'blog.minRead' | 'blog.min') => t(key).replace('{n}', String(n));
+const topicHref = (key: BlogTopic) => localePath(locale, topicPath(key));
 
-const breadcrumb = breadcrumbLd(site, [
+const countByTopic = new Map<BlogTopic, number>();
+for (const item of allPosts) {
+  countByTopic.set(item.post.data.topic, (countByTopic.get(item.post.data.topic) ?? 0) + 1);
+}
+const topicChips = [...countByTopic.entries()]
+  .map(([key, count]) => ({ key, count, label: topicLabel(key), href: topicHref(key) }))
+  .sort((a, b) => b.count - a.count || a.label.localeCompare(b.label, locale));
+
+const label = topic ? topicLabel(topic) : '';
+const pageTitle = topic ? `${label} · ${t('nav.blog')}` : t('nav.blog');
+const pageDescription = topic
+  ? t('blog.topic.metaDescription').replace('{topic}', label)
+  : t('blog.metaDescription');
+
+const crumbs = [
   { name: 'KANAP', url: localePath(locale, '/') },
   { name: t('nav.blog'), url: localePath(locale, '/blog') },
-]);
+];
+if (topic) crumbs.push({ name: label, url: topicHref(topic) });
+const breadcrumb = breadcrumbLd(site, crumbs);
+
+// Hreflang follows the real pages: a topic missing in a locale gets no
+// alternate, and the switcher sends that locale to the blog index.
+let alternates: Partial<Record<Locale, string>> | undefined;
+if (topic) {
+  alternates = {};
+  for (const l of LOCALES) {
+    if ((await getTopicsWithPosts(l)).includes(topic)) {
+      alternates[l] = localePath(l, topicPath(topic));
+    }
+  }
+}
 ---
 
 <BaseLayout
-  title={t('nav.blog')}
-  description={t('blog.metaDescription')}
-  pathWithoutLocale="/blog"
+  title={pageTitle}
+  description={pageDescription}
+  pathWithoutLocale={topic ? topicPath(topic) : '/blog'}
+  alternates={alternates}
+  fallbackPath={topic ? '/blog' : undefined}
 >
   <Fragment slot="head">
     <script type="application/ld+json" set:html={JSON.stringify(breadcrumb)} />
   </Fragment>
 
-  <PageHeader eyebrow={t('blog.eyebrow')} title={t('blog.title')} lead={t('blog.lead')} />
+  <PageHeader
+    eyebrow={t('blog.eyebrow')}
+    title={topic ? label : t('blog.title')}
+    lead={topic ? pageDescription : t('blog.lead')}
+  />
 
   <Section tone="default">
     <div class="mk-blog">
+      {allPosts.length > 0 && (
+        <nav aria-label={t('blog.topic.nav')}>
+          <ul class="mk-blog__topics">
+            <li>
+              <a
+                class="mk-blog__chip mk-blog__filter"
+                href={localePath(locale, '/blog')}
+                aria-current={topic ? undefined : 'page'}
+              >
+                <span class="mk-blog__filter-label">{t('blog.topic.all')}</span>
+                <span class="mk-blog__count">{allPosts.length}</span>
+              </a>
+            </li>
+            {topicChips.map((chip) => (
+              <li>
+                <a
+                  class="mk-blog__chip mk-blog__filter"
+                  href={chip.href}
+                  aria-current={chip.key === topic ? 'page' : undefined}
+                >
+                  <span class="mk-blog__filter-label">{chip.label}</span>
+                  <span class="mk-blog__count">{chip.count}</span>
+                </a>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
+
       {featured ? (
         <article class="mk-blog__featured">
           <div class="mk-blog__meta">
             <time datetime={featured.post.data.date.toISOString()} class="mk-blog__date">
               {formatDate(featured.post.data.date, locale)}
             </time>
-            <span class="mk-blog__chip">{topicLabel(featured.post.data.topic)}</span>
+            <a class="mk-blog__chip" href={topicHref(featured.post.data.topic)}>
+              {topicLabel(featured.post.data.topic)}
+            </a>
             {featured.locale !== locale && featured.locale === DEFAULT_LOCALE && (
               <span class="mk-blog__chip mk-blog__chip--neutral">{t('blog.inEnglish')}</span>
             )}
@@ -62,13 +149,13 @@ const breadcrumb = breadcrumbLd(site, [
             <a class="mk-blog__read" href={featured.href}>{t('blog.readArticle')} →</a>
           </div>
         </article>
-      ) : (
+      ) : listed.length === 0 ? (
         <p class="mk-blog__empty">{t('blog.empty')}</p>
-      )}
+      ) : null}
 
-      {rest.length > 0 && (
+      {listed.length > 0 && (
         <ul class="mk-blog__list">
-          {rest.map((item) => (
+          {listed.map((item) => (
             <li class="mk-blog__row">
               <time datetime={item.post.data.date.toISOString()} class="mk-blog__date">
                 {formatDate(item.post.data.date, locale)}
@@ -78,7 +165,9 @@ const breadcrumb = breadcrumbLd(site, [
                 <p>{item.post.data.description}</p>
               </div>
               <div class="mk-blog__tail">
-                <span class="mk-blog__chip">{topicLabel(item.post.data.topic)}</span>
+                <a class="mk-blog__chip" href={topicHref(item.post.data.topic)}>
+                  {topicLabel(item.post.data.topic)}
+                </a>
                 {item.locale !== locale && item.locale === DEFAULT_LOCALE && (
                   <span class="mk-blog__chip mk-blog__chip--neutral">{t('blog.inEnglish')}</span>
                 )}
@@ -104,6 +193,24 @@ const breadcrumb = breadcrumbLd(site, [
     display: flex;
     flex-direction: column;
     max-width: 900px;
+    min-width: 0;
+  }
+
+  .mk-blog__topics {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 8px;
+    width: 100%;
+    max-width: 100%;
+    margin: 0 0 20px;
+    padding: 0;
+    list-style: none;
+  }
+
+  .mk-blog__topics li {
+    display: flex;
+    max-width: 100%;
   }
 
   /* Shared bits */
@@ -127,6 +234,40 @@ const breadcrumb = breadcrumbLd(site, [
     border: 1px solid var(--kanap-nav-chip-border);
     color: var(--kanap-nav-chip-fg);
     white-space: nowrap;
+  }
+
+  a.mk-blog__chip {
+    color: var(--kanap-nav-chip-fg);
+  }
+
+  a.mk-blog__chip:hover {
+    color: var(--kanap-nav-chip-fg);
+    background: var(--kanap-tab-bg-hover);
+  }
+
+  .mk-blog__topics .mk-blog__chip {
+    max-width: 100%;
+    white-space: normal;
+  }
+
+  .mk-blog__filter {
+    gap: 6px;
+  }
+
+  .mk-blog__count {
+    font-variant-numeric: tabular-nums;
+    opacity: 0.7;
+  }
+
+  a.mk-blog__filter[aria-current='page'],
+  a.mk-blog__filter[aria-current='page']:hover {
+    background: var(--kanap-tab-bg-active);
+    border-color: var(--kanap-tab-border-active);
+    color: var(--kanap-tab-fg-active);
+  }
+
+  a.mk-blog__filter[aria-current='page'] .mk-blog__count {
+    opacity: 0.9;
   }
 
   .mk-blog__chip--neutral {
@@ -257,6 +398,8 @@ const breadcrumb = breadcrumbLd(site, [
     }
 
     .mk-blog__tail {
+      flex-wrap: wrap;
+      white-space: normal;
       order: -1;
     }
   }

@@ -1,5 +1,6 @@
 /**
- * Blog helpers shared by the index, article, RSS and homepage strip.
+ * Blog helpers shared by the index, topic pages, article, RSS, the homepage
+ * strip and the feature pages.
  *
  * A post's collection id is `<locale>/<slug>` (from its file path). Posts are
  * built per locale; locales without their own articles list the English ones
@@ -11,8 +12,26 @@ import { publicDir } from 'astro:config/server';
 import { existsSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { DEFAULT_LOCALE, LOCALES, localePath, type Locale } from '../i18n/ui';
+import type { FeatureSlug } from '../content/features/types';
 
 export type BlogPost = CollectionEntry<'blog'>;
+export type BlogTopic = BlogPost['data']['topic'];
+
+/** Locale-less path of a topic page: `/blog/topic/<key>`. */
+export function topicPath(topic: BlogTopic): string {
+  return `/blog/topic/${topic}`;
+}
+
+/**
+ * Topic → feature page, used when no language version sets `features`.
+ * Topics absent from this map point at no feature page.
+ */
+const TOPIC_FEATURE: Partial<Record<BlogTopic, FeatureSlug>> = {
+  cost: 'budget',
+  portfolio: 'portfolio',
+  compliance: 'it-landscape',
+  agents: 'agents',
+};
 
 export interface BlogItem {
   post: BlogPost;
@@ -96,6 +115,56 @@ export async function getPostsWithFallback(locale: Locale): Promise<BlogItem[]> 
   return [...own, ...fallback].sort(
     (a, b) => b.post.data.date.getTime() - a.post.data.date.getTime(),
   );
+}
+
+/** Topics that have at least one post on the `locale` index. */
+export async function getTopicsWithPosts(locale: Locale): Promise<BlogTopic[]> {
+  const seen = new Set<BlogTopic>();
+  for (const item of await getPostsWithFallback(locale)) seen.add(item.post.data.topic);
+  return [...seen];
+}
+
+function uniqueFeatures(values: FeatureSlug[]): FeatureSlug[] {
+  return [...new Set(values)];
+}
+
+/**
+ * Feature pages this article belongs on.
+ *
+ * Explicit `features` on any language version replace the default: the
+ * result is the union of those arrays, so a value on the English file
+ * covers translations that omit the field. When no version sets the field,
+ * each version contributes its topic default.
+ */
+export async function featuresOf(item: BlogItem): Promise<FeatureSlug[]> {
+  const all = await getAllPosts();
+  const group = all.filter((i) => i.translationKey === item.translationKey);
+  const versions = group.length > 0 ? group : [item];
+  const explicit = versions.filter((i) => i.post.data.features != null);
+  if (explicit.length > 0) {
+    return uniqueFeatures(explicit.flatMap((i) => i.post.data.features ?? []));
+  }
+  return uniqueFeatures(
+    versions.flatMap((i) => {
+      const mapped = TOPIC_FEATURE[i.post.data.topic];
+      return mapped ? [mapped] : [];
+    }),
+  );
+}
+
+/** Up to `n` posts for a feature page, newest first, from the locale index. */
+export async function getPostsForFeature(
+  slug: FeatureSlug,
+  locale: Locale,
+  n = 3,
+): Promise<BlogItem[]> {
+  const posts = await getPostsWithFallback(locale);
+  const out: BlogItem[] = [];
+  for (const item of posts) {
+    if ((await featuresOf(item)).includes(slug)) out.push(item);
+    if (out.length === n) break;
+  }
+  return out;
 }
 
 /** Release notes articles (topic `release`) for the `locale` changelog, same fallback as the index. */
