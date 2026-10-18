@@ -64,14 +64,14 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
   if (severity && (SEVERITIES as readonly string[]).includes(severity)) model.severity = set([severity]);
   const q = params.get('q');
   if (q) model.cve_id = { filterType: 'text', type: 'contains', filter: q };
-  // `period=<days>` (the emails' link): published within the last days, today included.
+  // `period=<days>` (the emails' link): as the email, from now less that many days, in UTC. The
+  // filter takes days: "after" the day before that instant's day, so every CVE of the email shows.
   const period = Number(params.get('period'));
   if (Number.isInteger(period) && period > 0 && period <= 3650) {
-    const day = new Date();
-    day.setDate(day.getDate() - period);
-    const text = `${day.getFullYear()}-${String(day.getMonth() + 1).padStart(2, '0')}-${String(day.getDate()).padStart(2, '0')}`;
-    // "After" that day: from the next one.
-    model.published_at = { filterType: 'date', type: 'greaterThan', dateFrom: `${text} 00:00:00`, dateTo: null };
+    const DAY = 24 * 60 * 60 * 1000;
+    const since = new Date(Date.now() - period * DAY);
+    const dayBefore = new Date(Date.UTC(since.getUTCFullYear(), since.getUTCMonth(), since.getUTCDate()) - DAY);
+    model.published_at = { filterType: 'date', type: 'greaterThan', dateFrom: `${dayBefore.toISOString().slice(0, 10)} 00:00:00`, dateTo: null };
   }
   return model;
 }

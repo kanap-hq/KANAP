@@ -199,15 +199,19 @@ describe('VulnerabilitiesPage', () => {
     });
   });
 
-  it('reads the emails\' period as the CVE published within its last days, to review', () => {
+  it('reads the emails\' period as the email does: from now less its days, in UTC', () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     try {
-      vi.setSystemTime(new Date(2026, 9, 18, 9, 30));
+      // The email of 18 October 09:30 UTC lists the CVE published since 18 September 09:30 UTC.
+      vi.setSystemTime(new Date('2026-10-18T09:30:00Z'));
       expect(filterModelFromSearch('?period=30')).toEqual({
         state: { filterType: 'set', values: ['to_review'] },
-        // After 18 September: from the 19th, today included (30 days).
-        published_at: { filterType: 'date', type: 'greaterThan', dateFrom: '2026-09-18 00:00:00', dateTo: null },
+        // After 17 September: from 18 September, the day of that instant.
+        published_at: { filterType: 'date', type: 'greaterThan', dateFrom: '2026-09-17 00:00:00', dateTo: null },
       });
+      // Just after midnight UTC, whatever the local day.
+      vi.setSystemTime(new Date('2026-10-18T00:10:00Z'));
+      expect((filterModelFromSearch('?period=1').published_at as any).dateFrom).toBe('2026-10-16 00:00:00');
       expect(filterModelFromSearch('?period=abc').published_at).toBeUndefined();
       expect(filterModelFromSearch('?period=-3').published_at).toBeUndefined();
     } finally {
