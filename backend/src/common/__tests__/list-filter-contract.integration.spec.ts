@@ -19,6 +19,7 @@ import { backendPath } from './backend-root';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService } from '../../demo-data/demo-data.service';
 import { FxRateService } from '../../currency/fx-rate.service';
+import { NvdFeedService } from '../../vulnerabilities/nvd-feed.service';
 
 // The list filter contract, server side. `frontend/src/pages/listFilterContract.json` lists, per
 // list endpoint, every column its screen lets the user filter and the kind of filter model the grid
@@ -152,6 +153,12 @@ async function testEveryOfferedFilterReachesTheDatabase() {
     const host = `${tenant.slug}.lvh.me`;
     const token = svc.auth.signToken({ id: tenant.ownerId, email: tenant.ownerEmail, tenant_id: tenant.tenantId }).access_token;
 
+    // The sample technologies name CPE products: after their commit the feed matches them and
+    // collects the products it never collected, with network calls of variable length, in the
+    // background. Those statements fell inside the recordings of /technologies and /vulnerabilities.
+    // No collection on demand here; the matching is awaited below.
+    const feed = app.get(NvdFeedService);
+    feed.collectNew = async () => undefined;
     // The sample data set gives the lists rows: the fields of the columns are read on them.
     const demo = app.get(DemoDataService);
     demo.config.apiUrl = `http://127.0.0.1:${port}`;
@@ -165,6 +172,8 @@ async function testEveryOfferedFilterReachesTheDatabase() {
       assert.ok(Date.now() < until, 'the sample data load ends');
       await new Promise((resolve) => setTimeout(resolve, 200));
     }
+    // The matching that follows the sample technologies' commit is over before the first recording.
+    await feed.whenIdle(60_000);
 
     // Lists filtered in memory (cost centers) show a filter only by the rows it leaves: give them one.
     const companies = JSON.parse((await send(port, 'GET', '/companies', host, token)).body);
