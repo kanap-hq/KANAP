@@ -42,7 +42,6 @@ import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareIn
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
 import AssetRelationsPanel, { AssetRelationsPanelHandle } from './editors/AssetRelationsPanel';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
-import OperatingSystemField from './components/OperatingSystemField';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 import { useAssetNav } from '../../hooks/useAssetNav';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
@@ -428,7 +427,6 @@ export default function AssetWorkspacePage() {
   const [subLocationId, setSubLocationId] = React.useState<string | null>(null);
   const [subLocationOptions, setSubLocationOptions] = React.useState<Array<{ id: string; name: string; description?: string | null }>>([]);
   const [subLocationLoading, setSubLocationLoading] = React.useState(false);
-  const [operatingSystem, setOperatingSystem] = React.useState<string>('');
   const [notes, setNotes] = React.useState<string>('');
   const [domain, setDomain] = React.useState<string>('');
   const [aliases, setAliases] = React.useState<string[]>([]);
@@ -673,7 +671,6 @@ export default function AssetWorkspacePage() {
     setEndOfLifeDate(data.end_of_life_date || '');
     setLocationId(data.location_id || null);
     setSubLocationId((data as any).sub_location_id || null);
-    setOperatingSystem(data.operating_system || '');
     setNotes(data.notes || '');
     setDirty(false);
   }, [data]);
@@ -833,7 +830,6 @@ export default function AssetWorkspacePage() {
       aliases: aliases.length > 0 ? aliases : null,
       ip_addresses: ipAddresses.filter((e) => e.ip.trim()).length > 0 ? ipAddresses.filter((e) => e.ip.trim()) : null,
       is_cluster: isCluster,
-      ...(isCreate ? { operating_system: isCluster ? null : operatingSystem || null } : {}),
       status,
       go_live_date: goLiveDate || null,
       end_of_life_date: endOfLifeDate || null,
@@ -1852,7 +1848,6 @@ export default function AssetWorkspacePage() {
                       onChange={(e) => {
                         const next = e.target.checked;
                         setIsCluster(next);
-                        if (next) setOperatingSystem('');
                         if (isCreate) {
                           setDirty(true);
                           return;
@@ -2069,25 +2064,11 @@ export default function AssetWorkspacePage() {
                     )}
                     disabled={!canManage}
                   />
-                  <PropertyRow label={t('workspace.asset.technical.operatingSystem')} valueSx={{ maxWidth: 520 }}>
-                    <OperatingSystemField
-                      assetId={isCreate ? undefined : id || undefined}
-                      disabled={isCluster || !canEditNetboxField('operating_system')}
-                      isCluster={isCluster}
-                      label={operatingSystem}
-                      onLabelChange={(next) => {
-                        setOperatingSystem(next ?? '');
-                        if (isCreate) setDirty(true);
-                      }}
-                      onSaved={() => { void load(); }}
-                    />
-                  </PropertyRow>
                 </Stack>
               </Box>
 
-              {/* What the server carries, under its operating system (lot T1b). */}
               {!isCreate && id && (
-                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+                <AssetTechnologiesSection assetId={id} canManage={canManage} isCluster={isCluster} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
               )}
 
               {/* NETWORK INFORMATION SECTION */}

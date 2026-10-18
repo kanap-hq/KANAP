@@ -16,7 +16,8 @@ const translation = {
   i18n: { language: 'en', resolvedLanguage: 'en' },
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
-vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../../hooks/useItOpsEnumOptions', () => ({
   default: () => ({ labelFor: (field: string, code: string) => (field === 'technologyFamily' && code === 'database' ? 'Database' : code) }),
 }));
@@ -29,6 +30,13 @@ const ROWS: AssetTechnologyRow[] = [
     kind: 'installed', removable: true, link_id: 'l-1', technology_id: 'sql', technology_name: 'SQL Server', technology_reference: 'TEC-3',
     family: 'database', technology_version_id: 'v19', version_label: '2019', via_asset_id: null, via_asset_name: null,
     is_operating_system: true,
+    standard_support_end: '2029-01-09',
+    extended_support_end: '2034-01-09',
+  },
+  {
+    kind: 'installed', removable: true, link_id: 'l-2', technology_id: 'esxi', technology_name: 'ESXi', technology_reference: 'TEC-4',
+    family: 'hypervisor', technology_version_id: 'v8', version_label: '8.0', via_asset_id: null, via_asset_name: null,
+    is_operating_system: false,
   },
   {
     kind: 'carried', removable: false, link_id: null, technology_id: 'vsphere', technology_name: 'vSphere', technology_reference: 'TEC-1',
@@ -42,11 +50,11 @@ function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
+function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true, isCluster = false) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1/technologies') return { data: { items } } as never;
     if (url === '/technologies/lookup') return { data: { items: [{ id: 'tomcat', name: 'Tomcat', reference: 'TEC-5', editor: 'Apache' }] } } as never;
-    if (url === '/technologies/tomcat/versions') return { data: { items: [{ id: 't10', label: '10.1' }, { id: 't9', label: '9.0' }] } } as never;
+    if (url.endsWith('/versions')) return { data: { items: [{ id: 't10', label: '10.1' }, { id: 't9', label: '9.0' }] } } as never;
     throw new Error(`unexpected GET ${url}`);
   });
   render(
@@ -54,7 +62,7 @@ function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/assets/AST-1/technical']}>
           <Routes>
-            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} /><Location /></>} />
+            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} isCluster={isCluster} /><Location /></>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -65,8 +73,12 @@ function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
 beforeEach(() => {
   mocked.get.mockReset();
   mocked.post.mockReset();
+  mocked.put.mockReset();
+  mocked.patch.mockReset();
   mocked.delete.mockReset();
   mocked.post.mockResolvedValue({ data: { ok: true } } as never);
+  mocked.put.mockResolvedValue({ data: { ok: true } } as never);
+  mocked.patch.mockResolvedValue({ data: { ok: true } } as never);
   mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
 });
 
@@ -75,14 +87,14 @@ describe('AssetTechnologiesSection', () => {
     renderSection();
     const table = await screen.findByRole('table', { name: `${K}.title` });
     const rows = [...table.querySelectorAll('tbody tr')] as HTMLElement[];
-    expect(rows.map((tr) => tr.querySelector('td')?.textContent)).toEqual(['TEC-3', 'TEC-1']);
+    expect(rows.map((tr) => tr.querySelector('td')?.textContent)).toEqual(['TEC-3', 'TEC-4', 'TEC-1']);
     expect(within(rows[0]).getByText('Database')).toBeTruthy();
     expect(within(rows[0]).getByText(`${K}.operatingSystem`)).toBeTruthy();
     expect(within(rows[1]).queryByText(`${K}.operatingSystem`)).toBeNull();
     expect(within(rows[0]).getByText('2019')).toBeTruthy();
-    expect(within(rows[1]).getByText('virtualization')).toBeTruthy();
-    expect(within(rows[1]).getByTitle('workspace.technology.versionPicker.unknown').textContent).toBe('—');
-    expect(within(rows[1]).getByText('ESX-01')).toBeTruthy();
+    expect(within(rows[2]).getByText('virtualization')).toBeTruthy();
+    expect(within(rows[2]).getByTitle('workspace.technology.versionPicker.unknown').textContent).toBe('—');
+    expect(within(rows[2]).getByText('ESX-01')).toBeTruthy();
 
     fireEvent.click(within(rows[0]).getByText('SQL Server'));
     expect(screen.getByTestId('location').textContent).toBe('/it/technologies/TEC-3');
@@ -150,5 +162,41 @@ describe('AssetTechnologiesSection', () => {
     expect(await screen.findByText(`${K}.empty`)).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
     expect(screen.queryByText(`${K}.add`)).toBeNull();
+  });
+
+  it('marks or unmarks an installed row as the operating system and skips carried rows', async () => {
+    renderSection();
+    await screen.findByRole('table', { name: `${K}.title` });
+    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=vSphere)` })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: `${K}.rowActions(name=SQL Server)` }));
+    fireEvent.click(screen.getByText(`${K}.notTheOperatingSystem`));
+    await waitFor(() => expect(mocked.put).toHaveBeenCalledWith('/assets/asset-1/technologies/l-1/operating-system', { is_operating_system: false }));
+    fireEvent.click(screen.getByRole('button', { name: `${K}.rowActions(name=ESXi)` }));
+    fireEvent.click(screen.getByText(`${K}.setAsOperatingSystem`));
+    await waitFor(() => expect(mocked.put).toHaveBeenCalledWith('/assets/asset-1/technologies/l-2/operating-system', { is_operating_system: true }));
+  });
+
+  it('hides the operating-system menu on a cluster and for a reader', async () => {
+    renderSection(ROWS, true, true);
+    await screen.findByRole('table', { name: `${K}.title` });
+    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=SQL Server)` })).toBeNull();
+    expect(screen.getByRole('button', { name: `${K}.remove(name=SQL Server)` })).toBeTruthy();
+  });
+
+  it('hides the operating-system menu for a reader', async () => {
+    renderSection(ROWS, false);
+    await screen.findByRole('table', { name: `${K}.title` });
+    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=SQL Server)` })).toBeNull();
+    expect(screen.queryByRole('button', { name: `${K}.remove(name=SQL Server)` })).toBeNull();
+  });
+
+  it('changes the version of an installed row and colours it with the support dates', async () => {
+    renderSection();
+    const version = await screen.findByRole('button', { name: `${K}.changeVersion(name=SQL Server)` });
+    expect(version.getAttribute('title')).toContain('workspace.asset.technical.standardSupportEnds(date=');
+    expect(version.getAttribute('title')).toContain('workspace.asset.technical.extendedSupportEnds(date=');
+    fireEvent.click(version);
+    fireEvent.click(await waitFor(() => picker().getByText('9.0')));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/sql/assets/l-1', { technology_version_id: 't9' }));
   });
 });
