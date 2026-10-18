@@ -10,13 +10,14 @@ export type RelationsColumn<T> = {
   header: React.ReactNode;
   /**
    * Width in px; the column without one takes the rest (the name). In a narrow table the widths
-   * shrink, down to 64px (96px for a right-aligned amount), so that the name keeps at least 128px.
+   * shrink, down to 96px (a date, an amount), so that the name keeps at least 120px.
    */
   width?: number;
   align?: 'left' | 'right';
   /**
    * The column hides in a table too narrow for it (1 first, then 2, ...), once the columns with a
-   * width would otherwise lose more than a fifth of it. Without one, the column always shows.
+   * width would otherwise lose more than a fifth of it or go below 96px. Without one, the column
+   * always shows.
    */
   hideOrder?: number;
   render: (row: T) => React.ReactNode;
@@ -52,11 +53,9 @@ export function RelationRef({ children }: { children: React.ReactNode }) {
 }
 
 /** The least width of the column without a width (the name). */
-const FLEX_MIN_WIDTH = 128;
-/** A column with a width shrinks no further than this (a narrower one keeps its own). */
-const COLUMN_MIN_WIDTH = 64;
-/** The same for a right-aligned column: an amount is never cut. */
-const AMOUNT_MIN_WIDTH = 96;
+const FLEX_MIN_WIDTH = 120;
+/** A column with a width shrinks no further than this, which holds a date (a narrower one keeps its own). */
+const COLUMN_MIN_WIDTH = 96;
 /** The share of their width the columns may lose before the next one with a `hideOrder` hides. */
 const MAX_SHRINK = 0.2;
 
@@ -67,7 +66,7 @@ const MAX_SHRINK = 0.2;
  * the table needs, and its frame scrolls.
  */
 export function fitColumnWidths(
-  columns: Array<Pick<RelationsColumn<unknown>, 'width' | 'align'>>,
+  columns: Array<Pick<RelationsColumn<unknown>, 'width'>>,
   available: number,
 ): { widths: Array<number | undefined>; minWidth?: number } {
   const widths = columns.map((column) => column.width);
@@ -75,7 +74,7 @@ export function fitColumnWidths(
   const room = available - flexMin;
   const total = widths.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (total <= room) return { widths };
-  const floors = columns.map(({ width, align }) => (width == null ? undefined : Math.min(width, align === 'right' ? AMOUNT_MIN_WIDTH : COLUMN_MIN_WIDTH)));
+  const floors = widths.map((width) => (width == null ? undefined : Math.min(width, COLUMN_MIN_WIDTH)));
   const floorTotal = floors.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (floorTotal >= room) return { widths: floors, minWidth: floorTotal + flexMin };
   const ratio = (total - room) / (total - floorTotal);
@@ -85,18 +84,21 @@ export function fitColumnWidths(
 }
 
 /** Hides the columns a narrow table cannot hold (by `hideOrder`), then fits the others' widths. */
-export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'align' | 'hideOrder'>>(
+export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'hideOrder'>>(
   columns: C[],
   available: number,
 ): { columns: C[]; widths: Array<number | undefined>; minWidth?: number } {
   const room = available - (columns.some((column) => column.width == null) ? FLEX_MIN_WIDTH : 0);
   const hidden = new Set<C>();
-  const fixedTotal = () => columns.reduce((sum, column) => sum + (hidden.has(column) ? 0 : column.width ?? 0), 0);
+  const total = (least: boolean) => columns.reduce((sum, column) => {
+    if (column.width == null || hidden.has(column)) return sum;
+    return sum + (least ? Math.min(column.width, COLUMN_MIN_WIDTH) : column.width);
+  }, 0);
   const hideable = columns
     .filter((column) => column.width != null && column.hideOrder != null)
     .sort((a, b) => a.hideOrder! - b.hideOrder!);
   for (const column of hideable) {
-    if (fixedTotal() * (1 - MAX_SHRINK) <= room) break;
+    if (total(false) * (1 - MAX_SHRINK) <= room && total(true) <= room) break;
     hidden.add(column);
   }
   const shown = columns.filter((column) => !hidden.has(column));

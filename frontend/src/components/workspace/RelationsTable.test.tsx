@@ -61,36 +61,35 @@ describe('fitColumnWidths', () => {
     expect(fitColumnWidths(COLUMNS, 900)).toEqual({ widths });
   });
 
-  it('shrinks the other columns so that the name keeps 128px', () => {
-    const fitted = fitColumnWidths(COLUMNS, 520);
+  it('shrinks the other columns so that the name keeps 120px', () => {
+    const fitted = fitColumnWidths(COLUMNS, 700);
     expect(fitted.minWidth).toBeUndefined();
     const fixed = fitted.widths.filter((width): width is number => width != null);
-    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(520 - 128);
-    expect(Math.min(...fixed)).toBeGreaterThanOrEqual(64);
+    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(700 - 120);
     expect(fitted.widths[1]).toBeUndefined();
-    // The wider columns give up more room.
-    expect(widths[5]! - fitted.widths[5]!).toBeGreaterThan(widths[0]! - fitted.widths[0]!);
+    // The wider columns give up more room; the reference, at 72px, keeps its width.
+    expect(widths[5]! - fitted.widths[5]!).toBeGreaterThan(widths[2]! - fitted.widths[2]!);
+    expect(fitted.widths[0]).toBe(72);
   });
 
-  it('never shrinks a column narrower than 64px', () => {
-    expect(fitColumnWidths([{ width: 32 }, {}, { width: 200 }], 300).widths).toEqual([32, undefined, 140]);
-  });
-
-  it('keeps 96px for an amount', () => {
-    expect(fitColumnWidths([{}, { width: 140 }, { width: 130, align: 'right' }], 280)).toEqual({ widths: [undefined, 64, 96], minWidth: 64 + 96 + 128 });
+  it('never shrinks a column below 96px, nor one narrower than that', () => {
+    expect(fitColumnWidths([{ width: 32 }, {}, { width: 200 }], 300).widths).toEqual([32, undefined, 148]);
+    expect(fitColumnWidths([{}, { width: 140 }, { width: 130 }], 280)).toEqual({ widths: [undefined, 96, 96], minWidth: 96 + 96 + 120 });
   });
 
   it('asks for a minimum width once the columns are at their least', () => {
-    expect(fitColumnWidths(COLUMNS, 300)).toEqual({ widths: [64, undefined, 64, 64, 64, 64, 64], minWidth: 6 * 64 + 128 });
+    expect(fitColumnWidths(COLUMNS, 300)).toEqual({ widths: [72, undefined, 96, 72, 96, 96, 96], minWidth: 528 + 120 });
   });
 });
 
 describe('fitColumns', () => {
   const keys = (available: number) => fitColumns(COLUMNS, available).columns.map((column) => column.key);
+  const all = COLUMNS.map((column) => column.key);
 
-  it('shows every column while they lose at most a fifth of their width', () => {
-    expect(keys(765)).toEqual(COLUMNS.map((column) => column.key));
-    expect(keys(128 + 614 * 0.8)).toEqual(COLUMNS.map((column) => column.key));
+  it('shows every column while they lose at most a fifth of their width and keep 96px', () => {
+    expect(keys(765)).toEqual(all);
+    expect(keys(120 + 528)).toEqual(all);
+    expect(keys(120 + 527)).toEqual(['ref', 'name', 'family', 'version', 'link', 'supportEnd']);
   });
 
   it('hides the columns by their order, then fits the others', () => {
@@ -99,12 +98,12 @@ describe('fitColumns', () => {
     const fitted = fitColumns(COLUMNS, 365);
     expect(fitted.columns.map((column) => column.key)).toEqual(['ref', 'name', 'version', 'supportEnd']);
     expect(fitted.minWidth).toBeUndefined();
-    expect(fitted.widths.reduce<number>((sum, width) => sum + (width ?? 0), 0)).toBeLessThanOrEqual(365 - 128);
+    expect(fitted.widths.reduce<number>((sum, width) => sum + (width ?? 0), 0)).toBeLessThanOrEqual(365 - 120);
   });
 
   it('never hides a column without an order', () => {
     expect(keys(100)).toEqual(['ref', 'name', 'version', 'supportEnd']);
-    expect(fitColumns(COLUMNS, 100).minWidth).toBe(3 * 64 + 128);
+    expect(fitColumns(COLUMNS, 100).minWidth).toBe(72 + 72 + 96 + 120);
   });
 });
 
@@ -126,7 +125,7 @@ describe('RelationsTable at narrow width', () => {
     const widths = colWidths(container);
     expect(widths).toHaveLength(5);
     const fixed = widths.slice(0, -1).filter((width): width is number => width != null);
-    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(405 - 40 - 128);
+    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(405 - 40 - 120);
     expect(widths[1]).toBeUndefined();
     expect(widths[widths.length - 1]).toBe(40);
     expect(screen.getByRole('table').style.minWidth).toBe('');
@@ -136,7 +135,7 @@ describe('RelationsTable at narrow width', () => {
     frameWidth = 300;
     renderTable({ columns: COLUMNS.map(({ hideOrder: _hideOrder, ...column }) => column) });
     const table = screen.getByRole('table');
-    expect(getComputedStyle(table).minWidth).toBe(`${6 * 64 + 128}px`);
+    expect(getComputedStyle(table).minWidth).toBe(`${528 + 120}px`);
     expect(getComputedStyle(table.parentElement!).overflowX).toBe('auto');
   });
 

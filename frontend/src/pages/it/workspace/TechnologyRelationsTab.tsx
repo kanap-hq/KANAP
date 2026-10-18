@@ -280,7 +280,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
         { key: 'ref', header: t('components.incidentRelations.columns.reference'), width: 72, render: (row: IncidentLinkRow) => <RelationRef>{formatItemRef('incident', row.item_number)}</RelationRef> },
         { key: 'title', header: t('components.incidentRelations.columns.title'), render: (row: IncidentLinkRow) => row.title ?? dash },
         {
-          key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100,
+          key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100, hideOrder: 2,
           render: (row: IncidentLinkRow) => (
             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <StatusDot color={getDotColor(INCIDENT_SEVERITY_COLORS[row.severity] || 'default', theme.palette.mode)} />
