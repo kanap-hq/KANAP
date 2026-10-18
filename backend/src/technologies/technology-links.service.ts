@@ -176,7 +176,8 @@ export class TechnologyLinksService {
     const asset = await this.readAsset(mg, tenantId, assetId);
     const retired: ReachingTechnology[] = await mg.query(
       `SELECT at.asset_id AS subject_id, at.technology_id, 'installed' AS kind, at.technology_version_id,
-              NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, at.id AS link_id, at.source
+              NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, at.id AS link_id, at.source,
+              at.is_operating_system
          FROM asset_technologies at
          JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND NOT (${assetInServiceSql('a')})
         WHERE at.tenant_id = $1 AND at.asset_id = $2`,
@@ -635,10 +636,13 @@ export class TechnologyLinksService {
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
         notes: removable && r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
+        is_operating_system: subject === 'asset' && r.kind === 'installed' && r.is_operating_system === true,
       };
     });
     const order: Record<string, number> = { installed: 0, declared: 0, carried: 1, hosted: 1 };
-    items.sort((a, b) => order[a.kind] - order[b.kind]
+    // The marked operating system leads the installed links.
+    items.sort((a, b) => Number(b.is_operating_system) - Number(a.is_operating_system)
+      || order[a.kind] - order[b.kind]
       || String(a.technology_name ?? '').localeCompare(String(b.technology_name ?? ''), 'en', { sensitivity: 'base' })
       || String(a.environment ?? '').localeCompare(String(b.environment ?? ''))
       || String(a.asset_name ?? '').localeCompare(String(b.asset_name ?? '')));
