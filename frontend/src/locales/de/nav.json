@@ -64,6 +64,7 @@
       "vulnerabilities": "Schwachstellen",
       "connections": "Verbindungen",
       "connectionMap": "Verbindungskarte",
+      "administrationView": "Administrationssicht",
       "applications": "Anwendungen",
       "interfaces": "Schnittstellen",
       "interfaceMap": "Schnittstellenkarte",

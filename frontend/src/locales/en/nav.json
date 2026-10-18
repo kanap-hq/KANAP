@@ -64,6 +64,7 @@
       "vulnerabilities": "Vulnerabilities",
       "connections": "Connections",
       "connectionMap": "Connection map",
+      "administrationView": "Administration view",
       "applications": "Applications",
       "interfaces": "Interfaces",
       "interfaceMap": "Interface map",

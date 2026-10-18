@@ -20,6 +20,7 @@ export type TechnologyRow = {
   lifecycle: string;
   description: string | null;
   notes: string | null;
+  support_notes: string | null;
   catalog_key: string | null;
   cpe_products: string[];
   replaced_by_id: string | null;
@@ -27,6 +28,8 @@ export type TechnologyRow = {
   recovery_wave: string | null;
   rto_minutes: number | null;
   rpo_minutes: number | null;
+  /** Code of the tenant's "Administration zones" catalog (lot A1a), null when not placed. */
+  admin_zone: string | null;
   created_at: Date;
   updated_at: Date;
 };
@@ -44,8 +47,8 @@ export type TechnologyVersionRow = {
 };
 
 export const TECHNOLOGY_COLUMNS = `t.id, t.tenant_id, t.item_number, t.name, t.editor, t.family, t.mode, t.lifecycle, t.description, t.notes,
-  t.catalog_key, t.cpe_products, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
-  t.created_at, t.updated_at`;
+  t.support_notes, t.catalog_key, t.cpe_products, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
+  t.admin_zone, t.created_at, t.updated_at`;
 
 export const VERSION_COLUMNS = `v.id, v.technology_id, v.label, v.cpe_version, v.build_prefixes,
   to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end,

@@ -495,6 +495,52 @@
         "server": "Server"
       }
     },
+    "administrationView": {
+      "title": "Administrationssicht",
+      "intro": "Wer verwaltet was: die Administrationszonen mit ihren Technologien und Servern, dann die Domänen mit Gesamtstruktur, Vertrauensstellungen und Domänencontrollern.",
+      "loading": "Wird geladen…",
+      "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
+      "exportZones": "Zonen exportieren",
+      "exportDomains": "Domänen exportieren",
+      "exportFailed": "Der Export ist fehlgeschlagen.",
+      "unplaced_one": "{{count}} Technologie hat keine Administrationszone. Legen Sie sie im Technologiedatensatz fest.",
+      "unplaced_other": "{{count}} Technologien haben keine Administrationszone. Legen Sie sie in ihren Datensätzen fest.",
+      "zones": "Administrationszonen",
+      "noZones": "Noch keine Administrationszonen definiert.",
+      "openSettings": "In den IT-Einstellungen definieren",
+      "noZone": "Keine Zone",
+      "noZoneHint": "Technologien, die einer Zone zugeordnet werden müssen.",
+      "unknownZone": "Unbekannte Zone ({{code}})",
+      "emptyZone": "Keine Technologie in dieser Zone.",
+      "attributes": {
+        "adminGroup": "Administratorgruppe",
+        "privilegeLevel": "Berechtigungsstufe",
+        "secretsLocation": "Geheimnisse",
+        "directoryServices": "Verzeichnisdienste"
+      },
+      "columns": {
+        "reference": "Ref.",
+        "technology": "Technologie",
+        "family": "Familie",
+        "servers": "Server",
+        "domain": "Domäne",
+        "dnsSuffix": "DNS-Suffix",
+        "forest": "Gesamtstruktur",
+        "trusts": "Vertrauensstellungen",
+        "accounts": "Konten",
+        "machines": "Computer",
+        "domainControllers": "Domänencontroller"
+      },
+      "noServer": "Kein Server",
+      "via": "über {{name}}",
+      "domains": "Domänen",
+      "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
+      "noDomains": "Keine Domänen definiert.",
+      "noController": "Keiner gefunden",
+      "notSet": "Nicht festgelegt",
+      "none": "Keine",
+      "declaredTrust": "{{name}} ({{direction}}, in jener Domäne erfasst)"
+    },
     "interfaceMap": {
       "title": "Schnittstellenkarte",
       "infraServices": "Infrastrukturdienste",
@@ -558,6 +604,11 @@
         }
       },
       "lists": {
+        "adminZones": {
+          "title": "Administrationszonen",
+          "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet, mit welcher Berechtigungsstufe und wo ihre Geheimnisse aufbewahrt werden. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
+          "usage": "Technologien / Übersicht, Administrationssicht"
+        },
         "accessMethods": {
           "title": "Zugriffsmethoden",
           "description": "Methoden, mit denen Benutzer auf Anwendungen zugreifen (z. B. Web, mobil, VDI).",
@@ -654,9 +705,14 @@
           "description": "Definieren Sie Subnetze mit VLAN-Zuordnung. Jedes Subnetz gehört zu einer Netzwerkzone.",
           "usage": "Assets / Netzwerkinformationen"
         },
+        "technologyFamilies": {
+          "title": "Technologiefamilien",
+          "description": "Welche Art von Technologie es jeweils ist: Datenbank, Hypervisor, Verzeichnis und Identität usw. Listen und Berichte gruppieren die Technologien nach Familie, und die Administrationssicht erkennt daran die Verzeichnisdienste.",
+          "usage": "Technologien / Familie"
+        },
         "domains": {
           "title": "Domänen",
-          "description": "Definieren Sie Active-Directory- oder DNS-Domänen für Assets. Integrierte Einträge können nicht geändert werden.",
+          "description": "Active-Directory- oder DNS-Domänen Ihrer Assets. Gesamtstruktur und Vertrauensstellungen finden Sie in „Active Directory-Domänen und -Vertrauensstellungen“, die Anzahl der Konten und Computer in „Active Directory-Benutzer und -Computer“. Integrierte Einträge können nicht geändert werden.",
           "usage": "Assets / Abschnitt Identität"
         }
       },
@@ -669,7 +725,14 @@
         "vlan": "VLAN",
         "networkZone": "Netzwerkzone",
         "description": "Beschreibung",
-        "dnsSuffix": "DNS-Suffix"
+        "dnsSuffix": "DNS-Suffix",
+        "forest": "Gesamtstruktur",
+        "accounts": "Konten",
+        "machines": "Computer",
+        "trusts": "Vertrauensstellungen",
+        "adminGroup": "Administratorgruppe",
+        "privilegeLevel": "Berechtigungsstufe",
+        "secretsLocation": "Ablageort der Geheimnisse"
       },
       "placeholders": {
         "osName": "z. B. Windows Server 2025",
@@ -678,13 +741,40 @@
         "cidr": "z. B. 192.168.1.0/24",
         "domainName": "z. B. Unternehmens-AD",
         "dnsSuffix": "z. B. corp.example.com",
+        "forest": "z. B. corp.example.com",
+        "accountCount": "z. B. 1200",
+        "machineCount": "z. B. 300",
+        "adminZoneName": "z. B. Tier 0",
+        "adminGroup": "z. B. Domänen-Admins",
+        "privilegeLevel": "z. B. Tier 0",
+        "secretsLocation": "z. B. Passwort-Tresor, Tresor A",
+        "adminZoneDescription": "z. B. Verzeichnis- und Identitätsdienste",
         "select": "Auswählen…"
       },
       "empty": {
+        "adminZones": "Keine Administrationszonen definiert.",
         "operatingSystems": "Noch keine Betriebssysteme konfiguriert.",
         "connectionTypes": "Keine Verbindungstypen definiert.",
         "subnets": "Keine Subnetze definiert.",
         "domains": "Keine Domänen definiert."
+      },
+      "trusts": {
+        "title": "Vertrauensstellungen von {{name}}",
+        "hint": "Die Domänen, mit denen diese eine Vertrauensstellung hat, wie in „Active Directory-Domänen und -Vertrauensstellungen“ aufgeführt.",
+        "directionsHint": "Ausgehend: Diese Domäne vertraut der anderen, deren Konten auf ihre Ressourcen zugreifen können. Eingehend: Die andere Domäne vertraut dieser. Bidirektional: beides.",
+        "empty": "Keine Vertrauensstellung.",
+        "direction": "Richtung",
+        "directions": {
+          "two_way": "bidirektional",
+          "outgoing": "ausgehend",
+          "incoming": "eingehend"
+        },
+        "add": "Vertrauenswürdige Domäne hinzufügen",
+        "declaredElsewhere": "In anderen Domänen erfasst (nur lesen)",
+        "noOtherDomain": "Fügen Sie zuerst eine weitere Domäne zur Liste hinzu.",
+        "count_one": "{{count}} Vertrauensstellung",
+        "count_other": "{{count}} Vertrauensstellungen",
+        "none": "Keine"
       }
     },
     "netbox": {
@@ -1417,6 +1507,7 @@
         },
         "moved": {
           "owners": "Verantwortliche",
+          "support_contacts": "Supportkontakte",
           "contracts": "Verträge",
           "budget_lines": "Budgetpositionen",
           "projects": "Projekte",
@@ -1432,7 +1523,6 @@
           "predecessor": "Vorgänger",
           "successors": "Verknüpfung zu ihren Nachfolgern",
           "data_residency": "Datenresidenz",
-          "support_contacts": "Supportkontakte",
           "audience": "Nutzende Gesellschaften und Abteilungen",
           "links_without_url": "Weblinks ohne Adresse",
           "knowledge_links": "Wissensverknüpfungen",
@@ -1448,6 +1538,8 @@
           "editor": "Hersteller (höchstens 200 Zeichen)",
           "description": "Beschreibung (höchstens 20.000 Zeichen)",
           "notes": "Notizen (höchstens 20.000 Zeichen)",
+          "support_notes": "Support-Notizen (höchstens 20.000 Zeichen)",
+          "support_contact_roles": "Rollen der Supportkontakte (höchstens 200 Zeichen)",
           "lifecycle": "Lebenszyklus",
           "cyber_criticality": "Cyber-Kritikalität",
           "recovery_wave": "Wiederherstellungswelle",
@@ -1544,6 +1636,22 @@
         "aliasesExamplePlaceholder": "z. B. server1, srv1",
         "ipAddressPlaceholder": "z. B. 10.12.34.56",
         "removeIpAddress": "IP-Adresse entfernen"
+      },
+      "technologies": {
+        "title": "Technologien",
+        "add": "Hinzufügen",
+        "search": "Technologien suchen",
+        "empty": "Keine Technologie auf diesem Server.",
+        "remove": "{{name}} entfernen",
+        "saveFailed": "Die Technologien konnten nicht gespeichert werden.",
+        "columns": {
+          "ref": "Ref.",
+          "name": "Name",
+          "family": "Familie",
+          "version": "Version",
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile"
+        }
       },
       "assignments": {
         "title": "Zuordnungen",
@@ -1734,6 +1842,7 @@
         "name": "Name",
         "editor": "Hersteller",
         "family": "Familie",
+        "adminZone": "Administrationszone",
         "mode": "Modus",
         "description": "Beschreibung",
         "notes": "Notizen",
@@ -1745,7 +1854,8 @@
         "editor": "z. B. Microsoft",
         "description": "Wofür diese Technologie verwendet wird",
         "notes": "z. B. Lizenz pro Kern, Verlängerung im März",
-        "cpe": "z. B. a:microsoft:sql_server"
+        "cpe": "z. B. a:microsoft:sql_server",
+        "noAdminZone": "Keine Zone"
       },
       "modes": {
         "installed": "Installiert",
@@ -1780,6 +1890,95 @@
           "ended": "Kein Support",
           "unknown": "Datum unbekannt"
         }
+      },
+      "operations": {
+        "contactsLoadFailed": "Die Support-Kontakte konnten nicht geladen werden.",
+        "alreadyListed": "Dieser Kontakt ist bereits aufgeführt. Seine Rolle bleibt unverändert."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Dokumente",
+          "links": "Weblinks"
+        },
+        "empty": {
+          "documents": "Kein Dokument.",
+          "links": "Kein Weblink.",
+          "incidents": "Kein Vorfall verknüpft."
+        },
+        "search": {
+          "incidents": "Vorfälle suchen"
+        },
+        "columns": {
+          "size": "Größe",
+          "added": "Hinzugefügt",
+          "url": "Adresse"
+        },
+        "newLink": "Neuer Weblink",
+        "editLink": "{{name}} bearbeiten",
+        "editLinkTitle": "Weblink bearbeiten",
+        "placeholders": {
+          "linkName": "z. B. Versionshinweise",
+          "url": "z. B. https://learn.microsoft.com/sql"
+        }
+      },
+      "servers": {
+        "title": "Server",
+        "add": "Hinzufügen",
+        "search": "Server suchen",
+        "empty": "Kein Server trägt diese Technologie.",
+        "total": "Gesamt",
+        "serverCount_one": "{{count}} Server",
+        "serverCount_other": "{{count}} Server",
+        "retired": "Außer Betrieb genommener Server: er zählt nirgends",
+        "retiredShort": "außer Betrieb",
+        "changeVersion": "Version auf {{name}} ändern",
+        "notesOf": "Notizen zu {{name}}",
+        "notesPlaceholder": "z. B. Clusterknoten",
+        "remove": "{{name}} entfernen",
+        "saveFailed": "Die Server konnten nicht gespeichert werden.",
+        "columns": {
+          "ref": "Ref.",
+          "server": "Server",
+          "environment": "Umgebung",
+          "operatingSystem": "Betriebssystem",
+          "version": "Version",
+          "via": "Über",
+          "viaHint": "Server, auf dem die Technologie installiert ist, bei einer abgeleiteten Zeile",
+          "notes": "Notizen"
+        }
+      },
+      "applications": {
+        "title": "Anwendungen",
+        "add": "Hinzufügen",
+        "addCount_one": "{{count}} Anwendung hinzufügen",
+        "addCount_other": "{{count}} Anwendungen hinzufügen",
+        "search": "Anwendungen suchen",
+        "empty": "Keine Anwendung nutzt diese Technologie.",
+        "noAccess": "Sie können die Anwendungen nicht sehen.",
+        "declared": "Deklariert",
+        "viaHost": "{{server}} (auf {{host}})",
+        "yes": "Ja",
+        "changeVersion": "Version für {{name}} ändern",
+        "remove": "{{name}} entfernen, alle deklarierten Versionen",
+        "saveFailed": "Die Anwendungen konnten nicht gespeichert werden.",
+        "exportCsv": "CSV exportieren",
+        "exportFailed": "Der Export ist fehlgeschlagen.",
+        "columns": {
+          "ref": "Ref.",
+          "application": "Anwendung",
+          "environment": "Umgebung",
+          "criticality": "Kritikalität",
+          "externalFacing": "Extern",
+          "server": "Server",
+          "version": "Version",
+          "itOwner": "IT-Verantwortlicher"
+        }
+      },
+      "versionPicker": {
+        "search": "Version wählen",
+        "placeholder": "z. B. 2022",
+        "unknown": "Version unbekannt",
+        "create": "Version „{{label}}“ hinzufügen"
       },
       "messages": {
         "saveFailed": "Die Technologie konnte nicht gespeichert werden.",

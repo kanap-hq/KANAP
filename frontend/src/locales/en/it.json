@@ -495,6 +495,52 @@
         "server": "Servers"
       }
     },
+    "administrationView": {
+      "title": "Administration view",
+      "intro": "Who administers what: the administration zones with their technologies and servers, then the domains with their forest, trusts and domain controllers.",
+      "loading": "Loading…",
+      "loadFailed": "The administration view could not be loaded.",
+      "exportZones": "Export zones",
+      "exportDomains": "Export domains",
+      "exportFailed": "The export failed.",
+      "unplaced_one": "{{count}} technology has no administration zone. Set it on the technology record.",
+      "unplaced_other": "{{count}} technologies have no administration zone. Set it on their records.",
+      "zones": "Administration zones",
+      "noZones": "No administration zones defined yet.",
+      "openSettings": "Define them in the IT settings",
+      "noZone": "No zone",
+      "noZoneHint": "Technologies to place in a zone.",
+      "unknownZone": "Unknown zone ({{code}})",
+      "emptyZone": "No technology in this zone.",
+      "attributes": {
+        "adminGroup": "Administrator group",
+        "privilegeLevel": "Privilege level",
+        "secretsLocation": "Secrets",
+        "directoryServices": "Directory services"
+      },
+      "columns": {
+        "reference": "Ref",
+        "technology": "Technology",
+        "family": "Family",
+        "servers": "Servers",
+        "domain": "Domain",
+        "dnsSuffix": "DNS suffix",
+        "forest": "Forest",
+        "trusts": "Trusts",
+        "accounts": "Accounts",
+        "machines": "Machines",
+        "domainControllers": "Domain controllers"
+      },
+      "noServer": "No server",
+      "via": "via {{name}}",
+      "domains": "Domains",
+      "domainsHint": "Domain controllers are the servers of the domain that carry a directory technology, or that are assigned with the \"Domain controller\" server role on an application in service.",
+      "noDomains": "No domains defined.",
+      "noController": "None found",
+      "notSet": "Not set",
+      "none": "None",
+      "declaredTrust": "{{name}} ({{direction}}, declared on that domain)"
+    },
     "interfaceMap": {
       "title": "Interface map",
       "infraServices": "Infrastructure services",
@@ -558,6 +604,11 @@
         }
       },
       "lists": {
+        "adminZones": {
+          "title": "Administration zones",
+          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it, at which privilege level, and where its secrets are kept. Find these in your administration policy or your privileged access model.",
+          "usage": "Technologies / Overview, administration view"
+        },
         "accessMethods": {
           "title": "Access methods",
           "description": "Methods by which users access applications (e.g., Web, Mobile, VDI).",
@@ -654,9 +705,14 @@
           "description": "Define network subnets with VLAN assignments. Each subnet belongs to a network zone.",
           "usage": "Assets / Network information"
         },
+        "technologyFamilies": {
+          "title": "Technology families",
+          "description": "What kind of technology each one is: database, hypervisor, directory and identity, and so on. The lists and reports group technologies by family, and the administration view finds the directory services through it.",
+          "usage": "Technologies / Family"
+        },
         "domains": {
           "title": "Domains",
-          "description": "Define Active Directory or DNS domains for assets. Built-in entries cannot be modified.",
+          "description": "Active Directory or DNS domains of your assets. The forest and the trusts are shown in Active Directory Domains and Trusts; the numbers of accounts and machines in Active Directory Users and Computers. Built-in entries cannot be modified.",
           "usage": "Assets / Identity section"
         }
       },
@@ -669,7 +725,14 @@
         "vlan": "VLAN",
         "networkZone": "Network zone",
         "description": "Description",
-        "dnsSuffix": "DNS suffix"
+        "dnsSuffix": "DNS suffix",
+        "forest": "Forest",
+        "accounts": "Accounts",
+        "machines": "Machines",
+        "trusts": "Trusts",
+        "adminGroup": "Administrator group",
+        "privilegeLevel": "Privilege level",
+        "secretsLocation": "Secrets location"
       },
       "placeholders": {
         "osName": "e.g., Windows Server 2025",
@@ -678,13 +741,40 @@
         "cidr": "e.g., 192.168.1.0/24",
         "domainName": "e.g., Corporate AD",
         "dnsSuffix": "e.g., corp.example.com",
+        "forest": "e.g., corp.example.com",
+        "accountCount": "e.g., 1200",
+        "machineCount": "e.g., 300",
+        "adminZoneName": "e.g., Tier 0",
+        "adminGroup": "e.g., Domain admins",
+        "privilegeLevel": "e.g., Tier 0",
+        "secretsLocation": "e.g., Password vault, safe A",
+        "adminZoneDescription": "e.g., Directory and identity services",
         "select": "Select…"
       },
       "empty": {
+        "adminZones": "No administration zones defined.",
         "operatingSystems": "No operating systems configured yet.",
         "connectionTypes": "No connection types defined.",
         "subnets": "No subnets defined.",
         "domains": "No domains defined."
+      },
+      "trusts": {
+        "title": "Trusts of {{name}}",
+        "hint": "The domains this one has a trust with, as listed in Active Directory Domains and Trusts.",
+        "directionsHint": "Outgoing: this domain trusts the other one, whose accounts can reach its resources. Incoming: the other domain trusts this one. Two-way: both.",
+        "empty": "No trust.",
+        "direction": "Direction",
+        "directions": {
+          "two_way": "two-way",
+          "outgoing": "outgoing",
+          "incoming": "incoming"
+        },
+        "add": "Add a trusted domain",
+        "declaredElsewhere": "Declared on other domains (read only)",
+        "noOtherDomain": "Add another domain to the list first.",
+        "count_one": "{{count}} trust",
+        "count_other": "{{count}} trusts",
+        "none": "None"
       }
     },
     "netbox": {
@@ -1417,6 +1507,7 @@
         },
         "moved": {
           "owners": "Owners",
+          "support_contacts": "Support contacts",
           "contracts": "Contracts",
           "budget_lines": "Budget lines",
           "projects": "Projects",
@@ -1432,7 +1523,6 @@
           "predecessor": "Predecessor",
           "successors": "Link to its successors",
           "data_residency": "Data residency",
-          "support_contacts": "Support contacts",
           "audience": "Companies and departments using it",
           "links_without_url": "Web links without an address",
           "knowledge_links": "Knowledge links",
@@ -1448,6 +1538,8 @@
           "editor": "editor (200 characters at most)",
           "description": "description (20,000 characters at most)",
           "notes": "notes (20,000 characters at most)",
+          "support_notes": "support notes (20,000 characters at most)",
+          "support_contact_roles": "support contact roles (200 characters at most)",
           "lifecycle": "lifecycle",
           "cyber_criticality": "cyber criticality",
           "recovery_wave": "recovery wave",
@@ -1544,6 +1636,22 @@
         "aliasesExamplePlaceholder": "e.g., server1, srv1",
         "ipAddressPlaceholder": "e.g., 10.12.34.56",
         "removeIpAddress": "Remove IP address"
+      },
+      "technologies": {
+        "title": "Technologies",
+        "add": "Add",
+        "search": "Search technologies",
+        "empty": "No technology on this server.",
+        "remove": "Remove {{name}}",
+        "saveFailed": "The technologies could not be saved.",
+        "columns": {
+          "ref": "Ref",
+          "name": "Name",
+          "family": "Family",
+          "version": "Version",
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row"
+        }
       },
       "assignments": {
         "title": "Assignments",
@@ -1734,6 +1842,7 @@
         "name": "Name",
         "editor": "Publisher",
         "family": "Family",
+        "adminZone": "Administration zone",
         "mode": "Mode",
         "description": "Description",
         "notes": "Notes",
@@ -1745,7 +1854,8 @@
         "editor": "e.g., Microsoft",
         "description": "What this technology is used for",
         "notes": "e.g., Licensed per core, renewal in March",
-        "cpe": "e.g., a:microsoft:sql_server"
+        "cpe": "e.g., a:microsoft:sql_server",
+        "noAdminZone": "No zone"
       },
       "modes": {
         "installed": "Installed",
@@ -1780,6 +1890,95 @@
           "ended": "Out of support",
           "unknown": "Date unknown"
         }
+      },
+      "operations": {
+        "contactsLoadFailed": "The support contacts could not be loaded.",
+        "alreadyListed": "This contact is already listed. Its role stays as it is."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Documents",
+          "links": "Web links"
+        },
+        "empty": {
+          "documents": "No document.",
+          "links": "No web link.",
+          "incidents": "No incident linked."
+        },
+        "search": {
+          "incidents": "Search incidents"
+        },
+        "columns": {
+          "size": "Size",
+          "added": "Added",
+          "url": "Address"
+        },
+        "newLink": "New web link",
+        "editLink": "Edit {{name}}",
+        "editLinkTitle": "Edit web link",
+        "placeholders": {
+          "linkName": "e.g., Release notes",
+          "url": "e.g., https://learn.microsoft.com/sql"
+        }
+      },
+      "servers": {
+        "title": "Servers",
+        "add": "Add",
+        "search": "Search servers",
+        "empty": "No server carries this technology.",
+        "total": "Total",
+        "serverCount_one": "{{count}} server",
+        "serverCount_other": "{{count}} servers",
+        "retired": "Retired server: it counts nowhere",
+        "retiredShort": "retired",
+        "changeVersion": "Change the version on {{name}}",
+        "notesOf": "Notes on {{name}}",
+        "notesPlaceholder": "e.g., cluster node",
+        "remove": "Remove {{name}}",
+        "saveFailed": "The servers could not be saved.",
+        "columns": {
+          "ref": "Ref",
+          "server": "Server",
+          "environment": "Environment",
+          "operatingSystem": "Operating system",
+          "version": "Version",
+          "via": "Via",
+          "viaHint": "Server the technology is installed on, for a deduced row",
+          "notes": "Notes"
+        }
+      },
+      "applications": {
+        "title": "Applications",
+        "add": "Add",
+        "addCount_one": "Add {{count}} application",
+        "addCount_other": "Add {{count}} applications",
+        "search": "Search applications",
+        "empty": "No application uses this technology.",
+        "noAccess": "You cannot see the applications.",
+        "declared": "Declared",
+        "viaHost": "{{server}} (on {{host}})",
+        "yes": "Yes",
+        "changeVersion": "Change the version for {{name}}",
+        "remove": "Remove {{name}}, every declared version",
+        "saveFailed": "The applications could not be saved.",
+        "exportCsv": "Export CSV",
+        "exportFailed": "The export failed.",
+        "columns": {
+          "ref": "Ref",
+          "application": "Application",
+          "environment": "Environment",
+          "criticality": "Criticality",
+          "externalFacing": "External",
+          "server": "Server",
+          "version": "Version",
+          "itOwner": "IT owner"
+        }
+      },
+      "versionPicker": {
+        "search": "Choose a version",
+        "placeholder": "e.g., 2022",
+        "unknown": "Version unknown",
+        "create": "Add version \"{{label}}\""
       },
       "messages": {
         "saveFailed": "The technology could not be saved.",

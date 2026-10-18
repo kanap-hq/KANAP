@@ -281,6 +281,7 @@
     },
     "exportResources": {
       "accounts": "Comptes",
+      "administrationView": "Vue de l'administration",
       "analyticsCategories": "Dimensions analytiques",
       "applications": "Applications",
       "assets": "Actifs",
@@ -516,6 +517,7 @@
       "technology_owners": "Responsables de technologie",
       "technology_projects": "Projets de technologie",
       "technology_spend_items": "Lignes budgétaires de technologie",
+      "technology_support_contacts": "Contacts de support de technologie",
       "technology_versions": "Versions de technologie",
       "technology_vulnerabilities": "Vulnérabilités de technologie",
       "tenants": "Espaces de travail",

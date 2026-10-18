@@ -25,10 +25,10 @@ type Props = {
   onConverted: (technologyId: string) => void;
 };
 
-const MOVE_KEYS = ['owners', 'contracts', 'budget_lines', 'projects', 'links', 'attachments', 'incidents', 'servers'];
+const MOVE_KEYS = ['owners', 'support_contacts', 'contracts', 'budget_lines', 'projects', 'links', 'attachments', 'incidents', 'servers'];
 const UNLINKED_KEYS = ['managed_documents'];
 const LOSS_KEYS = [
-  'instances', 'disabled_instance_servers', 'suites', 'predecessor', 'successors', 'data_residency', 'support_contacts',
+  'instances', 'disabled_instance_servers', 'suites', 'predecessor', 'successors', 'data_residency',
   'audience', 'links_without_url', 'knowledge_links', 'tasks', 'requests', 'business_processes', 'technologies',
 ];
 

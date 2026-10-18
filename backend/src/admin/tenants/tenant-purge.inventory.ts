@@ -126,6 +126,7 @@ export const TENANT_PURGE_TABLES = [
   'technology_contracts',
   'technology_spend_items',
   'technology_owners',
+  'technology_support_contacts',
   'asset_technologies',
   'application_technologies',
   'technology_versions',
