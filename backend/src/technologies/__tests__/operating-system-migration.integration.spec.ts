@@ -101,6 +101,8 @@ async function testDirtyDatabase() {
         { code: 'centos_7', label: 'CentOS 7' },
         { code: 'oracle_linux_9', label: 'Oracle Linux 9' },
         { code: 'dated_bare', label: 'Dated Bare', standardSupportEnd: '2020-01-01' },
+        // A shipped default no server uses stays in the catalog.
+        { code: 'rhel_9', label: 'RHEL 9' },
       ])],
     );
     await technology(runner, a, 3, 'Oracle', 'database');
@@ -155,6 +157,8 @@ async function testDirtyDatabase() {
     assert.equal(await column(runner, 'assets', 'operating_system'), null);
     assert.equal(await functionReadsOperatingSystem(runner), false);
     await setTenant(runner, a);
+    const [rhel] = await runner.query(`SELECT count(*)::int AS n FROM technologies WHERE tenant_id = $1 AND catalog_key = 'rhel'`, [a]);
+    assert.equal(rhel.n, 0, 'an unused shipped default is not adopted');
     const marked: Array<{ name: string; tech: string; family: string; lifecycle: string; catalog_key: string | null; version: string | null; source: string }> = await runner.query(
       `SELECT a.name, t.name AS tech, t.family, t.lifecycle, t.catalog_key, v.label AS version, at.source
          FROM assets a

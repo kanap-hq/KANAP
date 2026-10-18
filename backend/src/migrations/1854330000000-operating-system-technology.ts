@@ -9,7 +9,8 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  * go away once their values are technologies.
  *
  * Per tenant, with `app.current_tenant` set (`technologies` writes `search_index` through a
- * trigger): each distinct code on an asset, in the settings catalog, or in a Netbox `os_map`
+ * trigger): each distinct code on an asset, in the settings catalog (a shipped code only when a
+ * server uses it: the others stay in the catalog, offered for adoption), or in a Netbox `os_map`
  * (a value with no space; a value that already reads as a label is left alone) becomes a
  * technology. A shipped code (the 19 below, copied here so the migration imports no application
  * code) adopts the frozen product of the shipped catalog. Any other code goes through the order of
@@ -570,9 +571,18 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
     if (patch.dates) current.dates = patch.dates;
     works.set(code, current);
   };
+  const assets: Array<{ id: string; code: string }> = await queryRunner.query(
+    `SELECT id, lower(btrim(operating_system)) AS code FROM assets
+      WHERE tenant_id = $1 AND operating_system IS NOT NULL AND btrim(operating_system) <> ''`,
+    [tenantId],
+  );
+  const usedCodes = new Set(assets.map((asset) => asset.code));
   if (settingsList) {
     for (const entry of settingsList as Array<Record<string, unknown>>) {
       const code = norm(entry.code ?? entry.value);
+      // A shipped default no server uses stays in the catalog, offered for adoption: the starting
+      // catalog is proposed, never imposed. The tenant's own entries become technologies.
+      if (SHIPPED_BY_CODE.has(code) && !usedCodes.has(code)) continue;
       add(code, {
         label: String(entry.label ?? entry.name ?? '').trim(),
         deprecated: !!entry.deprecated,
@@ -584,11 +594,6 @@ async function migrateTenant(queryRunner: QueryRunner, tenantId: string): Promis
       });
     }
   }
-  const assets: Array<{ id: string; code: string }> = await queryRunner.query(
-    `SELECT id, lower(btrim(operating_system)) AS code FROM assets
-      WHERE tenant_id = $1 AND operating_system IS NOT NULL AND btrim(operating_system) <> ''`,
-    [tenantId],
-  );
   for (const asset of assets) add(asset.code, { fromAsset: true });
 
   const configs: Array<{ id: string; metadata_json: Record<string, unknown> | null }> = await queryRunner.query(
