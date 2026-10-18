@@ -22,11 +22,14 @@ import TechnologyOverviewTab, {
 } from './workspace/TechnologyOverviewTab';
 import TechnologyServersTab, { countServers, technologyServersKey, type TechnologyServerRow } from './workspace/TechnologyServersTab';
 import TechnologyApplicationsTab, { countApplications, technologyApplicationsKey, type TechnologyApplicationsData } from './workspace/TechnologyApplicationsTab';
+import TechnologyComplianceTab from './workspace/TechnologyComplianceTab';
+import TechnologyOperationsTab from './workspace/TechnologyOperationsTab';
+import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCount, technologyRelationsKey } from './workspace/TechnologyRelationsTab';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations'];
 // The tabs not listed here arrive with the next lots of the technology layer.
-const READY_TABS = new Set<TabKey>(['overview', 'servers', 'applications']);
+const READY_TABS = new Set<TabKey>(['overview', 'servers', 'applications', 'operations', 'compliance', 'relations']);
 
 function TechnologyDeleteButton({ technology, onDeleted, onError }: {
   technology: TechnologyDetail;
@@ -116,9 +119,16 @@ export default function TechnologyWorkspacePage() {
     queryFn: async () => (await api.get<TechnologyApplicationsData>(`/technologies/${technologyId}/applications`)).data,
     enabled: !!technologyId,
   });
+  // The Relations badge counts the rows of the sections the caller sees; the tab reads the same cache.
+  const relationsQuery = useQuery({
+    queryKey: technologyRelationsKey(technologyId),
+    queryFn: () => fetchTechnologyRelations(technologyId),
+    enabled: !!technologyId,
+  });
   const badges: Partial<Record<TabKey, number>> = {
     servers: serversQuery.data ? countServers(serversQuery.data.items) : undefined,
     applications: applicationsQuery.data?.items ? countApplications(applicationsQuery.data.items) : undefined,
+    relations: technologyRelationsCount(relationsQuery.data),
   };
 
   const listSearch = searchParams.toString();
@@ -250,6 +260,13 @@ export default function TechnologyWorkspacePage() {
             canManage={canManage}
           />
         )}
+        {routeTab === 'operations' && (
+          <TechnologyOperationsTab technology={technology} canManage={canManage} onPatch={patchTechnology} onError={setError} />
+        )}
+        {routeTab === 'compliance' && (
+          <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={patchTechnology} />
+        )}
+        {routeTab === 'relations' && <TechnologyRelationsTab id={technology.id} />}
       </PortfolioDetailWorkspaceShell>
     </Box>
   );

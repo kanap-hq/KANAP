@@ -229,6 +229,7 @@ export const TENANT_SCOPED_TABLES = [
   'technology_owners',
   'technology_projects',
   'technology_spend_items',
+  'technology_support_contacts',
   'technology_versions',
   'technology_vulnerabilities',
   'user_dashboard_config',

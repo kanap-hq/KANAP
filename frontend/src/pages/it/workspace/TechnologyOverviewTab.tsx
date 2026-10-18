@@ -66,10 +66,16 @@ export type TechnologyDetail = {
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
   owners: TechnologyOwner[];
+  cyber_criticality?: string | null;
+  recovery_wave?: string | null;
+  rto_minutes?: number | null;
+  rpo_minutes?: number | null;
+  support_notes?: string | null;
 };
 
 export type TechnologyPatch = Partial<Pick<TechnologyDetail,
-  'name' | 'editor' | 'family' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'>>;
+  'name' | 'editor' | 'family' | 'mode' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
+  | 'cyber_criticality' | 'recovery_wave' | 'rto_minutes' | 'rpo_minutes' | 'support_notes'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
 // The server's rule (`CPE_PRODUCT_RE` in backend/src/technologies/technology-rows.ts), on the lower-cased value.
@@ -89,7 +95,7 @@ function SectionLabel({ children, action }: { children: React.ReactNode; action?
 }
 
 /** A text saved after a pause in typing and when the field loses focus. */
-function AutosaveText({ value, onSave, disabled, multiline, placeholder, ariaLabel, composer }: {
+export function AutosaveText({ value, onSave, disabled, multiline, placeholder, ariaLabel, composer }: {
   value: string | null;
   onSave: (value: string | null) => void;
   disabled?: boolean;

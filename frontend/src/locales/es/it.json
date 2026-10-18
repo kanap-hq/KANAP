@@ -1310,6 +1310,7 @@
         },
         "moved": {
           "owners": "Responsables",
+          "support_contacts": "Contactos de soporte",
           "contracts": "Contratos",
           "budget_lines": "Líneas presupuestarias",
           "projects": "Proyectos",
@@ -1325,7 +1326,6 @@
           "predecessor": "Predecesora",
           "successors": "Vínculo con sus sucesoras",
           "data_residency": "Residencia de datos",
-          "support_contacts": "Contactos de soporte",
           "audience": "Empresas y departamentos que la usan",
           "links_without_url": "Enlaces web sin dirección",
           "knowledge_links": "Vínculos de conocimiento",
@@ -1341,6 +1341,8 @@
           "editor": "editor (200 caracteres como máximo)",
           "description": "descripción (20.000 caracteres como máximo)",
           "notes": "notas (20.000 caracteres como máximo)",
+          "support_notes": "notas de soporte (20.000 caracteres como máximo)",
+          "support_contact_roles": "roles de los contactos de soporte (200 caracteres como máximo)",
           "lifecycle": "ciclo de vida",
           "cyber_criticality": "criticidad cibernética",
           "recovery_wave": "ola de recuperación",
@@ -1688,6 +1690,36 @@
           "extended": "Soporte extendido",
           "ended": "Sin soporte",
           "unknown": "Fecha desconocida"
+        }
+      },
+      "operations": {
+        "contactsLoadFailed": "No se pudieron cargar los contactos de soporte.",
+        "alreadyListed": "Este contacto ya figura en la lista. Su rol no cambia."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Documentos",
+          "links": "Enlaces web"
+        },
+        "empty": {
+          "documents": "Ningún documento.",
+          "links": "Ningún enlace web.",
+          "incidents": "Ningún incidente vinculado."
+        },
+        "search": {
+          "incidents": "Buscar incidentes"
+        },
+        "columns": {
+          "size": "Tamaño",
+          "added": "Añadido",
+          "url": "Dirección"
+        },
+        "newLink": "Nuevo enlace web",
+        "editLink": "Editar {{name}}",
+        "editLinkTitle": "Editar enlace web",
+        "placeholders": {
+          "linkName": "p. ej., Notas de la versión",
+          "url": "p. ej., https://learn.microsoft.com/sql"
         }
       },
       "servers": {

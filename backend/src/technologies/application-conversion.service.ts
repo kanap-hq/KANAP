@@ -39,6 +39,8 @@ export type ConversionRefusal = { reason: ConversionRefusalReason; count: number
 /** What moves to the technology, counted; `null` for a module the caller cannot read. */
 export type ConversionMoves = {
   owners: number;
+  /** Once each, the first role kept (a technology lists a contact once). */
+  support_contacts: number;
   contracts: number | null;
   budget_lines: number | null;
   projects: number | null;
@@ -56,7 +58,6 @@ export type ConversionLosses = {
   predecessor: number;
   successors: number;
   data_residency: number;
-  support_contacts: number;
   audience: number;
   links_without_url: number;
   knowledge_links: number;
@@ -87,7 +88,7 @@ export type ConversionFiles = { copies: string[]; originals: string[] };
 type ApplicationRow = {
   id: string; name: string; sequential_id: string | null; editor: string | null; description: string | null; notes: string | null;
   lifecycle: string | null; cyber_criticality: string | null; recovery_wave: string | null; rto_minutes: number | null;
-  rpo_minutes: number | null; predecessor_id: string | null;
+  rpo_minutes: number | null; predecessor_id: string | null; support_notes: string | null;
 };
 
 type CountRow = Omit<ConversionMoves, 'contracts' | 'budget_lines' | 'projects' | 'incidents'> & ConversionLosses & ConversionUnlinked & {
@@ -101,6 +102,17 @@ const COUNTED_REFUSALS: ConversionRefusalReason[] = ['interfaces', 'middleware',
 /** A server assignment that becomes an installation: its instance is enabled (as the deductions of `technology-reach.service.ts`). */
 const ACTIVE_INSTANCE = `i.status = 'enabled' AND (i.disabled_at IS NULL OR i.disabled_at > now())`;
 
+/**
+ * The support contacts the technology takes: one row per contact of the tenant (the composite key
+ * of `technology_support_contacts` refuses another tenant's), the first role given kept, trimmed.
+ * Parameters `$1` tenant, `$2` application.
+ */
+const SUPPORT_CONTACTS_KEPT = `SELECT DISTINCT ON (l.contact_id) l.contact_id, NULLIF(btrim(coalesce(l.role, '')), '') AS role, l.created_at
+    FROM application_support_contacts l
+    JOIN contacts c ON c.tenant_id = l.tenant_id AND c.id = l.contact_id
+   WHERE l.tenant_id = $1 AND l.application_id = $2
+   ORDER BY l.contact_id, l.created_at, l.id`;
+
 const FULL_ACCESS: ConversionAccess = { contracts: true, budget_lines: true, projects: true, incidents: true };
 
 /**
@@ -109,7 +121,7 @@ const FULL_ACCESS: ConversionAccess = { contracts: true, budget_lines: true, pro
  * lists the refusals: interfaces, middleware or integration tool of a binding, a suite with
  * components, bindings on its instances, a technology of the same name, values the technology
  * cannot take, files missing from storage. The conversion runs in the caller's transaction: the
- * technology is created, the governance links are copied to it, the server assignments of its
+ * technology is created with the support notes, the governance links and support contacts are copied to it, the server assignments of its
  * enabled instances become installation links, the application is deleted by its own delete
  * service, and its managed documents are released unfiled with their files. Files are copied
  * before; the caller settles them after the transaction (`settleFiles`).
@@ -166,6 +178,7 @@ export class ApplicationConversionService {
         editor: app.editor,
         description: app.description,
         notes: app.notes,
+        support_notes: app.support_notes,
         lifecycle: app.lifecycle || undefined,
         cyber_criticality: app.cyber_criticality,
         recovery_wave: app.recovery_wave,
@@ -186,6 +199,11 @@ export class ApplicationConversionService {
           `INSERT INTO technology_owners (tenant_id, technology_id, user_id, owner_type)
            SELECT DISTINCT $1::uuid, $3::uuid, o.user_id, o.owner_type FROM application_owners o
             WHERE o.tenant_id = $1 AND o.application_id = $2 AND o.owner_type IN ('business', 'it')
+           ON CONFLICT DO NOTHING`,
+        ),
+        support_contacts: await moved(
+          `INSERT INTO technology_support_contacts (tenant_id, technology_id, contact_id, role, created_at)
+           SELECT $1::uuid, $3::uuid, k.contact_id, k.role, k.created_at FROM (${SUPPORT_CONTACTS_KEPT}) k
            ON CONFLICT DO NOTHING`,
         ),
         contracts: await moved(
@@ -338,7 +356,7 @@ export class ApplicationConversionService {
     if (!UUID_RE.test(id)) throw new NotFoundException('Application not found');
     const rows: ApplicationRow[] = await opts.manager.query(
       `SELECT id, name, sequential_id, editor, description, notes, lifecycle, cyber_criticality, recovery_wave,
-              rto_minutes, rpo_minutes, predecessor_id
+              rto_minutes, rpo_minutes, predecessor_id, support_notes
          FROM applications WHERE tenant_id = $1 AND id = $2${lock ? ' FOR UPDATE' : ''}`,
       [opts.tenantId, id],
     );
@@ -357,6 +375,12 @@ export class ApplicationConversionService {
     if (tooLong(app.editor, 200)) out.push('editor');
     if (tooLong(app.description, 20000)) out.push('description');
     if (tooLong(app.notes, 20000)) out.push('notes');
+    if (tooLong(app.support_notes, 20000)) out.push('support_notes');
+    const [{ n: longRoles }]: Array<{ n: number }> = await opts.manager.query(
+      `SELECT count(*)::int AS n FROM (${SUPPORT_CONTACTS_KEPT}) k WHERE char_length(k.role) > 200`,
+      [opts.tenantId, app.id],
+    );
+    if (Number(longRoles) > 0) out.push('support_contact_roles');
     const settings: any = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const known = (list: Array<{ code: string }> | undefined, value: string | null) =>
       value == null || value === '' || (list ?? []).some((item) => item.code === String(value).trim().toLowerCase());
@@ -418,7 +442,9 @@ export class ApplicationConversionService {
          (SELECT count(*)::int FROM applications p WHERE p.tenant_id = $1 AND p.id = $4) AS predecessor,
          (SELECT count(*)::int FROM applications p WHERE p.tenant_id = $1 AND p.predecessor_id = $2) AS successors,
          (SELECT count(*)::int FROM application_data_residency l WHERE l.tenant_id = $1 AND l.application_id = $2) AS data_residency,
-         (SELECT count(*)::int FROM application_support_contacts l WHERE l.tenant_id = $1 AND l.application_id = $2) AS support_contacts,
+         (SELECT count(DISTINCT l.contact_id)::int FROM application_support_contacts l
+            JOIN contacts c ON c.tenant_id = l.tenant_id AND c.id = l.contact_id
+           WHERE l.tenant_id = $1 AND l.application_id = $2) AS support_contacts,
          (SELECT count(*)::int FROM application_companies l WHERE l.tenant_id = $1 AND l.application_id = $2)
            + (SELECT count(*)::int FROM application_departments l WHERE l.tenant_id = $1 AND l.application_id = $2) AS audience,
          (SELECT count(*)::int FROM document_applications l WHERE l.tenant_id = $1 AND l.application_id = $2) AS knowledge_links,
@@ -444,6 +470,7 @@ export class ApplicationConversionService {
       refusals,
       moves: {
         owners: n('owners'),
+        support_contacts: n('support_contacts'),
         contracts: readable(access.contracts, 'contracts'),
         budget_lines: readable(access.budget_lines, 'budget_lines'),
         projects: readable(access.projects, 'projects'),
@@ -456,7 +483,7 @@ export class ApplicationConversionService {
       losses: {
         instances: n('instances'), disabled_instance_servers: n('disabled_instance_servers'), suites: n('suites'),
         predecessor: n('predecessor'), successors: n('successors'), data_residency: n('data_residency'),
-        support_contacts: n('support_contacts'), audience: n('audience'), links_without_url: n('links_without_url'),
+        audience: n('audience'), links_without_url: n('links_without_url'),
         knowledge_links: n('knowledge_links'), tasks: n('tasks'), requests: n('requests'),
         business_processes: n('business_processes'), technologies: n('technologies'),
       },

@@ -117,8 +117,21 @@ async function managedDocument(runner: QueryRunner, tenantId: string, appId: str
  * link, a file, two incidents (one confidential), two instances on three servers, a disabled one
  * on a fourth, a managed document.
  */
-async function seedLinkedApplication(runner: QueryRunner, tenantId: string, storage: Storage) {
+async function seedLinkedApplication(runner: QueryRunner, tenantId: string, storage: Storage, foreignContact?: string) {
   const app = await application(runner, tenantId, 'vSphere', { reference: 'APP-7' });
+  // Support: notes, a contact named twice (the first role is kept), one without a role, and a
+  // contact of another tenant (a plain key lets the application name it; the technology cannot).
+  await runner.query(`UPDATE applications SET support_notes = 'Call Broadcom first.' WHERE tenant_id = $1 AND id = $2`, [tenantId, app]);
+  const anna = await one(runner, `INSERT INTO contacts (tenant_id, email, first_name) VALUES ($1, $2, 'Anna') RETURNING id`, [tenantId, `anna-${randomUUID()}@example.invalid`]);
+  const bruno = await one(runner, `INSERT INTO contacts (tenant_id, email, first_name) VALUES ($1, $2, 'Bruno') RETURNING id`, [tenantId, `bruno-${randomUUID()}@example.invalid`]);
+  await runner.query(
+    `INSERT INTO application_support_contacts (tenant_id, application_id, contact_id, role, created_at)
+     VALUES ($1, $2, $3, ' Editor support ', now() - interval '3 hours'), ($1, $2, $3, 'Escalation', now() - interval '2 hours'),
+            ($1, $2, $4, '', now() - interval '1 hour')`,
+    [tenantId, app, anna, bruno]);
+  if (foreignContact) {
+    await runner.query(`INSERT INTO application_support_contacts (tenant_id, application_id, contact_id, role) VALUES ($1, $2, $3, 'Foreign')`, [tenantId, app, foreignContact]);
+  }
   const role = await one(runner, `INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Conv role') RETURNING id`, [tenantId]);
   const userA = await one(runner, `INSERT INTO users (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id`, [tenantId, `a-${randomUUID()}@example.invalid`, role]);
   const userB = await one(runner, `INSERT INTO users (tenant_id, email, role_id) VALUES ($1, $2, $3) RETURNING id`, [tenantId, `b-${randomUUID()}@example.invalid`, role]);
@@ -161,29 +174,31 @@ async function seedLinkedApplication(runner: QueryRunner, tenantId: string, stor
   await runner.query(`UPDATE applications SET predecessor_id = $3 WHERE tenant_id = $1 AND id = $2`, [tenantId, successor, app]);
   await runner.query(`INSERT INTO application_data_residency (tenant_id, application_id, country_iso) VALUES ($1, $2, 'FR')`, [tenantId, app]);
   const managed = await managedDocument(runner, tenantId, app, storage);
-  return { app, users: [userA, userB], contract, lines: [opex, capex], project, incidents: [incident, secret], servers, retiredServer, original, successor, managed };
+  return { app, contacts: { anna, bruno }, users: [userA, userB], contract, lines: [opex, capex], project, incidents: [incident, secret], servers, retiredServer, original, successor, managed };
 }
 
 const count = async (runner: QueryRunner, sql: string, params: unknown[]) => Number((await runner.query(sql, params))[0].n);
 
 async function testPreviewAndConvert() {
   await inRolledBackTransaction(async (runner) => {
+    const other = await seedTenant(runner, 'conv-full-other');
+    const foreign = await one(runner, `INSERT INTO contacts (tenant_id, email, first_name) VALUES ($1, $2, 'Olga') RETURNING id`, [other, `olga-${randomUUID()}@example.invalid`]);
     const tenantId = await seedTenant(runner, 'conv-full');
     const storage = memoryStorage();
     const audit: AuditEntry[] = [];
     const svc = conversion(audit, storage);
-    const seeded = await seedLinkedApplication(runner, tenantId, storage);
+    const seeded = await seedLinkedApplication(runner, tenantId, storage, foreign);
     const opts = { manager: runner.manager, tenantId, userId: null };
 
     const preview = await svc.preview(seeded.app, opts);
     assert.deepEqual(preview.refusals, []);
     assert.equal(preview.mode, 'installed');
     assert.deepEqual(preview.application, { id: seeded.app, name: 'vSphere', reference: 'APP-7' });
-    assert.deepEqual(preview.moves, { owners: 2, contracts: 1, budget_lines: 2, projects: 1, links: 1, attachments: 1, incidents: 2, servers: 3 });
+    assert.deepEqual(preview.moves, { owners: 2, support_contacts: 2, contracts: 1, budget_lines: 2, projects: 1, links: 1, attachments: 1, incidents: 2, servers: 3 });
     assert.deepEqual(preview.unlinked, { managed_documents: 1 });
     assert.deepEqual(
       { ...preview.losses },
-      { instances: 3, disabled_instance_servers: 1, suites: 1, predecessor: 1, successors: 1, data_residency: 1, support_contacts: 0, audience: 1,
+      { instances: 3, disabled_instance_servers: 1, suites: 1, predecessor: 1, successors: 1, data_residency: 1, audience: 1,
         links_without_url: 1, knowledge_links: 0, tasks: 0, requests: 0, business_processes: 0, technologies: 0 },
     );
 
@@ -195,6 +210,11 @@ async function testPreviewAndConvert() {
     assert.equal(tech.mode, 'installed');
     assert.equal(tech.description, 'Virtualisation platform');
     assert.deepEqual([tech.rto_minutes, tech.rpo_minutes], [240, 60]);
+    assert.equal(tech.support_notes, 'Call Broadcom first.');
+    const support = await runner.query(
+      `SELECT contact_id, role FROM technology_support_contacts WHERE tenant_id = $1 AND technology_id = $2 ORDER BY created_at, id`, [tenantId, technology.id]);
+    assert.deepEqual(support, [{ contact_id: seeded.contacts.anna, role: 'Editor support' }, { contact_id: seeded.contacts.bruno, role: null }],
+      'each contact once, the first role kept, in their order; the other tenant\'s contact left out');
     assert.equal(technology.reference, `TEC-${tech.item_number}`);
     const of = (table: string, column: string) => runner.query(`SELECT ${column} AS v FROM ${table} WHERE tenant_id = $1 AND technology_id = $2 ORDER BY 1`, [tenantId, technology.id]).then((rows: any[]) => rows.map((r) => r.v));
     assert.deepEqual(await of('technology_owners', 'user_id'), [...seeded.users].sort());
@@ -232,7 +252,7 @@ async function testPreviewAndConvert() {
     assert.ok(tables.includes('technologies:create') && tables.includes('technologies:update') && tables.includes('applications:update') && tables.includes('applications:delete'));
     const trace = audit.find((entry) => entry.table === 'technologies' && entry.action === 'update') as any;
     assert.equal(trace.after.converted_from_application.reference, 'APP-7', 'the old reference stays readable');
-    assert.deepEqual(trace.after.moved, { owners: 2, contracts: 1, budget_lines: 2, projects: 1, links: 1, attachments: 1, incidents: 2, servers: 3, managed_documents: 1 });
+    assert.deepEqual(trace.after.moved, { owners: 2, support_contacts: 2, contracts: 1, budget_lines: 2, projects: 1, links: 1, attachments: 1, incidents: 2, servers: 3, managed_documents: 1 });
 
     await svc.settleFiles(files, true);
     assert.ok(!storage.objects.has(seeded.original), 'the original goes after the commit');
@@ -325,6 +345,12 @@ async function testRefusals() {
     await runner.query(`UPDATE applications SET rto_minutes = 6000000, lifecycle = 'gone', cyber_criticality = 'unknown' WHERE tenant_id = $1 AND id = $2`, [tenantId, invalid]);
     const fields = await refused(invalid, 'invalid_fields');
     assert.deepEqual(fields.fields, ['name', 'lifecycle', 'cyber_criticality', 'rto_minutes']);
+
+    // A role the technology cannot take (200 characters at most), on the role it would keep.
+    const longRole = await application(runner, tenantId, 'Nutanix');
+    const contact = await one(runner, `INSERT INTO contacts (tenant_id, email) VALUES ($1, $2) RETURNING id`, [tenantId, `c-${randomUUID()}@example.invalid`]);
+    await runner.query(`INSERT INTO application_support_contacts (tenant_id, application_id, contact_id, role) VALUES ($1, $2, $3, $4)`, [tenantId, longRole, contact, 'r'.repeat(250)]);
+    assert.deepEqual((await refused(longRole, 'invalid_fields')).fields, ['support_contact_roles']);
 
     const missing = await application(runner, tenantId, 'Veeam');
     await runner.query(

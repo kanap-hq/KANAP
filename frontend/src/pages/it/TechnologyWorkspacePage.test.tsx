@@ -106,6 +106,9 @@ describe('TechnologyWorkspacePage', () => {
     del.mockReset();
     get.mockImplementation(async (url: string) => {
       if (url === '/technologies/TEC-3') return { data: DETAIL };
+      if (url === '/technologies/tech-1/relations') {
+        return { data: { year: 2026, budget_column: { key: 'budget', label: 'Budget' }, budget_lines: null, contracts: [{ id: 'ct-1' }], projects: [], incidents: null, documents: [{ id: 'd-1' }], links: [{ id: 'l-1' }] } };
+      }
       return { data: { items: [], has_more: false } };
     });
     patch.mockImplementation(async (_url: string, body: any) => ({ data: { ...DETAIL, ...body } }));
@@ -120,10 +123,12 @@ describe('TechnologyWorkspacePage', () => {
       ['workspace.technology.tabs.overview', false],
       ['workspace.technology.tabs.servers', false],
       ['workspace.technology.tabs.applications', false],
-      ['workspace.technology.tabs.operations', true],
-      ['workspace.technology.tabs.compliance', true],
-      ['workspace.technology.tabs.relations', true],
+      ['workspace.technology.tabs.operations', false],
+      ['workspace.technology.tabs.compliance', false],
+      ['workspace.technology.tabs.relations', false],
     ]);
+    // The Relations badge counts the rows of the sections the caller sees.
+    await waitFor(() => expect(tabs[5].getAttribute('data-badge')).toBe('3'));
     expect(screen.getByTestId('owners-workspace.technology.fields.itOwners').textContent).toBe('Ada Lovelace');
     expect(screen.queryByTestId('owners-workspace.technology.fields.businessOwners')).toBeNull();
     expect(screen.queryByText(/Grace Hopper/)).toBeNull();

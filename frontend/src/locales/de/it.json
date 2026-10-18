@@ -1310,6 +1310,7 @@
         },
         "moved": {
           "owners": "Verantwortliche",
+          "support_contacts": "Supportkontakte",
           "contracts": "Verträge",
           "budget_lines": "Budgetpositionen",
           "projects": "Projekte",
@@ -1325,7 +1326,6 @@
           "predecessor": "Vorgänger",
           "successors": "Verknüpfung zu ihren Nachfolgern",
           "data_residency": "Datenresidenz",
-          "support_contacts": "Supportkontakte",
           "audience": "Nutzende Gesellschaften und Abteilungen",
           "links_without_url": "Weblinks ohne Adresse",
           "knowledge_links": "Wissensverknüpfungen",
@@ -1341,6 +1341,8 @@
           "editor": "Hersteller (höchstens 200 Zeichen)",
           "description": "Beschreibung (höchstens 20.000 Zeichen)",
           "notes": "Notizen (höchstens 20.000 Zeichen)",
+          "support_notes": "Support-Notizen (höchstens 20.000 Zeichen)",
+          "support_contact_roles": "Rollen der Supportkontakte (höchstens 200 Zeichen)",
           "lifecycle": "Lebenszyklus",
           "cyber_criticality": "Cyber-Kritikalität",
           "recovery_wave": "Wiederherstellungswelle",
@@ -1688,6 +1690,36 @@
           "extended": "Erweiterter Support",
           "ended": "Kein Support",
           "unknown": "Datum unbekannt"
+        }
+      },
+      "operations": {
+        "contactsLoadFailed": "Die Support-Kontakte konnten nicht geladen werden.",
+        "alreadyListed": "Dieser Kontakt ist bereits aufgeführt. Seine Rolle bleibt unverändert."
+      },
+      "relations": {
+        "sections": {
+          "documents": "Dokumente",
+          "links": "Weblinks"
+        },
+        "empty": {
+          "documents": "Kein Dokument.",
+          "links": "Kein Weblink.",
+          "incidents": "Kein Vorfall verknüpft."
+        },
+        "search": {
+          "incidents": "Vorfälle suchen"
+        },
+        "columns": {
+          "size": "Größe",
+          "added": "Hinzugefügt",
+          "url": "Adresse"
+        },
+        "newLink": "Neuer Weblink",
+        "editLink": "{{name}} bearbeiten",
+        "editLinkTitle": "Weblink bearbeiten",
+        "placeholders": {
+          "linkName": "z. B. Versionshinweise",
+          "url": "z. B. https://learn.microsoft.com/sql"
         }
       },
       "servers": {
