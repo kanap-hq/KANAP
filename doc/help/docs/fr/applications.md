@@ -221,7 +221,14 @@ Chaque ligne affiche le nom de l'interface, l'application contrepartie et un ind
 
 ### Exploitation
 
-L'onglet Exploitation capture comment les utilisateurs accèdent à l'application et qui la supporte.
+L'onglet Exploitation capture les technologies dont l'application dépend, comment les utilisateurs y accèdent et qui la supporte.
+
+**Technologies** (en haut de l'onglet) liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien**. Colonnes : référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard.
+
+- **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
+- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
+
+Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut `applications:member` et `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
 **Technique** :
 - **Méthodes d'accès** (multi-sélection) : comment les utilisateurs accèdent à cette application. Les options sont configurables dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Les options par défaut incluent Web, Application installée localement, Application mobile, IHM propriétaire (interface industrielle), Terminal / CLI, VDI / Bureau distant, Borne.
@@ -280,7 +287,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents, technologies et processus métier, chacun dans son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents et processus métier, chacun dans son propre tableau. Les technologies sont dans l'onglet [Exploitation](#exploitation). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
@@ -294,15 +301,7 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 | **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |
 | **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
-| **Technologies** | Référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard |
 | **Processus métier** | Nom, responsable métier |
-
-**Technologies** liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien** :
-
-- **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
-- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
-
-Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut aussi `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
 **Processus métier** liste les processus que l'application soutient. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Le lien demande aussi `business_processes:member`.
 

@@ -119,6 +119,8 @@ Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw
 **Verwendung**:
 - Technologie-Arbeitsbereich → Kopfzeile und Eigenschaftenfeld → **Familie**, und das Fenster für neue Technologien
 
+Die Familie **Betriebssystem** kennzeichnet die Betriebssysteme: Eine Technologie dieser Familie, die einem Server ohne Betriebssystem hinzugefügt wird, wird zu seinem Betriebssystem. Siehe [Technologien](technologies.md#betriebssysteme).
+
 ### Verbindungstypen
 
 Ein zweistufiger Katalog (Kategorie und Eintrag) von Verbindungsprotokollen, mit typischen Ports.
@@ -216,19 +218,6 @@ Definieren Sie Subnetze in CIDR-Notation, mit optionaler VLAN-Zuordnung. Jedes S
 - CIDR und VLAN-Nummern sind pro Standort eindeutig (dieselben Werte können an verschiedenen Standorten vorkommen)
 
 **Automatisches Ausfüllen**: Wenn Sie bei einem Asset ein Subnetz auswählen, wird die Netzwerkzone automatisch aus der Konfiguration des Subnetzes übernommen.
-
-### Betriebssysteme
-
-Katalog der für Server verfügbaren Betriebssysteme mit Enddaten für Standard- und erweiterten Support.
-
-**Spalten**: Name, Standard-Support, Erweiterter Support, Nicht mehr anbieten
-
-**Verwendung**:
-- Assets-Arbeitsbereich → Reiter Technik → Auswahl **Betriebssystem** (der Hilfetext zeigt die Support-Daten)
-
-Daten werden als `YYYY-MM-DD` gespeichert, aber als `TT.MM.JJJJ` bearbeitet.
-
-Die Standardeinträge umfassen Windows-Server-Versionen, Ubuntu LTS, RHEL, Debian und SLES mit den passenden Support-Daten.
 
 ### Serverrollen
 
@@ -426,7 +415,6 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **IP-Adresstypen** | Assets (Reiter Technik → IP-Adressen → Typ) |
 | **Lebenszyklus-Status** | Anwendungen, App-Instanzen, Schnittstellen, Bindungen, Assets |
 | **Netzwerkzonen** | Subnetze (Netzwerkzone), Assets (automatisch aus dem Subnetz) |
-| **Betriebssysteme** | Assets (Reiter Technik) |
 | **Subnetze** | Assets (Reiter Technik → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Asset-Typen** | Assets (Übersicht → Typ) |

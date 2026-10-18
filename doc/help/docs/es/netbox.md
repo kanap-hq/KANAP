@@ -60,9 +60,11 @@ Asignar un sitio de Netbox también trae sus ubicaciones de Netbox como sub-ubic
 
 ### Sistemas operativos
 
-La tercera tabla asocia cada plataforma de Netbox con un sistema operativo de su catálogo. Netbox dice «Debian 12» donde KANAP tiene «Debian 12 (bookworm)», y es aquí donde se unen los dos. Cada fila indica cuántos objetos usan esa plataforma.
+La tercera tabla asocia cada plataforma de Netbox con una tecnología. Netbox dice «Debian 12» donde KANAP tiene la tecnología Debian con su versión «12 (Bookworm)», y es aquí donde se unen los dos. Cada fila indica cuántos objetos usan esa plataforma.
 
-Las filas vienen rellenadas cuando KANAP ve la respuesta: el mismo nombre, o el único sistema operativo cuyo nombre empieza por el nombre de la plataforma. «Debian 12» sugiere «Debian 12 (bookworm)». Como en las otras tablas, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
+La lista ofrece sus tecnologías de la familia **Sistema operativo**, solas y con cada una de sus versiones, y después los sistemas operativos del catálogo de tecnologías que aún no ha añadido. El valor que se guarda es el nombre de la tecnología, con su versión cuando elige una. En la siguiente ejecución, KANAP registra esa tecnología y esa versión como sistema operativo del servidor, y añade a sus tecnologías una entrada del catálogo cuando ha elegido una.
+
+Las filas vienen rellenadas cuando KANAP ve la respuesta: el mismo nombre, o la única opción cuyo nombre empieza por el nombre de la plataforma. «Debian 12» sugiere «Debian 12 (Bookworm)». Como en las otras tablas, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
 
 Esta tabla no es un filtro. Una plataforma que quede en **Sin correspondencia** nunca deja nada fuera de la importación. El equipo entra y su sistema operativo se queda tal como está en KANAP. Asocie la plataforma más tarde y la siguiente ejecución rellena el campo.
 
@@ -82,7 +84,7 @@ La vista previa está agrupada:
 - **Por decidir**: objetos sobre los que KANAP no decide por su cuenta. No les pasa nada hasta que los resuelva, aquí o más tarde en la página.
 - **Omitidos**: objetos fuera de alcance, contados por motivo (rol sin correspondencia, sitio sin correspondencia, sin nombre en Netbox, ignorado por usted).
 - **Ausentes de Netbox**: activos que una ejecución anterior vinculó y cuyo objeto de Netbox ha desaparecido.
-- **Avisos**: valores que Netbox devuelve y que KANAP no ha podido retomar, por ejemplo un sistema operativo que no está en su catálogo. Un objeto que no tiene nada que cambiar pero sí algo que señalar aparece también aquí.
+- **Avisos**: valores que Netbox devuelve y que KANAP no ha podido retomar, por ejemplo un sistema operativo que KANAP no encuentra entre sus tecnologías. Un objeto que no tiene nada que cambiar pero sí algo que señalar aparece también aquí.
 
 Léala y pulse **Aplicar**. Los objetos que ya son idénticos se cuentan como sin cambios y no se tocan en absoluto. Un inventario grande se revisa en lotes de 500. **Aplicar este lote** solo escribe lo que la vista previa enumera; todo lo demás se deja exactamente como está. La página indica después cuántos objetos siguen en espera y ofrece **Revisar el lote siguiente**, hasta que no quede nada. Una sincronización que usted inicia nunca crea ni modifica un objeto que no se le haya mostrado. Los objetos fuera de alcance se cuentan por motivo y no se enumeran, de modo que nunca ocupan el lugar de un objeto que usted debe leer. El filtro de la parte superior restringe la lista a un objeto o a un nombre de activo.
 
@@ -177,7 +179,7 @@ Una sincronización nunca pone un activo en **Retirado**. Retirar un equipo es u
 
 **El entorno se establece una sola vez.** Los activos nuevos reciben el entorno elegido en la tarjeta de la integración. Las ejecuciones posteriores no lo tocan nunca, así que puede corregirlo en KANAP y se queda corregido.
 
-**Los valores que KANAP no conoce se omiten, nunca se inventan.** Un estado de ciclo de vida sin equivalente, o un sistema operativo sin correspondencia en **Correspondencias** y sin entrada de ese nombre en **Panorama IT > Configuración**, se deja sin cambios y se señala como aviso. Asocie la plataforma, o añada la entrada en la configuración, y vuelva a ejecutar. Una dirección principal IPv6 se deja fuera igual, con el aviso «La dirección principal es una dirección IPv6, que todavía no se importa.».
+**Los valores que KANAP no conoce se omiten, nunca se inventan.** Un estado de ciclo de vida sin equivalente, o un sistema operativo sin correspondencia en **Correspondencias** y sin tecnología de ese nombre en la familia **Sistema operativo** ni en el catálogo, se deja sin cambios y se señala como aviso. Asocie la plataforma, o añada la tecnología, y vuelva a ejecutar. Una dirección principal IPv6 se deja fuera igual, con el aviso «La dirección principal es una dirección IPv6, que todavía no se importa.».
 
 **Las sub-ubicaciones se comparten entre equipos.** Una sub-ubicación es una sola fila en una ubicación, y cada activo colocado ahí apunta a ella. Renombrar la ubicación de Netbox renombra esa única fila, así que todos los equipos que la llevan siguen a la vez, incluidos los que usted mismo haya clasificado ahí. Nada se mueve activo por activo.
 
@@ -258,7 +260,7 @@ El widget no molesta cuando no hay nada que hacer: una línea que dice que la si
 | No se ha podido verificar el certificado | Netbox presenta un certificado en el que KANAP no confía. Instale un certificado de confianza, o active **Ignorar los errores de certificado** si el certificado es suyo. |
 | El servidor de Netbox no ha respondido a tiempo | Netbox está lento, inaccesible, o detrás de un cortafuegos que descarta la llamada. Compruébelo desde el servidor de KANAP y luego suba el tiempo de espera si la instancia es simplemente grande. |
 | Los objetos aparecen como omitidos, con el motivo «Rol sin correspondencia» o «Sitio sin correspondencia» | Es lo esperado para todo lo que dejó en **No importar**. Si no debía omitirse, asigne el rol o el sitio y vuelva a ejecutar. |
-| Un aviso dice que un sistema operativo no está en su catálogo | La plataforma de Netbox no tiene correspondencia en **Correspondencias > Sistemas operativos** ni entrada de ese nombre en **Panorama IT > Configuración**. Asóciela en la pestaña Correspondencias, o añada el sistema operativo en la configuración, y vuelva a ejecutar. El campo se deja sin cambios hasta entonces. |
+| Un aviso dice que un sistema operativo no está en su catálogo | La plataforma de Netbox no tiene correspondencia en **Correspondencias > Sistemas operativos**, y su nombre no coincide con ninguna tecnología de la familia **Sistema operativo** ni con ningún sistema operativo del catálogo. Asóciela en la pestaña Correspondencias, o añada la tecnología en **Panorama IT > Tecnologías**, y vuelva a ejecutar. El sistema operativo se deja sin cambios hasta entonces. |
 | «Netbox no ha devuelto sus plataformas» | El token de API no puede leer las plataformas. Déle permiso sobre `dcim.platform` en Netbox, o déjelo así: los equipos se siguen importando y solo queda fuera la correspondencia de sistemas operativos. |
 | Un activo acaba con el nombre completo de Netbox como nombre de host | El nombre no termina con un sufijo DNS de su lista de dominios, así que KANAP lo conserva tal cual. Es el resultado esperado para un nombre cuyos puntos forman parte del nombre. Si de verdad es un dominio, añádalo en **Panorama IT > Configuración** y vuelva a ejecutar. |
 | La ejecución ha fallado después de unos pocos objetos | Diez objetos seguidos no se han podido guardar, así que la ejecución se ha detenido. La causa suele ser la misma para todos, y los detalles están en el registro del servidor. |

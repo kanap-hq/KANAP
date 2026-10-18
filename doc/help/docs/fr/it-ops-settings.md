@@ -119,6 +119,8 @@ Le genre de chaque technologie : base de données, hyperviseur, annuaire et iden
 **Où c'est utilisé** :
 - Espace de travail Technologies > en-tête et panneau de propriétés > **Famille**, et la fenêtre de nouvelle technologie
 
+La famille **Système d'exploitation** désigne les systèmes d'exploitation : une technologie de cette famille ajoutée à un serveur qui n'en a pas devient son système d'exploitation. Voir [Technologies](technologies.md#systemes-dexploitation).
+
 ### Types de connexion
 
 Catalogue à deux niveaux (catégorie et entrée) des protocoles de connexion, avec les ports courants.
@@ -216,19 +218,6 @@ Définissez les sous-réseaux avec la notation CIDR et, si besoin, leur VLAN. Ch
 - Les numéros CIDR et VLAN sont uniques par site (les mêmes valeurs peuvent exister à des sites différents)
 
 **Auto-remplissage** : Lorsque vous sélectionnez un sous-réseau sur un actif, la zone réseau est automatiquement remplie depuis la configuration du sous-réseau.
-
-### Systèmes d'exploitation
-
-Catalogue des systèmes d'exploitation proposés pour les serveurs, avec les dates de fin de support standard et étendu.
-
-**Colonnes** : Nom, Support standard, Support étendu, Ne plus proposer
-
-**Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Technique > Sélecteur **Système d'exploitation** (le texte d'aide affiche les dates de support)
-
-Les dates sont stockées au format `AAAA-MM-JJ` mais affichées et modifiées au format `JJ/MM/AAAA`.
-
-Les entrées par défaut incluent les versions Windows Server, Ubuntu LTS, RHEL, Debian et SLES avec les dates de support appropriées.
 
 ### Rôles de serveur
 
@@ -426,7 +415,6 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Types d'adresse IP** | Actifs (Onglet Technique > Adresses IP > Type) |
 | **Statuts du cycle de vie** | Applications, Instances, Interfaces, Liaisons, Actifs |
 | **Zones réseau** | Sous-réseaux (Zone réseau), Actifs (auto-rempli depuis le sous-réseau) |
-| **Systèmes d'exploitation** | Actifs (Onglet Technique) |
 | **Sous-réseaux** | Actifs (Onglet Technique > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
 | **Types d'actif** | Actifs (Vue d'ensemble > Type) |

@@ -13,7 +13,7 @@ Ce que le rapport surveille :
 | Type | Ce qui finit | D'où vient la date |
 |---|---|---|
 | **Technologie** | Une version en service sur un serveur en service, ou déclarée par une application en service | La fin du support standard et étendu de la version, sur la [technologie](technologies.md#apercu) |
-| **OS** | Le système d'exploitation d'un serveur en service | La liste des systèmes d'exploitation dans **Cartographie SI > Paramètres** |
+| **OS** | Une version d'un système d'exploitation en service sur un serveur en service | La fin du support standard et étendu de la version, sur la technologie de la famille **Système d'exploitation** |
 | **Application** | Une application en service | Sa date de fin de support |
 | **Matériel** | Un actif physique en service | Sa fin de vie ou la fin de son contrat de support, indiquée dans la colonne **Version** |
 
@@ -35,7 +35,8 @@ Les actifs retirés, les applications désactivées et les versions que personne
 **Ce que touche un élément** : cliquez sur une ligne pour déplier les serveurs et les applications derrière ses compteurs. Chaque nom ouvre sa fiche.
 
 - Une version de technologie touche les serveurs qui la portent (y compris les machines virtuelles d'un hôte qui la porte) et les applications hébergées sur eux ou qui la déclarent.
-- Un système d'exploitation ou un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble.
+- Un système d'exploitation touche les serveurs qui utilisent cette version, ce qu'ils contiennent, et les applications déployées sur l'ensemble. Sa ligne ouvre la technologie.
+- Un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble.
 - Une application touche les serveurs sur lesquels elle est déployée.
 
 ## Données manquantes
