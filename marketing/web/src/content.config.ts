@@ -13,12 +13,13 @@
 import { defineCollection } from 'astro:content';
 import { z } from 'astro/zod';
 import { glob } from 'astro/loaders';
+import { FEATURE_SLUGS } from './content/features/types';
 
 /**
  * Topics are a closed list so the chip label can be translated (see
- * `blog.topic.*` in `src/i18n/*.json`) and so a topic-grouped index can be
- * switched on later without touching posts. To add one: extend this enum,
- * then add the four `blog.topic.<key>` labels.
+ * `blog.topic.*` in `src/i18n/*.json`). Each topic with a published article
+ * gets a page at `/blog/topic/<key>`. To add one: extend this enum, then add
+ * the four `blog.topic.<key>` labels.
  */
 export const BLOG_TOPICS = ['agents', 'self-hosting', 'cost', 'glpi', 'product', 'portfolio', 'compliance', 'release'] as const;
 export type BlogTopic = (typeof BLOG_TOPICS)[number];
@@ -35,6 +36,12 @@ const blog = defineCollection({
     /** Optional last-revision date, shown when set. */
     updated: z.coerce.date().optional(),
     topic: z.enum(BLOG_TOPICS),
+    /**
+     * Feature pages that list this article. Omit the field to use the topic
+     * default in `src/lib/blog.ts`. A value on any language version covers
+     * translations that omit the field.
+     */
+    features: z.array(z.enum(FEATURE_SLUGS)).optional(),
     /**
      * Optional series grouping. Posts sharing `series.key` are parts of one
      * series, ordered by `part`; `title` is written in the post's own

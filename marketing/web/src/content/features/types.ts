@@ -1,3 +1,20 @@
+/**
+ * Feature pages a blog article can point at. One list: the blog schema,
+ * the topic defaults and the related-articles block all use it.
+ * Agents is a feature page with its own renderer. The deep-dive union in
+ * `resolve.ts` (`DeepDiveSlug`) is this list without `agents`.
+ */
+export const FEATURE_SLUGS = [
+  'budget',
+  'portfolio',
+  'it-landscape',
+  'knowledge',
+  'ai',
+  'agents',
+] as const;
+
+export type FeatureSlug = (typeof FEATURE_SLUGS)[number];
+
 /** Feature deep-dive page content shape. */
 
 export interface FeatureSection {

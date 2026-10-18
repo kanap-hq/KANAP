@@ -8,9 +8,11 @@ import {
   FeatureGrid,
   CTABand,
 } from './sections';
-import { getLocaleFromUrl, localePath } from '../i18n/ui';
+import { getLocaleFromUrl, localePath, useTranslations } from '../i18n/ui';
 import type { FeatureContent } from '../content/features/types';
 import { FEATURE_SCREENSHOTS, getFeatureSlugFromPath } from '../content/screenshots';
+import { getPostsForFeature } from '../lib/blog';
+import BlogStrip from './BlogStrip.astro';
 
 interface Props {
   content: FeatureContent;
@@ -18,8 +20,10 @@ interface Props {
 
 const { content } = Astro.props;
 const locale = getLocaleFromUrl(Astro.url);
+const t = useTranslations(locale);
 const featureSlug = getFeatureSlugFromPath(Astro.url.pathname);
 const featureScreenshots = featureSlug ? FEATURE_SCREENSHOTS[featureSlug] : undefined;
+const featurePosts = featureSlug ? await getPostsForFeature(featureSlug, locale) : [];
 ---
 
 <BaseLayout title={content.meta.title} description={content.meta.description}>
@@ -51,6 +55,18 @@ const featureScreenshots = featureSlug ? FEATURE_SCREENSHOTS[featureSlug] : unde
       columns={2}
     />
   </Section>
+
+  {featurePosts.length > 0 && (
+    <Section tone="default">
+      <BlogStrip
+        posts={featurePosts}
+        locale={locale}
+        title={t('blog.home.eyebrow')}
+        allLabel={t('blog.home.all')}
+        allHref={localePath(locale, '/blog')}
+      />
+    </Section>
+  )}
 
   <Section tone="sunken" compact>
     <nav class="mk-cross" aria-label={content.crossLinks.label}>

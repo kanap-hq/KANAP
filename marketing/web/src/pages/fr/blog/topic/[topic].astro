@@ -1,0 +1,16 @@
+---
+import BlogIndexPage from '../../../../components/BlogIndexPage.astro';
+import { getTopicsWithPosts, type BlogTopic } from '../../../../lib/blog';
+
+export async function getStaticPaths() {
+  const topics = await getTopicsWithPosts('fr');
+  return topics.map((topic) => ({ params: { topic }, props: { topic } }));
+}
+
+interface Props {
+  topic: BlogTopic;
+}
+
+const { topic } = Astro.props;
+---
+<BlogIndexPage topic={topic} />

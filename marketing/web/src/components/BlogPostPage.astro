@@ -21,7 +21,7 @@ import {
   LOCALES,
   type Locale,
 } from '../i18n/ui';
-import { getTranslations, getRelated, getSeriesParts, ogImageFor, formatDate, type BlogItem } from '../lib/blog';
+import { getTranslations, getRelated, getSeriesParts, ogImageFor, formatDate, topicPath, type BlogItem } from '../lib/blog';
 import { breadcrumbLd } from '../lib/jsonld';
 
 interface Props {
@@ -98,7 +98,7 @@ const breadcrumb = breadcrumbLd(site, [
       <nav class="mk-post__crumb" aria-label="Breadcrumb">
         <a href={localePath(locale, '/blog')}>{t('nav.blog')}</a>
         <span aria-hidden="true">/</span>
-        <span>{topicLabel}</span>
+        <a href={localePath(locale, topicPath(post.data.topic))}>{topicLabel}</a>
       </nav>
       <h1 class="mk-post__title">{post.data.title}</h1>
       <p class="mk-lead mk-post__lead">{post.data.description}</p>
