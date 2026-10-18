@@ -210,6 +210,7 @@ Vincular o quitar una aplicación o un activo en **Relaciones** actualiza la pes
 ### Relaciones
 
 - **Aplicaciones** y **Activos**: vincule las aplicaciones y los activos que cubre este contrato. Los selectores buscan entre las aplicaciones y los activos que usted puede ver. Estos vínculos alimentan la pestaña [Conformidad](#conformidad). Un activo cuyo contrato de soporte es este, indicado en la ficha del activo, no aparece aquí. Cuenta igualmente para la conformidad
+- **Tecnologías**: vincule las tecnologías que paga este contrato, como una suscripción a Microsoft 365 para Entra ID. Solo visible si puede leer la infraestructura. Las tecnologías retiradas no se ofrecen
 - **Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic
 - **Sitios web relevantes**: enlaces a documentos externos como el PDF firmado o el portal del proveedor
 - **Adjuntos**: una lista de archivos. Use **Agregar archivos** o suelte archivos sobre la sección. Haga clic en un archivo para descargarlo

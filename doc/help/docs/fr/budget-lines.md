@@ -539,7 +539,7 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 
 ### Relations
 
-L'onglet Relations lie la ligne aux objets associés : Projets, Applications, Contrats, Contacts, Sites web pertinents et Pièces jointes. Tout ce qui se trouve dans cet onglet s'enregistre automatiquement.
+L'onglet Relations lie la ligne aux objets associés : Projets, Applications, Technologies, Contrats, Contacts, Sites web pertinents et Pièces jointes. Tout ce qui se trouve dans cet onglet s'enregistre automatiquement.
 
 **Projets** :
 
@@ -553,6 +553,12 @@ L'onglet Relations lie la ligne aux objets associés : Projets, Applications, Co
 - Utilisez l'autocomplétion pour lier une ou plusieurs applications ou services depuis votre catalogue IT
 - Cela aide à suivre quelles lignes financent quelles applications ou services
 - Retirez une application en cliquant sur le X de sa puce
+
+**Technologies** :
+
+- Utilisez l'autocomplétion pour lier les technologies que la ligne paie, comme des licences de base de données ou un abonnement d'hyperviseur
+- Visible seulement si vous pouvez lire l'infrastructure
+- Retirez une technologie en cliquant sur le X de sa puce
 
 **Contrats** :
 

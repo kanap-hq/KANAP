@@ -210,6 +210,7 @@ Linking or removing an application or an asset in **Relations** updates the tab 
 ### Relations
 
 - **Applications** and **Assets**: link the applications and assets this contract covers. The pickers search the applications and assets you can see. These links feed the [Compliance](#compliance) tab. An asset whose support contract is set to this one on the asset page is not listed here. It still counts for compliance
+- **Technologies**: link the technologies this contract pays for, such as a Microsoft 365 subscription for Entra ID. Shown only if you can read the infrastructure. Retired technologies are not offered
 - **Contacts**: people for this contract, each with a role (Commercial, Technical, Support or Other). **Add the supplier's contacts** copies the supplier's contacts in one click
 - **Relevant websites**: links to external documents such as the signed PDF or the vendor portal
 - **Attachments**: a list of files. Use **Add files** or drop files on the section. Click a file to download it

@@ -180,6 +180,7 @@ Reopening an incident changes none of that. The versions stay, the closure entry
 
 - **Assets**: the servers, VMs or devices involved. Search and select; linking and unlinking is journaled
 - **Applications**: the applications and services affected, same behaviour
+- **Technologies**: the technologies involved, such as a directory or a database engine, same behaviour. Shown, and counted in the tab badge, only for users who can read the infrastructure
 - **Tasks**: the follow-up work. Create a task directly from the incident, and it stays attached to it. The task shows "Incident · INC-14" in its own sidebar, and the incident's Tasks column counts it
 
 Linking is done from the incident side only. A linked asset or application shows the incident in a read-only **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble.

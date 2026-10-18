@@ -26,6 +26,9 @@
   "theme.system": "Détection automatique",
 
   "locale.switch": "Changer de langue",
+  "locale.suggest.text": "Cette page existe en français.",
+  "locale.suggest.link": "Voir en français",
+  "locale.suggest.close": "Fermer",
 
   "footer.tagline": "La plateforme open source de gouvernance IT : budget, SI, projets et documentation dans un seul référentiel. Auto-hébergement gratuit, ou version hébergée.",
   "footer.product": "Produit",

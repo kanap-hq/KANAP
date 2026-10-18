@@ -180,6 +180,7 @@ La réouverture ne change rien à cela. Les versions restent, l'entrée de clôt
 
 - **Actifs** : les serveurs, VM ou équipements concernés. Recherchez et sélectionnez ; les liaisons et déliaisons sont consignées au journal
 - **Applications** : les applications et services touchés, même comportement
+- **Technologies** : les technologies en cause, comme un annuaire ou un moteur de base de données, même comportement. Visibles, et comptées dans le badge de l'onglet, seulement pour les utilisateurs qui peuvent lire l'infrastructure
 - **Tâches** : le travail de suivi. Créez une tâche directement depuis l'incident, elle y reste rattachée. La tâche affiche « Incident · INC-14 » dans sa propre barre latérale, et la colonne Tâches de l'incident la compte
 
 La liaison se fait uniquement depuis l'incident. Un actif ou une application liés affichent l'incident dans une section **Incidents** en lecture seule de leur propre onglet Relations : celui qui consulte un serveur voit son historique d'incidents.

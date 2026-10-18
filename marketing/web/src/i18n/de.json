@@ -26,6 +26,9 @@
   "theme.system": "Automatisch",
 
   "locale.switch": "Sprache wechseln",
+  "locale.suggest.text": "Diese Seite gibt es auch auf Deutsch.",
+  "locale.suggest.link": "Auf Deutsch ansehen",
+  "locale.suggest.close": "Schließen",
 
   "footer.tagline": "Die Open-Source-Plattform für IT-Governance: Budget, Landschaft, Projekte und Dokumentation in einem Datenbestand. Kostenlos selbst hosten oder von uns betreiben lassen.",
   "footer.product": "Produkt",
