@@ -2068,7 +2068,7 @@ export default function AssetWorkspacePage() {
               </Box>
 
               {!isCreate && id && (
-                <AssetTechnologiesSection assetId={id} canManage={canManage} isCluster={isCluster} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
               )}
 
               {/* NETWORK INFORMATION SECTION */}

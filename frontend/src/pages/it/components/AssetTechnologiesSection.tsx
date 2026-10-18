@@ -1,12 +1,11 @@
 import React from 'react';
-import { Alert, Box, IconButton, Menu, MenuItem, Stack, useTheme } from '@mui/material';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
+import { Alert, Box, IconButton, Stack, Tooltip, useTheme } from '@mui/material';
+import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { useLocale } from '../../../i18n/useLocale';
-import { drawerMenuItemSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatSupportDate, supportStateColor, supportStateOf } from '../../../utils/supportState';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
@@ -40,8 +39,6 @@ const PAGE = 30;
 type Props = {
   assetId: string;
   canManage: boolean;
-  /** A cluster has no operating system of its own: the row menu is hidden. */
-  isCluster?: boolean;
   /** The section title of the page around it (the asset's Technical tab), so it reads like its neighbours. */
   heading?: (title: string) => React.ReactNode;
 };
@@ -49,10 +46,10 @@ type Props = {
 /**
  * What a server carries: technologies installed on it (removable) and carried to it through the
  * server it runs on or its cluster (with that server, not removable). The marked operating system
- * leads the list. Managers add a technology then its version, change a version, and choose which
- * installed row is the OS; each change is saved at once. One line when empty.
+ * leads the list. Managers add a technology then its version, and change a version from the
+ * version or from Edit. Each change is saved at once. One line when empty.
  */
-export default function AssetTechnologiesSection({ assetId, canManage, isCluster = false, heading }: Props) {
+export default function AssetTechnologiesSection({ assetId, canManage, heading }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const theme = useTheme();
@@ -102,15 +99,8 @@ export default function AssetTechnologiesSection({ assetId, canManage, isCluster
     await refresh();
   };
 
-  const setOperatingSystem = async (row: AssetTechnologyRow, marked: boolean) => {
-    if (!row.link_id) return;
-    setError(null);
-    try {
-      await api.put(`/assets/${assetId}/technologies/${row.link_id}/operating-system`, { is_operating_system: marked });
-    } catch (e) {
-      failed(e);
-    }
-    await refresh();
+  const openVersion = (row: AssetTechnologyRow, anchor: HTMLElement) => {
+    setVersionEdit({ row, anchor });
   };
 
   const remove = async (row: AssetTechnologyRow) => {
@@ -137,7 +127,6 @@ export default function AssetTechnologiesSection({ assetId, canManage, isCluster
 
   const rows = data?.items ?? [];
   const dash = '—';
-  const showOsMenu = canManage && !isCluster;
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => (
@@ -182,7 +171,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, isCluster
             aria-label={t('workspace.asset.technologies.changeVersion', { name: row.technology_name ?? '' })}
             onClick={(event) => {
               event.stopPropagation();
-              setVersionEdit({ row, anchor: event.currentTarget });
+              openVersion(row, event.currentTarget);
             }}
             sx={{
               all: 'unset',
@@ -260,52 +249,24 @@ export default function AssetTechnologiesSection({ assetId, canManage, isCluster
             onRemove={canManage ? (row) => { void remove(row); } : undefined}
             canRemove={(row) => row.removable && !!row.link_id}
             removeLabel={(row) => t('workspace.asset.technologies.remove', { name: row.technology_name ?? '' })}
-            action={showOsMenu ? {
+            action={canManage ? {
               width: 32,
-              render: (row) => (row.kind === 'installed' && row.link_id
-                ? <OperatingSystemRowMenu row={row} onSet={(marked) => { void setOperatingSystem(row, marked); }} />
-                : null),
+              render: (row) => (row.kind === 'installed' && row.link_id ? (
+                <Tooltip title={t('workspace.asset.technologies.edit')} enterTouchDelay={0}>
+                  <IconButton
+                    size="small"
+                    aria-label={t('workspace.asset.technologies.editNamed', { name: row.technology_name ?? '' })}
+                    onClick={(event) => openVersion(row, event.currentTarget)}
+                    sx={{ p: '2px', color: 'kanap.text.tertiary' }}
+                  >
+                    <EditOutlinedIcon sx={{ fontSize: 16 }} />
+                  </IconButton>
+                </Tooltip>
+              ) : null),
             } : undefined}
           />
         ) : null}
       </RelationsSection>
     </Stack>
-  );
-}
-
-function OperatingSystemRowMenu({ row, onSet }: { row: AssetTechnologyRow; onSet: (marked: boolean) => void }) {
-  const { t } = useTranslation('it');
-  const [anchor, setAnchor] = React.useState<HTMLElement | null>(null);
-  const marked = !!row.is_operating_system;
-  return (
-    <>
-      <IconButton
-        size="small"
-        aria-label={t('workspace.asset.technologies.rowActions', { name: row.technology_name ?? '' })}
-        aria-haspopup="menu"
-        aria-expanded={anchor ? 'true' : undefined}
-        onClick={(event) => setAnchor(event.currentTarget)}
-        sx={{ p: '2px', color: 'kanap.text.tertiary' }}
-      >
-        <MoreHorizIcon sx={{ fontSize: 16 }} />
-      </IconButton>
-      <Menu
-        anchorEl={anchor}
-        open={!!anchor}
-        onClose={() => setAnchor(null)}
-        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
-        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
-      >
-        <MenuItem
-          sx={drawerMenuItemSx}
-          onClick={() => {
-            setAnchor(null);
-            onSet(!marked);
-          }}
-        >
-          {marked ? t('workspace.asset.technologies.notTheOperatingSystem') : t('workspace.asset.technologies.setAsOperatingSystem')}
-        </MenuItem>
-      </Menu>
-    </>
   );
 }

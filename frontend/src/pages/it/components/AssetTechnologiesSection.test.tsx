@@ -50,7 +50,7 @@ function Location() {
   return <div data-testid="location">{useLocation().pathname}</div>;
 }
 
-function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true, isCluster = false) {
+function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1/technologies') return { data: { items } } as never;
     if (url === '/technologies/lookup') return { data: { items: [{ id: 'tomcat', name: 'Tomcat', reference: 'TEC-5', editor: 'Apache' }] } } as never;
@@ -62,7 +62,7 @@ function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true, isC
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/assets/AST-1/technical']}>
           <Routes>
-            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} isCluster={isCluster} /><Location /></>} />
+            <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} /><Location /></>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -164,29 +164,20 @@ describe('AssetTechnologiesSection', () => {
     expect(screen.queryByText(`${K}.add`)).toBeNull();
   });
 
-  it('marks or unmarks an installed row as the operating system and skips carried rows', async () => {
+  it('edits the version of an installed row from the pencil and skips carried rows', async () => {
     renderSection();
     await screen.findByRole('table', { name: `${K}.title` });
-    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=vSphere)` })).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: `${K}.rowActions(name=SQL Server)` }));
-    fireEvent.click(screen.getByText(`${K}.notTheOperatingSystem`));
-    await waitFor(() => expect(mocked.put).toHaveBeenCalledWith('/assets/asset-1/technologies/l-1/operating-system', { is_operating_system: false }));
-    fireEvent.click(screen.getByRole('button', { name: `${K}.rowActions(name=ESXi)` }));
-    fireEvent.click(screen.getByText(`${K}.setAsOperatingSystem`));
-    await waitFor(() => expect(mocked.put).toHaveBeenCalledWith('/assets/asset-1/technologies/l-2/operating-system', { is_operating_system: true }));
+    expect(screen.queryByRole('button', { name: `${K}.editNamed(name=vSphere)` })).toBeNull();
+    expect(screen.queryByRole('button', { name: `${K}.setAsOperatingSystem` })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: `${K}.editNamed(name=ESXi)` }));
+    fireEvent.click(await waitFor(() => picker().getByText('9.0')));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/esxi/assets/l-2', { technology_version_id: 't9' }));
   });
 
-  it('hides the operating-system menu on a cluster and for a reader', async () => {
-    renderSection(ROWS, true, true);
-    await screen.findByRole('table', { name: `${K}.title` });
-    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=SQL Server)` })).toBeNull();
-    expect(screen.getByRole('button', { name: `${K}.remove(name=SQL Server)` })).toBeTruthy();
-  });
-
-  it('hides the operating-system menu for a reader', async () => {
+  it('hides Edit for a reader', async () => {
     renderSection(ROWS, false);
     await screen.findByRole('table', { name: `${K}.title` });
-    expect(screen.queryByRole('button', { name: `${K}.rowActions(name=SQL Server)` })).toBeNull();
+    expect(screen.queryByRole('button', { name: `${K}.editNamed(name=SQL Server)` })).toBeNull();
     expect(screen.queryByRole('button', { name: `${K}.remove(name=SQL Server)` })).toBeNull();
   });
 
