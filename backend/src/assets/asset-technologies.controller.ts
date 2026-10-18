@@ -73,27 +73,19 @@ export class AssetTechnologiesController {
   }
 
   /**
-   * Mark or unmark an installed link as the operating system: `{ is_operating_system }`.
-   * `true` moves the mark onto this link and keeps the previous marked link. A cluster and a
-   * carried (inherited) row are refused.
+   * Remove an installed link. When it was the operating system and the asset is not a cluster,
+   * the mark passes to the oldest remaining link of family `operating_system`, under the asset
+   * row lock.
    */
-  @UseGuards(PermissionGuard)
-  @RequireLevel('infrastructure', 'member')
-  @Put(':id/technologies/:linkId/operating-system')
-  setMarkedOnLink(
-    @Param('id') id: string,
-    @Param('linkId') linkId: string,
-    @Body() body: { is_operating_system?: boolean },
-    @Tenant() ctx: TenantRequest,
-  ) {
-    const opts = this.opts(ctx);
-    return this.operatingSystems.setMarkedOnLink(opts.manager, opts.tenantId, id, linkId, body?.is_operating_system, opts.userId);
-  }
-
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'member')
   @Delete(':id/technologies/:linkId')
   remove(@Param('id') id: string, @Param('linkId') linkId: string, @Tenant() ctx: TenantRequest) {
-    return this.links.removeAssetLinkOfAsset(id, linkId, this.opts(ctx));
+    const opts = this.opts(ctx);
+    return this.operatingSystems.onInstalledLinkRemoved(
+      opts.manager, opts.tenantId, id, linkId,
+      () => this.links.removeAssetLinkOfAsset(id, linkId, opts),
+      opts.userId,
+    );
   }
 }

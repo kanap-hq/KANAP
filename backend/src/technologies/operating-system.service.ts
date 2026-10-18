@@ -18,12 +18,14 @@ import { readTechnology, resolveVersionLabel, UUID_RE } from './technology-rows'
 /**
  * The operating system of a server is one technology link marked `is_operating_system`
  * (lot T3). One mark per server: the partial unique index `uq_asset_technologies_one_os`.
- * The family `operating_system` only decides which technologies the screen offers first and
- * how the end-of-support report types the row. ESXi can be the operating system of a host.
+ * A technology of family `operating_system` takes the mark when the server has none
+ * (`onAssetLinkAdded`). When that marked link is removed, the oldest remaining link of
+ * the same family takes it (`onInstalledLinkRemoved`). A cluster is never marked.
  *
  * `resolve` turns a label, or one of the 19 old shipped codes, into a technology and an
- * optional version. `setOperatingSystem` writes the mark. Both are the only writers the
- * CSV, the assistant, Netbox, the API and the screen use.
+ * optional version. `setOperatingSystem` writes the mark from that label. The CSV, the
+ * assistant, Netbox and PUT `/assets/:id/operating-system` all write through it, so a
+ * label can still mark a technology of another family (ESXi, for instance).
  */
 
 export type ResolvedOperatingSystem = {
@@ -302,42 +304,44 @@ export class OperatingSystemService {
   }
 
   /**
-   * Mark or unmark an installed link as the operating system, without deleting the previous
-   * marked link. The screen uses this to choose which of the server's technologies is the OS.
-   * A cluster, and a link that is not installed on this asset (a carried row), are refused.
+   * Around DELETE `/assets/:id/technologies/:linkId`. The asset row is locked first
+   * (`SELECT … FOR UPDATE`), then `remove` deletes the link. When that link was the
+   * operating system and the asset is not a cluster, the mark passes to the oldest
+   * remaining link of family `operating_system` (`created_at`, then `id`). A cluster,
+   * or a server with no such link left, simply loses the mark.
    */
-  async setMarkedOnLink(
+  async onInstalledLinkRemoved(
     mg: EntityManager,
     tenantId: string,
     assetId: string,
     linkId: string,
-    marked: unknown,
+    remove: () => Promise<{ ok: boolean; changed: boolean }>,
     userId?: string | null,
-  ): Promise<{ ok: true; link_id: string | null; changed: boolean }> {
-    if (typeof marked !== 'boolean') throw new BadRequestException('is_operating_system must be a boolean.');
-    const id = String(linkId || '').trim().toLowerCase();
-    if (!UUID_RE.test(id)) throw new NotFoundException('Link not found');
+  ): Promise<{ ok: boolean; changed: boolean }> {
     const { id: lockedId, is_cluster } = await this.lockAsset(mg, tenantId, assetId);
-    if (is_cluster) throw new BadRequestException('A cluster has no operating system.');
-    const [row]: Array<LinkRow & { asset_id: string; is_operating_system: boolean }> = await mg.query(
-      `SELECT id, asset_id, technology_id, technology_version_id, source, source_ref, notes, is_operating_system
-         FROM asset_technologies WHERE tenant_id = $1 AND id = $2`,
-      [tenantId, id],
-    );
-    if (!row) throw new NotFoundException('Link not found');
-    if (row.asset_id !== lockedId) throw new BadRequestException('An inherited technology cannot be the operating system.');
-    if (row.is_operating_system === marked) return { ok: true, link_id: row.id, changed: false };
-    if (marked) {
-      const previous: Array<LinkRow> = await mg.query(
-        `SELECT id, technology_id, technology_version_id, source, source_ref, notes
-           FROM asset_technologies
-          WHERE tenant_id = $1 AND asset_id = $2 AND is_operating_system AND id <> $3`,
-        [tenantId, lockedId, row.id],
+    const id = String(linkId || '').trim().toLowerCase();
+    let wasMarked = false;
+    if (UUID_RE.test(id)) {
+      const [row]: Array<{ is_operating_system: boolean }> = await mg.query(
+        `SELECT is_operating_system FROM asset_technologies
+          WHERE tenant_id = $1 AND asset_id = $2 AND id = $3`,
+        [tenantId, lockedId, id],
       );
-      for (const other of previous) await this.writeMark(mg, tenantId, other, false, userId);
+      wasMarked = row?.is_operating_system === true;
     }
-    await this.writeMark(mg, tenantId, row, marked, userId);
-    return { ok: true, link_id: row.id, changed: true };
+    const result = await remove();
+    if (!result.changed || !wasMarked || is_cluster) return result;
+    const [next]: Array<LinkRow> = await mg.query(
+      `SELECT at.id, at.technology_id, at.technology_version_id, at.source, at.source_ref, at.notes
+         FROM asset_technologies at
+         JOIN technologies t ON t.tenant_id = at.tenant_id AND t.id = at.technology_id
+        WHERE at.tenant_id = $1 AND at.asset_id = $2 AND t.family = 'operating_system'
+        ORDER BY at.created_at, at.id
+        LIMIT 1`,
+      [tenantId, lockedId],
+    );
+    if (next) await this.writeMark(mg, tenantId, next, true, userId);
+    return result;
   }
 
   /**
