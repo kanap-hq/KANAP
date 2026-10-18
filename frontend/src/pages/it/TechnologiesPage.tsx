@@ -15,11 +15,10 @@ import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
 import { setListFiltersParam } from '../../lib/listContext';
-import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { refusalCounts } from '../../utils/deleteRefusal';
-import { supportStateColor, supportStateNeedsAttention, supportStateOf } from '../../utils/supportState';
+import { formatSupportDate, supportStateColor, supportStateNeedsAttention, supportStateOf } from '../../utils/supportState';
 import { getDotColor } from '../../utils/statusColors';
 import ForbiddenPage from '../ForbiddenPage';
 import TechnologyCreateDialog from './components/TechnologyCreateDialog';
@@ -147,7 +146,7 @@ export default function TechnologiesPage() {
           data-state={state}
           sx={(theme) => ({ color: supportStateNeedsAttention(state) ? supportStateColor(state, theme) : 'inherit' })}
         >
-          {formatShortDate(value, locale)}
+          {formatSupportDate(value, locale)}
         </Box>
       );
     };

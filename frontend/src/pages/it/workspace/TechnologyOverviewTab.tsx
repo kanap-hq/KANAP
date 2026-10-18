@@ -16,6 +16,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useTheme,
 } from '@mui/material';
@@ -29,12 +30,11 @@ import DateEUField from '../../../components/fields/DateEUField';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { useLookupPicker } from '../../../hooks/useLookupPicker';
-import { formatShortDate } from '../../../lib/dateFormat';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
+import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
 
 export type TechnologyVersion = {
@@ -45,6 +45,8 @@ export type TechnologyVersion = {
   standard_support_end: string | null;
   extended_support_end: string | null;
   notes: string | null;
+  /** Set when the version comes from the catalog (adoption or the living catalog's sync). */
+  catalog_key?: string | null;
   servers?: number;
   applications?: number;
 };
@@ -65,6 +67,8 @@ export type TechnologyDetail = {
   description: string | null;
   notes: string | null;
   cpe_products: string[];
+  /** The catalog entry the technology was adopted from; its versions and dates are then kept up to date. */
+  catalog_key?: string | null;
   replaced_by_id: string | null;
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
@@ -522,9 +526,18 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
             const status = supportStateOf(version.standard_support_end, version.extended_support_end);
             return (
               <TableRow key={version.id}>
-                <TableCell sx={{ fontFamily: MONO_FONT_FAMILY }}>{version.label}</TableCell>
-                <TableCell>{formatShortDate(version.standard_support_end, locale, { empty: '—' })}</TableCell>
-                <TableCell>{formatShortDate(version.extended_support_end, locale, { empty: '—' })}</TableCell>
+                <TableCell>
+                  <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY }}>{version.label}</Box>
+                  {version.catalog_key && (
+                    <Tooltip title={t('workspace.technology.versions.fromCatalogHint')}>
+                      <Box component="span" tabIndex={0} sx={(th) => ({ ml: 1, fontSize: 11, color: th.palette.kanap.text.tertiary })}>
+                        {t('workspace.technology.versions.fromCatalog')}
+                      </Box>
+                    </Tooltip>
+                  )}
+                </TableCell>
+                <TableCell>{formatSupportDate(version.standard_support_end, locale, '—')}</TableCell>
+                <TableCell>{formatSupportDate(version.extended_support_end, locale, '—')}</TableCell>
                 <TableCell>
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
                     <StatusDot color={supportStateColor(status, theme)} />
@@ -549,6 +562,11 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
           {editing === 'new' && editRow('new')}
         </TableBody>
       </Table>
+      {technology.catalog_key && (
+        <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, color: th.palette.kanap.text.tertiary })}>
+          {t('workspace.technology.versions.catalogNote')}
+        </Typography>
+      )}
     </Box>
   );
 }

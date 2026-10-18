@@ -213,6 +213,12 @@ function cpeProductsOf(entry, published) {
   return [...cpe].sort();
 }
 
+// The living catalog (lot C4) reads endoflife.date between two KANAP versions with the same rules:
+// backend/src/technologies/catalog/catalog-releases.ts repeats `cleanLabel`, `cpeVersionOf` (with the
+// `cpeVersion` and `cpeVersions` of PRODUCTS) and `versionsOf`. Change both; its spec checks that it
+// gives back the `cpe_version` of every shipped version. There too, `productPerRelease` gives a SQL
+// Server release published between two versions its `a:microsoft:sql_server_<year>` product.
+
 /** "2022 'Dallas'", "24 (LTS)" → "2022", "24". */
 function cleanLabel(label, name) {
   const text = String(label ?? name ?? '').replace(/\s*\(.*?\)\s*/g, ' ').replace(/\s*'.*?'\s*/g, ' ').replace(/\s+/g, ' ').trim();
