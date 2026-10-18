@@ -109,6 +109,9 @@ Tool-specific or private notes live in each tool's local files, never here.
   `main` when the maintainer says "publish", plus a release commit (both `package.json` at the
   version, a new entry at the top of `CHANGELOG.md`). Fixes come from `main` only, as a new version.
 - QA and prod run versions only. `stable` is the latest published version.
+- Exception: marketing content (blog articles, site pages under `marketing/`) may be deployed
+  from `main` between two versions. Only the `marketing` container is rebuilt from `main`; `api`
+  and `web` stay on the deployed tag.
 - Maintainer says "publish", merge queue empty: `node scripts/release/release.mjs prepare <version>`
   (`--since <ref>` for the first one), write the entry from the PR notes draft, rerun with
   `--commit`. The `Release <version>` PR it queues is the exception to "nothing is pushed before
