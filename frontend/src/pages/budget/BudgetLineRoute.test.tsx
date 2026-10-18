@@ -61,7 +61,8 @@ describe('budget line route resolution', () => {
     renderAt('/ops/budget/BL-999');
     expect(await screen.findByRole('alert')).toHaveTextContent('opex.workspace.failedToLoad');
     expect(screen.queryByTestId('workspace')).toBeNull();
-    expect(resolveCalls()).toBe(2);
+    // The second read is the query's refetch on mount, sent by an effect after the error shows.
+    await waitFor(() => expect(resolveCalls()).toBe(2));
   });
   it.each([['', 'opex'], ['?nature=capex', 'capex'], ['?nature=unknown', 'opex']])('creates with %s and no resolution request', async (search, nature) => {
     renderAt(`/ops/budget/new${search}`);
