@@ -10,7 +10,7 @@ export type RelationsColumn<T> = {
   header: React.ReactNode;
   /**
    * Width in px; the column without one takes the rest (the name). In a narrow table the widths
-   * shrink, down to 64px, so that the name keeps at least 128px.
+   * shrink, down to 64px (96px for a right-aligned amount), so that the name keeps at least 128px.
    */
   width?: number;
   align?: 'left' | 'right';
@@ -50,6 +50,8 @@ export function RelationRef({ children }: { children: React.ReactNode }) {
 const FLEX_MIN_WIDTH = 128;
 /** A column with a width shrinks no further than this (a narrower one keeps its own). */
 const COLUMN_MIN_WIDTH = 64;
+/** The same for a right-aligned column: an amount is never cut. */
+const AMOUNT_MIN_WIDTH = 96;
 
 /**
  * Fits the column widths in `available` px (the trailing action columns excluded): the columns
@@ -57,12 +59,16 @@ const COLUMN_MIN_WIDTH = 64;
  * one keeps `FLEX_MIN_WIDTH`. When even their least widths do not fit, `minWidth` is the width
  * the table needs, and its frame scrolls.
  */
-export function fitColumnWidths(widths: Array<number | undefined>, available: number): { widths: Array<number | undefined>; minWidth?: number } {
+export function fitColumnWidths(
+  columns: Array<Pick<RelationsColumn<unknown>, 'width' | 'align'>>,
+  available: number,
+): { widths: Array<number | undefined>; minWidth?: number } {
+  const widths = columns.map((column) => column.width);
   const flexMin = widths.some((width) => width == null) ? FLEX_MIN_WIDTH : 0;
   const room = available - flexMin;
   const total = widths.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (total <= room) return { widths };
-  const floors = widths.map((width) => (width == null ? undefined : Math.min(width, COLUMN_MIN_WIDTH)));
+  const floors = columns.map(({ width, align }) => (width == null ? undefined : Math.min(width, align === 'right' ? AMOUNT_MIN_WIDTH : COLUMN_MIN_WIDTH)));
   const floorTotal = floors.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (floorTotal >= room) return { widths: floors, minWidth: floorTotal + flexMin };
   const ratio = (total - room) / (total - floorTotal);
@@ -115,8 +121,9 @@ export function RelationsTable<T>({ columns, rows, rowKey, rowHref, rowMuted, on
   const removeWidth = onRemove ? 40 : 0;
   const [frame, setFrame] = React.useState<HTMLDivElement | null>(null);
   const frameWidth = useElementWidth(frame);
-  const declared = columns.map((column) => column.width);
-  const fitted = frameWidth > 0 ? fitColumnWidths(declared, frameWidth - actionWidth - removeWidth) : { widths: declared };
+  const fitted = frameWidth > 0
+    ? fitColumnWidths(columns, frameWidth - actionWidth - removeWidth)
+    : { widths: columns.map((column) => column.width) };
   return (
     <Box ref={setFrame} sx={{ width: '100%', overflowX: 'auto' }}>
       <Box

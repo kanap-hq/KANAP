@@ -58,11 +58,11 @@ describe('fitColumnWidths', () => {
   const widths = COLUMNS.map((column) => column.width);
 
   it('keeps the declared widths when they fit with the name', () => {
-    expect(fitColumnWidths(widths, 900)).toEqual({ widths });
+    expect(fitColumnWidths(COLUMNS, 900)).toEqual({ widths });
   });
 
   it('shrinks the other columns so that the name keeps 128px', () => {
-    const fitted = fitColumnWidths(widths, 520);
+    const fitted = fitColumnWidths(COLUMNS, 520);
     expect(fitted.minWidth).toBeUndefined();
     const fixed = fitted.widths.filter((width): width is number => width != null);
     expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(520 - 128);
@@ -73,11 +73,15 @@ describe('fitColumnWidths', () => {
   });
 
   it('never shrinks a column narrower than 64px', () => {
-    expect(fitColumnWidths([32, undefined, 200], 300).widths).toEqual([32, undefined, 140]);
+    expect(fitColumnWidths([{ width: 32 }, {}, { width: 200 }], 300).widths).toEqual([32, undefined, 140]);
+  });
+
+  it('keeps 96px for an amount', () => {
+    expect(fitColumnWidths([{}, { width: 140 }, { width: 130, align: 'right' }], 280)).toEqual({ widths: [undefined, 64, 96], minWidth: 64 + 96 + 128 });
   });
 
   it('asks for a minimum width once the columns are at their least', () => {
-    expect(fitColumnWidths(widths, 300)).toEqual({ widths: [64, undefined, 64, 64, 64, 64, 64], minWidth: 6 * 64 + 128 });
+    expect(fitColumnWidths(COLUMNS, 300)).toEqual({ widths: [64, undefined, 64, 64, 64, 64, 64], minWidth: 6 * 64 + 128 });
   });
 });
 
