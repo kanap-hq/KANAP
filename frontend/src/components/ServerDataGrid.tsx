@@ -1274,8 +1274,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
   const rowSelection = useMemo(() => {
     if (!enableRowSelection) {
+      // No box column: AG Grid draws its own (`checkboxes` defaults to true) on any row selection.
       return {
         mode: 'singleRow' as const,
+        checkboxes: false,
         enableClickSelection: false,
       };
     }

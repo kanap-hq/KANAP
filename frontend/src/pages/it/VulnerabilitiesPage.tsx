@@ -459,6 +459,8 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
 
 /** The column of the row boxes: its header ticks every row of the filter. */
 const SELECTION_COLUMN = 'select';
+/** Stable: a new function would have AG Grid draw its rows again. */
+const rowId = (row: VulnerabilityRow) => row.id;
 
 /**
  * IT › Vulnerabilities (lots T6b, T6c): one row per technology, version and published CVE (NVD) of
@@ -540,6 +542,23 @@ export default function VulnerabilitiesPage() {
       filter: false,
       headerComponent: SelectAllHeader,
       cellRenderer: SelectRowCell,
+      // Space on the focused cell or header ticks, as the box would (AG Grid keeps the focus on the cell).
+      suppressKeyboardEvent: (params: any) => {
+        if (params.editing || params.event.key !== ' ') return false;
+        if (params.event.type === 'keydown' && params.data?.id) {
+          params.event.preventDefault();
+          toggleRow(params.data.id);
+        }
+        return true;
+      },
+      suppressHeaderKeyboardEvent: (params: any) => {
+        if (params.event.key !== ' ') return false;
+        if (params.event.type === 'keydown') {
+          params.event.preventDefault();
+          toggleAll();
+        }
+        return true;
+      },
     }] : []),
     { headerName: t('pages.vulnerabilities.columns.cve'), field: 'cve_id', width: 125, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
     {
@@ -607,7 +626,7 @@ export default function VulnerabilitiesPage() {
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, versionValues]);
+  ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
@@ -658,7 +677,7 @@ export default function VulnerabilitiesPage() {
         columns={columns}
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
-        getRowId={(row) => row.id}
+        getRowId={rowId}
         showRowCount
         defaultSort={{ field: 'severity', direction: 'DESC' }}
         initialState={{ filter: { filterModel: initialModel } }}
@@ -668,7 +687,14 @@ export default function VulnerabilitiesPage() {
         refreshKey={refreshKey}
         enableSearch
         onCellClicked={(event: any) => {
-          if (event?.data?.cve_id && event.column?.getColId?.() !== SELECTION_COLUMN) setOpenCve(event.data.cve_id);
+          if (!event?.data?.id) return;
+          if (event.column?.getColId?.() !== SELECTION_COLUMN) {
+            setOpenCve(event.data.cve_id);
+            return;
+          }
+          // A click in the selection cell beside the box ticks it too; the box ticks itself.
+          const target = event.event?.target as HTMLElement | undefined;
+          if (!target?.closest?.('input')) toggleRow(event.data.id);
         }}
         onListRequestChange={(next) => {
           requestRef.current = next;

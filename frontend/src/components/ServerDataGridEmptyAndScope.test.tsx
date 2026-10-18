@@ -127,8 +127,11 @@ describe('ServerDataGrid', () => {
       get.mockImplementation(async () => page(['Alpha']));
       const view = render(<Grid withScope />);
       expect(await screen.findByText('Alpha')).toBeInTheDocument();
-      // Column 1 is AG Grid's selection column.
-      const statusFilter = () => document.querySelector('.ag-floating-filter[aria-colindex="2"]') as HTMLElement;
+      // The status column's floating filter, found by its header's column index.
+      const statusFilter = () => {
+        const index = document.querySelector('.ag-header-cell[col-id="status"]')!.getAttribute('aria-colindex');
+        return document.querySelector(`.ag-floating-filter[aria-colindex="${index}"]`) as HTMLElement;
+      };
       await waitFor(() => expect(within(statusFilter()).getByRole('button', { name: 'common:labels.enabled' })).toBeInTheDocument());
 
       // Show scope → column filter.
