@@ -52,22 +52,23 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
 
 /**
  * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
- * of the former operating-system catalog of the IT settings. Linux distributions: standard support
- * ends with the security fixes (`eolFrom`), extended support is the paid extension when published
- * (`eoesFrom`: ESM, ELS, LTSS). Windows Server: standard is the end of mainstream support, extended
- * the end of extended support (`eolFrom`; the paid ESU is left out). The twin of `SUPPORT_RULES` in
+ * of the former operating-system catalog of the IT settings. `eol_then_paid` (Ubuntu, RHEL and
+ * its rebuilds, SLES): standard support ends with the security fixes (`eolFrom`), extended support is
+ * the paid extension when published (`eoesFrom`: ESM, ELS, LTSS). `active_then_eol` (Windows Server,
+ * Debian): standard is the end of mainstream or regular security support, extended the end of
+ * extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
  * `scripts/technologies/build-catalog.mjs`.
  */
-export const SUPPORT_RULES: Record<string, 'linux' | 'windows'> = {
-  ubuntu: 'linux',
-  rhel: 'linux',
-  debian: 'linux',
-  sles: 'linux',
-  'rocky-linux': 'linux',
-  almalinux: 'linux',
-  'oracle-linux': 'linux',
-  centos: 'linux',
-  'windows-server': 'windows',
+export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> = {
+  ubuntu: 'eol_then_paid',
+  rhel: 'eol_then_paid',
+  debian: 'active_then_eol',
+  sles: 'eol_then_paid',
+  'rocky-linux': 'eol_then_paid',
+  almalinux: 'eol_then_paid',
+  'oracle-linux': 'eol_then_paid',
+  centos: 'eol_then_paid',
+  'windows-server': 'active_then_eol',
 };
 
 /**
@@ -85,10 +86,10 @@ export function supportDates(
   const rule = SUPPORT_RULES[catalogKey];
   let standard: string | null;
   let extended: string | null;
-  if (rule === 'linux') {
+  if (rule === 'eol_then_paid') {
     standard = eol ?? eoas;
     extended = eoes;
-  } else if (rule === 'windows') {
+  } else if (rule === 'active_then_eol') {
     standard = eoas ?? eol;
     extended = eoas ? eol : null;
   } else {

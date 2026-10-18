@@ -155,9 +155,9 @@ function testFeatureGate() {
 
 /**
  * Operating systems keep the meaning of the former IT settings catalog, in the living catalog as
- * in the script (`SUPPORT_RULES`, twins): Linux standard = end of security fixes, extended = paid
- * extension; Windows Server standard = mainstream, extended = extended support (the paid ESU is
- * left out). Without the same rule here, the first sync would undo the shipped dates.
+ * in the script (`SUPPORT_RULES`, twins): Ubuntu, RHEL and SLES standard = end of security fixes,
+ * extended = paid extension; Windows Server and Debian standard = mainstream or regular security
+ * support, extended = extended support or LTS (the paid ESU and ELTS are left out). Without the same rule here, the first sync would undo the shipped dates.
  */
 function testOperatingSystemSupportDates() {
   const dates = (key: string, release: Record<string, unknown>) => {
@@ -170,6 +170,7 @@ function testOperatingSystemSupportDates() {
   assert.deepEqual(dates('centos', { eoasFrom: '2020-08-06', eolFrom: '2024-06-30' }), ['2024-06-30', null], 'no paid extension, no extended date');
   assert.deepEqual(dates('sles', { eolFrom: '2024-10-31', eoesFrom: '2027-10-31' }), ['2024-10-31', '2027-10-31']);
   assert.deepEqual(dates('windows-server', { eoasFrom: '2022-01-11', eolFrom: '2027-01-12', eoesFrom: '2030-01-12' }), ['2022-01-11', '2027-01-12']);
+  assert.deepEqual(dates('debian', { eoasFrom: '2026-06-10', eolFrom: '2028-06-30', eoesFrom: '2033-06-30' }), ['2026-06-10', '2028-06-30'], 'Debian: regular security support, then LTS');
   // Every other product keeps the catalog convention: active support, then the paid extension.
   assert.deepEqual(dates('nginx', ubuntu), ['2024-09-30', '2032-04-21']);
   assert.deepEqual(dates('postgresql', { eolFrom: '2029-11-08' }), ['2029-11-08', null]);

@@ -5233,8 +5233,8 @@
             "13"
           ],
           "release_date": "2025-08-09",
-          "standard_support_end": "2030-06-30",
-          "extended_support_end": "2035-06-30"
+          "standard_support_end": "2028-08-09",
+          "extended_support_end": "2030-06-30"
         },
         {
           "key": "12",
@@ -5244,8 +5244,8 @@
             "12"
           ],
           "release_date": "2023-06-10",
-          "standard_support_end": "2028-06-30",
-          "extended_support_end": "2033-06-30"
+          "standard_support_end": "2026-07-11",
+          "extended_support_end": "2028-06-30"
         },
         {
           "key": "11",
@@ -5255,8 +5255,8 @@
             "11"
           ],
           "release_date": "2021-08-14",
-          "standard_support_end": "2026-08-31",
-          "extended_support_end": "2031-06-30"
+          "standard_support_end": "2024-08-14",
+          "extended_support_end": "2026-08-31"
         },
         {
           "key": "10",
@@ -5266,8 +5266,8 @@
             "10"
           ],
           "release_date": "2019-07-06",
-          "standard_support_end": "2024-06-30",
-          "extended_support_end": "2029-06-30"
+          "standard_support_end": "2022-09-10",
+          "extended_support_end": "2024-06-30"
         },
         {
           "key": "9",
@@ -5277,8 +5277,8 @@
             "9"
           ],
           "release_date": "2017-06-17",
-          "standard_support_end": "2022-07-01",
-          "extended_support_end": "2027-06-30"
+          "standard_support_end": "2020-07-18",
+          "extended_support_end": "2022-07-01"
         },
         {
           "key": "8",
@@ -5288,8 +5288,8 @@
             "8"
           ],
           "release_date": "2015-04-25",
-          "standard_support_end": "2020-06-30",
-          "extended_support_end": "2025-06-30"
+          "standard_support_end": "2018-06-17",
+          "extended_support_end": "2020-06-30"
         }
       ]
     },

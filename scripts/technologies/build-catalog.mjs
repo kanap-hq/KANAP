@@ -298,21 +298,22 @@ function cpeVersionOf(label, entry) {
 const day = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(value) ? value : null);
 
 /**
- * Operating systems keep the meaning of the former IT settings catalog. Linux distributions:
- * standard = end of security fixes (eolFrom), extended = paid extension (eoesFrom: ESM, ELS, LTSS)
- * or nothing. Windows Server: standard = end of mainstream support, extended = end of extended
- * support (eolFrom). Twin of SUPPORT_RULES in backend/src/technologies/catalog/catalog-releases.ts.
+ * Operating systems keep the meaning of the former IT settings catalog. eol_then_paid (Ubuntu,
+ * RHEL and its rebuilds, SLES): standard = end of security fixes (eolFrom), extended = paid
+ * extension (eoesFrom: ESM, ELS, LTSS) or nothing. active_then_eol (Windows Server, Debian):
+ * standard = end of mainstream or regular security support, extended = end of extended support or
+ * of Debian LTS (eolFrom). Twin of SUPPORT_RULES in backend/src/technologies/catalog/catalog-releases.ts.
  */
 const SUPPORT_RULES = {
-  ubuntu: 'linux',
-  rhel: 'linux',
-  debian: 'linux',
-  sles: 'linux',
-  'rocky-linux': 'linux',
-  almalinux: 'linux',
-  'oracle-linux': 'linux',
-  centos: 'linux',
-  'windows-server': 'windows',
+  ubuntu: 'eol_then_paid',
+  rhel: 'eol_then_paid',
+  debian: 'active_then_eol',
+  sles: 'eol_then_paid',
+  'rocky-linux': 'eol_then_paid',
+  almalinux: 'eol_then_paid',
+  'oracle-linux': 'eol_then_paid',
+  centos: 'eol_then_paid',
+  'windows-server': 'active_then_eol',
 };
 
 /** Other products: standard = end of active support, else end of life; extended = paid extension, else end of life after an active support. */
@@ -320,10 +321,10 @@ function supportDates(key, eoas, eol, eoes) {
   const rule = SUPPORT_RULES[key];
   let standard;
   let extended;
-  if (rule === 'linux') {
+  if (rule === 'eol_then_paid') {
     standard = eol ?? eoas;
     extended = eoes;
-  } else if (rule === 'windows') {
+  } else if (rule === 'active_then_eol') {
     standard = eoas ?? eol;
     extended = eoas ? eol : null;
   } else {
