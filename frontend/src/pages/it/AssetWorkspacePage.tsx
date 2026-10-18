@@ -1967,7 +1967,7 @@ export default function AssetWorkspacePage() {
                     {t('pages.netbox.assetSource.managedFields')}
                   </Typography>
                 ) : null}
-                <Stack spacing={1.5} sx={{ maxWidth: 560 }}>
+                <Stack spacing={0.75} sx={{ maxWidth: 560 }}>
                   <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
                     <TextField
                       value={hostname}
