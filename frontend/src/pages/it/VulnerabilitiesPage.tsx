@@ -23,6 +23,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate } from '../../lib/dateFormat';
 import { getWithListContext } from '../../lib/listContext';
 import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/formSx';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
 import {
@@ -387,8 +388,13 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
     placeholderData: keepPreviousData,
   });
   const body = { ...scope, ...(note.trim() ? { note: note.trim() } : {}) };
-  // A 400 is the cap; anything else (busy, network) is a failed count.
-  const tooMany = count.isError && (count.error as any)?.response?.status === 400;
+  // The cap in the page's words; another refusal (400) by its own reason; anything else (busy,
+  // network) is a failed count.
+  const countError = count.error as any;
+  const tooMany = count.isError && countError?.response?.data?.code === 'bulk_too_many';
+  const refused = count.isError && !tooMany && countError?.response?.status === 400
+    ? getApiErrorMessage(countError, t, t('pages.vulnerabilities.bulk.countFailed'))
+    : null;
   const save = async () => {
     setSaving(true);
     setError(null);
@@ -451,11 +457,13 @@ function BulkStateDialog({ open, onClose, selection, request, onDone }: {
         <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
           {tooMany
             ? t('pages.vulnerabilities.bulk.tooMany')
-            : count.isError
-              ? t('pages.vulnerabilities.bulk.countFailed')
-              : count.data
-              ? t('pages.vulnerabilities.bulk.count', { count: count.data.changes, rows: count.data.rows, cves: count.data.cves })
-              : t('pages.vulnerabilities.bulk.counting')}
+            : refused
+              ? refused
+              : count.isError
+                ? t('pages.vulnerabilities.bulk.countFailed')
+                : count.data
+                  ? `${t('pages.vulnerabilities.bulk.count', { count: count.data.changes, rows: count.data.rows })} ${t('pages.vulnerabilities.bulk.countCves', { count: count.data.cves })}`
+                  : t('pages.vulnerabilities.bulk.counting')}
         </Typography>
         <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
           {note.trim() === ''

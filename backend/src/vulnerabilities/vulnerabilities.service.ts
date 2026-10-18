@@ -710,7 +710,7 @@ export class VulnerabilitiesService {
       if (!Array.isArray(raw)) throw new BadRequestException(`${name} must be a list of row ids.`);
       const ids = Array.from(new Set(raw.map((v) => String(v ?? '').trim().toLowerCase())));
       if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(`${name} must be row ids.`);
-      if (ids.length > BULK_MAX_ROWS) throw new BadRequestException(`At most ${BULK_MAX_ROWS} rows at once: narrow the filters.`);
+      if (ids.length > BULK_MAX_ROWS) throw new BadRequestException({ code: 'bulk_too_many', message: `At most ${BULK_MAX_ROWS} rows at once: narrow the filters.` });
       return ids;
     };
     const ids = rowIds('ids');
@@ -761,7 +761,8 @@ export class VulnerabilitiesService {
     );
     const rows = Number(count?.rows ?? 0);
     if (rows > BULK_MAX_ROWS) {
-      throw new BadRequestException(`These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.`);
+      // A code: the page says the cap in its own words, and any other refusal by its message.
+      throw new BadRequestException({ code: 'bulk_too_many', message: `These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.` });
     }
     const summary = { rows, cves: Number(count?.cves ?? 0) };
     if (body.dry_run === true) {

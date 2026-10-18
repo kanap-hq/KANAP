@@ -269,7 +269,7 @@ describe('VulnerabilitiesPage', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).queryByRole('checkbox')).toBeNull();
     expect(dialog.textContent).toContain('Every row of the current filter but 1.');
-    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 279 rows of 279, on 90 vulnerabilities.'));
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the state of 279 rows of 279, on 90 vulnerabilities.'));
     expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
       state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS }, exclude_ids: ['row-1'], dry_run: true,
     });
@@ -299,7 +299,7 @@ describe('VulnerabilitiesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change state (2)' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toContain('The 2 selected rows.');
-    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes 2 rows of 2, on 1 vulnerabilities.'));
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the state of 2 rows of 2, on 1 vulnerability.'));
     expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', { state: 'handled', ids: ['row-1', 'row-2'], dry_run: true });
     // The note counts nothing again.
     const counts = postMock.mock.calls.length;
@@ -347,7 +347,7 @@ describe('VulnerabilitiesPage', () => {
   });
 
   it('refuses a change over the cap with a line that says to narrow the filters', async () => {
-    postMock.mockRejectedValue(Object.assign(new Error('400'), { response: { status: 400 } }));
+    postMock.mockRejectedValue(Object.assign(new Error('400'), { response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 9000 rows' } } }));
     renderPage();
     listed(9000);
     fireEvent.click(box(ALL_BOX));
@@ -355,6 +355,16 @@ describe('VulnerabilitiesPage', () => {
     const dialog = await screen.findByRole('dialog');
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('More than 5,000 rows'));
     expect((within(dialog).getByRole('button', { name: 'Change state' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('says the reason of another refusal of the count', async () => {
+    postMock.mockRejectedValue(Object.assign(new Error('400'), { response: { status: 400, data: { message: 'The publication date filter must be a day (YYYY-MM-DD).' } } }));
+    renderPage();
+    listed(40);
+    fireEvent.click(box(ALL_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (40)' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('The publication date filter must be a day (YYYY-MM-DD).'));
   });
 
   it('says a count failed apart from the cap, and starts afresh at each opening', async () => {
