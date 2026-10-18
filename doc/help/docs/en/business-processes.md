@@ -84,6 +84,12 @@ The Overview tab is organized into three sections.
 
 - **Notes**: free-form field for internal information such as links to process maps, SOPs, scope notes, or improvement plans.
 
+**Applications**
+
+Below the details, the **Applications** section lists the applications that support the process, with their reference, criticality and IT owner. **Add** opens a search; a link saves at once, without **Save**. Hover a row and click its cross to unlink it. The application shows the same link in the **Business processes** section of its Relations tab.
+
+You need `business_processes:member` to change the links. The section appears only if you can read applications. A Business Contributor sees and links only the applications in their scope.
+
 ---
 
 ## Managing categories

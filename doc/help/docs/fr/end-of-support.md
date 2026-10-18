@@ -1,0 +1,65 @@
+# Fins de support
+
+Le rapport Fins de support liste ce qui a atteint, ou atteint bientôt, la fin de son support, et ce que chaque élément touche : les serveurs qui le font tourner et les applications qui en dépendent. Une seconde vue liste les données manquantes qui empêchent le rapport de répondre.
+
+Ouvrez-le depuis **Cartographie SI > Fins de support**, dans le groupe **Exploitation**. Il faut `infrastructure:reader`. Les colonnes et les lignes d'applications n'apparaissent que si vous pouvez aussi lire les applications.
+
+## Échéances
+
+La vue **Échéances** montre une ligne par élément dont le support est fini, ou finit dans l'horizon. Le sous-titre donne le dernier jour couvert par l'horizon.
+
+Ce que le rapport surveille :
+
+| Type | Ce qui finit | D'où vient la date |
+|---|---|---|
+| **Technologie** | Une version en service sur un serveur en service, ou déclarée par une application en service | La fin du support standard et étendu de la version, sur la [technologie](technologies.md#apercu) |
+| **OS** | Le système d'exploitation d'un serveur en service | La liste des systèmes d'exploitation dans **Cartographie SI > Paramètres** |
+| **Application** | Une application en service | Sa date de fin de support |
+| **Matériel** | Un actif physique en service | Sa fin de vie ou la fin de son contrat de support, indiquée dans la colonne **Version** |
+
+Les actifs retirés, les applications désactivées et les versions que personne n'utilise sont exclus.
+
+**Filtres** :
+
+- **Type** : l'un des quatre types, ou **Tous les types**.
+- **Horizon** : 6, 12, 24 ou 36 mois. 12 mois par défaut.
+
+**Colonnes** : **Type**, **Élément** (ouvre la fiche), **Version**, **Date de fin**, **État**, **Serveurs** et **Applications** (combien chaque élément en touche).
+
+**État** :
+
+- **Hors support** : toutes les dates de fin sont passées.
+- **Support étendu** : le support standard est fini, le support étendu court encore.
+- **Fin proche** : le support finit dans l'horizon.
+
+**Ce que touche un élément** : cliquez sur une ligne pour déplier les serveurs et les applications derrière ses compteurs. Chaque nom ouvre sa fiche.
+
+- Une version de technologie touche les serveurs qui la portent (y compris les machines virtuelles d'un hôte qui la porte) et les applications hébergées sur eux ou qui la déclarent.
+- Un système d'exploitation ou un matériel touche ses serveurs, ce qu'ils contiennent, et les applications déployées sur l'ensemble.
+- Une application touche les serveurs sur lesquels elle est déployée.
+
+## Données manquantes
+
+La vue **Données manquantes** liste les fiches à compléter pour que les échéances soient justes. Cliquez sur une ligne pour ouvrir la fiche.
+
+| Donnée manquante | Ce que cela signifie |
+|---|---|
+| **Application hébergée sans serveur** | Une application hébergée sur site ou en cloud privé n'a aucun serveur sur un déploiement en service |
+| **Machine virtuelle sans hôte** | Aucun actif ne contient cette machine virtuelle |
+| **Technologie installée sur aucun serveur** | Une technologie en mode **Installée** ne tourne sur aucun serveur |
+| **Serveur de base de données sans technologie de base de données** | Un serveur tient un rôle de base de données pour une application, mais ne porte aucune technologie de la famille **Base de données** |
+| **Application avec SSO sans technologie d'identité** | Une application utilise le SSO et n'a aucune technologie de la famille **Annuaire et identité** |
+| **Lien de technologie sans version** | Un serveur ou une application utilise une technologie sans dire quelle version |
+| **Version en service sans date de fin de support** | Le rapport ne peut pas dire quand cette version finit |
+
+Les lignes qui concernent des applications demandent le droit de lire les applications.
+
+## Export et impression
+
+**Exporter le tableau en CSV** télécharge la liste à l'écran : les échéances avec l'horizon et le type en cours, ou les données manquantes. Les en-têtes suivent la langue de votre écran. **Imprimer / Enregistrer en PDF** imprime le rapport.
+
+## Conseils
+
+- **Commencez par les données manquantes** : un serveur sans ses technologies, ou une version sans date, n'apparaît jamais dans les échéances.
+- **Regardez à 24 mois pour les budgets** : une migration prévue l'an prochain a besoin de son budget cette année.
+- **Utilisez le catalogue** : les technologies ajoutées depuis le catalogue arrivent avec leurs dates de fin de support.

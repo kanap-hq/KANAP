@@ -26,6 +26,9 @@
   "theme.system": "Detección automática",
 
   "locale.switch": "Cambiar idioma",
+  "locale.suggest.text": "Esta página también está disponible en español.",
+  "locale.suggest.link": "Ver en español",
+  "locale.suggest.close": "Cerrar",
 
   "footer.tagline": "La plataforma open source de gobernanza de TI: presupuesto, sistemas, proyectos y documentación en un solo repositorio. Autoalójela gratis o déjenos gestionarla.",
   "footer.product": "Producto",

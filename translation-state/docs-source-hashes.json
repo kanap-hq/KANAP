@@ -12,7 +12,7 @@
 
     "agents-workspace.md": "3e9bf4decb68e99cfec0941526739007",
 
-    "ai-assistant.md": "30b7bebbcb4ae4cda043385e99975c5f",
+    "ai-assistant.md": "b8df3ab5f72dd6a01c39ebb23508ac36",
 
     "ai-models.md": "dd41b5b504573ad8a51d75cedcdc1c92",
 
@@ -22,9 +22,9 @@
 
     "analytics.md": "18af5db6bf7cf142fd4a482388b3b8e2",
 
-    "applications.md": "0c27f742ebe213ae5ef673e06180c936",
+    "applications.md": "a4f8043dc48882c82beb8d550e18834c",
 
-    "assets.md": "3bf7e989cba7788b9207a157ca1d9835",
+    "assets.md": "caee1d91378fc450797203fc06f2e76c",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
@@ -32,11 +32,11 @@
 
     "budget-file.md": "f6b2fc9645d564f88e21a384193c068f",
 
-    "budget-lines.md": "8aab86b23a7ea0aa05cd3e3c64fb01f5",
+    "budget-lines.md": "5613744bae05d662e941304e072dc661",
 
     "budget-operations.md": "759813dc1d276a62c7873f51f467d799",
 
-    "business-processes.md": "a87bc21b04f4dad431852b80e76060aa",
+    "business-processes.md": "2f8b3645cdcb90c0836024bc436a0213",
 
     "chart-of-accounts.md": "86cc9f0e1ba460dfe721d779562cdf76",
 
@@ -50,7 +50,7 @@
 
     "contacts.md": "2fb322fa0779b69abe58c585a01c8d4c",
 
-    "contracts.md": "35722eea57135f2d1487defb1eee7dcb",
+    "contracts.md": "5f4a401e6fe17b9c6a8db24faf8e69b5",
 
     "cost-centers.md": "e2be06630eddca29fd43e323954f69a5",
 
@@ -60,6 +60,8 @@
 
     "departments.md": "e55075da58c5e75a66aaf123d56040eb",
 
+    "end-of-support.md": "45e6d7b03d4b8e64a0b9353af0cf789a",
+
     "fast-track/apps-and-assets.md": "4277c68b563febcb8df33c284cc80450",
 
     "fast-track/getting-started.md": "50884fde6a70970cf76fdc8586c2b628",
@@ -68,9 +70,9 @@
 
     "fast-track/task-types.md": "10abb0bfb1dafc0fe4619b74d754363f",
 
-    "incidents.md": "f91203e1d6db866c49667562721a615b",
+    "incidents.md": "ef59929d4231ef3336b2f467d7183eec",
 
-    "index.md": "2bcb0df884dd2050892dfb5f82af8060",
+    "index.md": "bae902435036eb928a11d9e28d8b87d9",
 
     "integrations.md": "08e93abcf4c16c9e2245db72783d7fb1",
 
@@ -127,6 +129,8 @@
     "suppliers.md": "64cc144ac8b37f7bbcfa5c60de0abf09",
 
     "tasks.md": "ee8e6e77bb27d9ce4c3211a6d0deda8e",
+
+    "technologies.md": "1779d87a5cdd96291842ecc5e28f235b",
 
     "working-day-calendars.md": "140c26bb4fc51fe411ad29fc6f773024"
   },

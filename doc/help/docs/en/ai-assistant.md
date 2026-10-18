@@ -78,7 +78,7 @@ Typing `@` opens the **mention picker** above the composer. It lets you referenc
   - `@DOC`: recent knowledge documents
   - `@APP backup`: applications matching "backup"
   - `@BL-12`: the budget line with the reference BL-12. `@BL` alone lists budget lines of both types, and `@OPX` or `@CPX` narrows them to OPEX or CAPEX lines. The former numbers still work: `@OPX-12` or `@CPX-3` finds its line
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Plain text**: anything else (`@payroll`, `@server-2`) runs a cross-type search ranked by relevance. It also finds budget lines by the names of their analytics values.
 
 Use the arrow keys to move through the suggestions, **Enter** or **Tab** to confirm, **Escape** to dismiss the picker. Results are grouped by entity type (Knowledge, Tasks, Projects, Applications, Assets, Contracts, and so on) so you can tell at a glance what kind of record you are about to insert.
@@ -147,7 +147,7 @@ The token usage bar only appears once the conversation has at least one exchange
 
 ## Tips
 
-- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-` map directly to native KANAP references. They are the fastest way to point Plaid at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
+- **Use prefixes for precision**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` map directly to native KANAP references. They are the fastest way to point Plaid at a specific record and they survive copy-paste because they look identical to what you see elsewhere in the application.
 - **Start a new conversation per topic**: keeping unrelated questions in separate conversations makes the context window smaller, the answers faster, and the token bill lower. The conversation list is grouped by date so you can find them again easily.
 - **Approve and reject deliberately**: previews are the only thing standing between Plaid and your live data. Take the extra second to read the diff before clicking **Approve**.
 - **Stop instead of waiting**: if Plaid heads down the wrong path mid-stream, hit the **Stop** button rather than waiting for it to finish. You will save tokens, and your follow-up message can correct the course.

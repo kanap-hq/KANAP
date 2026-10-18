@@ -539,7 +539,7 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 
 ### Verknüpfungen
 
-Der Tab Verknüpfungen verbindet die Zeile mit zugehörigen Objekten: Projekte, Anwendungen, Verträge, Kontakte, Relevante Websites und Anhänge. Alles in diesem Tab wird automatisch gespeichert.
+Der Tab Verknüpfungen verbindet die Zeile mit zugehörigen Objekten: Projekte, Anwendungen, Technologien, Verträge, Kontakte, Relevante Websites und Anhänge. Alles in diesem Tab wird automatisch gespeichert.
 
 **Projekte**:
 
@@ -553,6 +553,12 @@ Der Tab Verknüpfungen verbindet die Zeile mit zugehörigen Objekten: Projekte, 
 - Verknüpfen Sie über die Autovervollständigung eine oder mehrere Anwendungen oder Services aus Ihrem IT-Katalog
 - Das hilft nachzuverfolgen, welche Zeilen welche Anwendungen oder Services finanzieren
 - Entfernen Sie eine Anwendung mit dem X auf ihrem Chip
+
+**Technologien**:
+
+- Verknüpfen Sie über die Autovervollständigung die Technologien, die die Zeile bezahlt, etwa Datenbanklizenzen oder ein Hypervisor-Abonnement
+- Nur sichtbar, wenn Sie die Infrastruktur lesen dürfen
+- Entfernen Sie eine Technologie über das X auf ihrem Chip
 
 **Verträge**:
 

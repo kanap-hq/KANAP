@@ -3,7 +3,9 @@
  * LocaleSwitcher — preserves current route when switching language.
  *
  * Uses a <details> disclosure so it works without JS. JS progressively
- * enhances with outside-click close and Escape-to-close.
+ * enhances with outside-click close and Escape-to-close, and stores the
+ * chosen locale (localStorage `kanap-locale`) so the English home stops
+ * redirecting and the LocaleSuggest banner stays away.
  */
 
 import {
@@ -67,6 +69,13 @@ const items = LOCALES.map((loc) => ({
     });
     document.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') el.open = false;
+    });
+    el.querySelectorAll<HTMLAnchorElement>('a[hreflang]').forEach((a) => {
+      a.addEventListener('click', () => {
+        try {
+          localStorage.setItem('kanap-locale', a.hreflang);
+        } catch {}
+      });
     });
   });
 </script>

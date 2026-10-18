@@ -78,7 +78,7 @@ Die Eingabe von `@` öffnet die **Erwähnungsauswahl** über dem Eingabefeld. Da
   - `@DOC`: aktuelle Wissensdokumente
   - `@APP backup`: Anwendungen, die zu „backup“ passen
   - `@BL-12`: die Budgetzeile mit der Referenz BL-12. `@BL` allein listet Budgetzeilen beider Typen auf, `@OPX` oder `@CPX` grenzt sie auf OPEX- oder CAPEX-Zeilen ein. Die früheren Nummern funktionieren weiterhin: `@OPX-12` oder `@CPX-3` findet seine Zeile
-  - `@PRJ`, `@REQ`, `@INC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
+  - `@PRJ`, `@REQ`, `@INC`, `@TEC`, `@AST`, `@CONN`, `@INT`, `@LOC`, `@CTR`, `@COMP`, `@CONT`, `@DEPT`, `@SUP`, `@BP`
 - **Klartext**: alles andere (`@payroll`, `@server-2`) startet eine typübergreifende Suche, sortiert nach Relevanz. Sie findet auch Budgetzeilen über die Namen ihrer Analysewerte.
 
 Verwenden Sie die Pfeiltasten, um durch die Vorschläge zu navigieren, **Eingabe** oder **Tab** zum Bestätigen und **Escape**, um die Auswahl zu schließen. Die Ergebnisse sind nach Entitätstyp gruppiert (Wissen, Aufgaben, Projekte, Anwendungen, Assets, Verträge usw.), sodass Sie auf einen Blick erkennen, welche Art von Datensatz Sie einfügen.
@@ -147,7 +147,7 @@ Der Token-Nutzungsbalken erscheint erst, wenn die Konversation mindestens einen 
 
 ## Tipps
 
-- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-` sind direkt nativen KANAP-Referenzen zugeordnet. Sie sind der schnellste Weg, Plaid auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
+- **Präfixe für Präzision nutzen**: `@T-`, `@DOC-`, `@PRJ-`, `@REQ-`, `@INC-`, `@TEC-` sind direkt nativen KANAP-Referenzen zugeordnet. Sie sind der schnellste Weg, Plaid auf einen bestimmten Datensatz zu lenken, und sie überstehen Kopieren und Einfügen, weil sie identisch mit dem aussehen, was Sie an anderer Stelle in der Anwendung sehen.
 - **Pro Thema eine neue Konversation beginnen**: Wenn Sie unzusammenhängende Fragen in getrennten Konversationen halten, bleibt das Kontextfenster kleiner, die Antworten kommen schneller und die Token-Kosten sinken. Die Konversationsliste ist nach Datum gruppiert, sodass Sie sie leicht wiederfinden.
 - **Bewusst genehmigen und ablehnen**: Vorschauen sind das Einzige, was zwischen Plaid und Ihren Live-Daten steht. Nehmen Sie sich die zusätzliche Sekunde, um die Gegenüberstellung zu lesen, bevor Sie auf **Genehmigen** klicken.
 - **Stoppen statt warten**: Wenn Plaid mitten im Stream in die falsche Richtung läuft, drücken Sie die **Stopp**-Schaltfläche, statt auf das Ende zu warten. Sie sparen Tokens, und Ihre Anschlussnachricht kann den Kurs korrigieren.

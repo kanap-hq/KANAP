@@ -84,6 +84,12 @@ Der Übersichts-Tab ist in drei Abschnitte gegliedert.
 
 - **Notizen**: Freitextfeld für interne Informationen wie Links zu Prozesskarten, SOPs, Bereichsnotizen oder Verbesserungsplänen.
 
+**Anwendungen**
+
+Unter den Details listet der Abschnitt **Anwendungen** die Anwendungen, die den Prozess unterstützen, mit Referenz, Kritikalität und IT-Verantwortlichem. **Hinzufügen** öffnet eine Suche; eine Verknüpfung wird sofort gespeichert, ohne **Speichern**. Fahren Sie über eine Zeile und klicken Sie auf ihr Kreuz, um die Verknüpfung zu lösen. Die Anwendung zeigt dieselbe Verknüpfung im Abschnitt **Geschäftsprozesse** ihres Reiters Beziehungen.
+
+Zum Ändern der Verknüpfungen benötigen Sie `business_processes:member`. Der Abschnitt erscheint nur, wenn Sie Anwendungen lesen dürfen. Ein Business Contributor sieht und verknüpft nur die Anwendungen in seinem Bereich.
+
 ---
 
 ## Kategorien verwalten

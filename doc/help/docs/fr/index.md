@@ -37,6 +37,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 
 - [Sites](locations.md) - Suivez les datacenters et les régions cloud
 - [Actifs](assets.md) - Gérez l'inventaire de l'infrastructure (serveurs, VM, conteneurs, instances cloud)
+- [Technologies](technologies.md) - Suivez les produits sur lesquels tournent vos applications, leurs versions et leur fin de support
 - [Connexions](connections.md) - Suivez les connexions réseau et système
 - [Carte des connexions](connection-map.md) - Visualisez la topologie des connexions
 
