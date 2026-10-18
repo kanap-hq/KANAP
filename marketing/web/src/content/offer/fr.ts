@@ -2,22 +2,22 @@ import type { OfferContent } from './types';
 
 const content: OfferContent = {
   meta: {
-    title: 'Tarifs',
+    title: 'Offre',
     description:
       'Gratuit et open source. Auto-hébergement sans limite, support si vous en avez besoin, ou KANAP hébergé. Toutes les fonctionnalités sur tous les plans, agents inclus. AGPL v3.',
   },
 
   header: {
-    eyebrow: 'Tarifs simples et transparents',
-    title: 'Gratuit et open source.\nAuto-hébergez, ou laissez-nous la gérer.',
+    eyebrow: 'Une offre simple et transparente',
+    title: 'Gratuit et open source.\nAuto-hébergez, ou laissez-nous gérer.',
     lead: 'Toutes les fonctionnalités sur chaque plan. Aucune option verrouillée, aucune taxe par siège, aucun enfermement. Vous payez uniquement l\'exploitation et le support que vous ne voulez pas assurer vous-même.',
   },
 
   selfHosted: {
     eyebrow: 'Choisissez votre chemin',
-    title: 'Même produit.\nTrois façons de l\'exécuter.',
+    title: 'Trois façons d\'utiliser KANAP',
     intro:
-      'Démarrez avec la plateforme open source complète. Ajoutez le support de production quand la souveraineté compte, ou choisissez KANAP hébergé si vous voulez nous confier l\'exploitation.',
+      'Démarrez avec la plateforme open source complète et auto-hébergée. Ajoutez le support si vous le souhaitez, quand vous passez en production, ou choisissez la version hébergée si vous préférez nous confier l\'exploitation.',
     plans: [
       {
         name: 'Auto-hébergé',
@@ -106,7 +106,7 @@ const content: OfferContent = {
     items: [
       {
         title: 'Auto-hébergé · gratuit',
-        body: 'Vous avez les ressources IT et voulez le contrôle complet. Le meilleur rapport, sans contrepartie. Support communautaire.',
+        body: 'Vous avez les ressources IT et voulez le contrôle complet. Installez dans votre infrastructure et accédez à toutes les fonctionnalités. Support communautaire.',
       },
       {
         title: 'Auto-hébergé · avec support',
@@ -120,12 +120,12 @@ const content: OfferContent = {
   },
 
   services: {
-    title: 'Aide experte, quand vous en voulez',
+    title: 'Expertise et conseil à votre rythme',
     intro: 'KANAP est conçu pour une adoption autonome. Si vous voulez aller plus vite, les offres payantes incluent le support prioritaire et un tarif de conseil réduit.',
     support: {
       title: 'Support prioritaire',
       subtitle: 'Inclus avec tout plan payant',
-      body: 'On maintient le service opérationnel. De vrais humains, des délais raisonnables, pas de théâtre SLA.',
+      body: 'On vous assure un support opérationnel de qualité, sans chatbot, formulaire à rallonge ou centre d\'appels à l\'étranger.',
       items: [
         'Bugs, erreurs, incidents, problèmes d\'accès',
         'Aide à l\'installation auto-hébergée',
@@ -158,7 +158,7 @@ const content: OfferContent = {
       'Configuration de Plaid et des agents',
       'Mise en place des intégrations (Entra ID, Claude ou ChatGPT, NetBox…)',
     ],
-    ctaLabel: 'Parlez-nous',
+    ctaLabel: 'Contactez-nous',
     ctaHref: '/contact',
     note: 'Nous le cadrons ensemble lors d\'un appel de 30 minutes.',
   },

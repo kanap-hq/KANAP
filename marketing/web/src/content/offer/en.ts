@@ -2,13 +2,13 @@ import type { OfferContent } from './types';
 
 const content: OfferContent = {
   meta: {
-    title: 'Pricing',
+    title: 'Offer',
     description:
       'Free and open source. Self-host without limits, add support when you need it, or choose hosted KANAP. Every feature on every plan, agents included. AGPL v3.',
   },
 
   header: {
-    eyebrow: 'Simple, transparent pricing',
+    eyebrow: 'A simple, transparent offer',
     title: 'Free and open source.\nSelf-host, or let us run it.',
     lead: 'All features on every plan. No feature gates, no seat tax, no lock-in. Pay only for the operations and support you don\'t want to run yourself.',
   },
@@ -16,9 +16,9 @@ const content: OfferContent = {
   /* -------------------- Self-hosted (primary) -------------------- */
   selfHosted: {
     eyebrow: 'Choose your path',
-    title: 'Same product.\nThree ways to run it.',
+    title: 'Three ways to use KANAP',
     intro:
-      'Start with the full open source platform. Add production support when sovereignty matters, or choose hosted KANAP when you want us to run the operations.',
+      'Start with the complete, self-hosted open source platform. Add support if you want it, when you go to production, or choose the hosted version if you would rather we run the operations.',
     plans: [
       {
         name: 'Self-hosted',
@@ -108,7 +108,7 @@ const content: OfferContent = {
     items: [
       {
         title: 'Self-hosted · free',
-        body: 'You have IT capacity and want full control. The best value, no strings attached. Community support.',
+        body: 'You have IT capacity and want full control. Install it in your infrastructure and get every feature. Community support.',
       },
       {
         title: 'Self-hosted · with support',
@@ -122,12 +122,12 @@ const content: OfferContent = {
   },
 
   services: {
-    title: 'Expert help, when you want it',
+    title: 'Expertise and advice at your own pace',
     intro: 'KANAP is built for self-service adoption. If you want to go faster, paid plans include priority support and a reduced consulting rate.',
     support: {
       title: 'Priority support',
       subtitle: 'Included with any paid plan',
-      body: 'Keep it running smoothly. Real humans, reasonable response times, no SLA theatre.',
+      body: 'Quality operational support, with no chatbot, no endless forms and no offshore call center.',
       items: [
         'Bugs, errors, outages, access issues',
         'On-prem installation troubleshooting',
@@ -160,7 +160,7 @@ const content: OfferContent = {
       'Plaid and agents configured',
       'Integrations set up (Entra ID, Claude or ChatGPT, NetBox…)',
     ],
-    ctaLabel: 'Talk to us',
+    ctaLabel: 'Contact us',
     ctaHref: '/contact',
     note: 'We scope it together on a 30-minute call first.',
   },
