@@ -180,6 +180,7 @@ Das Wiederöffnen eines Vorfalls ändert daran nichts. Die Versionen bleiben, de
 
 - **Assets**: die betroffenen Server, VMs oder Geräte. Suchen und auswählen; Verknüpfen und Lösen wird im Journal festgehalten
 - **Anwendungen**: die betroffenen Anwendungen und Dienste, gleiches Verhalten
+- **Technologien**: die beteiligten Technologien, etwa ein Verzeichnisdienst oder eine Datenbank-Engine, gleiches Verhalten. Nur für Benutzer sichtbar und im Reiter-Badge gezählt, die die Infrastruktur lesen dürfen
 - **Aufgaben**: die Folgearbeit. Legen Sie eine Aufgabe direkt aus dem Vorfall heraus an, sie bleibt daran gebunden. Die Aufgabe zeigt „Vorfall · INC-14" in ihrer eigenen Seitenleiste, und die Spalte Aufgaben des Vorfalls zählt sie mit
 
 Verknüpft wird ausschließlich von der Vorfallsseite aus. Ein verknüpftes Asset oder eine verknüpfte Anwendung zeigt den Vorfall in einem schreibgeschützten Abschnitt **Vorfälle** auf dem eigenen Tab Beziehungen: Wer einen Server ansieht, sieht dessen Störungsgeschichte.

@@ -215,6 +215,16 @@ Suit les informations de support et de contact fournisseur.
 
 L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le badge de l'onglet compte tous les éléments liés. La plupart des champs sont enregistrés automatiquement.
 
+**Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters, technologies et processus métier touchés, puis un tableau par type :
+
+- **Applications** : celles qui ont un déploiement en service sur un actif tombé, avec leurs environnements, leur criticité et les actifs sur lesquels elles tournent (**Via**).
+- **Actifs** : les actifs qu'il contient, jusqu'à trois niveaux, et les actifs qui dépendent de lui. **Via** montre le chemin.
+- **Clusters** : les clusters dont un membre tombe. **Tombé** quand plus aucun membre ne tient, sinon **Dégradé** avec le nombre de membres tombés. Les applications d'un cluster tombé tombent avec lui.
+- **Technologies** : celles installées sur un actif tombé, avec leurs versions.
+- **Processus métier** : les processus des applications touchées.
+
+Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour une fois les relations de l'actif enregistrées plus bas.
+
 **Relations entre actifs** :
 - **Dépend de** : Autres actifs dont celui-ci dépend (ex. : un serveur de base de données)
 - **Contient** : Actifs contenus dans celui-ci (ex. : serveurs dans une baie)
