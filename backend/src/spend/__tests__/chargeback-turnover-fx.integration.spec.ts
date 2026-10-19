@@ -41,20 +41,8 @@ async function seed(runner: QueryRunner): Promise<Seed> {
 }
 
 /** `rates`: `<rate set or live>:<year>:<currency>` to the rate into EUR; anything else is missing (rate 1). */
-function service(seeded: Seed, rates: Record<string, number>) {
-  const calculator = {
-    computeForVersions: async (versions: Array<{ id: string }>) => new Map(versions.map((v) => [
-      v.id,
-      {
-        resolvedMethod: 'manual_company',
-        shares: [
-          { company_id: seeded.paris, department_id: null, allocation_pct: 50 },
-          { company_id: seeded.newYork, department_id: null, allocation_pct: 50 },
-        ],
-      },
-    ])),
-  };
-  const fxRates = {
+function fakeFx(rates: Record<string, number>) {
+  return {
     resolveRates: async (_tenantId: string, lookups: any[]) => {
       const map = new Map<string, any>();
       for (const l of lookups) {
@@ -70,7 +58,23 @@ function service(seeded: Seed, rates: Record<string, number>) {
     },
     convertValue: (value: number, rate: number) => Math.round(value * rate * 100) / 100,
   };
-  return new ChargebackReportService(undefined as any, calculator as any, fxRates as any);
+}
+
+/** Every version split 50/50 between Paris and New York. */
+function service(seeded: Seed, rates: Record<string, number>) {
+  const calculator = {
+    computeForVersions: async (versions: Array<{ id: string }>) => new Map(versions.map((v) => [
+      v.id,
+      {
+        resolvedMethod: 'manual_company',
+        shares: [
+          { company_id: seeded.paris, department_id: null, allocation_pct: 50 },
+          { company_id: seeded.newYork, department_id: null, allocation_pct: 50 },
+        ],
+      },
+    ])),
+  };
+  return new ChargebackReportService(undefined as any, calculator as any, fakeFx(rates) as any);
 }
 
 async function testTurnoverIndicatorsAreInTheReportingCurrency() {
@@ -127,7 +131,37 @@ async function testMissingRateCountsUnconvertedWithAWarning() {
   });
 }
 
+async function testAVersionNotCountedGivesNoWarning() {
+  await inRolledBackTransaction(async (runner) => {
+    const seeded = await seed(runner);
+    // A second line with nothing in the year: the report does not count it.
+    const { versionId: empty } = await seedLine(runner, 'opex', seeded.tenantId, YEAR, {}, 2);
+    const jpy = { code: 'turnover_fx_missing', currencies: ['JPY'], year: YEAR, reportingCurrency: 'EUR' };
+    const shares = [{ company_id: seeded.paris, department_id: null, allocation_pct: 100 }];
+    const svc = new ChargebackReportService(undefined as any, {
+      computeForVersions: async (versions: Array<{ id: string }>) => new Map(versions.map((v) => [
+        v.id,
+        // Only the empty line's split counted a turnover without a rate.
+        { resolvedMethod: 'turnover', shares, warning: v.id === empty ? jpy : null },
+      ])),
+    } as any, fakeFx({ [`live:${YEAR}:USD`]: 0.9 }) as any);
+    const global = await svc.generateGlobal(YEAR, 'budget', seeded.tenantId, { manager: runner.manager });
+    assert.equal(global.total, 1200);
+    assert.deepEqual(global.warnings, [], 'the warning of a version the report does not count is not shown');
+
+    const counted = new ChargebackReportService(undefined as any, {
+      computeForVersions: async (versions: Array<{ id: string }>) => new Map(versions.map((v) => [
+        v.id,
+        { resolvedMethod: 'turnover', shares, warning: v.id === seeded.versionId ? jpy : null },
+      ])),
+    } as any, fakeFx({ [`live:${YEAR}:USD`]: 0.9 }) as any);
+    const report = await counted.generateGlobal(YEAR, 'budget', seeded.tenantId, { manager: runner.manager });
+    assert.deepEqual(report.warnings, [jpy], 'the warning of a counted version is shown');
+  });
+}
+
 void runSpecs('chargeback-turnover-fx.integration.spec', [
+  ['testAVersionNotCountedGivesNoWarning', testAVersionNotCountedGivesNoWarning],
   ['testTurnoverIndicatorsAreInTheReportingCurrency', testTurnoverIndicatorsAreInTheReportingCurrency],
   ['testFrozenVersionsConvertAtTheirRateSet', testFrozenVersionsConvertAtTheirRateSet],
   ['testMissingRateCountsUnconvertedWithAWarning', testMissingRateCountsUnconvertedWithAWarning],
