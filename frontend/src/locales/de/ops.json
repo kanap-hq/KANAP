@@ -1268,6 +1268,16 @@
       "turnoverFxMissing": "Noch keine Wechselkurse von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in diesen Währungen wird ohne Umrechnung gezählt, bis die Kurse verfügbar sind.",
       "turnoverFxMissing_one": "Noch kein Wechselkurs von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist."
     },
+    "fxMissing": {
+      "excluding_one": "{{count}} Zeile ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "excluding_other": "{{count}} Zeilen ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "excludingSeveral": "Zeilen ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Kurs eingeben",
+      "lineTooltip": "Kein Wechselkurs für {{currency}} im Jahr {{year}}: nicht in den Summen enthalten.",
+      "localAmount": "{{amount}} {{currency}}"
+    },
     "turnoverMillions": "{{value}} Mio. {{currency}}"
   },
   "fields": {
