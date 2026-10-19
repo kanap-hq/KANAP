@@ -907,6 +907,8 @@ export class CompaniesService {
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      // `city` is NOT NULL, like name: a blank cell is refused for a new company and for an update.
+      if (!city) errors.push(rowError(line, 'city', 'CSV_VALUE_REQUIRED', 'city is required'));
       if (!country_iso) errors.push(rowError(line, 'country_iso', 'CSV_VALUE_REQUIRED', 'country_iso is required and must be 2 letters'));
       else if (country_iso.length !== 2) errors.push(rowError(line, 'country_iso', 'CSV_COUNTRY_INVALID', 'country_iso is required and must be 2 letters', { value: country_iso }));
       const base_currency = cellOf(row, 'base_currency');
