@@ -31,10 +31,12 @@
   "locale.suggest.link": "Voir en français",
   "locale.suggest.close": "Fermer",
 
+  "a11y.skipToContent": "Aller au contenu",
+
   "footer.tagline": "La plateforme open source de gouvernance IT : budget, SI, projets et documentation dans un seul référentiel. Auto-hébergement gratuit, ou version hébergée.",
   "footer.product": "Produit",
   "footer.resources": "Ressources",
-  "footer.legal": "Mentions légales",
+  "footer.legal": "Informations légales",
   "footer.docs": "Documentation",
   "footer.github": "GitHub",
   "footer.privacy": "Confidentialité",
