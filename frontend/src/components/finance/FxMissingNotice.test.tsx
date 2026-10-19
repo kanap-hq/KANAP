@@ -48,8 +48,23 @@ describe('FxMissingNotice', () => {
     expect(screen.queryByRole('link', { name: 'Enter a rate' })).not.toBeInTheDocument();
     reader.unmount();
     auth.levels = { budget: 'admin', budget_ops: 'admin' };
-    renderNotice([{ currency: 'USD', year: 2026, lines: 2 }]);
-    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute('href', '/ops/operations/currency');
+    renderNotice([{ currency: 'ZAR', year: 2028, lines: 1 }]);
+    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute(
+      'href',
+      '/ops/operations/currency?currency=ZAR&year=2028',
+    );
+  });
+
+  it('links several pairs to the first one', () => {
+    auth.levels = { budget: 'admin', budget_ops: 'admin' };
+    renderNotice([
+      { currency: 'ZAR', year: 2028, lines: 1 },
+      { currency: 'USD', year: 2026, lines: 2 },
+    ]);
+    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute(
+      'href',
+      '/ops/operations/currency?currency=ZAR&year=2028',
+    );
   });
 
   it('words the notice in every language', () => {

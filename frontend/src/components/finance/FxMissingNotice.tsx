@@ -10,10 +10,16 @@ import { fxMissingText, type FxMissing } from './fxMissing';
 /** The administration page where a rate can be entered by hand. */
 export const CURRENCY_SETTINGS_PATH = '/ops/operations/currency';
 
+/** Opens the currency page on one pair. With several pairs the page highlights the whole list. */
+export function currencySettingsHref(pair: { currency: string; year: number }): string {
+  const params = new URLSearchParams({ currency: pair.currency, year: String(pair.year) });
+  return `${CURRENCY_SETTINGS_PATH}?${params.toString()}`;
+}
+
 /**
  * One line saying which amounts the totals leave out for lack of an exchange rate: the currencies
  * and years in the order received, with their line counts. Users who can open the currency settings
- * get a link to enter a rate. Nothing for an empty or absent list.
+ * get a link to enter a rate for the first pair. Nothing for an empty or absent list.
  */
 export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<FxMissing> | null | undefined; sx?: SxProps<Theme> }) {
   const { t } = useTranslation('ops');
@@ -34,7 +40,7 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
         <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</Box>
       </Tooltip>
       {canEnterRate && (
-        <Link component={RouterLink} to={CURRENCY_SETTINGS_PATH} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
+        <Link component={RouterLink} to={currencySettingsHref(items[0])} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {t('shared.fxMissing.enterRate')}
         </Link>
       )}
