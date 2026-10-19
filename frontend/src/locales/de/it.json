@@ -500,31 +500,22 @@
     },
     "administrationView": {
       "title": "Administrationssicht",
-      "intro": "Wer verwaltet was: die Administrationszonen mit ihren Technologien und Servern, dann die Domänen mit Gesamtstruktur, Vertrauensstellungen und Domänencontrollern.",
       "loading": "Wird geladen…",
       "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
       "exportZones": "Zonen exportieren",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
-      "unplaced_one": "{{count}} Technologie hat keine Administrationszone. Legen Sie sie im Technologiedatensatz fest.",
-      "unplaced_other": "{{count}} Technologien haben keine Administrationszone. Legen Sie sie in ihren Datensätzen fest.",
       "zones": "Administrationszonen",
       "noZones": "Noch keine Administrationszonen definiert.",
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
-      "noZoneHint": "Technologien, die einer Zone zugeordnet werden müssen.",
       "unknownZone": "Unbekannte Zone ({{code}})",
-      "emptyZone": "Keine Technologie in dieser Zone.",
-      "serversInZone": "Server in dieser Zone",
       "attributes": {
         "adminGroup": "Administratorgruppe",
         "directoryServices": "Verzeichnisdienste"
       },
       "columns": {
         "reference": "Ref.",
-        "technology": "Technologie",
-        "family": "Familie",
-        "servers": "Server",
         "type": "Typ",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
@@ -534,8 +525,6 @@
         "machines": "Computer",
         "domainControllers": "Domänencontroller"
       },
-      "noServer": "Kein Server",
-      "via": "über {{name}}",
       "domains": "Domänen",
       "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
       "noDomains": "Keine Domänen definiert.",
@@ -2965,8 +2954,7 @@
     "summary_incomplete_other": "{{count}} zu vervollständigen",
     "classification": "Klassifizierung",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe.",
-    "e_g_tier_1": "z. B. Stufe 1"
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe."
   },
   "catalogDefaults": {
     "applicationCategories": {

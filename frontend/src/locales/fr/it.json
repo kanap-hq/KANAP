@@ -500,31 +500,22 @@
     },
     "administrationView": {
       "title": "Vue de l'administration",
-      "intro": "Qui administre quoi : les zones d'administration avec leurs technologies et leurs serveurs, puis les domaines avec leur forêt, leurs approbations et leurs contrôleurs de domaine.",
       "loading": "Chargement…",
       "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
       "exportZones": "Exporter les zones",
       "exportDomains": "Exporter les domaines",
       "exportFailed": "L'export a échoué.",
-      "unplaced_one": "{{count}} technologie n'a pas de zone d'administration. Renseignez-la sur sa fiche.",
-      "unplaced_other": "{{count}} technologies n'ont pas de zone d'administration. Renseignez-la sur leurs fiches.",
       "zones": "Zones d'administration",
       "noZones": "Aucune zone d'administration définie pour l'instant.",
       "openSettings": "Les définir dans les réglages IT",
       "noZone": "Sans zone",
-      "noZoneHint": "Technologies à placer dans une zone.",
       "unknownZone": "Zone inconnue ({{code}})",
-      "emptyZone": "Aucune technologie dans cette zone.",
-      "serversInZone": "Serveurs de cette zone",
       "attributes": {
         "adminGroup": "Groupe d'administrateurs",
         "directoryServices": "Services d'annuaire"
       },
       "columns": {
         "reference": "Réf.",
-        "technology": "Technologie",
-        "family": "Famille",
-        "servers": "Serveurs",
         "type": "Type",
         "domain": "Domaine",
         "dnsSuffix": "Suffixe DNS",
@@ -534,8 +525,6 @@
         "machines": "Machines",
         "domainControllers": "Contrôleurs de domaine"
       },
-      "noServer": "Aucun serveur",
-      "via": "via {{name}}",
       "domains": "Domaines",
       "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine qui portent une technologie d'annuaire, ou qui sont affectés avec le rôle « Contrôleur de domaine » sur une application en service.",
       "noDomains": "Aucun domaine défini.",
@@ -2965,8 +2954,7 @@
     "summary_incomplete_other": "{{count}} à compléter",
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique.",
-    "e_g_tier_1": "ex. : Niveau 1"
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
   },
   "catalogDefaults": {
     "applicationCategories": {

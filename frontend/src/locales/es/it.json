@@ -500,31 +500,22 @@
     },
     "administrationView": {
       "title": "Vista de la administración",
-      "intro": "Quién administra qué: las zonas de administración con sus tecnologías y servidores, y después los dominios con su bosque, sus confianzas y sus controladores de dominio.",
       "loading": "Cargando…",
       "loadFailed": "No se pudo cargar la vista de la administración.",
       "exportZones": "Exportar las zonas",
       "exportDomains": "Exportar los dominios",
       "exportFailed": "La exportación ha fallado.",
-      "unplaced_one": "{{count}} tecnología no tiene zona de administración. Indíquela en su ficha.",
-      "unplaced_other": "{{count}} tecnologías no tienen zona de administración. Indíquela en sus fichas.",
       "zones": "Zonas de administración",
       "noZones": "Todavía no hay zonas de administración definidas.",
       "openSettings": "Definirlas en los ajustes de TI",
       "noZone": "Sin zona",
-      "noZoneHint": "Tecnologías que hay que asignar a una zona.",
       "unknownZone": "Zona desconocida ({{code}})",
-      "emptyZone": "Ninguna tecnología en esta zona.",
-      "serversInZone": "Servidores de esta zona",
       "attributes": {
         "adminGroup": "Grupo de administradores",
         "directoryServices": "Servicios de directorio"
       },
       "columns": {
         "reference": "Ref.",
-        "technology": "Tecnología",
-        "family": "Familia",
-        "servers": "Servidores",
         "type": "Tipo",
         "domain": "Dominio",
         "dnsSuffix": "Sufijo DNS",
@@ -534,8 +525,6 @@
         "machines": "Equipos",
         "domainControllers": "Controladores de dominio"
       },
-      "noServer": "Ningún servidor",
-      "via": "a través de {{name}}",
       "domains": "Dominios",
       "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",
       "noDomains": "No hay dominios definidos.",
@@ -2965,8 +2954,7 @@
     "summary_incomplete_other": "{{count}} por completar",
     "classification": "Clasificación",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Datos en el nivel de confidencialidad más alto con la criticidad cibernética más baja: compruebe la evaluación cibernética.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Ninguna prueba de recuperación en los últimos doce meses para una aplicación en el nivel más crítico.",
-    "e_g_tier_1": "p. ej., Nivel 1"
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Ninguna prueba de recuperación en los últimos doce meses para una aplicación en el nivel más crítico."
   },
   "catalogDefaults": {
     "applicationCategories": {
