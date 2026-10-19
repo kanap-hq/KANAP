@@ -65,7 +65,7 @@ export const CONTROL_TITLES: Record<ControlKey, string> = {
 /** English relation names in the export. The screen uses the same words, translated. */
 const TRUST_RELATION_LABEL = { contains: 'Runs', cluster: 'Member of cluster' } as const;
 
-/** Sortable fields. `zone` sorts in catalog order, see `orderOf`. */
+/** Sortable fields. `zone` sorts in catalog order, `kind` by the label of its catalog, see `orderOf`. */
 const SORTS: Record<string, string> = {
   name: 'lower(a.name)',
   reference: 'a.asset_reference',
@@ -748,7 +748,8 @@ export class AdministrationViewService {
   /**
    * The ORDER BY of the asset list. `zone` follows the catalog order (deprecated zones at their
    * place), then the codes the catalog does not have, by code; assets without a zone come last in
-   * both directions. The catalog is bound on `params`.
+   * both directions. `kind` follows the labels of the asset type catalog, then the codes the
+   * catalog does not have, by code. The catalog is bound on `params`.
    */
   private orderOf(sort: unknown, ctx: RankCtx, params: unknown[]): string {
     const [rawField, rawDir] = String(sort ?? '').split(':');
@@ -761,6 +762,12 @@ export class AdministrationViewService {
       params.push(ctx.catalog.map((option) => option.code));
       const zone = zoneOf('a');
       return `(${zone} IS NULL) ASC, array_position($${params.length}::text[], ${zone}) ${direction} NULLS LAST, ${zone} ${direction}, lower(a.name) ASC, a.id ASC`;
+    }
+    if (field === 'kind') {
+      params.push([...ctx.kinds.entries()]
+        .sort(([codeA, labelA], [codeB, labelB]) => (labelA || codeA).localeCompare(labelB || codeB, undefined, { sensitivity: 'base' }) || codeA.localeCompare(codeB))
+        .map(([code]) => code));
+      return `array_position($${params.length}::text[], a.kind) ${direction} NULLS LAST, ${SORTS.kind} ${direction}, lower(a.name) ASC, a.id ASC`;
     }
     const primary = field ? `${SORTS[field]} ${direction} NULLS LAST` : `${SORTS.name} ASC`;
     return field && field !== 'name' ? `${primary}, lower(a.name) ASC, a.id ASC` : `${primary}, a.id ASC`;

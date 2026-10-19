@@ -799,7 +799,9 @@ export default function AdministrationViewPage() {
     [selection, selectedCount, toggleRow, toggleAll],
   );
 
-  const kindValues = useCallback(async () => (byField.serverKind || []).map((option) => ({ value: option.code, label: labelFor('serverKind', option.code) })), [byField, labelFor]);
+  const kindValues = useCallback(async () => (byField.serverKind || [])
+    .map((option) => ({ value: option.code, label: labelFor('serverKind', option.code) }))
+    .sort((a, b) => a.label.localeCompare(b.label)), [byField, labelFor]);
   const zonesRef = useRef(zones);
   zonesRef.current = zones;
   const zoneValues = useCallback(async () => [

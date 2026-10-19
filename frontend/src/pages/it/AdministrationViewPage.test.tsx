@@ -271,7 +271,8 @@ describe('AdministrationViewPage', () => {
     for (const key of ['technologies', 'applications', 'control']) expect(column(key).sortable).toBe(false);
     for (const key of ['technologies', 'applications']) expect(column(key).filter).toBe(false);
     expect(column('kind').valueFormatter({ value: 'vm' })).toBe('Virtual machine');
-    expect(await column('kind').filterParams.getValues({})).toEqual([{ value: 'vm', label: 'Virtual machine' }, { value: 'physical', label: 'Physical server' }]);
+    // The types in the order of their names, whatever the order of the catalog.
+    expect(await column('kind').filterParams.getValues({})).toEqual([{ value: 'physical', label: 'Physical server' }, { value: 'vm', label: 'Virtual machine' }]);
     expect(await column('zone').filterParams.getValues({})).toEqual([
       { value: 'tier_0', label: 'Niveau 0' }, { value: 'tier_1', label: 'Tier 1' }, { value: 'legacy', label: 'Legacy (no longer offered)' }, { value: null, label: 'No zone' },
     ]);

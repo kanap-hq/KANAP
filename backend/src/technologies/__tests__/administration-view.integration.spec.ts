@@ -632,6 +632,30 @@ async function testZoneSort() {
   });
 }
 
+async function testKindSort() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-kind-sort');
+    // Codes in an order their labels do not give: by label, physical (Bare metal), vm (Virtual machine), appliance (Wireless).
+    const kinds = [
+      { code: 'vm', label: 'Virtual machine' },
+      { code: 'appliance', label: 'Wireless' },
+      { code: 'physical', label: 'Bare metal' },
+    ];
+    for (const [name, kind] of [['v1', 'vm'], ['p1', 'physical'], ['a1', 'appliance'], ['z1', 'zz_unknown'], ['b1', 'aa_unknown']] as Array<[string, string]>) {
+      const id = await asset(runner, a, name);
+      await runner.query(`UPDATE assets SET kind = $3 WHERE tenant_id = $1 AND id = $2`, [a, id, kind]);
+    }
+    const svc = service(new Map([[a, { adminZones: [], domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: kinds }]]));
+    const opts = { manager: runner.manager, tenantId: a };
+    const names = async (sort: string) => (await svc.assets({ sort, limit: 50 }, opts)).items.map((item) => item.name);
+    assert.deepEqual(await names('kind:ASC'), ['p1', 'v1', 'a1', 'b1', 'z1'], 'catalog labels, unknown codes after them');
+    assert.deepEqual(await names('kind:DESC'), ['a1', 'v1', 'p1', 'z1', 'b1'], 'reversed labels, unknown codes still after them');
+    assert.deepEqual(await names('type:ASC'), await names('kind:ASC'), 'type is the same column');
+    const page = await svc.assets({ sort: 'kind:ASC', limit: 2, page: 2 }, opts);
+    assert.deepEqual({ total: page.total, names: page.items.map((item) => item.name) }, { total: 5, names: ['a1', 'b1'] }, 'the count does not bind the catalog');
+  });
+}
+
 async function zoneOf(runner: QueryRunner, id: string): Promise<string | null> {
   const [row] = await runner.query(`SELECT admin_zone FROM assets WHERE id = $1`, [id]);
   return row.admin_zone;
@@ -928,6 +952,7 @@ void runSpecs('Administration view', [
   ['each control point, with one case that stays out', testControls],
   ['the asset page: order, filters, caps', testAssetsPage],
   ['sort by zone in catalog order', testZoneSort],
+  ['sort by type in the order of its labels', testKindSort],
   ['bulk zone assignment', testBulk],
   ['CSV export of assets and domains', testExport],
   ['a page of 50 on 2000 assets, and the bulk and export caps', testScale],
