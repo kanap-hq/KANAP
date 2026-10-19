@@ -219,7 +219,10 @@ aggregate:
   metric, since an aggregate expression cannot carry that scope;
 - `end_of_support`: the earliest end of support among the versions in use (on
   a server in service or declared by an application in service), each version
-  dated as the End of support report dates it;
+  dated as the End of support report dates it. Like that report, it counts the
+  declarations of every application, whatever the user's application read
+  scope: a version declared only by an application outside that scope still
+  dates the technology;
 - `open_vulnerabilities`: CVE still to review, null while the vulnerability
   feed is off.
 
