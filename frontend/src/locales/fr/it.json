@@ -500,6 +500,7 @@
     },
     "administrationView": {
       "title": "Vue de l'administration",
+      "lead": "Chaque zone liste les actifs qu'elle couvre et les services d'annuaire qui y sont placés, puis les points à corriger.",
       "loading": "Chargement…",
       "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
       "exportZones": "Exporter les zones",
@@ -510,6 +511,10 @@
       "openSettings": "Les définir dans les réglages IT",
       "noZone": "Sans zone",
       "unknownZone": "Zone inconnue ({{code}})",
+      "scope": "Périmètre",
+      "scopeEmpty": "Aucun actif dans cette zone.",
+      "hostedApplications_one": "{{count}} application",
+      "hostedApplications_other": "{{count}} applications",
       "attributes": {
         "adminGroup": "Groupe d'administrateurs",
         "directoryServices": "Services d'annuaire"
@@ -517,6 +522,10 @@
       "columns": {
         "reference": "Réf.",
         "type": "Type",
+        "zone": "Zone",
+        "relation": "Relation",
+        "contained": "Actif contenu",
+        "asset": "Actif",
         "domain": "Domaine",
         "dnsSuffix": "Suffixe DNS",
         "forest": "Forêt",
@@ -524,6 +533,35 @@
         "accounts": "Comptes",
         "machines": "Machines",
         "domainControllers": "Contrôleurs de domaine"
+      },
+      "relation": {
+        "contains": "Contient",
+        "cluster": "Cluster"
+      },
+      "controls": "Points de contrôle",
+      "controlsHint": "La zone la plus sensible est {{zone}}.",
+      "controlsNoCatalog": "Ajoutez une zone d'administration dans les réglages IT pour lancer les autres contrôles.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Actifs sans zone d'administration",
+          "hint": "Renseignez une zone sur chaque actif encore en service."
+        },
+        "domainControllers": {
+          "title": "Contrôleurs de domaine hors de la zone la plus sensible",
+          "hint": "Un contrôleur de domaine a sa place dans la zone la plus sensible."
+        },
+        "directoryAssets": {
+          "title": "Actifs portant un service d'annuaire hors de la zone la plus sensible",
+          "hint": "Un actif qui porte un service d'annuaire a sa place dans la zone la plus sensible."
+        },
+        "trustRaised": {
+          "title": "Actifs dans une zone plus sensible que ce qui les contient",
+          "hint": "L'actif qui en contient un autre doit être dans une zone au moins aussi sensible."
+        },
+        "applications": {
+          "title": "Applications hébergées dans la zone la plus sensible",
+          "hint": "Revoyez chaque application hébergée sur un actif de la zone la plus sensible."
+        }
       },
       "domains": "Domaines",
       "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine qui portent une technologie d'annuaire, ou qui sont affectés avec le rôle « Contrôleur de domaine » sur une application en service.",
@@ -599,6 +637,8 @@
         "adminZones": {
           "title": "Zones d'administration",
           "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
+          "orderHint": "La première zone est la plus sensible.",
+          "dragToReorder": "Glisser pour réorganiser",
           "usage": "Technologies / Aperçu, vue de l'administration"
         },
         "accessMethods": {
@@ -729,6 +769,24 @@
         "adminZoneName": "ex. : Tier 0",
         "adminGroup": "ex. : Admins du domaine",
         "adminZoneDescription": "ex. : Services d'annuaire et d'identité",
+        "hostingTypeName": "ex. : Colocation",
+        "assetKindName": "ex. : Machine virtuelle",
+        "serverRoleName": "ex. : Contrôleur de domaine",
+        "entityName": "ex. : Utilisateurs internes",
+        "applicationCategoryName": "ex. : Productivité",
+        "networkSegmentName": "ex. : DMZ",
+        "ipAddressTypeName": "ex. : Hôte",
+        "technologyFamilyName": "ex. : Base de données",
+        "serverProviderName": "ex. : AWS",
+        "lifecycleStateName": "ex. : Actif",
+        "interfaceProtocolName": "ex. : HTTPS",
+        "interfaceDataCategoryName": "ex. : Données de référence",
+        "interfaceTriggerTypeName": "ex. : Planifié",
+        "interfacePatternName": "ex. : Webhook",
+        "interfaceFormatName": "ex. : JSON",
+        "interfaceAuthModeName": "ex. : OAuth2",
+        "accessMethodName": "ex. : Web",
+        "incidentCategoryName": "ex. : Infrastructure",
         "select": "Sélectionner…"
       },
       "empty": {
@@ -1822,6 +1880,7 @@
         "editor": "Éditeur",
         "family": "Famille",
         "adminZone": "Zone d'administration",
+        "adminZoneUnused": "Cette valeur n'est plus utilisée.",
         "hostingType": "Type d'hébergement",
         "description": "Description",
         "notes": "Notes",
@@ -2954,7 +3013,11 @@
     "summary_incomplete_other": "{{count}} à compléter",
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique."
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique.",
+    "e_g_critical": "ex. : Critique",
+    "e_g_high": "ex. : Élevée",
+    "e_g_confidential": "ex. : Confidentiel",
+    "e_g_foundation": "ex. : Socle"
   },
   "catalogDefaults": {
     "applicationCategories": {

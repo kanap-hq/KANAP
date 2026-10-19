@@ -500,6 +500,7 @@
     },
     "administrationView": {
       "title": "Administrationssicht",
+      "lead": "Jede Zone listet die Assets, die sie abdeckt, und die Verzeichnisdienste, die ihr zugeordnet sind, danach die zu korrigierenden Punkte.",
       "loading": "Wird geladen…",
       "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
       "exportZones": "Zonen exportieren",
@@ -510,6 +511,10 @@
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
       "unknownZone": "Unbekannte Zone ({{code}})",
+      "scope": "Umfang",
+      "scopeEmpty": "Kein Asset in dieser Zone.",
+      "hostedApplications_one": "{{count}} Anwendung",
+      "hostedApplications_other": "{{count}} Anwendungen",
       "attributes": {
         "adminGroup": "Administratorgruppe",
         "directoryServices": "Verzeichnisdienste"
@@ -517,6 +522,10 @@
       "columns": {
         "reference": "Ref.",
         "type": "Typ",
+        "zone": "Zone",
+        "relation": "Beziehung",
+        "contained": "Enthaltenes Asset",
+        "asset": "Asset",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
         "forest": "Gesamtstruktur",
@@ -524,6 +533,35 @@
         "accounts": "Konten",
         "machines": "Computer",
         "domainControllers": "Domänencontroller"
+      },
+      "relation": {
+        "contains": "Enthält",
+        "cluster": "Cluster"
+      },
+      "controls": "Kontrollpunkte",
+      "controlsHint": "Die sensibelste Zone ist {{zone}}.",
+      "controlsNoCatalog": "Fügen Sie in den IT-Einstellungen eine Administrationszone hinzu, um die übrigen Prüfungen auszuführen.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Assets ohne Administrationszone",
+          "hint": "Legen Sie für jedes noch genutzte Asset eine Zone fest."
+        },
+        "domainControllers": {
+          "title": "Domänencontroller außerhalb der sensibelsten Zone",
+          "hint": "Ein Domänencontroller gehört in die sensibelste Zone."
+        },
+        "directoryAssets": {
+          "title": "Assets mit einem Verzeichnisdienst außerhalb der sensibelsten Zone",
+          "hint": "Ein Asset, das einen Verzeichnisdienst trägt, gehört in die sensibelste Zone."
+        },
+        "trustRaised": {
+          "title": "Assets in einer sensibleren Zone als das, was sie enthält",
+          "hint": "Das Asset, das ein anderes enthält, sollte in einer mindestens ebenso sensiblen Zone liegen."
+        },
+        "applications": {
+          "title": "In der sensibelsten Zone gehostete Anwendungen",
+          "hint": "Prüfen Sie jede Anwendung, die auf einem Asset der sensibelsten Zone gehostet wird."
+        }
       },
       "domains": "Domänen",
       "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
@@ -599,6 +637,8 @@
         "adminZones": {
           "title": "Administrationszonen",
           "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
+          "orderHint": "Die erste Zone ist die sensibelste.",
+          "dragToReorder": "Zum Neuanordnen ziehen",
           "usage": "Technologien / Übersicht, Administrationssicht"
         },
         "accessMethods": {
@@ -729,6 +769,24 @@
         "adminZoneName": "z. B. Tier 0",
         "adminGroup": "z. B. Domänen-Admins",
         "adminZoneDescription": "z. B. Verzeichnis- und Identitätsdienste",
+        "hostingTypeName": "z. B. Colocation",
+        "assetKindName": "z. B. Virtuelle Maschine",
+        "serverRoleName": "z. B. Domänencontroller",
+        "entityName": "z. B. Interne Benutzer",
+        "applicationCategoryName": "z. B. Produktivität",
+        "networkSegmentName": "z. B. DMZ",
+        "ipAddressTypeName": "z. B. Host",
+        "technologyFamilyName": "z. B. Datenbank",
+        "serverProviderName": "z. B. AWS",
+        "lifecycleStateName": "z. B. Aktiv",
+        "interfaceProtocolName": "z. B. HTTPS",
+        "interfaceDataCategoryName": "z. B. Stammdaten",
+        "interfaceTriggerTypeName": "z. B. Geplant",
+        "interfacePatternName": "z. B. Webhook",
+        "interfaceFormatName": "z. B. JSON",
+        "interfaceAuthModeName": "z. B. OAuth2",
+        "accessMethodName": "z. B. Web",
+        "incidentCategoryName": "z. B. Infrastruktur",
         "select": "Auswählen…"
       },
       "empty": {
@@ -1822,6 +1880,7 @@
         "editor": "Hersteller",
         "family": "Familie",
         "adminZone": "Administrationszone",
+        "adminZoneUnused": "Dieser Wert wird nicht mehr verwendet.",
         "hostingType": "Hosting-Typ",
         "description": "Beschreibung",
         "notes": "Notizen",
@@ -2954,7 +3013,11 @@
     "summary_incomplete_other": "{{count}} zu vervollständigen",
     "classification": "Klassifizierung",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
-    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe."
+    "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe.",
+    "e_g_critical": "z. B. Kritisch",
+    "e_g_high": "z. B. Hoch",
+    "e_g_confidential": "z. B. Vertraulich",
+    "e_g_foundation": "z. B. Grundlage"
   },
   "catalogDefaults": {
     "applicationCategories": {
