@@ -48,6 +48,9 @@ const COMMON_READ_TOOLS: AiToolName[] = [
   'aggregate_entities',
   'get_filter_values',
   'get_entity_detail',
+  // The related records of one record (what runs on a server, which applications use a
+  // technology), for a question that names it without a reference.
+  'get_entity_context',
 ];
 
 const ENTITY_INSPECTION_TOOLS: AiToolName[] = [

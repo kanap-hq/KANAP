@@ -237,7 +237,10 @@ servers that carry it (`TechnologyReachService`). The context of an asset lists
 its technologies (installed or carried); the context of an application lists
 its declared and deduced technologies, for a user who reads technologies. These
 groups list at most 25 records (`AI_CONTEXT_GROUP_ITEM_LIMIT`) and carry `total`
-and `truncated`.
+and `truncated`; the technology context reads only those 25 servers and
+applications from the database. The chat's read profile (`read_query`) offers
+`get_entity_context` too, so a question that names a server or a technology
+without its reference can reach its related records.
 
 Page size: 25 items by default, at most 50, 30 for `applications`, 15 for
 `spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
