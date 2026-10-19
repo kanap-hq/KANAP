@@ -2,6 +2,7 @@ import React from 'react';
 import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
+import { useSearchParams } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
 import { useTranslation } from 'react-i18next';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
@@ -53,6 +54,13 @@ export function parseRateDraft(raw: string): number | null {
 }
 
 const MANUAL_RATE_MAX = 1_000_000_000;
+const DEEP_LINK_HIGHLIGHT_MS = 4_000;
+
+const highlightSx = {
+  bgcolor: 'kanap.bg.hover',
+  boxShadow: (theme: Theme) => `inset 0 0 0 2px ${theme.palette.primary.main}`,
+  borderRadius: '4px',
+} as const;
 
 export type ManualRateProblem = 'empty' | 'nan' | 'nonPositive' | 'tooLarge' | 'tooSmall';
 
@@ -157,7 +165,10 @@ export default function CurrencySettingsPage() {
   const [successMessage, setSuccessMessage] = React.useState('');
   const [frozenNotice, setFrozenNotice] = React.useState('');
   const [syncNotice, setSyncNotice] = React.useState<SyncNotice | null>(null);
+  const [highlightKey, setHighlightKey] = React.useState<string | null>(null);
   const followRateSync = useRateSyncFollowUp();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const handledDeepLink = React.useRef(false);
 
   React.useEffect(() => {
     if (data) {
@@ -167,6 +178,50 @@ export default function CurrencySettingsPage() {
       setAllowedCurrencies((data.allowedCurrencies ?? []).join(', '));
     }
   }, [data]);
+
+  // `?currency=ZAR&year=2028` opens the manual dialog when that pair has no rate and the user
+  // can edit. Otherwise the missing row, or the matrix cell, stays highlighted for a few seconds.
+  React.useEffect(() => {
+    if (handledDeepLink.current) return;
+    if (isLoading || ratesLoading || missingLoading) return;
+    const currency = (searchParams.get('currency') ?? '').trim().toUpperCase();
+    const yearRaw = searchParams.get('year');
+    const year = Number(yearRaw);
+    if (!/^[A-Z]{3}$/.test(currency) || yearRaw == null || !Number.isInteger(year)) return;
+    handledDeepLink.current = true;
+
+    const next = new URLSearchParams(searchParams);
+    next.delete('currency');
+    next.delete('year');
+    setSearchParams(next, { replace: true });
+
+    const listed = (missingPairs ?? []).some((pair) => pair.currency === currency && pair.year === year);
+    const set = rateRows?.find((row) => row.fiscalYear === year);
+    const value = set?.rates?.[currency];
+    const hasRate = typeof value === 'number' && Number.isFinite(value) && value > 0;
+    if ((listed || !hasRate) && canEdit) {
+      setManualTarget({ currency, year });
+      return;
+    }
+    const currencies = (rateMatrix?.currencies ?? []).map((code) => code.trim().toUpperCase());
+    if (listed) setHighlightKey(`missing:${currency}:${year}`);
+    else if (currencies.includes(currency) && set) setHighlightKey(`cell:${currency}:${year}`);
+    else setHighlightKey('missing-section');
+    const targetId = listed
+      ? `currency-missing-${currency}-${year}`
+      : currencies.includes(currency) && set
+        ? `currency-cell-${currency}-${year}`
+        : 'currency-missing';
+    window.requestAnimationFrame(() => {
+      document.getElementById(targetId)?.scrollIntoView?.({ block: 'center' });
+    });
+  }, [canEdit, isLoading, missingLoading, missingPairs, rateMatrix?.currencies, rateRows, ratesLoading, searchParams, setSearchParams]);
+
+  React.useEffect(() => {
+    if (!highlightKey) return;
+    const timer = window.setTimeout(() => setHighlightKey(null), DEEP_LINK_HIGHLIGHT_MS);
+    return () => window.clearTimeout(timer);
+  }, [highlightKey]);
 
   const mutation = useMutation({
     mutationFn: updateCurrencySettings,
@@ -324,6 +379,7 @@ export default function CurrencySettingsPage() {
         missingError={missingError}
         canEdit={canEdit}
         reportingCurrency={reporting}
+        highlightKey={highlightKey}
         onEdit={setManualTarget}
       />
       {manualTarget && (
@@ -520,6 +576,8 @@ type RatesTableProps = {
   /** Editors get the sync hint, the "Enter a rate" actions and editable cells. */
   canEdit: boolean;
   reportingCurrency: string;
+  /** `missing:CODE:YEAR`, `cell:CODE:YEAR` or `missing-section`, from a deep link. */
+  highlightKey: string | null;
   onEdit: (pair: MissingRatePair) => void;
 };
 
@@ -631,6 +689,7 @@ function CurrencyRatesTable({
   missingError,
   canEdit,
   reportingCurrency,
+  highlightKey,
   onEdit,
 }: RatesTableProps) {
   const { t } = useTranslation(['ops']);
@@ -670,6 +729,7 @@ function CurrencyRatesTable({
           loading={missingLoading}
           error={missingError}
           canEdit={canEdit}
+          highlightKey={highlightKey}
           onEdit={onEdit}
         />
         <Box sx={{ overflowX: 'auto' }}>
@@ -712,7 +772,18 @@ function CurrencyRatesTable({
                     // The asterisk sits beside the button so it can take keyboard focus on its own.
                     const marks = value != null ? <RateMarks source={source} /> : null;
                     return (
-                      <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                      <Box
+                        component="td"
+                        key={year}
+                        id={`currency-cell-${code}-${year}`}
+                        data-highlight={highlightKey === `cell:${code}:${year}` ? 'true' : undefined}
+                        sx={{
+                          ...cellSx,
+                          textAlign: 'right',
+                          whiteSpace: 'nowrap',
+                          ...(highlightKey === `cell:${code}:${year}` ? highlightSx : null),
+                        }}
+                      >
                         {editable ? (
                           <Box
                             role="button"
@@ -754,35 +825,53 @@ type MissingRatesProps = {
   loading: boolean;
   error: boolean;
   canEdit: boolean;
+  highlightKey: string | null;
   onEdit: (pair: MissingRatePair) => void;
 };
 
 /** The pairs in use with no rate, one dense line each, above the matrix. */
-function MissingRates({ missing, loading, error, canEdit, onEdit }: MissingRatesProps) {
+function MissingRates({ missing, loading, error, canEdit, highlightKey, onEdit }: MissingRatesProps) {
   const { t } = useTranslation(['ops']);
   const C = 'operations.currency';
+  const sectionHighlight = highlightKey === 'missing-section';
   if (loading) return null;
   if (error) {
     return <Alert severity="error" sx={{ mb: 1.5 }}>{t(`${C}.loadMissingError`)}</Alert>;
   }
   if (missing.length === 0) {
     return (
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1.5 }}>
+      <Typography
+        id="currency-missing"
+        data-highlight={sectionHighlight ? 'true' : undefined}
+        sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1.5, ...(sectionHighlight ? highlightSx : null) }}
+      >
         {t(`${C}.missingNone`)}
       </Typography>
     );
   }
   return (
-    <Box sx={{ mb: 2 }}>
+    <Box id="currency-missing" data-highlight={sectionHighlight ? 'true' : undefined} sx={{ mb: 2, ...(sectionHighlight ? highlightSx : null) }}>
       <Typography component="h3" sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', mb: 0.5 }}>
         {t(`${C}.missingTitle`, { count: missing.length })}
       </Typography>
       <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
-        {missing.map((pair) => (
+        {missing.map((pair) => {
+          const rowKey = `missing:${pair.currency}:${pair.year}`;
+          const rowHighlight = highlightKey === rowKey;
+          return (
           <Box
             component="li"
             key={`${pair.currency}-${pair.year}`}
-            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minHeight: 32, fontSize: 13 }}
+            id={`currency-missing-${pair.currency}-${pair.year}`}
+            data-highlight={rowHighlight ? 'true' : undefined}
+            sx={{
+              display: 'flex',
+              alignItems: 'center',
+              gap: 1.5,
+              minHeight: 32,
+              fontSize: 13,
+              ...(rowHighlight ? highlightSx : null),
+            }}
           >
             <Box
               component="span"
@@ -803,7 +892,8 @@ function MissingRates({ missing, loading, error, canEdit, onEdit }: MissingRates
               </Button>
             )}
           </Box>
-        ))}
+          );
+        })}
       </Box>
     </Box>
   );

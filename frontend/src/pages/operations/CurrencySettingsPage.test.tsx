@@ -2,7 +2,7 @@ import React from 'react';
 import { render, screen, waitFor, within } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useSearchParams } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
@@ -77,13 +77,19 @@ const NOK_2025 = { currency: 'NOK', year: 2025 };
 let matrix: { currencies: string[]; rates: unknown[] } = { currencies: [], rates: [] };
 let missing: unknown[] = [];
 
-function renderPage() {
+function SearchProbe() {
+  const [params] = useSearchParams();
+  return <div data-testid="search">{params.toString()}</div>;
+}
+
+function renderPage(initialEntry = '/ops/operations/currency') {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter>
+        <MemoryRouter initialEntries={[initialEntry]}>
           <CurrencySettingsPage />
+          <SearchProbe />
         </MemoryRouter>
       </ThemeProvider>
     </QueryClientProvider>,
@@ -430,6 +436,38 @@ describe('CurrencySettingsPage', () => {
     expect(screen.queryByRole('button', { name: /Enter a rate/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Edit the rate/ })).not.toBeInTheDocument();
     expect(within(screen.getByRole('table')).queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('opens the manual rate dialog from a deep link and drops the parameters', async () => {
+    missing = [{ currency: 'ZAR', year: 2028 }];
+    matrix = { currencies: ['CHF'], rates: [RATES_2025] };
+    renderPage('/ops/operations/currency?currency=ZAR&year=2028');
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('ZAR · 2028')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''));
+  });
+
+  it('highlights the missing row from a deep link when the rate cannot be edited', async () => {
+    auth.budgetAdmin = false;
+    missing = [{ currency: 'ZAR', year: 2028 }];
+    matrix = { currencies: ['CHF'], rates: [RATES_2025] };
+    renderPage('/ops/operations/currency?currency=ZAR&year=2028');
+
+    const row = await screen.findByRole('listitem');
+    expect(row).toHaveAttribute('data-highlight', 'true');
+    expect(row).toHaveTextContent('ZAR · 2028');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''));
+  });
+
+  it('highlights the matrix cell from a deep link when the rate is already there', async () => {
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
+    renderPage('/ops/operations/currency?currency=EUR&year=2025');
+
+    await waitFor(() => expect(document.getElementById('currency-cell-EUR-2025')).toHaveAttribute('data-highlight', 'true'));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByTestId('search').textContent).toBe(''));
   });
 
   it('keeps the sync button busy, then lists what was fetched and what is still missing', async () => {
