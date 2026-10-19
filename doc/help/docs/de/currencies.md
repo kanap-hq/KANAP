@@ -103,7 +103,12 @@ Unterhalb des Einstellungsformulars zeigt die Tabelle **Neueste FX-Kurs-Snapshot
       - **Live-Kassakurs**: Aktueller Kassakurs von ExchangeRate-API (aktuelles Jahr)
       - **Forward-Schätzung**: Kurs des aktuellen Jahres wird für zukünftige Jahre wiederverwendet
   - **Kennzeichen in den Zellen**: ein Sternchen (*) nach einem von Hand eingegebenen Kurs, erklärt durch den Hinweis **Manuell erfasster Kurs** unter der Tabelle (nur sichtbar, wenn die Tabelle einen solchen Kurs enthält); **Schätzung** neben einem Kurs aus dem nächstgelegenen veröffentlichten Jahr (zeigen Sie mit der Maus auf das Kennzeichen, um den Grund zu sehen)
-  - **Fehlender Kurs**: Ein Paar ohne Kurs zeigt `—` in der Warnfarbe
+  - **Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, die Übersicht der Budgetverwaltung und die Budgetberichte. Der Bildschirm weist dort darauf hin, wo es zählt:
+
+- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht und oben in jedem Budgetbericht. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite öffnet.
+- In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
+
+KANAP ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie eine FX-Synchronisation durch, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
 
 **Beispiel**:
 Wenn Ihre Berichtswährung EUR ist:
@@ -116,14 +121,14 @@ Wenn Ihre Berichtswährung EUR ist:
 
 **Die Tabelle lesen**:
   - Kurse zeigen, wie viele Einheiten Ihrer Berichtswährung einer Einheit der gelisteten Währung entsprechen
-  - Zeigt ein Kurs `—`, sind keine Daten verfügbar (Fallback-Umrechnung von 1,00 wird verwendet)
+  - Zeigt ein Kurs `—`, sind keine Daten verfügbar. Beträge von Budgetzeilen in dieser Währung sind für dieses Jahr nicht in den Summen enthalten (siehe [Umrechnungsmechanismen](#umrechnungsmechanismen-kurzreferenz))
   - Kurse werden zum Zeitpunkt der Synchronisation erfasst und bleiben bis zur nächsten Aktualisierung stabil
 
 **Tipp**: Wenn Sie fehlende Kurse (`—`) sehen, prüfen Sie, ob der Währungscode gültig und allgemein veröffentlicht ist. Erwägen Sie, zugelassene Währungen einzuschränken, um exotische Codes ohne Daten zu vermeiden. Sie können den Kurs auch selbst eingeben (siehe [Manuelle Kurse](#manuelle-kurse)).
 
 ### Fehlende Kurse
 
-Über der Tabelle listet ein Block jede verwendete Kombination aus Währung und Jahr ohne Kurs auf, unter einem Titel wie **2 Wechselkurse fehlen**. Jede Zeile erklärt, dass noch keine Quelle diesen Kurs veröffentlicht und Beträge in dieser Währung erst korrekt umgerechnet werden, wenn ein Kurs vorliegt. Fehlt nichts, zeigt der Block **Jede verwendete Währung hat einen Kurs.**
+Über der Tabelle listet ein Block jede verwendete Kombination aus Währung und Jahr ohne Kurs auf, unter einem Titel wie **2 Wechselkurse fehlen**. Jede Zeile erklärt, dass noch keine Quelle diesen Kurs veröffentlicht und Beträge in dieser Währung bei den Summen außen vor bleiben, bis ein Kurs vorliegt. Fehlt nichts, zeigt der Block **Jede verwendete Währung hat einen Kurs.**
 
 Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Kennzahlen eines Unternehmens oder ein Vertrag es benötigen. Beim Öffnen der Seite werden die Quellen für die Jahre der Liste außerdem erneut abgefragt.
 

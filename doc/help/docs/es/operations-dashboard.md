@@ -87,6 +87,10 @@ Las cinco líneas presupuestarias modificadas más recientemente, OPEX y CAPEX j
 
 Sin acceso de lectura a las líneas presupuestarias (`budget:reader`), los mosaicos de presupuesto se ocultan. **Mis tareas** requiere acceso de lectura a las tareas, y **Próximas renovaciones** acceso de lectura a los contratos.
 
+### Importes sin tipo de cambio
+
+Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto** y **Mayores incrementos** muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. En **Top líneas**, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tasas manuales](currencies.md#tasas-manuales).
+
 ## Personalizar la vista general
 
 Haga clic en **Personalizar** para abrir **Configuración del panel de control del presupuesto**. Sus elecciones solo se aplican a su propia vista general.

@@ -155,6 +155,13 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Jede angezeigte VZÄ-Spalte zeigt die Summe der VZÄ der Zeilen. Haben einige Zeilen keine VZÄ, folgt die Anzahl auf die Summe, zum Beispiel „3.50 · 12 unbekannt“. Fahren Sie mit der Maus darüber, um den vollständigen Satz zu lesen: „Unbekannt für 12 Zeilen“. Hat keine Zeile VZÄ, bleibt die Summe leer, und nur die Anzahl erscheint
 - Summen berücksichtigen Ihre aktuellen Filter und Suche
 
+**Beträge ohne Wechselkurs**:
+
+- Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag für dieses Jahr in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
+- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet.
+- In einer sortierten Spalte stehen diese Zeilen am Ende. Ein Betragsfilter behält sie nie.
+- Unter [Manuelle Kurse](currencies.md#manuelle-kurse) können Sie den fehlenden Kurs selbst eingeben.
+
 **Deep Linking**:
 
 - Das Anklicken einer beliebigen Zelle öffnet den Arbeitsbereich auf dem relevantesten Tab:

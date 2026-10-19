@@ -103,7 +103,12 @@ Debajo del formulario de configuración, la tabla **Últimas instantáneas de ta
       - **Tasa al contado**: Tasa al contado actual de ExchangeRate-API (año actual)
       - **Estimación futura**: Tasa del año actual reutilizada para años futuros
   - **Marcas en las celdas**: un asterisco (*) tras una tasa introducida a mano, explicado por la nota **Tipo introducido manualmente** bajo la tabla (solo aparece cuando la tabla contiene una tasa así); **estimación** junto a una tasa tomada del año publicado más cercano (pase el cursor sobre la marca para ver el motivo)
-  - **Tasa faltante**: un par sin tasa muestra `—` en el color de advertencia
+  - **Tasa faltante**: Cuando un año no tiene tasa para una moneda en uso, los importes de las líneas presupuestarias en esa moneda quedan excluidos de todos los totales en la moneda de reporte de ese año. Esto afecta a la lista de líneas presupuestarias, a la vista general de la gestión presupuestaria y a los informes presupuestarios. La pantalla lo indica donde importa:
+
+- Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general y en la parte superior de cada informe presupuestario. Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre esta página.
+- En la propia línea, el importe aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
+
+KANAP obtiene las tasas de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa la nueva tasa en cuanto la fuente la publica. Para detectar las tasas faltantes, consulte el bloque de tasas faltantes encima de la tabla de instantáneas de tasas FX y ejecute Forzar sincronización FX para obtener las tasas de inmediato. Introducir una [tasa manual](#tasas-manuales) lo corrige al momento.
 
 **Ejemplo**:
 Si su moneda de reporte es EUR:
@@ -116,14 +121,14 @@ Si su moneda de reporte es EUR:
 
 **Cómo leer la tabla**:
   - Las tasas muestran cuántas unidades de su moneda de reporte equivalen a 1 unidad de la moneda listada
-  - Si una tasa muestra `—`, no hay datos disponibles (se usa una conversión de respaldo de 1,00)
+  - Si una tasa muestra `—`, no hay datos disponibles. Los importes de las líneas presupuestarias en esa moneda quedan excluidos de los totales de ese año (vea [Mecánicas de conversión](#mecanicas-de-conversion-referencia-rapida))
   - Las tasas se capturan en el momento de la sincronización y permanecen estables hasta la próxima actualización
 
 **Consejo**: Si ve tasas faltantes (`—`), verifique que el código de moneda sea válido y de uso común. Considere limitar las Monedas permitidas para evitar códigos exóticos sin datos. También puede introducir la tasa usted mismo (vea [Tasas manuales](#tasas-manuales)).
 
 ### Tasas faltantes
 
-Encima de la tabla, un bloque enumera cada moneda y año en uso sin tasa, bajo un título como **Faltan 2 tipos de cambio**. Cada línea explica que ninguna fuente publica todavía esta tasa, por lo que los importes en esta moneda no se convierten correctamente hasta que la tenga. Cuando no falta nada, el bloque indica **Cada moneda en uso tiene un tipo.**
+Encima de la tabla, un bloque enumera cada moneda y año en uso sin tasa, bajo un título como **Faltan 2 tipos de cambio**. Cada línea explica que ninguna fuente publica todavía esta tasa, por lo que los importes en esta moneda quedan excluidos de los totales hasta que la tenga. Cuando no falta nada, el bloque indica **Cada moneda en uso tiene un tipo.**
 
 Un par se considera en uso cuando lo necesita una línea presupuestaria, las cifras de una empresa o un contrato. Al abrir la página también se vuelve a consultar a las fuentes para los años de la lista.
 

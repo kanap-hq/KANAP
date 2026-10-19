@@ -103,7 +103,12 @@ Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de
       - **Spot en temps réel** : Taux spot actuel d'ExchangeRate-API (année en cours)
       - **Estimation prospective** : Taux de l'année en cours réutilisé pour les années futures
   - **Marques dans les cellules** : un astérisque (*) après un taux saisi à la main, expliqué par la note **Taux saisi manuellement** sous le tableau (affichée seulement quand le tableau contient un tel taux) ; **estimation** à côté d'un taux pris sur l'année publiée la plus proche (survolez la marque pour en voir la raison)
-  - **Taux manquant** : une paire sans taux affiche `—` dans la couleur d'avertissement
+  - **Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting pour cette année. Cela concerne la liste des lignes budgétaires, la vue d'ensemble de la gestion budgétaire et les rapports budgétaires. L'écran le signale là où cela compte :
+
+- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble et en haut de chaque rapport budgétaire. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page.
+- Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
+
+KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
 
 **Exemple** :
 Si votre devise de reporting est EUR :
@@ -116,14 +121,14 @@ Si votre devise de reporting est EUR :
 
 **Lire le tableau** :
   - Les taux indiquent combien d'unités de votre devise de reporting équivalent à 1 unité de la devise listée
-  - Si un taux affiche `—`, aucune donnée n'est disponible (une conversion de repli à 1,00 est utilisée)
+  - Si un taux affiche `—`, aucune donnée n'est disponible. Les montants des lignes budgétaires dans cette devise sont exclus des totaux pour cette année (voir [Mécanismes de conversion](#mecanismes-de-conversion-reference-rapide))
   - Les taux sont capturés au moment de la synchronisation et restent stables jusqu'au prochain rafraîchissement
 
 **Conseil** : Si vous voyez des taux manquants (`—`), vérifiez que le code devise est valide et couramment publié. Envisagez de limiter les devises autorisées pour éviter les codes exotiques sans données. Vous pouvez aussi saisir le taux vous-même (voir [Taux manuels](#taux-manuels)).
 
 ### Taux manquants
 
-Au-dessus du tableau, un bloc liste chaque devise et année utilisée qui n'a pas de taux, sous un titre comme **2 taux de change manquants**. Chaque ligne indique qu'aucune source ne publie encore ce taux : les montants dans cette devise ne sont pas convertis correctement tant qu'elle n'en a pas un. Quand rien ne manque, le bloc affiche **Chaque devise utilisée a un taux.**
+Au-dessus du tableau, un bloc liste chaque devise et année utilisée qui n'a pas de taux, sous un titre comme **2 taux de change manquants**. Chaque ligne indique qu'aucune source ne publie encore ce taux : les montants dans cette devise sont exclus des totaux tant qu'elle n'en a pas un. Quand rien ne manque, le bloc affiche **Chaque devise utilisée a un taux.**
 
 Une paire est considérée comme utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. L'ouverture de la page interroge aussi de nouveau les sources pour les années de la liste.
 

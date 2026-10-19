@@ -155,6 +155,13 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 - Cada columna de ETC visible muestra la suma del ETC de las líneas. Cuando algunas líneas no tienen ETC, el recuento sigue al total, por ejemplo «3.50 · 12 desconocidas». Pase el cursor por encima para ver la frase completa: «Desconocido para 12 líneas». Cuando ninguna línea tiene ETC, el total queda vacío y solo se muestra el recuento
 - Los totales respetan sus filtros y búsqueda actuales
 
+**Importes sin tipo de cambio**:
+
+- Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe de ese año aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
+- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas.
+- En una columna ordenada, estas líneas van al final. Un filtro de importe nunca las conserva.
+- Vea [Tasas manuales](currencies.md#tasas-manuales) para introducir usted mismo la tasa que falta.
+
 **Enlace directo**:
 
 - Hacer clic en cualquier celda abre el espacio de trabajo en la pestaña más relevante:

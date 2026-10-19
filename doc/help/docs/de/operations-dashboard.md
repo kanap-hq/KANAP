@@ -87,6 +87,10 @@ Die fünf zuletzt bearbeiteten Budgetzeilen, OPEX und CAPEX zusammen. Jede Zeile
 
 Ohne Lesezugriff auf Budgetzeilen (`budget:reader`) sind die Budget-Kacheln ausgeblendet. **Meine Aufgaben** erfordert Lesezugriff auf Aufgaben, **Nächste Verlängerungen** Lesezugriff auf Verträge.
 
+### Beträge ohne Wechselkurs
+
+Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, ist ihr Betrag nicht in den Summen dieses Jahres enthalten. Die Kacheln **Budget** und **Stärkste Zuwächse** zeigen dann einen einzeiligen Hinweis, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet. In **Top-Zeilen** zeigt eine solche Zeile ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
+
 ## Die Übersicht anpassen
 
 Klicken Sie auf **Anpassen**, um **Einstellungen des Budget-Dashboards** zu öffnen. Ihre Wahl gilt nur für Ihre eigene Übersicht.
