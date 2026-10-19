@@ -73,6 +73,40 @@ export function buildCompanyWeights(
 /** What converting turnovers needs from `FxRateService`. */
 export type TurnoverFxRates = Pick<FxRateService, 'resolveRates'>;
 
+/**
+ * `fxRates` reading the rates once per (rate set, year), for all of `currencies` at once: one
+ * calculator call converts the turnovers of many selections and versions of the same years.
+ * For one tenant and one manager (a calculator call). A lookup naming a currency outside
+ * `currencies`, or several (rate set, year), goes to `fxRates` as it is.
+ */
+export function memoizeTurnoverRates(fxRates: TurnoverFxRates | undefined, currencies: Iterable<string | null | undefined>): TurnoverFxRates | undefined {
+  if (!fxRates) return undefined;
+  const universe = Array.from(new Set(
+    Array.from(currencies, (code) => String(code ?? '').trim().toUpperCase()).filter((code) => code.length > 0),
+  )).sort();
+  const known = new Set(universe);
+  const cache = new Map<string, ReturnType<TurnoverFxRates['resolveRates']>>();
+  return {
+    resolveRates: (tenantId, lookups, opts) => {
+      const groups = new Set(lookups.map((l) => `${l.rateSetId || 'live'}:${l.fiscalYear}`));
+      if (groups.size > 1 || lookups.some((l) => !known.has(l.sourceCurrency.toUpperCase()))) {
+        return fxRates.resolveRates(tenantId, lookups, opts);
+      }
+      // No lookup: the settings only (the reporting currency), read once too.
+      const key = lookups.length === 0 ? 'settings' : `${lookups[0].rateSetId || 'live'}:${lookups[0].fiscalYear}`;
+      let pending = cache.get(key);
+      if (!pending) {
+        const all = lookups.length === 0
+          ? []
+          : universe.map((sourceCurrency) => ({ key: '', rateSetId: lookups[0].rateSetId, fiscalYear: lookups[0].fiscalYear, sourceCurrency }));
+        pending = fxRates.resolveRates(tenantId, all, opts);
+        cache.set(key, pending);
+      }
+      return pending;
+    },
+  };
+}
+
 export type TurnoverConversion = {
   reportingCurrency: string;
   /** Company id → its turnover in the reporting currency (null when it has none). */
@@ -186,27 +220,21 @@ export type CompanySharesResult = {
   reportingCurrency: string | null;
 };
 
-/**
- * Company split for a manual company selection, shared by the OPEX/CAPEX calculators
- * (read path) and the allocation services (save path).
- *
- * Companies must belong to the tenant and be enabled for the fiscal year: a company is
- * considered enabled when `disabled_at` is NULL or falls on/after January 1st of that
- * year. Percentages come from each company's driver value for the same year; turnovers
- * are converted into the reporting currency first (`convertTurnovers`, with `rateSetId`,
- * the version's frozen rate set, or null for the live rates of the year).
- */
-export async function computeCompanySharesWithFx(args: {
+type CompanySelectionArgs = {
   manager: EntityManager;
   tenantId: string;
   fiscalYear: number;
   companyIds: string[];
   driver: AllocationDriver;
-  fxRates: TurnoverFxRates | undefined;
-  rateSetId?: string | null;
-}): Promise<CompanySharesResult> {
-  const { manager, tenantId, fiscalYear, companyIds, driver } = args;
+};
 
+/**
+ * The companies of a manual selection and their metrics of the year. Companies must belong to
+ * the tenant and be enabled for the fiscal year: a company is considered enabled when
+ * `disabled_at` is NULL or falls on/after January 1st of that year.
+ */
+async function readCompanySelection(args: CompanySelectionArgs): Promise<{ companies: Company[]; metrics: CompanyMetric[] }> {
+  const { manager, tenantId, fiscalYear, companyIds } = args;
   const periodStart = fiscalYearStart(fiscalYear);
   const companies = await manager.getRepository(Company).find({
     where: {
@@ -226,10 +254,50 @@ export async function computeCompanySharesWithFx(args: {
       company_id: In(companyIds) as any,
     } as any,
   });
+  return { companies, metrics };
+}
+
+/** Each selected company's driver value as entered (a turnover in its base currency). */
+function enteredDriverValues(companyIds: string[], metrics: CompanyMetric[], driver: AllocationDriver): Map<string, number | string | null> {
+  const values = new Map<string, number | string | null>();
+  for (const companyId of companyIds) {
+    const metric = metrics.find((m) => m.company_id === companyId);
+    if (driver === 'headcount') values.set(companyId, metric?.headcount ?? null);
+    else if (driver === 'it_users') values.set(companyId, metric?.it_users ?? null);
+    else values.set(companyId, metric?.turnover ?? null);
+  }
+  return values;
+}
+
+/**
+ * Checks that a manual selection can be split (`computeCompanySharesWithFx` would throw the
+ * same error), without reading any rate: a rate is positive and a missing one counts 1, so a
+ * converted turnover is positive exactly when the turnover entered is.
+ */
+export async function assertCompanySelection(args: CompanySelectionArgs): Promise<void> {
+  const { metrics } = await readCompanySelection(args);
+  normalizeWeights(buildCompanyWeights(args.companyIds, enteredDriverValues(args.companyIds, metrics, args.driver), args.driver));
+}
+
+/**
+ * Company split for a manual company selection, shared by the OPEX/CAPEX calculators
+ * (read path) and the allocation services (save path).
+ *
+ * The companies must be available for the year (`readCompanySelection`). Percentages come
+ * from each company's driver value for the same year; turnovers are converted into the
+ * reporting currency first (`convertTurnovers`, with `rateSetId`, the version's frozen rate
+ * set, or null for the live rates of the year).
+ */
+export async function computeCompanySharesWithFx(args: CompanySelectionArgs & {
+  fxRates: TurnoverFxRates | undefined;
+  rateSetId?: string | null;
+}): Promise<CompanySharesResult> {
+  const { manager, tenantId, fiscalYear, companyIds, driver } = args;
+  const { companies, metrics } = await readCompanySelection(args);
 
   let fxMissing: string[] = [];
   let reportingCurrency: string | null = null;
-  const driverValueByCompany = new Map<string, number | string | null>();
+  let driverValueByCompany = enteredDriverValues(companyIds, metrics, driver);
   if (driver === 'turnover' && companyIds.length > 1) {
     const converted = await convertTurnovers({
       fxRates: args.fxRates,
@@ -240,19 +308,12 @@ export async function computeCompanySharesWithFx(args: {
       entries: companyIds.map((companyId) => ({
         companyId,
         currency: companies.find((c) => c.id === companyId)?.base_currency,
-        turnover: metrics.find((m) => m.company_id === companyId)?.turnover ?? null,
+        turnover: driverValueByCompany.get(companyId),
       })),
     });
     fxMissing = converted.missingCurrencies;
     reportingCurrency = converted.reportingCurrency;
-    for (const companyId of companyIds) driverValueByCompany.set(companyId, converted.values.get(companyId) ?? null);
-  } else {
-    for (const companyId of companyIds) {
-      const metric = metrics.find((m) => m.company_id === companyId);
-      if (driver === 'headcount') driverValueByCompany.set(companyId, metric?.headcount ?? null);
-      else if (driver === 'it_users') driverValueByCompany.set(companyId, metric?.it_users ?? null);
-      else driverValueByCompany.set(companyId, metric?.turnover ?? null);
-    }
+    driverValueByCompany = new Map(companyIds.map((companyId) => [companyId, converted.values.get(companyId) ?? null]));
   }
 
   const distribution = normalizeWeights(buildCompanyWeights(companyIds, driverValueByCompany, driver));

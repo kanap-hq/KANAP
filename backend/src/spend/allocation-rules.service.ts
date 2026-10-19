@@ -13,7 +13,7 @@ import {
 } from './allocation-rule-resolver';
 import {
   TurnoverFxMissingWarning,
-  computeCompanyShares,
+  assertCompanySelection,
   computeCompanySharesWithFx,
   turnoverFxMissingWarning,
   yearRateSetId,
@@ -187,15 +187,13 @@ export class AllocationRulesService {
 
     const manager = opts?.manager ?? this.repo.manager;
     if (companyIds) {
-      // Preflight only: throws when the selection cannot be computed.
-      await computeCompanyShares({
+      // Preflight only: throws when the selection cannot be computed (no rate is read for it).
+      await assertCompanySelection({
         manager,
         tenantId,
         fiscalYear: year,
         companyIds,
         driver: input.method,
-        fxRates: this.fxRates,
-        rateSetId: null,
       });
     }
 

@@ -98,8 +98,36 @@ async function testPreviewOfAFrozenYearUsesItsRateSet() {
   assert.deepEqual(fx.calls.map((c) => c.lookups.map((l: any) => l.rateSetId)), [['set-1', 'set-1']]);
 }
 
+async function testSavingARuleChecksTheSelectionWithoutRates() {
+  const fx = fakeFx({ [`live:${YEAR}:USD`]: 0.9 });
+  const resolved = await service(fx).setTenantMethod(TENANT, YEAR, { mode: 'manual_company', method: 'turnover', company_ids: ['paris', 'newyork'] }, 'u1', { manager: fakeManager(null) });
+  assert.deepEqual(pct(resolved.shares), { paris: 68.9655, newyork: 31.0345 });
+  // The positivity check needs no rate (a rate is positive, a missing one counts 1): the only
+  // read of the rates is the preview's.
+  assert.equal(fx.calls.length, 1);
+}
+
+async function testSavingARuleStillRefusesAMissingTurnover() {
+  const fx = fakeFx({});
+  const manager = fakeManager(null);
+  const original = metrics[1].turnover;
+  (metrics[1] as any).turnover = null;
+  try {
+    await assert.rejects(
+      () => service(fx).setTenantMethod(TENANT, YEAR, { mode: 'manual_company', method: 'turnover', company_ids: ['paris', 'newyork'] }, 'u1', { manager }),
+      /Provide turnover values for the selected companies/,
+    );
+  } finally {
+    (metrics[1] as any).turnover = original;
+  }
+  assert.equal(fx.calls.length, 0);
+  assert.ok(!manager.queries.some((q) => /INSERT INTO allocation_rules/.test(q.sql)), 'nothing is saved');
+}
+
 Promise.resolve()
   .then(testPreviewOfAnUnfrozenYearUsesTheLiveRates)
+  .then(testSavingARuleChecksTheSelectionWithoutRates)
+  .then(testSavingARuleStillRefusesAMissingTurnover)
   .then(testPreviewOfAFrozenYearUsesItsRateSet)
   .then(() => console.log('allocation-rules-turnover-fx: ok'))
   .catch((err) => {

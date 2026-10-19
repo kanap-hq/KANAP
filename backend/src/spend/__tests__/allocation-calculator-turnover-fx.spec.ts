@@ -15,12 +15,18 @@ import { CompanyMetric } from '../../companies/company-metric.entity';
 
 const TENANT = 't1';
 
+/** The rows whose `key` is in the `In(...)` of `where[key]`, when the query names one. */
+function byIds(list: any[], where: any, key: string) {
+  const ids = where?.[key]?.value;
+  return Array.isArray(ids) ? list.filter((row) => ids.includes(row[key])) : list;
+}
+
 function fakeManager(rows: { companies: any[]; metrics: any[]; allocations?: any[]; rules?: any[] }) {
   return {
     getRepository: (entity: unknown) => ({
-      find: async () => {
-        if (entity === Company) return rows.companies;
-        if (entity === CompanyMetric) return rows.metrics;
+      find: async (opts?: { where?: any }) => {
+        if (entity === Company) return byIds(rows.companies, opts?.where, 'id');
+        if (entity === CompanyMetric) return byIds(rows.metrics, opts?.where, 'company_id');
         if (entity === SpendAllocation) return rows.allocations ?? [];
         if (entity === AllocationRule) return rows.rules ?? [];
         throw new Error(`unexpected repository ${String((entity as any)?.name)}`);
@@ -132,7 +138,39 @@ async function testOtherDriversReadNoRate() {
   assert.equal(fx.calls.length, 0);
 }
 
+async function testRatesAreReadOncePerRateSetAndYear() {
+  const fx = fakeFx('EUR', { 'live:2026:USD': 0.9 });
+  const tokyo = { id: 'tokyo', tenant_id: TENANT, base_currency: 'JPY', disabled_at: null };
+  const rows = (versionId: string, companyIds: string[]) => companyIds.map((companyId, i) => ({
+    id: `${versionId}-${i}`, tenant_id: TENANT, version_id: versionId, company_id: companyId, department_id: null, allocation_pct: '50', is_system_generated: false,
+  }));
+  const manual = { allocation_method: 'manual_company', allocation_driver: 'turnover' };
+  const result = await calculator(fx).computeForVersions(
+    [
+      version('auto'),
+      version('a', manual),
+      version('b', manual),
+      version('default', { allocation_method: 'default' }),
+    ],
+    {
+      manager: fakeManager({
+        companies: [...companies, tokyo],
+        metrics: [...metrics, { company_id: 'tokyo', fiscal_year: 2026, headcount: 10, it_users: 5, turnover: '1000' }],
+        allocations: [...rows('a', ['paris', 'newyork']), ...rows('b', ['newyork', 'tokyo'])],
+        rules: [{ tenant_id: TENANT, fiscal_year: 2026, mode: 'manual_company', method: 'turnover', company_ids: ['paris', 'tokyo'] }],
+      }),
+      tenantId: TENANT,
+    },
+  );
+  assert.equal(result.size, 4);
+  assert.deepEqual(pct(result.get('a')!.shares), { paris: 68.9655, newyork: 31.0345 });
+  // Two selections, the default selection and the automatic split of one (rate set, year): one read.
+  assert.equal(fx.calls.length, 1);
+  assert.deepEqual(fx.calls[0].lookups.map((l: any) => l.sourceCurrency).sort(), ['EUR', 'JPY', 'USD']);
+}
+
 Promise.resolve()
+  .then(testRatesAreReadOncePerRateSetAndYear)
   .then(testTurnoverSharesUseTheReportingCurrency)
   .then(testManualCompanySelectionConvertsToo)
   .then(testSameCurrencyNeedsNoRate)

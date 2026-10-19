@@ -17,6 +17,7 @@ import {
   TurnoverFxMissingWarning,
   computeCompanySharesWithFx,
   convertTurnovers,
+  memoizeTurnoverRates,
   normalizeWeights,
   turnoverFxMissingWarning,
 } from './allocation-distribution';
@@ -163,6 +164,16 @@ export class AllocationCalculatorService {
       }
     }
 
+    // Every turnover conversion of this call (automatic splits, manual selections, the default
+    // selection) reads the rates once per (rate set, year), for the currencies of the turnovers.
+    const currencyByCompany = new Map<string, string | null>();
+    enabledCompaniesByYear.forEach((list) => list.forEach((c) => currencyByCompany.set(c.id, c.base_currency ?? null)));
+    const turnoverCurrencies: Array<string | null | undefined> = [];
+    metricsByYear.forEach((byCompany) => byCompany.forEach((metric, companyId) => {
+      if (metric.turnover != null) turnoverCurrencies.push(currencyByCompany.get(companyId));
+    }));
+    const fxRates = memoizeTurnoverRates(this.fxRates, turnoverCurrencies);
+
     for (const version of versions) {
       const method = ((version as any).allocation_method ?? 'default') as string;
       if (method === 'manual_pct') {
@@ -213,7 +224,7 @@ export class AllocationCalculatorService {
             let pendingShares = manualCompanyShares.get(sharesKey);
             if (!pendingShares) {
               pendingShares = computeCompanySharesWithFx({
-                manager, tenantId, fiscalYear: version.budget_year, companyIds, driver, fxRates: this.fxRates, rateSetId,
+                manager, tenantId, fiscalYear: version.budget_year, companyIds, driver, fxRates, rateSetId,
               });
               manualCompanyShares.set(sharesKey, pendingShares);
             }
@@ -308,7 +319,7 @@ export class AllocationCalculatorService {
               fiscalYear: version.budget_year,
               companyIds: resolvedDefault.companyIds,
               driver: resolvedDefault.method,
-              fxRates: this.fxRates,
+              fxRates,
               rateSetId,
             });
             manualDefaultShares.set(key, pending);
@@ -391,7 +402,7 @@ export class AllocationCalculatorService {
           let pending = turnoversByRates.get(key);
           if (!pending) {
             pending = convertTurnovers({
-              fxRates: this.fxRates,
+              fxRates,
               manager,
               tenantId,
               fiscalYear: version.budget_year,
