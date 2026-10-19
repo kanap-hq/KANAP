@@ -253,10 +253,22 @@ export function turnoverFxMissingWarning(
 export class AllocationSplitError extends BadRequestException {
   readonly warning: TurnoverFxMissingWarning;
 
-  constructor(message: string, warning: TurnoverFxMissingWarning) {
-    super(message);
+  /** `code`, when given, goes into the 400 body beside the message. */
+  constructor(message: string, warning: TurnoverFxMissingWarning, code?: string) {
+    super(code ? { statusCode: 400, error: 'Bad Request', code, message } : message);
     this.warning = warning;
   }
+}
+
+/** Every company of a turnover split lacks a rate into the reporting currency. */
+export const TURNOVER_FX_MISSING_ALL_CODE = 'turnover_fx_missing_all';
+
+/** The 400 message of `TURNOVER_FX_MISSING_ALL_CODE`: the currencies and the year without a rate. */
+export function turnoverFxMissingAllMessage(warning: TurnoverFxMissingWarning): string {
+  const currencies = Array.from(new Set(warning.items.map((item) => item.currency))).sort();
+  const years = Array.from(new Set(warning.items.map((item) => item.year))).sort((a, b) => a - b);
+  return `No exchange rate from ${currencies.join(', ')} to ${warning.reportingCurrency} for ${years.join(', ')}: `
+    + 'the turnover of the selected companies cannot be compared. Enter the rate, or choose another allocation driver.';
 }
 
 /**
@@ -414,9 +426,8 @@ export async function computeCompanySharesWithFx(args: CompanySelectionArgs & {
 
   const warning = reportingCurrency ? turnoverFxMissingWarning(fxMissing, reportingCurrency) : null;
   if (weightedIds.length === 0) {
-    const message = 'Allocation source values must sum to a positive amount.';
-    if (warning) throw new AllocationSplitError(message, warning);
-    throw new BadRequestException(message);
+    if (warning) throw new AllocationSplitError(turnoverFxMissingAllMessage(warning), warning, TURNOVER_FX_MISSING_ALL_CODE);
+    throw new BadRequestException('Allocation source values must sum to a positive amount.');
   }
   let distribution: Array<{ id: string; pct: number }>;
   try {

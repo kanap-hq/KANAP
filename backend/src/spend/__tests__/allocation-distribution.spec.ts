@@ -275,7 +275,9 @@ async function testManualSplitWithNoRateHasNoDriver() {
     }),
     (err: unknown) => {
       assert.ok(err instanceof AllocationSplitError);
-      assert.match(err.message, /positive amount/);
+      assert.equal(err.getStatus(), 400);
+      assert.equal((err.getResponse() as { code?: string }).code, 'turnover_fx_missing_all');
+      assert.equal(err.message, 'No exchange rate from JPY, USD to EUR for 2026: the turnover of the selected companies cannot be compared. Enter the rate, or choose another allocation driver.');
       assert.deepEqual(err.warning.items.map((item) => item.companyId), ['jp', 'us']);
       assert.equal(err.warning.reportingCurrency, 'EUR');
       return true;

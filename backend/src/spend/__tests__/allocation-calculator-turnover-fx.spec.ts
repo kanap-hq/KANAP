@@ -164,13 +164,16 @@ async function testManualSelectionDropsTheCompanyWithoutARate() {
       [version('manual', { allocation_method: 'manual_company', allocation_driver: 'turnover' })],
       { manager: fakeManager({ companies: bothUsd, metrics, allocations }), tenantId: TENANT },
     ),
-    (err: unknown) => err instanceof AllocationSplitError && /positive amount/.test(err.message) && err.warning.items.length === 2,
+    (err: unknown) => err instanceof AllocationSplitError
+      && (err.getResponse() as { code?: string }).code === 'turnover_fx_missing_all'
+      && /No exchange rate from USD to EUR/.test(err.message)
+      && err.warning.items.length === 2,
   );
   const suppressed = await calculator(fx).computeForVersions(
     [version('manual', { allocation_method: 'manual_company', allocation_driver: 'turnover' })],
     { manager: fakeManager({ companies: bothUsd, metrics, allocations }), tenantId: TENANT, suppressErrors: true },
   );
-  assert.match(suppressed.get('manual')!.error ?? '', /positive amount/);
+  assert.match(suppressed.get('manual')!.error ?? '', /No exchange rate from USD to EUR/);
   assert.equal(suppressed.get('manual')!.warning?.items.length, 2);
 }
 
