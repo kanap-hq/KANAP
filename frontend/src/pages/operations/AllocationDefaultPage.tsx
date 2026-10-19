@@ -15,6 +15,7 @@ import {
   resetAllocationRule,
   saveAllocationRule,
 } from '../../services/allocationRules';
+import { allocationWarningText } from '../../utils/allocationWarnings';
 
 const METHODS: AllocationMethod[] = ['headcount', 'it_users', 'turnover'];
 const MODES: AllocationRuleMode[] = ['auto', 'manual_company'];
@@ -29,6 +30,8 @@ const METHOD_LABEL_KEYS: Record<AllocationMethod, string> = {
 type Company = {
   id: string;
   name: string;
+  /** The currency of `turnover_year`, entered in millions. */
+  base_currency?: string | null;
   headcount_year?: number | null;
   it_users_year?: number | null;
   turnover_year?: number | null;
@@ -143,6 +146,16 @@ export default function AllocationDefaultPage() {
     [method],
   );
 
+  // A turnover is in millions of the company's base currency, while the percentages are computed in the
+  // reporting currency: the currency is named next to it ("35 M USD").
+  const driverLabel = (company: Company): string => {
+    const value = driverValue(company);
+    if (value == null) return '—';
+    const currency = company.base_currency?.trim().toUpperCase();
+    const formatted = value.toLocaleString();
+    return method === 'turnover' && currency ? t('shared.turnoverMillions', { value: formatted, currency }) : formatted;
+  };
+
   const applyMode = (next: AllocationRuleMode) => {
     if (next === 'auto') {
       setPendingMode(null);
@@ -209,6 +222,7 @@ export default function AllocationDefaultPage() {
           {t('operations.allocationDefault.previewError', { reason: data.preview_error })}
         </Alert>
       )}
+      {data?.preview_warning && <Alert severity="warning">{allocationWarningText(t, data.preview_warning)}</Alert>}
 
       <Paper variant="outlined" sx={{ p: 2, maxWidth: 640 }}>
         <Stack spacing={1}>
@@ -376,14 +390,13 @@ export default function AllocationDefaultPage() {
               <Box component="tbody">
                 {shares.map((share) => {
                   const company = companies.find((c) => c.id === share.company_id);
-                  const value = company ? driverValue(company) : null;
                   return (
                     <Box component="tr" key={share.company_id}>
                       <Box component="td" sx={{ px: 1, py: 0.5, fontSize: 13 }}>
                         {companyLabel(share.company_id) ?? '—'}
                       </Box>
                       <Box component="td" sx={{ px: 1.5, py: 0.5, fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums', color: 'kanap.text.secondary' }}>
-                        {value == null ? '—' : value.toLocaleString()}
+                        {company ? driverLabel(company) : '—'}
                       </Box>
                       <Box component="td" sx={{ px: 1.5, py: 0.5, fontSize: 13, textAlign: 'right', fontVariantNumeric: 'tabular-nums' }}>
                         {Number(share.allocation_pct).toFixed(2)}
