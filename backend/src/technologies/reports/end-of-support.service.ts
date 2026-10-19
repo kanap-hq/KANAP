@@ -7,6 +7,7 @@ import type { ApplicationsReach } from '../technology-links.service';
 import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../technology-reach.service';
 import { onPremHostingTypes } from '../hosting-type';
 import { technologyReference } from '../technology-rows';
+import { versionInUseSql, versionSupportSql } from './version-support';
 
 /**
  * The "End of support" report (lot T4 of planning/cartographie-technologies): what reaches or has
@@ -92,19 +93,11 @@ export type ReportWindow = { today: string; until: string };
 
 const DAY = (expr: string) => `to_char(${expr}, 'YYYY-MM-DD')`;
 
-/**
- * The versions in use: named by a link to an asset in service, or declared by an application in
- * service (the rule of `countsOfTechnologies`).
- */
+/** The versions in use (`versionInUseSql`, shared with the assistant's technology reads). */
 const USED_VERSIONS = `
   used AS (
-    SELECT at.technology_version_id AS version_id FROM asset_technologies at
-      JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND ${assetInServiceSql('a')}
-     WHERE at.tenant_id = $1 AND at.technology_version_id IS NOT NULL
-    UNION
-    SELECT d.technology_version_id FROM application_technologies d
-      JOIN applications ap ON ap.tenant_id = $1 AND ap.id = d.application_id AND ${inServiceSql('ap')}
-     WHERE d.tenant_id = $1 AND d.technology_version_id IS NOT NULL
+    SELECT uv.id AS version_id FROM technology_versions uv
+     WHERE uv.tenant_id = $1 AND ${versionInUseSql('uv')}
   )`;
 
 export function horizonOf(value: unknown): number {
@@ -119,26 +112,6 @@ export function typeOf(value: unknown): DeadlineType | null {
   const text = String(value);
   if (!(DEADLINE_TYPES as readonly string[]).includes(text)) throw new BadRequestException(`type must be one of ${DEADLINE_TYPES.join(', ')}.`);
   return text as DeadlineType;
-}
-
-/**
- * Where a support period stands on `today`, kept when it ended or ends by `until`. A standard end
- * passed with an extended end to come is extended support (dated by the extended end); both passed
- * is out of support (dated by the last end); a standard end within the horizon is upcoming. With
- * one date only, that date is the end.
- */
-export function supportState(
-  standard: string | null,
-  extended: string | null,
-  window: ReportWindow,
-): { state: DeadlineState; date: string } | null {
-  const first = standard ?? extended;
-  if (!first) return null;
-  const last = extended && extended > first ? extended : first;
-  if (last < window.today) return { state: 'out_of_support', date: last };
-  if (first < window.today) return { state: 'extended_support', date: last };
-  if (first <= window.until) return { state: 'upcoming', date: first };
-  return null;
 }
 
 @Injectable()
@@ -384,22 +357,30 @@ export class EndOfSupportService {
     return { filename: `end-of-support-${report.horizon_months}-months.csv`, content: writeCsv({ language, headers, rows }) };
   }
 
-  /** The versions in use whose support ended or ends within the window, with what they reach. */
+  /**
+   * The versions in use whose support ended or ends within the window, with what they reach. The
+   * state and its date follow `versionSupportSql`: a version still supported is upcoming here.
+   */
   private async technologyDeadlines(mg: EntityManager, tenantId: string, window: ReportWindow): Promise<Candidate[]> {
-    const rows: Array<{ version_id: string; label: string; technology_id: string; name: string; item_number: number; family: string; standard: string | null; extended: string | null }> = await mg.query(
+    const support = versionSupportSql('v', '$3::date');
+    const rows: Array<{
+      version_id: string; label: string; technology_id: string; name: string; item_number: number; family: string;
+      standard: string | null; extended: string | null; state: 'out_of_support' | 'extended_support' | 'supported'; date: string;
+    }> = await mg.query(
       `WITH ${USED_VERSIONS}
        SELECT v.id AS version_id, v.label, t.id AS technology_id, t.name, t.item_number, t.family,
-              ${DAY('v.standard_support_end')} AS standard, ${DAY('v.extended_support_end')} AS extended
+              ${DAY('v.standard_support_end')} AS standard, ${DAY('v.extended_support_end')} AS extended,
+              ${support.state} AS state, ${DAY(support.date)} AS date
          FROM used u
          JOIN technology_versions v ON v.tenant_id = $1 AND v.id = u.version_id
          JOIN technologies t ON t.tenant_id = $1 AND t.id = v.technology_id
-        WHERE COALESCE(v.standard_support_end, v.extended_support_end) <= $2::date`,
-      [tenantId, window.until],
+        WHERE ${support.first} <= $2::date`,
+      [tenantId, window.until, window.today],
     );
-    const kept = rows.flatMap((row) => {
-      const support = supportState(row.standard, row.extended, window);
-      return support ? [{ row, support }] : [];
-    });
+    const kept = rows.map((row) => ({
+      row,
+      support: { state: row.state === 'supported' ? 'upcoming' as const : row.state, date: row.date },
+    }));
     if (kept.length === 0) return [];
     const techIds = Array.from(new Set(kept.map((k) => k.row.technology_id)));
     const assets = await this.reach.assetsOfTechnologies(mg, tenantId, techIds);
