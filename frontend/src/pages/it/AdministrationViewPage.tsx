@@ -274,21 +274,23 @@ function ControlPoints({ view }: { view: AdministrationView }) {
   );
   const assetHref = (row: ZoneAsset) => `/it/assets/${row.id}`;
   const placedColumns = assetColumns(assetHref);
+  const trustHref = (row: TrustRaised) => `/it/assets/${row.holder_kind === 'cluster' ? row.asset.id : row.holder.id}`;
   const trustColumns: Array<RelationsColumn<TrustRaised>> = [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/assets/${row.holder.id}`, row.holder.reference, row.holder.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.holder.name },
+    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/assets/${row.asset.id}`, row.asset.reference, row.asset.name) },
+    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.asset.name },
+    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(row.asset_zone) },
     { key: 'relation', header: t('pages.administrationView.columns.relation'), width: COL.type, render: (row) => t(`pages.administrationView.relation.${row.holder_kind}`) },
     {
-      key: 'contained',
-      header: t('pages.administrationView.columns.contained'),
+      key: 'dependsOn',
+      header: t('pages.administrationView.columns.dependsOn'),
       render: (row) => (
         <>
-          {row.asset.reference ? <><RelationRef>{row.asset.reference}</RelationRef>{' '}</> : null}
-          {row.asset.name}
-          <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{` · ${zoneLabel(row.asset_zone)}`}</Box>
+          {referenceLink(`/it/assets/${row.holder.id}`, row.holder.reference, row.holder.name)}
+          {row.holder.reference ? ` ${row.holder.name}` : ''}
         </>
       ),
     },
+    { key: 'holderZone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(row.holder_zone) },
   ];
   const applicationColumns: Array<RelationsColumn<HostedApplication>> = [
     { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/applications/${row.id}`, row.reference, row.name) },
@@ -307,7 +309,7 @@ function ControlPoints({ view }: { view: AdministrationView }) {
         {section('assetsWithoutZone', controls.assets_without_zone, placedColumns, (row) => row.id, assetHref)}
         {controls.domain_controllers_outside !== null && section('domainControllers', controls.domain_controllers_outside, placedColumns, (row) => row.id, assetHref)}
         {controls.directory_assets_outside !== null && section('directoryAssets', controls.directory_assets_outside, placedColumns, (row) => row.id, assetHref)}
-        {controls.trust_raised !== null && section('trustRaised', controls.trust_raised, trustColumns, (row) => `${row.holder.id}:${row.asset.id}:${row.holder_kind}`, (row) => `/it/assets/${row.holder.id}`)}
+        {controls.trust_raised !== null && section('trustRaised', controls.trust_raised, trustColumns, (row) => `${row.holder.id}:${row.asset.id}:${row.holder_kind}`, trustHref)}
         {controls.applications_on_most_sensitive !== null && section('applications', controls.applications_on_most_sensitive, applicationColumns, (row) => `${row.id}:${row.asset.id}`, (row) => `/it/applications/${row.id}`)}
       </Stack>
     </Box>

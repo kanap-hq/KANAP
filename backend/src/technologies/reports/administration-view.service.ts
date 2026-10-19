@@ -91,9 +91,12 @@ export const CONTROL_TITLES = {
   assetsWithoutZone: 'Assets without an administration zone',
   domainControllers: 'Domain controllers outside the most sensitive zone',
   directoryAssets: 'Assets carrying a directory service outside the most sensitive zone',
-  trustRaised: 'Assets in a more sensitive zone than what contains them',
+  trustRaised: 'What runs an asset is in a less sensitive zone',
   applications: 'Applications hosted in the most sensitive zone',
 } as const;
+
+/** English relation names in the export. The screen uses the same words, translated. */
+const TRUST_RELATION_LABEL = { contains: 'Runs on', cluster: 'Member of cluster' } as const;
 
 export type AdministrationDomain = {
   code: string;
@@ -382,8 +385,11 @@ export class AdministrationViewService {
    * (`Record` is `zone`, `asset`, `directory` or `control`):
    * a zone row carries the administrator group, the description and the hosted-application count,
    * and its note is the asset counts by type; an asset row and a directory row name the zone;
-   * a control row uses the English control title as its zone, and its note says the zone, the
-   * contained asset, or the hosting asset. An empty control is omitted.
+   * a control row uses the English control title as its zone. Its note gives the asset's zone
+   * (`No zone` when it has none), or the hosting asset for an application. A trust finding names
+   * the asset, puts the relation in Type (`Runs on` when the asset runs on its holder,
+   * `Member of cluster` when the asset is a member of its cluster) and, in the note, the asset's
+   * zone, then the asset it depends on and that asset's zone. An empty control is omitted.
    */
   async csv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
     const view = await this.view(opts);
@@ -428,8 +434,9 @@ export class AdministrationViewService {
       control(CONTROL_TITLES.directoryAssets, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(assetByZone(view, asset.id)));
     }
     for (const finding of view.controls.trust_raised ?? []) {
-      const contained = [finding.asset.reference, finding.asset.name, zoneNote(finding.asset_zone)].filter(Boolean).join(' ');
-      control(CONTROL_TITLES.trustRaised, finding.holder.reference ?? '', finding.holder.name, finding.holder_kind, contained);
+      const dependsOn = [finding.holder.reference, finding.holder.name].filter(Boolean).join(' ');
+      const note = `${zoneNote(finding.asset_zone)}; ${dependsOn} (${zoneNote(finding.holder_zone)})`;
+      control(CONTROL_TITLES.trustRaised, finding.asset.reference ?? '', finding.asset.name, TRUST_RELATION_LABEL[finding.holder_kind], note);
     }
     for (const app of view.controls.applications_on_most_sensitive ?? []) {
       control(CONTROL_TITLES.applications, app.reference ?? '', app.name, '', app.asset.reference ?? app.asset.name);

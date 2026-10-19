@@ -57,13 +57,22 @@ const VIEW: AdministrationView = {
     assets_without_zone: [{ id: 'asset-bare', name: 'bare', reference: 'AST-9', kind: 'vm' }],
     domain_controllers_outside: [{ id: 'asset-dc2', name: 'dc2', reference: 'AST-2', kind: 'vm' }],
     directory_assets_outside: [],
-    trust_raised: [{
-      asset: { id: 'asset-guest', name: 'guest', reference: 'AST-7', kind: 'vm' },
-      asset_zone: 'tier_0',
-      holder: { id: 'asset-host', name: 'host1', reference: 'AST-6', kind: 'vm' },
-      holder_zone: 'tier_1',
-      holder_kind: 'contains',
-    }],
+    trust_raised: [
+      {
+        asset: { id: 'asset-guest', name: 'guest', reference: 'AST-7', kind: 'vm' },
+        asset_zone: 'tier_0',
+        holder: { id: 'asset-host', name: 'host1', reference: 'AST-6', kind: 'vm' },
+        holder_zone: 'tier_1',
+        holder_kind: 'contains',
+      },
+      {
+        asset: { id: 'asset-esx', name: 'esx1', reference: 'AST-8', kind: 'vm' },
+        asset_zone: 'tier_1',
+        holder: { id: 'asset-cluster', name: 'vsphere', reference: 'AST-5', kind: 'vm' },
+        holder_zone: 'tier_0',
+        holder_kind: 'cluster',
+      },
+    ],
     applications_on_most_sensitive: [{
       id: 'app-1', name: 'Portal', reference: 'APP-3',
       asset: { id: 'asset-fw1', name: 'fw1', reference: 'AST-4', kind: 'firewall' },
@@ -126,9 +135,22 @@ describe('AdministrationViewPage', () => {
     const directory = screen.getByRole('region', { name: 'pages.administrationView.controlsList.directoryAssets.title' });
     expect(within(directory).getByText('pages.administrationView.none')).toBeInTheDocument();
     const trust = screen.getByRole('region', { name: 'pages.administrationView.controlsList.trustRaised.title' });
-    expect(within(trust).getByRole('link', { name: 'AST-6' })).toHaveAttribute('href', '/it/assets/asset-host');
-    expect(within(trust).getByText('pages.administrationView.relation.contains')).toBeInTheDocument();
-    expect(within(trust).getByText('guest')).toBeInTheDocument();
+    expect(within(trust).getAllByRole('columnheader', { name: 'pages.administrationView.columns.zone' })).toHaveLength(2);
+    expect(within(trust).getByRole('columnheader', { name: 'pages.administrationView.columns.dependsOn' })).toBeInTheDocument();
+    expect(within(trust).queryByRole('columnheader', { name: 'pages.administrationView.columns.contained' })).toBeNull();
+    const guestRow = within(trust).getByText('guest').closest('tr');
+    expect(guestRow).toHaveAttribute('data-href', '/it/assets/asset-host');
+    expect(within(guestRow as HTMLElement).getByRole('link', { name: 'AST-7' })).toHaveAttribute('href', '/it/assets/asset-guest');
+    expect(within(guestRow as HTMLElement).getByRole('link', { name: 'AST-6' })).toHaveAttribute('href', '/it/assets/asset-host');
+    expect(within(guestRow as HTMLElement).getByText('host1')).toBeInTheDocument();
+    expect(within(guestRow as HTMLElement).getByText('pages.administrationView.relation.contains')).toBeInTheDocument();
+    expect(within(guestRow as HTMLElement).getByText('Niveau 0')).toBeInTheDocument();
+    const memberRow = within(trust).getByText('esx1').closest('tr');
+    expect(memberRow).toHaveAttribute('data-href', '/it/assets/asset-esx');
+    expect(within(memberRow as HTMLElement).getByRole('link', { name: 'AST-8' })).toHaveAttribute('href', '/it/assets/asset-esx');
+    expect(within(memberRow as HTMLElement).getByRole('link', { name: 'AST-5' })).toHaveAttribute('href', '/it/assets/asset-cluster');
+    expect(within(memberRow as HTMLElement).getByText('vsphere')).toBeInTheDocument();
+    expect(within(memberRow as HTMLElement).getByText('pages.administrationView.relation.cluster')).toBeInTheDocument();
     expect(within(trust).queryByText('asset-host')).toBeNull();
     const apps = screen.getByRole('region', { name: 'pages.administrationView.controlsList.applications.title' });
     expect(within(apps).getByRole('link', { name: 'APP-3' })).toHaveAttribute('href', '/it/applications/app-1');

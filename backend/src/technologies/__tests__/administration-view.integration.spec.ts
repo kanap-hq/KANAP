@@ -335,7 +335,8 @@ async function testControls() {
     const file = await service(settings).csv({ list: 'zones', language: 'en' }, { manager: runner.manager, tenantId: a });
     const lines = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
     assert.equal(lines[0], 'Record,Zone,Administrator group,Description,Reference,Name,Type,Hosted applications,Note');
-    assert.ok(lines.some((line) => line.startsWith('control,Assets in a more sensitive zone than what contains them,') && line.includes(',host,contains,') && line.includes('guest')), file.content);
+    assert.ok(lines.some((line) => line.startsWith('control,What runs an asset is in a less sensitive zone,') && line.includes(',guest,Runs on,') && line.includes('host (Tier 1)')), file.content);
+    assert.ok(lines.some((line) => line.startsWith('control,What runs an asset is in a less sensitive zone,') && line.includes(',esx1,Member of cluster,') && line.includes('vsphere (Tier 0)')), file.content);
     assert.ok(lines.some((line) => line.startsWith('control,Applications hosted in the most sensitive zone,') && line.includes(',Portal,')), file.content);
     assert.equal(lines.some((line) => line.includes('Quiet') || line.includes('leftover')), false);
 

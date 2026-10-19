@@ -525,6 +525,7 @@
         "zone": "Zone",
         "relation": "Relation",
         "contained": "Contained asset",
+        "dependsOn": "Depends on",
         "asset": "Asset",
         "domain": "Domain",
         "dnsSuffix": "DNS suffix",
@@ -535,8 +536,8 @@
         "domainControllers": "Domain controllers"
       },
       "relation": {
-        "contains": "Contains",
-        "cluster": "Cluster"
+        "contains": "Runs on",
+        "cluster": "Member of cluster"
       },
       "controls": "Control points",
       "controlsHint": "The most sensitive zone is {{zone}}.",
@@ -555,7 +556,7 @@
           "hint": "An asset that carries a directory service belongs in the most sensitive zone."
         },
         "trustRaised": {
-          "title": "Assets in a more sensitive zone than what contains them",
+          "title": "What runs an asset is in a less sensitive zone",
           "hint": "What runs an asset should sit in a zone at least as sensitive. An asset without a zone interrupts the check of the chain."
         },
         "applications": {
