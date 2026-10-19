@@ -180,8 +180,66 @@ async function testDuplicateNameInFile() {
   });
 }
 
+/** Each year block is optional. A year missing from the file leaves stored metrics. A year outside the window is ignored. */
+async function testOptionalYearColumns() {
+  await withCompanies('years', async (runner, tenantId, svc) => {
+    const run = importer(runner, svc);
+    const bare = await run([company({ name: 'Bare' })], true, BASE_HEADERS);
+    assert.equal(bare.ok, true, `no metric columns: ${JSON.stringify(bare.errors)}`);
+    assert.equal(bare.inserted, 1);
+
+    const oneYearHeaders = [...BASE_HEADERS, ...yearHeaders([YEAR])];
+    const loaded = await run([company({
+      name: 'One year',
+      [`headcount_${YEAR}`]: '8',
+      [`it_users_${YEAR}`]: '2',
+      [`turnover_${YEAR}`]: '1.5',
+    })], false, oneYearHeaders);
+    assert.equal(loaded.ok, true, `one year: ${JSON.stringify(loaded.errors)}`);
+    assert.equal(loaded.inserted, 1);
+    const written = await runner.query(
+      `SELECT m.fiscal_year, m.headcount, m.it_users
+         FROM companies c JOIN company_metrics m ON m.company_id = c.id
+        WHERE c.tenant_id = $1 AND c.name = 'One year'`,
+      [tenantId],
+    );
+    assert.deepEqual(written, [{ fiscal_year: YEAR, headcount: 8, it_users: 2 }]);
+
+    const again = await run([company({ name: 'One year', notes: 'Later' })], false, BASE_HEADERS);
+    assert.equal(again.ok, true, `year absent on update: ${JSON.stringify(again.errors)}`);
+    assert.equal(again.updated, 1);
+    const still = await runner.query(
+      `SELECT m.fiscal_year, m.headcount FROM companies c JOIN company_metrics m ON m.company_id = c.id
+        WHERE c.tenant_id = $1 AND c.name = 'One year'`,
+      [tenantId],
+    );
+    assert.deepEqual(still, [{ fiscal_year: YEAR, headcount: 8 }], 'an absent year leaves the stored metric');
+
+    const extraHeaders = [...BASE_HEADERS, 'headcount_2031', 'turnover_2031'];
+    const extra = await run([company({ name: 'Outside', headcount_2031: '9', turnover_2031: '3' })], true, extraHeaders);
+    assert.equal(extra.ok, true, `outside window: ${JSON.stringify(extra.errors)}`);
+    assert.deepEqual([...(extra.ignoredColumns ?? [])].sort(), ['headcount_2031', 'turnover_2031']);
+
+    const partial = await run(
+      [company({ name: 'Partial', [`headcount_${YEAR}`]: '1' })],
+      true,
+      [...BASE_HEADERS, `headcount_${YEAR}`],
+    );
+    assert.equal(partial.ok, false, 'a partial year block is refused');
+    assert.equal(partial.errors[0]?.code, 'CSV_HEADER_MISSING_COLUMNS');
+    assert.match(partial.errors[0]?.message ?? '', new RegExp(`it_users_${YEAR}`));
+    assert.match(partial.errors[0]?.message ?? '', new RegExp(`turnover_${YEAR}`));
+
+    const missingName = await run([company({ name: 'X' })], true, BASE_HEADERS.filter((header) => header !== 'name'));
+    assert.equal(missingName.ok, false);
+    assert.equal(missingName.errors[0]?.code, 'CSV_HEADER_MISSING_COLUMNS');
+    assert.match(missingName.errors[0]?.message ?? '', /name/);
+  });
+}
+
 void runSpecs('companies csv import', [
   ['a blank city is refused at the check, like the other required columns', testBlankCityRefused],
   ['metrics for a frozen year are refused at the check', testFrozenYearRefusedAtCheck],
   ['two rows with the same name are refused at the check', testDuplicateNameInFile],
+  ['metric year columns are optional and a year outside the window is ignored', testOptionalYearColumns],
 ]);

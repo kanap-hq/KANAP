@@ -42,6 +42,7 @@ import {
   formatCsvAmount,
   formatCsvEndOfValidity,
   ImportReportError,
+  headerMismatchError,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
@@ -49,6 +50,9 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
+
+/** A metric column of any year (`headcount_2031`), inside or outside the list's window. */
+const METRIC_COLUMN = /^(headcount|it_users|turnover)_(\d{4})$/i;
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -773,12 +777,39 @@ export class CompaniesService {
       'notes',
     ];
     const years = this.metricYears(baseYear);
-    years.forEach((year) => {
-      headers.push(`headcount_${year}`);
-      headers.push(`it_users_${year}`);
-      headers.push(`turnover_${year}`);
-    });
+    years.forEach((year) => headers.push(...this.metricColumns(year)));
     return headers;
+  }
+
+  private metricColumns(year: number): string[] {
+    return [`headcount_${year}`, `it_users_${year}`, `turnover_${year}`];
+  }
+
+  /** Years of the window whose three columns are all in the file. An absent year is left untouched. */
+  private yearsInFile(present: readonly string[], metricYears: readonly number[]): number[] {
+    return metricYears.filter((year) => this.metricColumns(year).every((column) => present.includes(column)));
+  }
+
+  /** A year that has some of its three columns and not the others: the file would otherwise clear the missing ones. */
+  private incompleteYearColumns(present: readonly string[], metricYears: readonly number[]): string[] {
+    const have = new Set(present);
+    const missing: string[] = [];
+    for (const year of metricYears) {
+      const columns = this.metricColumns(year);
+      if (!columns.some((column) => have.has(column))) continue;
+      for (const column of columns) if (!have.has(column)) missing.push(column);
+    }
+    return missing;
+  }
+
+  /** Ignored headers, plus metric columns of a year outside the window (`turnover_2031` is read as an amount). */
+  private reportedIgnored(
+    read: { present: readonly string[]; ignoredColumns: readonly string[] },
+    metricYears: readonly number[],
+  ): string[] {
+    const allowed = new Set(metricYears.flatMap((year) => this.metricColumns(year)));
+    const outside = read.present.filter((id) => METRIC_COLUMN.test(id) && !allowed.has(id));
+    return [...read.ignoredColumns, ...outside];
   }
 
   async exportCsv(
@@ -868,24 +899,38 @@ export class CompaniesService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      // Each year of the window may be absent. A year outside it is reported, not refused.
+      optional: metricYears.flatMap((fy) => this.metricColumns(fy)),
       amounts: [{ measure: 'turnover', names: ['turnover'] }],
       dateFields: ['disabled_at'],
       language: readLanguage,
       dateOrder,
       decimalMark,
+      noticeUnknown: (header) => METRIC_COLUMN.test(header.trim()),
     });
+    const ignoredColumns = this.reportedIgnored(read, metricYears);
     const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
         errors: [read.headerError],
-        ignoredColumns: read.ignoredColumns, notices: read.notices,
+        ignoredColumns, notices: read.notices,
       };
     }
+    // One column of a year without the other two would store nulls for the ones the file omits.
+    const incomplete = headerMismatchError(this.incompleteYearColumns(read.present, metricYears), []);
+    if (incomplete) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [incomplete],
+        ignoredColumns, notices: read.notices,
+      };
+    }
+    const yearsInFile = this.yearsInFile(read.present, metricYears);
     // Years frozen for company metrics: a row that sets one is refused here, not at the load.
     const frozenYears = new Set<number>();
     if (typeof this.companyMetrics?.assertYearOpen === 'function') {
-      for (const fy of metricYears) {
+      for (const fy of yearsInFile) {
         try {
           await this.companyMetrics.assertYearOpen(fy, opts);
         } catch (err) {
@@ -959,7 +1004,7 @@ export class CompaniesService {
         return;
       }
       const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: string | null }>();
-      for (const fy of metricYears) {
+      for (const fy of yearsInFile) {
         const headcountKey = `headcount_${fy}`;
         const itUsersKey = `it_users_${fy}`;
         const turnoverKey = `turnover_${fy}`;
@@ -1035,7 +1080,7 @@ export class CompaniesService {
     });
     const total = read.rows.length;
     if (errors.length > 0) {
-      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns, notices: read.notices };
     }
     // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
@@ -1058,9 +1103,9 @@ export class CompaniesService {
     }
     const existingIds = Array.from(existingByName.values()).map((company) => company.id);
     const storedMetrics = new Map<string, CompanyMetric>();
-    if (existingIds.length > 0 && metricYears.length > 0) {
+    if (existingIds.length > 0 && yearsInFile.length > 0) {
       const metricRepo = (opts?.manager ?? repo.manager).getRepository(CompanyMetric);
-      for (const metric of await metricRepo.find({ where: { company_id: In(existingIds), fiscal_year: In(metricYears) } })) {
+      for (const metric of await metricRepo.find({ where: { company_id: In(existingIds), fiscal_year: In(yearsInFile) } })) {
         storedMetrics.set(`${metric.company_id}:${metric.fiscal_year}`, metric);
       }
     }
@@ -1090,7 +1135,7 @@ export class CompaniesService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1111,6 +1156,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns, notices: read.notices };
   }
 }

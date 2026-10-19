@@ -23,6 +23,11 @@ export interface MasterDataFileRequest {
   dateFields?: readonly string[];
   /** Columns accepted when absent. Every other column, and every unknown one, is refused. */
   optional?: readonly string[];
+  /**
+   * An unknown header that stays in `ignoredColumns` and does not refuse the file.
+   * Any other unknown header still does.
+   */
+  noticeUnknown?: (header: string) => boolean;
   language: CsvLanguage;
   dateOrder?: CsvDateOrder;
   decimalMark?: DecimalMark;
@@ -90,7 +95,9 @@ function headerProblem(
   const optional = new Set(request.optional ?? []);
   const present = new Set(read.columns.map((column) => column.id));
   const missing = request.fields.filter((field) => !optional.has(field) && !present.has(field));
-  return headerMismatchError(missing, read.ignoredColumns);
+  const notice = request.noticeUnknown;
+  const extras = notice ? read.ignoredColumns.filter((header) => !notice(header)) : read.ignoredColumns;
+  return headerMismatchError(missing, extras);
 }
 
 /**
