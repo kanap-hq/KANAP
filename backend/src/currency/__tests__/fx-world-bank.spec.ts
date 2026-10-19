@@ -179,7 +179,43 @@ async function testManualQueueDeduplication() {
   await new Promise((resolve) => setTimeout(resolve, 0));
 }
 
+/**
+ * The refresh covers the base currencies of the tenant's companies: their turnovers are
+ * converted at the year's rates (`convertTurnovers`), and a currency no set rates would stay
+ * counted unconverted for good.
+ */
+async function testTenantContextCoversCompanyCurrencies() {
+  const queries: Array<{ sql: string; params: unknown[] }> = [];
+  const ensured: string[][] = [];
+  const service = new FxIngestionService(
+    {} as any,
+    {} as any,
+    {
+      getSettings: async () => ({ reportingCurrency: 'EUR', defaultCapexCurrency: 'EUR', defaultSpendCurrency: 'EUR', allowedCurrencies: [] }),
+      ensureCurrencyRecords: async (codes: Set<string>) => { ensured.push(Array.from(codes)); },
+    } as any,
+    {} as any,
+    {} as any,
+  );
+  const manager = {
+    query: async (sql: string, params: unknown[] = []) => {
+      queries.push({ sql, params });
+      if (/FROM companies/.test(sql)) return [{ currency: 'USD' }, { currency: 'JPY' }];
+      return [];
+    },
+  };
+  const context = await (service as any).buildTenantContext('tenant-1', manager);
+  assert.ok(context.currencies.includes('USD'), 'USD, a company base currency, is refreshed');
+  assert.ok(context.currencies.includes('JPY'), 'JPY, a company base currency, is refreshed');
+  assert.ok(ensured[0].includes('JPY'));
+  const companies = queries.find((q) => /FROM companies/.test(q.sql));
+  assert.ok(companies, 'the companies are read');
+  assert.match(companies!.sql, /tenant_id = \$1/);
+  assert.deepEqual(companies!.params, ['tenant-1']);
+}
+
 (async () => {
+  await testTenantContextCoversCompanyCurrencies();
   await testAnnualOnly();
   await testSpotRateBlending();
   await testMissingDataYieldsNull();
