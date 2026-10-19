@@ -514,10 +514,12 @@ export default function ContractsPage() {
     const data = totals.data;
     if (!data || totals.isError) return [];
     const budget = data.budget;
-    return [
-      ...data.excluded.map((entry) => t('contracts.list.totalExcluded', { count: entry.count, currency: entry.currency })),
-      ...(budget?.excluded ?? []).map((entry) => t('contracts.list.committedExcluded', { count: entry.count, currency: entry.currency, year: budget.year })),
-    ];
+    const notes = data.excluded.map((entry) => t('contracts.list.totalExcluded', { count: entry.count, currency: entry.currency }));
+    if (budget) {
+      const year = budget.year;
+      notes.push(...budget.excluded.map((entry) => t('contracts.list.committedExcluded', { count: entry.count, currency: entry.currency, year })));
+    }
+    return notes;
   }, [totals.data, totals.isError, t]);
 
   const currentModel = safeParse(listQuery?.filters ?? '');

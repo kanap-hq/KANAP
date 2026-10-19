@@ -57,8 +57,11 @@ describe('CompaniesPage turnover without a rate', () => {
       const pinned = grid.props?.pinnedBottomRowData?.[0];
       expect(pinned?.turnover_fx_missing).toEqual([{ currency: 'ZAR', year: 2026, companies: 1 }]);
     });
-    const column = (grid.props?.columns as Array<Record<string, any>>).find((col) => col.field === 'turnover_year');
-    const pinned = grid.props.pinnedBottomRowData[0];
+    const props = grid.props;
+    if (!props) throw new Error('missing grid');
+    const column = (props.columns as Array<Record<string, any>>).find((col) => col.field === 'turnover_year');
+    if (!column) throw new Error('missing turnover column');
+    const pinned = props.pinnedBottomRowData[0];
     expect(column.valueFormatter({ value: pinned.turnover_year, node: { rowPinned: 'bottom' }, data: pinned })).toBe('12,5 M EUR');
     const selected = column.cellRendererSelector({ node: { rowPinned: 'bottom' }, data: pinned });
     const { container } = render(
