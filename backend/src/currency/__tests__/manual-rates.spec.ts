@@ -1,4 +1,5 @@
 import * as assert from 'node:assert/strict';
+import { CurrencyController } from '../currency.controller';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { FxRateService } from '../fx-rate.service';
 import {
@@ -324,6 +325,108 @@ async function testLatestSetWins() {
   console.log('ok - the manual write reads and becomes the latest set of the year');
 }
 
+async function testApiContract() {
+  const { service, manager } = harness();
+  const capturedAt = new Date('2024-06-01T00:00:00.000Z');
+  const older = new Date('2024-01-01T00:00:00.000Z');
+  const listManager = {
+    query: async () => [],
+    getRepository: () => ({
+      find: async () => [
+        {
+          fiscal_year: 2024,
+          base_currency: 'EUR',
+          rates: { EUR: 1, GBP: 1.2 },
+          rate_sources: null,
+          captured_at: capturedAt,
+          source: 'world-bank-annual',
+        },
+        {
+          fiscal_year: 2024,
+          base_currency: 'EUR',
+          rates: { EUR: 1 },
+          rate_sources: { EUR: 'identity' },
+          captured_at: older,
+          source: 'world-bank-annual',
+        },
+        {
+          fiscal_year: 2023,
+          base_currency: 'EUR',
+          rates: { EUR: 1 },
+          rate_sources: { EUR: 'identity', USD: 'manual' },
+          captured_at: older,
+          source: 'manual',
+        },
+      ],
+    }),
+  };
+  const missingManager = {
+    query: async (sql: string) => {
+      if (sql.includes('FROM spend_items')) return [{ currency: 'gbp', year: 2023 }];
+      if (sql.includes('FROM companies')) return [{ currency: 'CHF', year: 2020 }];
+      if (sql.includes('FROM contracts')) return [{ currency: 'SEK', year: 2024 }, { currency: 'EUR', year: 2024 }];
+      if (sql.includes('FROM currency_rate_sets')) return [{ fiscal_year: 2024, rates: { SEK: 0.1 } }];
+      return [];
+    },
+  };
+  const controller = new CurrencyController({} as any, {} as any, service, { manager: listManager } as any);
+
+  const listed = await controller.listRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: listManager } });
+  assert.deepEqual(listed, [
+    {
+      fiscalYear: 2023,
+      baseCurrency: 'EUR',
+      rates: { EUR: 1 },
+      rateSources: { EUR: 'identity', USD: 'manual' },
+      capturedAt: older,
+      source: 'manual',
+    },
+    {
+      fiscalYear: 2024,
+      baseCurrency: 'EUR',
+      rates: { EUR: 1, GBP: 1.2 },
+      rateSources: {},
+      capturedAt,
+      source: 'world-bank-annual',
+    },
+  ]);
+
+  const missing = await controller.listMissingRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: missingManager } });
+  assert.deepEqual(missing, {
+    items: [
+      { currency: 'CHF', year: 2020 },
+      { currency: 'GBP', year: 2023 },
+    ],
+  });
+
+  const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, queryRunner: { manager } };
+  const saved = await controller.setManualRate({ currency: 'gbp', year: 2024, rate: 1.25 }, req);
+  assert.deepEqual(saved, {
+    fiscalYear: 2024,
+    baseCurrency: 'EUR',
+    rates: { EUR: 1, GBP: 1.25 },
+    rateSources: { EUR: 'identity', GBP: 'manual' },
+    capturedAt: saved.capturedAt,
+    source: 'manual',
+  });
+  assert.ok(saved.capturedAt instanceof Date);
+
+  const removed = await controller.removeManualRate('2024', 'GBP', req);
+  assert.deepEqual(removed, { ok: true, refreshQueued: true });
+
+  await rejects(
+    () => controller.setManualRate({ currency: 'EU', year: 2024, rate: 1 }, req),
+    MANUAL_RATE_CURRENCY_MESSAGE,
+    400,
+  );
+  await rejects(
+    () => controller.removeManualRate('nope', 'GBP', req),
+    MANUAL_RATE_YEAR_MESSAGE,
+    400,
+  );
+  console.log('ok - the currency API returns the manual-rate contract');
+}
+
 (async () => {
   await testValidationWritesNothing();
   await testNoSetForTheYear();
@@ -332,6 +435,7 @@ async function testLatestSetWins() {
   await testRemoveClearsTheCurrencyAndQueuesARefresh();
   await testSkippedRefreshReportsTheYear();
   await testLatestSetWins();
+  await testApiContract();
   console.log('manual-rates.spec: ok');
 })().catch((error) => {
   console.error(error);

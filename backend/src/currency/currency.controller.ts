@@ -1,9 +1,10 @@
-import { Body, Controller, Get, Patch, Post, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
+import { ManualRatesService } from './manual-rates.service';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
@@ -22,6 +23,7 @@ export class CurrencyController {
   constructor(
     private readonly settings: CurrencySettingsService,
     private readonly fxIngestion: FxIngestionService,
+    private readonly manualRates: ManualRatesService,
     @InjectRepository(CurrencyRateSet)
     private readonly rateSets: Repository<CurrencyRateSet>,
   ) {}
@@ -91,9 +93,53 @@ export class CurrencyController {
         fiscalYear: year,
         baseCurrency: row.base_currency,
         rates: row.rates,
+        rateSources: row.rate_sources ?? {},
         capturedAt: row.captured_at,
         source: row.source,
       }));
+  }
+
+  // Static path: declared before `rates/manual/:year/:currency`.
+  @Get('rates/missing')
+  @UseGuards(PermissionGuard)
+  @RequireAnyLevel(CURRENCY_READERS)
+  async listMissingRates(@Req() req: any) {
+    const tenantId = this.requireTenantId(req);
+    const manager = req?.queryRunner?.manager ?? this.rateSets.manager;
+    await this.ensureTenantContext(manager, tenantId);
+    const items = await this.manualRates.listMissingPairs(tenantId, manager);
+    return { items };
+  }
+
+  @Put('rates/manual')
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget_ops', 'admin')
+  async setManualRate(@Body() body: { currency?: string; year?: number; rate?: number }, @Req() req: any) {
+    const tenantId = this.requireTenantId(req);
+    const manager = req?.queryRunner?.manager ?? this.rateSets.manager;
+    await this.ensureTenantContext(manager, tenantId);
+    const set = await this.manualRates.setManualRate(
+      tenantId,
+      { currency: body?.currency as string, year: body?.year as number, rate: body?.rate as number },
+      req.user?.sub ?? null,
+      manager,
+    );
+    return this.presentSet(set);
+  }
+
+  @Delete('rates/manual/:year/:currency')
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget_ops', 'admin')
+  async removeManualRate(@Param('year') yearRaw: string, @Param('currency') currency: string, @Req() req: any) {
+    const tenantId = this.requireTenantId(req);
+    const manager = req?.queryRunner?.manager ?? this.rateSets.manager;
+    await this.ensureTenantContext(manager, tenantId);
+    return this.manualRates.removeManualRate(
+      tenantId,
+      { currency, year: Number(yearRaw) },
+      req.user?.sub ?? null,
+      manager,
+    );
   }
 
   @Post('rates/refresh')
@@ -114,6 +160,17 @@ export class CurrencyController {
       queued: status === 'queued',
       alreadyQueued: status === 'skipped',
       years,
+    };
+  }
+
+  private presentSet(set: CurrencyRateSet) {
+    return {
+      fiscalYear: set.fiscal_year,
+      baseCurrency: typeof set.base_currency === 'string' ? set.base_currency.trim() : set.base_currency,
+      rates: set.rates,
+      rateSources: set.rate_sources ?? {},
+      capturedAt: set.captured_at,
+      source: set.source,
     };
   }
 
