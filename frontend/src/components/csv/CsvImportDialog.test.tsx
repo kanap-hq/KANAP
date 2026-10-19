@@ -21,6 +21,10 @@ vi.mock('react-i18next', () => {
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 
 import api from '../../api';
+import en from '../../locales/en/it.json';
+import fr from '../../locales/fr/it.json';
+import de from '../../locales/de/it.json';
+import es from '../../locales/es/it.json';
 import CsvImportDialog from './CsvImportDialog';
 
 const post = (api as unknown as { post: ReturnType<typeof vi.fn> }).post;
@@ -245,5 +249,17 @@ describe('CsvImportDialog', () => {
   it('shows the accepted values the page gives, under the description', () => {
     render(<CsvImportDialog open onClose={() => undefined} endpoint="/suppliers" hint="status: enabled or disabled." />);
     expect(screen.getByText('status: enabled or disabled.')).toBeInTheDocument();
+  });
+
+  it('shows an introduction and one line per rule', () => {
+    const hints = [en, fr, de, es].map((file) => file.pages.technologies.linkFiles.importHint);
+    for (const hint of hints) {
+      expect(hint.asset.items.length).toBeGreaterThan(1);
+      expect(hint.application.items.length).toBeGreaterThan(0);
+    }
+    const { asset } = en.pages.technologies.linkFiles.importHint;
+    render(<CsvImportDialog open onClose={() => undefined} endpoint="/technologies/asset-links" hintList={asset} />);
+    expect(screen.getByText(asset.intro)).toBeInTheDocument();
+    expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual(asset.items);
   });
 });
