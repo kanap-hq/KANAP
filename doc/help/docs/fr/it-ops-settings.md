@@ -31,7 +31,7 @@ Dans une section, les listes sont triées par nom. Chaque liste apparaît comme 
 
 Chaque liste possède ses propres contrôles en haut :
 
-- **Ajouter un élément** - Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir.
+- **Ajouter un élément** - Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir. Son champ de nom affiche un exemple propre à la liste.
 - Les modifications sont enregistrées automatiquement environ une seconde et demie après votre dernière saisie, dès que toutes les lignes sont valides. Un indicateur d'enregistrement s'affiche à côté de la liste.
 
 Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, affichant environ 20 à la fois avec un défilement fluide et des en-têtes fixes.
@@ -104,14 +104,16 @@ Les zones de votre modèle d'administration. KANAP fournit les trois tiers du mo
 
 Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, KANAP ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
 
+L'ordre de la liste compte : la première zone est la plus sensible. Faites glisser une ligne par sa poignée pour la déplacer. Une nouvelle zone s'ajoute en haut : déplacez-la ensuite à sa place. La [Vue de l'administration](administration-view.md) affiche les zones dans cet ordre et contrôle les actifs par rapport à la première zone qui n'est pas marquée **Ne plus proposer**.
+
 **Colonnes** : Nom, Groupe d'administrateurs, Description, Ne plus proposer
 
 - **Groupe d'administrateurs** : le groupe de l'annuaire ou l'équipe qui administre la zone, par exemple « Admins du domaine ».
 
 **Où c'est utilisé** :
-- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**
-- Espace de travail Actifs > Onglet Technique > **Zone d'administration**
-- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies, leurs serveurs et les serveurs placés dans la zone. Voir [Vue de l'administration](administration-view.md).
+- Espace de travail Actifs > panneau de propriétés > **Zone d'administration**
+- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**, pour les technologies de la famille **Annuaire et identité**
+- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses actifs et ses services d'annuaire, puis les points de contrôle. Voir [Vue de l'administration](administration-view.md).
 
 Une zone marquée **Ne plus proposer** reste sur les technologies et les actifs déjà placés dedans.
 
@@ -415,7 +417,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
-| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Actifs (onglet Technique > Zone d'administration), Vue de l'administration |
+| **Zones d'administration** | Actifs (panneau de propriétés > Zone d'administration), Technologies de la famille Annuaire et identité (panneau de propriétés > Zone d'administration), Vue de l'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
 | **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |

@@ -31,7 +31,7 @@ Innerhalb eines Abschnitts sind die Listen nach Namen sortiert. Jede Liste ersch
 
 Jede Liste hat oben eigene Steuerungen:
 
-- **Element hinzufügen** - Fügt oben in der Liste eine neue Zeile ein, fokussiert und bereit zur Eingabe.
+- **Element hinzufügen** - Fügt oben in der Liste eine neue Zeile ein, fokussiert und bereit zur Eingabe. Ihr Namensfeld zeigt ein Beispiel für diese Liste.
 - Bearbeitungen werden etwa eineinhalb Sekunden nach Ihrer letzten Änderung automatisch gespeichert, sobald alle Zeilen gültig sind. Neben der Liste erscheint eine Speicheranzeige.
 
 Bei langen Listen (mehr als 25 Zeilen) virtualisiert die Tabelle die Zeilen: Sie zeigt etwa 20 Zeilen gleichzeitig, mit flüssigem Scrollen und fixierten Spaltenköpfen.
@@ -104,14 +104,16 @@ Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Adminis
 
 Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt KANAP sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
 
+Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die [Administrationssicht](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die nicht als **Nicht mehr anbieten** markiert ist.
+
 **Spalten**: Name, Administratorgruppe, Beschreibung, Nicht mehr anbieten
 
 - **Administratorgruppe**: die Verzeichnisgruppe oder das Team, das die Zone verwaltet, zum Beispiel „Domänen-Admins“.
 
 **Verwendung**:
-- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**
-- Assets-Arbeitsbereich → Reiter Technik → **Administrationszone**
-- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Technologien, deren Servern und den der Zone zugeordneten Servern listet. Siehe [Administrationssicht](administration-view.md).
+- Assets-Arbeitsbereich → Eigenschaftsleiste → **Administrationszone**
+- Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**, für die Technologien der Familie **Verzeichnis und Identität**
+- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Assets und Verzeichnisdiensten listet, danach die Kontrollpunkte. Siehe [Administrationssicht](administration-view.md).
 
 Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
 
@@ -415,7 +417,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 |------|-----------------|
 | **Zugriffsmethoden** | Anwendungen (Reiter Technik und Support → Zugriffsmethoden) |
 | **Anwendungskategorien** | Anwendungen (Kategorie) |
-| **Administrationszonen** | Technologien (Eigenschaftenfeld → Administrationszone), Assets (Reiter Technik → Administrationszone), Administrationssicht |
+| **Administrationszonen** | Assets (Eigenschaftsleiste → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenfeld → Administrationszone), Administrationssicht |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
 | **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Administrationssicht |

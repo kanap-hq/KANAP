@@ -94,7 +94,7 @@ The workspace has a header, a properties drawer on the right, and six tabs: **Ov
 ### Properties drawer
 
 - **Publisher**, **Family** and **Hosting type**.
-- **Administration zone**: the zone of your administration model the technology belongs to, for example Tier 0 for the directory. The zones come from **IT Landscape > Settings**. A technology without a zone is listed as data to complete in the [Administration view](administration-view.md).
+- **Administration zone**: shown for the technologies of the **Directory and identity** family only. It places a directory service in a zone of your administration model, for example Tier 0 for Entra ID, which runs on no server of yours. The zones come from **IT Landscape > Settings**, and the [Administration view](administration-view.md) lists the directory services of each zone. The other technologies take no zone: place the servers that carry them instead. A zone set earlier on a technology of another family stays shown, read only, with a note that the value is no longer used.
 - **Replaced by**: the technology that takes over from this one, for example a newer product your teams are moving to.
 - **IT owners**: the people responsible for the technology.
 
@@ -237,7 +237,7 @@ Record the technology on the server where it is installed: the host for a hyperv
 - **Contracts**, **budget lines** and **incidents**: a **Technologies** field in their Relations tab, for users who can read the infrastructure.
 - **End of support** report: the versions that reach their end of support, and what they touch. See [End of support](end-of-support.md).
 - **Vulnerabilities**: the known vulnerabilities of the versions in use, and the servers and applications they reach. See [Vulnerabilities](vulnerabilities.md).
-- **Administration view**: the technologies of each administration zone, with their servers. See [Administration view](administration-view.md).
+- **Administration view**: the directory services of each administration zone, and the servers that carry a directory technology outside the most sensitive zone. See [Administration view](administration-view.md).
 - **Contacts**: the **Used by** section of a contact lists the technologies it supports. See [Contacts](contacts.md#where-contacts-are-used).
 - **Search**: the global search and the assistant's `@` mentions find technologies by name and by reference (`@TEC-4`).
 

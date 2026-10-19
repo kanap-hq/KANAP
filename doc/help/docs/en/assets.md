@@ -118,6 +118,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 
 **Status**:
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
+- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration view](administration-view.md)
 - **Lifecycle**: Active, Deprecated, Retired, etc. (configurable in Settings)
 - **Go live**: When the asset entered production
 - **End of life**: Planned or actual retirement date
@@ -162,7 +163,6 @@ The Technical tab organizes cluster, network identity, the technologies the serv
 **Identity**:
 - **Hostname**: The asset's network hostname. Automatically pre-filled from the asset name on creation; you can override it at any time. Required when a domain is selected. It accepts letters, digits, hyphens and dots, with each part between dots limited to 63 characters, so a name such as `DL3.ROBOT-15MS.IE2000` is valid as it stands.
 - **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
-- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration view](administration-view.md).
 - **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
 - **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters: OS is defined per member. When selected, shows standard and extended support end dates underneath.

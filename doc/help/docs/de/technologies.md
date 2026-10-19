@@ -94,7 +94,7 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 ### Eigenschaftenfeld
 
 - **Hersteller**, **Familie** und **Hosting-Typ**.
-- **Administrationszone**: die Zone Ihres Administrationsmodells, zu der die Technologie gehört, zum Beispiel Tier 0 für den Verzeichnisdienst. Die Zonen stammen aus **IT-Landschaft > Einstellungen**. Eine Technologie ohne Zone erscheint als zu ergänzende Angabe in der [Administrationssicht](administration-view.md).
+- **Administrationszone**: nur für die Technologien der Familie **Verzeichnis und Identität** angezeigt. Sie ordnet einen Verzeichnisdienst einer Zone Ihres Administrationsmodells zu, zum Beispiel Tier 0 für Entra ID, das auf keinem Ihrer Server läuft. Die Zonen stammen aus **IT-Landschaft > Einstellungen**, und die [Administrationssicht](administration-view.md) listet die Verzeichnisdienste jeder Zone. Die übrigen Technologien erhalten keine Zone: Ordnen Sie stattdessen die Server zu, die sie tragen. Eine früher bei einer Technologie einer anderen Familie gesetzte Zone bleibt sichtbar, nur lesend, mit dem Hinweis, dass der Wert nicht mehr verwendet wird.
 - **Ersetzt durch**: die Technologie, die diese ablöst, zum Beispiel ein neueres Produkt, zu dem Ihre Teams wechseln.
 - **IT-Verantwortliche**: die für die Technologie zuständigen Personen.
 
@@ -237,7 +237,7 @@ Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Ho
 - **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
 - Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).
-- **Administrationssicht**: die Technologien jeder Administrationszone mit ihren Servern. Siehe [Administrationssicht](administration-view.md).
+- **Administrationssicht**: die Verzeichnisdienste jeder Administrationszone und die Server, die eine Verzeichnistechnologie außerhalb der sensibelsten Zone tragen. Siehe [Administrationssicht](administration-view.md).
 - **Kontakte**: Der Abschnitt **Verwendet in** eines Kontakts listet die Technologien, die er betreut. Siehe [Kontakte](contacts.md#wo-kontakte-verwendet-werden).
 - **Suche**: Die globale Suche und die `@`-Erwähnungen des Assistenten finden Technologien über Name und Referenz (`@TEC-4`).
 

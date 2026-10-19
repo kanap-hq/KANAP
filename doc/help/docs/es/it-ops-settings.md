@@ -31,7 +31,7 @@ Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece com
 
 Cada lista tiene sus propios controles en la parte superior:
 
-- **Agregar elemento** - Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir.
+- **Agregar elemento** - Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir. Su campo de nombre muestra un ejemplo propio de esa lista.
 - Las ediciones se guardan automáticamente alrededor de un segundo y medio después de su último cambio, una vez que todas las filas son válidas. Un indicador de guardado se muestra junto a la lista.
 
 Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas 20 a la vez con desplazamiento suave y encabezados fijos.
@@ -104,14 +104,16 @@ Las zonas de su modelo de administración. KANAP incluye los tres tiers del mode
 
 Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, KANAP ya no los añade: añádalos usted mismo si los necesita.
 
+El orden de la lista importa: la primera zona es la más sensible. Arrastre una fila por su asa para moverla. Una zona nueva se añade arriba: muévala después a su lugar. La [Vista de la administración](administration-view.md) muestra las zonas en este orden y compara los activos con la primera zona que no está marcada con **Dejar de proponer**.
+
 **Columnas**: Nombre, Grupo de administradores, Descripción, Dejar de proponer
 
 - **Grupo de administradores**: el grupo del directorio o el equipo que administra la zona, por ejemplo «Admins. del dominio».
 
 **Dónde se usa**:
-- Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**
-- Espacio de trabajo de Activos → pestaña Técnico → **Zona de administración**
-- **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías, sus servidores y los servidores situados en la zona. Consulte [Vista de la administración](administration-view.md).
+- Espacio de trabajo de Activos → panel de propiedades → **Zona de administración**
+- Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**, para las tecnologías de la familia **Directorio e identidad**
+- **Panorama IT > Vista de la administración**, que lista cada zona con sus activos y sus servicios de directorio, y después los puntos de control. Consulte [Vista de la administración](administration-view.md).
 
 Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías y los activos ya situados en ella.
 
@@ -415,7 +417,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 |-------|--------------|
 | **Métodos de acceso** | Aplicaciones (pestaña Técnico y soporte → Métodos de acceso) |
 | **Categorías de aplicación** | Aplicaciones (Categoría) |
-| **Zonas de administración** | Tecnologías (panel de propiedades → Zona de administración), Activos (pestaña Técnico → Zona de administración), Vista de la administración |
+| **Zonas de administración** | Activos (panel de propiedades → Zona de administración), Tecnologías de la familia Directorio e identidad (panel de propiedades → Zona de administración), Vista de la administración |
 | **Proveedores cloud** | Activos (Proveedor), Ubicaciones (Proveedor cloud) |
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
 | **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), Vista de la administración |

@@ -118,6 +118,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 
 **Statut** :
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la [Vue de l'administration](administration-view.md)
 - **Cycle de vie** : Actif, Obsolète, Retiré, etc. (configurable dans les Paramètres)
 - **Mise en production** : Quand l'actif est entré en production
 - **Fin de vie** : Date de retrait planifiée ou effective
@@ -162,7 +163,6 @@ L'onglet Technique organise le cluster, l'identité réseau, les technologies qu
 **Identité** :
 - **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
 - **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
-- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la [Vue de l'administration](administration-view.md).
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
 - **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters : l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.

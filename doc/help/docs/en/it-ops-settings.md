@@ -31,7 +31,7 @@ Within a section, lists are sorted by name. Each list appears as an expandable p
 
 Each list has its own controls at the top:
 
-- **Add item** - Inserts a new row at the top of the list, focused and ready to type.
+- **Add item** - Inserts a new row at the top of the list, focused and ready to type. Its name field shows an example for that list.
 - Edits save automatically about a second and a half after your last change, once every row is valid. A saving indicator shows next to the list.
 
 For long lists (more than 25 rows), the table virtualizes rows, showing about 20 at a time with smooth scrolling and sticky headers.
@@ -104,14 +104,16 @@ The zones of your administration model. KANAP ships the three tiers of the ANSSI
 
 Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, KANAP no longer adds them: add them yourself if you need them.
 
+The order of the list matters: the first zone is the most sensitive. Drag a row by its handle to move it. A new zone is added at the top, so move it to its place. The [Administration view](administration-view.md) shows the zones in this order and checks the assets against the first zone that is not marked **No longer offered**.
+
 **Columns**: Name, Administrator group, Description, No longer offered
 
 - **Administrator group**: the directory group or the team that administers the zone, for example "Domain admins".
 
 **Where used**:
-- Technologies workspace → properties drawer → **Administration zone**
-- Assets workspace → Technical tab → **Administration zone**
-- **IT Landscape > Administration view**, which lists each zone with its technologies, their servers and the servers placed in the zone. See [Administration view](administration-view.md).
+- Assets workspace → properties drawer → **Administration zone**
+- Technologies workspace → properties drawer → **Administration zone**, for the technologies of the **Directory and identity** family
+- **IT Landscape > Administration view**, which lists each zone with its assets and directory services, then the control points. See [Administration view](administration-view.md).
 
 A zone marked **No longer offered** stays on the technologies and assets already placed in it.
 
@@ -415,7 +417,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 |------|-----------------|
 | **Access methods** | Applications (Technical & Support tab → Access Methods) |
 | **Application categories** | Applications (Category) |
-| **Administration zones** | Technologies (properties drawer → Administration zone), Assets (Technical tab → Administration zone), Administration view |
+| **Administration zones** | Assets (properties drawer → Administration zone), Technologies of the Directory and identity family (properties drawer → Administration zone), Administration view |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
 | **Domains** | Assets (Technical tab → Domain, FQDN), Administration view |

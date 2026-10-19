@@ -118,6 +118,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 
 **Status**:
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone in der [Administrationssicht](administration-view.md)
 - **Lebenszyklus**: Aktiv, Veraltet, Außer Betrieb usw. (konfigurierbar in den Einstellungen)
 - **Go-Live**: Wann das Asset in Produktion ging
 - **End-of-Life**: Geplantes oder tatsächliches Stilllegungsdatum
@@ -162,7 +163,6 @@ Der Reiter Technisch organisiert Cluster, Netzwerkidentität, die vom Server get
 **Identität**:
 - **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
 - **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
-- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone in der [Administrationssicht](administration-view.md).
 - **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
 - **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert: OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.

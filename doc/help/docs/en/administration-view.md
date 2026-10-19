@@ -1,6 +1,6 @@
 # Administration view
 
-The Administration view shows who administers what. It lists your administration zones with their technologies and servers, then your domains with their forest, trusts and domain controllers. It follows the administration view of the ANSSI information system mapping guide, and helps answer the questions of a NIS2 review about privileged access.
+The Administration view shows who administers what. It lists your administration zones with the assets they cover, then your domains with their forest, trusts and domain controllers, then the points to correct. It follows the administration view of the ANSSI information system mapping guide, and helps answer the questions of a NIS2 review about privileged access.
 
 Open it from **IT Landscape > Administration view**, in the **Infrastructure** group. You need `infrastructure:reader`.
 
@@ -8,23 +8,25 @@ Open it from **IT Landscape > Administration view**, in the **Infrastructure** g
 
 The view reads what you record elsewhere:
 
-1. Define your administration zones and complete your domains in **IT Landscape > Settings**. See [Administration zones](it-ops-settings.md#administration-zones) and [Domains](it-ops-settings.md#domains).
-2. Place each technology in its zone with the **Administration zone** field of its properties drawer. See [Technologies](technologies.md#properties-drawer).
-3. Link the technologies to the servers that carry them. See [Linking a technology to a server](technologies.md#linking-a-technology-to-a-server).
-4. Place a server in a zone of its own with the **Administration zone** field of its Technical tab. See [Assets](assets.md#technical).
+1. Define your administration zones and complete your domains in **IT Landscape > Settings**. Put the zones in order: the first one is the most sensitive. See [Administration zones](it-ops-settings.md#administration-zones) and [Domains](it-ops-settings.md#domains).
+2. Place each asset in its zone with the **Administration zone** field of its properties drawer. See [Assets](assets.md#properties-drawer-right-panel).
+3. Link the directory technologies, such as Active Directory, to the servers that carry them. See [Linking a technology to a server](technologies.md#linking-a-technology-to-a-server).
+4. A directory service with no server of yours, such as Entra ID, takes its zone from the **Administration zone** field of its properties drawer. See [Technologies](technologies.md#properties-drawer).
+
+## Why the zones matter
+
+In the ANSSI tier model, anything that can act on an element of a sensitive zone belongs to that zone. The hypervisor that runs a domain controller can take control of it, so it is Tier 0 as well. The control points at the bottom of the page find the assets that break this rule.
 
 ## Administration zones
 
-One block per zone, by name. Each block shows:
+One block per zone, in the order of the settings, with the number of its assets. Each block shows:
 
-- The zone's **Administrator group**.
-- **Directory services**: the technologies of the **Directory and identity** family placed in the zone.
-- A table of its technologies: **Ref**, **Technology**, **Family** and **Servers**. The servers are those that carry the technology, directly or through the server they run in ("via" that server).
-- **Servers in this zone**: the servers placed in the zone with their own **Administration zone** field, with **Ref**, **Name** and **Type**.
+- The zone's **Administrator group** and its description.
+- Its scope: the number of assets of each type, and the number of applications hosted on those assets. Only applications and instances in service count.
+- A table of its assets: **Ref**, **Name** and **Type**. Click a row to open the asset.
+- **Directory services**: the technologies of the **Directory and identity** family placed in the zone. Click a row to open the technology.
 
-The technologies without a zone come last, under **No zone**. A warning at the top of the page counts them: open each one and set its zone.
-
-Retired technologies and retired servers are left out. A zone marked **No longer offered** in the settings still shows while technologies or servers are placed in it. A zone removed from the settings while technologies or servers still name it shows as **Unknown zone**, with its code.
+Retired assets and retired technologies are left out. A zone marked **No longer offered** in the settings still shows while assets or directory services are placed in it. A zone removed from the settings while assets or directory services still name it shows after the others as **Unknown zone**, with its code.
 
 If no zone exists yet, the page says so and, if you can read the settings, links to them.
 
@@ -54,12 +56,34 @@ One row per domain, except the built-in **Workgroup** and **N/A** entries:
 
 Each server appears once. "None found" means no server of the domain meets either rule.
 
+## Control points
+
+The control points list what to correct. The first zone of the settings that is not marked **No longer offered** is the most sensitive zone, and the page names it. Each control point shows its count and a table. Click a row to open the record to correct.
+
+| Control point | What it lists |
+|---|---|
+| **Assets without an administration zone** | The assets that are not retired and have no zone |
+| **Domain controllers outside the most sensitive zone** | The assets assigned the **Domain controller** server role on an application in service, when their zone is another one |
+| **Assets carrying a directory service outside the most sensitive zone** | The assets with a directory technology installed on them, such as Active Directory, when their zone is another one |
+| **Assets in a more sensitive zone than what contains them** | An asset in a more sensitive zone than the asset that contains it (a virtual machine and its host, for example), or a cluster member in a more sensitive zone than its cluster. The row opens the container or the cluster: place it in a zone at least as sensitive |
+| **Applications hosted in the most sensitive zone** | Each application hosted on an asset of that zone, with the asset. Review whether it belongs there |
+
+For the trust check, KANAP reads the **Contains** relations of the assets and the members of the clusters. A pair where one of the two assets has no zone is left out: the first control point already lists it.
+
+Without any zone in the settings, only the first control point runs, and the page asks you to add a zone.
+
 ## Export
 
-**Export zones** and **Export domains** download each list as a CSV file. The zones file has one row per technology and names the servers placed in each zone.
+**Export zones** and **Export domains** download each list as a CSV file.
+
+The zones file has a **Record** column that says what each row is:
+
+- **zone**: one row per zone, with its administrator group, description, number of hosted applications and, in **Note**, its number of assets of each type.
+- **asset** and **directory**: the assets and the directory services of the zone named in **Zone**.
+- **control**: one row per finding of the control points, with the title of the control point in **Zone**. **Note** gives the asset's zone, the contained asset for the trust check, or the hosting asset for an application. A control point with no finding has no row.
 
 ## Tips
 
-- **Start with Tier 0**: place the directory, its controllers and the tools that administer them first. They are the most exposed.
+- **Start with Tier 0**: place the directory, its controllers, the hypervisors that run them and the tools that administer them first. They are the most exposed.
 - **Name the administrators**: the **Administrator group** of a zone answers the first question of an audit: who holds the administrator rights?
-- **Check the controllers**: a domain without a controller, or with an unexpected one, usually reveals a server whose domain or technologies are missing.
+- **Check the controllers**: a domain without a controller, or with an unexpected one, usually reveals a server whose domain, role or technologies are missing.
