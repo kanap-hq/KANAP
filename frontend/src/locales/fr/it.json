@@ -499,7 +499,6 @@
       }
     },
     "administrationView": {
-      "subtitle": "La vue de l'administration du guide de cartographie du système d'information de l'ANSSI.",
       "exportAssets": "Exporter les actifs",
       "exportDomains": "Exporter les domaines",
       "exportFailed": "L'export a échoué.",

@@ -499,7 +499,6 @@
       }
     },
     "administrationView": {
-      "subtitle": "The administration view of the ANSSI information system mapping guide.",
       "exportAssets": "Export assets",
       "exportDomains": "Export domains",
       "exportFailed": "The export failed.",

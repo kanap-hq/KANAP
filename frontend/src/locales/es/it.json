@@ -499,7 +499,6 @@
       }
     },
     "administrationView": {
-      "subtitle": "La vista de la administración de la guía de cartografía del sistema de información de la ANSSI.",
       "exportAssets": "Exportar activos",
       "exportDomains": "Exportar los dominios",
       "exportFailed": "La exportación ha fallado.",

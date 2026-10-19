@@ -179,10 +179,10 @@ describe('AdministrationViewPage', () => {
     });
   });
 
-  it('is named after the ANSSI guide\'s view', async () => {
+  it('has a title and no subtitle', async () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Administration zones' })).toBeTruthy();
-    expect(screen.getByText('The administration view of the ANSSI information system mapping guide.')).toBeTruthy();
+    expect(screen.queryByText(/administration view of/i)).toBeNull();
     await screen.findByRole('group', { name: 'Administration zones' });
   });
 

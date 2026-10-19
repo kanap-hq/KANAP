@@ -937,10 +937,7 @@ export default function AdministrationViewPage() {
     <SelectionContext.Provider value={selectionApi}>
       <ZoneNameContext.Provider value={zoneName}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <Box>
-            <PageHeader title={t('pages.administrationView.zones')} actions={actions} />
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
-          </Box>
+          <PageHeader title={t('pages.administrationView.zones')} actions={actions} />
           {exportError && <Alert severity="error">{exportError}</Alert>}
           {!data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
           {data && (

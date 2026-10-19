@@ -499,7 +499,6 @@
       }
     },
     "administrationView": {
-      "subtitle": "Die Administrationssicht des ANSSI-Leitfadens zur Kartografie des Informationssystems.",
       "exportAssets": "Assets exportieren",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
