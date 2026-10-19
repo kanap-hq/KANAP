@@ -285,6 +285,7 @@ export default function CostPerFteReport() {
   return (
     <ReportLayout
       busy={busy}
+      fxMissing={report.fxMissing}
       title={t('reports.costPerFte.title')}
       subtitle={t('reports.costPerFte.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(

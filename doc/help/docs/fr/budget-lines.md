@@ -155,6 +155,13 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche
 - Les totaux respectent vos filtres et votre recherche actuels
 
+**Montants sans taux de change** :
+
+- Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant de cette année s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
+- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises.
+- Dans une colonne triée, ces lignes viennent en dernier. Un filtre de montant ne les conserve jamais.
+- Voir [Taux manuels](currencies.md#taux-manuels) pour saisir vous-même le taux manquant.
+
 **Liens profonds** :
 
 - Cliquer sur n'importe quelle cellule ouvre l'espace de travail sur l'onglet le plus pertinent :
@@ -497,7 +504,7 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 |---|---|
 | **Effectif (par défaut)** | Répartit la dépense proportionnellement à l'effectif de chaque société pour l'année sélectionnée. Aucune sélection manuelle requise : les pourcentages sont calculés automatiquement depuis les métriques des sociétés. C'est la méthode standard. |
 | **Utilisateurs IT** | Répartit la dépense proportionnellement au nombre d'utilisateurs IT de chaque société pour l'année sélectionnée. |
-| **Chiffre d'affaires** | Répartit la dépense proportionnellement au chiffre d'affaires de chaque société pour l'année sélectionnée. |
+| **Chiffre d'affaires** | Répartit la dépense proportionnellement au chiffre d'affaires de chaque société pour l'année sélectionnée, converti dans la devise de reporting. |
 | **Manuel par société** | Vous sélectionnez les sociétés qui reçoivent cette dépense et choisissez un inducteur dans **Ventiler par** (Effectif, Utilisateurs IT ou Chiffre d'affaires) pour calculer les pourcentages entre les sociétés sélectionnées uniquement. |
 | **Manuel par département** | Vous sélectionnez des paires société/département. Les pourcentages sont calculés à partir de l'effectif de chaque département. Utile lorsqu'une ligne ne bénéficie qu'à certains départements (ex. : un CRM utilisé par les ventes). |
 | **Pourcentages manuels** | Vous choisissez les sociétés et saisissez vous-même chaque pourcentage. Le total doit faire 100 %. |
@@ -515,6 +522,12 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 - Pour **Manuel par société** et **Manuel par département** : vous choisissez les sociétés ou départements, et le système calcule les pourcentages selon l'inducteur choisi et les métriques actuelles
 - Pour **Pourcentages manuels** : saisir un pourcentage fixe cette rangée, et les autres rangées se partagent le reste. **Répartir équitablement** donne la même part à chaque rangée ; **Réinitialiser les valeurs fixées** libère les rangées fixées
 - Les pourcentages reflètent les données en temps réel. Si vous mettez à jour l'effectif d'une société, les ventilations se recalculent
+- La colonne **Inducteur** affiche la valeur de chaque société pour l'inducteur. Un chiffre d'affaires s'affiche avec la devise de base de la société, par exemple **35 M USD**
+
+**Chiffre d'affaires en plusieurs devises** :
+
+- Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, KANAP convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
+- Quand une devise n'a pas encore de taux, ses chiffres d'affaires sont comptés sans conversion et un avertissement s'affiche au-dessus du tableau, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible. » KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux, et la répartition se corrige d'elle-même
 
 **Comment l'utiliser** :
 

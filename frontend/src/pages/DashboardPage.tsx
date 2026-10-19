@@ -14,7 +14,7 @@ import api from '../api';
 import { useAuth } from '../auth/AuthContext';
 import { useLocale } from '../i18n/useLocale';
 import DashboardTile from './workspace/tiles/DashboardTile';
-import { AmountColumnKey, amountFieldKey, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
+import { AmountColumnKey, amountFieldKey, slotYear, YearSlot, yearSlotLabel } from '../components/finance/amountColumns';
 import { useBudgetColumns } from '../hooks/useBudgetColumns';
 import type { BudgetOperationScope as NatureScope } from '../services/budgetOperations';
 import { buildItemPath, formatItemRef } from '../utils/item-ref';
@@ -35,6 +35,8 @@ import {
 } from './reports/reportAggregates';
 import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
+import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
+import { mergeFxMissing, type FxMissing } from '../components/finance/fxMissing';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
 
@@ -86,7 +88,12 @@ function formatThousandsK(v: any) {
   return `${sign}${formatted}k`;
 }
 
-/** Every year and column from each list's totals; the combined total comes from the server. */
+type SnapshotTotals = Record<string, number> & { fxMissing?: FxMissing[] };
+
+/**
+ * Every year and column from each list's totals; the combined total comes from the server. The
+ * amounts left out for lack of an exchange rate: the three answers' entries together.
+ */
 function useBudgetSnapshot(enabled: boolean) {
   return useQuery({
     queryKey: ['budget-lines-summary', 'dashboard', 'snapshot'],
@@ -98,10 +105,13 @@ function useBudgetSnapshot(enabled: boolean) {
         ['all', '/budget-lines/summary/totals'],
       ] as const;
       const totals = await Promise.all(endpoints.map(async ([scope, endpoint]) => {
-        const res = await api.get<Record<string, number>>(endpoint, { signal });
+        const res = await api.get<SnapshotTotals>(endpoint, { signal });
         return [scope, res.data] as const;
       }));
-      return Object.fromEntries(totals) as Record<BudgetScope, Record<string, number>>;
+      return {
+        totals: Object.fromEntries(totals) as Record<BudgetScope, Record<string, number>>,
+        fxMissing: mergeFxMissing(...totals.map(([, data]) => data?.fxMissing)),
+      };
     },
     staleTime: 5 * 60 * 1000,
   });
@@ -317,6 +327,17 @@ function getColumnValueFromRow(row: any, year: 'y' | 'yMinus1' | 'yPlus1', colum
   return Number.isFinite(v) ? v : 0;
 }
 
+/**
+ * This year's slot without an exchange rate for the line currency (the full row shape): its amount
+ * stays in that currency, named and marked, never as a reporting amount. Null when it has a rate.
+ */
+function missingRateOfRow(row: any, column: AmountColumnKey, year: number): { currency: string; year: number } | null {
+  const reporting = row?.versions?.y?.reporting;
+  if (reporting?.fx_source !== 'missing' || reporting?.[column] != null) return null;
+  const currency = reporting.currency || row?.currency;
+  return currency ? { currency, year: row?.versions?.y?.year ?? year } : null;
+}
+
 function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: AmountColumnKey, sort: string, limit: number = 5) {
   const Y = new Date().getFullYear();
   return useQuery({
@@ -332,6 +353,7 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
         name: row.product_name || '\u2014',
         y: getColumnValueFromRow(row, 'y', column),
         yMinus1: getColumnValueFromRow(row, 'yMinus1', column),
+        yMissingRate: missingRateOfRow(row, column, Y),
       }));
     },
     staleTime: 60 * 1000,
@@ -353,7 +375,7 @@ function useTopIncreases(scope: BudgetScope, enabled: boolean, column: AmountCol
     // The line's reference; its id only when it has none (the page opens either).
     path: buildItemPath('budget', row.itemNumber != null ? formatItemRef('budget', row.itemNumber) : row.id),
   })), [query.data]);
-  return { items, isLoading: enabled && (query.isLoading || !columnReady) };
+  return { items, fxMissing: query.data?.fxMissing, isLoading: enabled && (query.isLoading || !columnReady) };
 }
 
 /** All / OPEX / CAPEX choice of a dashboard tile, remembered per tile; a type the user cannot read falls back to the default. */
@@ -431,7 +453,7 @@ export default function DashboardPage() {
   );
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
-  const { items: topIncreases, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
+  const { items: topIncreases, fxMissing: increasesFxMissing, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
 
   const [myBudgetScope, setMyBudgetScope] = useTileScope('myBudget');
   const myBudget = useMyBudget(myBudgetScope, profile, defaultColumn.key, readableScopes.length > 0 && tileEnabled('my-budget') && budgetColumns.ready);
@@ -457,11 +479,14 @@ export default function DashboardPage() {
     label: scope === 'all' ? t('ops:shared.total') : scopeLabel(scope),
     values: Object.fromEntries(budgetColumns.shown.map((column) => {
       const field = amountFieldKey(slot, column);
-      return [column.key, snapshot.data?.[scope][field] ?? 0];
+      return [column.key, snapshot.data?.totals[scope][field] ?? 0];
     })) as Record<AmountColumnKey, number>,
   })));
   // Keep a column if either nature has a value, even when the combined total is zero.
   const chosenColumns = dashboardSettings.config.tiles.find((tile) => tile.id === 'budget')?.config.columns as AmountColumnKey[] | null | undefined;
+  // The tile shows Y-1 to Y+1: the amounts left out of those years only.
+  const snapshotYears = new Set(snapshotSlots.map((slot) => slotYear(slot, Y)));
+  const snapshotFxMissing = (snapshot.data?.fxMissing ?? []).filter((entry) => snapshotYears.has(entry.year));
   const snapshotColumns = budgetColumns.shown.filter((column) => chosenColumns == null || chosenColumns.includes(column.key)).filter((column) => snapshotRows.some((row) => row.values[column.key] !== 0));
 
   const canViewTile = (id: string) => id === 'my-tasks' ? canTasks : id === 'renewals' ? canContracts : canOpex;
@@ -508,6 +533,7 @@ export default function DashboardPage() {
                   </Table>
                 </TableContainer>
               )}
+              <FxMissingNotice items={snapshotFxMissing} sx={{ mt: 1 }} />
             </DashboardTile>
           </Box>
     ) : null,
@@ -684,7 +710,17 @@ export default function DashboardPage() {
                 {(topItems || []).map((r) => (
                   <Stack key={r.id} component={RouterLink} to={r.path} direction="row" spacing={1} alignItems="center" sx={ROW_LINK_SX}>
                     <Typography variant="body1" noWrap sx={{ flex: 1 }}>{r.name}</Typography>
-                    <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
+                    {r.yMissingRate ? (
+                      // No exchange rate this year: the amount in the line currency, marked.
+                      <Stack direction="row" alignItems="center" spacing={0.5} sx={{ minWidth: 90, justifyContent: 'flex-end' }}>
+                        <Typography variant="body1" sx={{ color: 'kanap.text.secondary', whiteSpace: 'nowrap' }}>
+                          {t('ops:shared.fxMissing.localAmount', { amount: formatThousandsK(r.y), currency: r.yMissingRate.currency })}
+                        </Typography>
+                        <FxMissingMark currency={r.yMissingRate.currency} year={r.yMissingRate.year} />
+                      </Stack>
+                    ) : (
+                      <Typography variant="body1" sx={{ minWidth: 90, textAlign: 'right' }}>{formatThousandsK(r.y)}</Typography>
+                    )}
                   </Stack>
                 ))}
                 {(topItems?.length || 0) === 0 && (
@@ -718,6 +754,7 @@ export default function DashboardPage() {
                 {topIncreases.length === 0 && (
                   <Typography variant="body1" color="text.secondary">{t('dashboard.noIncreases')}</Typography>
                 )}
+                <FxMissingNotice items={increasesFxMissing} sx={{ pt: 0.5 }} />
               </Stack>
             </DashboardTile>
           </Box>

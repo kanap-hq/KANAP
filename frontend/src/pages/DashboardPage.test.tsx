@@ -174,6 +174,42 @@ describe('DashboardPage budget snapshot', () => {
     expect(rows.map((row) => within(row).getByRole('link').textContent)).toEqual(['4k', '0k', '6k']);
   });
 
+  it('names the amounts the snapshot leaves out without an exchange rate, for the years it shows', async () => {
+    const Y = new Date().getFullYear();
+    get.mockImplementation(async (url: string) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
+      if (url === '/spend-items/summary/totals') return { data: { yBudget: 4000, fxMissing: [{ currency: 'USD', year: Y, lines: 1 }] } };
+      if (url === '/capex-items/summary/totals') return { data: { yBudget: 0, fxMissing: [] } };
+      // Y+2 is not on the tile: left out of its notice.
+      if (url === '/budget-lines/summary/totals') return { data: { yBudget: 4000, fxMissing: [{ currency: 'USD', year: Y, lines: 1 }, { currency: 'JPY', year: Y + 2, lines: 4 }] } };
+      return { data: { items: [], total: 0 } };
+    });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: 'dashboard.budgetSnapshot' });
+    // One currency and year once the three answers are merged: the singular wording.
+    expect(await within(tile).findByRole('status')).toHaveTextContent('shared.fxMissing.excluding');
+    expect(within(tile).getByRole('status')).not.toHaveTextContent('excludingSeveral');
+  });
+
+  it('shows a top item without an exchange rate in its own currency, marked, never as a reporting amount', async () => {
+    const Y = new Date().getFullYear();
+    const item = {
+      id: 'l-1', item_number: 5, nature: 'opex', product_name: 'Tokyo hosting', currency: 'JPY',
+      versions: { y: { year: Y, totals: { budget: 900000 }, reporting: { budget: null, currency: 'JPY', fx_source: 'missing' } } },
+    };
+    get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
+      if (url.endsWith('/summary/totals')) return { data: {} };
+      if (url === '/budget-lines/summary' && config?.params?.sort !== 'updated_at:DESC') return { data: { items: [item], total: 1, page: 1, limit: 5 } };
+      return { data: { items: [], total: 0 } };
+    });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: TOP_ITEMS });
+    const link = await within(tile).findByRole('link', { name: /Tokyo hosting/ });
+    expect(link).toHaveTextContent('ops:shared.fxMissing.localAmount');
+    expect(within(link).getByRole('img', { name: 'shared.fxMissing.lineTooltip' })).toBeInTheDocument();
+  });
+
   it('fetches the snapshot without calling any summary/aggregate endpoint', async () => {
     // Other tiles wait for the column setting. Snapshot totals need no setting or aggregate.
     setBudgetColumns({}, false);

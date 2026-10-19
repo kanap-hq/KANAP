@@ -1004,7 +1004,28 @@
       "liveSpot": "Live spot",
       "quarterlyAvg": "Quarterly avg",
       "forwardEstimate": "Forward estimate",
-      "annualAvg": "Annual avg"
+      "annualAvg": "Annual avg",
+      "missingNone": "Every currency in use has a rate.",
+      "missingTitle_one": "{{count}} exchange rate missing",
+      "missingTitle_other": "{{count}} exchange rates missing",
+      "missingReason": "No source publishes this rate yet; amounts in this currency are left out of totals until it has one.",
+      "enterRate": "Enter a rate",
+      "enterRateFor": "Enter a rate for {{currency}} in {{year}}",
+      "loadMissingError": "Exchange rates in use could not be checked.",
+      "manualFootnote": "Rate entered manually",
+      "estimateMark": "estimate",
+      "estimateTooltip": "The source has not published this year yet; the nearest published year is used until it does.",
+      "editRate": "Edit the rate for {{currency}} in {{year}}",
+      "manualDialogTitle": "Manual exchange rate",
+      "manualRateLabel": "Rate in {{reporting}} for 1 {{currency}}",
+      "manualRatePlaceholder": "1.05",
+      "manualRateHint": "Use the average rate of the year published by your central bank or your treasury.",
+      "manualRateReplaces": "A manual rate replaces the automatic rate for this year until you remove it.",
+      "manualRateInvalid": "Enter a rate greater than 0.",
+      "removeManualRate": "Remove manual rate",
+      "manualRateRemoved": "The automatic rate will be fetched again.",
+      "failedToSaveManualRate": "The rate could not be saved.",
+      "failedToRemoveManualRate": "The manual rate could not be removed."
     },
     "budgetColumns": {
       "budget": "Budget",
@@ -1242,7 +1263,22 @@
         "opex": "OPEX line",
         "capex": "CAPEX line"
       }
-    }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in these currencies is counted unconverted until the rates are available.",
+      "turnoverFxMissing_one": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in this currency is counted unconverted until the rate is available."
+    },
+    "fxMissing": {
+      "excluding_one": "Excluding {{count}} line with no exchange rate: {{pairs}}.",
+      "excluding_other": "Excluding {{count}} lines with no exchange rate: {{pairs}}.",
+      "excludingSeveral": "Excluding lines with no exchange rate: {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Enter a rate",
+      "lineTooltip": "No {{currency}} exchange rate for {{year}}: left out of totals.",
+      "localAmount": "{{amount}} {{currency}}"
+    },
+    "turnoverMillions": "{{value}} M {{currency}}"
   },
   "fields": {
     "description": "Description",

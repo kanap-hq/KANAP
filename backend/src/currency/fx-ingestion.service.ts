@@ -8,8 +8,59 @@ import { Tenant } from '../tenants/tenant.entity';
 import { WorldBankClient } from './world-bank-client';
 import { withTenantExecution } from '../common/tenant-runner';
 import { trackBackgroundWork } from '../common/background-work';
+import { lockRateSetWrite } from './rate-set-lock';
 
 type RateSnapshot = Record<string, number | null>;
+
+/** First year the World Bank official-exchange-rate series carries. */
+const WORLD_BANK_SERIES_START = 1960;
+
+/** A past year missing from a dataset older than this triggers one reload. */
+const ANNUAL_DATASET_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
+/** A usable cross rate: finite and strictly positive. */
+function isUsableRate(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Precedence of one currency's rate. A stored manual value outranks every
+ * automatic source (a fetch never produces `manual`). Then a fresh real value,
+ * the value already stored, a fresh estimate, and a stored estimate. Every
+ * source other than `estimate` is real, including a value whose source was not
+ * recorded.
+ */
+function ratePrecedence(source: string | null, fresh: boolean): number {
+  if (!fresh && source === 'manual') return 5;
+  if (source === 'estimate') return fresh ? 2 : 1;
+  return fresh ? 4 : 3;
+}
+
+/**
+ * The published year nearest to `year`: the closest earlier year, otherwise
+ * the closest later one. The year itself is never a candidate.
+ */
+function nearestPublished(series: Map<number, number>, year: number): { year: number; value: number } | null {
+  let earlier = -Infinity;
+  let later = Infinity;
+  for (const candidate of series.keys()) {
+    if (candidate < year && candidate > earlier) earlier = candidate;
+    else if (candidate > year && candidate < later) later = candidate;
+  }
+  const chosen = earlier !== -Infinity ? earlier : later !== Infinity ? later : null;
+  if (chosen == null) return null;
+  const value = series.get(chosen);
+  if (!isUsableRate(value)) return null;
+  return { year: chosen, value };
+}
+
+function canonicalJson(record: Record<string, unknown> | null | undefined): string {
+  const source = record ?? {};
+  const keys = Object.keys(source).sort();
+  const ordered: Record<string, unknown> = {};
+  for (const key of keys) ordered[key] = source[key];
+  return JSON.stringify(ordered);
+}
 
 type WorldBankRateSource =
   | 'world-bank-annual'
@@ -20,6 +71,8 @@ type WorldBankRateSource =
 interface YearlySnapshot {
   year: number;
   quotes: RateSnapshot;
+  /** Source of each USD quote (`world-bank-annual`, `estimate`, a spot source, or `identity` for USD). */
+  quoteSources?: Record<string, string | null>;
   source: WorldBankRateSource;
   forwardSourceYear?: number;
   missingCurrencies: string[];
@@ -170,9 +223,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     if (!due.length) return;
     due.forEach((year) => this.missingRefreshAt.set(keyOf(year), now));
     this.logger.log(`[missing-rate] queuing FX refresh for tenant ${tenantId}: years ${due.join(', ')}`);
-    void this.queueManualRefresh(tenantId, due, { label: 'missing-rate' }).then((status) => {
-      // Another refresh of the tenant was running: the next read asks again.
-      if (status === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
+    const queue = () => this.queueManualRefresh(tenantId, due, { label: 'missing-rate' });
+    void queue().then(async (status) => {
+      if (status !== 'skipped') return;
+      // Another refresh of the tenant is running (often for another year read at the same
+      // time): these years follow it. The running job never rejects.
+      await this.manualJobs.get(tenantId);
+      if ((await queue()) === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
     }).catch(() => undefined);
   }
 
@@ -366,7 +423,24 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       const code = typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : '';
       if (code.length === 3) currencies.add(code);
     });
-
+    // The base currencies of the companies: their turnovers are converted at the year's rates.
+    const companyCurrencies = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(base_currency)) AS currency FROM companies WHERE tenant_id = $1 AND base_currency IS NOT NULL`,
+      [tenantId],
+    );
+    companyCurrencies.forEach((row: any) => {
+      const code = typeof row.currency === 'string' ? row.currency : '';
+      if (code.length === 3) currencies.add(code);
+    });
+    // Contract amounts convert at the year's rates, the same way company turnovers do.
+    const contractCurrencies = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(currency)) AS currency FROM contracts WHERE tenant_id = $1 AND currency IS NOT NULL`,
+      [tenantId],
+    );
+    contractCurrencies.forEach((row: any) => {
+      const code = typeof row.currency === 'string' ? row.currency : '';
+      if (code.length === 3) currencies.add(code);
+    });
 
     await this.currencySettings.ensureCurrencyRecords(currencies, { manager });
 
@@ -391,6 +465,53 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     return withTenantExecution(dataSource, tenantId, fn, { transaction: true });
   }
 
+  /**
+   * Latest published annual for the current-year and future-year fallback.
+   * A value already read from the series (a refresh that also asked for past
+   * years) is reused. Otherwise the last ten published years are read, so a
+   * refresh of the current year alone still has a fallback.
+   */
+  private async latestPublishedForFallback(
+    currency: string,
+    currentYear: number,
+    knownValue: number | null,
+    knownYear: number,
+  ): Promise<{ year: number; value: number } | null> {
+    if (knownValue != null && knownYear !== -Infinity) return { year: knownYear, value: knownValue };
+    try {
+      const history = await this.worldBank.fetchAnnualRates(currency, currentYear - 10, currentYear - 1);
+      let bestYear = -Infinity;
+      let best: number | null = null;
+      for (const [year, value] of history) {
+        if (year > bestYear && isUsableRate(value)) {
+          bestYear = year;
+          best = value;
+        }
+      }
+      return best == null ? null : { year: bestYear, value: best };
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`World Bank annual fetch failed for ${currency} ${currentYear - 10}-${currentYear - 1}: ${reason}`);
+      return null;
+    }
+  }
+
+  /**
+   * One reload of a stale annual dataset. Stubs that do not implement it, and
+   * a reload that fails, leave the series already fetched in place.
+   */
+  private async reloadStaleAnnualDataset(): Promise<boolean> {
+    const refresh = this.worldBank.refreshAnnualDatasetIfOlderThan;
+    if (typeof refresh !== 'function') return false;
+    try {
+      return await this.worldBank.refreshAnnualDatasetIfOlderThan(ANNUAL_DATASET_MAX_AGE_MS);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`World Bank annual dataset reload failed: ${reason}`);
+      return false;
+    }
+  }
+
   private determineSource(year: number, currentYear: number): WorldBankRateSource {
     if (year > currentYear) return 'world-bank-forward';
     if (year === currentYear) return 'exchangerateapi-spot';
@@ -411,12 +532,14 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     const needCurrentYear = years.includes(currentYear);
 
     const currencyResults = new Map<string, Map<number, number | null>>();
+    const sourceResults = new Map<string, Map<number, string | null>>();
     const missingByYear = new Map<number, Set<string>>();
     const basisByYear = new Map<number, WorldBankRateSource>();
 
     for (const currency of Array.from(currencies)) {
       const upper = currency.toUpperCase();
       const yearMap = new Map<number, number | null>();
+      const sourceByYear = new Map<number, string | null>();
       const isBase = upper === baseCode;
       let latestHistoricalValue: number | null = null;
       let latestHistoricalYear = -Infinity;
@@ -424,55 +547,87 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         if (!missingByYear.has(year)) missingByYear.set(year, new Set());
         missingByYear.get(year)?.add(upper);
       };
+      const put = (year: number, value: number | null, source: string | null) => {
+        yearMap.set(year, value);
+        sourceByYear.set(year, value != null ? source : null);
+      };
 
       if (upper === 'USD') {
-        years.forEach((year) => yearMap.set(year, 1));
+        years.forEach((year) => put(year, 1, 'identity'));
         currencyResults.set(upper, yearMap);
+        sourceResults.set(upper, sourceByYear);
         continue;
       }
 
       const code = this.worldBank.resolveCode(upper);
       if (!code) {
+        // No World Bank series: past years have no source, but the live feed may still
+        // quote the currency for the current year, which also stands in for later years.
+        const spot = years.some((year) => year >= currentYear) ? await this.worldBank.fetchSpotRate(upper) : null;
         years.forEach((year) => {
+          if (spot != null && year === currentYear) {
+            put(year, spot, 'exchangerateapi-spot');
+            return;
+          }
+          if (spot != null && year > currentYear) {
+            put(year, spot, 'world-bank-forward');
+            return;
+          }
           recordMissing(year);
-          yearMap.set(year, null);
+          put(year, null, null);
         });
         this.logger.warn(`No World Bank ISO3 mapping for ${upper}`);
         currencyResults.set(upper, yearMap);
+        sourceResults.set(upper, sourceByYear);
         continue;
       }
 
       if (annualYears.length) {
-        const start = Math.min(...annualYears);
-        const end = Math.max(...annualYears);
+        // The whole series, so a year the World Bank has not published can take
+        // the nearest year it has, including one outside the requested range.
+        const end = Math.max(currentYear - 1, ...annualYears);
         try {
-          const annualMap = await this.worldBank.fetchAnnualRates(upper, start, end);
+          let annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          if (annualYears.some((year) => !annualMap.has(year)) && (await this.reloadStaleAnnualDataset())) {
+            annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          }
+          for (const [publishedYear, publishedValue] of annualMap) {
+            if (publishedYear <= currentYear - 1 && publishedYear > latestHistoricalYear && isUsableRate(publishedValue)) {
+              latestHistoricalValue = publishedValue;
+              latestHistoricalYear = publishedYear;
+            }
+          }
           annualYears.forEach((year) => {
-            const value = annualMap.get(year) ?? null;
-            yearMap.set(year, value);
-            if (value != null && year <= currentYear - 1 && year > latestHistoricalYear) {
-              latestHistoricalValue = value;
-              latestHistoricalYear = year;
+            const published = annualMap.get(year) ?? null;
+            if (isUsableRate(published)) {
+              put(year, published, 'world-bank-annual');
+              if (isBase) basisByYear.set(year, 'world-bank-annual');
+              return;
             }
-            if (value == null) {
-              recordMissing(year);
-              this.logger.warn(`No World Bank annual value for ${upper} ${year}`);
-            } else if (isBase) {
-              basisByYear.set(year, 'world-bank-annual');
+            this.logger.warn(`No World Bank annual value for ${upper} ${year}`);
+            const nearest = nearestPublished(annualMap, year);
+            if (nearest) {
+              put(year, nearest.value, 'estimate');
+              return;
             }
+            recordMissing(year);
+            put(year, null, null);
           });
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           this.logger.warn(`World Bank annual fetch failed for ${upper}: ${reason}`);
           annualYears.forEach((year) => {
             recordMissing(year);
-            yearMap.set(year, null);
+            put(year, null, null);
           });
         }
       }
 
       let currentYearValue: number | null = null;
       let currentYearBasis: WorldBankRateSource | null = null;
+      // The latest published year standing in for the current year is an estimate: a spot
+      // captured earlier this year beats it in `mergeWithLatest`.
+      let currentYearEstimated = false;
       if (needCurrentYear) {
         const spot = await this.worldBank.fetchSpotRate(upper);
         if (spot != null) {
@@ -493,37 +648,50 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
           }
         }
 
-        if (currentYearValue == null && latestHistoricalValue != null) {
-          currentYearValue = latestHistoricalValue;
-          currentYearBasis = 'world-bank-forward';
-          this.logger.warn(
-            `Using latest World Bank annual value (${latestHistoricalYear}) for ${upper} in place of ${currentYear}`,
-          );
+        if (currentYearValue == null) {
+          const latest = await this.latestPublishedForFallback(upper, currentYear, latestHistoricalValue, latestHistoricalYear);
+          if (latest) {
+            currentYearValue = latest.value;
+            latestHistoricalValue = latest.value;
+            latestHistoricalYear = latest.year;
+            currentYearBasis = 'world-bank-forward';
+            currentYearEstimated = true;
+            this.logger.warn(
+              `Using latest World Bank annual value (${latest.year}) for ${upper} in place of ${currentYear}`,
+            );
+          }
         }
 
         if (currentYearValue != null) {
-          yearMap.set(currentYear, currentYearValue);
+          put(currentYear, currentYearValue, currentYearEstimated ? 'estimate' : currentYearBasis);
           if (isBase && currentYearBasis) {
             basisByYear.set(currentYear, currentYearBasis);
           }
         } else {
           recordMissing(currentYear);
-          yearMap.set(currentYear, null);
+          put(currentYear, null, null);
           this.logger.warn(`Missing World Bank data for ${upper} ${currentYear}`);
         }
       }
 
+      if (futureYears.length && currentYearValue == null && latestHistoricalValue == null) {
+        const latest = await this.latestPublishedForFallback(upper, currentYear, null, -Infinity);
+        if (latest) {
+          latestHistoricalValue = latest.value;
+          latestHistoricalYear = latest.year;
+        }
+      }
       const forwardValue = currentYearValue ?? latestHistoricalValue ?? null;
       if (futureYears.length) {
         if (forwardValue != null) {
           futureYears.forEach((year) => {
-            yearMap.set(year, forwardValue as number);
+            put(year, forwardValue as number, 'world-bank-forward');
             if (isBase) basisByYear.set(year, 'world-bank-forward');
           });
         } else {
           futureYears.forEach((year) => {
             recordMissing(year);
-            yearMap.set(year, null);
+            put(year, null, null);
             this.logger.warn(`Cannot derive World Bank estimate for ${upper} ${year} (no historical data)`);
           });
         }
@@ -532,24 +700,29 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       years.forEach((year) => {
         if (!yearMap.has(year)) {
           recordMissing(year);
-          yearMap.set(year, null);
+          put(year, null, null);
         }
       });
 
       currencyResults.set(upper, yearMap);
+      sourceResults.set(upper, sourceByYear);
     }
 
     return years.map((year) => {
       const basis = basisByYear.get(year);
       const source = basis ?? this.determineSource(year, currentYear);
       const quotes: RateSnapshot = {};
+      const quoteSources: Record<string, string | null> = {};
       currencyResults.forEach((map, currency) => {
         quotes[currency] = map.get(year) ?? null;
+        quoteSources[currency] = sourceResults.get(currency)?.get(year) ?? null;
       });
       quotes.USD = 1;
+      quoteSources.USD = 'identity';
       return {
         year,
         quotes,
+        quoteSources,
         source,
         forwardSourceYear: source === 'world-bank-forward' ? currentYear : undefined,
         missingCurrencies: Array.from(missingByYear.get(year)?.values() ?? []).filter((code) => code !== 'USD'),
@@ -595,11 +768,97 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Source recorded for a value already stored. A set captured before
+   * `rate_sources` existed lends its set-level `source` to each value.
+   */
+  private existingRateSource(existing: CurrencyRateSet, code: string, value: number | null): string | null {
+    if (!isUsableRate(value)) return null;
+    const table = existing.rate_sources ?? {};
+    const recorded = table[code] ?? table[code.toUpperCase()] ?? table[code.toLowerCase()];
+    if (typeof recorded === 'string' && recorded.length > 0) return recorded;
+    return existing.source ?? null;
+  }
+
+  /**
+   * Merges this fetch with the latest set of the same tenant, year and base.
+   * A currency the sources miss this time (or that is no longer in the fetch
+   * list) keeps its stored value and the source that produced it. A stored
+   * manual value is kept even when this fetch has a real quote for it.
+   */
+  private mergeWithLatest(
+    freshRates: RateSnapshot,
+    freshSources: Record<string, string | null>,
+    existing: CurrencyRateSet | null,
+  ): { rates: RateSnapshot; sources: Record<string, string> } {
+    const fresh: RateSnapshot = {};
+    const freshSourceByCode: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(freshRates)) {
+      const code = key.toUpperCase();
+      fresh[code] = value;
+      freshSourceByCode[code] = freshSources[key] ?? freshSources[code] ?? null;
+    }
+    const previous: RateSnapshot = {};
+    const previousSourceByCode: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(existing?.rates ?? {})) {
+      const code = key.toUpperCase();
+      previous[code] = value;
+      previousSourceByCode[code] = existing ? this.existingRateSource(existing, code, isUsableRate(value) ? value : null) : null;
+    }
+    const keys = new Set<string>([...Object.keys(fresh), ...Object.keys(previous)]);
+    const rates: RateSnapshot = {};
+    const sources: Record<string, string> = {};
+    for (const code of keys) {
+      const freshValue = isUsableRate(fresh[code]) ? fresh[code] : null;
+      const freshSource = freshValue != null ? (freshSourceByCode[code] ?? null) : null;
+      const previousValue = isUsableRate(previous[code]) ? previous[code] : null;
+      const previousSource = previousValue != null ? (previousSourceByCode[code] ?? null) : null;
+      const freshRank = freshValue != null ? ratePrecedence(freshSource, true) : 0;
+      const previousRank = previousValue != null ? ratePrecedence(previousSource, false) : 0;
+      if (freshRank === 0 && previousRank === 0) {
+        if (Object.prototype.hasOwnProperty.call(fresh, code)) rates[code] = null;
+        continue;
+      }
+      const keepFresh = freshRank >= previousRank;
+      const value = keepFresh ? freshValue : previousValue;
+      const source = keepFresh ? freshSource : previousSource;
+      rates[code] = value;
+      if (value != null && source) sources[code] = source;
+    }
+    return { rates, sources };
+  }
+
+  /** Source of each fresh cross rate. Per-currency sources win; the set source covers the rest. */
+  private freshRateSources(baseCurrency: string, snapshot: YearlySnapshot, rates: RateSnapshot): Record<string, string | null> {
+    const upperBase = baseCurrency.toUpperCase();
+    const quoteSources = snapshot.quoteSources ?? {};
+    const baseQuoteSource = upperBase === 'USD' ? 'identity' : (quoteSources[upperBase] ?? null);
+    const sources: Record<string, string | null> = {};
+    for (const [code, value] of Object.entries(rates)) {
+      if (!isUsableRate(value)) {
+        sources[code] = null;
+        continue;
+      }
+      if (code.toUpperCase() === upperBase) {
+        sources[code] = 'identity';
+        continue;
+      }
+      if (code.toUpperCase() === 'USD') {
+        sources[code] = baseQuoteSource ?? snapshot.source;
+        continue;
+      }
+      // A cross rate is only as firm as both quotes: an estimated base makes every rate an estimate.
+      sources[code] = baseQuoteSource === 'estimate' ? 'estimate' : (quoteSources[code] ?? snapshot.source);
+    }
+    return sources;
+  }
+
   private async saveRateSet(
     context: TenantCurrencyContext,
     snapshot: YearlySnapshot,
     manager: EntityManager,
   ): Promise<CurrencyRateSet | null> {
+    await lockRateSetWrite(manager, context.tenantId, snapshot.year);
     const repo = manager.getRepository(CurrencyRateSet);
     const existing = await repo.findOne({
       where: {
@@ -610,12 +869,17 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       order: { captured_at: 'DESC' as any },
     });
 
-    const rates = this.buildRateMap(context.reportingCurrency, snapshot, context.currencies);
-    const nonBaseTargets = context.currencies.filter(
-      (code) => code.toUpperCase() !== context.reportingCurrency.toUpperCase(),
+    const freshRates = this.buildRateMap(context.reportingCurrency, snapshot, context.currencies);
+    const merged = this.mergeWithLatest(
+      freshRates,
+      this.freshRateSources(context.reportingCurrency, snapshot, freshRates),
+      existing,
     );
-    const hasSignal = nonBaseTargets.length === 0 || Object.entries(rates).some(([code, value]) => {
-      if (code.toUpperCase() === context.reportingCurrency.toUpperCase()) return false;
+    const rates = merged.rates;
+    const upperBase = context.reportingCurrency.toUpperCase();
+    const hasNonBase = Object.keys(rates).some((code) => code.toUpperCase() !== upperBase);
+    const hasSignal = !hasNonBase || Object.entries(rates).some(([code, value]) => {
+      if (code.toUpperCase() === upperBase) return false;
       return typeof value === 'number' && Number.isFinite(value) && Math.abs(value - 1) > 1e-6;
     });
     if (!hasSignal) {
@@ -630,24 +894,15 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    const sortedKeys = Object.keys(rates).sort();
-    const canonical = JSON.stringify(sortedKeys.reduce<Record<string, number | null>>((acc, key) => {
-      acc[key] = rates[key];
-      return acc;
-    }, {}));
+    const canonical = canonicalJson(rates);
+    const existingCanonical = existing ? canonicalJson(existing.rates || {}) : null;
+    // An older set has no per-currency sources: identical rates are not rewritten
+    // only to fill them in. A stored provenance that changed (an estimate the
+    // World Bank has now published, at the same number) is a new set.
+    const provenanceUnchanged = !existing?.rate_sources
+      || canonicalJson(existing.rate_sources) === canonicalJson(merged.sources);
 
-    const existingCanonical = existing
-      ? JSON.stringify(
-          Object.keys(existing.rates || {})
-            .sort()
-            .reduce<Record<string, number | null>>((acc, key) => {
-              acc[key] = existing.rates[key];
-              return acc;
-            }, {}),
-        )
-      : null;
-
-    if (existing && existingCanonical === canonical && existing.source === snapshot.source) {
+    if (existing && existingCanonical === canonical && existing.source === snapshot.source && provenanceUnchanged) {
       this.logger.debug(`FX rates unchanged for tenant ${context.tenantId} year ${snapshot.year}`);
       return existing;
     }
@@ -668,6 +923,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       fiscal_year: snapshot.year,
       base_currency: context.reportingCurrency,
       rates,
+      rate_sources: Object.keys(merged.sources).length ? merged.sources : null,
       rate_basis: this.rateBasisForSource(snapshot.source),
       source: snapshot.source,
     });

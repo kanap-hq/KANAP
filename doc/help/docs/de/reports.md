@@ -86,6 +86,10 @@ So funktionieren sie:
 - Enthält der Link einen Analysefilter und konnten die Dimensionen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Der Analysefilter konnte nicht angewendet werden. Entfernen Sie ihn oder versuchen Sie es erneut.“ Klicken Sie auf **Filter entfernen**, um die Analysefilter zu entfernen und den Bericht wieder zu sehen.
 - Die beiden Leistungsverrechnungsberichte haben keine solchen Filter und sind nicht betroffen.
 
+### Beträge ohne Wechselkurs
+
+Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, lassen die Budgetberichte, **Personal nach Monat** und **Kosten pro VZÄ** die Beträge dieser Zeile für das Jahr bei ihren Zahlen aus. Ein einzeiliger Hinweis oben im Bericht nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet. Der Hinweis wird nicht gedruckt. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
+
 ### Die Liste aus einem Bericht öffnen
 
 In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die [Liste der Budgetzeilen](budget-lines.md) in einem neuen Tab öffnet, mit den Budgetzeilen, die die Zeile zählt:
@@ -149,8 +153,8 @@ Zeigen Sie Kostenzuordnungen über alle Unternehmen hinweg mit Zusammenfassungs-
 | Betrag | Summe der ausgewählten Kennzahl |
 | Mitarbeiterzahl | Gesamte Mitarbeiterzahl |
 | IT-Benutzer | Anzahl IT-Benutzer |
-| Umsatz | Jahresumsatz |
-| IT-Kosten vs. Umsatz | Prozentsatz |
+| Umsatz | Jahresumsatz, in Millionen der Berichtswährung |
+| IT-Kosten vs. Umsatz | Prozentsatz, beide Werte in der Berichtswährung |
 | IT-Kosten pro Benutzer | Betrag geteilt durch Mitarbeiterzahl |
 | IT-Kosten pro IT-Benutzer | Betrag geteilt durch IT-Benutzer |
 
@@ -183,6 +187,8 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 ### Was Sie sehen
 
 **Unternehmens-Zusammenfassungskarte**: Unternehmensname, Gesamtbetrag, Berichtswährung, Mitarbeiterzahl, IT-Benutzer, Kosten pro Benutzer, Kosten pro IT-Benutzer und IT-Kosten vs. Umsatz.
+
+**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und der Bericht zeigt eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse.
 
 **Abteilungs-Summen** (wenn aktiviert):
 

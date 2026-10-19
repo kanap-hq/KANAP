@@ -123,6 +123,7 @@
       "turnoverYear": "Chiffre d'affaires ({{year}})"
     },
     "pinnedTotal": "Total",
+    "turnoverTotalFxMissing": "{{value}} (pas encore de taux pour {{currencies}}, compté sans conversion)",
     "export": "Exporter les sociétés",
     "import": "Importer les sociétés",
     "importHint": "Métriques lues : {{years}}, d'après l'année de la liste. Chaque année est facultative. Valeurs acceptées pour status : enabled ou disabled.",
@@ -191,7 +192,11 @@
       "kept_one": "{{count}} société est encore utilisée et est conservée. Désactivez-la plutôt :",
       "kept_other": "{{count}} sociétés sont encore utilisées et sont conservées. Désactivez-les plutôt :",
       "deleted_one": "{{count}} société supprimée",
-      "deleted_other": "{{count}} sociétés supprimées"
+      "deleted_other": "{{count}} sociétés supprimées",
+      "title_one": "Supprimer la société sélectionnée",
+      "title_other": "Supprimer les {{count}} sociétés sélectionnées",
+      "keptDone_one": "{{count}} société conservée",
+      "keptDone_other": "{{count}} sociétés conservées"
     }
   },
   "departments": {
@@ -1058,7 +1063,7 @@
       "departmentsMetrics": "Indicateurs des départements",
       "frozen": "Gelé",
       "editable": "Modifiable",
-      "frozenBy": "par {{name}}"
+      "frozenBy": "Gelé par {{name}} le {{date}}"
     }
   },
   "formSchemas": {

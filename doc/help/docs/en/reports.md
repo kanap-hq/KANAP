@@ -86,6 +86,10 @@ How they work:
 - If the link carries an analytics filter and the dimensions could not be loaded, the report shows no lines and one line of text: "The analytics filter could not be applied. Clear it or try again." Click **Clear filter** to remove the analytics filters and see the report again.
 - The two chargeback reports have no such filters and are not affected.
 
+### Amounts without an exchange rate
+
+When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. The warning does not print. See [Manual rates](currencies.md#manual-rates).
+
 ### Opening the list from a report
 
 In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the [budget lines list](budget-lines.md) in a new tab, on the lines the row counts:
@@ -149,8 +153,8 @@ View cost allocations across all companies with summary KPIs and intercompany fl
 | Amount | Selected metric total |
 | Headcount | Total headcount |
 | IT users | IT user count |
-| Turnover | Annual turnover |
-| IT costs vs turnover | Percentage ratio |
+| Turnover | Annual turnover, in millions of the reporting currency |
+| IT costs vs turnover | Percentage ratio, both in the reporting currency |
 | IT costs per user | Amount divided by headcount |
 | IT costs per IT user | Amount divided by IT users |
 
@@ -183,6 +187,8 @@ Drill down into a single company's chargeback allocations across departments, bu
 ### What you'll see
 
 **Company summary card**: Company name, total amount, reporting currency, headcount, IT users, cost per user, cost per IT user, and IT costs vs turnover.
+
+**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate yet for the year, its turnovers are counted without conversion and the report lists a warning, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is counted unconverted until the rate is available." KANAP fetches the missing rate with the next rate refresh.
 
 **Department totals** (when enabled):
 

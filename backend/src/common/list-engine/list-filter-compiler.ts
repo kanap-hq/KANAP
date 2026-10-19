@@ -42,7 +42,16 @@ export function compileFieldFilter(stmt: SqlStatement, field: FieldSql, raw: any
   return compileSingle(stmt, field, raw);
 }
 
+/**
+ * One condition. An amount without a value (no exchange rate for its line's currency that year)
+ * matches no condition that filters something, whatever its type (blank and not blank included).
+ */
 function compileSingle(stmt: SqlStatement, field: FieldSql, raw: any): string {
+  const predicate = compileCondition(stmt, field, raw);
+  return field.kind === 'money' && predicate !== 'TRUE' ? `(${field.sql} IS NOT NULL AND ${predicate})` : predicate;
+}
+
+function compileCondition(stmt: SqlStatement, field: FieldSql, raw: any): string {
   const model = normalizeAgFilterModel(raw);
   if (!model || typeof model !== 'object') return 'TRUE';
   const type = String(model.type ?? model.filterType ?? 'contains');
@@ -75,7 +84,7 @@ function compileSingle(stmt: SqlStatement, field: FieldSql, raw: any): string {
   return textPredicate(stmt, field, type, needle);
 }
 
-/** Blank: null or '' (a money value is never blank). */
+/** Blank: null or '' (a money value is never blank; one without a value matches no condition, `compileSingle`). */
 export function blankSql(field: FieldSql): string {
   switch (field.kind) {
     case 'money':

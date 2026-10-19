@@ -39,6 +39,34 @@ export function formatCount(value: number, locale: string): string {
   return new Intl.NumberFormat(locale, COUNT_OPTIONS).format(value);
 }
 
+/** A decimal (turnover, a total that keeps a fraction) with the separators of the language. */
+export function formatDecimal(value: number, locale: string, maximumFractionDigits = 3): string {
+  return new Intl.NumberFormat(locale, {
+    maximumFractionDigits,
+    useGrouping: 'always',
+  } as unknown as Intl.NumberFormatOptions).format(value);
+}
+
+/**
+ * A ratio already written in percent points (4.95 means 4.95%, not 495%).
+ * `fractionDigits` keeps the one or two decimals the report already showed.
+ */
+export function formatPercentPoints(value: number, locale: string, fractionDigits: number): string {
+  return new Intl.NumberFormat(locale, {
+    style: 'percent',
+    minimumFractionDigits: fractionDigits,
+    maximumFractionDigits: fractionDigits,
+  }).format(value / 100);
+}
+
+/** A grid share cell: blank when the share is absent, otherwise `formatPercentPoints`. */
+export function formatSharePercent(value: unknown, locale: string, fractionDigits: number): string {
+  if (value == null || value === '') return '';
+  const n = Number(value);
+  if (!Number.isFinite(n)) return '';
+  return formatPercentPoints(n, locale, fractionDigits);
+}
+
 /** The thousand and decimal separators of the language, as Intl writes them. */
 export function numberSeparators(locale: string): { thousand: string; decimal: string } {
   const parts = new Intl.NumberFormat(locale, { useGrouping: 'always' } as unknown as Intl.NumberFormatOptions).formatToParts(1234.5);

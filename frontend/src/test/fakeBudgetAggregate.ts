@@ -196,7 +196,11 @@ function rowOf(keys: Array<string | null>, rows: Row[], request: AggregateReques
 
 const compareText = (a: string | null, b: string | null) => (a === b ? 0 : a == null ? -1 : b == null ? 1 : a.localeCompare(b));
 
-export function fakeAggregate(rows: Row[], request: AggregateRequest, options: { accounts?: Account[] } = {}): AggregateResult {
+/**
+ * `fxMissing`: what the answer says the converted amounts leave out for lack of an exchange rate
+ * (the fake converts nothing itself; `[]` by default), for a spec that shows the notice.
+ */
+export function fakeAggregate(rows: Row[], request: AggregateRequest, options: { accounts?: Account[]; fxMissing?: AggregateResult['fxMissing'] } = {}): AggregateResult {
   const accounts = new Map((options.accounts ?? []).map((account) => [account.id, account]));
   const filters = request.query.filters ?? {};
   const kept = rows.filter((row) => Object.entries(filters).every(([field, model]) => passes(row, field, model, accounts)));
@@ -262,6 +266,7 @@ export function fakeAggregate(rows: Row[], request: AggregateRequest, options: {
     total: rowOf([], kept, request),
     groupCount,
     reportingCurrency: spec.measures.length ? 'EUR' : null,
+    fxMissing: options.fxMissing ?? [],
   };
 }
 

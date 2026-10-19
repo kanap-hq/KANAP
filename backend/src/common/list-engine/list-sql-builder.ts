@@ -88,11 +88,15 @@ export function sortKeys(field: FieldSql): string[] {
   return field.position ? [`(${field.position})`, sortKey(field)] : [sortKey(field)];
 }
 
-/** `ORDER BY` of the list: the sort keys, then the tie-break (newest first). */
+/**
+ * `ORDER BY` of the list: the sort keys, then the tie-break (newest first). An amount without a
+ * value (no exchange rate for its line's currency that year) sorts last in both directions.
+ */
 export function orderBy(stmt: SqlStatement, config: ListConfig, state: ListState): string {
   const field = fieldOf(stmt, config, state.sort.field);
   const direction = state.sort.direction === 'ASC' ? 'ASC' : 'DESC';
-  return `ORDER BY ${sortKeys(field).map((key) => `${key} ${direction}`).join(', ')}, ${config.tieBreak.join(', ')}`;
+  const nulls = field.kind === 'money' ? ' NULLS LAST' : '';
+  return `ORDER BY ${sortKeys(field).map((key) => `${key} ${direction}${nulls}`).join(', ')}, ${config.tieBreak.join(', ')}`;
 }
 
 /** One page of ids with the count of the whole list (`count(*) OVER ()`). */

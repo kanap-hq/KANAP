@@ -87,6 +87,10 @@ The five most recently edited budget lines, OPEX and CAPEX together. Each row sh
 
 Without read access to budget lines (`budget:reader`), the budget tiles are hidden. **My tasks** needs read access to tasks, and **Next renewals** read access to contracts.
 
+### Amounts without an exchange rate
+
+When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget** and **Top increases** tiles then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. In **Top lines**, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
+
 ## Customizing the overview
 
 Click **Customize** to open **Budget dashboard settings**. Your choices apply to your own overview only.

@@ -9,6 +9,7 @@ import {
   amountColumnYear,
   buildAmountColumnDefs,
   buildFteColumnDefs,
+  cellFxMissing,
   dimensionFieldPredicate,
   fteFieldKey,
   fteTotalsToRow,
@@ -109,6 +110,35 @@ describe('amount helpers', () => {
     expect(slotAmount(versions.y, 'budget')).toBe(12.5);
     expect(Object.keys(versions.y?.totals ?? {})).toEqual(AMOUNT_COLUMNS.map((c) => c.key));
     expect(versions.yMinus2).toBeUndefined();
+  });
+
+  it('shows a cell without an exchange rate in the line currency, never as 0 or as a reporting amount', () => {
+    const localT = ((key: string, options?: { amount?: string; currency?: string; column?: string }) => (
+      key === 'ops:shared.fxMissing.localAmount' ? `${options?.amount} ${options?.currency}` : options?.column ?? key
+    )) as unknown as TFunction;
+    const defs = buildAmountColumnDefs({ t: localT, currentYear: Y, cellRenderer: () => undefined, columns: columnsOf() });
+    const yBudget = defs.find((d) => d.colId === 'yBudget')!;
+    const row = {
+      versions: {
+        y: {
+          year: 2026,
+          reporting: { budget: null, revision: null, forecast: null, follow_up: null, landing: null },
+          fx_missing: { currency: 'USD', amounts: { budget: 12000, revision: 0, forecast: 0, follow_up: 0, landing: 0 } },
+        },
+        yMinus1: { year: 2025, reporting: { budget: 900 }, totals: { budget: 1000 } },
+      },
+    };
+    const value = (yBudget.valueGetter as (p: unknown) => unknown)({ data: row });
+    expect(value).toBeNull();
+    const format = yBudget.valueFormatter as (p: unknown) => string;
+    expect(format({ data: row, value, node: {} })).toBe('12 000 USD');
+    const converted = defs.find((d) => d.colId === 'yMinus1Budget')!;
+    const convertedValue = (converted.valueGetter as (p: unknown) => unknown)({ data: row });
+    expect(convertedValue).toBe(900);
+    expect(format({ data: { versions: {} }, value: null, node: {} })).toBe('');
+    expect(cellFxMissing(row, 'yBudget', Y)).toEqual({ currency: 'USD', year: 2026, amount: 12000 });
+    expect(cellFxMissing(row, 'yMinus1Budget', Y)).toBeNull();
+    expect(slotAmount({ totals: { budget: 50 }, reporting: { budget: null, fx_source: 'missing', currency: 'USD' } }, 'budget')).toBeNull();
   });
 });
 

@@ -36,6 +36,10 @@ export class WorldBankClient {
   private annualDataCache: Map<string, Map<number, number>> | null = null;
   private annualDataLoadedAt = 0;
   private annualLoadPromise: Promise<Map<string, Map<number, number>>> | null = null;
+  /** When set, the next annual load ignores the memory cache and the CSV file. */
+  private bypassAnnualCache = false;
+  /** Stamped before a forced reload, including one that fails, so a process retries at most once per window. */
+  private lastForcedAnnualRefreshAt = 0;
   private readonly liveBaseUrl: string;
   private readonly liveApiKey: string | null;
   private readonly liveRateTtlMs: number;
@@ -141,40 +145,105 @@ export class WorldBankClient {
     return null;
   }
 
+  /**
+   * Reloads the annual dataset when the loaded copy is older than `maxAgeMs`.
+   * The memory cache and the CSV file are both bypassed. A process does this
+   * at most once per `maxAgeMs`, and a failed reload counts: the previous
+   * copy stays in place and the window still elapses.
+   * Returns whether a new copy was loaded.
+   */
+  async refreshAnnualDatasetIfOlderThan(maxAgeMs: number): Promise<boolean> {
+    const now = Date.now();
+    const age = this.annualDataCache ? now - this.annualDataLoadedAt : Infinity;
+    if (age < maxAgeMs) return false;
+    if (now - this.lastForcedAnnualRefreshAt < maxAgeMs) return false;
+    this.lastForcedAnnualRefreshAt = now;
+    try {
+      await this.forceReloadAnnualDataset();
+      return true;
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`World Bank annual dataset reload failed: ${reason}`);
+      return false;
+    }
+  }
+
+  private async forceReloadAnnualDataset(): Promise<void> {
+    const previousCache = this.annualDataCache;
+    const previousLoadedAt = this.annualDataLoadedAt;
+    this.bypassAnnualCache = true;
+    this.annualDataCache = null;
+    try {
+      await this.ensureAnnualDataset();
+    } catch (err) {
+      if (this.annualDataCache == null) {
+        this.annualDataCache = previousCache;
+        this.annualDataLoadedAt = previousLoadedAt;
+      }
+      throw err;
+    } finally {
+      this.bypassAnnualCache = false;
+    }
+  }
+
   private async ensureAnnualDataset(): Promise<Map<string, Map<number, number>>> {
     const now = Date.now();
-    if (this.annualDataCache && now - this.annualDataLoadedAt < this.csvCacheTtlMs) {
+    if (!this.bypassAnnualCache && this.annualDataCache && now - this.annualDataLoadedAt < this.csvCacheTtlMs) {
       return this.annualDataCache;
+    }
+    if (this.bypassAnnualCache) {
+      return this.loadAnnualDataset();
     }
     if (this.annualLoadPromise) {
       return this.annualLoadPromise;
     }
-    this.annualLoadPromise = (async () => {
-      const csvPath = await this.ensureAnnualCsvFile();
-      const csvContent = await fs.promises.readFile(csvPath, 'utf8');
-      const dataset = this.parseAnnualCsv(csvContent);
-      this.annualDataCache = dataset;
-      this.annualDataLoadedAt = Date.now();
-      this.annualLoadPromise = null;
-      return dataset;
-    })().catch((err) => {
-      this.annualLoadPromise = null;
-      throw err;
-    });
+    this.annualLoadPromise = this.loadAnnualDataset().then(
+      (dataset) => {
+        this.annualLoadPromise = null;
+        return dataset;
+      },
+      (err) => {
+        this.annualLoadPromise = null;
+        throw err;
+      },
+    );
     return this.annualLoadPromise;
+  }
+
+  private async loadAnnualDataset(): Promise<Map<string, Map<number, number>>> {
+    const csvPath = await this.ensureAnnualCsvFile();
+    const csvContent = await fs.promises.readFile(csvPath, 'utf8');
+    const dataset = this.parseAnnualCsv(csvContent);
+    this.annualDataCache = dataset;
+    // The file time is when this copy was downloaded. A process that just
+    // started still sees a day-old file as stale.
+    this.annualDataLoadedAt = await this.datasetFileTime(csvPath);
+    return dataset;
+  }
+
+  private async datasetFileTime(csvPath: string): Promise<number> {
+    try {
+      const stats = await fs.promises.stat(csvPath);
+      if (Number.isFinite(stats.mtimeMs)) return stats.mtimeMs;
+    } catch {
+      // The parsed copy is usable even when the file time cannot be read.
+    }
+    return Date.now();
   }
 
   private async ensureAnnualCsvFile(): Promise<string> {
     await fs.promises.mkdir(this.csvCacheDir, { recursive: true });
     const csvPath = path.join(this.csvCacheDir, 'world-bank-fcrf.csv');
     let needsDownload = true;
-    try {
-      const stats = await fs.promises.stat(csvPath);
-      if (Date.now() - stats.mtimeMs < this.csvCacheTtlMs) {
-        needsDownload = false;
+    if (!this.bypassAnnualCache) {
+      try {
+        const stats = await fs.promises.stat(csvPath);
+        if (Date.now() - stats.mtimeMs < this.csvCacheTtlMs) {
+          needsDownload = false;
+        }
+      } catch {
+        needsDownload = true;
       }
-    } catch {
-      needsDownload = true;
     }
     if (needsDownload) {
       this.logger.log('Refreshing World Bank FX annual dataset (CSV download)');

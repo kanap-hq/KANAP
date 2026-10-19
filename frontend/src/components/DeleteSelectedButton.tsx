@@ -65,7 +65,15 @@ export interface DeleteSelectedButtonProps<T> {
    * The item lines in the record's words: "2 contracts will be deleted:", "1 contract is kept:", and
    * for the message once done, "2 contracts deleted" (else "Deleted 2 items").
    */
-  itemLabels?: { toDelete: (count: number) => string; kept: (count: number) => string; deleted?: (count: number) => string };
+  itemLabels?: {
+    toDelete: (count: number) => string;
+    kept: (count: number) => string;
+    deleted?: (count: number) => string;
+    /** Several selected items: "Delete the 2 selected companies". One item stays named. */
+    title?: (count: number) => string;
+    /** Once done: "1 company kept". */
+    keptDone?: (count: number) => string;
+  };
 }
 
 /** The names a success message lists before "and n more". */
@@ -212,7 +220,10 @@ export default function DeleteSelectedButton<T>({
     return t('delete.namedList', { what, names: joinNames(shown, language) });
   };
   /** "1 item kept: Beta", the names capped as for the deleted ones. */
-  const keptMessage = () => namedMessage(t('delete.keptDone', { count: shownKept.length }), shownKept.map((item) => item.name));
+  const keptMessage = () => namedMessage(
+    itemLabels?.keptDone?.(shownKept.length) ?? t('delete.keptDone', { count: shownKept.length }),
+    shownKept.map((item) => item.name),
+  );
   // Refused rows stay out of the delete; each is listed as kept, with what makes it refused.
   const refusedById = new Map((check?.refused ?? []).map((refusal) => [refusal.id, refusal]));
   const deletable = items.filter((item) => !refusedById.has(item.id));
@@ -234,7 +245,7 @@ export default function DeleteSelectedButton<T>({
   /** "Delete Acme?" for one item, "Delete the 3 selected items" for several: one item is always named. */
   const selectionTitle = (named: Item[]) => (named.length === 1
     ? t('delete.recordTitle', { name: named[0].name })
-    : t('delete.deleteSelectedTitle', { count: named.length }));
+    : itemLabels?.title?.(named.length) ?? t('delete.deleteSelectedTitle', { count: named.length }));
   const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
 
   return (

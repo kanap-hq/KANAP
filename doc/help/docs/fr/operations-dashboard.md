@@ -87,6 +87,10 @@ Les cinq lignes budgétaires modifiées le plus récemment, OPEX et CAPEX confon
 
 Sans accès en lecture aux lignes budgétaires (`budget:reader`), les tuiles du budget sont masquées. **Mes tâches** demande l'accès en lecture aux tâches, et **Prochains renouvellements** l'accès en lecture aux contrats.
 
+### Montants sans taux de change
+
+Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant est exclu des totaux de cette année. Les tuiles **Budget** et **Plus fortes hausses** affichent alors un avertissement d'une ligne, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises. Dans **Top lignes**, une telle ligne affiche son montant dans sa propre devise avec une petite marque orange. Voir [Taux manuels](currencies.md#taux-manuels).
+
 ## Personnaliser la vue d'ensemble
 
 Cliquez sur **Personnaliser** pour ouvrir **Réglages du tableau de bord du budget**. Vos choix ne s'appliquent qu'à votre propre vue d'ensemble.

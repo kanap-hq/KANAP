@@ -13,7 +13,7 @@ The Dashboard is your personal landing page in KANAP. It gives you a quick overv
 The header strip at the top of the dashboard provides shortcut buttons for common everyday work. Each button is shown only if you have the corresponding permission.
 
 - **Create Task**: opens the standalone task creation flow. Requires `tasks:member` or higher.
-- **Log Time**: opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:member` or `tasks:member`.
+- **Log Time**: opens the **Quick Log Time** dialog (see below). Requires `portfolio_projects:contributor` or `tasks:member`.
 - **New Request**: opens the request creation flow. Requires `portfolio_requests:member` or higher.
 - **New Application**: opens the application creation flow. Requires `applications:member` or higher.
 - **New Asset**: opens the asset creation flow. Requires `infrastructure:member` or higher.
@@ -24,11 +24,11 @@ The header strip at the top of the dashboard provides shortcut buttons for commo
 
 The **Log Time** action opens a focused dialog so you can record hours without leaving the dashboard.
 
-- Choose the target: **Project** or **Task**.
-  - Project entries log time directly against a portfolio project.
-  - Task entries log time against one of your active tasks (project tasks or standalone tasks). OPEX, CAPEX, and contract tasks are intentionally excluded from the picker.
+- Choose the target: **Project** or **Task**. The choice appears only when you can log time on both.
+  - Project entries log time directly against a portfolio project. The list holds only the projects you can log time on.
+  - Task entries log time against one of your active tasks: project tasks of those projects, and standalone tasks if you have `tasks:member`. OPEX, CAPEX, and contract tasks are excluded from the picker.
 - Pick the project or task from the dropdown.
-- Enter the **Hours** (in 0.25 increments).
+- Enter the **Hours** (whole hours).
 - Pick a **Category**: **IT** or **Business**.
 - Add **Notes** if you want context on what you worked on.
 
@@ -96,7 +96,7 @@ Displays up to 5 items.
 
 ### Recently Viewed
 
-Shows items you have recently opened across the application: projects, requests, applications, assets, interfaces, connections, contracts, tasks, OPEX and CAPEX lines, and Knowledge documents. Each entry shows the item name, its type, and when you last viewed it.
+Shows items you have recently opened across the application: projects, requests, applications, assets, interfaces, connections, contracts, tasks, OPEX and CAPEX lines, companies, and Knowledge documents. Each entry shows the item name, its type, and when you last viewed it.
 
 Recently viewed items are stored locally in your browser and are scoped to the current tenant and user. Click **Clear** to reset the list. Items you no longer have permission to access are filtered out automatically. Items deleted since, alone or with another item (such as the tasks of a deleted contract), leave the list.
 

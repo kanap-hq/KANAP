@@ -8,7 +8,7 @@ Für Hintergrundinformationen zu Währungskonzepten und Umrechnungsmechanismen s
 
 Währungen sind eine Budgeteinstellung. Die Seite steht bei den anderen Budgeteinstellungen in der [Budgetadministration](budget-operations.md).
 
-- **Die Seite öffnen, Einstellungen ändern und die Wechselkurssynchronisierung starten**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
+- **Die Seite öffnen, Einstellungen ändern, die Wechselkurssynchronisierung starten und manuelle Kurse eingeben**: Budgetadministration auf Administratorebene. Die Karte ist für andere Benutzer ausgeblendet.
 - **Währungen bei Zeilen verwenden**: OPEX- und CAPEX-Benutzer wählen in ihren Zeilenformularen aus den erlaubten Währungen, ohne diese Seite zu öffnen.
 
 Das Recht **Einstellungen** der IT-Landschaft gibt keinen Zugriff auf Währungen. Es umfasst nur die Einstellungen der IT-Landschaft.
@@ -79,7 +79,13 @@ Die Schaltfläche **FX-Kurse erzwingen** löst manuell eine Hintergrundaktualisi
   - Kurse aktualisieren sich innerhalb weniger Sekunden
   - Die FX-Kurs-Snapshot-Tabelle aktualisiert sich automatisch
 
-**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Braucht eine Liste oder ein Bericht einen Kurs, der im Snapshot seines Jahres fehlt (eine seither verwendete Währung oder ein Jahr ohne Snapshot), holt das System dieses Jahr im Hintergrund nach, und die nächste Anzeige verwendet den neuen Kurs. Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
+**Automatische Aktualisierung**: Das System aktualisiert Kurse auch automatisch alle 30 Tage, wenn sich ein Benutzer anmeldet (für J-1, J, J+1). Braucht eine Liste, ein Bericht oder die Vertragsseite einen Kurs, der im Snapshot seines Jahres fehlt (eine seither verwendete Währung oder ein Jahr ohne Snapshot), holt das System dieses Jahr im Hintergrund nach, sobald es gelesen wird, und die nächste Anzeige verwendet den neuen Kurs. Die manuelle Synchronisation gibt Ihnen Kontrolle, wenn Sie sofortige Aktualisierungen benötigen.
+
+**Abgerufene Währungen**: die Währungen der Budgetzeilen, Unternehmen und Verträge sowie die Berichtswährung, die Standardwährungen und die zugelassenen Währungen.
+
+**Bekannte Kurse bleiben erhalten**: Liefert eine Quelle eine Währung bei einer späteren Aktualisierung nicht mehr, bleibt der für dieses Jahr gespeicherte Kurs bestehen.
+
+**Noch nicht veröffentlichte Jahre**: Die Weltbank veröffentlicht den Durchschnitt eines Jahres einige Monate nach dessen Ende (das gerade abgelaufene Jahr meist um die Jahresmitte). Bis dahin verwendet ein vergangenes Jahr das nächstgelegene veröffentlichte Jahr, und die Tabelle kennzeichnet diesen Kurs als **Schätzung**. Der tatsächliche Wert ersetzt ihn bei der ersten Aktualisierung nach der Veröffentlichung. Das aktuelle Jahr verwendet den Live-Kurs. Ist dieser nicht verfügbar, verwendet es das zuletzt veröffentlichte Jahr, ebenfalls als Schätzung gekennzeichnet.
 
 **Tipp**: Wenn Sie eine neue Währung zu den zugelassenen Währungen hinzufügen, führen Sie sofort eine FX-Synchronisation durch, um die Kurse zu befüllen, bevor Benutzer Budgetzeilen in dieser Währung erstellen.
 
@@ -96,6 +102,13 @@ Unterhalb des Einstellungsformulars zeigt die Tabelle **Neueste FX-Kurs-Snapshot
       - **Quartalsdurchschnitt**: Weltbank-Quartalsdurchschnitt (falls verfügbar)
       - **Live-Kassakurs**: Aktueller Kassakurs von ExchangeRate-API (aktuelles Jahr)
       - **Forward-Schätzung**: Kurs des aktuellen Jahres wird für zukünftige Jahre wiederverwendet
+  - **Kennzeichen in den Zellen**: ein Sternchen (*) nach einem von Hand eingegebenen Kurs, erklärt durch den Hinweis **Manuell erfasster Kurs** unter der Tabelle (nur sichtbar, wenn die Tabelle einen solchen Kurs enthält); **Schätzung** neben einem Kurs aus dem nächstgelegenen veröffentlichten Jahr (zeigen Sie mit der Maus auf das Kennzeichen, um den Grund zu sehen)
+  - **Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, sind die Beträge der Budgetzeilen in dieser Währung für dieses Jahr in keiner Summe in der Berichtswährung enthalten. Das betrifft die Liste der Budgetzeilen, die Übersicht der Budgetverwaltung und die Budgetberichte. Der Bildschirm weist dort darauf hin, wo es zählt:
+
+- Ein einzeiliger Hinweis nennt, was ausgeschlossen ist, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Er erscheint unter den Summen der Liste der Budgetzeilen, auf den Kacheln der Übersicht und oben in jedem Budgetbericht. Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das diese Seite öffnet.
+- In der Zeile selbst erscheint der Betrag in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
+
+KANAP ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um fehlende Kurse zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie eine FX-Synchronisation durch, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
 
 **Beispiel**:
 Wenn Ihre Berichtswährung EUR ist:
@@ -108,10 +121,33 @@ Wenn Ihre Berichtswährung EUR ist:
 
 **Die Tabelle lesen**:
   - Kurse zeigen, wie viele Einheiten Ihrer Berichtswährung einer Einheit der gelisteten Währung entsprechen
-  - Zeigt ein Kurs `—`, sind keine Daten verfügbar (Fallback-Umrechnung von 1,00 wird verwendet)
+  - Zeigt ein Kurs `—`, sind keine Daten verfügbar. Beträge von Budgetzeilen in dieser Währung sind für dieses Jahr nicht in den Summen enthalten (siehe [Umrechnungsmechanismen](#umrechnungsmechanismen-kurzreferenz))
   - Kurse werden zum Zeitpunkt der Synchronisation erfasst und bleiben bis zur nächsten Aktualisierung stabil
 
-**Tipp**: Wenn Sie fehlende Kurse (`—`) sehen, prüfen Sie, ob der Währungscode gültig und allgemein veröffentlicht ist. Erwägen Sie, zugelassene Währungen einzuschränken, um exotische Codes ohne Daten zu vermeiden.
+**Tipp**: Wenn Sie fehlende Kurse (`—`) sehen, prüfen Sie, ob der Währungscode gültig und allgemein veröffentlicht ist. Erwägen Sie, zugelassene Währungen einzuschränken, um exotische Codes ohne Daten zu vermeiden. Sie können den Kurs auch selbst eingeben (siehe [Manuelle Kurse](#manuelle-kurse)).
+
+### Fehlende Kurse
+
+Über der Tabelle listet ein Block jede verwendete Kombination aus Währung und Jahr ohne Kurs auf, unter einem Titel wie **2 Wechselkurse fehlen**. Jede Zeile erklärt, dass noch keine Quelle diesen Kurs veröffentlicht und Beträge in dieser Währung bei den Summen außen vor bleiben, bis ein Kurs vorliegt. Fehlt nichts, zeigt der Block **Jede verwendete Währung hat einen Kurs.**
+
+Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Kennzahlen eines Unternehmens oder ein Vertrag es benötigen. Beim Öffnen der Seite werden die Quellen für die Jahre der Liste außerdem erneut abgefragt.
+
+### Manuelle Kurse
+
+Wenn keine Quelle einen Kurs veröffentlicht oder Ihr Finanzteam eigene Kurse verwendet, können Sie einen Kurs für eine Währung und ein Jahr eingeben.
+
+  1. Klicken Sie in der Tabelle auf die Zelle der Währung und des Jahres, oder klicken Sie auf **Kurs eingeben** neben einer Zeile des Blocks der fehlenden Kurse.
+  2. Geben Sie im Dialog **Manueller Wechselkurs** den Kurs in Ihrer Berichtswährung für 1 Einheit der gewählten Währung ein (zum Beispiel **Kurs in EUR für 1 USD**). Verwenden Sie das Dezimaltrennzeichen Ihrer Sprache. Eine gute Quelle ist der Jahresdurchschnitt, den Ihre Zentralbank oder Ihre Treasury veröffentlicht.
+  3. Klicken Sie auf **Speichern**. Die Zelle zeigt den Kurs dann mit einem Sternchen (*).
+
+Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn entfernen. Spätere Aktualisierungen überschreiben ihn nicht. Um zum automatischen Kurs zurückzukehren, öffnen Sie die Zelle und klicken Sie auf **Manuellen Kurs entfernen**: Der automatische Kurs wird erneut abgerufen.
+
+Gut zu wissen:
+  - Nur Benutzer der Budgetadministration auf Administratorebene können einen manuellen Kurs eingeben, ändern oder entfernen.
+  - Jede Eingabe, Änderung und Entfernung wird im Audit-Protokoll erfasst.
+  - Ein eingefrorenes Jahr behält die beim Einfrieren erfassten Kurse, manuelle Kurse und Schätzungen eingeschlossen (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
+  - Ein manueller Kurs gilt für die aktuelle Berichtswährung. Nach einem Wechsel der Berichtswährung gelten die für die alte Währung eingegebenen manuellen Kurse nicht mehr.
+  - Die Berichtswährung hat immer den Kurs 1 und nimmt keinen manuellen Kurs an.
 
 ## CSV-Import und -Export
 
@@ -152,10 +188,10 @@ Wenn Sie Einstellungen ändern:
 Beträge werden in ihrer eigenen Währung gespeichert und bei der Anzeige umgerechnet. Jedes Jahr verwendet die zuletzt für dieses Jahr erfassten Kurse, unabhängig davon, wann die Beträge eingegeben wurden. Erfasst eine Synchronisation neue Kurse für ein Jahr, werden die Beträge dieses Jahres ab dann damit umgerechnet, außer das Jahr ist eingefroren (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
 
 ### Vergangene Jahre
-Es werden Weltbank-Jahresdurchschnittskurse verwendet. Diese sind stabil und ändern sich nach Veröffentlichung nicht mehr.
+Es werden Weltbank-Jahresdurchschnittskurse verwendet. Diese sind stabil und ändern sich nach Veröffentlichung nicht mehr. Solange die Weltbank ein Jahr noch nicht veröffentlicht hat, tritt das nächstgelegene veröffentlichte Jahr an seine Stelle, als Schätzung gekennzeichnet.
 
 ### Aktuelles Jahr
-Es wird der Live-Kassakurs von ExchangeRate-API verwendet (Fallback auf den neuesten Jahreskurs, falls nicht verfügbar). Aktualisiert sich bei FX-Synchronisation oder bei der automatischen 30-Tage-Aktualisierung.
+Es wird der Live-Kassakurs von ExchangeRate-API verwendet (Fallback auf den neuesten Jahreskurs, als Schätzung gekennzeichnet, falls nicht verfügbar). Aktualisiert sich bei FX-Synchronisation oder bei der automatischen 30-Tage-Aktualisierung.
 
 ### Zukünftige Jahre
 Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies bietet Orientierung für die Budgetplanung, sollte aber überprüft werden, wenn diese Jahre näher rücken.
@@ -163,7 +199,7 @@ Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies 
 ### Eingefrorene Jahre
 Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses Jahres für den eingefrorenen Typ (OPEX oder CAPEX) fest: KANAP aktualisiert die Kurse des Jahres und behält diesen Satz dann für alle Beträge des Jahres, auch wenn neuere Kurse eintreffen. Das Auftauen der Standardspalte gibt sie wieder frei. Siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](budget-operations.md#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest).
 
-**Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, werden die Beträge in dieser Währung mit **1,00** gezählt, als wären sie bereits in der Berichtswährung. Der Server protokolliert eine Warnung und ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um das zu erkennen, prüfen Sie die Tabelle der FX-Kurs-Snapshots auf `—`-Werte und führen Sie eine FX-Synchronisation durch, um die Kurse sofort abzurufen.
+**Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, werden die Beträge in dieser Währung mit **1,00** gezählt, als wären sie bereits in der Berichtswährung. Der Server protokolliert eine Warnung und ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um das zu erkennen, prüfen Sie den Block der fehlenden Kurse über der FX-Kurs-Snapshot-Tabelle und führen Sie eine FX-Synchronisation durch, um die Kurse sofort abzurufen. Ein [manueller Kurs](#manuelle-kurse) behebt das Problem umgehend.
 
 ## Tipps
 
@@ -234,13 +270,13 @@ A: Nein. Die Berichtswährung ist mandantenweit. Alle Unternehmen, Berichte und 
 A: Die Datenquelle (Weltbank oder ExchangeRate-API) veröffentlicht diese Währung möglicherweise nicht. Prüfen Sie, ob der ISO-Code korrekt und allgemein veröffentlicht ist. Erwägen Sie bei Bedarf, zugelassene Währungen auf Codes mit zuverlässiger Datenabdeckung zu beschränken.
 
 **F: Wie oft werden FX-Kurse automatisch aktualisiert?**
-A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Ein Jahr, dem der Kurs einer verwendeten Währung fehlt, wird außerdem abgerufen, sobald eine Liste oder ein Bericht ihn braucht. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
+A: Alle 30 Tage, wenn sich ein Benutzer anmeldet, aktualisiert das System die Kurse für J-1, J und J+1. Ein Jahr, dem der Kurs einer verwendeten Währung fehlt, wird außerdem abgerufen, sobald eine Liste, ein Bericht oder die Vertragsseite ihn braucht, und wenn Sie diese Seite öffnen. Sie können auch jederzeit eine manuelle Aktualisierung über FX-Kurse erzwingen auslösen.
 
 **F: Beeinflussen FX-Kursänderungen meine gespeicherten Daten?**
 A: Nein. Wechselkurse beeinflussen nur **Umrechnung und Anzeige**. Jede OPEX- und CAPEX-Zeile speichert ihre eigene Währung und Beträge, die sich bei Kursaktualisierungen nie ändern. Nur die angezeigten umgerechneten Werte in Berichten und Listen ändern sich.
 
 **F: Kann ich historische Kurse manuell importieren?**
-A: Nein. Das System ruft Kurse automatisch von externen Quellen ab (Weltbank, ExchangeRate-API). Wenn Sie benutzerdefinierte Kurse benötigen, kontaktieren Sie den Support oder erwägen Sie die Verwendung einer Währung, bei der Sie die veröffentlichten Kurse akzeptieren können.
+A: Ein Import von Kursen aus einer Datei ist nicht verfügbar. Sie können auf dieser Seite für jede Währung und jedes Jahr einen manuellen Kurs eingeben (siehe [Manuelle Kurse](#manuelle-kurse)). Ein manueller Kurs ersetzt den automatischen Kurs, bis Sie ihn entfernen.
 
 **F: Was, wenn ich eine Währung verwenden muss, die nicht in der zugelassenen Liste steht?**
 A: Fügen Sie sie entweder zu den zugelassenen Währungen hinzu oder lassen Sie die Liste leer (was alle Währungen zulässt). Denken Sie daran, nach dem Hinzufügen neuer Währungen eine FX-Synchronisation durchzuführen, um Kurse zu befüllen.

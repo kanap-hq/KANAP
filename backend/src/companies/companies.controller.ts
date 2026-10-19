@@ -43,7 +43,7 @@ export class CompaniesController {
   @RequireLevel('companies', 'reader')
   @Get('totals')
   totals(@Query() query: any, @Tenant() ctx: TenantRequest) {
-    return this.svc.totals(query, { manager: ctx.manager });
+    return this.svc.totals(query, { manager: ctx.manager, tenantId: ctx.tenantId });
   }
 
   @UseGuards(PermissionGuard)

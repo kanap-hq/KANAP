@@ -15,7 +15,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
-import { countValueFormatter } from '../components/grid/countValueFormatter';
+import { metricValueFormatter } from '../components/grid/metricValueFormatter';
 
 type CompanyRow = {
   id: string;
@@ -36,7 +36,7 @@ type CompanyRow = {
 };
 
 export default function CompaniesPage() {
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t } = useTranslation(['master-data', 'common', 'ops']);
   const locale = useLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -71,6 +71,8 @@ export default function CompaniesPage() {
   const gridApiRef = useRef<any>(null);
 
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
+  const totalsKeyRef = useRef('');
+  const totalsGen = useRef(0);
   const [pinnedTotals, setPinnedTotals] = useState<any[]>([]);
 
   const updateSearchYear = useCallback((nextYear: number) => {
@@ -240,7 +242,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'headcount_year',
-      valueFormatter: countValueFormatter,
+      valueFormatter: metricValueFormatter('count'),
       headerName: t('companies.columns.headcountYear', { year }),
       width: 150,
       filter: 'agNumberColumnFilter',
@@ -262,7 +264,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'it_users_year',
-      valueFormatter: countValueFormatter,
+      valueFormatter: metricValueFormatter('count'),
       headerName: t('companies.columns.itUsersYear', { year }),
       width: 150,
       filter: 'agNumberColumnFilter',
@@ -284,6 +286,15 @@ export default function CompaniesPage() {
     },
     {
       field: 'turnover_year',
+      // Each row in millions of its base currency; the Total in the reporting currency.
+      valueFormatter: (params: any) => {
+        const value = metricValueFormatter('decimal')(params);
+        const currency = params.node?.rowPinned ? params.data?.turnover_currency : params.data?.base_currency;
+        if (params.value == null || !currency) return value;
+        const shown = t('ops:shared.turnoverMillions', { value, currency });
+        const missing: string[] = params.node?.rowPinned ? params.data?.turnover_fx_missing ?? [] : [];
+        return missing.length ? t('companies.turnoverTotalFxMissing', { value: shown, currencies: missing.join(', ') }) : shown;
+      },
       headerName: t('companies.columns.turnoverYear', { year }),
       width: 170,
       filter: 'agNumberColumnFilter',
@@ -336,6 +347,16 @@ export default function CompaniesPage() {
   ], [getWorkspaceHref, locale, navigate, year, t]);
 
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
+    const key = JSON.stringify({
+      year,
+      refreshKey,
+      q: q || '',
+      filters: filterModel || {},
+      statusScope: statusScope ?? 'enabled',
+    });
+    if (key === totalsKeyRef.current) return;
+    totalsKeyRef.current = key;
+    const gen = ++totalsGen.current;
     try {
       const params: Record<string, any> = { year };
       if (q) params.q = q;
@@ -347,18 +368,23 @@ export default function CompaniesPage() {
       }
       // Filters too long for a URL go as a saved list context, like the grid's own requests.
       const res = await getWithListContext('/companies/totals', params);
+      if (gen !== totalsGen.current) return;
       const totals = res.data || {};
       const pinned = {
         name: t('companies.pinnedTotal'),
         headcount_year: Number(totals.headcount || 0),
         it_users_year: Number(totals.it_users || 0),
         turnover_year: Number(totals.turnover || 0),
+        turnover_currency: totals.turnover_currency ?? null,
+        turnover_fx_missing: Array.isArray(totals.turnover_fx_missing) ? totals.turnover_fx_missing : [],
       } as Partial<CompanyRow>;
       setPinnedTotals([pinned]);
     } catch (err) {
+      if (totalsKeyRef.current === key) totalsKeyRef.current = '';
+      if (gen !== totalsGen.current) return;
       setPinnedTotals([]);
     }
-  }, [year]);
+  }, [refreshKey, t, year]);
 
   const canCreate = hasLevel('companies', 'manager');
   const canAdmin = hasLevel('companies', 'admin');
@@ -402,6 +428,8 @@ export default function CompaniesPage() {
             toDelete: (count) => t('companies.delete.toDelete', { count }),
             kept: (count) => t('companies.delete.kept', { count }),
             deleted: (count) => t('companies.delete.deleted', { count }),
+            title: (count) => t('companies.delete.title', { count }),
+            keptDone: (count) => t('companies.delete.keptDone', { count }),
           }}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);

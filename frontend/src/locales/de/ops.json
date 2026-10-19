@@ -1004,7 +1004,28 @@
       "liveSpot": "Live-Spot",
       "quarterlyAvg": "Quartalsdurchschnitt",
       "forwardEstimate": "Terminschätzung",
-      "annualAvg": "Jahresdurchschnitt"
+      "annualAvg": "Jahresdurchschnitt",
+      "missingNone": "Jede verwendete Währung hat einen Kurs.",
+      "missingTitle_one": "{{count}} Wechselkurs fehlt",
+      "missingTitle_other": "{{count}} Wechselkurse fehlen",
+      "missingReason": "Keine Quelle veröffentlicht diesen Kurs bisher; Beträge in dieser Währung bleiben bei den Summen außen vor, bis ein Kurs vorliegt.",
+      "enterRate": "Kurs eingeben",
+      "enterRateFor": "Kurs für {{currency}} im Jahr {{year}} eingeben",
+      "loadMissingError": "Die verwendeten Wechselkurse konnten nicht geprüft werden.",
+      "manualFootnote": "Manuell erfasster Kurs",
+      "estimateMark": "Schätzung",
+      "estimateTooltip": "Die Quelle hat dieses Jahr noch nicht veröffentlicht; bis dahin wird das nächstgelegene veröffentlichte Jahr verwendet.",
+      "editRate": "Kurs für {{currency}} im Jahr {{year}} bearbeiten",
+      "manualDialogTitle": "Manueller Wechselkurs",
+      "manualRateLabel": "Kurs in {{reporting}} für 1 {{currency}}",
+      "manualRatePlaceholder": "1,05",
+      "manualRateHint": "Verwenden Sie den Jahresdurchschnitt, den Ihre Zentralbank oder Ihre Treasury veröffentlicht.",
+      "manualRateReplaces": "Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn entfernen.",
+      "manualRateInvalid": "Geben Sie einen Kurs größer als 0 ein.",
+      "removeManualRate": "Manuellen Kurs entfernen",
+      "manualRateRemoved": "Der automatische Kurs wird erneut abgerufen.",
+      "failedToSaveManualRate": "Der Kurs konnte nicht gespeichert werden.",
+      "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden."
     },
     "budgetColumns": {
       "budget": "Budget",
@@ -1242,7 +1263,22 @@
         "opex": "OPEX-Zeile",
         "capex": "CAPEX-Zeile"
       }
-    }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "Noch keine Wechselkurse von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in diesen Währungen wird ohne Umrechnung gezählt, bis die Kurse verfügbar sind.",
+      "turnoverFxMissing_one": "Noch kein Wechselkurs von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist."
+    },
+    "fxMissing": {
+      "excluding_one": "{{count}} Zeile ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "excluding_other": "{{count}} Zeilen ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "excludingSeveral": "Zeilen ohne Wechselkurs ausgeschlossen: {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Kurs eingeben",
+      "lineTooltip": "Kein Wechselkurs für {{currency}} im Jahr {{year}}: nicht in den Summen enthalten.",
+      "localAmount": "{{amount}} {{currency}}"
+    },
+    "turnoverMillions": "{{value}} Mio. {{currency}}"
   },
   "fields": {
     "description": "Beschreibung",

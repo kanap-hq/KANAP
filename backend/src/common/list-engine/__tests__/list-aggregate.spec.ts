@@ -133,7 +133,7 @@ function testParts() {
   assert.ok(plain.includes("'g' AS part") && plain.includes("'t' AS part"), 'groups and the total');
   assert.equal(plain.includes("'o' AS part"), false, 'no others row without a limit');
   assert.equal(plain.includes('x.rn <='), false, 'no limit');
-  assert.ok(plain.includes('coalesce(am.y2026_planned, 0::float8) AS v0'), 'a line reads its converted cents');
+  assert.ok(plain.includes('(CASE WHEN am.y2026_fx_missing THEN NULL ELSE coalesce(am.y2026_planned, 0::float8) END) AS v0'), 'a line reads its converted cents');
   assert.ok(plain.includes('round(coalesce(sum((agg_lines.v0)::bigint) FILTER (WHERE abs(agg_lines.v0) < 1e15), 0)'), 'and the group sums them exactly (the footer totals rule)');
 
   const top = build({ groupBy: ['currency'], measures: [sum('b', 'yBudget')], order: [{ by: 'measure', id: 'b', dir: 'DESC', nulls: 'LAST' }], limit: 3, others: true }).sql;
@@ -234,7 +234,12 @@ function testGroupedCapAndReportFields() {
   assert.equal(/cons_labels|accounts ca|JOIN accounts/.test(hidden), false, 'no account is read for him');
 
   const local = build({ groupBy: ['id'], measures: [sum('l', 'local_y2026Budget'), sum('r', 'y2026Budget')] }).raw;
-  assert.ok(local.includes('* 100 AS planned_local') && local.includes('* coalesce(fx.rate, 1::float8) * 100 AS planned'), 'a local amount is the same chain at rate 1');
+  assert.ok(local.includes('* 100 AS planned_local') && local.includes('* fx.rate * 100 AS planned'), 'a local amount is the same chain at rate 1');
+  assert.ok(local.includes('fx.rate IS NULL AS fx_missing') && local.includes('bool_or(x.fx_missing) FILTER (WHERE x.yr = 2026) AS y2026_fx_missing'), 'a version without a rate is flagged per year');
+  assert.ok(local.includes('(CASE WHEN am.y2026_fx_missing THEN NULL ELSE coalesce(am.y2026_planned, 0::float8) END)'), 'its converted amount is null');
+  assert.ok(local.includes('coalesce(am.y2026_planned_local, 0::float8)'), 'its local amount stays');
+  const moneyPart = build({ groupBy: [], measures: [sum('p', 'y2027Budget', { minus: 'y2026Budget', part: 'positive' })] }).raw;
+  assert.ok(/\(CASE WHEN \(.*\) IS NOT NULL THEN greatest\(/.test(moneyPart), 'a part of an amount without a value stays without one (greatest skips a null)');
   assert.ok(local.includes('AS y2026_planned_local') && local.includes('AS y2026_planned'), 'both read from the one amounts table');
 
   const version = build({ groupBy: ['has_version_yMinus2', 'has_version_y2028'], measures: [] }).raw;
@@ -307,8 +312,9 @@ function testFteReportFields() {
     assert.ok(raw.includes('lt2026_planned.days AS v3'), `${scope}: days as they are`);
     assert.ok(/LEFT JOIN unnest\(\$\d+::text\[\], \$\d+::int\[\], \$\d+::text\[\], \$\d+::float8\[\]\) AS fxv2026\(set_key, yr, cur, rate\) ON fxv2026\.yr = 2026 AND fxv2026\.cur = i\.currency::text AND fxv2026\.set_key = CASE WHEN v2026\.fx_rate_set_id = ANY\(\$\d+::uuid\[\]\) THEN v2026\.fx_rate_set_id::text ELSE 'live' END/.test(raw), `${scope}: the version's rate, as its amounts`);
     assert.equal((raw.match(/AS fxv2026\(/g) ?? []).length, 1, `${scope}: one rate join for both amounts of the year`);
-    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.staff_cost * coalesce(fxv2026.rate, 1::float8) * 100) + CASE WHEN`), `${scope}: the staff cost converted like an amount, rounded to the cent`);
-    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.day_cost * coalesce(fxv2026.rate, 1::float8) * 100) + CASE WHEN`), `${scope}: the day cost too`);
+    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.staff_cost * fxv2026.rate * 100) + CASE WHEN`), `${scope}: the staff cost converted like an amount, rounded to the cent`);
+    assert.ok(raw.includes(`(CASE WHEN v2026.id IS NOT NULL AND fxv2026.rate IS NULL THEN NULL ELSE coalesce((floor(lt2026_planned.staff_cost`), `${scope}: no staff cost without a rate`);
+    assert.ok(raw.includes(`coalesce((floor(lt2026_planned.day_cost * fxv2026.rate * 100) + CASE WHEN`), `${scope}: the day cost too`);
     assert.ok(raw.includes('round(coalesce(sum((agg_lines.v0)::bigint)'), `${scope}: summed exactly in cents`);
     assert.ok(params.includes(TENANT), `${scope}: the tenant is bound`);
     // Two columns of a year: one lateral per round, one rate join per year.

@@ -19,6 +19,8 @@ import PageHeader from '../../../components/PageHeader';
 import { useAuth } from '../../../auth/AuthContext';
 import { FreezeScope, FreezeTarget, freezeTargets, unfreezeTargets, FreezeStateResponse } from '../../../services/freeze';
 import { useFreezeState } from '../../../hooks/useFreezeState';
+import { useLocale } from '../../../i18n/useLocale';
+import { formatShortDate } from '../../../lib/dateFormat';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 
 const YEAR_RANGE = 6;
@@ -32,6 +34,7 @@ function useYearOptions() {
 export default function MasterDataFreezePage() {
   const years = useYearOptions();
   const { t } = useTranslation(['master-data', 'common']);
+  const locale = useLocale();
   const { hasLevel } = useAuth();
   const canFreezeCompanies = hasLevel('budget_ops', 'admin') || hasLevel('companies', 'admin');
   const canFreezeDepartments = hasLevel('budget_ops', 'admin') || hasLevel('departments', 'admin');
@@ -99,20 +102,24 @@ export default function MasterDataFreezePage() {
   const renderScopeStatus = () => {
     if (!scopeSummary) return null;
 
-    const card = (label: string, info: { frozen: boolean; frozenAt: string | null; frozenBy: string | null } | undefined) => (
+    const statusOf = (info: { frozen: boolean; frozenAt: string | null; frozenByName?: string | null } | undefined) => {
+      if (!info?.frozen) return t('admin.freeze.editable');
+      if (info.frozenByName && info.frozenAt) {
+        return t('admin.freeze.frozenBy', {
+          name: info.frozenByName,
+          date: formatShortDate(info.frozenAt, locale, { year: 'always' }),
+        });
+      }
+      return t('admin.freeze.frozen');
+    };
+
+    const card = (label: string, info: { frozen: boolean; frozenAt: string | null; frozenByName?: string | null } | undefined) => (
       <Card variant="outlined" key={label}>
         <CardContent>
           <Typography variant="subtitle2" sx={{ mb: 1 }}>{label}</Typography>
-          <Box sx={{ display: 'flex', justifyContent: 'space-between' }}>
-            <Typography variant="body2" color={info?.frozen ? 'error.main' : 'text.secondary'}>
-              {info?.frozen ? t('admin.freeze.frozen') : t('admin.freeze.editable')}
-            </Typography>
-            {info?.frozenBy && (
-              <Typography variant="caption" color="text.secondary">
-                {t('admin.freeze.frozenBy', { name: info.frozenBy })}
-              </Typography>
-            )}
-          </Box>
+          <Typography variant="body2" color={info?.frozen ? 'error.main' : 'text.secondary'}>
+            {statusOf(info)}
+          </Typography>
         </CardContent>
       </Card>
     );

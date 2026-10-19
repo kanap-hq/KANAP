@@ -30,8 +30,11 @@ import { itemHref, useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
+import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
+import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -39,19 +42,19 @@ function baseFormatNumber(value: number | null | undefined, locale: string): str
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
-function baseFormatCurrency(value: number | null | undefined, locale: string, withDecimals = false): string {
+function baseFormatCurrency(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n)) return '—';
   const formatter = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: withDecimals ? 2 : 0,
-    maximumFractionDigits: withDecimals ? 2 : 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
   return formatter.format(n);
 }
 
-function formatPercent(value: number | null | undefined): string {
+function formatPercent(value: number | null | undefined, locale: string): string {
   if (value == null || !Number.isFinite(value)) return '—';
-  return `${value.toFixed(2)}%`;
+  return formatPercentPoints(value, locale, 2);
 }
 
 function baseFormatCount(value: number | null | undefined, locale: string): string {
@@ -142,7 +145,7 @@ type CompanyChargebackReportResponse = {
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
   reportingCurrency?: string;
-  warnings?: string[];
+  warnings?: ReportWarning[];
 };
 
 type CompanyChargebackKpiRow = CompanyChargebackReportResponse['kpis'][number];
@@ -187,6 +190,11 @@ export default function CompanyChargebackReport() {
   const metricLabel = budgetColumns.label(metric);
   const metricFile = metricFileName(budgetColumns, metric);
   const reportingCurrency = (data?.reportingCurrency || 'EUR').toUpperCase();
+  // A turnover reads as money of the reporting currency, in whole units like the costs.
+  const formatTurnover = React.useCallback(
+    (value: number) => formatMoney(value, locale, reportingCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    [locale, reportingCurrency],
+  );
   const departments = data?.departments ?? [];
   const items = data?.items ?? [];
   const kpiRows = data?.kpis ?? [];
@@ -197,11 +205,15 @@ export default function CompanyChargebackReport() {
     [locale],
   );
   const formatCurrency = React.useCallback(
-    (value: number | null | undefined, withDecimals = false) => baseFormatCurrency(value, locale, withDecimals),
+    (value: number | null | undefined) => baseFormatCurrency(value, locale),
     [locale],
   );
   const formatCount = React.useCallback(
     (value: number | null | undefined) => baseFormatCount(value, locale),
+    [locale],
+  );
+  const formatShare = React.useCallback(
+    (value: unknown, fractionDigits: number) => formatSharePercent(value, locale, fractionDigits),
     [locale],
   );
 
@@ -266,7 +278,7 @@ export default function CompanyChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 150,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${Number(params.value).toFixed(2)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 2),
     },
     {
       field: 'headcount',
@@ -282,7 +294,7 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatNumber(params.value),
     },
-  ], [formatCount, formatNumber, metricLabel]);
+  ], [formatCount, formatNumber, formatShare, metricLabel]);
 
   const itemColumns = useMemo<ColDef[]>(() => [
     {
@@ -307,9 +319,9 @@ export default function CompanyChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 150,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${Number(params.value).toFixed(2)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 2),
     },
-  ], [formatNumber, metricLabel, scope]);
+  ], [formatNumber, formatShare, metricLabel, scope]);
 
   const chartData = useMemo(() => {
     return departments.map((row: CompanyChargebackDepartmentRow) => ({ label: row.departmentName, value: row.amount }));
@@ -368,7 +380,7 @@ export default function CompanyChargebackReport() {
                 title: escapeTooltipText(datum.label),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
-                  { label: t('reports.shared.share'), value: `${pct.toFixed(2)}%` },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 2) },
                 ],
               };
             },
@@ -378,7 +390,7 @@ export default function CompanyChargebackReport() {
       legend: { enabled: false },
       animation: { enabled: true, duration: 700 },
     };
-  }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, metricLabel, t]);
+  }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, locale, metricLabel, t]);
 
   const exportDepartmentsCsv = () => {
     if (!companyId) return;
@@ -507,7 +519,7 @@ export default function CompanyChargebackReport() {
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">{t("reports.columns.itCostsVsTurnover")}</Typography>
-                  <Typography variant="subtitle2">{companySummary.costVsTurnoverPct != null ? formatPercent(companySummary.costVsTurnoverPct) : '—'}</Typography>
+                  <Typography variant="subtitle2">{companySummary.costVsTurnoverPct != null ? formatPercent(companySummary.costVsTurnoverPct, locale) : '—'}</Typography>
                 </Box>
               </Box>
             </Stack>
@@ -518,9 +530,9 @@ export default function CompanyChargebackReport() {
           <Alert severity="warning" sx={{ whiteSpace: 'pre-wrap' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{t("reports.shared.warningsTitle")}</Typography>
             <Box component="ul" sx={{ pl: 3, my: 0 }}>
-              {warnings.map((warning: string, index: number) => (
-                <Typography component="li" variant="body2" key={`${warning}-${index}`}>
-                  {warning}
+              {warnings.map((warning, index) => (
+                <Typography component="li" variant="body2" key={`${allocationWarningKey(warning)}-${index}`}>
+                  {allocationWarningText(t, warning)}
                 </Typography>
               ))}
             </Box>
@@ -637,8 +649,8 @@ export default function CompanyChargebackReport() {
                       <TableCell align="right">{formatCurrency(row.amount)}</TableCell>
                       <TableCell align="right">{formatCount(row.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(row.itUsers)}</TableCell>
-                      <TableCell align="right">{row.turnover != null ? formatCurrency(row.turnover, true) : '—'}</TableCell>
-                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct) : '—'}</TableCell>
+                      <TableCell align="right">{row.turnover != null ? formatTurnover(row.turnover) : '—'}</TableCell>
+                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerUser != null ? formatCount(Math.round(row.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerItUser != null ? formatCount(Math.round(row.costPerItUser)) : '—'}</TableCell>
                     </TableRow>
@@ -656,8 +668,8 @@ export default function CompanyChargebackReport() {
                       <TableCell align="right">{formatCurrency(globalKpi.amount)}</TableCell>
                       <TableCell align="right">{formatCount(globalKpi.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(globalKpi.itUsers)}</TableCell>
-                      <TableCell align="right">{globalKpi.turnover != null ? formatCurrency(globalKpi.turnover, true) : '—'}</TableCell>
-                      <TableCell align="right">{globalKpi.costVsTurnoverPct != null ? formatPercent(globalKpi.costVsTurnoverPct) : '—'}</TableCell>
+                      <TableCell align="right">{globalKpi.turnover != null ? formatTurnover(globalKpi.turnover) : '—'}</TableCell>
+                      <TableCell align="right">{globalKpi.costVsTurnoverPct != null ? formatPercent(globalKpi.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{globalKpi.costPerUser != null ? formatCount(Math.round(globalKpi.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{globalKpi.costPerItUser != null ? formatCount(Math.round(globalKpi.costPerItUser)) : '—'}</TableCell>
                     </TableRow>

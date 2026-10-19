@@ -14,9 +14,11 @@ import {
  * them, unchanged: moved here from `spend-summary.builder.ts` as they were.
  */
 
-function slotValue(row: any, slotKey: string, metric: SlotMetric): number {
+function slotValue(row: any, slotKey: string, metric: SlotMetric): number | null {
   const slot = row?.versions?.[slotKey];
   if (!slot) return 0;
+  // No rate for the line's currency that year: no value (left out of sums, last in sorts, no filter keeps it).
+  if (slot.reporting?.fx_source === 'missing') return null;
   if (slot.reporting && typeof slot.reporting[metric] === 'number') return slot.reporting[metric];
   if (slot.totals && typeof slot.totals[metric] === 'number') return slot.totals[metric];
   return 0;
@@ -26,7 +28,8 @@ function slotValue(row: any, slotKey: string, metric: SlotMetric): number {
  * The value of `field` on a built row, as the list shows it (the AI
  * aggregates group and measure with it; the list engine's oracle sorts and
  * filters on it): an amount field is the slot's reporting total (item
- * currency when there is no reporting), an FTE field its number or null
+ * currency when there is no reporting, null when the version has no exchange
+ * rate), an FTE field its number or null
  * (unknown), a derived field its row value, anything else the item column.
  * Blank derived text reads as null so blanks sort last ascending.
  */

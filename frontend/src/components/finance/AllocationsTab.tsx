@@ -23,6 +23,7 @@ import { editConflictsOf, type ConflictChoice, type EditConflict } from '../../h
 import { useKanapDialogs } from '../design';
 import { unreadableConflict } from './budgetConflicts';
 import type { HeldAllocationChoice } from './heldChoices';
+import { allocationWarningText, type TurnoverFxMissingWarning } from '../../utils/allocationWarnings';
 
 type PickerOption = { id: string; label: string };
 
@@ -130,7 +131,8 @@ type Driver = 'headcount' | 'it_users' | 'turnover';
 const METHODS: Method[] = ['default', 'headcount', 'it_users', 'turnover', 'manual_company', 'manual_department', 'manual_pct'];
 type Version = { id: string; budget_year?: number; allocation_method?: Method; allocation_driver?: Driver; budget_rev?: number };
 type Row = { company_id: string | null; department_id: string | null; allocation_pct: number; pinned?: boolean };
-type Company = { id: string; name: string; headcount_year?: number; it_users_year?: number; turnover_year?: number };
+/** `turnover_year` is in millions of the company's `base_currency`. */
+type Company = { id: string; name: string; base_currency?: string | null; headcount_year?: number; it_users_year?: number; turnover_year?: number };
 type Department = { id: string; name: string; company_id: string };
 
 type ComputedItem = { company_id: string; department_id: string | null; allocation_pct: number };
@@ -140,7 +142,11 @@ type YearTotals = Partial<Record<AmountMeasure, number | string>>;
  * is what a save sends back as `base_signature` (plan planning/perf-scale, lot 3E): read with the
  * method and driver shown, so a save started from them is refused when someone else changed them.
  */
-type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; totals: YearTotals; signature: string | null; budgetRev: number | null };
+type AllocationsSnapshot = {
+  version: Version | null; computed: ComputedItem[]; totals: YearTotals; signature: string | null; budgetRev: number | null;
+  /** The split counted turnovers without a rate into the reporting currency. */
+  warning: TurnoverFxMissingWarning | null;
+};
 /**
  * `GET` and `PUT …/allocations`: the distribution, the stored method and driver, and the signature
  * and version counter (lot 3G) they were read with, then the year's totals (read after the counter,
@@ -148,6 +154,7 @@ type AllocationsSnapshot = { version: Version | null; computed: ComputedItem[]; 
  */
 type AllocationsAnswer = {
   items?: ComputedItem[]; method?: Method; driver?: Driver; base_signature?: string | null; budget_rev?: number | null; totals?: YearTotals;
+  warning?: TurnoverFxMissingWarning | null;
 };
 
 /**
@@ -176,7 +183,7 @@ const ORGANISATION_STALE_MS = 5 * 60_000;
 async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string, year: number, signal?: AbortSignal): Promise<AllocationsSnapshot> {
   const versRes = await api.get<Version[]>(`${config.itemsApi}/${id}/versions`, { signal });
   const version = (versRes.data || []).find((vv) => Number(vv.budget_year) === year) || null;
-  if (!version) return { version: null, computed: [], totals: {}, signature: UNTOUCHED_ALLOCATION_SIGNATURE, budgetRev: null };
+  if (!version) return { version: null, computed: [], totals: {}, signature: UNTOUCHED_ALLOCATION_SIGNATURE, budgetRev: null, warning: null };
   const answer = (await api.get<AllocationsAnswer>(`${config.versionsApi}/${version.id}/allocations`, { signal })).data ?? {};
   // The totals and the counter come from the same answer (lot 3G): what the tab knows is never newer than what it shows.
   const totals = answer.totals ?? await api.get<{ totals?: YearTotals }>(`${config.versionsApi}/${version.id}/amounts`, { params: { year }, signal })
@@ -187,6 +194,7 @@ async function fetchAllocationsSnapshot(config: FinanceModuleConfig, id: string,
     totals,
     signature: answer.base_signature ?? null,
     budgetRev: answer.budget_rev ?? version.budget_rev ?? null,
+    warning: answer.warning ?? null,
   };
 }
 
@@ -217,6 +225,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const [driver, setDriver] = React.useState<Driver>('headcount');
   const [rows, setRows] = React.useState<Row[]>([]);
   const [computedPct, setComputedPct] = React.useState<Map<string, number>>(new Map());
+  const [fxWarning, setFxWarning] = React.useState<TurnoverFxMissingWarning | null>(null);
   // The version's yearly totals; the reference amount is the default column's.
   const [yearTotals, setYearTotals] = React.useState<Partial<Record<AmountMeasure, number | string>>>({});
   const budgetTotal = num(yearTotals[defaultColumn.measure]);
@@ -290,14 +299,24 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   const companyOptions = React.useMemo<PickerOption[]>(() => companies.map((c) => ({ id: c.id, label: c.name })), [companies]);
   const deptOptionsFor = React.useCallback((companyId: string | null): PickerOption[] =>
     departments.filter((d) => !companyId || d.company_id === companyId).map((d) => ({ id: d.id, label: d.name })), [departments]);
+  const drivesByTurnover = () => methodRef.current !== 'it_users' && driverRef.current !== 'it_users'
+    && (methodRef.current === 'turnover' || driverRef.current === 'turnover');
   const driverValue = React.useCallback((cid: string | null): number | null => {
     const c = companies.find((x) => x.id === cid);
     if (!c) return null;
     const d = methodRef.current === 'it_users' || driverRef.current === 'it_users' ? c.it_users_year
-      : methodRef.current === 'turnover' || driverRef.current === 'turnover' ? c.turnover_year
+      : drivesByTurnover() ? c.turnover_year
       : c.headcount_year;
     return d == null ? null : num(d);
   }, [companies]);
+  // A turnover is in millions of the company's base currency, while the percentages are computed in the
+  // reporting currency: the currency is named next to it ("35 M USD").
+  const driverLabel = (cid: string | null): string => {
+    const value = driverValue(cid);
+    if (value == null) return '—';
+    const currency = companies.find((x) => x.id === cid)?.base_currency?.trim().toUpperCase();
+    return drivesByTurnover() && currency ? t('ops:shared.turnoverMillions', { value, currency }) : String(value);
+  };
 
   const ensureVersion = React.useCallback(async (): Promise<Version> => {
     if (versionRef.current) return versionRef.current;
@@ -334,7 +353,8 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     // them shows here, never hidden behind the save's newer counter (lot 3G).
     const totals = answer.totals ?? previous?.totals ?? {};
     if (answer.totals) setYearTotals(answer.totals);
-    const next: AllocationsSnapshot = { version, computed: items, totals, signature: baseSignatureRef.current, budgetRev };
+    setFxWarning(answer.warning ?? null);
+    const next: AllocationsSnapshot = { version, computed: items, totals, signature: baseSignatureRef.current, budgetRev, warning: answer.warning ?? null };
     // The object the cache keeps (React Query shares the parts equal to the copy before): the
     // snapshot effect then knows the tab already shows it, and the rows keep their pins.
     writtenSnapshotRef.current = queryClient.setQueryData<AllocationsSnapshot>(snapshotKey, next) ?? next;
@@ -354,6 +374,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
     noteRev(yearRef.current, loaded.budgetRev);
     baseSignatureRef.current = loaded.signature;
     setYearTotals(loaded.totals);
+    setFxWarning(loaded.warning);
     const map = new Map<string, number>();
     loaded.computed.forEach((it) => map.set(keyOf(it.company_id, it.department_id), num(it.allocation_pct)));
     setComputedPct(map);
@@ -655,6 +676,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   return (
     <Stack spacing={2.5} sx={{ pt: 1 }}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
+      {fxWarning && <Alert severity="warning">{allocationWarningText(t, fxWarning)}</Alert>}
 
       {/* Someone else saved this allocation while the user was editing it: reload or overwrite. */}
       <EditConflictBanner
@@ -752,7 +774,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
                     </Box>
                   )}
                 </Box>
-                {!isManualPct && <Box component="td" sx={numCellSx}>{driverValue(r.company_id) ?? '—'}</Box>}
+                {!isManualPct && <Box component="td" sx={numCellSx}>{driverLabel(r.company_id)}</Box>}
                 <Box component="td" sx={{ ...numCellSx, width: isManualPct ? 124 : undefined }}>
                   {isManualPct ? (
                     <TextField

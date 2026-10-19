@@ -155,6 +155,13 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 - Jede angezeigte VZÄ-Spalte zeigt die Summe der VZÄ der Zeilen. Haben einige Zeilen keine VZÄ, folgt die Anzahl auf die Summe, zum Beispiel „3.50 · 12 unbekannt“. Fahren Sie mit der Maus darüber, um den vollständigen Satz zu lesen: „Unbekannt für 12 Zeilen“. Hat keine Zeile VZÄ, bleibt die Summe leer, und nur die Anzahl erscheint
 - Summen berücksichtigen Ihre aktuellen Filter und Suche
 
+**Beträge ohne Wechselkurs**:
+
+- Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag für dieses Jahr in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
+- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet.
+- In einer sortierten Spalte stehen diese Zeilen am Ende. Ein Betragsfilter behält sie nie.
+- Unter [Manuelle Kurse](currencies.md#manuelle-kurse) können Sie den fehlenden Kurs selbst eingeben.
+
 **Deep Linking**:
 
 - Das Anklicken einer beliebigen Zelle öffnet den Arbeitsbereich auf dem relevantesten Tab:
@@ -497,7 +504,7 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 |---|---|
 | **Mitarbeiterzahl (Standard)** | Teilt Ausgaben proportional nach der Mitarbeiterzahl jedes Unternehmens für das ausgewählte Jahr. Keine manuelle Auswahl erforderlich: Die Prozentsätze werden automatisch aus den Unternehmenskennzahlen berechnet. Das ist der Standard. |
 | **IT-Benutzer** | Teilt Ausgaben proportional nach der Anzahl der IT-Benutzer jedes Unternehmens für das ausgewählte Jahr. |
-| **Umsatz** | Teilt Ausgaben proportional nach dem Umsatz jedes Unternehmens für das ausgewählte Jahr. |
+| **Umsatz** | Teilt Ausgaben proportional nach dem Umsatz jedes Unternehmens für das ausgewählte Jahr, umgerechnet in die Berichtswährung. |
 | **Manuell nach Unternehmen** | Sie wählen aus, welche Unternehmen diese Ausgabe erhalten, und wählen unter **Zuordnen nach** einen Treiber (Mitarbeiterzahl, IT-Benutzer oder Umsatz), um die Prozentsätze nur unter den ausgewählten Unternehmen zu berechnen. |
 | **Manuell nach Abteilung** | Sie wählen bestimmte Unternehmen/Abteilungs-Paare aus. Die Prozentsätze werden aus der Mitarbeiterzahl jeder Abteilung berechnet. Nützlich, wenn eine Zeile nur bestimmten Abteilungen zugutekommt (z. B. ein CRM, das vom Vertrieb genutzt wird). |
 | **Manuelle Prozentsätze** | Sie wählen die Unternehmen und geben jeden Prozentsatz selbst ein. Die Summe muss 100 % ergeben. |
@@ -515,6 +522,12 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 - Bei **Manuell nach Unternehmen** und **Manuell nach Abteilung**: Sie wählen die Unternehmen oder Abteilungen, und das System berechnet die Prozentsätze aus dem gewählten Treiber und den aktuellen Kennzahlen
 - Bei **Manuelle Prozentsätze**: Die Eingabe eines Prozentsatzes fixiert diese Zeile, und die übrigen Zeilen teilen sich den Rest. **Gleichmäßig aufteilen** gibt jeder Zeile denselben Anteil; **Manuelle Fixierungen löschen** hebt die Fixierungen auf
 - Die Prozentsätze spiegeln Live-Daten wider. Wenn Sie die Mitarbeiterzahl eines Unternehmens aktualisieren, werden die Zuordnungen neu berechnet
+- Die Spalte **Treiber** zeigt den Wert jedes Unternehmens für den Treiber. Ein Umsatz erscheint mit der Basiswährung des Unternehmens, zum Beispiel **35 Mio. USD**
+
+**Umsatz in mehreren Währungen**:
+
+- Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet KANAP jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
+- Hat eine Währung noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und über der Tabelle erscheint eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse, und die Aufteilung korrigiert sich von selbst
 
 **So verwenden Sie ihn**:
 

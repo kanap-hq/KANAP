@@ -6,7 +6,7 @@ The Currency Settings page (**Budget management > Administration > Currencies**)
 
 Currencies are a budget setting. The page sits with the other budget settings in [Budget Administration](budget-operations.md).
 
-- **Open the page, change settings and run the FX rates sync**: Budget administration at admin level. The card is hidden from other users.
+- **Open the page, change settings, run the FX rates sync and enter manual rates**: Budget administration at admin level. The card is hidden from other users.
 - **Use currencies on items**: OPEX and CAPEX users pick from the allowed currencies in their line forms, without opening this page.
 
 The **Settings** permission of the IT landscape does not give access to currencies. It covers the IT landscape settings only.
@@ -79,7 +79,13 @@ The **Force FX rates sync** button manually triggers a background refresh of exc
   - Rates update within a few seconds
   - The FX Rate Snapshots table refreshes automatically
 
-**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). When a list or report needs a rate that the snapshot of its year does not have (a currency first used since, or a year without a snapshot), the system fetches that year in the background and the next display uses the new rate. Manual sync gives you control when you need immediate updates.
+**Automatic refresh**: The system also refreshes rates automatically every 30 days when a user logs in (covers Y-1, Y, Y+1). When a list, a report or the contracts page needs a rate that the snapshot of its year does not have (a currency first used since, or a year without a snapshot), the system fetches that year in the background as soon as it is read, and the next display uses the new rate. Manual sync gives you control when you need immediate updates.
+
+**Which currencies are fetched**: the currencies of budget lines, companies and contracts, plus the reporting, default and allowed currencies.
+
+**Rates already known are kept**: when a source no longer returns a currency on a later refresh, the rate stored for that year stays in place.
+
+**Years not yet published**: the World Bank publishes the average of a year some months after it ends (the year just ended usually around mid-year). Until then, a past year uses the nearest published year, and the table marks that rate as an **estimate**. The real value replaces it on the first refresh after publication. The current year uses the live rate. When the live rate is unavailable, it uses the latest published year, also marked as an estimate.
 
 **Tip**: If you add a new currency to Allowed Currencies, run Force FX sync immediately to populate rates before users start creating lines in that currency.
 
@@ -96,6 +102,8 @@ Below the settings form, the **Latest FX Rate Snapshots** table shows the most r
       - **Quarterly avg**: World Bank quarterly average (if available)
       - **Live spot**: Current spot rate from ExchangeRate-API (current year)
       - **Forward estimate**: Current year's rate reused for future years
+  - **Marks in the cells**: an asterisk (*) after a rate entered by hand, explained by the note **Rate entered manually** under the table (shown only when the table has such a rate); **estimate** next to a rate taken from the nearest published year (hover the mark for the reason)
+  - **Missing rate**: a pair with no rate shows `—` in the warning colour
 
 **Example**:
 If your reporting currency is EUR:
@@ -108,10 +116,33 @@ If your reporting currency is EUR:
 
 **Reading the table**:
   - Rates show how many units of your reporting currency equal 1 unit of the listed currency
-  - If a rate shows `—`, no data is available (fallback conversion of 1.00 is used)
+  - If a rate shows `—`, no data is available. Budget line amounts in that currency are left out of totals for that year (see [Conversion mechanics](#conversion-mechanics-quick-reference))
   - Rates are captured at the time of sync and remain stable until the next refresh
 
-**Tip**: If you see missing rates (`—`), check that the currency code is valid and commonly published. Consider limiting Allowed Currencies to avoid exotic codes without data.
+**Tip**: If you see missing rates (`—`), check that the currency code is valid and commonly published. Consider limiting Allowed Currencies to avoid exotic codes without data. You can also enter the rate yourself (see [Manual rates](#manual-rates)).
+
+### Missing rates
+
+Above the table, a block lists every currency and year in use that has no rate, under a title such as **2 exchange rates missing**. Each line explains that no source publishes this rate yet, so amounts in this currency are left out of totals until it has one. When nothing is missing, the block reads **Every currency in use has a rate.**
+
+A pair counts as in use when a budget line, a company's figures or a contract needs it. Opening the page also asks the sources again for the years in the list.
+
+### Manual rates
+
+When no source publishes a rate, or when your finance team uses its own rates, you can enter a rate for one currency and one year.
+
+  1. Click the cell of the currency and year in the table, or click **Enter a rate** next to a line of the missing rates block.
+  2. In the **Manual exchange rate** dialog, enter the rate in your reporting currency for 1 unit of the selected currency (for example **Rate in EUR for 1 USD**). Use the decimal mark of your language. A good source is the average rate of the year published by your central bank or your treasury.
+  3. Click **Save**. The cell then shows the rate followed by an asterisk (*).
+
+A manual rate replaces the automatic rate for this year until you remove it. Later refreshes do not overwrite it. To go back to the automatic rate, open the cell and click **Remove manual rate**: the automatic rate will be fetched again.
+
+Good to know:
+  - Only Budget administration users at admin level can enter, change or remove a manual rate.
+  - Each entry, change and removal is recorded in the audit log.
+  - A frozen year keeps the rates captured when it was frozen, manual and estimated ones included (see [Frozen years](#frozen-years)).
+  - A manual rate is entered against the current reporting currency. After a change of reporting currency, manual rates entered for the old one no longer apply.
+  - The reporting currency always has a rate of 1 and takes no manual rate.
 
 ## CSV import and export
 
@@ -152,10 +183,10 @@ When you change settings:
 Amounts are stored in their own currency and converted when they are displayed. Each year uses the latest rates captured for that year, whatever the date the amounts were entered. When a sync captures new rates for a year, the amounts of that year are converted with them from then on, unless the year is frozen (see [Frozen years](#frozen-years)).
 
 ### Past years
-World Bank annual average rates are used. These are stable and don't change once published.
+World Bank annual average rates are used. These are stable and don't change once published. Until the World Bank publishes a year, the nearest published year stands in, marked as an estimate.
 
 ### Current year
-Live spot rate from ExchangeRate-API is used (falls back to latest annual rate if unavailable). Refreshes when you run Force FX sync or during automatic 30-day refresh.
+Live spot rate from ExchangeRate-API is used (falls back to the latest annual rate, marked as an estimate, if unavailable). Refreshes when you run Force FX sync or during automatic 30-day refresh.
 
 ### Future years
 Reuse the current year's rate as a forward estimate. This provides budget planning guidance but should be reviewed as those years approach.
@@ -163,7 +194,12 @@ Reuse the current year's rate as a forward estimate. This provides budget planni
 ### Frozen years
 Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
 
-**Missing rate**: When a year has no rate for a currency in use, the amounts in that currency are counted at **1.00**, as if they were already in the reporting currency. The server logs a warning and fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot it, check the FX Rate Snapshots table for `—` values, and run Force FX sync to fetch the rates at once.
+**Missing rate**: When a year has no rate for a currency in use, the budget line amounts in that currency are left out of every total in the reporting currency for that year. This covers the budget lines list, the budget management overview and the budget reports. The screen says so where it matters:
+
+- A one-line warning names what is left out, for example "Excluding 3 lines with no exchange rate: USD 2026." It shows under the totals of the budget lines list, on the overview tiles and at the top of each budget report. Budget administration users at admin level also see **Enter a rate**, which opens this page.
+- On the line itself, the amount shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
+
+KANAP fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot missing rates, check the missing rates block above the FX Rate Snapshots table, and run Force FX sync to fetch the rates at once. Entering a [manual rate](#manual-rates) fixes it immediately.
 
 ## Tips
 
@@ -234,13 +270,13 @@ A: No. The reporting currency is tenant-wide. All companies, reports, and totals
 A: The data source (World Bank or ExchangeRate-API) may not publish that currency. Check the ISO code is correct and commonly published. If needed, limit Allowed Currencies to codes with reliable data coverage.
 
 **Q: How often do FX rates refresh automatically?**
-A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. A year that lacks the rate of a currency in use is also fetched as soon as a list or report needs it. You can also manually trigger a refresh anytime using Force FX sync.
+A: Every 30 days, when any user logs in, the system refreshes rates for Y-1, Y, and Y+1. A year that lacks the rate of a currency in use is also fetched as soon as a list, a report or the contracts page needs it, and when you open this page. You can also manually trigger a refresh anytime using Force FX sync.
 
 **Q: Do FX rate changes affect my stored data?**
 A: No. Exchange rates only affect **conversion and display**. Each OPEX and CAPEX line stores its own currency and amounts, which never change when rates update. Only the displayed converted values in reports and lists change.
 
 **Q: Can I import historical rates manually?**
-A: No. The system fetches rates automatically from external sources (World Bank, ExchangeRate-API). If you need custom rates, contact support or consider using a currency where you can accept the published rates.
+A: Importing rates from a file is not available. You can enter a manual rate for each currency and year on this page (see [Manual rates](#manual-rates)). A manual rate replaces the automatic rate until you remove it.
 
 **Q: What if I need to use a currency not in the allowed list?**
 A: Either add it to Allowed Currencies or leave the list empty (which allows all currencies). Remember to run Force FX sync after adding new currencies to populate rates.

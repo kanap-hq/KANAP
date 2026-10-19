@@ -13,7 +13,7 @@ Le Tableau de bord est votre page d'accueil personnelle dans KANAP. Il vous donn
 La bande d'en-tête en haut du tableau de bord fournit des boutons de raccourci pour le travail courant du quotidien. Chaque bouton n'est affiché que si vous avez l'autorisation correspondante.
 
 - **Créer une tâche** : ouvre le flux de création de tâche autonome. Nécessite `tasks:member` ou supérieur.
-- **Enregistrer du temps** : ouvre la boîte de dialogue **Enregistrement rapide du temps** (voir ci-dessous). Nécessite `portfolio_projects:member` ou `tasks:member`.
+- **Enregistrer du temps** : ouvre la boîte de dialogue **Enregistrement rapide du temps** (voir ci-dessous). Nécessite `portfolio_projects:contributor` ou `tasks:member`.
 - **Nouvelle demande** : ouvre le flux de création de demande. Nécessite `portfolio_requests:member` ou supérieur.
 - **Nouvelle application** : ouvre le flux de création d'application. Nécessite `applications:member` ou supérieur.
 - **Nouvel actif** : ouvre le flux de création d'actif. Nécessite `infrastructure:member` ou supérieur.
@@ -24,11 +24,11 @@ La bande d'en-tête en haut du tableau de bord fournit des boutons de raccourci 
 
 L'action **Enregistrer du temps** ouvre une boîte de dialogue ciblée pour enregistrer des heures sans quitter le tableau de bord.
 
-- Choisissez la cible : **Projet** ou **Tâche**.
-  - Les entrées Projet enregistrent du temps directement sur un projet du portefeuille.
-  - Les entrées Tâche enregistrent du temps sur l'une de vos tâches actives (tâches de projet ou tâches autonomes). Les tâches OPEX, CAPEX et contrat sont intentionnellement exclues du sélecteur.
+- Choisissez la cible : **Projet** ou **Tâche**. Ce choix n'apparaît que si vous pouvez enregistrer du temps sur les deux.
+  - Les entrées Projet enregistrent du temps directement sur un projet du portefeuille. La liste ne contient que les projets sur lesquels vous pouvez enregistrer du temps.
+  - Les entrées Tâche enregistrent du temps sur l'une de vos tâches actives : les tâches de ces projets, et les tâches autonomes si vous avez `tasks:member`. Les tâches OPEX, CAPEX et contrat sont exclues du sélecteur.
 - Choisissez le projet ou la tâche dans le menu déroulant.
-- Saisissez les **Heures** (par incréments de 0,25).
+- Saisissez les **Heures** (en heures entières).
 - Choisissez une **Catégorie** : **IT** ou **Métier**.
 - Ajoutez des **Notes** si vous voulez du contexte sur ce sur quoi vous avez travaillé.
 
@@ -96,7 +96,7 @@ Affiche jusqu'à 5 éléments.
 
 ### Récemment consultés
 
-Affiche les éléments que vous avez récemment ouverts dans l'application : projets, demandes, applications, actifs, interfaces, connexions, contrats, tâches, lignes OPEX et CAPEX, et documents de connaissances. Chaque entrée affiche le nom de l'élément, son type, et quand vous l'avez consulté pour la dernière fois.
+Affiche les éléments que vous avez récemment ouverts dans l'application : projets, demandes, applications, actifs, interfaces, connexions, contrats, tâches, lignes OPEX et CAPEX, sociétés, et documents de connaissances. Chaque entrée affiche le nom de l'élément, son type, et quand vous l'avez consulté pour la dernière fois.
 
 Les éléments récemment consultés sont stockés localement dans votre navigateur et limités au tenant et à l'utilisateur courants. Cliquez sur **Effacer** pour réinitialiser la liste. Les éléments auxquels vous n'avez plus l'autorisation d'accéder sont filtrés automatiquement. Les éléments supprimés depuis, seuls ou avec un autre élément (comme les tâches d'un contrat supprimé), quittent la liste.
 

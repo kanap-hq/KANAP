@@ -8,7 +8,7 @@ Pour des informations de fond sur les concepts de devises et les mécanismes de 
 
 Les devises sont un paramètre budgétaire. La page se trouve avec les autres paramètres budgétaires dans l'[Administration budgétaire](budget-operations.md).
 
-- **Ouvrir la page, modifier les paramètres et lancer la synchronisation des taux de change** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
+- **Ouvrir la page, modifier les paramètres, lancer la synchronisation des taux de change et saisir des taux manuels** : administration budgétaire au niveau administrateur. La carte est masquée pour les autres utilisateurs.
 - **Utiliser les devises sur les lignes** : les utilisateurs OPEX et CAPEX choisissent parmi les devises autorisées dans leurs formulaires de ligne, sans ouvrir cette page.
 
 Le droit **Paramètres** de la cartographie SI ne donne pas accès aux devises. Il couvre uniquement les paramètres de la cartographie SI.
@@ -79,7 +79,13 @@ Le bouton **Forcer la synchronisation des taux** déclenche manuellement un rafr
   - Les taux se mettent à jour en quelques secondes
   - Le tableau des instantanés de taux de change se rafraîchit automatiquement
 
-**Rafraîchissement automatique** : Le système rafraîchit aussi les taux automatiquement tous les 30 jours lorsqu'un utilisateur se connecte (couvre A-1, A, A+1). Quand une liste ou un rapport a besoin d'un taux absent du snapshot de son année (une devise utilisée depuis, ou une année sans snapshot), le système récupère cette année en arrière-plan et l'affichage suivant utilise le nouveau taux. La synchronisation manuelle vous donne le contrôle lorsque vous avez besoin de mises à jour immédiates.
+**Rafraîchissement automatique** : Le système rafraîchit aussi les taux automatiquement tous les 30 jours lorsqu'un utilisateur se connecte (couvre A-1, A, A+1). Quand une liste, un rapport ou la page des contrats a besoin d'un taux absent du snapshot de son année (une devise utilisée depuis, ou une année sans snapshot), le système récupère cette année en arrière-plan dès sa lecture, et l'affichage suivant utilise le nouveau taux. La synchronisation manuelle vous donne le contrôle lorsque vous avez besoin de mises à jour immédiates.
+
+**Devises récupérées** : les devises des lignes budgétaires, des sociétés et des contrats, plus les devises de reporting, par défaut et autorisées.
+
+**Les taux déjà connus sont conservés** : quand une source ne renvoie plus une devise lors d'un rafraîchissement ultérieur, le taux enregistré pour cette année reste en place.
+
+**Années pas encore publiées** : la Banque Mondiale publie la moyenne d'une année quelques mois après sa fin (l'année qui vient de s'achever, en général vers le milieu de l'année). En attendant, une année passée utilise l'année publiée la plus proche, et le tableau marque ce taux comme **estimation**. La valeur réelle la remplace au premier rafraîchissement après publication. L'année en cours utilise le taux en temps réel. Quand il est indisponible, elle utilise la dernière année publiée, également marquée comme estimation.
 
 **Conseil** : Si vous ajoutez une nouvelle devise aux devises autorisées, lancez immédiatement la synchronisation des taux pour remplir les taux avant que les utilisateurs ne commencent à créer des lignes dans cette devise.
 
@@ -96,6 +102,13 @@ Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de
       - **Moy. trimestrielle** : Moyenne trimestrielle Banque Mondiale (si disponible)
       - **Spot en temps réel** : Taux spot actuel d'ExchangeRate-API (année en cours)
       - **Estimation prospective** : Taux de l'année en cours réutilisé pour les années futures
+  - **Marques dans les cellules** : un astérisque (*) après un taux saisi à la main, expliqué par la note **Taux saisi manuellement** sous le tableau (affichée seulement quand le tableau contient un tel taux) ; **estimation** à côté d'un taux pris sur l'année publiée la plus proche (survolez la marque pour en voir la raison)
+  - **Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting pour cette année. Cela concerne la liste des lignes budgétaires, la vue d'ensemble de la gestion budgétaire et les rapports budgétaires. L'écran le signale là où cela compte :
+
+- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble et en haut de chaque rapport budgétaire. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page.
+- Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
+
+KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
 
 **Exemple** :
 Si votre devise de reporting est EUR :
@@ -108,10 +121,33 @@ Si votre devise de reporting est EUR :
 
 **Lire le tableau** :
   - Les taux indiquent combien d'unités de votre devise de reporting équivalent à 1 unité de la devise listée
-  - Si un taux affiche `—`, aucune donnée n'est disponible (une conversion de repli à 1,00 est utilisée)
+  - Si un taux affiche `—`, aucune donnée n'est disponible. Les montants des lignes budgétaires dans cette devise sont exclus des totaux pour cette année (voir [Mécanismes de conversion](#mecanismes-de-conversion-reference-rapide))
   - Les taux sont capturés au moment de la synchronisation et restent stables jusqu'au prochain rafraîchissement
 
-**Conseil** : Si vous voyez des taux manquants (`—`), vérifiez que le code devise est valide et couramment publié. Envisagez de limiter les devises autorisées pour éviter les codes exotiques sans données.
+**Conseil** : Si vous voyez des taux manquants (`—`), vérifiez que le code devise est valide et couramment publié. Envisagez de limiter les devises autorisées pour éviter les codes exotiques sans données. Vous pouvez aussi saisir le taux vous-même (voir [Taux manuels](#taux-manuels)).
+
+### Taux manquants
+
+Au-dessus du tableau, un bloc liste chaque devise et année utilisée qui n'a pas de taux, sous un titre comme **2 taux de change manquants**. Chaque ligne indique qu'aucune source ne publie encore ce taux : les montants dans cette devise sont exclus des totaux tant qu'elle n'en a pas un. Quand rien ne manque, le bloc affiche **Chaque devise utilisée a un taux.**
+
+Une paire est considérée comme utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. L'ouverture de la page interroge aussi de nouveau les sources pour les années de la liste.
+
+### Taux manuels
+
+Quand aucune source ne publie un taux, ou quand votre équipe finance utilise ses propres taux, vous pouvez saisir un taux pour une devise et une année.
+
+  1. Cliquez sur la cellule de la devise et de l'année dans le tableau, ou cliquez sur **Saisir un taux** à côté d'une ligne du bloc des taux manquants.
+  2. Dans la boîte de dialogue **Taux de change manuel**, saisissez le taux dans votre devise de reporting pour 1 unité de la devise choisie (par exemple **Taux en EUR pour 1 USD**). Utilisez le séparateur décimal de votre langue. Une bonne source est le taux moyen de l'année publié par votre banque centrale ou votre trésorerie.
+  3. Cliquez sur **Enregistrer**. La cellule affiche alors le taux suivi d'un astérisque (*).
+
+Un taux manuel remplace le taux automatique pour cette année jusqu'à ce que vous le retiriez. Les rafraîchissements suivants ne l'écrasent pas. Pour revenir au taux automatique, ouvrez la cellule et cliquez sur **Retirer le taux manuel** : le taux automatique sera de nouveau récupéré.
+
+Bon à savoir :
+  - Seuls les utilisateurs de l'administration budgétaire au niveau administrateur peuvent saisir, modifier ou retirer un taux manuel.
+  - Chaque saisie, modification et suppression est enregistrée dans le journal d'audit.
+  - Une année gelée conserve les taux capturés lors du gel, taux manuels et estimations compris (voir [Années gelées](#annees-gelees)).
+  - Un taux manuel est saisi par rapport à la devise de reporting actuelle. Après un changement de devise de reporting, les taux manuels saisis pour l'ancienne ne s'appliquent plus.
+  - La devise de reporting a toujours un taux de 1 et ne prend pas de taux manuel.
 
 ## Import et export CSV
 
@@ -152,10 +188,10 @@ Lorsque vous changez les paramètres :
 Les montants sont enregistrés dans leur propre devise et convertis à l'affichage. Chaque année utilise les derniers taux capturés pour cette année, quelle que soit la date de saisie des montants. Quand une synchronisation capture de nouveaux taux pour une année, les montants de cette année sont désormais convertis avec eux, sauf si l'année est gelée (voir [Années gelées](#annees-gelees)).
 
 ### Années passées
-Les taux moyens annuels de la Banque Mondiale sont utilisés. Ils sont stables et ne changent pas une fois publiés.
+Les taux moyens annuels de la Banque Mondiale sont utilisés. Ils sont stables et ne changent pas une fois publiés. Tant que la Banque Mondiale n'a pas publié une année, l'année publiée la plus proche la remplace, marquée comme estimation.
 
 ### Année en cours
-Le taux spot en temps réel d'ExchangeRate-API est utilisé (repli sur le dernier taux annuel si indisponible). Se rafraîchit lorsque vous lancez la synchronisation des taux ou lors du rafraîchissement automatique de 30 jours.
+Le taux spot en temps réel d'ExchangeRate-API est utilisé (repli sur le dernier taux annuel, marqué comme estimation, si indisponible). Se rafraîchit lorsque vous lancez la synchronisation des taux ou lors du rafraîchissement automatique de 30 jours.
 
 ### Années futures
 Réutilise le taux de l'année en cours comme estimation prospective. Cela fournit des indications pour la planification budgétaire mais devrait être revu à mesure que ces années approchent.
@@ -163,7 +199,7 @@ Réutilise le taux de l'année en cours comme estimation prospective. Cela fourn
 ### Années gelées
 Geler la colonne budgétaire par défaut d'une année fige les taux de cette année pour le type gelé (OPEX ou CAPEX) : KANAP rafraîchit les taux de l'année, puis conserve ce jeu pour tous les montants de l'année, même quand de nouveaux taux arrivent. Dégeler la colonne par défaut les libère. Voir [Geler la colonne par défaut fige les taux de change](budget-operations.md#geler-la-colonne-par-defaut-fige-les-taux-de-change).
 
-**Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants dans cette devise sont comptés à **1,00**, comme s'ils étaient déjà dans la devise de reporting. Le serveur journalise un avertissement et récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour le repérer, vérifiez les valeurs `—` du tableau des snapshots de taux, et lancez la synchronisation des taux pour les récupérer tout de suite.
+**Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants dans cette devise sont comptés à **1,00**, comme s'ils étaient déjà dans la devise de reporting. Le serveur journalise un avertissement et récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour le repérer, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
 
 ## Conseils
 
@@ -234,13 +270,13 @@ R : Non. La devise de reporting est au niveau du tenant. Toutes les sociétés, 
 R : La source de données (Banque Mondiale ou ExchangeRate-API) peut ne pas publier cette devise. Vérifiez que le code ISO est correct et couramment publié. Si nécessaire, limitez les devises autorisées aux codes avec une couverture de données fiable.
 
 **Q : À quelle fréquence les taux de change se rafraîchissent-ils automatiquement ?**
-R : Tous les 30 jours, lorsqu'un utilisateur se connecte, le système rafraîchit les taux pour A-1, A et A+1. Une année à laquelle manque le taux d'une devise utilisée est aussi récupérée dès qu'une liste ou un rapport en a besoin. Vous pouvez aussi déclencher manuellement un rafraîchissement à tout moment via Forcer la synchronisation des taux.
+R : Tous les 30 jours, lorsqu'un utilisateur se connecte, le système rafraîchit les taux pour A-1, A et A+1. Une année à laquelle manque le taux d'une devise utilisée est aussi récupérée dès qu'une liste, un rapport ou la page des contrats en a besoin, et quand vous ouvrez cette page. Vous pouvez aussi déclencher manuellement un rafraîchissement à tout moment via Forcer la synchronisation des taux.
 
 **Q : Les changements de taux affectent-ils mes données stockées ?**
 R : Non. Les taux de change n'affectent que la **conversion et l'affichage**. Chaque ligne OPEX et CAPEX stocke sa propre devise et ses montants, qui ne changent jamais lors de la mise à jour des taux. Seules les valeurs converties affichées dans les rapports et les listes changent.
 
 **Q : Puis-je importer des taux historiques manuellement ?**
-R : Non. Le système récupère les taux automatiquement depuis des sources externes (Banque Mondiale, ExchangeRate-API). Si vous avez besoin de taux personnalisés, contactez le support ou envisagez d'utiliser une devise dont vous pouvez accepter les taux publiés.
+R : L'import de taux depuis un fichier n'est pas disponible. Vous pouvez saisir un taux manuel pour chaque devise et chaque année sur cette page (voir [Taux manuels](#taux-manuels)). Un taux manuel remplace le taux automatique jusqu'à ce que vous le retiriez.
 
 **Q : Que faire si j'ai besoin d'une devise qui n'est pas dans la liste autorisée ?**
 R : Soit ajoutez-la aux devises autorisées, soit laissez la liste vide (ce qui autorise toutes les devises). N'oubliez pas de lancer la synchronisation des taux après avoir ajouté de nouvelles devises pour remplir les taux.

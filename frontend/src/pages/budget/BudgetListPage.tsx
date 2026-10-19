@@ -21,6 +21,7 @@ import {
   amountColumnYear,
   buildAmountColumnDefs,
   buildFteColumnDefs,
+  cellFxMissing,
   explicitSort,
   fteTotalsToRow,
   pendingAmountsField,
@@ -43,6 +44,10 @@ import { useTenant } from '../../tenant/TenantContext';
 import { migrateBudgetGridLayout, type BudgetNatureScope, natureScopeOf } from './listPreferences';
 import BudgetTotalCell from './BudgetTotalCell';
 import { statusColumnProps } from '../../components/grid/statusColumn';
+import FxMissingNotice, { FxMissingMark } from '../../components/finance/FxMissingNotice';
+
+/** A cell amount in the line currency (its year has no exchange rate): secondary text, visited or not. */
+const LOCAL_AMOUNT_LINK_SX = { color: 'kanap.text.secondary', '&:visited, &:hover': { color: 'kanap.text.secondary' } } as const;
 
 /**
  * A line as the list reads it: the grid shape of `/budget-lines/summary` (`shape=grid`), which
@@ -319,6 +324,8 @@ function BudgetListPageView() {
   const lastCurrencyRef = useRef<string | null>(null);
   if (typeof totals.data?.reportingCurrency === 'string') lastCurrencyRef.current = totals.data.reportingCurrency;
   const reportingCurrency = lastCurrencyRef.current ?? 'EUR';
+  // The amounts the footer totals leave out for lack of an exchange rate, named under the grid.
+  const fxMissing = totals.isError ? undefined : totals.data?.fxMissing;
 
   const openNew = (nature: 'opex' | 'capex') => {
     const sp = buildGridSearch();
@@ -620,14 +627,20 @@ function BudgetListPageView() {
       t,
       currentYear: Y,
       columns: budgetColumns,
-      cellRenderer: (colId) => (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getBudgetHref(row, colId)}
-          onNavigate={(href) => navigate(href)}
-        />
-      ),
+      cellRenderer: (colId) => (params: any) => {
+        // No exchange rate that year: the amount in the line currency, marked, left out of the totals.
+        const missing = cellFxMissing(params.data, colId, Y);
+        return (
+          <LinkCellRenderer
+            {...params}
+            linkType="internal"
+            getHref={(row) => getBudgetHref(row, colId)}
+            onNavigate={(href) => navigate(href)}
+            linkSx={missing ? LOCAL_AMOUNT_LINK_SX : undefined}
+            endAdornment={missing ? <FxMissingMark currency={missing.currency} year={missing.year} /> : undefined}
+          />
+        );
+      },
     }).map(({ cellRenderer, ...column }) => ({
       ...column,
       // ServerDataGrid suppresses cellRenderer on pinned rows; a selector preserves the footer.
@@ -1030,6 +1043,7 @@ function BudgetListPageView() {
         }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}
+        footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}
       <BudgetFileExportDialog
         open={exportOpen}

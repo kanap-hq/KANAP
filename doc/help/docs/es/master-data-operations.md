@@ -28,7 +28,7 @@ Utilice esta herramienta para bloquear o desbloquear métricas de empresas y dep
 
 La página muestra una tarjeta de estado para cada alcance:
 
-- **Congelado** (rojo): los datos son de solo lectura para ese año; la tarjeta muestra quién congeló y cuándo
+- **Congelado** (rojo): los datos son de solo lectura para ese año. La tarjeta muestra **Congelado por**, seguido del nombre de la persona que congeló y la fecha
 - **Editable**: los datos aún pueden modificarse
 
 ### Qué afecta la congelación

@@ -408,6 +408,7 @@ function createQueryExecutor(overrides?: {
     {} as any,
     {} as any,
     {} as any,
+    {} as any, // allocationCalculator
   );
 }
 

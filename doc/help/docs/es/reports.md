@@ -86,6 +86,10 @@ Cómo funcionan:
 - Si el enlace incluye un filtro analítico y las dimensiones no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo." Haga clic en **Quitar el filtro** para quitar los filtros analíticos y volver a ver el informe.
 - Los dos informes de contracargo no tienen estos filtros y no se ven afectados.
 
+### Importes sin tipo de cambio
+
+Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. El aviso no se imprime. Vea [Tasas manuales](currencies.md#tasas-manuales).
+
 ### Abrir la lista desde un informe
 
 En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la [lista de líneas presupuestarias](budget-lines.md) en una pestaña nueva, con las líneas que cuenta la fila:
@@ -149,8 +153,8 @@ Vea las asignaciones de costes entre todas las empresas con KPI resumen y flujos
 | Importe | Total de la métrica seleccionada |
 | Plantilla | Plantilla total |
 | Usuarios IT | Conteo de usuarios IT |
-| Facturación | Facturación anual |
-| Costes IT vs facturación | Ratio porcentual |
+| Facturación | Facturación anual, en millones de la moneda de reporte |
+| Costes IT vs facturación | Ratio porcentual, ambos términos en la moneda de reporte |
 | Costes IT por usuario | Importe dividido por plantilla |
 | Costes IT por usuario IT | Importe dividido por usuarios IT |
 
@@ -183,6 +187,8 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 ### Qué verá
 
 **Tarjeta resumen de la empresa**: Nombre de la empresa, importe total, moneda de reporte, plantilla, usuarios IT, coste por usuario, coste por usuario IT y costes IT vs facturación.
+
+**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda aún no tiene tipo para el año, sus facturaciones se cuentan sin convertir y el informe muestra un aviso, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos.
 
 **Totales por departamento** (cuando está habilitado):
 

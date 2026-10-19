@@ -80,17 +80,19 @@ async function run() {
     const everyKey = [
       ...['yMinus2', 'yMinus1', 'y', 'yPlus1', 'yPlus2', `y${Y + 3}`].flatMap((slot) => SUMMARY_COLUMNS.map((c) => `${slot}${c.suffix}`)),
       'reportingCurrency',
+      'fxMissing',
     ];
     assert.deepEqual(Object.keys(full).sort(), everyKey.sort(), 'no amounts=: every key, as today');
     assert.ok(Object.values(full).some((v) => typeof v === 'number' && v !== 0), 'the fixture has amounts');
     const asked = ['yBudget', 'yPlus1Revision', 'yMinus1Landing', `y${Y + 3}Forecast`, `y${Y - 4}Budget`];
     const some = await engine.budgetListTotals(scope, deps, { ...all, years: String(Y + 3), amounts: [...asked, 'nonsense', 'fte_yBudget'].join(',') }, m);
-    assert.deepEqual(Object.keys(some).sort(), [...asked, 'reportingCurrency'].sort(), 'amounts=: only the keys asked for (unknown keys left out)');
+    assert.deepEqual(Object.keys(some).sort(), [...asked, 'reportingCurrency', 'fxMissing'].sort(), 'amounts=: only the keys asked for (unknown keys left out)');
     for (const key of asked.slice(0, 4)) assert.equal(some[key], full[key], `${key}: same total as the default answer`);
     const older = await engine.budgetListTotals(scope, deps, { ...all, years: String(Y - 4) }, m);
     assert.equal(some[`y${Y - 4}Budget`], older[`y${Y - 4}Budget`], 'a year key outside years= is read too');
     const none = await engine.budgetListTotals(scope, deps, { ...all, amounts: '' }, m);
-    assert.deepEqual(Object.keys(none), ['reportingCurrency'], 'amounts= empty: no amount');
+    assert.deepEqual(Object.keys(none), ['reportingCurrency', 'fxMissing'], 'amounts= empty: no amount');
+    assert.deepEqual(none.fxMissing, [], 'and nothing left out');
     const withFte = await engine.budgetListTotals(scope, deps, { ...all, amounts: 'yBudget', fte: 'fte_yBudget' }, m);
     assert.equal(withFte.yBudget, full.yBudget);
     assert.ok(withFte.fte && 'fte_yBudget' in withFte.fte, 'FTE keys still answered with amounts=');

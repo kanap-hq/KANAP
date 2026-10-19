@@ -87,6 +87,43 @@ describe('DeleteSelectedButton in each language', () => {
   });
 
   it.each([
+    ['fr', 'Supprimer les 2 sociétés sélectionnées', '1 société supprimée : Alpha. 1 société conservée : Beta'],
+    ['en', 'Delete the 2 selected companies', '1 company deleted: Alpha. 1 company kept: Beta'],
+    ['de', '2 ausgewählte Unternehmen löschen', '1 Unternehmen gelöscht: Alpha. 1 Unternehmen behalten: Beta'],
+    ['es', 'Eliminar las 2 empresas seleccionadas', '1 empresa eliminada: Alpha. 1 empresa conservada: Beta'],
+  ])('in %s, names companies when the list gives their words', async (lng, title, message) => {
+    await i18n.changeLanguage(lng);
+    vi.mocked(api.delete).mockResolvedValue({ data: { deleted: ['0'], failed: [] } } as any);
+    render(
+      <I18nextProvider i18n={i18n}>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <DeleteSelectedButton<Row>
+            selectedRows={rowsOf(2)}
+            endpoint="/companies/bulk"
+            getItemId={(row) => row.id}
+            getItemName={(row) => row.name}
+            onDeleteSuccess={() => undefined}
+            checkDelete={async () => ({ refused: [{ ...NODES_REFUSAL, id: '1', name: 'Beta' }] })}
+            itemLabels={{
+              toDelete: (count) => i18n.t('master-data:companies.delete.toDelete', { count }),
+              kept: (count) => i18n.t('master-data:companies.delete.kept', { count }),
+              deleted: (count) => i18n.t('master-data:companies.delete.deleted', { count }),
+              title: (count) => i18n.t('master-data:companies.delete.title', { count }),
+              keptDone: (count) => i18n.t('master-data:companies.delete.keptDone', { count }),
+            }}
+          />
+        </ThemeProvider>
+      </I18nextProvider>,
+    );
+    fireEvent.click(screen.getAllByRole('button')[0]);
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent(title);
+    const buttons = dialog.querySelectorAll('button');
+    fireEvent.click(buttons[buttons.length - 1]);
+    expect(await screen.findByText(message)).toBeInTheDocument();
+  });
+
+  it.each([
     ['fr', 'Ce groupe contient 1 élément. Déplacez-le ou supprimez-le d’abord.'],
     ['en', 'This group contains 1 node. Move or delete it first.'],
     ['de', 'Diese Gruppe enthält 1 Element. Verschieben oder löschen Sie es zuerst.'],

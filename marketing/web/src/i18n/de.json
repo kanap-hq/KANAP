@@ -31,6 +31,8 @@
   "locale.suggest.link": "Auf Deutsch ansehen",
   "locale.suggest.close": "Schließen",
 
+  "a11y.skipToContent": "Zum Inhalt springen",
+
   "footer.tagline": "Die Open-Source-Plattform für IT-Governance: Budget, Landschaft, Projekte und Dokumentation in einem Datenbestand. Kostenlos selbst hosten oder von uns betreiben lassen.",
   "footer.product": "Produkt",
   "footer.resources": "Ressourcen",

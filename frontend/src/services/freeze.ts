@@ -10,6 +10,7 @@ export type FreezeEntry = {
   isFrozen: boolean;
   frozenAt: string | null;
   frozenBy: string | null;
+  frozenByName?: string | null;
   unfrozenAt: string | null;
   unfrozenBy: string | null;
 };
@@ -18,6 +19,7 @@ export type FreezeSummaryColumn = {
   frozen: boolean;
   frozenAt: string | null;
   frozenBy: string | null;
+  frozenByName?: string | null;
 };
 
 export type FreezeSummary = {

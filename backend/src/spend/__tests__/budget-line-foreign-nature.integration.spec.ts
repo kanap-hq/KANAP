@@ -549,7 +549,7 @@ async function testCountsAndPeriphery() {
 
     // The budget years of the currency page count the months of both natures (the CAPEX ones came
     // from capex_amounts before lot Z1): the year only the CAPEX line has is one of them.
-    const currency = new CurrencyController(none, none, none) as any;
+    const currency = new CurrencyController(none, none, none, none) as any;
     const years: number[] = await currency.findBudgetYears(mg);
     assert.ok(years.includes(YEAR) && years.includes(ONLY_YEAR), `the currency years count the CAPEX line's months (${years})`);
 

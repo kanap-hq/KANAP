@@ -183,7 +183,7 @@ const xDefault = alternateOverride
     edge). This JSX comment is stripped from the built HTML. */}
   </head>
   <body>
-    <a href="#main" class="mk-skip">Skip to content</a>
+    <a href="#main" class="mk-skip">{t('a11y.skipToContent')}</a>
     {locale === DEFAULT_LOCALE && !isEnglishHome && <LocaleSuggest />}
     <Nav alternates={alternateOverride} fallbackPath={fallbackPath} />
     <main id="main">

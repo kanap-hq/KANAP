@@ -294,7 +294,7 @@ Définissez la méthode que les lignes OPEX et CAPEX suivent lorsqu'elles resten
 ### Sociétés sélectionnées
 
 - L'inducteur s'applique uniquement aux sociétés sélectionnées : leurs pourcentages sont calculés à partir de leur propre effectif, de leurs utilisateurs IT ou de leur chiffre d'affaires pour l'année
-- La page affiche la répartition obtenue, ce qui vous permet de vérifier l'effet avant de vous y appuyer
+- La page affiche la répartition obtenue, ce qui vous permet de vérifier l'effet avant de vous y appuyer. La colonne **Inducteur** affiche la valeur de chaque société. Un chiffre d'affaires s'affiche avec la devise de base de la société, par exemple **35 M USD**, et la répartition l'utilise converti dans la devise de reporting, comme dans l'[onglet Ventilations](budget-lines.md#ventilations). Quand une devise n'a pas encore de taux pour l'année, un avertissement au-dessus de la répartition signale que ses chiffres d'affaires sont comptés sans conversion
 - Une seule société sélectionnée prend toujours **100 %**, sans valeur d'inducteur requise
 - À partir de deux sociétés, chaque société sélectionnée doit disposer d'une valeur pour l'inducteur choisi. Une société sans valeur est rejetée à l'enregistrement. Corrigez d'abord les métriques de la société dans **Données de référence > Sociétés**
 - Une société désactivée pour l'année ne peut pas être sélectionnée : les sociétés désactivées sont exclues des ventilations de cette année

@@ -162,7 +162,16 @@ export type ServerDataGridProps<T> = {
    * message and its way out.
    */
   emptyState?: React.ReactNode;
+  /**
+   * One line under the grid, about its totals (amounts the totals leave out). The grid gives it
+   * room within the viewport while it is set; without it the grid keeps its full height.
+   */
+  footer?: React.ReactNode;
 };
+
+/** Height of the `footer` line and the gap above it. */
+const FOOTER_LINE_HEIGHT = 20;
+const FOOTER_GAP = 8;
 
 function parseSortParam(sortModel: SortModelItem[] | undefined, fallback: { field: string; direction: 'ASC' | 'DESC' }) {
   if (sortModel && sortModel.length > 0) {
@@ -204,6 +213,43 @@ function parseUrlSort(sortFromUrl: string | null | undefined, fallback: { field:
  * columns the layout does not know yet go right after their nearest predecessor in the default
  * order (at the start when none precedes them), and columns that no longer exist are dropped.
  */
+/**
+ * Row selection for the infinite model. The header checkbox exists only for the client and server
+ * models: leaving the default on prints a warning and draws nothing. Row checkboxes stay.
+ */
+export function gridRowSelection(enableRowSelection: boolean): {
+  mode: 'singleRow' | 'multiRow';
+  checkboxes: boolean;
+  headerCheckbox?: boolean;
+  enableClickSelection: boolean;
+} {
+  if (!enableRowSelection) {
+    return { mode: 'singleRow', checkboxes: false, enableClickSelection: false };
+  }
+  return { mode: 'multiRow', checkboxes: true, headerCheckbox: false, enableClickSelection: false };
+}
+
+/** A flex column with no minimum of its own stays wide enough to read its header ("Nom", "Total"). */
+export const FLEX_COLUMN_MIN_WIDTH = 160;
+
+export function columnMinWidth(col: { minWidth?: number | null; flex?: number | null; width?: number | null }): number | undefined {
+  if (typeof col.minWidth === 'number') return col.minWidth;
+  if (typeof col.flex === 'number' && col.flex > 0) return FLEX_COLUMN_MIN_WIDTH;
+  return undefined;
+}
+
+/** A stored width below the column's minimum is lifted. Widths without a minimum stay as saved. */
+export function floorSavedColumnWidths(
+  state: ColumnState[],
+  minWidthById: ReadonlyMap<string, number>,
+): ColumnState[] {
+  return state.map((col) => {
+    const min = col.colId ? minWidthById.get(col.colId) : undefined;
+    if (min == null || col.width == null || col.width >= min) return col;
+    return { ...col, width: min };
+  });
+}
+
 export function mergeSavedColumnState(savedState: ColumnState[], defaultState: ColumnState[]): ColumnState[] {
   const defaultById = new Map<string | null | undefined, ColumnState>();
   for (const d of defaultState) defaultById.set(d.colId, d);
@@ -392,7 +438,13 @@ function useColumnState(
         };
       };
 
-      return mergeSavedColumnState(savedState, defaultState).map(applyRequired);
+      const minWidthById = new Map<string, number>();
+      for (const column of columns) {
+        const id = column.field || column.colId || '';
+        const min = columnMinWidth(column);
+        if (id && min != null) minWidthById.set(id, min);
+      }
+      return floorSavedColumnWidths(mergeSavedColumnState(savedState, defaultState).map(applyRequired), minWidthById);
     } catch (e) {
       console.warn('Failed to load column state from localStorage:', e);
       return getDefaultColumnState();
@@ -468,6 +520,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   pageParams,
   setFilterExcludeMode = false,
   emptyState,
+  footer,
 }: ServerDataGridProps<T>) {
   const { t } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
@@ -553,6 +606,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           if (params.node?.rowPinned) return '';
           return typeof origFmt === 'function' ? origFmt(params) : params.value;
         };
+      }
+
+      if (agGridCol.minWidth == null && typeof agGridCol.flex === 'number' && agGridCol.flex > 0) {
+        agGridCol.minWidth = FLEX_COLUMN_MIN_WIDTH;
       }
 
       return {
@@ -1331,22 +1388,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     },
   }), []);
 
-  const rowSelection = useMemo(() => {
-    if (!enableRowSelection) {
-      // No box column: AG Grid draws its own (`checkboxes` defaults to true) on any row selection.
-      return {
-        mode: 'singleRow' as const,
-        checkboxes: false,
-        enableClickSelection: false,
-      };
-    }
-    return {
-      mode: 'multiRow' as const,
-      checkboxes: true,
-      // headerCheckbox not supported with infinite row model
-      enableClickSelection: false,
-    };
-  }, [enableRowSelection]);
+  const rowSelection = useMemo(() => gridRowSelection(enableRowSelection), [enableRowSelection]);
 
   const gridContext = useMemo(() => ({
     // Read by the set filters: whether "All" then untick may send an exclude model.
@@ -1576,7 +1618,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       </Stack>
       <div
         style={{
-          height: containerHeight,
+          height: footer ? Math.max(200, containerHeight - FOOTER_LINE_HEIGHT - FOOTER_GAP) : containerHeight,
           width: '100%',
           position: 'relative',
           overflow: 'hidden', // contain grid overflow; grid manages its own scrollbars
@@ -1691,6 +1733,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           </div>
         )}
       </div>
+      {footer && (
+        <Box sx={{ mt: `${FOOTER_GAP}px`, height: FOOTER_LINE_HEIGHT, minWidth: 0, overflow: 'hidden' }}>{footer}</Box>
+      )}
 
       {/* Custom Column Chooser Popover (Community Edition Compatible) */}
       <Popover

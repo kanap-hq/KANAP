@@ -36,6 +36,11 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
+// `access=contributor` narrows the list to the projects the user may write to (time entries).
+function listAccessLevel(query: ListProjectsQueryInput): PermissionLevel {
+  return query?.access === 'contributor' ? 'contributor' : 'reader';
+}
+
 @UseGuards(JwtAuthGuard)
 @Controller('portfolio/projects')
 export class PortfolioProjectsController {
@@ -91,7 +96,7 @@ export class PortfolioProjectsController {
     @Query() query: ListProjectsQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.projectAccessScope(ctx, 'reader').then((accessScope) =>
+    return this.projectAccessScope(ctx, listAccessLevel(query)).then((accessScope) =>
       this.svc.list(query, { manager: ctx.manager, accessScope }),
     );
   }
@@ -103,7 +108,7 @@ export class PortfolioProjectsController {
     @Query() query: ListProjectsQueryInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.projectAccessScope(ctx, 'reader').then((accessScope) =>
+    return this.projectAccessScope(ctx, listAccessLevel(query)).then((accessScope) =>
       this.svc.listIds(query, { manager: ctx.manager, accessScope }),
     );
   }

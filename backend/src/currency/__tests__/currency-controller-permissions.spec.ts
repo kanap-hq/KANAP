@@ -24,19 +24,36 @@ function run() {
   assert.equal(levelOf(CurrencyController), undefined, 'no class-level requirement');
   assert.equal(anyOf(CurrencyController), undefined, 'no class-level requirement');
 
-  for (const [name, handler] of [['getSettings', proto.getSettings], ['listRates', proto.listRates]] as const) {
+  for (const [name, handler] of [
+    ['getSettings', proto.getSettings],
+    ['listRates', proto.listRates],
+    ['listMissingRates', proto.listMissingRates],
+  ] as const) {
     assert.deepEqual(anyOf(handler), readers, `${name}: budget_ops or budget reader`);
     assert.equal(levelOf(handler), undefined, `${name}: no single-resource requirement on top`);
   }
-  console.log('ok - settings and rates are read by budget, OPEX and CAPEX readers');
+  console.log('ok - settings, rates and missing pairs are read by budget, OPEX and CAPEX readers');
 
-  for (const [name, handler] of [['updateSettings', proto.updateSettings], ['refreshRates', proto.refreshRates]] as const) {
+  for (const [name, handler] of [
+    ['updateSettings', proto.updateSettings],
+    ['refreshRates', proto.refreshRates],
+    ['setManualRate', proto.setManualRate],
+    ['removeManualRate', proto.removeManualRate],
+  ] as const) {
     assert.deepEqual(levelOf(handler), { resource: 'budget_ops', level: 'admin' }, `${name}: budget_ops admin`);
     assert.equal(anyOf(handler), undefined, `${name}: no alternative resource`);
   }
-  console.log('ok - settings and rates are changed by budget administrators');
+  console.log('ok - settings, rates and manual rates are changed by budget administrators');
 
-  const handlers = [proto.getSettings, proto.listRates, proto.updateSettings, proto.refreshRates];
+  const handlers = [
+    proto.getSettings,
+    proto.listRates,
+    proto.listMissingRates,
+    proto.updateSettings,
+    proto.refreshRates,
+    proto.setManualRate,
+    proto.removeManualRate,
+  ];
   const resources = handlers.flatMap((handler) => [levelOf(handler), ...(anyOf(handler) ?? [])])
     .filter((meta): meta is RequireLevelMeta => !!meta)
     .map((meta) => meta.resource);

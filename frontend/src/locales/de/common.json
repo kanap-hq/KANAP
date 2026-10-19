@@ -355,7 +355,7 @@
     "quickLogTime": {
       "logTime": "Zeit erfassen",
       "logOn": "Erfassen auf",
-      "hoursPlaceholder": "z.B. 2,5",
+      "hoursPlaceholder": "z.B. 2",
       "notesOptional": "Notizen (optional)",
       "whatDidYouWorkOn": "Woran haben Sie gearbeitet?",
       "it": "IT",

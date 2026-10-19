@@ -112,21 +112,23 @@ export type ContractFxRates = {
  * The rates contract amounts convert with: each year's latest rate set, the one the budget's live
  * columns use. A currency the set does not rate (or a year without a set) has no rate: the FX
  * service would count it at 1. `resolveRates` is called with no lookup, for the tenant's
- * settings only: it resolves no rate.
+ * settings only: it resolves no rate. Years in which a contract currency of the tenant has no
+ * rate are reported to the missing-rate listener, which fetches them.
  */
 export async function contractFxRates(
-  fxRates: Pick<FxRateService, 'resolveRates' | 'getLatestRateSet'>,
+  fxRates: Pick<FxRateService, 'resolveRates' | 'getLatestRateSet' | 'reportMissingYears'>,
   manager: EntityManager,
   tenantId: string,
   years: number[],
 ): Promise<ContractFxRates> {
   const { settings } = await fxRates.resolveRates(tenantId, [], { manager });
   const reportingCurrency = settings.reportingCurrency.toUpperCase();
+  const uniqueYears = Array.from(new Set(years));
   const sets = new Map<number, Awaited<ReturnType<FxRateService['getLatestRateSet']>>>();
-  for (const year of Array.from(new Set(years))) {
+  for (const year of uniqueYears) {
     sets.set(year, await fxRates.getLatestRateSet(tenantId, year, reportingCurrency, { manager }));
   }
-  return {
+  const rates: ContractFxRates = {
     reportingCurrency,
     rateOf(year, currency) {
       const code = currency.toUpperCase();
@@ -135,6 +137,16 @@ export async function contractFxRates(
       return typeof raw === 'number' && Number.isFinite(raw) && raw > 0 ? raw : null;
     },
   };
+  const rows: Array<{ currency: string | null }> = await manager.query(
+    `SELECT DISTINCT UPPER(currency) AS currency FROM contracts WHERE tenant_id = $1`,
+    [tenantId],
+  );
+  const codes = rows
+    .map((row) => (typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : ''))
+    .filter((code) => /^[A-Z]{3}$/.test(code));
+  const missing = uniqueYears.filter((year) => codes.some((code) => rates.rateOf(year, code) == null));
+  if (missing.length) fxRates.reportMissingYears(tenantId, missing);
+  return rates;
 }
 
 /** What `contractBudgetSql` reads besides the contracts, for some years and one column. */

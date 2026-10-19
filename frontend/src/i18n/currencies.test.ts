@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { currencyLabel, currencyOptionsFor } from './currencies';
+import { currencyLabel, currencyOptionsFor, filterCurrencyOptions } from './currencies';
 
 describe('currency names', () => {
   it('names every currency in the reader\'s language and keeps the ISO code', () => {
@@ -13,6 +13,20 @@ describe('currency names', () => {
   it('keeps the list in code order', () => {
     const codes = currencyOptionsFor('es').map((option) => option.code);
     expect(codes).toEqual([...codes].sort());
+  });
+
+  it('ranks an exact code before a code prefix, then a name', () => {
+    const options = [
+      { code: 'CHE', name: 'WIR Euro' },
+      { code: 'CHF', name: 'Swiss franc' },
+      { code: 'EURX', name: 'Test' },
+      { code: 'EUR', name: 'Euro' },
+    ];
+    expect(filterCurrencyOptions(options, 'eur').map((option) => option.code)).toEqual(['EUR', 'EURX', 'CHE']);
+    expect(filterCurrencyOptions(options, 'CH').map((option) => option.code)).toEqual(['CHE', 'CHF']);
+    expect(filterCurrencyOptions(options, '  Eur ').map((option) => option.code)[0]).toBe('EUR');
+    expect(filterCurrencyOptions(options, '').map((option) => option.code)).toEqual(['CHE', 'CHF', 'EURX', 'EUR']);
+    expect(filterCurrencyOptions(options, 'swiss').map((option) => option.code)).toEqual(['CHF']);
   });
 
   it('writes one label everywhere: the code, then the name in the reader\'s language', () => {

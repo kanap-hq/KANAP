@@ -56,6 +56,9 @@ export const ListProjectsQuerySchema = ListQuerySchema.extend({
   /** Scope to projects involving users in this team */
   involvedTeamId: z.string().uuid().optional(),
 
+  /** `contributor`: only the projects the user may write to (time entries) */
+  access: z.enum(['reader', 'contributor']).optional(),
+
   /** Filter by year (for timeline views) */
   year: z
     .union([z.string(), z.number()])
@@ -110,6 +113,7 @@ export class ListProjectsQueryDto implements ListProjectsQuery {
   it_lead_id?: string;
   involvedUserId?: string;
   involvedTeamId?: string;
+  access?: 'reader' | 'contributor';
   year?: number;
   month?: number;
 

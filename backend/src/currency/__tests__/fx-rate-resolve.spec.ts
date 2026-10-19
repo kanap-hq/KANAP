@@ -123,7 +123,21 @@ async function testMissingYearsRefreshedOnceInAWhile() {
   answer = 'queued';
   await fxRates.resolveRates('t', [lookup(2031)]);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(queued.map((call) => call.years), [[2031], [2031]], 'a refresh skipped behind another one is asked again');
+  // Skipped behind a running refresh: asked again once it ends (here at once, the stub runs
+  // none), and when that is skipped too, by the next read.
+  assert.deepEqual(queued.map((call) => call.years), [[2031], [2031], [2031]], 'a refresh skipped behind another one is asked again');
+}
+
+async function testReportMissingYearsNeverThrows() {
+  const service = createService();
+  const calls: Array<{ tenantId: string; years: number[] }> = [];
+  service.onMissingRates((tenantId, years) => calls.push({ tenantId, years }));
+  service.reportMissingYears('t', [2030, 2025, 2030, 2024.5]);
+  assert.deepEqual(calls, [{ tenantId: 't', years: [2025, 2030] }]);
+  service.reportMissingYears('t', []);
+  assert.equal(calls.length, 1, 'an empty list does not call the listener');
+  service.onMissingRates(() => { throw new Error('listener down'); });
+  service.reportMissingYears('t', [2025]);
 }
 
 (async () => {
@@ -135,6 +149,7 @@ async function testMissingYearsRefreshedOnceInAWhile() {
   await testFrozenAndLiveSetsBothMissing();
   await testMissingYearsGoToTheListener();
   await testMissingYearsRefreshedOnceInAWhile();
+  await testReportMissingYearsNeverThrows();
   console.log('FX rate resolution sources pass.');
 })().catch((err) => {
   console.error(err);

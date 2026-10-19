@@ -1004,7 +1004,28 @@
       "liveSpot": "Spot en tiempo real",
       "quarterlyAvg": "Media trimestral",
       "forwardEstimate": "Estimación a futuro",
-      "annualAvg": "Media anual"
+      "annualAvg": "Media anual",
+      "missingNone": "Cada moneda en uso tiene un tipo.",
+      "missingTitle_one": "Falta {{count}} tipo de cambio",
+      "missingTitle_other": "Faltan {{count}} tipos de cambio",
+      "missingReason": "Ninguna fuente publica todavía este tipo; los importes en esta moneda quedan excluidos de los totales hasta que lo tenga.",
+      "enterRate": "Introducir un tipo",
+      "enterRateFor": "Introducir un tipo para {{currency}} en {{year}}",
+      "loadMissingError": "No se pudieron comprobar los tipos de cambio en uso.",
+      "manualFootnote": "Tipo introducido manualmente",
+      "estimateMark": "estimación",
+      "estimateTooltip": "La fuente aún no ha publicado este año; se usa el año publicado más cercano hasta que lo haga.",
+      "editRate": "Editar el tipo de {{currency}} en {{year}}",
+      "manualDialogTitle": "Tipo de cambio manual",
+      "manualRateLabel": "Tipo en {{reporting}} para 1 {{currency}}",
+      "manualRatePlaceholder": "1,05",
+      "manualRateHint": "Use el tipo medio del año publicado por su banco central o su tesorería.",
+      "manualRateReplaces": "Un tipo manual sustituye al tipo automático de este año hasta que lo retire.",
+      "manualRateInvalid": "Introduzca un tipo mayor que 0.",
+      "removeManualRate": "Retirar el tipo manual",
+      "manualRateRemoved": "El tipo automático se volverá a obtener.",
+      "failedToSaveManualRate": "No se pudo guardar el tipo.",
+      "failedToRemoveManualRate": "No se pudo retirar el tipo manual."
     },
     "budgetColumns": {
       "budget": "Presupuesto",
@@ -1242,7 +1263,22 @@
         "opex": "línea OPEX",
         "capex": "línea CAPEX"
       }
-    }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "Aún no hay tipos de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en estas monedas se cuenta sin convertir hasta que los tipos estén disponibles.",
+      "turnoverFxMissing_one": "Aún no hay tipo de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible."
+    },
+    "fxMissing": {
+      "excluding_one": "Se excluye {{count}} línea sin tipo de cambio: {{pairs}}.",
+      "excluding_other": "Se excluyen {{count}} líneas sin tipo de cambio: {{pairs}}.",
+      "excludingSeveral": "Se excluyen líneas sin tipo de cambio: {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Introducir un tipo",
+      "lineTooltip": "Sin tipo de cambio de {{currency}} para {{year}}: excluido de los totales.",
+      "localAmount": "{{amount}} {{currency}}"
+    },
+    "turnoverMillions": "{{value}} M {{currency}}"
   },
   "fields": {
     "description": "Descripción",
