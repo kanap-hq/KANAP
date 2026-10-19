@@ -143,11 +143,13 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ## Status und historische Daten
 
 Wenn Sie Einstellungen ändern:
-  - **Berichtswährung**: Wirkt sich sofort auf die Anzeige aus; historische Daten bleiben erhalten und werden mit den zum Eingabezeitpunkt aktiven Kursen umgerechnet
+  - **Berichtswährung**: Wirkt sich sofort auf die Anzeige aus; gespeicherte Beträge ändern sich nicht, und jedes Jahr wird mit den unter [Umrechnungsmechanismen](#umrechnungsmechanismen-kurzreferenz) beschriebenen Kursen in die neue Währung umgerechnet
   - **Standardwährungen**: Betreffen nur neue Budgetzeilen; bestehende Budgetzeilen behalten ihre Währungen
   - **Zugelassene Währungen**: Bestehende Budgetzeilen werden nicht rückwirkend validiert. Einschränkungen gelten nur für neue oder bearbeitete Budgetzeilen
 
 ## Umrechnungsmechanismen (Kurzreferenz)
+
+Beträge werden in ihrer eigenen Währung gespeichert und bei der Anzeige umgerechnet. Jedes Jahr verwendet die zuletzt für dieses Jahr erfassten Kurse, unabhängig davon, wann die Beträge eingegeben wurden. Erfasst eine Synchronisation neue Kurse für ein Jahr, werden die Beträge dieses Jahres ab dann damit umgerechnet, außer das Jahr ist eingefroren (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
 
 ### Vergangene Jahre
 Es werden Weltbank-Jahresdurchschnittskurse verwendet. Diese sind stabil und ändern sich nach Veröffentlichung nicht mehr.
@@ -158,7 +160,10 @@ Es wird der Live-Kassakurs von ExchangeRate-API verwendet (Fallback auf den neue
 ### Zukünftige Jahre
 Der Kurs des aktuellen Jahres wird als Forward-Schätzung wiederverwendet. Dies bietet Orientierung für die Budgetplanung, sollte aber überprüft werden, wenn diese Jahre näher rücken.
 
-**Fallback**: Wird für eine Währung kein Kurs gefunden, verwendet das System **1,00**, bis Daten verfügbar sind. Dies verhindert Fehler, kann aber ungenaue Umrechnungen erzeugen. Führen Sie eine FX-Synchronisation durch, um fehlende Kurse zu befüllen.
+### Eingefrorene Jahre
+Das Einfrieren der Standard-Budgetspalte eines Jahres schreibt die Kurse dieses Jahres für den eingefrorenen Typ (OPEX oder CAPEX) fest: KANAP aktualisiert die Kurse des Jahres und behält diesen Satz dann für alle Beträge des Jahres, auch wenn neuere Kurse eintreffen. Das Auftauen der Standardspalte gibt sie wieder frei. Siehe [Das Einfrieren der Standardspalte schreibt die Wechselkurse fest](budget-operations.md#das-einfrieren-der-standardspalte-schreibt-die-wechselkurse-fest).
+
+**Fehlender Kurs**: Hat ein Jahr keinen Kurs für eine verwendete Währung, werden die Beträge in dieser Währung mit **1,00** gezählt, als wären sie bereits in der Berichtswährung. Der Server protokolliert eine Warnung und ruft die Kurse dieses Jahres im Hintergrund ab (höchstens einmal alle sechs Stunden je Jahr), sodass die nächste Anzeige den neuen Kurs verwendet, sobald die Quelle ihn veröffentlicht. Um das zu erkennen, prüfen Sie die Tabelle der FX-Kurs-Snapshots auf `—`-Werte und führen Sie eine FX-Synchronisation durch, um die Kurse sofort abzurufen.
 
 ## Tipps
 

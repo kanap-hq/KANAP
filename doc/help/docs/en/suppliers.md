@@ -39,7 +39,7 @@ Every cell in a row is clickable and opens that supplier's page.
 - Status scope: Use the **Show: All / Enabled / Disabled** toggle above the grid to filter by status. The list shows enabled suppliers by default
 
 **Actions**:
-- **New**: Create a new supplier (requires `suppliers:manager`)
+- **New**: Create a new supplier (requires `suppliers:member`)
 - **Import CSV**: Bulk-import suppliers (requires `suppliers:admin`)
 - **Export CSV**: Export the list to CSV (requires `suppliers:admin`)
 - **Delete Selected**: Remove selected suppliers (requires `suppliers:admin`)
@@ -67,7 +67,7 @@ The page has two tabs: **Overview** and **Contacts**.
 
 **Notes**: Free-form notes about the vendor, on the **Overview** tab. They save a moment after you stop typing, and when you leave the field.
 
-Editing requires `suppliers:manager` permission. Read-only users see the same page but cannot make changes.
+Editing requires `suppliers:member` permission. Read-only users see the same page but cannot make changes.
 
 Press **Escape** or click the close button to go back to the list.
 

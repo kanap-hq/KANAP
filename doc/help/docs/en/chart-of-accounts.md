@@ -37,7 +37,7 @@ OPEX/CAPEX lines -> Account selection (filtered to FR-2024 accounts only)
 - Path: **Master Data -> Charts of Accounts**
 - Permissions:
   - View: `accounts:reader`
-  - Create/edit accounts and CoAs: `accounts:manager`
+  - Create/edit accounts and CoAs: `accounts:member`
   - Import CSV, Export CSV, Delete: `accounts:admin`
 
 ## Working with the list
@@ -51,7 +51,7 @@ A horizontal row of chips represents each Chart of Accounts. Click a chip to swi
 - The selected chip is filled; others are outlined.
 - Hover a chip to see the CoA name, its countries, its account count and its roles. See [Chart roles](#chart-roles).
 
-If you have `accounts:manager` permission, two extra controls appear on the right:
+If you have `accounts:member` permission, two extra controls appear on the right:
 
 - **New**: Opens the **New chart of accounts** dialog.
 - **Manage charts**: Opens the [Manage charts](#the-manage-charts-dialog) dialog.
@@ -76,7 +76,7 @@ Each count is a link. Click it to filter the grid to those accounts. The filter 
 
 In the grid, a small orange dot next to **Consol. account #** marks an account whose number is not in the consolidation chart. Hover the dot to see the name of the consolidation chart.
 
-Without a consolidation chart, the line reads "No consolidation chart." Managers can click **Choose one in Manage charts** to open the dialog.
+Without a consolidation chart, the line reads "No consolidation chart." Users with `accounts:member` can click **Choose one in Manage charts** to open the dialog.
 
 ### Accounts grid
 
@@ -104,7 +104,7 @@ The grid shows accounts for the selected CoA only.
 **Sort**: Defaults to **Account #** ascending.
 
 **Actions** (in the page header):
-- **New account** (`accounts:manager`): Opens a new account form with the selected CoA already chosen.
+- **New account** (`accounts:member`): Opens a new account form with the selected CoA already chosen.
 - **Import CSV** (`accounts:admin`): Import accounts into the selected CoA.
 - **Export CSV** (`accounts:admin`): Export accounts from the selected CoA.
 - **Delete selected** (`accounts:admin`): Delete selected account rows. Select rows using the checkbox column (visible to admins). An account used by budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the accounts kept, with the reason.
@@ -123,7 +123,7 @@ Click any row in the accounts grid to open the account workspace.
 
 **Changes save automatically.** Each field saves when you leave it, and there is no Save button. If a value is refused, a message appears under the field. The **Account number** must be a whole number greater than zero, with at most 15 digits.
 
-You need `accounts:manager` to edit. Read-only users see the same page with the fields locked.
+You need `accounts:member` to edit. Read-only users see the same page with the fields locked.
 
 ### OPEX or CAPEX accounts
 
@@ -276,13 +276,13 @@ Click **Manage charts** in the chip bar to open the dialog. One table lists ever
 - **Companies**: the number of companies assigned to the chart
 - **Accounts**: the number of accounts in the chart
 
-Three short lines under the table explain the roles. **New chart** (`accounts:manager`) at the bottom left opens the Create dialog.
+Three short lines under the table explain the roles. **New chart** (`accounts:member`) at the bottom left opens the Create dialog.
 
 Each row has a **⋯** menu with only the actions that apply to that chart. The wording follows the current state.
 
-- **Make country default** / **Stop being country default** (`accounts:manager`): for one-country charts.
-- **Make default for other countries** / **Stop being default for other countries** (`accounts:manager`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
-- **Make consolidation chart** / **Stop being consolidation chart** (`accounts:manager`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
+- **Make country default** / **Stop being country default** (`accounts:member`): for one-country charts.
+- **Make default for other countries** / **Stop being default for other countries** (`accounts:member`): for all-countries charts. Making it the default also assigns the chart to companies that have no chart.
+- **Make consolidation chart** / **Stop being consolidation chart** (`accounts:member`): for any chart. See [Change the consolidation chart](#change-the-consolidation-chart).
 - **Delete** (`accounts:admin`): Delete the chart together with its accounts. If the chart has accounts, a confirmation tells you how many are deleted. If it is the consolidation chart, the confirmation says that group reporting will no longer have a reference chart. Deletion is refused while companies use the chart or OPEX/CAPEX lines use its accounts. The dialog shows the reason before any confirmation.
 
 The roles change as soon as you pick an action. The table updates on the spot.

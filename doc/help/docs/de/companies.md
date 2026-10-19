@@ -55,7 +55,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 **Aktionen**:
 
-- **Neu**: Unternehmen erstellen (erfordert `companies:manager`)
+- **Neu**: Unternehmen erstellen (erfordert `companies:member`)
 - **CSV importieren**: Massenimport von Unternehmen aus einer CSV-Datei (erfordert `companies:admin`)
 - **CSV exportieren**: Unternehmen und ihre Kennzahlen als CSV exportieren (erfordert `companies:admin`)
 - **Ausgewählte löschen**: Ein oder mehrere ausgewählte Unternehmen löschen (erfordert `companies:admin`; nur möglich, wenn nichts das Unternehmen referenziert)
@@ -67,7 +67,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 | Aktion | Erforderliche Stufe |
 |--------|---------------------|
 | Liste und Arbeitsbereiche anzeigen | `companies:reader` |
-| Unternehmen erstellen oder bearbeiten | `companies:manager` |
+| Unternehmen erstellen oder bearbeiten | `companies:member` |
 | Importieren, exportieren oder löschen | `companies:admin` |
 
 ## Der Unternehmens-Arbeitsbereich
@@ -126,7 +126,7 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 - Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr."
 - Jedes Jahr wird für sich gespeichert: Beim Jahreswechsel werden die Werte dieses Jahres geladen
 - Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis besagt, dass ein Budgetadministrator sie wieder freigeben kann (**Budgetverwaltung > Administration > Stammdaten einfrieren**)
-- Für das Bearbeiten der Kennzahlen benötigen Sie `companies:manager`
+- Für das Bearbeiten der Kennzahlen benötigen Sie `companies:member`
 
 ## Kontenplan
 

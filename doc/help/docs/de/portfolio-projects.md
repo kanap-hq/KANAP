@@ -14,9 +14,9 @@ Für portfolio-weite Sequenzierung und Roadmap-Arbeit verwenden Sie [Portfolio-P
 ## Berechtigungen
 
 - `portfolio_projects:reader`: die Liste öffnen und Projekt-Arbeitsbereiche anzeigen
-- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren und Projekt-Overhead-Zeiteinträge pflegen
-- `portfolio_projects:manager`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
-- `portfolio_projects:admin`: enthält Manager-Funktionen und kann auch CSV importieren/exportieren und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
+- `portfolio_projects:contributor`: das verwaltete Dokument **Zweck** aktualisieren und Zeit auf dem Projekt erfassen (Projekt-Overhead-Einträge und Einträge auf Projektaufgaben)
+- `portfolio_projects:member`: Projekte erstellen und Projektdaten, Status, Team, Beziehungen, Zeitleiste, Fortschritt, Aufgaben, Bewertung, Kommentare und Entscheidungen verwalten
+- `portfolio_projects:admin`: enthält die Member-Funktionen und kann auch CSV importieren/exportieren, Prioritäts-Überschreibungen speichern und Projekt-Overhead-Zeiteinträge anderer Benutzer pflegen
 - Die Anzeige der Wissensdatenbank erfordert auch Wissensdatenbank-Zugriff
 - Das Erstellen oder Verknüpfen von eigenständigem Wissen erfordert auch eine Wissens-Erstellungsrolle
 
@@ -65,7 +65,7 @@ Die Projektliste ist darauf ausgelegt, zwei Fragen schnell zu beantworten: „Wo
 
 **Massenverwaltung**
 
-- **Neues Projekt** ist für Manager verfügbar
+- **Neues Projekt** ist mit `portfolio_projects:member` verfügbar
 - **CSV importieren** und **CSV exportieren** sind für Administratoren verfügbar
 
 Das Öffnen eines Projekts aus der Liste bewahrt den aktuellen Listenkontext. Der Projekt-Arbeitsbereich verwendet denselben Kontext für die **Vorherige**- und **Nächste**-Navigation, sodass Sie einen gefilterten Satz überprüfen können, ohne Ihren Platz zu verlieren.
@@ -187,7 +187,7 @@ Unter Zweck enthält der Reiter Zusammenfassung den Projektaktivitäts-Stream:
 
 **Historie** listet die erfassten Änderungen auf (Statuswechsel, Feldänderungen, Team- und Beziehungsänderungen, Änderungen am Dokument Zweck) und endet mit dem Erstellungseintrag: wer das Projekt erstellt hat und wann.
 
-Manager können Projektkommentare hinzufügen und bearbeiten. Kommentare können auch als formale Entscheidungen aufgezeichnet werden, mit einem Ergebnis und einer optionalen Statusänderung. Verwenden Sie das, wenn die Diskussion selbst den Verlauf des Projekts ändert.
+Benutzer mit `portfolio_projects:member` können Projektkommentare hinzufügen und bearbeiten. Kommentare können auch als formale Entscheidungen aufgezeichnet werden, mit einem Ergebnis und einer optionalen Statusänderung. Verwenden Sie das, wenn die Diskussion selbst den Verlauf des Projekts ändert.
 
 Bilder können in Aktivitätskommentaren enthalten sein, wenn visuelle Beweise nützlich sind: Architekturskizzen, Screenshots oder Review-Beweise.
 
@@ -297,7 +297,7 @@ Der Reiter **Bewertung** hält die Lieferung an die Priorisierung gebunden.
 
 - für Projekte mit Anfragenherkunft bleibt die Quell-Anfrage als Bewertungsreferenz sichtbar
 - für Schnellstart- und Legacy-Projekte wird die Bewertung direkt am Projekt gepflegt
-- Manager können die Bewertung überprüfen oder aktualisieren, einschließlich Prioritäts-Überschreibungen, wo Portfolio-Regeln dies erlauben
+- Benutzer mit `portfolio_projects:member` können die Bewertung überprüfen oder aktualisieren; das Speichern einer Prioritäts-Überschreibung erfordert `portfolio_projects:admin`
 
 Der resultierende Prioritätswert ist außerhalb dieses Reiters wichtig:
 

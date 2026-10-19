@@ -14,9 +14,9 @@ Para crear una interfaz necesita:
 - **Aplicación de origen** y **Aplicación de destino**
 - **Categoría de datos**: El tipo de datos transferidos
 
-Una vez establecidos estos, puede guardar la interfaz; el resto del espacio de trabajo (Técnico, Entornos, Mapeo, Relaciones) queda disponible a continuación.
+Una vez establecidos estos, puede guardar la interfaz; el resto del espacio de trabajo (Flujo, Entornos, Mapeo de datos, Relaciones) queda disponible a continuación.
 
-**Consejo**: Defina pronto el **Tipo de ruta de integración** (Directa o Vía middleware). Controla qué tramos se generan automáticamente y qué aparece en la pestaña Técnico y en la matriz de Entornos.
+**Consejo**: Defina pronto el **Tipo de ruta de integración** (Directa o Vía middleware). Controla qué tramos se generan automáticamente y qué aparece en la pestaña Flujo y en la matriz de Entornos.
 
 ---
 
@@ -54,8 +54,8 @@ La cuadrícula de Interfaces muestra su registro de integraciones de un vistazo.
 
 **Acciones**:
 
-- **Añadir interfaz**: Crear una nueva interfaz (requiere `applications:manager`)
-- **Duplicar interfaz**: Crear una copia de una interfaz seleccionada (requiere `applications:manager`). Seleccione exactamente una fila para activar esta acción. Un diálogo le permite elegir si copiar los enlaces de entorno; consulte [Copiar interfaces](#copiar-interfaces) más abajo.
+- **Añadir interfaz**: Crear una nueva interfaz (requiere `applications:member`)
+- **Duplicar interfaz**: Crear una copia de una interfaz seleccionada (requiere `applications:member`). Seleccione exactamente una fila para activar esta acción. Un diálogo le permite elegir si copiar los enlaces de entorno; consulte [Copiar interfaces](#copiar-interfaces) más abajo.
 - **Eliminar seleccionadas**: Eliminar interfaces seleccionadas (requiere `applications:admin`). Antes de la confirmación, la ventana muestra como conservadas las interfaces que tienen enlaces, con su número de enlaces. Marque **Eliminar también los enlaces relacionados** para eliminarlas con sus enlaces; sus conexiones se conservan. El mensaje nombra después las interfaces eliminadas y las conservadas, con el motivo.
 
 ---
@@ -93,17 +93,17 @@ Los cambios en los campos del panel lateral se guardan automáticamente al salir
 
 ---
 
-### Especificación
+### Vista general
 
-La pestaña Especificación es un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
+Una vez guardada la interfaz, la pestaña Vista general contiene la **Especificación**, un documento de texto enriquecido gestionado donde describe la interfaz de principio a fin: contexto de negocio, alcance, contrato, ejemplos. Es el documento narrativo principal de la interfaz.
 
 **Consejo**: Use esta pestaña como su única fuente de verdad para la prosa. Las reglas de mapeo y los tramos técnicos viven en las pestañas dedicadas a continuación; mantenga este documento centrado en la intención, el alcance y el resumen legible para humanos.
 
 ---
 
-### Técnico
+### Flujo
 
-La pestaña Técnico define los **tramos** compartidos que componen la interfaz. Los tramos son plantillas: describen lo que hace cada paso en general (la misma definición se aplica en todos los entornos).
+La pestaña Flujo define los **tramos** compartidos que componen la interfaz. Los tramos son plantillas: describen lo que hace cada paso en general (la misma definición se aplica en todos los entornos).
 
 Para cada tramo puede editar:
 
@@ -144,9 +144,9 @@ La pestaña Entornos gestiona los enlaces por entorno que convierten las plantil
 
 ---
 
-### Mapeo
+### Mapeo de datos
 
-La pestaña Mapeo es donde describe cómo los campos de origen se convierten en campos de destino. Está organizada alrededor de dos conceptos:
+La pestaña Mapeo de datos es donde describe cómo los campos de origen se convierten en campos de destino. Está organizada alrededor de dos conceptos:
 
 - Las **reglas de mapeo** describen una única decisión de mapeo: uno o más campos de origen, uno o más campos de destino, una operación (copia directa, transformación, búsqueda, división, fusión, filtro, valor predeterminado o una operación personalizada) y notas opcionales de condición / negocio / middleware.
 - Los **grupos de mapeo** son carpetas que organizan las reglas en secciones temáticas (por ejemplo "Cabecera", "Bloque del cliente", "Líneas de detalle", "Pie"). Las reglas pueden asignarse a un grupo o dejarse sin agrupar. Dos grupos base, **Head** e **Item**, están siempre presentes; puede añadir más.
@@ -199,7 +199,7 @@ La pestaña Relaciones reúne los vínculos de esta interfaz con otras cosas.
 
 - **Dependencias de interfaz**: Interfaces aguas arriba y aguas abajo. Úselas para documentar ordenamientos como "La sincronización de pedidos debe ejecutarse antes que la sincronización de facturas".
 - **URLs externas**: Enlaces a documentación en Confluence, SharePoint, etc. Añada una descripción y una URL; el icono de abrir en nueva pestaña le lleva directamente al enlace.
-- **Adjuntos**: Arrastre y suelte archivos en el área de carga o use **Seleccionar archivos** para adjuntar documentos de especificación directamente a la interfaz. Haga clic en un chip de adjunto para descargarlo; haga clic en el icono de papelera para eliminarlo (requiere derechos de gestor).
+- **Adjuntos**: Arrastre y suelte archivos en el área de carga o use **Seleccionar archivos** para adjuntar documentos de especificación directamente a la interfaz. Haga clic en un chip de adjunto para descargarlo; haga clic en el icono de papelera para eliminarlo (requiere `applications:member`).
 
 Una sección de Conocimiento está reservada para futura vinculación de conocimiento entre entidades; actualmente muestra un marcador informativo.
 
@@ -258,7 +258,7 @@ Use esto al actualizar una aplicación a una nueva versión y necesite migrar in
 
 ## Consejos
 
-- **Documente primero el "por qué"**: Use la pestaña Especificación y el campo **Propósito de negocio** del panel lateral para capturar la intención antes de sumergirse en tramos y enlaces.
+- **Documente primero el "por qué"**: Use la **Especificación** de la pestaña Vista general y el campo **Propósito de negocio** del panel lateral para capturar la intención antes de sumergirse en tramos y enlaces.
 - **Use el panel lateral desde cualquier pestaña**: Responsables, criticidad, tipo de ruta, indicador PII y el resto persisten inmediatamente, de modo que puede actualizarlos mientras revisa reglas o enlaces.
 - **Una interfaz, muchos entornos**: No cree interfaces separadas para cada entorno. Use una interfaz y configure cada entorno en la pestaña Entornos.
 - **Agrupe sus reglas de mapeo**: Para interfaces con más de un puñado de campos, organice las reglas en grupos de mapeo (Cabecera, Líneas de detalle, Pie, etc.). Hace que la revisión y el análisis de impacto sean mucho más fáciles.

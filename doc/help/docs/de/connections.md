@@ -126,7 +126,7 @@ Dieser Reiter steuert die Risikoklassifizierung und Datenschutzeinstellungen.
   - **Abgeleitet**: Werte werden aus verknüpften Schnittstellen-Bindungen aggregiert: der Reiter zeigt die effektiven Werte und listet jede beitragende Schnittstelle einmal auf, mit den Umgebungen, in denen sie gebunden ist
 
 **Felder**:
-  - **Kritikalität**: Geschäftskritisch, Hoch, Mittel oder Niedrig
+  - **Kritikalität**: eine Stufe der Geschäftskritikalität aus dem Katalog Ihrer Organisation, unter [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Die Standardstufen sind Kritisch, Hoch, Mittel und Niedrig
   - **Datenklasse**: Aus den Datenklassifizierungseinstellungen Ihrer Organisation
   - **Enthält PII**: Ob personenbezogene Daten über die Verbindung übertragen werden
 

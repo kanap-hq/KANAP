@@ -12,9 +12,10 @@ Les Demandes du portefeuille sont la couche d'intake pour les travaux proposés.
 | Autorisation | Ce qu'elle permet |
 | --- | --- |
 | `portfolio_requests:reader` | Ouvrir la liste des demandes et consulter les espaces de travail des demandes |
-| `portfolio_requests:member` | Modifier les documents managés intégrés dans l'espace de travail de la demande, même sans droits plus larges de gestion des demandes |
-| `portfolio_requests:manager` | Créer des demandes, mettre à jour les données de demande, maintenir l'équipe et les relations, ajouter commentaires et décisions, changer le statut, soumettre des recommandations d'analyse et modifier l'évaluation |
-| `portfolio_requests:admin` | Supprimer des demandes et utiliser l'import/export CSV |
+| `portfolio_requests:member` | Créer des demandes, mettre à jour les données de demande, modifier les documents managés (Objectif, Risques et atténuations), maintenir l'équipe et les relations, ajouter commentaires et décisions, changer le statut, soumettre des recommandations d'analyse et modifier l'évaluation |
+| `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import/export CSV et enregistrer les remplacements de priorité |
+
+La conversion d'une demande en projet nécessite aussi `portfolio_projects:member`.
 
 L'onglet **Connaissances** suit les autorisations Connaissances pour les actions de création et de liaison. Un utilisateur peut être autorisé à travailler sur le contenu de la demande sans être autorisé à créer ou re-lier des documents de connaissances autonomes.
 
@@ -62,7 +63,7 @@ La grille standard met en évidence les champs qui comptent pendant l'intake et 
 
 ### Actions de la liste
 
-- **Nouvelle demande** est disponible pour les managers de demandes.
+- **Nouvelle demande** est disponible avec `portfolio_requests:member`.
 - **Import CSV** et **Export CSV** sont disponibles pour les administrateurs de demandes.
 
 ## L'espace de travail Demande
@@ -139,10 +140,8 @@ La section **Objectif** est un document markdown managé intégré directement d
 
 - il donne aux relecteurs une déclaration stable d'intention
 - il est disponible pendant la conversion demande-en-projet
-- il peut être modifié par les utilisateurs disposant de `portfolio_requests:member`, même s'ils ne gèrent pas le reste de la demande
+- il peut être modifié par les utilisateurs disposant de `portfolio_requests:member`
 - il prend en charge **l'import DOCX** afin que vous puissiez importer directement des documents Word existants, et **l'export** pour télécharger le contenu courant en PDF, DOCX ou ODT
-
-Cette séparation est délibérée. Elle permet aux contributeurs experts du sujet d'améliorer le récit de la demande sans ouvrir le contrôle complet sur le statut, l'évaluation et la structure du portefeuille.
 
 ### Activité
 
@@ -328,5 +327,4 @@ Utilisez l'export quand vous avez besoin de reporting de portefeuille ou d'enric
 - **Utilisez l'import DOCX pour le contenu existant** : Si vous avez déjà une déclaration d'objectif ou un registre des risques dans un document Word, utilisez le bouton **Importer** sur l'éditeur Objectif ou Risques et atténuations au lieu de copier-coller. L'import convertit le document en markdown et vous avertit si du contenu n'a pas pu être reporté.
 - **Les filtres de périmètre persistent** : La liste s'ouvre sur **Toutes les demandes**. KANAP mémorise votre dernier choix de périmètre, vous n'avez donc pas besoin de le re-sélectionner à chaque session.
 - **Les demandes converties sont masquées par défaut** : Si vous cherchez une demande qui a déjà été convertie en projet, ajoutez **Convertie** au filtre Statut sur la liste.
-- **Autorisation membre pour les contributeurs** : Donnez aux experts du sujet `portfolio_requests:member` afin qu'ils puissent modifier Objectif et Risques et atténuations sans pouvoir changer le statut, l'évaluation ou la structure du portefeuille.
 - **De la tâche à la demande** : Lorsqu'une tâche révèle une initiative plus grande, utilisez **Convertir en demande** depuis l'espace de travail de la tâche. La nouvelle demande hérite du titre de la tâche, de la description (comme Objectif), de la classification et des pièces jointes, et affiche la **Tâche source** dans son en-tête.

@@ -14,9 +14,9 @@ Um eine Schnittstelle zu erstellen, benötigen Sie:
 - **Quellanwendung** und **Zielanwendung**
 - **Datenkategorie**: Der Datentyp, der übertragen wird
 
-Sobald diese festgelegt sind, können Sie die Schnittstelle speichern; der Rest des Arbeitsbereichs (Technisch, Umgebungen, Mapping, Verknüpfungen) wird danach verfügbar.
+Sobald diese festgelegt sind, können Sie die Schnittstelle speichern; der Rest des Arbeitsbereichs (Fluss, Umgebungen, Datenzuordnung, Beziehungen) wird danach verfügbar.
 
-**Tipp**: Legen Sie den **Integrationsroutentyp** (Direkt oder Via Middleware) frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Technisch und in der Umgebungsmatrix angezeigt wird.
+**Tipp**: Legen Sie den **Integrationsroutentyp** (Direkt oder Via Middleware) frühzeitig fest. Er steuert, welche Legs automatisch generiert werden und was im Reiter Fluss und in der Umgebungsmatrix angezeigt wird.
 
 ---
 
@@ -54,8 +54,8 @@ Das Schnittstellenraster zeigt Ihr Integrationsverzeichnis auf einen Blick.
 
 **Aktionen**:
 
-- **Schnittstelle hinzufügen**: Eine neue Schnittstelle erstellen (erfordert `applications:manager`)
-- **Schnittstelle duplizieren**: Eine Kopie einer ausgewählten Schnittstelle erstellen (erfordert `applications:manager`). Wählen Sie genau eine Zeile aus, um diese Aktion zu aktivieren. Ein Dialog ermöglicht es Ihnen zu wählen, ob Umgebungs-Bindungen kopiert werden sollen. Siehe [Schnittstellen kopieren](#schnittstellen-kopieren) unten.
+- **Schnittstelle hinzufügen**: Eine neue Schnittstelle erstellen (erfordert `applications:member`)
+- **Schnittstelle duplizieren**: Eine Kopie einer ausgewählten Schnittstelle erstellen (erfordert `applications:member`). Wählen Sie genau eine Zeile aus, um diese Aktion zu aktivieren. Ein Dialog ermöglicht es Ihnen zu wählen, ob Umgebungs-Bindungen kopiert werden sollen. Siehe [Schnittstellen kopieren](#schnittstellen-kopieren) unten.
 - **Ausgewählte löschen**: Ausgewählte Schnittstellen entfernen (erfordert `applications:admin`). Vor der Bestätigung führt das Fenster die Schnittstellen mit Bindungen als behalten auf, mit der Anzahl ihrer Bindungen. Aktivieren Sie **Zugehörige Bindungen ebenfalls löschen**, um sie mit ihren Bindungen zu löschen; ihre Verbindungen bleiben erhalten. Die Meldung nennt danach die gelöschten und die behaltenen Schnittstellen mit dem Grund.
 
 ---
@@ -93,17 +93,17 @@ Feldänderungen im Seitenpanel werden automatisch gespeichert, wenn Sie das Feld
 
 ---
 
-### Spezifikation
+### Übersicht
 
-Der Reiter Spezifikation ist ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben: geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
+Sobald die Schnittstelle gespeichert ist, enthält der Reiter Übersicht die **Spezifikation**, ein verwaltetes Rich-Text-Dokument, in dem Sie die Schnittstelle End-to-End beschreiben: geschäftlicher Kontext, Umfang, Vertrag, Beispiele. Es ist das primäre narrative Dokument für die Schnittstelle.
 
 **Tipp**: Verwenden Sie diesen Reiter als Ihre einzige Quelle der Wahrheit für Prosa. Mapping-Regeln und technische Legs leben in den dedizierten Reitern unten; halten Sie dieses Dokument auf Absicht, Umfang und die für Menschen lesbare Zusammenfassung fokussiert.
 
 ---
 
-### Technisch
+### Fluss
 
-Der Reiter Technisch definiert die gemeinsamen **Legs**, aus denen die Schnittstelle besteht. Legs sind Vorlagen: Sie beschreiben, was jeder Schritt allgemein tut (die gleiche Definition gilt für jede Umgebung).
+Der Reiter Fluss definiert die gemeinsamen **Legs**, aus denen die Schnittstelle besteht. Legs sind Vorlagen: Sie beschreiben, was jeder Schritt allgemein tut (die gleiche Definition gilt für jede Umgebung).
 
 Für jeden Leg können Sie bearbeiten:
 
@@ -144,9 +144,9 @@ Der Reiter Umgebungen verwaltet die umgebungsspezifischen Bindungen, die die Leg
 
 ---
 
-### Mapping
+### Datenzuordnung
 
-Der Reiter Mapping ist der Ort, an dem Sie beschreiben, wie Quellfelder zu Zielfeldern werden. Er ist um zwei Konzepte herum organisiert:
+Der Reiter Datenzuordnung ist der Ort, an dem Sie beschreiben, wie Quellfelder zu Zielfeldern werden. Er ist um zwei Konzepte herum organisiert:
 
 - **Mapping-Regeln** beschreiben eine einzelne Mapping-Entscheidung: ein oder mehrere Quellfelder, ein oder mehrere Zielfelder, eine Operation (direktes Kopieren, Transformieren, Lookup, Aufteilen, Zusammenführen, Filtern, Standardwert oder eine benutzerdefinierte Operation) und optionale Bedingungs- / Geschäfts- / Middleware-Notizen.
 - **Mapping-Gruppen** sind Ordner, die die Regeln in thematische Bereiche organisieren (zum Beispiel „Header", „Kundenblock", „Positionen", „Footer"). Regeln können einer Gruppe zugewiesen oder ungruppiert gelassen werden. Zwei Basisgruppen, **Head** und **Item**, sind immer vorhanden; Sie können weitere hinzufügen.
@@ -193,13 +193,13 @@ Die Mapping-Tabelle fasst jede Regel zusammen, indem sie die Quellbindungen, ein
 
 ---
 
-### Verknüpfungen
+### Beziehungen
 
-Der Reiter Verknüpfungen sammelt die Verknüpfungen von dieser Schnittstelle zu anderen Dingen.
+Der Reiter Beziehungen sammelt die Verknüpfungen von dieser Schnittstelle zu anderen Dingen.
 
 - **Schnittstellen-Abhängigkeiten**: Vorgelagerte und nachgelagerte Schnittstellen. Verwenden Sie diese, um Reihenfolgen zu dokumentieren, wie „Order Sync muss vor Invoice Sync laufen".
 - **Externe URLs**: Links zur Dokumentation in Confluence, SharePoint usw. Fügen Sie eine Beschreibung und eine URL hinzu; das Symbol „In neuem Tab öffnen" führt Sie direkt zum Link.
-- **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop in den Upload-Bereich oder verwenden Sie **Dateien auswählen**, um Spezifikationsdokumente direkt an die Schnittstelle anzuhängen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen; klicken Sie auf das Papierkorbsymbol, um ihn zu löschen (erfordert Manager-Rechte).
+- **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop in den Upload-Bereich oder verwenden Sie **Dateien auswählen**, um Spezifikationsdokumente direkt an die Schnittstelle anzuhängen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen; klicken Sie auf das Papierkorbsymbol, um ihn zu löschen (erfordert `applications:member`).
 
 Ein Wissensdatenbank-Bereich ist für zukünftige entitätenübergreifende Wissensverknüpfungen reserviert; er zeigt derzeit einen informativen Platzhalter.
 
@@ -258,7 +258,7 @@ Verwenden Sie dies beim Upgrade einer Anwendung auf eine neue Version, wenn Sie 
 
 ## Tipps
 
-- **Dokumentieren Sie das „Warum" zuerst**: Verwenden Sie den Reiter Spezifikation und das Feld **Geschäftlicher Zweck** im Seitenpanel, um die Absicht zu erfassen, bevor Sie sich in Legs und Bindungen vertiefen.
+- **Dokumentieren Sie das „Warum" zuerst**: Verwenden Sie die **Spezifikation** im Reiter Übersicht und das Feld **Geschäftlicher Zweck** im Seitenpanel, um die Absicht zu erfassen, bevor Sie sich in Legs und Bindungen vertiefen.
 - **Verwenden Sie das Seitenpanel von jedem Reiter aus**: Verantwortliche, Kritikalität, Routentyp, PII-Flag und der Rest werden sofort gespeichert, sodass Sie sie aktualisieren können, während Sie Regeln oder Bindungen überprüfen.
 - **Eine Schnittstelle, viele Umgebungen**: Erstellen Sie keine separaten Schnittstellen für jede Umgebung. Verwenden Sie eine Schnittstelle und konfigurieren Sie jede Umgebung im Reiter Umgebungen.
 - **Gruppieren Sie Ihre Mapping-Regeln**: Bei Schnittstellen mit mehr als einer Handvoll Felder organisieren Sie die Regeln in Mapping-Gruppen (Header, Positionen, Footer usw.). Es macht Überprüfung und Auswirkungsanalyse weitaus einfacher.

@@ -138,7 +138,7 @@ Cuando selecciona un nodo o una arista, se abre un panel lateral a la derecha co
 
 - **Descripción**: Qué hace la aplicación
 - **Editor**: Editor del software
-- **Criticidad**: Crítica para el negocio, Alta, Media o Baja
+- **Criticidad**: un nivel de criticidad de negocio del catálogo de su organización, en [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Los niveles por defecto son Crítica, Alta, Moderada y Baja
 - **Servidores**: Servidores que alojan esta app, agrupados por entorno. Haga clic en el nombre de un servidor para abrir su espacio de trabajo.
 - **Responsables de negocio** y **Responsables IT**: Contactos responsables
 - **Información de soporte**: Contactos de soporte con sus roles. Haga clic en el nombre de un contacto para navegar a la pestaña Técnico de la aplicación.

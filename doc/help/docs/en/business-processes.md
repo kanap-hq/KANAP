@@ -13,7 +13,7 @@ Navigate to **Master Data > Business Processes** to open the list.
 **Permissions**:
 
 - View: `business_processes:reader`
-- Create / edit: `business_processes:manager`
+- Create / edit: `business_processes:member`
 - Delete, import/export CSV: `business_processes:admin`
 
 If the page is missing or fields are read-only, ask your tenant admin to adjust your role permissions.
@@ -43,8 +43,8 @@ The list shows all business processes for your tenant.
 
 **Actions** (top-right toolbar):
 
-- **New** (Manager+): create a new business process.
-- **Manage Categories** (Manager+): open the category management dialog.
+- **New** (`business_processes:member`): create a new business process.
+- **Manage Categories** (`business_processes:member`): open the category management dialog.
 - **Import CSV** (Admin): bulk-import processes from a CSV file.
 - **Export CSV** (Admin): export the processes the list shows, or all processes, to CSV.
 - **Delete Selected** (Admin): delete one or more selected rows. Interfaces and requests linked to a deleted process stay, without the link.

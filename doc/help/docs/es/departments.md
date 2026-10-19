@@ -42,7 +42,7 @@ La cuadrícula de Departamentos proporciona una visión general de todos los dep
 **Enlace directo**: Cada celda de la cuadrícula es un enlace clicable. Nombre y Empresa abren la pestaña Visión general; Plantilla abre la pestaña Detalles. Cuando navega a un espacio de trabajo y luego vuelve, su orden de clasificación, consulta de búsqueda y filtros se preservan.
 
 **Acciones**:
-- **Nuevo**: Crear un nuevo departamento (requiere `departments:manager`)
+- **Nuevo**: Crear un nuevo departamento (requiere `departments:member`)
 - **Importar CSV**: Importación masiva de departamentos (requiere `departments:admin`)
 - **Exportar CSV**: Exportar a CSV (requiere `departments:admin`)
 - **Eliminar seleccionados**: Eliminar departamentos seleccionados (requiere `departments:admin`). Un departamento usado en las asignaciones de líneas presupuestarias no se puede eliminar: desactívelo en su lugar. Antes de eliminar nada, la confirmación enumera los departamentos que se conservan, con el motivo

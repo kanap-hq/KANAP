@@ -32,6 +32,8 @@ L'action **Enregistrer du temps** ouvre une boîte de dialogue ciblée pour enre
 - Choisissez une **Catégorie** : **IT** ou **Métier**.
 - Ajoutez des **Notes** si vous voulez du contexte sur ce sur quoi vous avez travaillé.
 
+L'enregistrement vérifie la permission de la cible : une entrée sur un projet ou sur une tâche de projet nécessite `portfolio_projects:contributor`, une entrée sur une tâche autonome nécessite `tasks:member`.
+
 Après l'enregistrement, la tuile de synthèse du temps du tableau de bord se rafraîchit automatiquement.
 
 ## Ligne des données d'exemple

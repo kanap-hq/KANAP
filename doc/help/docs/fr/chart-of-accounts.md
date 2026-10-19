@@ -37,7 +37,7 @@ Lignes OPEX/CAPEX -> Sélection de compte (filtré aux comptes FR-2024 uniquemen
 - Chemin : **Données de référence -> Plans comptables**
 - Autorisations :
   - Consultation : `accounts:reader`
-  - Créer/modifier des comptes et des CoA : `accounts:manager`
+  - Créer/modifier des comptes et des CoA : `accounts:member`
   - Import CSV, Export CSV, Suppression : `accounts:admin`
 
 ## Travailler avec la liste
@@ -51,7 +51,7 @@ Une rangée horizontale de pastilles représente chaque plan comptable. Cliquez 
 - La pastille sélectionnée est pleine ; les autres sont en contour.
 - Survolez une pastille pour voir le nom du CoA, ses pays, son nombre de comptes et ses rôles. Voir [Rôles des plans](#roles-des-plans).
 
-Si vous avez l'autorisation `accounts:manager`, deux contrôles supplémentaires apparaissent à droite :
+Si vous avez l'autorisation `accounts:member`, deux contrôles supplémentaires apparaissent à droite :
 
 - **Nouveau** : Ouvre la boîte de dialogue **Nouveau plan comptable**.
 - **Gérer les plans** : Ouvre la fenêtre [Gérer les plans](#la-fenetre-gerer-les-plans).
@@ -76,7 +76,7 @@ Chaque nombre est un lien. Cliquez dessus pour filtrer la grille sur ces comptes
 
 Dans la grille, un petit point orange à côté de **N° compte de consolidation** signale un compte dont le numéro n'est pas dans le plan de consolidation. Survolez le point pour voir le nom du plan de consolidation.
 
-Sans plan de consolidation, la ligne indique « Aucun plan de consolidation. ». Les gestionnaires peuvent cliquer sur **Choisissez-en un dans Gérer les plans** pour ouvrir la fenêtre.
+Sans plan de consolidation, la ligne indique « Aucun plan de consolidation. ». Les utilisateurs disposant de `accounts:member` peuvent cliquer sur **Choisissez-en un dans Gérer les plans** pour ouvrir la fenêtre.
 
 ### Grille des comptes
 
@@ -104,7 +104,7 @@ La grille affiche uniquement les comptes du CoA sélectionné.
 **Tri** : Par défaut, **N° de compte** par ordre croissant.
 
 **Actions** (dans l'en-tête de la page) :
-- **Nouveau compte** (`accounts:manager`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
+- **Nouveau compte** (`accounts:member`) : Ouvre un nouveau formulaire de compte avec le CoA sélectionné déjà choisi.
 - **Importer CSV** (`accounts:admin`) : Importer des comptes dans le CoA sélectionné.
 - **Exporter CSV** (`accounts:admin`) : Exporter les comptes du CoA sélectionné.
 - **Supprimer la sélection** (`accounts:admin`) : Supprimer les lignes de comptes sélectionnées. Sélectionnez les lignes avec la colonne de cases à cocher (visible par les administrateurs). Un compte utilisé par des lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les comptes conservés, avec la raison.
@@ -123,7 +123,7 @@ Cliquez sur n'importe quelle ligne de la grille des comptes pour ouvrir l'espace
 
 **Les modifications s'enregistrent automatiquement.** Chaque champ s'enregistre lorsque vous le quittez, et il n'y a pas de bouton Enregistrer. Si une valeur est refusée, un message apparaît sous le champ. Le **Numéro de compte** doit être un nombre entier supérieur à zéro, de 15 chiffres au plus.
 
-Vous avez besoin de `accounts:manager` pour modifier. Les utilisateurs en lecture seule voient la même page, avec les champs verrouillés.
+Vous avez besoin de `accounts:member` pour modifier. Les utilisateurs en lecture seule voient la même page, avec les champs verrouillés.
 
 ### Comptes OPEX ou CAPEX
 
@@ -276,13 +276,13 @@ Cliquez sur **Gérer les plans** dans la barre de pastilles pour ouvrir la fenê
 - **Sociétés** : le nombre de sociétés assignées au plan
 - **Comptes** : le nombre de comptes du plan
 
-Trois courtes lignes sous le tableau expliquent les rôles. **Nouveau plan** (`accounts:manager`), en bas à gauche, ouvre la boîte de dialogue de création.
+Trois courtes lignes sous le tableau expliquent les rôles. **Nouveau plan** (`accounts:member`), en bas à gauche, ouvre la boîte de dialogue de création.
 
 Chaque ligne a un menu **⋯** qui ne propose que les actions applicables à ce plan. Le libellé suit l'état actuel.
 
-- **Définir comme plan par défaut du pays** / **Ne plus utiliser comme plan par défaut du pays** (`accounts:manager`) : pour les plans d'un seul pays.
-- **Définir par défaut pour les autres pays** / **Ne plus utiliser par défaut pour les autres pays** (`accounts:manager`) : pour les plans de tous les pays. En le définissant par défaut, vous l'attribuez aussi aux sociétés qui n'ont pas de plan comptable.
-- **Définir comme plan de consolidation** / **Ne plus utiliser comme plan de consolidation** (`accounts:manager`) : pour n'importe quel plan. Voir [Modifier le plan de consolidation](#modifier-le-plan-de-consolidation).
+- **Définir comme plan par défaut du pays** / **Ne plus utiliser comme plan par défaut du pays** (`accounts:member`) : pour les plans d'un seul pays.
+- **Définir par défaut pour les autres pays** / **Ne plus utiliser par défaut pour les autres pays** (`accounts:member`) : pour les plans de tous les pays. En le définissant par défaut, vous l'attribuez aussi aux sociétés qui n'ont pas de plan comptable.
+- **Définir comme plan de consolidation** / **Ne plus utiliser comme plan de consolidation** (`accounts:member`) : pour n'importe quel plan. Voir [Modifier le plan de consolidation](#modifier-le-plan-de-consolidation).
 - **Supprimer** (`accounts:admin`) : Supprime le plan avec ses comptes. Si le plan contient des comptes, une confirmation indique combien sont supprimés. S'il s'agit du plan de consolidation, la confirmation précise que le reporting de groupe n'aura plus de plan de référence. La suppression est refusée tant que des sociétés utilisent le plan ou que des lignes OPEX/CAPEX utilisent ses comptes. La fenêtre en indique la raison avant toute confirmation.
 
 Les rôles changent dès que vous choisissez une action. Le tableau se met à jour immédiatement.

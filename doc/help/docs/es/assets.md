@@ -260,7 +260,7 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 
 **Sitios web relevantes**: Añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
+**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `infrastructure:member`.
 
 ---
 

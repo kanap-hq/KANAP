@@ -42,7 +42,7 @@ The Departments grid gives you an overview of all departments with their headcou
 **Deep-linking**: Every cell in the grid is a clickable link. Name and Company open the Overview tab; Headcount opens the Details tab. When you navigate to a workspace and then return, your sort order, search query, and filters are preserved.
 
 **Actions**:
-- **New**: Create a new department (requires `departments:manager`)
+- **New**: Create a new department (requires `departments:member`)
 - **Import CSV**: Bulk import departments (requires `departments:admin`)
 - **Export CSV**: Export to CSV (requires `departments:admin`)
 - **Delete Selected**: Remove selected departments (requires `departments:admin`). A department used in the allocations of budget lines cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the departments kept, with the reason

@@ -24,11 +24,11 @@ KANAP ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt di
 |---------|----------------|
 | **Dashboard** | Ihr persönlicher Hub. Klicken Sie auf das KANAP-Logo oder navigieren Sie zu `/` |
 | **Portfolio** | Aufgaben, Anfragen, Projekte, Planung, Berichte, Mitwirkende |
-| **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Verbindungen, Verbindungskarte, Standorte |
+| **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Technologien, Verbindungen, Verbindungskarte, Standorte, Netbox, Vorfälle, Supportende, Schwachstellen |
 | **Wissensdatenbank** | Dokumente und Vorlagen mit Review-Workflows |
 | **Budgetverwaltung** | OPEX, CAPEX, Verträge, Berichte, Administration (Währungen, Budgetspalten, Vorgänge zum Einfrieren und Kopieren) |
 | **Stammdaten** | Unternehmen, Abteilungen, Kostenstellen, Lieferanten, Kontakte, Kontenpläne, Arbeitstagekalender, Analysedimensionen, Geschäftsprozesse |
-| **Administration** | Benutzer, Rollen, Audit-Protokoll, Abrechnung, Authentifizierung, Branding (nur Admin) |
+| **Administration** | Benutzer, Rollen, Audit-Protokoll, Abrechnung, Authentifizierung, Branding, Integrationen (nur Admin) |
 
 Sie brauchen nicht auf alles Zugriff. Ihre Rolle bestimmt, welche Bereiche und Aktionen für Sie verfügbar sind. Wenn etwas in Ihrem Menü fehlt, fragen Sie Ihren Administrator.
 
@@ -277,6 +277,9 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 |--------------------------|------------------|
 | Anwendungen, Servern, Infrastruktur | [IT Ops Schnelleinstieg](apps-and-assets.md) |
 | Anfragen, Projekten, Portfolio-Planung | [Portfolio-Schnelleinstieg](index.md) |
+| Softwareversionen, Supportdaten, Sicherheitshinweisen | Seiten [Technologien](../technologies.md), [Supportende](../end-of-support.md) und [Schwachstellen](../vulnerabilities.md) |
+| Störungen und ihren Auswirkungen | Seite [Vorfälle](../incidents.md) |
+| Netbox-Inventar, Servicedesk und anderen angebundenen Werkzeugen | Seiten [Netbox-Synchronisierung](../netbox.md) und [Integrationen](../integrations.md) |
 
 ---
 

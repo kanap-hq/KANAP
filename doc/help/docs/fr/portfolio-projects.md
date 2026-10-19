@@ -14,9 +14,9 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 ## Autorisations
 
 - `portfolio_projects:reader` : ouvrir la liste et consulter les espaces de travail des projets
-- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé et maintenir les saisies de temps de gestion de projet
-- `portfolio_projects:manager` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
-- `portfolio_projects:admin` : inclut les capacités du manager et peut également importer/exporter en CSV et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
+- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé et saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet)
+- `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
+- `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer/exporter en CSV, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
 - La consultation des connaissances nécessite également un accès Connaissances
 - Créer ou lier des connaissances autonomes nécessite également un rôle de création de connaissances
 
@@ -65,7 +65,7 @@ La liste des projets est conçue pour répondre rapidement à deux questions : �
 
 **Administration en masse**
 
-- **Nouveau projet** est disponible pour les managers
+- **Nouveau projet** est disponible avec `portfolio_projects:member`
 - **Import CSV** et **Export CSV** sont disponibles pour les administrateurs
 
 Ouvrir un projet depuis la liste préserve le contexte de liste actuel. L'espace de travail du projet utilise le même contexte pour la navigation **Précédent** et **Suivant**, vous pouvez donc parcourir un ensemble filtré sans perdre votre place.
@@ -187,7 +187,7 @@ Sous Objectif, l'onglet Synthèse inclut le flux d'activité du projet :
 
 **Historique** liste les changements enregistrés (changements de statut, modifications de champs, changements d'équipe et de relations, modifications du document Objectif) et se termine par l'entrée de création : qui a créé le projet et quand.
 
-Les managers peuvent ajouter et modifier les commentaires de projet. Les commentaires peuvent également être enregistrés comme décisions formelles, avec un résultat et un changement de statut optionnel. Utilisez cela lorsque la discussion elle-même change le cours du projet.
+Les utilisateurs disposant de `portfolio_projects:member` peuvent ajouter et modifier les commentaires de projet. Les commentaires peuvent également être enregistrés comme décisions formelles, avec un résultat et un changement de statut optionnel. Utilisez cela lorsque la discussion elle-même change le cours du projet.
 
 Des images peuvent être incluses dans les commentaires d'activité lorsque l'évidence visuelle est utile : esquisses d'architecture, captures d'écran ou preuves de revue.
 
@@ -297,7 +297,7 @@ L'onglet **Évaluation** garde la livraison liée à la priorisation.
 
 - pour les projets d'origine demande, la demande source reste visible comme référence d'évaluation
 - pour les projets fast-track et legacy, l'évaluation est maintenue directement sur le projet
-- les managers peuvent revoir ou mettre à jour l'évaluation, y compris les remplacements de priorité lorsque les règles du portefeuille le permettent
+- les utilisateurs disposant de `portfolio_projects:member` peuvent revoir ou mettre à jour l'évaluation ; l'enregistrement d'un remplacement de priorité nécessite `portfolio_projects:admin`
 
 Le score de priorité résultant compte au-delà de cet onglet :
 

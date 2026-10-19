@@ -276,7 +276,7 @@ Sobald Assets dokumentiert sind, können Sie **Verbindungen** (Server-zu-Server 
 
 ### Schnittstellen & Schnittstellenkarte
 
-Gehen Sie einen Schritt weiter: Dokumentieren Sie **Schnittstellen** zwischen Anwendungen, um Datenflüsse, Integrationspunkte und Geschäftskontext zu erfassen. Jede Schnittstelle hat fünf Tabs für gründliche Dokumentation: Übersicht, Fluss, Umgebungen, Datenmapping und Beziehungen.
+Gehen Sie einen Schritt weiter: Dokumentieren Sie **Schnittstellen** zwischen Anwendungen, um Datenflüsse, Integrationspunkte und Geschäftskontext zu erfassen. Jede Schnittstelle hat fünf Tabs für gründliche Dokumentation: Übersicht, Fluss, Umgebungen, Datenzuordnung und Beziehungen.
 
 Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollständigen Anwendungsfluss zu visualisieren. In der Standard-Geschäftsansicht sehen Sie saubere Quelle-zu-Ziel-Beziehungen. Wechseln Sie zur technischen Ansicht, um Middleware-Plattformen als rautenförmige Knoten anzuzeigen, die den tatsächlichen Datenpfad zeigen. Der Tiefenfilter zählt nur primäre Anwendungsknoten: Middleware ist transparent, sodass die Auswahl einer App mit Tiefe 2 Ihnen zwei echte Sprünge zeigt, unabhängig davon, wie viele Middleware-Plattformen dazwischenliegen.
 

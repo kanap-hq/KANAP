@@ -14,9 +14,9 @@ Pour créer une interface, vous avez besoin de :
 - **Application source** et **Application cible**
 - **Catégorie de données** : Le type de données transférées
 
-Une fois ces éléments définis, vous pouvez enregistrer l'interface ; le reste de l'espace de travail (Technique, Environnements, Mappage, Relations) devient alors disponible.
+Une fois ces éléments définis, vous pouvez enregistrer l'interface ; le reste de l'espace de travail (Flux, Environnements, Mappage des données, Relations) devient alors disponible.
 
-**Conseil** : Définissez tôt le **Type de route d'intégration** (Direct ou Via middleware). Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Technique et la matrice Environnements.
+**Conseil** : Définissez tôt le **Type de route d'intégration** (Direct ou Via middleware). Il contrôle quels legs sont générés automatiquement et ce qui apparaît dans l'onglet Flux et la matrice Environnements.
 
 ---
 
@@ -54,8 +54,8 @@ La grille Interfaces affiche votre registre d'intégration en un coup d'œil.
 
 **Actions** :
 
-- **Ajouter une interface** : Créer une nouvelle interface (nécessite `applications:manager`)
-- **Dupliquer l'interface** : Créer une copie d'une interface sélectionnée (nécessite `applications:manager`). Sélectionnez exactement une ligne pour activer cette action. Une boîte de dialogue vous permet de choisir si vous voulez copier les liaisons d'environnement. Voir [Copier des interfaces](#copier-des-interfaces) ci-dessous.
+- **Ajouter une interface** : Créer une nouvelle interface (nécessite `applications:member`)
+- **Dupliquer l'interface** : Créer une copie d'une interface sélectionnée (nécessite `applications:member`). Sélectionnez exactement une ligne pour activer cette action. Une boîte de dialogue vous permet de choisir si vous voulez copier les liaisons d'environnement. Voir [Copier des interfaces](#copier-des-interfaces) ci-dessous.
 - **Supprimer la sélection** : Supprimer les interfaces sélectionnées (nécessite `applications:admin`). Avant la confirmation, la fenêtre liste comme conservées les interfaces qui ont des liaisons, avec leur nombre de liaisons. Cochez **Supprimer également les liaisons associées** pour les supprimer avec leurs liaisons ; leurs connexions sont conservées. Le message nomme ensuite les interfaces supprimées et celles conservées, avec la raison.
 
 ---
@@ -93,17 +93,17 @@ Les modifications de champs dans le panneau latéral sont enregistrées automati
 
 ---
 
-### Spécification
+### Vue d'ensemble
 
-L'onglet Spécification est un document texte enrichi managé où vous décrivez l'interface de bout en bout : contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
+Une fois l'interface enregistrée, l'onglet Vue d'ensemble contient la **Spécification**, un document texte enrichi managé où vous décrivez l'interface de bout en bout : contexte métier, périmètre, contrat, exemples. C'est le document narratif principal de l'interface.
 
 **Conseil** : Utilisez cet onglet comme votre source unique de vérité pour la prose. Les règles de mappage et les legs techniques vivent dans les onglets dédiés ci-dessous ; gardez ce document focalisé sur l'intention, le périmètre et le résumé lisible.
 
 ---
 
-### Technique
+### Flux
 
-L'onglet Technique définit les **legs** partagés qui composent l'interface. Les legs sont des modèles : ils décrivent ce que fait chaque étape en général (la même définition s'applique dans tous les environnements).
+L'onglet Flux définit les **legs** partagés qui composent l'interface. Les legs sont des modèles : ils décrivent ce que fait chaque étape en général (la même définition s'applique dans tous les environnements).
 
 Pour chaque leg, vous pouvez modifier :
 
@@ -144,9 +144,9 @@ L'onglet Environnements gère les liaisons par environnement qui transforment le
 
 ---
 
-### Mappage
+### Mappage des données
 
-L'onglet Mappage est l'endroit où vous décrivez comment les champs source deviennent des champs cibles. Il est organisé autour de deux concepts :
+L'onglet Mappage des données est l'endroit où vous décrivez comment les champs source deviennent des champs cibles. Il est organisé autour de deux concepts :
 
 - **Les règles de mappage** décrivent une seule décision de mappage : un ou plusieurs champs source, un ou plusieurs champs cibles, une opération (copie directe, transformation, lookup, division, fusion, filtre, valeur par défaut ou opération personnalisée), et des notes optionnelles de condition / métier / middleware.
 - **Les groupes de mappage** sont des dossiers qui organisent les règles en sections thématiques (par exemple « En-tête », « Bloc client », « Lignes d'articles », « Pied de page »). Les règles peuvent être assignées à un groupe ou laissées non groupées. Deux groupes de base, **En-tête** et **Article**, sont toujours présents ; vous pouvez en ajouter d'autres.
@@ -199,7 +199,7 @@ L'onglet Relations rassemble les liens de cette interface vers d'autres élémen
 
 - **Dépendances d'interface** : Interfaces amont et aval. Utilisez-les pour documenter les ordres tels que « Sync Commandes doit s'exécuter avant Sync Factures ».
 - **URL externes** : Liens vers la documentation dans Confluence, SharePoint, etc. Ajoutez une description et une URL ; l'icône d'ouverture dans un nouvel onglet vous emmène directement au lien.
-- **Pièces jointes** : Glissez-déposez des fichiers dans la zone de téléversement ou utilisez **Sélectionner des fichiers** pour attacher des documents de spécification directement à l'interface. Cliquez sur une pastille de pièce jointe pour la télécharger ; cliquez sur l'icône poubelle pour la supprimer (nécessite des droits manager).
+- **Pièces jointes** : Glissez-déposez des fichiers dans la zone de téléversement ou utilisez **Sélectionner des fichiers** pour attacher des documents de spécification directement à l'interface. Cliquez sur une pastille de pièce jointe pour la télécharger ; cliquez sur l'icône poubelle pour la supprimer (nécessite `applications:member`).
 
 Une section Connaissances est réservée pour la future liaison croisée des connaissances ; elle affiche actuellement un placeholder informatif.
 
@@ -258,7 +258,7 @@ Utilisez cela lors de la mise à niveau d'une application vers une nouvelle vers
 
 ## Conseils
 
-- **Documentez d'abord le « pourquoi »** : Utilisez l'onglet Spécification et le champ **Objectif métier** du panneau latéral pour capturer l'intention avant de plonger dans les legs et les liaisons.
+- **Documentez d'abord le « pourquoi »** : Utilisez la **Spécification** de l'onglet Vue d'ensemble et le champ **Objectif métier** du panneau latéral pour capturer l'intention avant de plonger dans les legs et les liaisons.
 - **Utilisez le panneau latéral depuis n'importe quel onglet** : Responsables, criticité, type de route, indicateur PII et le reste persistent immédiatement, vous pouvez donc les mettre à jour pendant que vous examinez les règles ou les liaisons.
 - **Une interface, plusieurs environnements** : Ne créez pas d'interfaces séparées pour chaque environnement : utilisez une interface et configurez chaque environnement dans l'onglet Environnements.
 - **Groupez vos règles de mappage** : Pour les interfaces ayant plus de quelques champs, organisez les règles en groupes de mappage (En-tête, Lignes d'articles, Pied de page, etc.). Cela rend la revue et l'analyse d'impact bien plus faciles.
