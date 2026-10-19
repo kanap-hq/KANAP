@@ -152,11 +152,19 @@ const NOTICE_PRIORITY: Record<NetboxNoticeCode, 1 | 2 | 3> = {
   fetch_incomplete: 1,
 };
 
+/**
+ * Shown on the preview row only, never kept on the record: another cluster
+ * holding the machine is often deliberate, and would otherwise stay on the
+ * records list at every run.
+ */
+const PREVIEW_ONLY_NOTICES: ReadonlySet<NetboxNoticeCode> = new Set<NetboxNoticeCode>(['cluster_other_present']);
+
 /** The one notice a record keeps out of everything an object produced. */
 export function primaryNotice(notices: NetboxNotice[]): NetboxNotice | null {
   let best: NetboxNotice | null = null;
   let bestRank = 0;
   for (const notice of notices) {
+    if (PREVIEW_ONLY_NOTICES.has(notice.code)) continue;
     const rank = NOTICE_PRIORITY[notice.code] ?? 1;
     if (rank > bestRank) {
       best = notice;

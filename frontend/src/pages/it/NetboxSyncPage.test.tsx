@@ -528,6 +528,13 @@ describe('NetboxSyncPage', () => {
                 text: 'other fallback',
               }],
             },
+            {
+              external_type: 'vm', external_id: '54', external_name: 'new-app-01',
+              external_url: 'https://netbox.internal/virtualization/virtual-machines/54/',
+              action: 'create', asset: null, matched_by: null, candidates: [], skip_reason: null,
+              diffs: [{ field: 'cluster', before: null, after: 'GOU-VSPHERE-CL01' }],
+              warnings: [],
+            },
           ],
           notices: [{ code: 'cluster_not_mapped', params: { value: 'Parma vSphere' }, text: 'unmapped fallback' }],
         });
@@ -537,6 +544,9 @@ describe('NetboxSyncPage', () => {
     await openPreview();
 
     expect(screen.getByText('Cluster: GOU-VSPHERE-CL01 → PAR-VSPHERE-CL01')).toBeInTheDocument();
+    // A machine the run creates shows the cluster it joins.
+    expect(screen.getByText('new-app-01')).toBeInTheDocument();
+    expect(screen.getByText(/^Cluster: .+ → GOU-VSPHERE-CL01$/)).toBeInTheDocument();
     expect(screen.getByText(
       'The Netbox cluster "Parma vSphere" is not matched with a KANAP cluster, so its virtual machines were not attached to one.',
     )).toBeInTheDocument();

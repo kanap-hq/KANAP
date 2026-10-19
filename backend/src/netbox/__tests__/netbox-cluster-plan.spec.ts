@@ -140,10 +140,11 @@ function plan(objects: ReturnType<typeof vm>[], assets: ExistingAsset[], cluster
   assert.equal(both.diff, null);
   assert.equal(both.warnings[0]?.code, 'cluster_other_present');
 
-  // A machine this run creates: the relation follows the creation, no diff.
+  // A machine this run creates: the relation follows the creation, and the
+  // preview shows the cluster it joins.
   const created = planClusterAttachment(machine, null, context({ 7: PARIS }));
   assert.deepEqual(created.target, { assetId: PARIS, netboxName: 'Paris vSphere' });
-  assert.equal(created.diff, null);
+  assert.deepEqual(created.diff, { field: 'cluster', before: null, after: 'PAR-VSPHERE-CL01' });
 
   // Not matched: nothing, and a notice for the cluster.
   const unmatched = planClusterAttachment(machine, 'vm-1', context({}));
@@ -156,6 +157,12 @@ function plan(objects: ReturnType<typeof vm>[], assets: ExistingAsset[], cluster
     const invalid = planClusterAttachment(machine, 'vm-1', context({ 7: assetId }));
     assert.equal(invalid.target, null, assetId);
     assert.equal(invalid.clusterNotice?.code, 'cluster_match_invalid', assetId);
+  }
+  // The status is compared without case, as on save.
+  {
+    const shouting = context({ 7: OLD });
+    shouting.targets.set(OLD, { id: OLD, name: 'PAR-OLD-CL', is_cluster: true, status: 'Retired' });
+    assert.equal(planClusterAttachment(machine, 'vm-1', shouting).clusterNotice?.code, 'cluster_match_invalid');
   }
 
   // No cluster in Netbox, a device, or no context at all: nothing, and silence.
@@ -201,6 +208,7 @@ function plan(objects: ReturnType<typeof vm>[], assets: ExistingAsset[], cluster
   assert.equal(byName('pma-app-01').action, 'unchanged');
   // A new machine is created, then attached.
   assert.equal(byName('new-app-01').action, 'create');
+  assert.deepEqual(byName('new-app-01').diffs, [{ field: 'cluster', before: null, after: 'PAR-VSPHERE-CL01' }]);
   assert.deepEqual(result.writes.get('vm:55')?.cluster, { assetId: PARIS, netboxName: 'Paris vSphere' });
   // One notice per Netbox cluster, not one per machine.
   assert.deepEqual(

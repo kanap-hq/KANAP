@@ -827,7 +827,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
                 title={t('pages.netbox.preview.sections.created', { n: sectionCount(created.length, preview.counts.create) })}
                 hint={t('pages.netbox.preview.hints.created')}
                 rows={created}
-                showDiffs={false}
+                showDiffs
                 showNotices={false}
                 renderRow={renderRow}
               />

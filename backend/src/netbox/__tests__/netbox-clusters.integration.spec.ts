@@ -230,6 +230,7 @@ async function main() {
       assert.equal(byName('pma-app-01'), undefined);
       assert.deepEqual(shown.notices.map((notice) => [notice.code, notice.params.value]), [['cluster_not_mapped', 'Parma vSphere']]);
       assert.equal(byName('new-app-01')?.action, 'create');
+      assert.deepEqual(byName('new-app-01')?.diffs, [{ field: 'cluster', before: null, after: 'PAR-VSPHERE-CL01' }]);
       // A preview writes nothing.
       assert.deepEqual(await relations(a.tenantId), ['PAR-VSPHERE-CL01 > gou-app-01', 'PAR-VSPHERE-CL01 > par-app-02']);
     }
@@ -258,6 +259,14 @@ async function main() {
       const gouda = audit.find((entry: any) => entry.record_id === a.clusters.gouda);
       assert.deepEqual(gouda.before_json, { relations: [] });
       assert.deepEqual(gouda.after_json, { relations: [{ related_asset_id: a.vms['gou-app-01'], relation_type: 'contains' }] });
+
+      // The other cluster is pointed out in the preview only: the record keeps no notice for it.
+      const kept = await withTenantExecution(dataSource, a.tenantId, (manager) => manager.query(
+        `SELECT message_code FROM asset_external_links
+         WHERE tenant_id = $1 AND source = 'netbox' AND external_name = 'gou-app-01'`,
+        [a.tenantId],
+      ));
+      assert.deepEqual(kept, [{ message_code: null }]);
 
       const again = await preview(sync, a.tenantId);
       assert.equal(again.counts.update, 0);

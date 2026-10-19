@@ -185,8 +185,8 @@ const NO_ATTACHMENT: NetboxClusterAttachment = { target: null, diff: null, warni
  * match, or matched with an asset that is deleted, retired or no longer a
  * cluster, attaches nothing and says so once for the whole cluster.
  *
- * `assetId` is null for an asset this run creates: there is no diff to show,
- * and the relation is added right after the creation.
+ * `assetId` is null for an asset this run creates: the diff shows the cluster
+ * it joins, and the relation is added right after the creation.
  */
 export function planClusterAttachment(
   object: NetboxObject,
@@ -200,7 +200,7 @@ export function planClusterAttachment(
     return { ...NO_ATTACHMENT, clusterNotice: netboxNotice('cluster_not_mapped', { value: netboxName }) };
   }
   const target = context.targets.get(targetId);
-  if (!target || target.is_cluster !== true || target.status === 'retired') {
+  if (!target || target.is_cluster !== true || String(target.status ?? '').toLowerCase() === 'retired') {
     return { ...NO_ATTACHMENT, clusterNotice: netboxNotice('cluster_match_invalid', { value: netboxName }) };
   }
   // The machine is the cluster itself: nothing to attach.
@@ -219,13 +219,11 @@ export function planClusterAttachment(
   }
   return {
     target: { assetId: target.id, netboxName },
-    diff: assetId
-      ? {
-        field: 'cluster',
-        before: current.length > 0 ? current.map((cluster) => cluster.name).join(', ') : null,
-        after: target.name,
-      }
-      : null,
+    diff: {
+      field: 'cluster',
+      before: current.length > 0 ? current.map((cluster) => cluster.name).join(', ') : null,
+      after: target.name,
+    },
     warnings,
     clusterNotice: null,
   };
@@ -754,7 +752,8 @@ export function planNetboxSync(input: {
     if (resolution?.kind === 'conflict') write.subLocation = null;
 
     if (!write.assetId) {
-      rows.push({ ...base, action: 'create', warnings });
+      // A new machine shows the cluster it joins, its only diff.
+      rows.push({ ...base, action: 'create', diffs: attachment.diff ? [attachment.diff] : base.diffs, warnings });
       counts.create += 1;
       continue;
     }

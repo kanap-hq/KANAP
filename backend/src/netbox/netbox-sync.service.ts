@@ -1456,7 +1456,7 @@ export class NetboxSyncService {
       [tenantId, cluster.assetId],
     );
     const target = rows[0];
-    if (!target || target.is_cluster !== true || target.status === 'retired') {
+    if (!target || target.is_cluster !== true || String(target.status ?? '').toLowerCase() === 'retired') {
       warnings.push(netboxNotice('cluster_match_invalid', { value: cluster.netboxName }));
       return false;
     }
