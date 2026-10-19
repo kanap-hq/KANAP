@@ -1,102 +1,131 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { AuditService } from '../../audit/audit.service';
+import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
-import { ItOpsSettingsService, type AdminZoneOption, type DomainTrustDirection } from '../../it-ops-settings/it-ops-settings.service';
-import { technologyReference } from '../technology-rows';
+import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
+import { ItOpsSettingsService, type AdminZoneOption, type DomainOption, type DomainTrustDirection } from '../../it-ops-settings/it-ops-settings.service';
+import { gridTextClause, gridTextModel } from '../technologies.service';
+import { technologyReference, UUID_RE } from '../technology-rows';
 import { inServiceSql } from '../technology-reach.service';
 
 /**
- * The administration view (lot A1d): the view 4 of the ANSSI mapping guide ("vue de
- * l'administration"). A zone sits on what is administered. Per zone of the catalog, in catalog
- * order (the first zone is the most sensitive): its attributes, the assets of the zone, the
- * applications hosted on those assets, and the directory services placed in the zone. Then the
- * domains, unchanged. Then the control points: assets without a zone, domain controllers and
- * directory-carrying assets outside the most sensitive zone, dependencies that raise trust, and
- * applications hosted in the most sensitive zone.
+ * The administration view (lot A1e): view 4 of the ANSSI mapping guide. A zone sits on what is
+ * administered. The first zone of the catalog that is not deprecated is the most sensitive, and a
+ * lower index among those zones is more sensitive. The five controls keep the rules reviewed in
+ * lot A1d. Each one answers a count here, and the asset list names the assets it concerns.
  *
  * What runs an asset must sit in a zone at least as sensitive. A contained asset
  * (`asset_relations` of type `contains`: the asset is the content, the holder is the container)
  * raises a finding when its zone is more sensitive than its container. A cluster member raises a
  * finding when its zone is less sensitive than its cluster: the member carries the cluster. A
- * pair is left out when either zone is missing, deprecated or outside the catalog.
+ * pair is left out when either zone is missing, deprecated or outside the catalog, and a self-link
+ * is left out. `trust_raised` counts the pairs. The asset list shows the content or the member
+ * once, with every holder it depends on.
  *
- * The most sensitive zone is the first non-deprecated zone of the catalog. Without one, the
- * controls that depend on it are absent. A deprecated zone is shown only when it still carries
- * an asset or a directory service. A zone code the catalog no longer has is shown when an asset
- * or a directory service still carries it. Sensitivity ranks only the zones of the catalog that
- * are not deprecated: a lower index is more sensitive.
- *
- * A domain controller, in the domains section, is an asset of the domain (`assets.domain`), not
- * retired, assigned with the server role `domain-controller` on an instance in service
- * (`inServiceSql`), or carrying an installed technology of the `directory` family that is not
- * retired. The control point uses the role only. Retired assets and retired technologies are left
- * out. Every statement carries `tenant_id` and reads the tenant in one pass.
+ * A domain controller, for the domains section, is an asset of the domain (`assets.domain`), not
+ * retired, assigned the server role `domain-controller` on an instance in service, or carrying an
+ * installed technology of the `directory` family that is not retired. The control point uses the
+ * role only. `applications_on_most_sensitive` counts one row per application and hosting asset.
+ * Retired assets and retired technologies are left out of every control. A deprecated or unknown
+ * zone is shown only while an asset or a directory service still carries it. Every statement
+ * carries `tenant_id` and reads the tenant in batches.
  */
 
 export const DIRECTORY_FAMILY = 'directory';
 export const DOMAIN_CONTROLLER_ROLE = 'domain-controller';
 
+/** At most this many assets in one assignment. The same cap as the vulnerabilities bulk change. */
+export const BULK_MAX_ROWS = 5000;
+/** Rows written by one statement of a bulk assignment. */
+const BULK_BATCH = 500;
+/** Direct links and hosted applications returned on one asset row. `total` keeps the full count. */
+export const LINK_CAP = 10;
+/** At most this many assets in one exported file. */
+export const EXPORT_MAX_ROWS = 10000;
+
+export const CONTROL_KEYS = [
+  'assets_without_zone',
+  'domain_controllers_outside',
+  'directory_assets_outside',
+  'trust_raised',
+  'applications_on_most_sensitive',
+] as const;
+export type ControlKey = (typeof CONTROL_KEYS)[number];
+
+/** English titles of the controls, in the Zone column of a control is no longer used: the export names them. */
+export const CONTROL_TITLES: Record<ControlKey, string> = {
+  assets_without_zone: 'Assets without an administration zone',
+  domain_controllers_outside: 'Domain controllers outside the most sensitive zone',
+  directory_assets_outside: 'Assets carrying a directory service outside the most sensitive zone',
+  trust_raised: 'What runs an asset is in a less sensitive zone',
+  applications_on_most_sensitive: 'Applications hosted in the most sensitive zone',
+};
+
+/** English relation names in the export. The screen uses the same words, translated. */
+const TRUST_RELATION_LABEL = { contains: 'Runs on', cluster: 'Member of cluster' } as const;
+
+const SORTS: Record<string, string> = {
+  name: 'lower(a.name)',
+  reference: 'a.asset_reference',
+  kind: 'lower(a.kind)',
+  zone: "NULLIF(btrim(a.admin_zone), '')",
+};
+
+const zoneOf = (alias: string) => `NULLIF(btrim(${alias}.admin_zone), '')`;
+
 export type AdministrationOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
-export type AdministrationAsset = { id: string; name: string; reference: string | null; kind: string };
-
-export type AdministrationDirectory = { id: string; reference: string | null; name: string };
+export type AdministrationAssetQuery = {
+  q?: unknown;
+  limit?: unknown;
+  offset?: unknown;
+  /** The list grid: page from 1, `field:DIR` sort, and the JSON filter model. */
+  page?: unknown;
+  sort?: unknown;
+  filters?: unknown;
+};
 
 export type AdministrationZone = {
   code: string;
   label: string | null;
-  admin_group: string | null;
   description: string | null;
+  admin_group: string | null;
   deprecated: boolean;
   /** A zone code an asset or a directory service carries that the catalog no longer has. */
   unknown: boolean;
-  assets: AdministrationAsset[];
   asset_counts: Array<{ kind: string; count: number }>;
   /** Distinct applications in service hosted on the assets of the zone. */
   hosted_application_count: number;
-  directory_services: AdministrationDirectory[];
+  directory_services: Array<{ id: string; reference: string | null; name: string }>;
 };
 
-/** The record a control point asks to correct. The reference is the business one. */
-export type ControlAsset = AdministrationAsset;
-
-export type TrustRaised = {
-  asset: ControlAsset;
-  asset_zone: string;
-  holder: ControlAsset;
-  holder_zone: string;
-  holder_kind: 'contains' | 'cluster';
+export type AdministrationSummary = {
+  /** The first zone of the catalog that is not deprecated, or null when the catalog has none. */
+  most_sensitive: string | null;
+  zones: AdministrationZone[];
+  /** Assets that are not retired and have no zone. */
+  without_zone: { asset_count: number };
+  /** One entry per control. `count` is null when the control does not apply. */
+  controls: Array<{ key: ControlKey; count: number | null }>;
 };
 
-export type HostedApplication = {
+export type AdministrationAssetRow = {
   id: string;
-  name: string;
   reference: string | null;
-  asset: ControlAsset;
+  name: string;
+  kind: string;
+  /** The zone code, or null when the asset has none. */
+  zone: string | null;
+  technologies: { total: number; items: Array<{ reference: string | null; name: string; version: string | null }> };
+  applications: { total: number; items: Array<{ reference: string | null; name: string }> };
+  /** The controls that concern this asset, in `CONTROL_KEYS` order. */
+  findings: ControlKey[];
+  /** Holders that raise a trust finding: the asset this one depends on. */
+  depends_on: Array<{ reference: string | null; name: string; zone: string | null; relation: 'contains' | 'cluster' }>;
+  /** References of the applications that place the asset in `applications_on_most_sensitive`. */
+  application_references: string[];
 };
-
-export type AdministrationControls = {
-  /** The first non-deprecated zone of the catalog, or null when the catalog has none. */
-  most_sensitive_zone: string | null;
-  assets_without_zone: ControlAsset[];
-  /** Null when there is no most sensitive zone: the check does not run. */
-  domain_controllers_outside: ControlAsset[] | null;
-  directory_assets_outside: ControlAsset[] | null;
-  trust_raised: TrustRaised[] | null;
-  applications_on_most_sensitive: HostedApplication[] | null;
-};
-
-/** English titles of the control points, also the Zone column of a `control` row in the export. */
-export const CONTROL_TITLES = {
-  assetsWithoutZone: 'Assets without an administration zone',
-  domainControllers: 'Domain controllers outside the most sensitive zone',
-  directoryAssets: 'Assets carrying a directory service outside the most sensitive zone',
-  trustRaised: 'What runs an asset is in a less sensitive zone',
-  applications: 'Applications hosted in the most sensitive zone',
-} as const;
-
-/** English relation names in the export. The screen uses the same words, translated. */
-const TRUST_RELATION_LABEL = { contains: 'Runs on', cluster: 'Member of cluster' } as const;
 
 export type AdministrationDomain = {
   code: string;
@@ -115,222 +144,432 @@ export type AdministrationDomain = {
   deprecated: boolean;
 };
 
-export type AdministrationView = {
-  zones: AdministrationZone[];
-  domains: AdministrationDomain[];
-  controls: AdministrationControls;
+export type AdministrationDirectories = {
+  services: Array<{ id: string; reference: string | null; name: string; zone: string | null; servers: number }>;
+  /** Domains grouped by forest. `forest` null gathers the domains that name none. */
+  forests: Array<{ forest: string | null; domains: AdministrationDomain[] }>;
+};
+
+type RankCtx = {
+  catalog: AdminZoneOption[];
+  known: Set<string>;
+  /** Non-deprecated catalog codes, in catalog order. A lower index is more sensitive. */
+  ranks: string[];
+  most: string | null;
+  domains: DomainOption[];
+  kinds: Map<string, string>;
+};
+
+type Markers = { ranks: string; most: string; role: string; family: string };
+
+type DirectoryRow = { id: string; item_number: number; name: string; zone: string | null; servers: number };
+type AssetPageRow = { id: string; reference: string | null; name: string; kind: string; zone: string | null };
+type TechLink = { asset_id: string; item_number: number; name: string; version: string | null };
+type AppLink = { asset_id: string; application_id: string; name: string; reference: string | null };
+type DependLink = { asset_id: string; reference: string | null; name: string; zone: string | null; relation: 'contains' | 'cluster' };
+type LockRow = {
+  id: string; name: string; asset_reference: string | null; kind: string; status: string;
+  admin_zone: string | null; updated_at: Date;
 };
 
 const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, undefined, { sensitivity: 'base' });
 
-type AssetRow = { id: string; name: string; kind: string; asset_reference: string | null; admin_zone: string | null };
-type HostingRow = { id: string; name: string; sequential_id: string | null; asset_id: string };
-type DirectoryRow = { id: string; item_number: number; name: string; admin_zone: string | null };
-type PairRow = {
-  holder_id: string; holder_name: string; holder_kind: string; holder_reference: string | null; holder_zone: string | null;
-  asset_id: string; asset_name: string; asset_kind: string; asset_reference: string | null; asset_zone: string | null;
-};
+function readModel(raw: unknown): Record<string, any> {
+  if (raw == null || raw === '') return {};
+  try {
+    const model = typeof raw === 'string' ? JSON.parse(raw) : raw;
+    return model && typeof model === 'object' && !Array.isArray(model) ? model as Record<string, any> : {};
+  } catch {
+    return {};
+  }
+}
 
-const toAsset = (row: { id: string; name: string; kind: string; asset_reference: string | null }): AdministrationAsset => ({
-  id: row.id, name: row.name, reference: row.asset_reference, kind: row.kind,
-});
+function setFilter(model: Record<string, any>, column: string): { values: string[]; blank: boolean } | null {
+  const entry = model[column];
+  if (!entry || entry.filterType !== 'set' || !Array.isArray(entry.values)) return null;
+  return {
+    values: entry.values.filter((value: unknown): value is string => typeof value === 'string' && value.trim() !== '').map((value: string) => value.trim()),
+    blank: entry.values.some((value: unknown) => value === null),
+  };
+}
+
+function whole(value: unknown, fallback: number, max: number): number {
+  const n = Math.floor(Number(value));
+  return Number.isFinite(n) ? Math.min(Math.max(n, 0), max) : fallback;
+}
+
+/** Domain controllers outside the most sensitive zone: the role on an instance in service, nothing else. */
+function controllersSql(role: string, most: string, ids?: string): string {
+  const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
+  return `SELECT DISTINCT ax.id AS asset_id
+    FROM assets ax
+    JOIN app_asset_assignments aa ON aa.tenant_id = $1 AND aa.asset_id = ax.id AND aa.role = ${role}
+    JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
+    JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+    WHERE ax.tenant_id = $1 AND ax.status <> 'retired'
+      AND ${zoneOf('ax')} IS DISTINCT FROM ${most}
+      ${only}`;
+}
+
+/** Assets with a direct link to a directory technology that is not retired, outside the most sensitive zone. */
+function directorySql(family: string, most: string, ids?: string): string {
+  const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
+  return `SELECT DISTINCT ax.id AS asset_id
+    FROM assets ax
+    JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = ax.id
+    JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
+      AND t.family = ${family} AND t.lifecycle <> 'retired'
+    WHERE ax.tenant_id = $1 AND ax.status <> 'retired'
+      AND ${zoneOf('ax')} IS DISTINCT FROM ${most}
+      ${only}`;
+}
+
+/**
+ * Pairs that raise trust. `asset_id` is the content or the cluster member. A lower
+ * `array_position` in the non-deprecated catalog is more sensitive, the same comparison as the
+ * reviewed rule. A zone the array does not hold (missing, deprecated, unknown) drops the pair.
+ */
+function trustSql(ranks: string): string {
+  const ranked = (alias: string) => `array_position(${ranks}, ${zoneOf(alias)})`;
+  return `SELECT content.id AS asset_id, holder.asset_reference AS reference, holder.name,
+              ${zoneOf('holder')} AS zone, 'contains'::text AS relation
+         FROM asset_relations r
+         JOIN assets holder ON holder.tenant_id = $1 AND holder.id = r.asset_id AND holder.status <> 'retired'
+         JOIN assets content ON content.tenant_id = $1 AND content.id = r.related_asset_id AND content.status <> 'retired'
+        WHERE r.tenant_id = $1 AND r.relation_type = 'contains' AND r.asset_id <> r.related_asset_id
+          AND ${ranked('content')} IS NOT NULL AND ${ranked('holder')} IS NOT NULL
+          AND ${ranked('content')} < ${ranked('holder')}
+        UNION ALL
+       SELECT member.id, cluster.asset_reference, cluster.name, ${zoneOf('cluster')}, 'cluster'
+         FROM asset_cluster_members m
+         JOIN assets cluster ON cluster.tenant_id = $1 AND cluster.id = m.cluster_id AND cluster.status <> 'retired'
+         JOIN assets member ON member.tenant_id = $1 AND member.id = m.asset_id AND member.status <> 'retired'
+        WHERE m.tenant_id = $1 AND m.cluster_id <> m.asset_id
+          AND ${ranked('member')} IS NOT NULL AND ${ranked('cluster')} IS NOT NULL
+          AND ${ranked('member')} > ${ranked('cluster')}`;
+}
+
+/** Applications in service hosted on assets of the most sensitive zone. One row per application and asset. */
+function hostedFrom(most: string, ids?: string): string {
+  const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
+  return `FROM app_asset_assignments aa
+    JOIN assets ax ON ax.tenant_id = $1 AND ax.id = aa.asset_id AND ax.status <> 'retired'
+      AND ${zoneOf('ax')} = ${most}
+    JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
+    JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+    WHERE aa.tenant_id = $1 ${only}`;
+}
 
 @Injectable()
 export class AdministrationViewService {
-  constructor(private readonly itOps: ItOpsSettingsService) {}
+  constructor(
+    private readonly itOps: ItOpsSettingsService,
+    private readonly audit: AuditService,
+  ) {}
 
-  async view(opts: AdministrationOpts): Promise<AdministrationView> {
+  /** Zones with their counts, the assets that have no zone, and the five control counts. */
+  async summary(opts: AdministrationOpts): Promise<AdministrationSummary> {
+    const ctx = await this.context(opts);
     const { manager: mg, tenantId } = opts;
-    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-    const catalog = settings.adminZones ?? [];
-    const known = new Set(catalog.map((option) => option.code));
-    const rank = new Map(catalog.filter((option) => !option.deprecated).map((option, index) => [option.code, index]));
-    const most = catalog.find((option) => !option.deprecated)?.code ?? null;
-
-    const assetRows: AssetRow[] = await mg.query(
-      `SELECT a.id, a.name, a.kind, a.asset_reference, NULLIF(btrim(a.admin_zone), '') AS admin_zone
+    const counts: Array<{ zone: string | null; kind: string; count: number }> = await mg.query(
+      `SELECT ${zoneOf('a')} AS zone, a.kind, count(*)::int AS count
          FROM assets a
         WHERE a.tenant_id = $1 AND a.status <> 'retired'
-        ORDER BY lower(a.name), a.id`,
+        GROUP BY 1, 2`,
       [tenantId],
     );
-    const assetById = new Map(assetRows.map((row) => [row.id, row]));
-    const assetsByZone = new Map<string, AdministrationAsset[]>();
-    const withoutZone: AdministrationAsset[] = [];
-    for (const row of assetRows) {
-      const asset = toAsset(row);
-      if (!row.admin_zone) withoutZone.push(asset);
-      else {
-        const list = assetsByZone.get(row.admin_zone) ?? [];
-        list.push(asset);
-        assetsByZone.set(row.admin_zone, list);
-      }
-    }
-
-    const hostings: HostingRow[] = await mg.query(
-      `SELECT DISTINCT ap.id, ap.name, ap.sequential_id, a.id AS asset_id
+    const hosted: Array<{ zone: string; count: number }> = await mg.query(
+      `SELECT ${zoneOf('a')} AS zone, count(DISTINCT ap.id)::int AS count
          FROM app_asset_assignments aa
          JOIN assets a ON a.tenant_id = $1 AND a.id = aa.asset_id AND a.status <> 'retired'
          JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
          JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-        WHERE aa.tenant_id = $1`,
+        WHERE aa.tenant_id = $1 AND ${zoneOf('a')} IS NOT NULL
+        GROUP BY 1`,
       [tenantId],
     );
-    const hostedByZone = new Map<string, Set<string>>();
-    const onMost: HostedApplication[] = [];
-    for (const row of hostings) {
-      const asset = assetById.get(row.asset_id);
-      if (!asset?.admin_zone) continue;
-      const ids = hostedByZone.get(asset.admin_zone) ?? new Set<string>();
-      ids.add(row.id);
-      hostedByZone.set(asset.admin_zone, ids);
-      if (most && asset.admin_zone === most) {
-        onMost.push({ id: row.id, name: row.name, reference: row.sequential_id, asset: toAsset(asset) });
-      }
+    const services = await this.directoryRows(opts);
+    const byKind = new Map<string, Map<string, number>>();
+    let without = 0;
+    for (const row of counts) {
+      if (!row.zone) { without += Number(row.count); continue; }
+      const kinds = byKind.get(row.zone) ?? new Map<string, number>();
+      kinds.set(row.kind, Number(row.count));
+      byKind.set(row.zone, kinds);
     }
-    onMost.sort((a, b) => byName(a, b) || byName(a.asset, b.asset));
-
-    const directories: DirectoryRow[] = await mg.query(
-      `SELECT t.id, t.item_number, t.name, NULLIF(btrim(t.admin_zone), '') AS admin_zone
-         FROM technologies t
-        WHERE t.tenant_id = $1 AND t.lifecycle <> 'retired' AND t.family = $2
-        ORDER BY lower(t.name), t.item_number`,
-      [tenantId, DIRECTORY_FAMILY],
-    );
-    const directoriesByZone = new Map<string, AdministrationDirectory[]>();
-    for (const row of directories) {
-      if (!row.admin_zone) continue;
-      const list = directoriesByZone.get(row.admin_zone) ?? [];
+    const hostedByZone = new Map(hosted.map((row) => [row.zone, Number(row.count)]));
+    const servicesByZone = new Map<string, AdministrationZone['directory_services']>();
+    for (const row of services) {
+      if (!row.zone) continue;
+      const list = servicesByZone.get(row.zone) ?? [];
       list.push({ id: row.id, reference: technologyReference(row.item_number), name: row.name });
-      directoriesByZone.set(row.admin_zone, list);
+      servicesByZone.set(row.zone, list);
     }
-
-    const zoneOf = (option: AdminZoneOption | null, code: string, unknown = false): AdministrationZone => {
-      const assets = assetsByZone.get(code) ?? [];
-      const counts = new Map<string, number>();
-      for (const asset of assets) counts.set(asset.kind, (counts.get(asset.kind) ?? 0) + 1);
+    const zone = (option: AdminZoneOption | null, code: string, unknown = false): AdministrationZone => {
+      const kinds = byKind.get(code) ?? new Map<string, number>();
       return {
         code,
         label: option?.label ?? code,
-        admin_group: option?.admin_group ?? null,
         description: option?.description ?? null,
+        admin_group: option?.admin_group ?? null,
         deprecated: !!option?.deprecated,
         unknown,
-        assets,
-        asset_counts: [...counts.entries()].map(([kind, count]) => ({ kind, count })).sort((a, b) => a.kind.localeCompare(b.kind)),
-        hosted_application_count: hostedByZone.get(code)?.size ?? 0,
-        directory_services: directoriesByZone.get(code) ?? [],
+        asset_counts: [...kinds.entries()].map(([kind, count]) => ({ kind, count })).sort((a, b) => a.kind.localeCompare(b.kind)),
+        hosted_application_count: hostedByZone.get(code) ?? 0,
+        directory_services: servicesByZone.get(code) ?? [],
       };
     };
-    const zones: AdministrationZone[] = catalog
-      .filter((option) => !option.deprecated || assetsByZone.has(option.code) || directoriesByZone.has(option.code))
-      .map((option) => zoneOf(option, option.code));
-    const strayCodes = new Set<string>([
-      ...[...assetsByZone.keys()].filter((code) => !known.has(code)),
-      ...[...directoriesByZone.keys()].filter((code) => !known.has(code)),
+    const zones = ctx.catalog
+      .filter((option) => !option.deprecated || byKind.has(option.code) || servicesByZone.has(option.code))
+      .map((option) => zone(option, option.code));
+    const stray = new Set<string>([
+      ...[...byKind.keys()].filter((code) => !ctx.known.has(code)),
+      ...[...servicesByZone.keys()].filter((code) => !ctx.known.has(code)),
     ]);
-    for (const code of [...strayCodes].sort()) zones.push(zoneOf(null, code, true));
-
-    const controls = await this.controls(opts, { assetById, withoutZone, rank, most, onMost });
-    return { zones, domains: await this.domains(opts, settings.domains ?? []), controls };
+    for (const code of [...stray].sort()) zones.push(zone(null, code, true));
+    return { most_sensitive: ctx.most, zones, without_zone: { asset_count: without }, controls: await this.controlCounts(opts, ctx) };
   }
 
-  private async controls(
-    opts: AdministrationOpts,
-    ctx: {
-      assetById: Map<string, AssetRow>;
-      withoutZone: AdministrationAsset[];
-      rank: Map<string, number>;
-      most: string | null;
-      onMost: HostedApplication[];
-    },
-  ): Promise<AdministrationControls> {
+  /**
+   * One page of the assets that are not retired, in the grid's order. Technologies and applications
+   * are the direct links, capped, loaded for the page only. Findings use the same SQL as the counts.
+   */
+  async assets(query: AdministrationAssetQuery, opts: AdministrationOpts): Promise<{
+    items: AdministrationAssetRow[]; total: number; limit: number; offset: number; page: number;
+  }> {
+    const ctx = await this.context(opts);
+    const { limit, offset, page } = this.pageOf(query);
+    const params: unknown[] = [opts.tenantId];
+    const where = this.whereOf(query, ctx, params);
+    const order = this.orderOf(query.sort);
+    const [counted] = await opts.manager.query(
+      `SELECT count(*)::int AS n FROM assets a WHERE ${where}`,
+      params,
+    );
+    const total = Number(counted?.n ?? 0);
+    const rows: AssetPageRow[] = total === 0 ? [] : await opts.manager.query(
+      `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, ${zoneOf('a')} AS zone
+         FROM assets a
+        WHERE ${where}
+        ORDER BY ${order}
+        LIMIT ${limit} OFFSET ${offset}`,
+      params,
+    );
+    return { items: await this.decorate(opts, ctx, rows, LINK_CAP), total, limit, offset, page };
+  }
+
+  /**
+   * Sets the administration zone of many assets: the chosen ones (`ids`), or every asset the list's
+   * filters reach (`all: true`), less the ones the user unticked (`exclude_ids`). The chosen assets
+   * are taken as they are. `dry_run` counts without writing and returns `as_of`. The write that
+   * sends it back changes only the assets created by then, and refuses when the locked rows are
+   * more than `expected_rows` (`409` `bulk_list_changed`). More than `BULK_MAX_ROWS` is a `400`
+   * `bulk_too_many`. Each changed asset is audited on `assets`. The UPDATE leaves the `search_index`
+   * trigger of the assets in place.
+   */
+  async assignZone(body: Record<string, unknown>, opts: AdministrationOpts): Promise<
+    { ok: true; rows: number; changed: number } | { ok: true; dry_run: true; rows: number; changes: number; as_of: string }
+  > {
     const { manager: mg, tenantId } = opts;
-    const { assetById, withoutZone, rank, most, onMost } = ctx;
-    const outside = (ids: string[]): ControlAsset[] | null => {
-      if (!most) return null;
-      return ids
-        .map((id) => assetById.get(id))
-        .filter((row): row is AssetRow => !!row && row.admin_zone !== most)
-        .map(toAsset)
-        .sort(byName);
+    const ctx = await this.context(opts);
+    const zone = this.resolveZone(body, ctx.catalog);
+    const all = body.all === true;
+    const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
+      const raw = body[name];
+      if (raw === undefined || raw === null) return [];
+      if (!Array.isArray(raw)) throw new BadRequestException(`${name} must be a list of asset ids.`);
+      const ids = Array.from(new Set(raw.map((value) => String(value ?? '').trim().toLowerCase())));
+      if (ids.some((id) => !UUID_RE.test(id))) throw new BadRequestException(`${name} must be asset ids.`);
+      if (ids.length > BULK_MAX_ROWS) {
+        throw new BadRequestException({ code: 'bulk_too_many', message: `At most ${BULK_MAX_ROWS} rows at once: narrow the filters.` });
+      }
+      return ids;
     };
-    if (!most) {
-      return {
-        most_sensitive_zone: null,
-        assets_without_zone: withoutZone,
-        domain_controllers_outside: null,
-        directory_assets_outside: null,
-        trust_raised: null,
-        applications_on_most_sensitive: null,
-      };
+    const ids = rowIds('ids');
+    const excluded = rowIds('exclude_ids');
+    if (all && ids.length > 0) throw new BadRequestException('Send the chosen rows (ids) or every row of the filter (all: true), not both.');
+    if (!all && excluded.length > 0) throw new BadRequestException('exclude_ids goes with all: true.');
+    if (!all && ids.length === 0) throw new BadRequestException('Choose the rows (ids), or every row of the filter (all: true).');
+    const filters = (body.filters && typeof body.filters === 'object' ? body.filters : {}) as AdministrationAssetQuery;
+
+    const params: unknown[] = [tenantId];
+    let where: string;
+    if (all) {
+      where = this.whereOf({ ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, ctx, params);
+      if (excluded.length > 0) {
+        params.push(excluded);
+        where += ` AND a.id <> ALL($${params.length}::uuid[])`;
+      }
+    } else {
+      params.push(ids);
+      where = `a.tenant_id = $1 AND a.status <> 'retired' AND a.id = ANY($${params.length}::uuid[])`;
+    }
+    if (all && body.dry_run !== true && (body.as_of === undefined || body.as_of === null)) {
+      throw new BadRequestException('as_of is required with all: send the instant the dry run returned.');
+    }
+    let expectedRows: number | null = null;
+    if (body.expected_rows !== undefined && body.expected_rows !== null) {
+      expectedRows = Number(body.expected_rows);
+      if (!Number.isSafeInteger(expectedRows) || expectedRows < 0) throw new BadRequestException('expected_rows must be the rows the dry run counted.');
+    } else if (all && body.dry_run !== true) {
+      throw new BadRequestException('expected_rows is required with all: send the rows the dry run counted.');
+    }
+    if (body.as_of !== undefined && body.as_of !== null) {
+      const asOf = new Date(String(body.as_of));
+      if (Number.isNaN(asOf.getTime())) throw new BadRequestException('as_of must be the instant a dry run returned.');
+      params.push(asOf.toISOString());
+      where += ` AND a.created_at <= $${params.length}::timestamptz`;
+    }
+    const scopeParams = [...params];
+    params.push(zone);
+    const zoneParam = `$${params.length}`;
+    const [count] = await mg.query(
+      `SELECT count(*)::int AS rows,
+              count(*) FILTER (WHERE a.admin_zone IS DISTINCT FROM ${zoneParam})::int AS changes
+         FROM assets a
+        WHERE ${where}`,
+      params,
+    );
+    const rows = Number(count?.rows ?? 0);
+    if (rows > BULK_MAX_ROWS) {
+      throw new BadRequestException({ code: 'bulk_too_many', message: `These filters reach ${rows} rows, more than ${BULK_MAX_ROWS} at once: narrow them.` });
+    }
+    if (body.dry_run === true) {
+      const [{ as_of: asOf }] = await mg.query(`SELECT clock_timestamp() AS as_of`);
+      return { ok: true, dry_run: true, rows, changes: Number(count?.changes ?? 0), as_of: new Date(asOf).toISOString() };
     }
 
-    const controllers: Array<{ id: string }> = await mg.query(
-      `SELECT DISTINCT a.id
+    const before: LockRow[] = await mg.query(
+      `SELECT a.id, a.name, a.asset_reference, a.kind, a.status, a.admin_zone, a.updated_at
          FROM assets a
-         JOIN app_asset_assignments aa ON aa.tenant_id = $1 AND aa.asset_id = a.id AND aa.role = $2
-         JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
-         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
-        WHERE a.tenant_id = $1 AND a.status <> 'retired'`,
-      [tenantId, DOMAIN_CONTROLLER_ROLE],
+        WHERE ${where}
+        ORDER BY a.id
+        FOR UPDATE OF a`,
+      scopeParams,
     );
-    const directoryAssets: Array<{ id: string }> = await mg.query(
-      `SELECT DISTINCT a.id
-         FROM assets a
-         JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = a.id
-         JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id AND t.family = $2 AND t.lifecycle <> 'retired'
-        WHERE a.tenant_id = $1 AND a.status <> 'retired'`,
-      [tenantId, DIRECTORY_FAMILY],
-    );
-    const pairs: PairRow[] = await mg.query(
-      `SELECT c.id AS holder_id, c.name AS holder_name, c.kind AS holder_kind, c.asset_reference AS holder_reference,
-              NULLIF(btrim(c.admin_zone), '') AS holder_zone,
-              a.id AS asset_id, a.name AS asset_name, a.kind AS asset_kind, a.asset_reference AS asset_reference,
-              NULLIF(btrim(a.admin_zone), '') AS asset_zone, 'contains' AS holder_link
-         FROM asset_relations r
-         JOIN assets c ON c.tenant_id = $1 AND c.id = r.asset_id AND c.status <> 'retired'
-         JOIN assets a ON a.tenant_id = $1 AND a.id = r.related_asset_id AND a.status <> 'retired'
-        WHERE r.tenant_id = $1 AND r.relation_type = 'contains' AND r.asset_id <> r.related_asset_id
-        UNION ALL
-       SELECT c.id, c.name, c.kind, c.asset_reference, NULLIF(btrim(c.admin_zone), ''),
-              a.id, a.name, a.kind, a.asset_reference, NULLIF(btrim(a.admin_zone), ''), 'cluster'
-         FROM asset_cluster_members m
-         JOIN assets c ON c.tenant_id = $1 AND c.id = m.cluster_id AND c.status <> 'retired'
-         JOIN assets a ON a.tenant_id = $1 AND a.id = m.asset_id AND a.status <> 'retired'
-        WHERE m.tenant_id = $1 AND m.cluster_id <> m.asset_id`,
-      [tenantId],
-    );
-    const trust: TrustRaised[] = [];
-    for (const row of pairs as Array<PairRow & { holder_link: 'contains' | 'cluster' }>) {
-      const assetRank = row.asset_zone == null ? undefined : rank.get(row.asset_zone);
-      const holderRank = row.holder_zone == null ? undefined : rank.get(row.holder_zone);
-      if (assetRank === undefined || holderRank === undefined) continue;
-      // A lower rank is more sensitive. Content more sensitive than its container, or a member
-      // less sensitive than the cluster it carries, is a finding.
-      const raised = row.holder_link === 'cluster' ? assetRank > holderRank : assetRank < holderRank;
-      if (!raised) continue;
-      trust.push({
-        asset: { id: row.asset_id, name: row.asset_name, reference: row.asset_reference, kind: row.asset_kind },
-        asset_zone: row.asset_zone!,
-        holder: { id: row.holder_id, name: row.holder_name, reference: row.holder_reference, kind: row.holder_kind },
-        holder_zone: row.holder_zone!,
-        holder_kind: row.holder_link,
-      });
+    if (expectedRows !== null && before.length > expectedRows) {
+      throw new ConflictException({ code: 'bulk_list_changed', message: 'The list changed since the count: count again.' });
     }
-    trust.sort((a, b) => byName(a.holder, b.holder) || byName(a.asset, b.asset));
+    const toChange = before.filter((row) => row.admin_zone !== zone);
+    let changed = 0;
+    for (let i = 0; i < toChange.length; i += BULK_BATCH) {
+      const batch = toChange.slice(i, i + BULK_BATCH);
+      // An UPDATE answers [rows, rowCount], RETURNING included.
+      const [afterRows] = await mg.query(
+        `UPDATE assets
+            SET admin_zone = $3, updated_at = clock_timestamp()
+          WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+          RETURNING id, name, asset_reference, kind, status, admin_zone, updated_at`,
+        [tenantId, batch.map((row) => row.id), zone],
+      );
+      const afterById = new Map((afterRows as LockRow[]).map((row) => [String(row.id), row]));
+      for (const row of batch) {
+        const after = afterById.get(String(row.id));
+        if (!after) continue;
+        await this.audit.log(
+          { table: 'assets', recordId: String(row.id), action: 'update', before: this.snapshot(row), after: this.snapshot(after), userId: opts.userId ?? null },
+          { manager: mg },
+        );
+        changed += 1;
+      }
+    }
+    return { ok: true, rows, changed };
+  }
 
+  /** Directory services, and the domains of the catalog grouped by forest. No link between the two is stored. */
+  async directories(opts: AdministrationOpts): Promise<AdministrationDirectories> {
+    const ctx = await this.context(opts);
+    const services = await this.directoryRows(opts);
+    const domains = await this.domains(opts, ctx.domains);
+    const groups = new Map<string | null, AdministrationDomain[]>();
+    for (const domain of domains) {
+      const forest = domain.forest && domain.forest.trim() ? domain.forest : null;
+      const list = groups.get(forest) ?? [];
+      list.push(domain);
+      groups.set(forest, list);
+    }
+    const forests = [...groups.entries()]
+      .sort((a, b) => (a[0] === null ? 1 : b[0] === null ? -1 : a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })))
+      .map(([forest, items]) => ({ forest, domains: items }));
     return {
-      most_sensitive_zone: most,
-      assets_without_zone: withoutZone,
-      domain_controllers_outside: outside(controllers.map((row) => row.id)),
-      directory_assets_outside: outside(directoryAssets.map((row) => row.id)),
-      trust_raised: trust,
-      applications_on_most_sensitive: onMost,
+      services: services.map((row) => ({
+        id: row.id,
+        reference: technologyReference(row.item_number),
+        name: row.name,
+        zone: row.zone,
+        servers: Number(row.servers),
+      })),
+      forests,
     };
   }
 
-  private async domains(opts: AdministrationOpts, catalog: Awaited<ReturnType<ItOpsSettingsService['getSettings']>>['domains']): Promise<AdministrationDomain[]> {
+  /**
+   * One list as a CSV file. `list=domains` is the domains. `list=assets` (the default) is every
+   * asset the asset list's filters reach, in the list's order. A cell is written by `writeCsv`,
+   * which prefixes a formula.
+   */
+  async csv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+    const list = query.list === undefined || query.list === '' ? 'assets' : String(query.list);
+    if (list === 'domains') return this.domainsCsv(query, opts);
+    if (list !== 'assets') throw new BadRequestException('list must be assets or domains.');
+    return this.assetsCsv(query, opts);
+  }
+
+  private async context(opts: AdministrationOpts): Promise<RankCtx> {
+    const settings = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
+    const catalog = settings.adminZones ?? [];
+    const ranks = catalog.filter((option) => !option.deprecated).map((option) => option.code);
+    return {
+      catalog,
+      known: new Set(catalog.map((option) => option.code)),
+      ranks,
+      most: ranks[0] ?? null,
+      domains: settings.domains ?? [],
+      kinds: new Map((settings.serverKinds ?? []).map((option) => [option.code, option.label])),
+    };
+  }
+
+  private async controlCounts(opts: AdministrationOpts, ctx: RankCtx): Promise<AdministrationSummary['controls']> {
+    const params: unknown[] = [opts.tenantId];
+    const bare = `SELECT count(*)::int AS assets_without_zone,
+             NULL::int AS domain_controllers_outside,
+             NULL::int AS directory_assets_outside,
+             NULL::int AS trust_raised,
+             NULL::int AS applications_on_most_sensitive`;
+    let sql = `${bare}
+      FROM assets a
+      WHERE a.tenant_id = $1 AND a.status <> 'retired' AND ${zoneOf('a')} IS NULL`;
+    // The four controls that name the most sensitive zone do not apply when the catalog has none.
+    if (ctx.most) {
+      const m = this.markers(params, ctx);
+      sql = `SELECT
+        (SELECT count(*)::int FROM assets a WHERE a.tenant_id = $1 AND a.status <> 'retired' AND ${zoneOf('a')} IS NULL) AS assets_without_zone,
+        (SELECT count(*)::int FROM (${controllersSql(m.role, m.most)}) s) AS domain_controllers_outside,
+        (SELECT count(*)::int FROM (${directorySql(m.family, m.most)}) s) AS directory_assets_outside,
+        (SELECT count(*)::int FROM (${trustSql(m.ranks)}) s) AS trust_raised,
+        (SELECT count(*)::int FROM (SELECT DISTINCT ap.id, ax.id ${hostedFrom(m.most)}) s) AS applications_on_most_sensitive`;
+    }
+    const [row] = await opts.manager.query(sql, params);
+    const count = (key: ControlKey): number | null => (ctx.most || key === 'assets_without_zone' ? Number(row?.[key] ?? 0) : null);
+    return CONTROL_KEYS.map((key) => ({ key, count: count(key) }));
+  }
+
+  /** Directory technologies that are not retired, with the number of assets that carry them directly. */
+  private async directoryRows(opts: AdministrationOpts): Promise<DirectoryRow[]> {
+    return opts.manager.query(
+      `SELECT t.id, t.item_number, t.name, ${zoneOf('t')} AS zone,
+              count(DISTINCT a.id)::int AS servers
+         FROM technologies t
+         LEFT JOIN asset_technologies at ON at.tenant_id = $1 AND at.technology_id = t.id
+         LEFT JOIN assets a ON a.tenant_id = $1 AND a.id = at.asset_id AND a.status <> 'retired'
+        WHERE t.tenant_id = $1 AND t.lifecycle <> 'retired' AND t.family = $2
+        GROUP BY t.id, t.item_number, t.name, t.admin_zone
+        ORDER BY lower(t.name), t.item_number`,
+      [opts.tenantId, DIRECTORY_FAMILY],
+    );
+  }
+
+  private async domains(opts: AdministrationOpts, catalog: DomainOption[]): Promise<AdministrationDomain[]> {
     const { manager: mg, tenantId } = opts;
     const listed = catalog.filter((option) => !option.system);
     if (!listed.length) return [];
@@ -380,69 +619,276 @@ export class AdministrationViewService {
       .sort((a, b) => a.label.localeCompare(b.label, undefined, { sensitivity: 'base' }));
   }
 
+  private markers(params: unknown[], ctx: RankCtx): Markers {
+    params.push(ctx.ranks);
+    const ranks = `$${params.length}::text[]`;
+    params.push(ctx.most);
+    const most = `$${params.length}`;
+    params.push(DOMAIN_CONTROLLER_ROLE);
+    const role = `$${params.length}`;
+    params.push(DIRECTORY_FAMILY);
+    const family = `$${params.length}`;
+    return { ranks, most, role, family };
+  }
+
+  /** The WHERE of the asset list, on `a`. The same clause scopes a bulk assignment of the filter. */
+  private whereOf(query: AdministrationAssetQuery, ctx: RankCtx, params: unknown[]): string {
+    const model = readModel(query.filters);
+    assertSetFilterModes(model);
+    const parts = [`a.tenant_id = $1`, `a.status <> 'retired'`];
+    const push = (value: unknown) => { params.push(value); return `$${params.length}`; };
+    const q = String(query.q ?? '').trim();
+    if (q) {
+      const like = push(`%${q.replace(/[\\%_]/g, (char) => `\\${char}`)}%`);
+      parts.push(`(a.name ILIKE ${like} OR a.asset_reference ILIKE ${like})`);
+    }
+    const json = typeof query.filters === 'string' ? query.filters : JSON.stringify(model);
+    for (const [column, expr] of [['name', 'a.name'], ['reference', 'a.asset_reference']] as const) {
+      const clause = gridTextClause(expr, gridTextModel(json, column), push);
+      if (clause) parts.push(clause);
+    }
+    const zone = setFilter(model, 'zone');
+    if (zone) parts.push(this.setClause(zoneOf('a'), zone, push));
+    const kind = setFilter(model, 'kind') ?? setFilter(model, 'type');
+    if (kind) parts.push(this.setClause('a.kind', kind, push));
+    const control = setFilter(model, 'control');
+    if (control) {
+      const keys = control.values.filter((value): value is ControlKey => (CONTROL_KEYS as readonly string[]).includes(value));
+      if (!keys.length) parts.push('false');
+      else parts.push(this.controlClause(keys, ctx, params));
+    }
+    return parts.join(' AND ');
+  }
+
+  /** A set filter. `null` among the values matches an empty column. An empty selection matches nothing. */
+  private setClause(expr: string, filter: { values: string[]; blank: boolean }, push: (value: unknown) => string): string {
+    const parts: string[] = [];
+    if (filter.values.length) parts.push(`${expr} = ANY(${push(filter.values)}::text[])`);
+    if (filter.blank) parts.push(`${expr} IS NULL`);
+    return parts.length ? `(${parts.join(' OR ')})` : 'false';
+  }
+
   /**
-   * One list as a CSV file. `list=domains` is unchanged. `list=zones` is one fact per row
-   * (`Record` is `zone`, `asset`, `directory` or `control`):
-   * a zone row carries the administrator group, the description and the hosted-application count,
-   * and its note is the asset counts by type; an asset row and a directory row name the zone;
-   * a control row uses the English control title as its zone. Its note gives the asset's zone
-   * (`No zone` when it has none), or the hosting asset for an application. A trust finding names
-   * the asset, puts the relation in Type (`Runs on` when the asset runs on its holder,
-   * `Member of cluster` when the asset is a member of its cluster) and, in the note, the asset's
-   * zone, then the asset it depends on and that asset's zone. An empty control is omitted.
+   * One arm per selected control. Parameters are appended only when that arm uses them, in order,
+   * so a filter on one control does not leave an untyped gap in the bind list.
    */
-  async csv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
-    const view = await this.view(opts);
-    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
-    if (query.list === 'domains') {
-      const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Accounts', 'Machines', 'Domain controllers', 'Domain controller servers'];
-      const direction: Record<DomainTrustDirection, string> = { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' };
-      const rows = view.domains.map((domain) => [
-        domain.label,
-        domain.dns_suffix,
-        domain.forest ?? '',
-        domain.trusts.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
-        domain.declared_by.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
-        domain.account_count == null ? '' : String(domain.account_count),
-        domain.machine_count == null ? '' : String(domain.machine_count),
-        String(domain.domain_controllers.length),
-        domain.domain_controllers.map((server) => server.name).join(', '),
-      ]);
-      return { filename: 'administration_view_domains.csv', content: writeCsv({ language, headers, rows }) };
+  private controlClause(keys: ControlKey[], ctx: RankCtx, params: unknown[]): string {
+    const ranked = keys.some((key) => key !== 'assets_without_zone');
+    if (ranked && !ctx.most) {
+      return `(${keys.map((key) => (key === 'assets_without_zone' ? `${zoneOf('a')} IS NULL` : 'false')).join(' OR ')})`;
     }
-    const settings = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
-    const kindLabel = new Map((settings.serverKinds ?? []).map((option) => [option.code, option.label]));
-    const kind = (code: string) => kindLabel.get(code) ?? code;
-    const zoneLabel = new Map(view.zones.map((zone) => [zone.code, zone.label ?? zone.code]));
-    const zoneCodeByAsset = new Map<string, string>();
-    for (const zone of view.zones) for (const asset of zone.assets) zoneCodeByAsset.set(asset.id, zone.code);
-    const headers = ['Record', 'Zone', 'Administrator group', 'Description', 'Reference', 'Name', 'Type', 'Hosted applications', 'Note'];
-    const rows: string[][] = [];
-    for (const zone of view.zones) {
-      const label = zone.label ?? zone.code;
-      rows.push(['zone', label, zone.admin_group ?? '', zone.description ?? '', '', '', '', String(zone.hosted_application_count), zone.asset_counts.map((item) => `${kind(item.kind)}: ${item.count}`).join(', ')]);
-      for (const asset of zone.assets) rows.push(['asset', label, '', '', asset.reference ?? '', asset.name, kind(asset.kind), '', '']);
-      for (const service of zone.directory_services) rows.push(['directory', label, '', '', service.reference ?? '', service.name, '', '', '']);
-    }
-    const control = (title: string, reference: string, name: string, type: string, note: string) => {
-      rows.push(['control', title, '', '', reference, name, type, '', note]);
+    const bind = (value: unknown, cast: string) => {
+      params.push(value);
+      return `$${params.length}::${cast}`;
     };
-    const zoneNote = (code: string | null) => (code ? zoneLabel.get(code) ?? code : 'No zone');
-    for (const asset of view.controls.assets_without_zone) control(CONTROL_TITLES.assetsWithoutZone, asset.reference ?? '', asset.name, kind(asset.kind), 'No zone');
-    for (const asset of view.controls.domain_controllers_outside ?? []) {
-      control(CONTROL_TITLES.domainControllers, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(zoneCodeByAsset.get(asset.id) ?? null));
+    const ranks = keys.includes('trust_raised') ? bind(ctx.ranks, 'text[]') : null;
+    const most = keys.some((key) => key !== 'assets_without_zone' && key !== 'trust_raised') ? bind(ctx.most, 'text') : null;
+    const role = keys.includes('domain_controllers_outside') ? bind(DOMAIN_CONTROLLER_ROLE, 'text') : null;
+    const family = keys.includes('directory_assets_outside') ? bind(DIRECTORY_FAMILY, 'text') : null;
+    const parts = keys.map((key) => {
+      if (key === 'assets_without_zone') return `${zoneOf('a')} IS NULL`;
+      if (key === 'domain_controllers_outside') return `a.id IN (${controllersSql(role!, most!)})`;
+      if (key === 'directory_assets_outside') return `a.id IN (${directorySql(family!, most!)})`;
+      if (key === 'trust_raised') return `a.id IN (SELECT asset_id FROM (${trustSql(ranks!)}) pairs)`;
+      return `a.id IN (SELECT DISTINCT ax.id ${hostedFrom(most!)})`;
+    });
+    return `(${parts.join(' OR ')})`;
+  }
+
+  private orderOf(sort: unknown): string {
+    const [rawField, rawDir] = String(sort ?? '').split(':');
+    const field = rawField === 'type' ? 'kind' : rawField;
+    if (field && !Object.prototype.hasOwnProperty.call(SORTS, field)) {
+      throw new BadRequestException('sort must be name, reference, kind or zone.');
     }
-    for (const asset of view.controls.directory_assets_outside ?? []) {
-      control(CONTROL_TITLES.directoryAssets, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(zoneCodeByAsset.get(asset.id) ?? null));
+    const direction = String(rawDir ?? '').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    const primary = field ? `${SORTS[field]} ${direction} NULLS LAST` : `${SORTS.name} ASC`;
+    return field && field !== 'name' ? `${primary}, lower(a.name) ASC, a.id ASC` : `${primary}, a.id ASC`;
+  }
+
+  private pageOf(query: AdministrationAssetQuery): { limit: number; offset: number; page: number } {
+    const limit = Math.max(whole(query.limit, 50, 200), 1);
+    const offset = query.offset !== undefined
+      ? whole(query.offset, 0, 1_000_000_000)
+      : Math.max(whole(query.page, 1, 10_000_000) - 1, 0) * limit;
+    return { limit, offset, page: Math.floor(offset / limit) + 1 };
+  }
+
+  /** Technologies, applications and findings of these assets. `cap` null keeps every link (the export). */
+  private async decorate(opts: AdministrationOpts, ctx: RankCtx, rows: AssetPageRow[], cap: number | null): Promise<AdministrationAssetRow[]> {
+    if (!rows.length) return [];
+    const { manager: mg, tenantId } = opts;
+    const ids = rows.map((row) => row.id);
+    const technologies: TechLink[] = await mg.query(
+      `SELECT at.asset_id, t.item_number, t.name, v.label AS version
+         FROM asset_technologies at
+         JOIN technologies t ON t.tenant_id = $1 AND t.id = at.technology_id
+         LEFT JOIN technology_versions v ON v.tenant_id = $1 AND v.id = at.technology_version_id
+        WHERE at.tenant_id = $1 AND at.asset_id = ANY($2::uuid[])
+        ORDER BY at.asset_id, lower(t.name), t.item_number, lower(coalesce(v.label, '')), at.id`,
+      [tenantId, ids],
+    );
+    const applications: AppLink[] = await mg.query(
+      `SELECT DISTINCT aa.asset_id, ap.id AS application_id, ap.name, ap.sequential_id AS reference
+         FROM app_asset_assignments aa
+         JOIN app_instances i ON i.tenant_id = $1 AND i.id = aa.app_instance_id
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+        WHERE aa.tenant_id = $1 AND aa.asset_id = ANY($2::uuid[])`,
+      [tenantId, ids],
+    );
+    const techByAsset = new Map<string, TechLink[]>();
+    for (const link of technologies) {
+      const list = techByAsset.get(link.asset_id) ?? [];
+      list.push(link);
+      techByAsset.set(link.asset_id, list);
     }
-    for (const finding of view.controls.trust_raised ?? []) {
-      const dependsOn = [finding.holder.reference, finding.holder.name].filter(Boolean).join(' ');
-      const note = `${zoneNote(finding.asset_zone)}; ${dependsOn} (${zoneNote(finding.holder_zone)})`;
-      control(CONTROL_TITLES.trustRaised, finding.asset.reference ?? '', finding.asset.name, TRUST_RELATION_LABEL[finding.holder_kind], note);
+    const appsByAsset = new Map<string, AppLink[]>();
+    for (const link of applications) {
+      const list = appsByAsset.get(link.asset_id) ?? [];
+      list.push(link);
+      appsByAsset.set(link.asset_id, list);
     }
-    for (const app of view.controls.applications_on_most_sensitive ?? []) {
-      control(CONTROL_TITLES.applications, app.reference ?? '', app.name, '', app.asset.reference ?? app.asset.name);
+    for (const list of appsByAsset.values()) {
+      list.sort((a, b) => byName(a, b) || (a.reference ?? '').localeCompare(b.reference ?? '') || a.application_id.localeCompare(b.application_id));
     }
-    return { filename: 'administration_view_zones.csv', content: writeCsv({ language, headers, rows }) };
+
+    const controllers = new Set<string>();
+    const directories = new Set<string>();
+    const depends = new Map<string, DependLink[]>();
+    if (ctx.most) {
+      // Each statement binds only the parameters it names. A hole in $1..$n is untyped.
+      const controllerRows: Array<{ asset_id: string }> = await mg.query(
+        `SELECT asset_id FROM (${controllersSql('$4', '$3', '$2')}) s`,
+        [tenantId, ids, ctx.most, DOMAIN_CONTROLLER_ROLE],
+      );
+      for (const row of controllerRows) controllers.add(row.asset_id);
+      const directoryRows: Array<{ asset_id: string }> = await mg.query(
+        `SELECT asset_id FROM (${directorySql('$4', '$3', '$2')}) s`,
+        [tenantId, ids, ctx.most, DIRECTORY_FAMILY],
+      );
+      for (const row of directoryRows) directories.add(row.asset_id);
+      const trustParams: unknown[] = [tenantId, ids, ctx.ranks];
+      const pairs: DependLink[] = await mg.query(
+        `SELECT asset_id, reference, name, zone, relation
+           FROM (${trustSql(`$3::text[]`)}) pairs
+          WHERE asset_id = ANY($2::uuid[])`,
+        trustParams,
+      );
+      for (const pair of pairs) {
+        const list = depends.get(pair.asset_id) ?? [];
+        list.push(pair);
+        depends.set(pair.asset_id, list);
+      }
+      for (const list of depends.values()) {
+        list.sort((a, b) => byName(a, b) || (a.reference ?? '').localeCompare(b.reference ?? '') || a.relation.localeCompare(b.relation));
+      }
+    }
+
+    const take = <T>(list: T[]): { total: number; items: T[] } => ({ total: list.length, items: cap == null ? list : list.slice(0, cap) });
+    return rows.map((row) => {
+      const techs = techByAsset.get(row.id) ?? [];
+      const apps = appsByAsset.get(row.id) ?? [];
+      const holders = depends.get(row.id) ?? [];
+      const findings: ControlKey[] = [];
+      if (!row.zone) findings.push('assets_without_zone');
+      if (controllers.has(row.id)) findings.push('domain_controllers_outside');
+      if (directories.has(row.id)) findings.push('directory_assets_outside');
+      if (holders.length) findings.push('trust_raised');
+      const onMost = !!ctx.most && row.zone === ctx.most && apps.length > 0;
+      if (onMost) findings.push('applications_on_most_sensitive');
+      return {
+        id: row.id,
+        reference: row.reference,
+        name: row.name,
+        kind: row.kind,
+        zone: row.zone,
+        technologies: take(techs.map((link) => ({ reference: technologyReference(link.item_number), name: link.name, version: link.version }))),
+        applications: take(apps.map((link) => ({ reference: link.reference, name: link.name }))),
+        findings,
+        depends_on: holders.map((link) => ({ reference: link.reference, name: link.name, zone: link.zone, relation: link.relation })),
+        application_references: onMost ? apps.map((link) => link.reference).filter((reference): reference is string => !!reference) : [],
+      };
+    });
+  }
+
+  private resolveZone(body: Record<string, unknown>, catalog: AdminZoneOption[]): string | null {
+    if (!Object.prototype.hasOwnProperty.call(body, 'zone')) {
+      throw new BadRequestException('zone is required: a zone code, or null to clear it.');
+    }
+    const value = body.zone;
+    if (value === null || (typeof value === 'string' && value.trim() === '')) return null;
+    if (typeof value !== 'string') throw new BadRequestException('zone must be a zone code or null.');
+    const option = findCatalogOption(value, catalog);
+    if (!option) throw new BadRequestException(`Unknown administration zone: ${value.trim()}.`);
+    if (option.deprecated) throw new BadRequestException(`The administration zone "${option.code}" is deprecated.`);
+    return option.code;
+  }
+
+  private snapshot(row: LockRow): Record<string, unknown> {
+    return {
+      id: row.id,
+      name: row.name,
+      asset_reference: row.asset_reference,
+      kind: row.kind,
+      status: row.status,
+      admin_zone: row.admin_zone,
+      updated_at: row.updated_at,
+    };
+  }
+
+  private async assetsCsv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+    const ctx = await this.context(opts);
+    const params: unknown[] = [opts.tenantId];
+    const where = this.whereOf(query, ctx, params);
+    const [counted] = await opts.manager.query(`SELECT count(*)::int AS n FROM assets a WHERE ${where}`, params);
+    const total = Number(counted?.n ?? 0);
+    if (total > EXPORT_MAX_ROWS) {
+      throw new BadRequestException(`More than ${EXPORT_MAX_ROWS} rows match: narrow the filters to export them.`);
+    }
+    const rows: AssetPageRow[] = total === 0 ? [] : await opts.manager.query(
+      `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, ${zoneOf('a')} AS zone
+         FROM assets a
+        WHERE ${where}
+        ORDER BY ${this.orderOf(query.sort)}`,
+      params,
+    );
+    const items = await this.decorate(opts, ctx, rows, null);
+    const zoneLabel = (code: string | null) => (code ? ctx.catalog.find((option) => option.code === code)?.label || code : '');
+    const headers = ['Zone', 'Reference', 'Name', 'Type', 'Technologies', 'Applications', 'Controls', 'Dependency'];
+    const lines = items.map((item) => [
+      zoneLabel(item.zone),
+      item.reference ?? '',
+      item.name,
+      ctx.kinds.get(item.kind) ?? item.kind,
+      item.technologies.items.map((link) => `${link.reference ?? ''} ${link.name}${link.version ? ` (${link.version})` : ''}`.trim()).join('; '),
+      item.applications.items.map((link) => `${link.reference ? `${link.reference} ` : ''}${link.name}`.trim()).join('; '),
+      item.findings.map((key) => CONTROL_TITLES[key]).join('; '),
+      item.depends_on.map((link) => {
+        const who = [link.reference, link.name].filter(Boolean).join(' ');
+        return `${TRUST_RELATION_LABEL[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
+      }).join('; '),
+    ]);
+    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
+    return { filename: 'administration_view_assets.csv', content: writeCsv({ language, headers, rows: lines }) };
+  }
+
+  private async domainsCsv(query: Record<string, unknown>, opts: AdministrationOpts): Promise<{ filename: string; content: string }> {
+    const ctx = await this.context(opts);
+    const domains = await this.domains(opts, ctx.domains);
+    const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
+    const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Accounts', 'Machines', 'Domain controllers', 'Domain controller servers'];
+    const direction: Record<DomainTrustDirection, string> = { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' };
+    const rows = domains.map((domain) => [
+      domain.label,
+      domain.dns_suffix,
+      domain.forest ?? '',
+      domain.trusts.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
+      domain.declared_by.map((trust) => `${trust.label} (${direction[trust.direction]})`).join(', '),
+      domain.account_count == null ? '' : String(domain.account_count),
+      domain.machine_count == null ? '' : String(domain.machine_count),
+      String(domain.domain_controllers.length),
+      domain.domain_controllers.map((server) => server.name).join(', '),
+    ]);
+    return { filename: 'administration_view_domains.csv', content: writeCsv({ language, headers, rows }) };
   }
 }

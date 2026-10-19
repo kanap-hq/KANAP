@@ -1,35 +1,37 @@
 // @database-spec
 import 'dotenv/config';
+import { randomUUID } from 'node:crypto';
 import type { QueryRunner } from 'typeorm';
+import { BadRequestException, ConflictException } from '@nestjs/common';
 import { PATH_METADATA } from '@nestjs/common/constants';
 import { REQUIRE_LEVEL_KEY } from '../../auth/require-level.decorator';
+import { AuditService } from '../../audit/audit.service';
 import { DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops-settings/it-ops-settings.service';
+import {
+  AdministrationViewService,
+  BULK_MAX_ROWS,
+  type AdministrationAssetRow,
+  type AdministrationSummary,
+  type ControlKey,
+} from '../reports/administration-view.service';
 import { AdministrationViewController } from '../reports/administration-view.controller';
-import { AdministrationViewService } from '../reports/administration-view.service';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { application, asset, assign, contains, installed, member, one, technology } from './technologies.fixtures';
+import { application, asset, assign, contains, installed, member, one, technology, version } from './technologies.fixtures';
 
-// The administration view (lot A1d), against a real database in transactions rolled back at the end:
-// - a zone lists its attributes, its assets (not retired) and the directory services placed in it;
-//   a deprecated zone without either is hidden; a code the catalog no longer has is shown when an
-//   asset or a directory service still carries it; a technology of another family does not open a zone;
-// - the domains carry forest, trusts (with the trusted domain's name), typed counts, and the domain
-//   controllers deduced from the server role `domain-controller` on an instance in service, or
-//   from an installed directory technology, each server once;
-// - the control points: assets without a zone; domain controllers (the role only) and assets that
-//   carry a directory technology outside the most sensitive zone; a contained asset whose zone is
-//   more sensitive than its container, or a cluster member whose zone is less sensitive than its
-//   cluster; a deprecated or unknown zone does not rank; applications hosted in that zone;
-//   each point has one case that must stay out;
-// - another tenant's assets, technologies and controllers never appear;
-// - both routes require `infrastructure:reader`, the export path ends with /export, and the CSV
-//   files carry the same rows.
+// The administration view (lot A1e), against a real database in transactions rolled back at the end.
+// The five controls keep the rules reviewed in lot A1d. The summary and the asset page report counts
+// and findings. Trust counts pairs. Applications in the most sensitive zone count one row per
+// application and hosting asset. The asset page lists each asset once.
 
 type Settings = Record<string, unknown>;
 
 function service(settingsByTenant: Map<string, Settings>) {
-  const itOps = { getSettings: async (tenantId: string) => settingsByTenant.get(tenantId) ?? { adminZones: [], domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES } };
-  return new AdministrationViewService(itOps as any);
+  const itOps = {
+    getSettings: async (tenantId: string) => settingsByTenant.get(tenantId) ?? {
+      adminZones: [], domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [],
+    },
+  };
+  return new AdministrationViewService(itOps as any, new AuditService({} as any));
 }
 
 const ZONES = [
@@ -43,6 +45,18 @@ const DOMAINS = [
   { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com' },
   { code: 'partner', label: 'Partner', dns_suffix: 'partner.example.com', trusts: [{ domain: 'lab', direction: 'outgoing' }] },
 ];
+
+const setFilter = (column: string, values: unknown[]) => JSON.stringify({ [column]: { filterType: 'set', values } });
+
+function countOf(summary: AdministrationSummary, key: ControlKey): number | null {
+  return summary.controls.find((control) => control.key === key)?.count ?? null;
+}
+
+function named(items: AdministrationAssetRow[], name: string): AdministrationAssetRow {
+  const row = items.find((item) => item.name === name);
+  assert.ok(row, name);
+  return row!;
+}
 
 async function controller(runner: QueryRunner, tenantId: string, name: string, domain: string, role: string, status = 'active') {
   const id = await asset(runner, tenantId, name);
@@ -102,63 +116,64 @@ async function seed(runner: QueryRunner) {
   await setTenant(runner, a);
 
   const settings = new Map<string, Settings>([
-    [a, { adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
-    [b, { adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
+    [a, { adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [{ code: 'vm', label: 'Virtual machine' }] }],
+    [b, { adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [{ code: 'vm', label: 'Virtual machine' }] }],
   ]);
   return { a, b, ad, sql, vsphere, dc1, app1, host, vm, otherDc, settings };
 }
 
-async function testView() {
+async function testSummary() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner);
-    const view = await service(s.settings).view({ manager: runner.manager, tenantId: s.a });
+    const svc = service(s.settings);
+    const opts = { manager: runner.manager, tenantId: s.a };
+    const view = await svc.summary(opts);
 
-    assert.deepEqual(view.zones.map((zone) => zone.code), ['tier_0', 'tier_1'], 'catalog order, the retired empty zone hidden');
+    assert.equal(view.most_sensitive, 'tier_0');
+    assert.deepEqual(view.zones.map((zone) => zone.code), ['tier_0', 'tier_1'], 'catalog order, the empty deprecated zone hidden');
     const [tier0, tier1] = view.zones;
     assert.deepEqual(
-      { group: tier0.admin_group, description: tier0.description, unknown: tier0.unknown },
-      { group: 'Domain admins', description: 'Identity core', unknown: false },
+      { group: tier0.admin_group, description: tier0.description, deprecated: tier0.deprecated, unknown: tier0.unknown },
+      { group: 'Domain admins', description: 'Identity core', deprecated: false, unknown: false },
     );
+    assert.equal('assets' in tier0, false, 'the summary counts the assets, it does not list them');
     assert.deepEqual(tier0.directory_services.map((item) => [item.reference, item.name]), [['TEC-1', 'Active Directory']], 'a database technology in the zone is not a directory service, a retired one is left out');
-    assert.deepEqual(tier0.assets.map((item) => [item.reference, item.name, item.kind]), [['AST-10', 'fw1', 'vm']], 'direct assets of the zone, retired left out');
     assert.deepEqual(tier0.asset_counts, [{ kind: 'vm', count: 1 }]);
     assert.equal(tier0.hosted_application_count, 0);
-    assert.deepEqual(tier1.assets, []);
     assert.deepEqual(tier1.directory_services, []);
+    assert.deepEqual(tier1.asset_counts, []);
     assert.equal(tier1.admin_group, 'Server admins');
     assert.equal(tier1.hosted_application_count, 0);
     assert.equal(view.zones.some((zone) => zone.code === 'old'), false);
+    assert.equal(view.without_zone.asset_count, 7);
+    assert.deepEqual(view.controls.map((control) => [control.key, control.count]), [
+      ['assets_without_zone', 7],
+      ['domain_controllers_outside', 1],
+      ['directory_assets_outside', 2],
+      ['trust_raised', 0],
+      ['applications_on_most_sensitive', 0],
+    ]);
+    assert.equal(countOf(view, 'assets_without_zone'), view.without_zone.asset_count);
 
-    assert.equal(view.controls.most_sensitive_zone, 'tier_0');
-    assert.deepEqual(view.controls.assets_without_zone.map((item) => item.name), ['app1', 'dc-disabled', 'dc1', 'dc2', 'host1', 'lab-old', 'vm1']);
-    assert.deepEqual(view.controls.domain_controllers_outside?.map((item) => item.name), ['dc1'], 'the role only: dc2 has no role, the disabled and retired controllers stay out');
-    assert.deepEqual(view.controls.directory_assets_outside?.map((item) => item.name), ['dc1', 'dc2'], 'a direct directory link; the retired technology on lab-old does not count');
-    assert.deepEqual(view.controls.trust_raised, [], 'neither side of host1/vm1 has a zone');
-    assert.deepEqual(view.controls.applications_on_most_sensitive, []);
+    const listed = await svc.assets({ limit: 50 }, opts);
+    assert.deepEqual(listed.items.map((item) => item.name), ['app1', 'dc-disabled', 'dc1', 'dc2', 'fw1', 'host1', 'lab-old', 'vm1']);
+    assert.equal(listed.items.some((item) => item.name === 'vm-retired' || item.name === 'fw-old' || item.name === 'dc-old'), false);
+    assert.deepEqual(named(listed.items, 'dc1').findings, ['assets_without_zone', 'domain_controllers_outside', 'directory_assets_outside']);
+    assert.deepEqual(named(listed.items, 'dc2').findings, ['assets_without_zone', 'directory_assets_outside']);
+    assert.deepEqual(named(listed.items, 'fw1').findings, []);
+    assert.equal(named(listed.items, 'fw1').zone, 'tier_0');
 
-    assert.deepEqual(view.domains.map((domain) => domain.code), ['corp', 'lab', 'partner'], 'system entries are not domains of the view');
-    const [corp, lab] = view.domains;
-    assert.deepEqual(
-      { forest: corp.forest, trusts: corp.trusts, declared: corp.declared_by, accounts: corp.account_count, machines: corp.machine_count, dcs: corp.domain_controllers.map((dc) => dc.name) },
-      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared: [], accounts: 1200, machines: 300, dcs: ['dc1', 'dc2'] },
-      'role on an instance in service or directory technology, each server once; disabled instance, retired server and other tenant left out',
-    );
-    assert.deepEqual({ forest: lab.forest, accounts: lab.account_count, dcs: lab.domain_controllers }, { forest: null, accounts: null, dcs: [] });
-    assert.deepEqual(lab.declared_by, [
-      { domain: 'corp', label: 'Corp', direction: 'two_way' },
-      { domain: 'partner', label: 'Partner', direction: 'incoming' },
-    ], 'trusts declared on Corp and Partner show on Lab, read only, seen from Lab (Partner trusts Lab: incoming)');
-
-    const ids = JSON.stringify(view);
+    const ids = JSON.stringify({ view, listed });
     assert.ok(!ids.includes(s.otherDc) && !ids.includes('Other AD'), 'nothing of the other tenant');
 
-    // The other tenant sees its own directory service and controller only.
     await setTenant(runner, s.b);
-    const other = await service(s.settings).view({ manager: runner.manager, tenantId: s.b });
+    const otherOpts = { manager: runner.manager, tenantId: s.b };
+    const other = await svc.summary(otherOpts);
     assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.directory_services.map((item) => item.name), ['Other AD']);
-    assert.deepEqual(other.domains.find((domain) => domain.code === 'corp')?.domain_controllers.map((dc) => dc.name), ['other-dc']);
-    assert.deepEqual(other.controls.assets_without_zone.map((item) => item.name), ['other-dc']);
-    assert.deepEqual(other.controls.domain_controllers_outside?.map((item) => item.name), ['other-dc']);
+    assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, []);
+    assert.equal(other.without_zone.asset_count, 1);
+    assert.deepEqual(other.controls.map((control) => control.count), [1, 1, 1, 0, 0]);
+    assert.equal(JSON.stringify(other).includes('dc1'), false);
     assert.equal(other.zones.some((zone) => zone.unknown), false);
   });
 }
@@ -173,18 +188,29 @@ async function testUnknownZoneAndEmptyCatalog() {
     const ghost = await asset(runner, a, 'ghost-srv');
     await runner.query(`UPDATE assets SET admin_zone = 'ghost' WHERE tenant_id = $1 AND id = $2`, [a, ghost]);
     await asset(runner, a, 'plain-srv');
-    const view = await service(new Map()).view({ manager: runner.manager, tenantId: a });
-    assert.deepEqual(view.zones.map((zone) => [zone.code, zone.label, zone.unknown]), [['ghost', 'ghost', true], ['gone', 'gone', true]]);
+    const svc = service(new Map());
+    const opts = { manager: runner.manager, tenantId: a };
+    const view = await svc.summary(opts);
+    assert.deepEqual(view.zones.map((zone) => [zone.code, zone.label, zone.unknown, zone.deprecated]), [
+      ['ghost', 'ghost', true, false],
+      ['gone', 'gone', true, false],
+    ]);
     assert.equal(view.zones.some((zone) => zone.code === 'leftover'), false, 'a technology of another family does not open a zone');
-    assert.deepEqual(view.zones[0].assets.map((item) => item.name), ['ghost-srv']);
+    assert.deepEqual(view.zones[0].asset_counts, [{ kind: 'vm', count: 1 }]);
     assert.deepEqual(view.zones[1].directory_services.map((item) => item.name), ['Stray']);
-    assert.deepEqual(view.domains, []);
-    assert.equal(view.controls.most_sensitive_zone, null);
-    assert.deepEqual(view.controls.assets_without_zone.map((item) => item.name), ['plain-srv']);
-    assert.equal(view.controls.domain_controllers_outside, null);
-    assert.equal(view.controls.directory_assets_outside, null);
-    assert.equal(view.controls.trust_raised, null);
-    assert.equal(view.controls.applications_on_most_sensitive, null);
+    assert.equal(view.most_sensitive, null);
+    assert.equal(view.without_zone.asset_count, 1);
+    assert.deepEqual(view.controls.map((control) => [control.key, control.count]), [
+      ['assets_without_zone', 1],
+      ['domain_controllers_outside', null],
+      ['directory_assets_outside', null],
+      ['trust_raised', null],
+      ['applications_on_most_sensitive', null],
+    ]);
+    const outside = await svc.assets({ filters: setFilter('control', ['domain_controllers_outside']) }, opts);
+    assert.equal(outside.total, 0, 'a control that does not apply matches nothing');
+    const bare = await svc.assets({ filters: setFilter('control', ['assets_without_zone']) }, opts);
+    assert.deepEqual(bare.items.map((item) => item.name), ['plain-srv']);
   });
 }
 
@@ -243,6 +269,9 @@ async function testControls() {
     const guest = await place('guest', 'tier_0');
     const host = await place('host', 'tier_1');
     await contains(runner, a, host, guest);
+    // The same content on a second holder: the control counts both pairs, the asset page lists guest once.
+    const hostB = await place('host-b', 'tier_1');
+    await contains(runner, a, hostB, guest);
     const node = await place('node', 'tier_0');
     const rack = await place('rack', 'tier_1');
     await member(runner, a, rack, node);
@@ -280,11 +309,13 @@ async function testControls() {
     const portal = await application(runner, a, 'Portal');
     await assign(runner, a, portal, guest);
     await assign(runner, a, portal, node);
+    const extra = await application(runner, a, 'Extra');
+    await assign(runner, a, extra, guest);
     const goneVm = await place('gone-vm', 'tier_0');
     await hostApp('Buried', goneVm);
     await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [a, goneVm]);
-    const oldBox = await place('old-box', 'old');
-    const ghostBox = await place('ghost-box', 'ghost');
+    await place('old-box', 'old');
+    await place('ghost-box', 'ghost');
     const goneDir = await technology(runner, a, 4, 'Gone directory', 'directory');
     await runner.query(`UPDATE technologies SET admin_zone = 'gone' WHERE tenant_id = $1 AND id = $2`, [a, goneDir]);
 
@@ -303,80 +334,88 @@ async function testControls() {
       [a, { adminZones: catalog, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
       [b, { adminZones: catalog, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
     ]);
-    const view = await service(settings).view({ manager: runner.manager, tenantId: a });
+    const svc = service(settings);
+    const opts = { manager: runner.manager, tenantId: a };
+    const view = await svc.summary(opts);
 
-    assert.equal(view.controls.most_sensitive_zone, 'tier_0', 'the first zone is deprecated, so the next one is the most sensitive');
+    assert.equal(view.most_sensitive, 'tier_0', 'the first zone is deprecated, so the next one is the most sensitive');
     assert.deepEqual(view.zones.map((zone) => zone.code), ['retired_first', 'tier_0', 'tier_1', 'old', 'ghost', 'gone']);
     assert.equal(view.zones.some((zone) => zone.code === 'leftover'), false, 'a technology of another family does not open a zone');
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'retired_first')?.assets.map((item) => item.name), ['legacy-host', 'legacy-vm']);
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.assets.map((item) => item.name), ['core', 'dc-home', 'dir-home', 'dom-cluster', 'esx0', 'guest', 'guest2', 'node', 'parent', 'peer', 'spare', 't0-holder', 'twin', 'vsphere']);
+    assert.equal(view.zones.find((zone) => zone.code === 'retired_first')?.deprecated, true);
+    assert.equal(view.zones.find((zone) => zone.code === 'ghost')?.unknown, true);
+    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, [{ kind: 'vm', count: 14 }]);
     assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.directory_services.map((item) => item.name), ['Active Directory']);
-    assert.equal(view.zones.find((zone) => zone.code === 'tier_0')?.hosted_application_count, 2);
-    assert.equal(view.zones.find((zone) => zone.code === 'tier_1')?.hosted_application_count, 2);
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'old')?.assets.map((item) => item.name), ['old-box']);
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'ghost')?.assets.map((item) => item.name), ['alien', 'ghost-box', 'parked']);
     assert.deepEqual(view.zones.find((zone) => zone.code === 'gone')?.directory_services.map((item) => item.name), ['Gone directory']);
+    assert.equal(view.zones.find((zone) => zone.code === 'old')?.asset_counts[0]?.count, 1);
+    assert.equal(view.zones.find((zone) => zone.code === 'tier_0')?.hosted_application_count, 3, 'Portal, Extra and App dc-home, each once');
+    assert.equal(view.zones.find((zone) => zone.code === 'tier_1')?.hosted_application_count, 2);
+    assert.equal(view.without_zone.asset_count, 5);
+    assert.equal(countOf(view, 'assets_without_zone'), 5);
+    assert.equal(countOf(view, 'domain_controllers_outside'), 2);
+    assert.equal(countOf(view, 'directory_assets_outside'), 2);
+    assert.equal(countOf(view, 'trust_raised'), 3, 'guest depends on host and host-b, and esx1 on vsphere: three pairs');
+    assert.equal(countOf(view, 'applications_on_most_sensitive'), 4, 'Portal on guest and node, Extra on guest, App dc-home on dc-home');
 
-    assert.deepEqual(view.controls.assets_without_zone.map((item) => item.name), ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose']);
-    assert.deepEqual(view.controls.domain_controllers_outside?.map((item) => item.name), ['dc-away', 'dc-blank']);
-    assert.deepEqual(view.controls.directory_assets_outside?.map((item) => item.name), ['dir-away', 'dir-blank']);
-    assert.deepEqual(view.controls.trust_raised?.map((item) => [item.holder.name, item.holder_kind, item.asset.name, item.asset_zone, item.holder_zone]), [
-      ['host', 'contains', 'guest', 'tier_0', 'tier_1'],
-      ['vsphere', 'cluster', 'esx1', 'tier_1', 'tier_0'],
+    const page = await svc.assets({ limit: 200 }, opts);
+    assert.equal(page.total, page.items.length);
+    const row = (name: string) => named(page.items, name);
+    assert.deepEqual(page.items.map((item) => item.name).filter((name) => ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose'].includes(name)).sort(), ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose']);
+    assert.equal(row('gap').zone, null, 'a blank zone is no zone');
+    assert.deepEqual(row('dc-home').findings, ['applications_on_most_sensitive']);
+    assert.deepEqual(row('dc-away').findings, ['domain_controllers_outside']);
+    assert.deepEqual(row('dc-blank').findings, ['assets_without_zone', 'domain_controllers_outside']);
+    assert.deepEqual(row('dc-off').findings, [], 'a disabled application and instance do not make a controller');
+    assert.deepEqual(row('dir-home').findings, []);
+    assert.deepEqual(row('dir-away').findings, ['directory_assets_outside']);
+    assert.deepEqual(row('dir-blank').findings, ['assets_without_zone', 'directory_assets_outside']);
+    assert.deepEqual(row('old-dir').technologies.items.map((item) => item.name), ['Retired directory']);
+    assert.deepEqual(row('old-dir').findings, [], 'a retired directory technology does not count');
+    assert.deepEqual(row('plain').findings, []);
+    assert.deepEqual(row('plain').applications.items.map((item) => item.name), ['Side']);
+    assert.deepEqual(row('spare').applications, { total: 0, items: [] });
+    assert.deepEqual(row('spare').findings, []);
+    assert.deepEqual(row('guest').findings, ['trust_raised', 'applications_on_most_sensitive']);
+    assert.deepEqual(row('guest').depends_on.map((item) => [item.name, item.zone, item.relation]), [
+      ['host', 'tier_1', 'contains'],
+      ['host-b', 'tier_1', 'contains'],
     ]);
-    assert.deepEqual(view.controls.applications_on_most_sensitive?.map((item) => [item.name, item.asset.name, item.reference?.startsWith('APP-')]), [
-      ['App dc-home', 'dc-home', true],
-      ['Portal', 'guest', true],
-      ['Portal', 'node', true],
-    ]);
-    const dumped = JSON.stringify(view);
-    for (const absent of ['dc-retired', 'gone-vm', 'Buried', 'Quiet', 'foreign-dc', 'leftover', 'Side']) assert.equal(dumped.includes(absent), false, absent);
+    assert.deepEqual(row('guest').application_references, row('guest').applications.items.map((item) => item.reference));
+    assert.deepEqual(row('guest').applications.items.map((item) => item.name), ['Extra', 'Portal']);
+    assert.deepEqual(row('host').findings, [], 'the holder is not the finding');
+    assert.deepEqual(row('host-b').findings, []);
+    assert.deepEqual(row('esx1').findings, ['trust_raised']);
+    assert.deepEqual(row('esx1').depends_on.map((item) => [item.name, item.zone, item.relation]), [['vsphere', 'tier_0', 'cluster']]);
+    assert.deepEqual(row('node').findings, ['applications_on_most_sensitive'], 'a member more sensitive than its cluster stays out of the trust control');
+    assert.deepEqual(row('esx0').findings, []);
+    assert.deepEqual(row('child').findings, []);
+    assert.deepEqual(row('guest2').findings, []);
+    assert.deepEqual(row('parked').findings, []);
+    assert.deepEqual(row('legacy-vm').findings, []);
+    assert.deepEqual(row('legacy-host').findings, []);
+    assert.deepEqual(row('twin').findings, []);
+    assert.equal(page.items.some((item) => item.name === 'dc-retired' || item.name === 'gone-vm'), false);
 
-    const file = await service(settings).csv({ list: 'zones', language: 'en' }, { manager: runner.manager, tenantId: a });
-    const lines = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    assert.equal(lines[0], 'Record,Zone,Administrator group,Description,Reference,Name,Type,Hosted applications,Note');
-    assert.ok(lines.some((line) => line.startsWith('control,What runs an asset is in a less sensitive zone,') && line.includes(',guest,Runs on,') && line.includes('host (Tier 1)')), file.content);
-    assert.ok(lines.some((line) => line.startsWith('control,What runs an asset is in a less sensitive zone,') && line.includes(',esx1,Member of cluster,') && line.includes('vsphere (Tier 0)')), file.content);
-    assert.ok(lines.some((line) => line.startsWith('control,Applications hosted in the most sensitive zone,') && line.includes(',Portal,')), file.content);
-    assert.equal(lines.some((line) => line.includes('Quiet') || line.includes('leftover')), false);
+    const trust = await svc.assets({ filters: setFilter('control', ['trust_raised']), limit: 50 }, opts);
+    assert.deepEqual(trust.items.map((item) => item.name), ['esx1', 'guest']);
+    assert.equal(trust.total, 2, 'two assets, three pairs');
+    const apps = await svc.assets({ filters: setFilter('control', ['applications_on_most_sensitive']), limit: 50 }, opts);
+    assert.deepEqual(apps.items.map((item) => item.name), ['dc-home', 'guest', 'node']);
+    assert.equal(apps.total, 3, 'three assets, four application rows');
+    const controllers = await svc.assets({ filters: setFilter('control', ['domain_controllers_outside']) }, opts);
+    assert.deepEqual(controllers.items.map((item) => item.name), ['dc-away', 'dc-blank']);
+    const directories = await svc.assets({ filters: setFilter('control', ['directory_assets_outside']) }, opts);
+    assert.deepEqual(directories.items.map((item) => item.name), ['dir-away', 'dir-blank']);
+    const bareRows = await svc.assets({ filters: setFilter('control', ['assets_without_zone']) }, opts);
+    assert.deepEqual(bareRows.items.map((item) => item.name), ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose']);
+    assert.equal(row('old-box').zone, 'old');
+    assert.equal(row('ghost-box').zone, 'ghost');
 
     await setTenant(runner, b);
-    const other = await service(settings).view({ manager: runner.manager, tenantId: b });
-    assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.assets.map((item) => item.name), ['foreign-dc']);
+    const other = await svc.summary({ manager: runner.manager, tenantId: b });
+    assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, [{ kind: 'vm', count: 1 }]);
     assert.equal(JSON.stringify(other).includes('dc-home'), false);
-  });
-}
-
-async function testCsv() {
-  await inRolledBackTransaction(async (runner) => {
-    const s = await seed(runner);
-    const svc = service(s.settings);
-    const opts = { manager: runner.manager, tenantId: s.a };
-    const zones = await svc.csv({ list: 'zones', language: 'en' }, opts);
-    assert.equal(zones.filename, 'administration_view_zones.csv');
-    const zoneLines = zones.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    assert.deepEqual(zoneLines, [
-      'Record,Zone,Administrator group,Description,Reference,Name,Type,Hosted applications,Note',
-      'zone,Tier 0,Domain admins,Identity core,,,,0,vm: 1',
-      'asset,Tier 0,,,AST-10,fw1,vm,,',
-      'directory,Tier 0,,,TEC-1,Active Directory,,,',
-      'zone,Tier 1,Server admins,,,,,0,',
-      'control,Assets without an administration zone,,,AST-3,app1,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-4,dc-disabled,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-1,dc1,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-5,dc2,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-7,host1,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-6,lab-old,vm,,No zone',
-      'control,Assets without an administration zone,,,AST-8,vm1,vm,,No zone',
-      'control,Domain controllers outside the most sensitive zone,,,AST-1,dc1,vm,,No zone',
-      'control,Assets carrying a directory service outside the most sensitive zone,,,AST-1,dc1,vm,,No zone',
-      'control,Assets carrying a directory service outside the most sensitive zone,,,AST-5,dc2,vm,,No zone',
-    ]);
-    const domains = await svc.csv({ list: 'domains', language: 'en' }, opts);
-    const domainLines = domains.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');
-    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
-    assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
+    const otherAssets = await svc.assets({ limit: 50 }, { manager: runner.manager, tenantId: b });
+    assert.deepEqual(otherAssets.items.map((item) => item.name), ['foreign-dc']);
   });
 }
 
@@ -384,15 +423,18 @@ async function testRoutes() {
   assert.equal(Reflect.getMetadata(PATH_METADATA, AdministrationViewController), 'technologies/reports/administration');
   const proto = AdministrationViewController.prototype as any;
   assert.equal(Reflect.getMetadata(PATH_METADATA, proto.export), 'export', 'recorded as an export by its path');
-  for (const handler of [proto.view, proto.export]) {
+  assert.equal(Reflect.getMetadata(PATH_METADATA, proto.assets), 'assets');
+  assert.equal(Reflect.getMetadata(PATH_METADATA, proto.directories), 'directories');
+  assert.equal(Reflect.getMetadata(PATH_METADATA, proto.assignZone), 'assets/zone');
+  for (const handler of [proto.view, proto.assets, proto.directories, proto.export]) {
     assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, handler), { resource: 'infrastructure', level: 'reader' });
   }
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.assignZone), { resource: 'infrastructure', level: 'member' });
 }
 
 void runSpecs('Administration view', [
-  ['zones, assets, directory services, domains and tenant isolation', testView],
+  ['summary counts, directories and tenant isolation', testSummary],
   ['a zone code the catalog no longer has, an empty catalog', testUnknownZoneAndEmptyCatalog],
   ['each control point, with one case that stays out', testControls],
-  ['CSV export of zones and domains', testCsv],
   ['routes: paths and permission', testRoutes],
 ]);
