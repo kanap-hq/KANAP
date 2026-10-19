@@ -1,6 +1,6 @@
 import '../../i18n';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -128,12 +128,19 @@ const DIRECTORIES: AdministrationDirectories = {
   ],
 };
 
-function renderPage() {
+/** The address the page writes, read back by the tests. */
+const address = { search: '' };
+function Address() {
+  address.search = useLocation().search;
+  return null;
+}
+
+function renderPage(entry = '/it/administration') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
-        <MemoryRouter><AdministrationViewPage /></MemoryRouter>
+        <MemoryRouter initialEntries={[entry]}><AdministrationViewPage /><Address /></MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -182,8 +189,46 @@ describe('AdministrationViewPage', () => {
   it('has a title and no subtitle', async () => {
     renderPage();
     expect(screen.getByRole('heading', { name: 'Administration zones' })).toBeTruthy();
-    expect(screen.queryByText(/administration view of/i)).toBeNull();
     await screen.findByRole('group', { name: 'Administration zones' });
+    expect(screen.queryByText(/administration view of/i)).toBeNull();
+  });
+
+  it('opens on the assets tab, with a count on each tab', async () => {
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    // 3 + 1 + 1 assets in the zones, 5 without one; 1 directory service and 2 domains.
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Assets 10' }).getAttribute('aria-selected')).toBe('true'));
+    await waitFor(() => expect(screen.getByRole('tab', { name: 'Directories and domains 3' }).getAttribute('aria-selected')).toBe('false'));
+    expect(screen.getByTestId('grid')).toBeTruthy();
+    expect(screen.queryByRole('table', { name: 'Directory services' })).toBeNull();
+  });
+
+  it('switches to the directories and domains and back, keeping the filters of the address', async () => {
+    const filters = encodeURIComponent(FILTERS);
+    renderPage(`/it/administration?filters=${filters}`);
+    await screen.findByRole('group', { name: 'Administration zones' });
+    fireEvent.click(screen.getByRole('tab', { name: /^Directories and domains/ }));
+    expect(await screen.findByRole('table', { name: 'Directory services' })).toBeTruthy();
+    expect(screen.queryByTestId('grid')).toBeNull();
+    expect(screen.queryByRole('group', { name: 'Administration zones' })).toBeNull();
+    let params = new URLSearchParams(address.search);
+    expect(params.get('tab')).toBe('directories');
+    expect(params.get('filters')).toBe(FILTERS);
+    // Both exports stay in the header.
+    expect(screen.getByRole('button', { name: 'Export assets' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Export domains' })).toBeTruthy();
+    fireEvent.click(screen.getByRole('tab', { name: /^Assets/ }));
+    expect(await screen.findByRole('group', { name: 'Administration zones' })).toBeTruthy();
+    params = new URLSearchParams(address.search);
+    expect(params.get('tab')).toBeNull();
+    expect(params.get('filters')).toBe(FILTERS);
+  });
+
+  it('opens the directories and domains tab from the address', async () => {
+    renderPage('/it/administration?tab=directories');
+    expect(await screen.findByRole('table', { name: 'Directory services' })).toBeTruthy();
+    expect(screen.getByRole('tab', { name: /^Directories and domains/ }).getAttribute('aria-selected')).toBe('true');
+    expect(screen.queryByTestId('grid')).toBeNull();
   });
 
   it('shows one compact row per zone, its description under its name, then No zone', async () => {
@@ -433,7 +478,7 @@ describe('AdministrationViewPage', () => {
   });
 
   it('lists the directory services, then the domains grouped by forest', async () => {
-    renderPage();
+    renderPage('/it/administration?tab=directories');
     const services = await screen.findByRole('table', { name: 'Directory services' });
     expect(within(services).getByRole('link', { name: 'TEC-1' }).getAttribute('href')).toBe('/it/technologies/tech-ad');
     const serviceRow = within(services).getAllByRole('row')[1];

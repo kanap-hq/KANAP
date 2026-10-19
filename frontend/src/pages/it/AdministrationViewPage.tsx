@@ -4,7 +4,7 @@ import { useTheme } from '@mui/material/styles';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useNavigate } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
@@ -21,12 +21,15 @@ import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getWithListContext } from '../../lib/listContext';
 import { getDotColor } from '../../utils/statusColors';
+import WorkspaceTabs from '../portfolio/workspace/WorkspaceTabs';
 import type { DomainTrustDirection } from '../../services/itOpsSettings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 
 const ENDPOINT = '/technologies/reports/administration';
 const ASSETS_ENDPOINT = `${ENDPOINT}/assets`;
+/** The tab of the address (`?tab=directories`); the assets without one. */
+const DIRECTORIES_TAB = 'directories';
 
 /** The five control points, in the order the server counts them. */
 export const CONTROL_KEYS = [
@@ -104,6 +107,14 @@ export type AdministrationDirectories = {
   services: Array<{ id: string; reference: string | null; name: string; zone: string | null; servers: number }>;
   forests: Array<{ forest: string | null; domains: AdministrationDomain[] }>;
 };
+
+/** The directory services and the domains: the tab draws them, the page counts them. */
+function useDirectories() {
+  return useQuery({
+    queryKey: ['technologies', 'reports', 'administration', 'directories'],
+    queryFn: async () => (await api.get<AdministrationDirectories>(`${ENDPOINT}/directories`)).data,
+  });
+}
 
 /** The value of the "No zone" choice of the assignment (the server takes `null`). */
 const NO_ZONE = '__none__';
@@ -628,10 +639,7 @@ function filler<T>(): RelationsColumn<T> {
 function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => string }) {
   const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
-  const directories = useQuery({
-    queryKey: ['technologies', 'reports', 'administration', 'directories'],
-    queryFn: async () => (await api.get<AdministrationDirectories>(`${ENDPOINT}/directories`)).data,
-  });
+  const directories = useDirectories();
   const domainName = (code: string, fallback: string) => (byField.domain || []).find((option) => option.code === code)?.label || fallback;
   // An absent value: a grey dash, "Not set" on hover (the convention of an unknown version in the Relations tab).
   const notSet = <Box component="span" title={t('pages.administrationView.notSet')} sx={quietSx}>{'\u2014'}</Box>;
@@ -734,15 +742,25 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
 }
 
 /**
- * Administration zones (the administration view of the ANSSI mapping guide): the zones in a compact
- * band and the control points, both of which narrow the asset list below them; the assets with their
- * zone, technologies, applications and findings, on the list grid (filters, sort, export); a member
- * assigns a zone to the ticked assets or to every asset of the filter.
+ * Administration zones (the administration view of the tiered administration model), in two tabs.
+ * Assets: the zones in a compact band and the control points, both of which narrow the asset list
+ * below them; the assets with their zone, technologies, applications and findings, on the list grid
+ * (filters, sort, export); a member assigns a zone to the ticked assets or to every asset of the
+ * filter. Directories and domains: the directory services, then the domains grouped by forest.
  */
 export default function AdministrationViewPage() {
   const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const navigate = useNavigate();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tab = searchParams.get('tab') === DIRECTORIES_TAB ? DIRECTORIES_TAB : 'assets';
+  /** Another tab keeps the rest of the address: the grid's filters, sort and search. */
+  const changeTab = (next: string) => setSearchParams((current) => {
+    const params = new URLSearchParams(current);
+    if (next === DIRECTORIES_TAB) params.set('tab', DIRECTORIES_TAB);
+    else params.delete('tab');
+    return params;
+  }, { replace: true });
   const queryClient = useQueryClient();
   const { byField, labelFor } = useItOpsEnumOptions();
   const zoneNameOf = useZoneName();
@@ -768,6 +786,14 @@ export default function AdministrationViewPage() {
   const data = Array.isArray(summary.data?.zones) ? summary.data : undefined;
   const zones = useMemo(() => data?.zones ?? [], [data]);
   const zoneName = useCallback((code: string | null) => zoneNameOf(code, zones), [zoneNameOf, zones]);
+  const directories = useDirectories();
+  // Every asset that is not retired: the zones' counts and those without one.
+  const assetCount = data
+    ? data.zones.reduce((sum, zone) => sum + zone.asset_counts.reduce((total, item) => total + item.count, 0), data.without_zone.asset_count)
+    : undefined;
+  const directoryCount = directories.data
+    ? directories.data.services.length + directories.data.forests.reduce((sum, group) => sum + group.domains.length, 0)
+    : undefined;
 
   const zoneFilter = singleSetValue(gridFilters, 'zone');
   const controlValue = singleSetValue(gridFilters, 'control');
@@ -911,7 +937,7 @@ export default function AdministrationViewPage() {
       justifyContent="flex-end"
       sx={{ flexWrap: 'wrap', gap: 1, ml: 'auto', maxWidth: { xs: '100%', sm: 'calc(100% - 300px)' } }}
     >
-      {canEdit && selectedCount > 0 && (
+      {tab === 'assets' && canEdit && selectedCount > 0 && (
         <>
           <Typography data-testid="administration-selection" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
             {selection.all
@@ -921,7 +947,7 @@ export default function AdministrationViewPage() {
           <Button variant="action" onClick={() => setSelection(NO_SELECTION)}>{t('pages.administrationView.selection.clear')}</Button>
         </>
       )}
-      {canEdit && (
+      {tab === 'assets' && canEdit && (
         <Button variant="action" onClick={() => setAssignOpen(true)} disabled={selectedCount === 0 || !data}>
           {selectedCount > 0
             ? t('pages.administrationView.actions.assignSelected', { count: selectedCount })
@@ -937,10 +963,23 @@ export default function AdministrationViewPage() {
     <SelectionContext.Provider value={selectionApi}>
       <ZoneNameContext.Provider value={zoneName}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-          <PageHeader title={t('pages.administrationView.zones')} actions={actions} />
+          <Box>
+            <PageHeader title={t('pages.administrationView.zones')} actions={actions} />
+            <Box sx={{ borderBottom: '1px solid', borderColor: 'kanap.border.default' }}>
+              <WorkspaceTabs
+                tabs={[
+                  { key: 'assets', label: t('pages.administrationView.tabs.assets'), badge: assetCount },
+                  { key: DIRECTORIES_TAB, label: t('pages.administrationView.tabs.directories'), badge: directoryCount },
+                ]}
+                activeTab={tab}
+                onTabChange={changeTab}
+              />
+            </Box>
+          </Box>
           {exportError && <Alert severity="error">{exportError}</Alert>}
-          {!data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
-          {data && (
+          {tab === DIRECTORIES_TAB && <DirectoriesSection zoneName={zoneName} />}
+          {tab === 'assets' && !data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
+          {tab === 'assets' && data && (
             <Box>
               {catalogEmpty && (
                 <Typography sx={{ fontSize: 13, ...quietSx, mb: 1 }}>
@@ -953,48 +992,49 @@ export default function AdministrationViewPage() {
             </Box>
           )}
           {/* The header of the box column: the box alone, centred, without the cell's padding. */}
-          <Box sx={{
-            '& .ag-header-cell[col-id="select"]': { px: 0 },
-            '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
-          }}
-          >
-            <ServerDataGrid<AdministrationAssetRow>
-              columns={columns}
-              endpoint={ASSETS_ENDPOINT}
-              queryKey="administration-assets"
-              getRowId={rowId}
-              showRowCount
-              defaultSort={{ field: 'name', direction: 'ASC' }}
-              requiredColumns={['name']}
-              enableColumnChooser
-              columnPreferencesKey="it-administration-assets"
-              refreshKey={refreshKey}
-              enableSearch
-              onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
-              onQueryStateChange={(state) => setGridFilters(state.filterModel ?? {})}
-              onCellClicked={(event: any) => {
-                if (!event?.data?.id) return;
-                const target = event.event?.target as HTMLElement | undefined;
-                // A link in a cell (the reference, an application) opens its own page.
-                if (target?.closest?.('a')) return;
-                if (event.column?.getColId?.() !== SELECTION_COLUMN) {
-                  navigate(`/it/assets/${event.data.id}`);
-                  return;
-                }
-                // A click in the selection cell beside the box ticks it too; the box ticks itself.
-                if (!target?.closest?.('input')) toggleRow(event.data.id);
-              }}
-              onListRequestChange={(next) => {
-                requestRef.current = next;
-                setRequest(next);
-                const key = JSON.stringify(listScope(next));
-                if (scopeKeyRef.current !== null && scopeKeyRef.current !== key) setSelection(NO_SELECTION);
-                scopeKeyRef.current = key;
-              }}
-              emptyState={<Typography sx={{ fontSize: 13, ...quietSx }} data-testid="administration-empty">{t('pages.administrationView.emptyAssets')}</Typography>}
-            />
-          </Box>
-          <DirectoriesSection zoneName={zoneName} />
+          {tab === 'assets' && (
+            <Box sx={{
+              '& .ag-header-cell[col-id="select"]': { px: 0 },
+              '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
+            }}
+            >
+              <ServerDataGrid<AdministrationAssetRow>
+                columns={columns}
+                endpoint={ASSETS_ENDPOINT}
+                queryKey="administration-assets"
+                getRowId={rowId}
+                showRowCount
+                defaultSort={{ field: 'name', direction: 'ASC' }}
+                requiredColumns={['name']}
+                enableColumnChooser
+                columnPreferencesKey="it-administration-assets"
+                refreshKey={refreshKey}
+                enableSearch
+                onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
+                onQueryStateChange={(state) => setGridFilters(state.filterModel ?? {})}
+                onCellClicked={(event: any) => {
+                  if (!event?.data?.id) return;
+                  const target = event.event?.target as HTMLElement | undefined;
+                  // A link in a cell (the reference, an application) opens its own page.
+                  if (target?.closest?.('a')) return;
+                  if (event.column?.getColId?.() !== SELECTION_COLUMN) {
+                    navigate(`/it/assets/${event.data.id}`);
+                    return;
+                  }
+                  // A click in the selection cell beside the box ticks it too; the box ticks itself.
+                  if (!target?.closest?.('input')) toggleRow(event.data.id);
+                }}
+                onListRequestChange={(next) => {
+                  requestRef.current = next;
+                  setRequest(next);
+                  const key = JSON.stringify(listScope(next));
+                  if (scopeKeyRef.current !== null && scopeKeyRef.current !== key) setSelection(NO_SELECTION);
+                  scopeKeyRef.current = key;
+                }}
+                emptyState={<Typography sx={{ fontSize: 13, ...quietSx }} data-testid="administration-empty">{t('pages.administrationView.emptyAssets')}</Typography>}
+              />
+            </Box>
+          )}
           {canEdit && (
             <AssignZoneDialog
               open={assignOpen}

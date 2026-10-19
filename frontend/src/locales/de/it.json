@@ -499,6 +499,10 @@
       }
     },
     "administrationView": {
+      "tabs": {
+        "assets": "Assets",
+        "directories": "Verzeichnisse und Domänen"
+      },
       "exportAssets": "Assets exportieren",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
