@@ -42,7 +42,7 @@ Sie sehen und tippen ausschließlich **Namen**. KANAP erzeugt beim ersten Speich
 
 Weil Namen die Werte identifizieren, gelten innerhalb einer Liste einige Regeln:
 
-- jeder Wert braucht einen Namen, und zwei Werte dürfen nicht denselben Namen tragen (Groß- und Kleinschreibung spielt keine Rolle);
+- jeder Wert braucht einen Namen (ein Sternchen kennzeichnet die Spalte **Name**), und zwei Werte dürfen nicht denselben Namen tragen (Groß- und Kleinschreibung spielt keine Rolle);
 - ein Name darf nicht mit dem internen Code eines anderen Werts derselben Liste identisch sein;
 - Namen von **Zugriffsmethoden** dürfen weder Komma noch Semikolon enthalten, da der CSV-Export sie in einer einzigen, durch Kommas getrennten Zelle auflistet.
 
@@ -96,19 +96,24 @@ Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen
 
 ### Administrationszonen
 
-Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller, Tier 1 für die Server, Tier 2 für die Arbeitsplätze. Sie finden sie in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.
+Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Administrationsmodells der ANSSI mit:
 
-**Spalten**: Name, Administratorgruppe, Berechtigungsstufe, Ablageort der Geheimnisse, Beschreibung, Nicht mehr anbieten
+- **Tier 0 (Vertrauenskern)**: Verzeichnisdienste wie Active Directory oder Entra ID, PKI, Werkzeuge zur Identitätsverwaltung und die Systeme, auf denen sie laufen.
+- **Tier 1 (Server und Anwendungen)**: Geschäftsserver, Anwendungen, Datenbanken und Middleware.
+- **Tier 2 (Arbeitsplätze)**: Arbeitsplätze und Geräte der Benutzer.
 
-- **Administratorgruppe**: wer die Zone verwaltet, zum Beispiel „Domänen-Admins“.
-- **Berechtigungsstufe**: die Stufe der Zone in Ihrem Modell, zum Beispiel „Tier 0“.
-- **Ablageort der Geheimnisse**: wo die Administrationsgeheimnisse der Zone aufbewahrt werden, zum Beispiel ein Passwort-Tresor.
+Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt KANAP sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
+
+**Spalten**: Name, Administratorgruppe, Beschreibung, Nicht mehr anbieten
+
+- **Administratorgruppe**: die Verzeichnisgruppe oder das Team, das die Zone verwaltet, zum Beispiel „Domänen-Admins“.
 
 **Verwendung**:
 - Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**
-- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Technologien und Servern listet. Siehe [Administrationssicht](administration-view.md).
+- Assets-Arbeitsbereich → Reiter Technik → **Administrationszone**
+- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Technologien, deren Servern und den der Zone zugeordneten Servern listet. Siehe [Administrationssicht](administration-view.md).
 
-Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien, die ihr bereits zugeordnet sind.
+Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
 
 ### Technologiefamilien
 
@@ -410,7 +415,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 |------|-----------------|
 | **Zugriffsmethoden** | Anwendungen (Reiter Technik und Support → Zugriffsmethoden) |
 | **Anwendungskategorien** | Anwendungen (Kategorie) |
-| **Administrationszonen** | Technologien (Eigenschaftenfeld → Administrationszone), Administrationssicht |
+| **Administrationszonen** | Technologien (Eigenschaftenfeld → Administrationszone), Assets (Reiter Technik → Administrationszone), Administrationssicht |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
 | **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Administrationssicht |

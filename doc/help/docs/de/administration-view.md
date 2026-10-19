@@ -11,18 +11,20 @@ Die Sicht liest, was Sie an anderer Stelle erfassen:
 1. Legen Sie Ihre Administrationszonen an und ergänzen Sie Ihre Domänen in **IT-Landschaft > Einstellungen**. Siehe [Administrationszonen](it-ops-settings.md#administrationszonen) und [Domänen](it-ops-settings.md#domanen).
 2. Ordnen Sie jede Technologie mit dem Feld **Administrationszone** ihres Eigenschaftenfelds ihrer Zone zu. Siehe [Technologien](technologies.md#eigenschaftenfeld).
 3. Verknüpfen Sie die Technologien mit den Servern, die sie tragen. Siehe [Eine Technologie mit einem Server verknüpfen](technologies.md#eine-technologie-mit-einem-server-verknupfen).
+4. Ordnen Sie einen Server selbst einer Zone zu, mit dem Feld **Administrationszone** seines Reiters Technik. Siehe [Assets](assets.md#technisch).
 
 ## Administrationszonen
 
 Ein Block pro Zone, nach Name. Jeder Block zeigt:
 
-- **Administratorgruppe**, **Berechtigungsstufe** und **Geheimnisse** (wo ihre Geheimnisse aufbewahrt werden) der Zone.
+- Die **Administratorgruppe** der Zone.
 - **Verzeichnisdienste**: die Technologien der Familie **Verzeichnis und Identität**, die der Zone zugeordnet sind.
 - Eine Tabelle ihrer Technologien: **Ref.**, **Technologie**, **Familie** und **Server**. Die Server sind die, die die Technologie tragen, direkt oder über den Server, in dem sie laufen („über“ diesen Server).
+- **Server in dieser Zone**: die Server, die der Zone über ihr eigenes Feld **Administrationszone** zugeordnet sind, mit **Ref.**, **Name** und **Typ**.
 
 Die Technologien ohne Zone kommen zuletzt, unter **Keine Zone**. Ein Hinweis oben auf der Seite zählt sie: Öffnen Sie jede und legen Sie ihre Zone fest.
 
-Außer Betrieb genommene Technologien und Server bleiben außen vor. Eine in den Einstellungen als **Nicht mehr anbieten** markierte Zone erscheint weiterhin, solange ihr Technologien zugeordnet sind. Eine aus den Einstellungen entfernte Zone, die Technologien noch nennen, erscheint als **Unbekannte Zone** mit ihrem Code.
+Außer Betrieb genommene Technologien und Server bleiben außen vor. Eine in den Einstellungen als **Nicht mehr anbieten** markierte Zone erscheint weiterhin, solange ihr Technologien oder Server zugeordnet sind. Eine aus den Einstellungen entfernte Zone, die Technologien oder Server noch nennen, erscheint als **Unbekannte Zone** mit ihrem Code.
 
 Gibt es noch keine Zone, sagt die Seite das und verweist, wenn Sie die Einstellungen lesen dürfen, auf sie.
 
@@ -54,10 +56,10 @@ Jeder Server erscheint einmal. „Keiner gefunden“ bedeutet, dass kein Server 
 
 ## Export
 
-**Zonen exportieren** und **Domänen exportieren** laden jede Liste als CSV-Datei herunter.
+**Zonen exportieren** und **Domänen exportieren** laden jede Liste als CSV-Datei herunter. Die Datei der Zonen hat eine Zeile pro Technologie und nennt die jeder Zone zugeordneten Server.
 
 ## Tipps
 
 - **Mit Tier 0 beginnen**: Ordnen Sie zuerst den Verzeichnisdienst, seine Controller und die Werkzeuge zu, die sie verwalten. Sie sind am stärksten exponiert.
-- **Die Geheimnisse benennen**: Der **Ablageort der Geheimnisse** einer Zone beantwortet die erste Frage eines Audits: Wo werden die Administratorpasswörter aufbewahrt?
+- **Die Administratoren benennen**: Die **Administratorgruppe** einer Zone beantwortet die erste Frage eines Audits: Wer hält die Administratorrechte?
 - **Die Controller prüfen**: Eine Domäne ohne Controller, oder mit einem unerwarteten, deutet meist auf einen Server hin, dem die Domäne oder die Technologien fehlen.

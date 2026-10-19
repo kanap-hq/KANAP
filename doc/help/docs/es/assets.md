@@ -51,6 +51,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 - **Sublocalización**: Área específica dentro de la ubicación (edificio, sala, rack)
 - **Puesta en marcha**: Fecha en que el activo entró en producción
 - **Fin de vida**: Fecha planificada o efectiva de retiro
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo
 
 **Filtrado**:
 
@@ -67,6 +68,7 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 | OS | Filtrar por sistema operativo |
 | Zona de red | Filtrar por segmento de red |
 | Ciclo de vida | Filtrar por estado del ciclo de vida |
+| Zona de administración | Incluye "(Vacío)" para los activos sin zona |
 
 **Consejo**: Combine filtros entre columnas para acotar resultados. Por ejemplo, filtre por Entorno = "Prod" y Ciclo de vida = "Activo" para ver solo los activos activos de producción.
 
@@ -160,6 +162,7 @@ La pestaña Técnico organiza el clúster, la identidad de red, las tecnologías
 **Identidad**:
 - **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
 - **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la [Vista de la administración](administration-view.md).
 - **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
 - **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
 - **Sistema operativo**: Tipo y versión del SO (p. ej., Windows Server 2022, Ubuntu 24.04 LTS). Deshabilitado para clústeres: el SO se define por miembro. Cuando se selecciona, muestra debajo las fechas de fin de soporte estándar y extendido.
@@ -305,6 +308,7 @@ Desde la lista de Activos:
 | `is_cluster` | Si es un clúster | No | `sí` o `no` |
 | `hostname` | Nombre de host de red | No | |
 | `domain` | Dominio DNS | No | Acepta código o etiqueta de Configuración |
+| `admin_zone` | Zona de administración | No | Acepta código o etiqueta de Configuración |
 | `aliases` | Alias DNS | No | Lista separada por comas |
 | `operating_system` | Tipo de SO | No | Acepta código o etiqueta de Configuración |
 | `cluster` | Pertenencia a clúster | No | Nombre del clúster padre |
@@ -331,6 +335,7 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 | Ciclo de vida (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Sistema operativo | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Dominio | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Zona de administración (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (núcleo de confianza)`, `Tier 1 (servidores y aplicaciones)` |
 | Tipo de dirección IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, de modo que un archivo exportado se puede volver a importar tal cual.

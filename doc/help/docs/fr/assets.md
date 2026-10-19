@@ -51,6 +51,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 - **Sous-site** : Zone spécifique au sein du site (bâtiment, salle, baie)
 - **Mise en production** : Date à laquelle l'actif est entré en production
 - **Fin de vie** : Date de retrait planifiée ou effective
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif
 
 **Filtrage** :
 
@@ -67,6 +68,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 | OS | Filtrer par système d'exploitation |
 | Zone réseau | Filtrer par segment réseau |
 | Cycle de vie | Filtrer par statut de cycle de vie |
+| Zone d'administration | Inclut « (Vide) » pour les actifs sans zone |
 
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
@@ -160,6 +162,7 @@ L'onglet Technique organise le cluster, l'identité réseau, les technologies qu
 **Identité** :
 - **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
 - **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la [Vue de l'administration](administration-view.md).
 - **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
 - **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
 - **Système d'exploitation** : Type et version d'OS (ex. : Windows Server 2022, Ubuntu 24.04 LTS). Désactivé pour les clusters : l'OS est défini par membre. Lorsqu'il est sélectionné, affiche les dates de fin de support standard et étendu en dessous.
@@ -305,6 +308,7 @@ Depuis la liste des Actifs :
 | `is_cluster` | Est-ce un cluster | Non | `oui` ou `non` |
 | `hostname` | Nom d'hôte réseau | Non | |
 | `domain` | Domaine DNS | Non | Accepte un code ou un libellé depuis les Paramètres |
+| `admin_zone` | Zone d'administration | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
 | `operating_system` | Type d'OS | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `cluster` | Appartenance à un cluster | Non | Nom du cluster parent |
@@ -331,6 +335,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Cycle de vie (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Système d'exploitation | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Domaine | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Zone d'administration (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (cœur de confiance)`, `Tier 1 (serveurs et applications)` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, si bien qu'un fichier exporté peut être réimporté tel quel.

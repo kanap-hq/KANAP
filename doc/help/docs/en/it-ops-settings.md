@@ -42,7 +42,7 @@ You only ever see and type **names**. KANAP generates a stable internal code fro
 
 Because names identify values, a few rules apply within a list:
 
-- every value needs a name, and two values cannot have the same name (case does not matter);
+- every value needs a name (an asterisk marks the **Name** column), and two values cannot have the same name (case does not matter);
 - a name cannot be identical to the internal code of another value in the same list;
 - names of **Access methods** cannot contain a comma or a semicolon, because the CSV export lists them in one comma-separated cell.
 
@@ -96,19 +96,24 @@ The category determines which fields appear when editing a Location:
 
 ### Administration zones
 
-The zones of your administration model, for example Tier 0 for the directory and its controllers, Tier 1 for the servers, Tier 2 for the workstations. Find them in your administration policy or your privileged access model.
+The zones of your administration model. KANAP ships the three tiers of the ANSSI administration model:
 
-**Columns**: Name, Administrator group, Privilege level, Secrets location, Description, No longer offered
+- **Tier 0 (core of trust)**: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.
+- **Tier 1 (servers and applications)**: business servers, applications, databases and middleware.
+- **Tier 2 (workstations)**: user workstations and devices.
 
-- **Administrator group**: who administers the zone, for example "Domain admins".
-- **Privilege level**: the level of the zone in your model, for example "Tier 0".
-- **Secrets location**: where the zone's administrator secrets are kept, for example a password vault.
+Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, KANAP no longer adds them: add them yourself if you need them.
+
+**Columns**: Name, Administrator group, Description, No longer offered
+
+- **Administrator group**: the directory group or the team that administers the zone, for example "Domain admins".
 
 **Where used**:
 - Technologies workspace → properties drawer → **Administration zone**
-- **IT Landscape > Administration view**, which lists each zone with its technologies and servers. See [Administration view](administration-view.md).
+- Assets workspace → Technical tab → **Administration zone**
+- **IT Landscape > Administration view**, which lists each zone with its technologies, their servers and the servers placed in the zone. See [Administration view](administration-view.md).
 
-A zone marked **No longer offered** stays on the technologies already placed in it.
+A zone marked **No longer offered** stays on the technologies and assets already placed in it.
 
 ### Technology families
 
@@ -410,7 +415,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 |------|-----------------|
 | **Access methods** | Applications (Technical & Support tab → Access Methods) |
 | **Application categories** | Applications (Category) |
-| **Administration zones** | Technologies (properties drawer → Administration zone), Administration view |
+| **Administration zones** | Technologies (properties drawer → Administration zone), Assets (Technical tab → Administration zone), Administration view |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
 | **Domains** | Assets (Technical tab → Domain, FQDN), Administration view |

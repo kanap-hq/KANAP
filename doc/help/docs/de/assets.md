@@ -51,6 +51,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 - **Unter-Standort**: Spezifischer Bereich innerhalb des Standorts (Gebäude, Raum, Rack)
 - **Go-Live**: Datum, an dem das Asset in Produktion ging
 - **End-of-Life**: Geplantes oder tatsächliches Stilllegungsdatum
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört
 
 **Filterung**:
 
@@ -67,6 +68,7 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 | OS | Nach Betriebssystem filtern |
 | Netzwerkzone | Nach Netzwerksegment filtern |
 | Lebenszyklus | Nach Lebenszyklus-Status filtern |
+| Administrationszone | Enthält „(Leer)“ für Assets ohne Zone |
 
 **Tipp**: Kombinieren Sie Filter über Spalten hinweg, um die Ergebnisse einzugrenzen. Filtern Sie zum Beispiel nach Umgebung = „Prod" und Lebenszyklus = „Aktiv", um nur aktive Produktions-Assets zu sehen.
 
@@ -160,6 +162,7 @@ Der Reiter Technisch organisiert Cluster, Netzwerkidentität, die vom Server get
 **Identität**:
 - **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
 - **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone in der [Administrationssicht](administration-view.md).
 - **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
 - **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert: OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.
@@ -305,6 +308,7 @@ Aus der Asset-Liste:
 | `is_cluster` | Ist dies ein Cluster | Nein | `ja` oder `nein` |
 | `hostname` | Netzwerk-Hostname | Nein | |
 | `domain` | DNS-Domäne | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
+| `admin_zone` | Administrationszone | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `aliases` | DNS-Aliase | Nein | Komma-getrennte Liste |
 | `operating_system` | OS-Typ | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `cluster` | Cluster-Mitgliedschaft | Nein | Name des übergeordneten Clusters |
@@ -331,6 +335,7 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 | Lebenszyklus (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Betriebssystem | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Domäne | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Administrationszone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (Vertrauenskern)`, `Tier 1 (Server und Anwendungen)` |
 | IP-Adresstyp | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, sodass eine exportierte Datei unverändert wieder importiert werden kann.

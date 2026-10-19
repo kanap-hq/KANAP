@@ -42,7 +42,7 @@ Usted solo ve y escribe **nombres**. KANAP genera un código interno estable a p
 
 Como los nombres identifican los valores, dentro de una lista se aplican algunas reglas:
 
-- todo valor necesita un nombre, y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
+- todo valor necesita un nombre (un asterisco marca la columna **Nombre**), y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
 - un nombre no puede ser idéntico al código interno de otro valor de la misma lista;
 - los nombres de los **Métodos de acceso** no pueden contener una coma ni un punto y coma, porque la exportación CSV los lista en una sola celda separada por comas.
 
@@ -96,19 +96,24 @@ La categoría determina qué campos aparecen al editar una Ubicación:
 
 ### Zonas de administración
 
-Las zonas de su modelo de administración, por ejemplo el tier 0 para el directorio y sus controladores, el tier 1 para los servidores, el tier 2 para los puestos de trabajo. Figuran en su política de administración o en su modelo de acceso privilegiado.
+Las zonas de su modelo de administración. KANAP incluye los tres tiers del modelo de administración de la ANSSI:
 
-**Columnas**: Nombre, Grupo de administradores, Nivel de privilegios, Ubicación de los secretos, Descripción, Dejar de proponer
+- **Tier 0 (núcleo de confianza)**: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.
+- **Tier 1 (servidores y aplicaciones)**: servidores de negocio, aplicaciones, bases de datos y middleware.
+- **Tier 2 (puestos de trabajo)**: puestos de trabajo y dispositivos de los usuarios.
 
-- **Grupo de administradores**: quién administra la zona, por ejemplo «Admins. del dominio».
-- **Nivel de privilegios**: el nivel de la zona en su modelo, por ejemplo «Tier 0».
-- **Ubicación de los secretos**: dónde se guardan los secretos de administración de la zona, por ejemplo un almacén de contraseñas.
+Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, KANAP ya no los añade: añádalos usted mismo si los necesita.
+
+**Columnas**: Nombre, Grupo de administradores, Descripción, Dejar de proponer
+
+- **Grupo de administradores**: el grupo del directorio o el equipo que administra la zona, por ejemplo «Admins. del dominio».
 
 **Dónde se usa**:
 - Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**
-- **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías y sus servidores. Consulte [Vista de la administración](administration-view.md).
+- Espacio de trabajo de Activos → pestaña Técnico → **Zona de administración**
+- **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías, sus servidores y los servidores situados en la zona. Consulte [Vista de la administración](administration-view.md).
 
-Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías ya situadas en ella.
+Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías y los activos ya situados en ella.
 
 ### Familias de tecnologías
 
@@ -410,7 +415,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 |-------|--------------|
 | **Métodos de acceso** | Aplicaciones (pestaña Técnico y soporte → Métodos de acceso) |
 | **Categorías de aplicación** | Aplicaciones (Categoría) |
-| **Zonas de administración** | Tecnologías (panel de propiedades → Zona de administración), Vista de la administración |
+| **Zonas de administración** | Tecnologías (panel de propiedades → Zona de administración), Activos (pestaña Técnico → Zona de administración), Vista de la administración |
 | **Proveedores cloud** | Activos (Proveedor), Ubicaciones (Proveedor cloud) |
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
 | **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), Vista de la administración |

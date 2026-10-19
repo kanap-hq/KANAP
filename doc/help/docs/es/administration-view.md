@@ -11,18 +11,20 @@ La vista lee lo que usted registra en otros lugares:
 1. Defina sus zonas de administración y complete sus dominios en **Panorama IT > Configuración**. Consulte [Zonas de administración](it-ops-settings.md#zonas-de-administracion) y [Dominios](it-ops-settings.md#dominios).
 2. Sitúe cada tecnología en su zona con el campo **Zona de administración** de su panel de propiedades. Consulte [Tecnologías](technologies.md#panel-de-propiedades).
 3. Vincule las tecnologías a los servidores que las llevan. Consulte [Vincular una tecnología a un servidor](technologies.md#vincular-una-tecnologia-a-un-servidor).
+4. Sitúe un servidor en una zona propia con el campo **Zona de administración** de su pestaña Técnico. Consulte [Activos](assets.md#tecnico).
 
 ## Zonas de administración
 
 Un bloque por zona, por nombre. Cada bloque muestra:
 
-- El **Grupo de administradores**, el **Nivel de privilegios** y los **Secretos** (dónde se guardan sus secretos) de la zona.
+- El **Grupo de administradores** de la zona.
 - **Servicios de directorio**: las tecnologías de la familia **Directorio e identidad** situadas en la zona.
 - Una tabla de sus tecnologías: **Ref.**, **Tecnología**, **Familia** y **Servidores**. Los servidores son los que llevan la tecnología, directamente o a través del servidor en el que se ejecutan («a través de» ese servidor).
+- **Servidores de esta zona**: los servidores situados en la zona con su propio campo **Zona de administración**, con **Ref.**, **Nombre** y **Tipo**.
 
 Las tecnologías sin zona van al final, en **Sin zona**. Un aviso en la parte superior de la página las cuenta: abra cada una e indique su zona.
 
-Las tecnologías retiradas y los servidores retirados quedan fuera. Una zona marcada con **Dejar de proponer** en la configuración se sigue mostrando mientras haya tecnologías situadas en ella. Una zona eliminada de la configuración que algunas tecnologías aún nombran se muestra como **Zona desconocida**, con su código.
+Las tecnologías retiradas y los servidores retirados quedan fuera. Una zona marcada con **Dejar de proponer** en la configuración se sigue mostrando mientras haya tecnologías o servidores situados en ella. Una zona eliminada de la configuración que algunas tecnologías o servidores aún nombran se muestra como **Zona desconocida**, con su código.
 
 Si todavía no existe ninguna zona, la página lo indica y, si puede leer la configuración, enlaza con ella.
 
@@ -54,10 +56,10 @@ Cada servidor aparece una vez. «Ninguno encontrado» significa que ningún serv
 
 ## Exportación
 
-**Exportar las zonas** y **Exportar los dominios** descargan cada lista como archivo CSV.
+**Exportar las zonas** y **Exportar los dominios** descargan cada lista como archivo CSV. El archivo de las zonas tiene una fila por tecnología y nombra los servidores situados en cada zona.
 
 ## Consejos
 
 - **Empiece por el tier 0**: sitúe primero el directorio, sus controladores y las herramientas que los administran. Son los más expuestos.
-- **Nombre los secretos**: la **Ubicación de los secretos** de una zona responde a la primera pregunta de una auditoría: ¿dónde se guardan las contraseñas de administración?
+- **Nombre a los administradores**: el **Grupo de administradores** de una zona responde a la primera pregunta de una auditoría: ¿quién tiene los derechos de administración?
 - **Revise los controladores**: un dominio sin controlador, o con uno inesperado, suele revelar un servidor al que le faltan el dominio o las tecnologías.

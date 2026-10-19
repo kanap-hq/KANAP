@@ -11,18 +11,20 @@ La vue lit ce que vous saisissez ailleurs :
 1. Définissez vos zones d'administration et complétez vos domaines dans **Cartographie SI > Paramètres**. Voir [Zones d'administration](it-ops-settings.md#zones-dadministration) et [Domaines](it-ops-settings.md#domaines).
 2. Placez chaque technologie dans sa zone avec le champ **Zone d'administration** de son panneau de propriétés. Voir [Technologies](technologies.md#panneau-de-proprietes).
 3. Liez les technologies aux serveurs qui les portent. Voir [Lier une technologie à un serveur](technologies.md#lier-une-technologie-a-un-serveur).
+4. Placez un serveur dans une zone qui lui est propre avec le champ **Zone d'administration** de son onglet Technique. Voir [Actifs](assets.md#technique).
 
 ## Zones d'administration
 
 Un bloc par zone, par nom. Chaque bloc montre :
 
-- Le **Groupe d'administrateurs**, le **Niveau de privilèges** et les **Secrets** (l'endroit où ses secrets sont conservés) de la zone.
+- Le **Groupe d'administrateurs** de la zone.
 - **Services d'annuaire** : les technologies de la famille **Annuaire et identité** placées dans la zone.
 - Un tableau de ses technologies : **Réf.**, **Technologie**, **Famille** et **Serveurs**. Les serveurs sont ceux qui portent la technologie, directement ou par le serveur dans lequel ils tournent (« via » ce serveur).
+- **Serveurs de cette zone** : les serveurs placés dans la zone par leur propre champ **Zone d'administration**, avec **Réf.**, **Nom** et **Type**.
 
 Les technologies sans zone viennent en dernier, sous **Sans zone**. Un avertissement en haut de la page les compte : ouvrez chacune et renseignez sa zone.
 
-Les technologies retirées et les serveurs retirés sont écartés. Une zone marquée **Ne plus proposer** dans les paramètres reste affichée tant que des technologies y sont placées. Une zone supprimée des paramètres alors que des technologies la nomment encore s'affiche comme **Zone inconnue**, avec son code.
+Les technologies retirées et les serveurs retirés sont écartés. Une zone marquée **Ne plus proposer** dans les paramètres reste affichée tant que des technologies ou des serveurs y sont placés. Une zone supprimée des paramètres alors que des technologies ou des serveurs la nomment encore s'affiche comme **Zone inconnue**, avec son code.
 
 Si aucune zone n'existe encore, la page le dit et, si vous pouvez lire les paramètres, renvoie vers eux.
 
@@ -54,10 +56,10 @@ Chaque serveur n'apparaît qu'une fois. « Aucun trouvé » signifie qu'aucun se
 
 ## Export
 
-**Exporter les zones** et **Exporter les domaines** téléchargent chaque liste en fichier CSV.
+**Exporter les zones** et **Exporter les domaines** téléchargent chaque liste en fichier CSV. Le fichier des zones compte une ligne par technologie et nomme les serveurs placés dans chaque zone.
 
 ## Conseils
 
 - **Commencez par le tier 0** : placez d'abord l'annuaire, ses contrôleurs et les outils qui les administrent. Ce sont les plus exposés.
-- **Nommez les secrets** : l'**Emplacement des secrets** d'une zone répond à la première question d'un audit : où sont conservés les mots de passe d'administration ?
+- **Nommez les administrateurs** : le **Groupe d'administrateurs** d'une zone répond à la première question d'un audit : qui détient les droits d'administration ?
 - **Vérifiez les contrôleurs** : un domaine sans contrôleur, ou avec un contrôleur inattendu, révèle souvent un serveur dont le domaine ou les technologies manquent.

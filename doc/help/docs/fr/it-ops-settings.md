@@ -42,7 +42,7 @@ Vous ne voyez et ne saisissez jamais que des **noms**. KANAP génère un code in
 
 Parce que les noms identifient les valeurs, quelques règles s'appliquent au sein d'une liste :
 
-- chaque valeur doit avoir un nom, et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
+- chaque valeur doit avoir un nom (un astérisque marque la colonne **Nom**), et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
 - un nom ne peut pas être identique au code interne d'une autre valeur de la même liste ;
 - les noms des **Méthodes d'accès** ne peuvent contenir ni virgule ni point-virgule, car l'export CSV les regroupe dans une seule cellule séparée par des virgules.
 
@@ -96,19 +96,24 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 
 ### Zones d'administration
 
-Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs, le tier 1 pour les serveurs, le tier 2 pour les postes de travail. Elles figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.
+Les zones de votre modèle d'administration. KANAP fournit les trois tiers du modèle d'administration de l'ANSSI :
 
-**Colonnes** : Nom, Groupe d'administrateurs, Niveau de privilèges, Emplacement des secrets, Description, Ne plus proposer
+- **Tier 0 (cœur de confiance)** : les annuaires comme Active Directory ou Entra ID, la PKI, les outils d'administration de l'identité, et les systèmes qui les hébergent.
+- **Tier 1 (serveurs et applications)** : les serveurs métier, les applications, les bases de données et le middleware.
+- **Tier 2 (postes de travail)** : les postes de travail et les équipements des utilisateurs.
 
-- **Groupe d'administrateurs** : qui administre la zone, par exemple « Admins du domaine ».
-- **Niveau de privilèges** : le niveau de la zone dans votre modèle, par exemple « Tier 0 ».
-- **Emplacement des secrets** : où sont conservés les secrets d'administration de la zone, par exemple un coffre de mots de passe.
+Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, KANAP ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
+
+**Colonnes** : Nom, Groupe d'administrateurs, Description, Ne plus proposer
+
+- **Groupe d'administrateurs** : le groupe de l'annuaire ou l'équipe qui administre la zone, par exemple « Admins du domaine ».
 
 **Où c'est utilisé** :
 - Espace de travail Technologies > panneau de propriétés > **Zone d'administration**
-- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies et ses serveurs. Voir [Vue de l'administration](administration-view.md).
+- Espace de travail Actifs > Onglet Technique > **Zone d'administration**
+- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies, leurs serveurs et les serveurs placés dans la zone. Voir [Vue de l'administration](administration-view.md).
 
-Une zone marquée **Ne plus proposer** reste sur les technologies déjà placées dedans.
+Une zone marquée **Ne plus proposer** reste sur les technologies et les actifs déjà placés dedans.
 
 ### Familles de technologies
 
@@ -410,7 +415,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
-| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Vue de l'administration |
+| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Actifs (onglet Technique > Zone d'administration), Vue de l'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
 | **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |
