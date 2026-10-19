@@ -31,6 +31,7 @@ import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
 import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
+import { chargebackKpiTotals } from './chargebackKpiTotals';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -88,6 +89,7 @@ type GlobalChargebackKpiRow = {
   headcount: number | null;
   itUsers: number | null;
   turnover: number | null;
+  /** In the company's base currency; `turnover` is in the reporting currency. */
   turnoverRaw?: number | null;
   costPerUser: number | null;
   costPerItUser: number | null;
@@ -463,36 +465,7 @@ export default function GlobalChargebackReport() {
     chartRef.current?.download(`global-chargeback-company-${scope}-${year}-${metricFile}`);
   };
 
-  const kpiTotals = useMemo(() => {
-    let amountRawTotal = 0;
-    let amountDisplayTotal = 0;
-    let headcountTotal = 0;
-    let itUsersTotal = 0;
-    let turnoverRawTotal = 0;
-    let turnoverDisplayTotal = 0;
-    for (const row of kpiRows) {
-      amountRawTotal += Number(row.amountRaw ?? row.amount ?? 0);
-      amountDisplayTotal += Number(row.amount ?? 0);
-      headcountTotal += Number(row.headcount ?? 0);
-      itUsersTotal += Number(row.itUsers ?? 0);
-      turnoverRawTotal += Number(row.turnoverRaw ?? row.turnover ?? 0);
-      turnoverDisplayTotal += Number(row.turnover ?? 0);
-    }
-    const costVsTurnover = turnoverRawTotal > 0 ? (amountRawTotal / turnoverRawTotal) * 100 : null;
-    const costPerUser = headcountTotal > 0 ? amountRawTotal / headcountTotal : null;
-    const costPerItUser = itUsersTotal > 0 ? amountRawTotal / itUsersTotal : null;
-    return {
-      amountRawTotal,
-      amountDisplayTotal,
-      headcountTotal,
-      itUsersTotal,
-      turnoverRawTotal,
-      turnoverDisplayTotal,
-      costVsTurnover,
-      costPerUser,
-      costPerItUser,
-    };
-  }, [kpiRows]);
+  const kpiTotals = useMemo(() => chargebackKpiTotals(kpiRows), [kpiRows]);
 
   return (
     <ReportLayout
