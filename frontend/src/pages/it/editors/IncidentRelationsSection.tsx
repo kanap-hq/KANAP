@@ -39,7 +39,7 @@ export default function IncidentRelationsSection({ assetId, applicationId }: Pro
     { key: 'ref', header: t('components.incidentRelations.columns.reference'), width: 72, render: (row) => <RelationRef>{formatItemRef('incident', row.item_number)}</RelationRef> },
     { key: 'title', header: t('components.incidentRelations.columns.title'), render: (row) => row.title },
     {
-      key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100,
+      key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100, hideOrder: 2,
       render: (row) => (
         <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
           <StatusDot color={getDotColor(INCIDENT_SEVERITY_COLORS[row.severity] || 'default', theme.palette.mode)} />
@@ -48,7 +48,7 @@ export default function IncidentRelationsSection({ assetId, applicationId }: Pro
       ),
     },
     { key: 'status', header: t('components.incidentRelations.columns.status'), width: 100, render: (row) => t(`enums.incidentStatus.${row.status}`, { defaultValue: row.status }) },
-    { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, render: (row) => formatShortDate(row.detected_at, i18n.language) },
+    { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, hideOrder: 1, render: (row) => formatShortDate(row.detected_at, i18n.language) },
   ];
 
   return (

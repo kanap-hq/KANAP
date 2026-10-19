@@ -166,11 +166,11 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       ),
     },
     {
-      key: 'environment', header: t('workspace.technology.servers.columns.environment'), width: 100,
+      key: 'environment', header: t('workspace.technology.servers.columns.environment'), width: 100, hideOrder: 4,
       render: (row) => muted(row, row.environment ? t(`enums.environment.${camel(row.environment)}`, { defaultValue: row.environment }) : dash),
     },
     {
-      key: 'os', header: t('workspace.technology.servers.columns.operatingSystem'), width: 150,
+      key: 'os', header: t('workspace.technology.servers.columns.operatingSystem'), width: 150, hideOrder: 3,
       render: (row) => muted(row, <span title={row.operating_system_label ?? undefined}>{row.operating_system_label ?? dash}</span>),
     },
     {
@@ -189,11 +189,11 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       ) : muted(row, versionText(row))),
     },
     {
-      key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140,
+      key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140, hideOrder: 2,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
     {
-      key: 'notes', header: t('workspace.technology.servers.columns.notes'), width: 180,
+      key: 'notes', header: t('workspace.technology.servers.columns.notes'), width: 180, hideOrder: 1,
       render: (row) => (editable(row) ? (
         <Box onClick={stop} onKeyDown={stop}>
           <TextField

@@ -120,7 +120,7 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
   const columns: Array<RelationsColumn<Technology>> = [
     { key: 'reference', header: t('pages.administrationView.columns.reference'), width: 80, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t('pages.administrationView.columns.technology'), width: 220, render: (row) => row.name },
-    { key: 'family', header: t('pages.administrationView.columns.family'), width: 180, render: (row) => labelFor('technologyFamily', row.family) },
+    { key: 'family', header: t('pages.administrationView.columns.family'), width: 180, hideOrder: 1, render: (row) => labelFor('technologyFamily', row.family) },
     { key: 'servers', header: t('pages.administrationView.columns.servers'), render: (row) => <Servers servers={row.servers} /> },
   ];
   const title = zone.code === null
@@ -150,11 +150,11 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
   const columns: Array<RelationsColumn<AdministrationDomain>> = [
     { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${nameOf('domain', row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
-    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? notSet },
+    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, hideOrder: 2, render: (row) => row.forest ?? notSet },
     {
       key: 'trusts',
       header: t('pages.administrationView.columns.trusts'),
-      width: 220,
+      width: 220, hideOrder: 1,
       render: (row) => (row.trusts.length || row.declared_by.length
         ? (
           <>

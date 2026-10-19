@@ -168,15 +168,15 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
     { key: 'ref', header: t('workspace.technology.applications.columns.ref'), width: 64, render: (row) => <RelationRef>{row.application_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.technology.applications.columns.application'), render: (row) => <span title={row.application_name ?? undefined}>{row.application_name ?? dash}</span> },
     {
-      key: 'environment', header: t('workspace.technology.applications.columns.environment'), width: 110,
+      key: 'environment', header: t('workspace.technology.applications.columns.environment'), width: 110, hideOrder: 4,
       render: (row) => (row.environment ? t(`enums.environment.${camel(row.environment)}`, { defaultValue: row.environment }) : dash),
     },
     { key: 'criticality', header: t('workspace.technology.applications.columns.criticality'), width: 100, render: (row) => criticality(row.criticality) },
     {
-      key: 'external', header: t('workspace.technology.applications.columns.externalFacing'), width: 64,
+      key: 'external', header: t('workspace.technology.applications.columns.externalFacing'), width: 64, hideOrder: 2,
       render: (row) => (row.external_facing ? t('workspace.technology.applications.yes') : tertiary(dash)),
     },
-    { key: 'server', header: t('workspace.technology.applications.columns.server'), width: 120, render: (row) => <span title={server(row)}>{server(row)}</span> },
+    { key: 'server', header: t('workspace.technology.applications.columns.server'), width: 120, hideOrder: 3, render: (row) => <span title={server(row)}>{server(row)}</span> },
     {
       key: 'version', header: t('workspace.technology.applications.columns.version'), width: 64,
       render: (row) => (editable(row) ? (
@@ -193,7 +193,7 @@ export default function TechnologyApplicationsTab({ technologyId, technologyRefe
       ) : versionText(row)),
     },
     {
-      key: 'itOwner', header: t('workspace.technology.applications.columns.itOwner'), width: 140,
+      key: 'itOwner', header: t('workspace.technology.applications.columns.itOwner'), width: 140, hideOrder: 1,
       render: (row) => {
         const names = row.it_owner_names.join(', ');
         return names ? <span title={names}>{names}</span> : dash;
