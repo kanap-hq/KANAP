@@ -36,8 +36,17 @@ export type CurrencyRateRow = {
   rates: Record<string, number | null>;
   /** Per currency: `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity` or `manual`. */
   rateSources: Record<string, string>;
-  capturedAt: string;
-  source: string;
+  capturedAt: string | null;
+  source: string | null;
+};
+
+/**
+ * `GET /currency/rates`. `currencies` is the row order (reporting currency first).
+ * `rates` holds one set per year, and only for that reporting currency.
+ */
+export type CurrencyRateMatrix = {
+  currencies: string[];
+  rates: CurrencyRateRow[];
 };
 
 export type MissingRatePair = {
@@ -56,9 +65,15 @@ export type RemoveManualRateResult = {
   refreshQueued: boolean;
 };
 
-export async function fetchCurrencyRates(): Promise<CurrencyRateRow[]> {
-  const res = await api.get<CurrencyRateRow[]>('/currency/rates');
-  return res.data;
+export async function fetchCurrencyRates(): Promise<CurrencyRateMatrix> {
+  const res = await api.get<CurrencyRateMatrix>('/currency/rates');
+  const data = res.data;
+  return {
+    currencies: Array.isArray(data?.currencies)
+      ? data.currencies.map((code) => String(code ?? '').trim().toUpperCase()).filter((code) => code.length > 0)
+      : [],
+    rates: Array.isArray(data?.rates) ? data.rates : [],
+  };
 }
 
 /** Currency and year pairs in use that have no rate. */

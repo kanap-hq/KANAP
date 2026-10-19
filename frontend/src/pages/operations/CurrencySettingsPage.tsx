@@ -22,10 +22,35 @@ import useCurrencyRates, {
 import { useAuth } from '../../auth/AuthContext';
 import KanapDialog from '../../components/design/KanapDialog';
 import { PropertyRow } from '../../components/design/PropertyRow';
-import FormattedNumberField from '../../components/inputs/FormattedNumberField';
-import { decimalMark } from '../../i18n/formatters';
+import { formatDecimal } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+
+/** Up to 6 decimals, trailing zeros trimmed, in the separators of the language. */
+function formatRate(value: number, locale: string): string {
+  return formatDecimal(value, locale, 6);
+}
+
+/**
+ * A typed rate. A comma or a point is the decimal mark; spaces and the other mark, when both
+ * appear, are grouping. `null` is empty, `NaN` is not a number.
+ */
+export function parseRateDraft(raw: string): number | null {
+  const trimmed = raw.trim();
+  if (trimmed === '') return null;
+  const compact = trimmed.replace(/[\s\u00a0\u202f\u2009]/g, '');
+  const lastComma = compact.lastIndexOf(',');
+  const lastPoint = compact.lastIndexOf('.');
+  let normalized = compact;
+  if (lastComma >= 0 && lastPoint >= 0) {
+    const decimalIsComma = lastComma > lastPoint;
+    normalized = decimalIsComma ? compact.replace(/\./g, '').replace(',', '.') : compact.replace(/,/g, '');
+  } else if (lastComma >= 0) {
+    normalized = compact.replace(',', '.');
+  }
+  if (!/^-?\d+(\.\d+)?$/.test(normalized)) return Number.NaN;
+  return Number(normalized);
+}
 
 function normalizeList(value: string): string[] | null {
   if (!value) return null;
@@ -42,7 +67,8 @@ export default function CurrencySettingsPage() {
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('budget_ops', 'admin');
   const { data, isLoading, isError } = useCurrencySettings();
-  const { data: rateRows, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
+  const { data: rateMatrix, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
+  const rateRows = rateMatrix?.rates;
   const { data: missingPairs, isLoading: missingLoading, isError: missingError } = useMissingRates();
   const [manualTarget, setManualTarget] = React.useState<{ currency: string; year: number } | null>(null);
   const [reportingCurrency, setReportingCurrency] = React.useState('EUR');
@@ -210,6 +236,7 @@ export default function CurrencySettingsPage() {
         )}
       </Paper>
       <CurrencyRatesTable
+        currencies={rateMatrix?.currencies}
         rows={rateRows}
         missing={missingPairs}
         loading={ratesLoading}
@@ -254,13 +281,12 @@ type ManualRateDialogProps = {
 function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, onRemoved }: ManualRateDialogProps) {
   const { t } = useTranslation(['ops', 'common']);
   const C = 'operations.currency';
-  // The application language decides the decimal mark; a typed comma or point is read either way.
-  const separator = decimalMark(useLocale());
+  const locale = useLocale();
   const set = rows?.find((row) => row.fiscalYear === year);
   const current = set?.rates?.[currency];
   const isManual = set?.rateSources?.[currency] === 'manual';
-  // Rates are stored with 6 decimals, as the matrix shows them.
-  const [draft, setDraft] = React.useState(current != null ? String(Number(current.toFixed(6))) : '');
+  // The same 6-decimal locale format as the matrix. A typed comma or point is read either way.
+  const [draft, setDraft] = React.useState(current != null ? formatRate(current, locale) : '');
   const [invalid, setInvalid] = React.useState(false);
   const save = useSetManualRate();
   const remove = useRemoveManualRate();
@@ -272,14 +298,14 @@ function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, on
       : null;
 
   const handleSave = async () => {
-    const rate = Number(draft);
-    if (draft === '' || !Number.isFinite(rate) || rate <= 0) {
+    const rate = parseRateDraft(draft);
+    if (rate == null || Number.isNaN(rate) || !Number.isFinite(rate) || rate <= 0) {
       setInvalid(true);
       return;
     }
     remove.reset();
     try {
-      await save.mutateAsync({ currency, year, rate });
+      await save.mutateAsync({ currency, year, rate: Number(rate.toFixed(6)) });
       onClose();
     } catch {
       // Shown in the dialog.
@@ -320,17 +346,14 @@ function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, on
           required
           valueSx={{ maxWidth: 200 }}
         >
-          <FormattedNumberField
+          <TextField
             variant="standard"
             value={draft}
-            emit="string"
-            decimals={6}
-            decimalSeparator={separator}
             error={invalid}
             placeholder={t(`${C}.manualRatePlaceholder`)}
-            inputProps={{ 'aria-label': t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency }) }}
+            inputProps={{ 'aria-label': t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency }), inputMode: 'decimal' }}
             onChange={(event) => {
-              setDraft(String(event.target.value ?? ''));
+              setDraft(event.target.value);
               setInvalid(false);
             }}
             fullWidth
@@ -350,6 +373,8 @@ function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, on
 }
 
 type RatesTableProps = {
+  /** Row order from the API: reporting currency first. Not the union of rate keys. */
+  currencies: string[] | undefined;
   rows: CurrencyRateRow[] | undefined;
   missing: MissingRatePair[] | undefined;
   loading: boolean;
@@ -391,6 +416,7 @@ const pairKey = (currency: string, year: number) => `${currency}:${year}`;
  */
 function RateValue({ value, source, missing }: { value: number | null; source: string | undefined; missing: boolean }) {
   const { t } = useTranslation(['ops']);
+  const locale = useLocale();
   const C = 'operations.currency';
   if (value == null) {
     return (
@@ -401,7 +427,7 @@ function RateValue({ value, source, missing }: { value: number | null; source: s
   }
   return (
     <>
-      <Box component="span">{value.toFixed(6)}</Box>
+      <Box component="span">{formatRate(value, locale)}</Box>
       {source === 'manual' && (
         <Box component="sup" aria-label={t(`${C}.manualFootnote`)} sx={manualStarSx}>*</Box>
       )}
@@ -415,6 +441,7 @@ function RateValue({ value, source, missing }: { value: number | null; source: s
 }
 
 function CurrencyRatesTable({
+  currencies,
   rows,
   missing,
   loading,
@@ -445,10 +472,7 @@ function CurrencyRatesTable({
   const years = Array.from(
     new Set([...rateRows.map((r) => r.fiscalYear), ...missingPairs.map((pair) => pair.year)]),
   ).sort((a, b) => a - b);
-  const currencySet = new Set<string>();
-  rateRows.forEach((row) => Object.keys(row.rates || {}).forEach((code) => currencySet.add(code.toUpperCase())));
-  missingPairs.forEach((pair) => currencySet.add(pair.currency));
-  const currencies = Array.from(currencySet).sort();
+  const currencyRows = (currencies ?? []).map((code) => code.trim().toUpperCase()).filter((code) => code.length > 0);
   const missingKeys = new Set(missingPairs.map((pair) => pairKey(pair.currency, pair.year)));
   const setByYear = new Map(rateRows.map((row) => [row.fiscalYear, row]));
   const hasManual = rateRows.some((row) => Object.values(row.rateSources ?? {}).includes('manual'));
@@ -481,7 +505,7 @@ function CurrencyRatesTable({
                 <Box component="th" sx={{ ...headSx, textAlign: 'left' }}>{t(`${C}.currencyCol`)}</Box>
                 {years.map((year) => {
                   const set = setByYear.get(year);
-                  const sourceLabel = set ? t(`${C}.${SOURCE_LABEL_KEYS[set.source] ?? 'annualAvg'}`) : '';
+                  const sourceLabel = set ? t(`${C}.${SOURCE_LABEL_KEYS[set.source ?? ''] ?? 'annualAvg'}`) : '';
                   return (
                     <Box component="th" key={year} sx={{ ...headSx, textAlign: 'right' }}>
                       <Box sx={{ color: 'kanap.text.secondary', fontVariantNumeric: 'tabular-nums' }}>{year}</Box>
@@ -492,7 +516,7 @@ function CurrencyRatesTable({
               </Box>
             </Box>
             <Box component="tbody">
-              {currencies.map((code) => (
+              {currencyRows.map((code) => (
                 <Box component="tr" key={code}>
                   <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{code}</Box>
                   {years.map((year) => {

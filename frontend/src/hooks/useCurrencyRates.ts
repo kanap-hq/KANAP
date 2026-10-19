@@ -4,11 +4,12 @@ import {
   fetchMissingRates,
   removeManualRate,
   setManualRate,
+  type CurrencyRateMatrix,
   type CurrencyRateRow,
   type ManualRateInput,
 } from '../services/currency';
 
-export type { CurrencyRateRow };
+export type { CurrencyRateMatrix, CurrencyRateRow };
 
 export const CURRENCY_RATES_KEY = ['currency-rates'] as const;
 export const MISSING_RATES_KEY = ['currency-rates-missing'] as const;

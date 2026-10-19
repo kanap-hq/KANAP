@@ -28,7 +28,10 @@ vi.mock('react-i18next', async () => {
       const fixed = real.getFixedT('en', first);
       translation = {
         t: (key: string, options?: unknown) => fixed(key, options as Record<string, unknown>),
-        i18n: { language: 'en', resolvedLanguage: 'en' },
+        i18n: {
+          get language() { return i18nState.language; },
+          get resolvedLanguage() { return i18nState.language; },
+        },
       };
       byNamespace.set(first, translation);
     }
@@ -38,6 +41,7 @@ vi.mock('react-i18next', async () => {
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn(), put: vi.fn(), delete: vi.fn() } }));
 const auth = vi.hoisted(() => ({ budgetAdmin: true }));
+const i18nState = vi.hoisted(() => ({ language: 'en' }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({
     hasLevel: (resource: string, level: string) => resource === 'budget_ops' && (level === 'reader' || auth.budgetAdmin),
@@ -69,7 +73,7 @@ const RATES_2025 = {
 };
 const NOK_2025 = { currency: 'NOK', year: 2025 };
 
-let rates: unknown[] = [];
+let matrix: { currencies: string[]; rates: unknown[] } = { currencies: [], rates: [] };
 let missing: unknown[] = [];
 
 function renderPage() {
@@ -95,12 +99,13 @@ async function waitForSettings() {
 describe('CurrencySettingsPage', () => {
   beforeEach(() => {
     auth.budgetAdmin = true;
-    rates = [];
+    i18nState.language = 'en';
+    matrix = { currencies: [], rates: [] };
     missing = [];
     for (const fn of Object.values(mocked)) fn.mockReset();
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/currency/settings') return { data: SETTINGS };
-      if (url === '/currency/rates') return { data: rates };
+      if (url === '/currency/rates') return { data: matrix };
       if (url === '/currency/rates/missing') return { data: { items: missing } };
       throw new Error(`unexpected GET ${url}`);
     });
@@ -142,7 +147,7 @@ describe('CurrencySettingsPage', () => {
   });
 
   it('says every currency has a rate when none is missing', async () => {
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
     renderPage();
 
     expect(await screen.findByText('Every currency in use has a rate.')).toBeInTheDocument();
@@ -150,16 +155,19 @@ describe('CurrencySettingsPage', () => {
   });
 
   it('shows no manual footnote when no rate was entered by hand', async () => {
-    rates = [{ ...RATES_2025, rateSources: { CHF: 'identity', EUR: 'world-bank-annual', USD: 'estimate' } }];
+    matrix = {
+      currencies: ['CHF', 'EUR', 'USD'],
+      rates: [{ ...RATES_2025, rateSources: { CHF: 'identity', EUR: 'world-bank-annual', USD: 'estimate' } }],
+    };
     renderPage();
 
-    expect(await screen.findByText('0.930000')).toBeInTheDocument();
+    expect(await screen.findByText('0.93')).toBeInTheDocument();
     expect(screen.queryByText('* Rate entered manually')).not.toBeInTheDocument();
     expect(screen.queryByLabelText('Rate entered manually')).not.toBeInTheDocument();
   });
 
   it('lists the missing pairs and marks manual and estimated rates', async () => {
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD', 'NOK'], rates: [RATES_2025] };
     missing = [NOK_2025];
     renderPage();
 
@@ -173,7 +181,7 @@ describe('CurrencySettingsPage', () => {
     const table = screen.getByRole('table');
     expect(within(table).getByText('NOK')).toBeInTheDocument();
     expect(within(table).getByText('—')).toBeInTheDocument();
-    expect(within(table).getByText('0.930000')).toBeInTheDocument();
+    expect(within(table).getByText('0.93')).toBeInTheDocument();
     // A manual rate carries an asterisk, explained once under the table.
     expect(within(table).getByLabelText('Rate entered manually')).toHaveTextContent('*');
     expect(screen.getByText('* Rate entered manually')).toBeInTheDocument();
@@ -188,7 +196,7 @@ describe('CurrencySettingsPage', () => {
 
   it('lets an editor enter a rate for a missing pair with a comma as decimal mark', async () => {
     const user = userEvent.setup();
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD', 'NOK'], rates: [RATES_2025] };
     missing = [NOK_2025];
     mocked.put.mockResolvedValue({ data: RATES_2025 });
     renderPage();
@@ -212,7 +220,7 @@ describe('CurrencySettingsPage', () => {
 
   it('refuses a rate that is not greater than 0 and shows the API errors', async () => {
     const user = userEvent.setup();
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD', 'NOK'], rates: [RATES_2025] };
     missing = [NOK_2025];
     mocked.put.mockRejectedValue({ response: { data: { message: 'Rate must be a finite number greater than 0 and at most 1000000000.' } } });
     renderPage();
@@ -234,7 +242,7 @@ describe('CurrencySettingsPage', () => {
 
   it('opens a manual rate from its cell, pre-filled, and removes it', async () => {
     const user = userEvent.setup();
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
     mocked.delete.mockResolvedValue({ data: { ok: true, refreshQueued: false } });
     renderPage();
 
@@ -252,9 +260,51 @@ describe('CurrencySettingsPage', () => {
     expect(mocked.put).not.toHaveBeenCalled();
   });
 
+  it('builds matrix rows from currencies, in that order, and trims trailing zeros', async () => {
+    matrix = {
+      currencies: ['CHF', 'USD', 'EUR'],
+      rates: [{
+        ...RATES_2025,
+        rates: { CHF: 1, EUR: 0.93, USD: 1.080803, GBP: 1.1 },
+        rateSources: { CHF: 'identity', EUR: 'manual', USD: 'world-bank-annual', GBP: 'world-bank-annual' },
+      }],
+    };
+    renderPage();
+
+    const table = await screen.findByRole('table');
+    const codes = within(table).getAllByRole('row').slice(1).map((row) => within(row).getAllByRole('cell')[0].textContent);
+    expect(codes).toEqual(['CHF', 'USD', 'EUR']);
+    expect(within(table).queryByText('GBP')).not.toBeInTheDocument();
+    expect(within(table).getByText('1.080803')).toBeInTheDocument();
+    expect(within(table).getByText('0.93')).toBeInTheDocument();
+    expect(within(table).queryByText('0.930000')).not.toBeInTheDocument();
+  });
+
+  it('writes rates in the French number format, including the prefilled manual rate', async () => {
+    const user = userEvent.setup();
+    i18nState.language = 'fr';
+    matrix = {
+      currencies: ['CHF', 'USD', 'EUR'],
+      rates: [{
+        ...RATES_2025,
+        rates: { CHF: 1, EUR: 0.93, USD: 1.080803 },
+        rateSources: { CHF: 'identity', EUR: 'manual', USD: 'world-bank-annual' },
+      }],
+    };
+    renderPage();
+
+    const table = await screen.findByRole('table');
+    expect(within(table).getByText('1,080803')).toBeInTheDocument();
+    expect(within(table).getByText('0,93')).toBeInTheDocument();
+
+    await user.click(within(table).getByRole('button', { name: 'Edit the rate for USD in 2025' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('textbox', { name: 'Rate in CHF for 1 USD' })).toHaveValue('1,080803');
+  });
+
   it('shows the rates read-only to a budget reader', async () => {
     auth.budgetAdmin = false;
-    rates = [RATES_2025];
+    matrix = { currencies: ['CHF', 'EUR', 'USD', 'NOK'], rates: [RATES_2025] };
     missing = [NOK_2025];
     renderPage();
 
