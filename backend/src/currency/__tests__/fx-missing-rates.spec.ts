@@ -286,6 +286,54 @@ async function testEstimatedBaseStillStoresTheYear() {
   assert.equal(saved[0].source, 'world-bank-annual');
 }
 
+/**
+ * A refresh that asks only for the current year, with the spot feed down, still
+ * falls back to the latest published year. The same fallback covers a future
+ * year requested on its own.
+ */
+async function testCurrentYearAloneFallsBackToLatestPublished() {
+  const currentYear = new Date().getFullYear();
+  const calls: Array<{ currency: string; start: number; end: number }> = [];
+  const annual: Record<string, Record<number, number>> = {
+    EUR: { [currentYear - 12]: 0.5, [currentYear - 4]: 0.88, [currentYear - 1]: 0.91 },
+    GBP: { [currentYear - 3]: 0.78 },
+    OLD: { [currentYear - 12]: 2 },
+  };
+  const fx = new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {} as any,
+    { getLatestRateSet: async () => null } as any,
+    {
+      ...annualClient(annual, { EUR: null, GBP: null }),
+      fetchAnnualRates: async (currency: string, startYear: number, endYear: number) => {
+        calls.push({ currency: currency.toUpperCase(), start: startYear, end: endYear });
+        return annualClient(annual).fetchAnnualRates(currency, startYear, endYear);
+      },
+    } as any,
+  );
+  const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP', 'OLD'] };
+  const [current] = await (fx as any).buildYearlySnapshots(ctx, [currentYear]);
+  assert.equal(current.quotes.EUR, 0.91, 'the latest year inside the ten-year window');
+  assert.equal(current.quoteSources.EUR, 'world-bank-forward');
+  assert.equal(current.source, 'world-bank-forward');
+  assert.equal(current.quotes.GBP, 0.78);
+  assert.equal(current.quoteSources.GBP, 'world-bank-forward');
+  assert.equal(current.quotes.OLD, null, 'a publication older than the ten-year window is not the fallback');
+  const fallback = calls.filter((call) => call.currency === 'EUR' && call.start === currentYear - 10 && call.end === currentYear - 1);
+  assert.equal(fallback.length, 1, 'the current year alone reads the published window');
+
+  calls.length = 0;
+  const [future] = await (fx as any).buildYearlySnapshots(ctx, [currentYear + 2]);
+  assert.equal(future.quotes.EUR, 0.91);
+  assert.equal(future.quoteSources.EUR, 'world-bank-forward');
+  assert.equal(future.source, 'world-bank-forward');
+  assert.ok(
+    calls.some((call) => call.currency === 'EUR' && call.start === currentYear - 10 && call.end === currentYear - 1),
+    'a future year requested alone reads the same window',
+  );
+}
+
 (async () => {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
@@ -294,6 +342,7 @@ async function testEstimatedBaseStillStoresTheYear() {
   await testOldSetWithoutProvenanceLendsItsSource();
   await testPastYearEstimateChain();
   await testEstimatedBaseStillStoresTheYear();
+  await testCurrentYearAloneFallsBackToLatestPublished();
   console.log('FX refresh keeps a known rate.');
 })().catch((err) => {
   console.error(err);

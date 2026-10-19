@@ -445,6 +445,37 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     return withTenantExecution(dataSource, tenantId, fn, { transaction: true });
   }
 
+  /**
+   * Latest published annual for the current-year and future-year fallback.
+   * A value already read from the series (a refresh that also asked for past
+   * years) is reused. Otherwise the last ten published years are read, so a
+   * refresh of the current year alone still has a fallback.
+   */
+  private async latestPublishedForFallback(
+    currency: string,
+    currentYear: number,
+    knownValue: number | null,
+    knownYear: number,
+  ): Promise<{ year: number; value: number } | null> {
+    if (knownValue != null && knownYear !== -Infinity) return { year: knownYear, value: knownValue };
+    try {
+      const history = await this.worldBank.fetchAnnualRates(currency, currentYear - 10, currentYear - 1);
+      let bestYear = -Infinity;
+      let best: number | null = null;
+      for (const [year, value] of history) {
+        if (year > bestYear && isUsableRate(value)) {
+          bestYear = year;
+          best = value;
+        }
+      }
+      return best == null ? null : { year: bestYear, value: best };
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`World Bank annual fetch failed for ${currency} ${currentYear - 10}-${currentYear - 1}: ${reason}`);
+      return null;
+    }
+  }
+
   private determineSource(year: number, currentYear: number): WorldBankRateSource {
     if (year > currentYear) return 'world-bank-forward';
     if (year === currentYear) return 'exchangerateapi-spot';
@@ -564,12 +595,17 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
           }
         }
 
-        if (currentYearValue == null && latestHistoricalValue != null) {
-          currentYearValue = latestHistoricalValue;
-          currentYearBasis = 'world-bank-forward';
-          this.logger.warn(
-            `Using latest World Bank annual value (${latestHistoricalYear}) for ${upper} in place of ${currentYear}`,
-          );
+        if (currentYearValue == null) {
+          const latest = await this.latestPublishedForFallback(upper, currentYear, latestHistoricalValue, latestHistoricalYear);
+          if (latest) {
+            currentYearValue = latest.value;
+            latestHistoricalValue = latest.value;
+            latestHistoricalYear = latest.year;
+            currentYearBasis = 'world-bank-forward';
+            this.logger.warn(
+              `Using latest World Bank annual value (${latest.year}) for ${upper} in place of ${currentYear}`,
+            );
+          }
         }
 
         if (currentYearValue != null) {
@@ -584,6 +620,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         }
       }
 
+      if (futureYears.length && currentYearValue == null && latestHistoricalValue == null) {
+        const latest = await this.latestPublishedForFallback(upper, currentYear, null, -Infinity);
+        if (latest) {
+          latestHistoricalValue = latest.value;
+          latestHistoricalYear = latest.year;
+        }
+      }
       const forwardValue = currentYearValue ?? latestHistoricalValue ?? null;
       if (futureYears.length) {
         if (forwardValue != null) {
