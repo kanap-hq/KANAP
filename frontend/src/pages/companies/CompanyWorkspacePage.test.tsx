@@ -89,7 +89,7 @@ const metrics: Record<number, Record<string, unknown> | null> = {
 
 function renderAt(path: string) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  return render(
+  const tree = () => (
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
@@ -101,8 +101,10 @@ function renderAt(path: string) {
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
-    </QueryClientProvider>,
+    </QueryClientProvider>
   );
+  const result = render(tree());
+  return { ...result, renderAgain: () => result.rerender(tree()) };
 }
 
 async function pickOption(label: string, typed: string, option: string) {
@@ -632,6 +634,21 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/companies/co-1'));
     expect(navigateMock).toHaveBeenCalledWith('/master-data/companies?year=2026');
+  });
+
+  it('does not load the deleted company again after deleting it', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    mocked.delete.mockResolvedValue({ data: {} });
+    const { renderAgain } = renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    const loadsBefore = mocked.get.mock.calls.filter(([url]) => url === '/companies/co-1').length;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/companies'));
+    // The router can keep the page on screen while the list loads: a render then must not reload it.
+    renderAgain();
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/companies/co-1')).toHaveLength(loadsBefore);
   });
 
   it('does not delete a company when the confirmation is cancelled', async () => {

@@ -130,10 +130,12 @@ export default function CompanyWorkspacePage() {
   });
 
   const detailKey = React.useMemo(() => ['companies', id] as const, [id]);
+  // Once deleted, the company is never loaded again, even while the page waits for the list.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Company>(`/companies/${id}`)).data,
-    enabled: !isCreate && !!id,
+    enabled: !isCreate && !!id && deletedId !== id,
   });
 
   React.useEffect(() => {
@@ -419,7 +421,7 @@ export default function CompanyWorkspacePage() {
               </Typography>
             )}
             {data && canDelete && (
-              <CompanyDeleteButton companyId={data.id} companyName={data.name} onDeleted={handleClose} />
+              <CompanyDeleteButton companyId={data.id} companyName={data.name} onDeleted={() => { setDeletedId(data.id); handleClose(); }} />
             )}
           </>
         ) : undefined}

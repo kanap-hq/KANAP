@@ -19,7 +19,8 @@ type Props = {
 /**
  * Delete action of the company page. The check runs first: a company something still uses
  * cannot be deleted, and the dialog says what uses it and to disable it instead (Close only).
- * Otherwise it asks, deletes, and hands back so the page can return to the list.
+ * Otherwise it asks, deletes, and hands back so the page can return to the list without
+ * loading the deleted company again.
  */
 export default function CompanyDeleteButton({ companyId, companyName, onDeleted }: Props) {
   const { t } = useTranslation(['master-data', 'common', 'errors']);
@@ -49,9 +50,9 @@ export default function CompanyDeleteButton({ companyId, companyName, onDeleted 
         return;
       }
       await api.delete(`/companies/${companyId}`);
-      queryClient.removeQueries({ queryKey: ['companies', companyId], exact: true });
       onDeleted();
-      void queryClient.invalidateQueries({ queryKey: ['companies'] });
+      queryClient.removeQueries({ queryKey: ['companies', companyId], exact: true });
+      void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== companyId });
     } catch (err) {
       setBusy(false);
       const failure = (err as { response?: { data?: DeleteFailure } })?.response?.data;
