@@ -13,7 +13,7 @@ const i18nLanguage = vi.hoisted(() => ({ current: 'en' }));
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({
-    t: (key: string) => key,
+    t: (key: string, params?: { currency?: string }) => (params?.currency ? `${key} ${params.currency}` : key),
     i18n: {
       get language() { return i18nLanguage.current; },
       get resolvedLanguage() { return i18nLanguage.current; },
@@ -161,18 +161,28 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.change(input, { target: { value: 'Other' } });
     fireEvent.blur(input);
     expect(await screen.findByText('Name refused.')).toBeInTheDocument();
+    expect(screen.getByText('Other')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('says another company has the name, under the name, on a 409 duplicate', async () => {
-    mocked.patch.mockRejectedValueOnce({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
+  it('keeps a duplicate name under the message until the name changes or the edit is cancelled', async () => {
+    mocked.patch.mockRejectedValue({ response: { status: 409, data: { code: 'duplicate', message: 'Another company already has this name.' } } });
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByText('Acme France'));
     const input = screen.getByDisplayValue('Acme France');
     fireEvent.change(input, { target: { value: 'acme germany' } });
     fireEvent.blur(input);
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
-    // The stored name stays.
+    expect(screen.getByText('acme germany')).toBeInTheDocument();
+    expect(screen.queryByText('Acme France')).toBeNull();
+
+    fireEvent.click(screen.getByText('acme germany'));
+    const again = screen.getByDisplayValue('acme germany');
+    fireEvent.change(again, { target: { value: 'acme germany 2' } });
+    expect(screen.queryByText('companies.messages.nameTaken')).toBeNull();
+
+    fireEvent.keyDown(again, { key: 'Escape' });
+    expect(screen.queryByText('companies.messages.nameTaken')).toBeNull();
     expect(screen.getByText('Acme France')).toBeInTheDocument();
   });
 
@@ -278,6 +288,31 @@ describe('CompanyWorkspacePage', () => {
     expect(screen.queryByText('Address refused.')).toBeNull();
   });
 
+  it('clears a create error as soon as that field changes', async () => {
+    renderAt('/master-data/companies/new/overview');
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+    expect(await screen.findByText('companies.messages.nameRequired')).toBeInTheDocument();
+    expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
+    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
+    expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'Acme' } });
+    expect(screen.queryByText('companies.messages.nameRequired')).toBeNull();
+    expect(screen.getByText('companies.messages.countryRequired')).toBeInTheDocument();
+
+    await pickOption('companies.fields.country', 'Germ', 'Germany (DE)');
+    expect(screen.queryByText('companies.messages.countryRequired')).toBeNull();
+    expect(screen.getByText('companies.messages.currencyRequired')).toBeInTheDocument();
+
+    await pickOption('companies.fields.baseCurrency', 'Euro', 'EUR · Euro');
+    expect(screen.queryByText('companies.messages.currencyRequired')).toBeNull();
+    expect(screen.getByText('companies.messages.cityRequired')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('companies.fields.city'), { target: { value: 'Berlin' } });
+    expect(screen.queryByText('companies.messages.cityRequired')).toBeNull();
+    expect(mocked.post).not.toHaveBeenCalled();
+  });
+
   it('validates and creates with an explicit button, the chart preselected from the country', async () => {
     mocked.post.mockResolvedValue({ data: { ...COMPANY, id: 'co-new' } });
     renderAt('/master-data/companies/new/overview?year=2026');
@@ -327,6 +362,8 @@ describe('CompanyWorkspacePage', () => {
     expect(await screen.findByText('companies.messages.nameTaken')).toBeInTheDocument();
     expect(screen.getByLabelText('companies.fields.name')).toHaveAttribute('aria-invalid', 'true');
     expect(navigateMock).not.toHaveBeenCalled();
+    fireEvent.change(screen.getByLabelText('companies.fields.name'), { target: { value: 'acme 2' } });
+    expect(screen.queryByText('companies.messages.nameTaken')).toBeNull();
   });
 
   it('shows a create refusal under the field the body names', async () => {
@@ -347,12 +384,27 @@ describe('CompanyWorkspacePage', () => {
     expect(deMasterData.companies.placeholders.turnover).toBe('z. B. 12,5');
     expect(esMasterData.companies.placeholders.turnover).toBe('p. ej., 12,5');
     expect(enMasterData.companies.placeholders.turnover).toBe('e.g., 12.5');
+    expect(enMasterData.companies.fields.turnover).toBe('Turnover (M {{currency}})');
+    expect(frMasterData.companies.fields.turnover).toBe("Chiffre d'affaires (M {{currency}})");
+    expect(deMasterData.companies.fields.turnover).toBe('Umsatz (Mio. {{currency}})');
+    expect(esMasterData.companies.fields.turnover).toBe('Facturación (M {{currency}})');
+  });
+
+  it('names the turnover in millions of the company base currency', async () => {
+    mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
+      if (url === '/companies/co-1') return { data: { ...COMPANY, base_currency: 'USD' } };
+      if (url === '/chart-of-accounts') return { data: { items: COAS } };
+      if (url === '/company-metrics/co-1') return { data: metrics[config?.params?.year ?? 0] ?? null };
+      return { data: { items: [] } };
+    });
+    renderAt(`/master-data/companies/co-1/details?year=${Y}`);
+    expect(await screen.findByLabelText('companies.fields.turnover USD')).toBeInTheDocument();
   });
 
   it('reads a comma as the decimal mark when the application is in French', async () => {
     i18nLanguage.current = 'fr';
     renderAt(`/master-data/companies/co-1/details?year=${Y}`);
-    const turnover = await screen.findByLabelText('companies.fields.turnover');
+    const turnover = await screen.findByLabelText('companies.fields.turnover EUR');
     await waitFor(() => expect(turnover).toHaveValue('12,5'));
     expect(turnover).toHaveAttribute('inputmode', 'decimal');
     expect(turnover).not.toHaveAttribute('type', 'number');
@@ -367,7 +419,7 @@ describe('CompanyWorkspacePage', () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
     await waitFor(() => expect(headcount).toHaveValue('50'));
-    expect(screen.getByLabelText('companies.fields.turnover')).toHaveValue('12.5');
+    expect(screen.getByLabelText('companies.fields.turnover EUR')).toHaveValue('12.5');
     fireEvent.change(headcount, { target: { value: '55' } });
     fireEvent.blur(headcount);
     const itUsers = screen.getByLabelText('companies.fields.itUsers');
@@ -385,7 +437,7 @@ describe('CompanyWorkspacePage', () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y + 1}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
     await waitFor(() => expect(headcount).toHaveValue('0'));
-    const turnover = screen.getByLabelText('companies.fields.turnover');
+    const turnover = screen.getByLabelText('companies.fields.turnover EUR');
     expect(turnover).toHaveValue('');
     fireEvent.change(turnover, { target: { value: '3.25' } });
     fireEvent.blur(turnover);
@@ -401,7 +453,7 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.change(headcount, { target: { value: '' } });
     fireEvent.blur(headcount);
     expect(await screen.findByText('companies.messages.headcountInvalid')).toBeInTheDocument();
-    const turnover = screen.getByLabelText('companies.fields.turnover');
+    const turnover = screen.getByLabelText('companies.fields.turnover EUR');
     fireEvent.change(turnover, { target: { value: '1.2345' } });
     fireEvent.blur(turnover);
     expect(await screen.findByText('companies.messages.turnoverInvalid')).toBeInTheDocument();
@@ -435,7 +487,7 @@ describe('CompanyWorkspacePage', () => {
     expect(itUsers).toHaveValue('10');
     expect(screen.getByText('companies.messages.itUsersInvalid')).toBeInTheDocument();
 
-    const turnover = screen.getByLabelText('companies.fields.turnover');
+    const turnover = screen.getByLabelText('companies.fields.turnover EUR');
     fireEvent.change(turnover, { target: { value: '-4' } });
     fireEvent.blur(turnover);
     expect(turnover).toHaveValue('12.5');
@@ -460,6 +512,57 @@ describe('CompanyWorkspacePage', () => {
     expect(headcount).toHaveValue('50');
     fireEvent.change(headcount, { target: { value: '61' } });
     expect(screen.queryByText('Metric refused.')).toBeNull();
+  });
+
+  function holdPatch() {
+    let release: (value: { data: Record<string, unknown> } | PromiseLike<{ data: Record<string, unknown> }>) => void = () => undefined;
+    mocked.patch.mockImplementation((url: string, body: Record<string, unknown>) => new Promise((resolve) => {
+      release = () => resolve(url.startsWith('/companies/') ? { data: { ...COMPANY, ...body } } : { data: body });
+    }));
+    return () => release({ data: {} });
+  }
+
+  it('shows Saving, then Saved, when leaving a company field saves', async () => {
+    const release = holdPatch();
+    renderAt('/master-data/companies/co-1/overview');
+    const city = await screen.findByLabelText('companies.fields.city');
+    await waitFor(() => expect(city).toHaveValue('Paris'));
+    fireEvent.blur(city);
+    expect(screen.queryByText('common:status.saving')).toBeNull();
+    fireEvent.change(city, { target: { value: 'Lyon' } });
+    fireEvent.blur(city);
+    expect(await screen.findByText('common:status.saving')).toBeInTheDocument();
+    release();
+    expect(await screen.findByText('common:status.saved')).toBeInTheDocument();
+    expect(screen.queryByText('common:status.saving')).toBeNull();
+  });
+
+  it('shows Saving, then Saved, when leaving a metric saves', async () => {
+    const release = holdPatch();
+    renderAt(`/master-data/companies/co-1/details?year=${Y}`);
+    const headcount = await screen.findByLabelText('companies.fields.headcount');
+    await waitFor(() => expect(headcount).toHaveValue('50'));
+    fireEvent.change(headcount, { target: { value: '55' } });
+    fireEvent.blur(headcount);
+    expect(await screen.findByText('common:status.saving')).toBeInTheDocument();
+    release();
+    expect(await screen.findByText('common:status.saved')).toBeInTheDocument();
+    expect(screen.queryByText('common:status.saving')).toBeNull();
+  });
+
+  it('does not show Saved when the save is refused', async () => {
+    let rejectPatch: (reason: unknown) => void = () => undefined;
+    mocked.patch.mockImplementation(() => new Promise((_resolve, reject) => { rejectPatch = reject; }));
+    renderAt('/master-data/companies/co-1/overview');
+    const city = await screen.findByLabelText('companies.fields.city');
+    await waitFor(() => expect(city).toHaveValue('Paris'));
+    fireEvent.change(city, { target: { value: 'Lyon' } });
+    fireEvent.blur(city);
+    expect(await screen.findByText('common:status.saving')).toBeInTheDocument();
+    rejectPatch({ response: { data: { message: 'City refused.' } } });
+    expect(await screen.findByText('City refused.')).toBeInTheDocument();
+    expect(screen.queryByText('common:status.saved')).toBeNull();
+    expect(screen.queryByText('common:status.saving')).toBeNull();
   });
 
   it('switches year while a metric save is still running', async () => {

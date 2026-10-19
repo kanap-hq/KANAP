@@ -145,7 +145,7 @@
       "year": "Jahr",
       "headcount": "Mitarbeiterzahl",
       "itUsers": "IT-Benutzer",
-      "turnover": "Umsatz (Mio. €)"
+      "turnover": "Umsatz (Mio. {{currency}})"
     },
     "status": {
       "enabled": "Aktiviert",

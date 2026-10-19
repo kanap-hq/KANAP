@@ -18,6 +18,10 @@ type Props = {
   year: number;
   onYearChange: (year: number) => void;
   readOnly: boolean;
+  /** Code of the company base currency. Turnover is entered in millions of it. */
+  baseCurrency: string;
+  /** Told when a value is actually sent, so the page can show Saving, then Saved. */
+  onSave?: (pending: Promise<boolean>) => void;
 };
 
 type Metrics = { headcount: number; it_users: number | null; turnover: number | null };
@@ -53,7 +57,7 @@ const INVALID_MESSAGE: Record<MetricField, string> = {
  * Headcount, IT users and turnover per year; each is saved for the selected year when its field
  * loses focus. The endpoint replaces the whole year, so every write carries the three values.
  */
-export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly }: Props) {
+export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly, baseCurrency, onSave }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
   const locale = useLocale();
   // The application language decides the decimal mark, not the browser's.
@@ -119,7 +123,11 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
       return 'invalid';
     }
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    return save(field, value);
+    // The same value is not a save: no request, and no Saving.
+    if ((stored[field] ?? null) === value) return Promise.resolve(true);
+    const pending = save(field, value);
+    onSave?.(pending);
+    return pending;
   };
 
   const clearError = (field: MetricField) => {
@@ -131,7 +139,7 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
   const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string }> = [
     { field: 'headcount', label: t('companies.fields.headcount'), required: true },
     { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers') },
-    { field: 'turnover', label: t('companies.fields.turnover'), placeholder: t('companies.placeholders.turnover') },
+    { field: 'turnover', label: t('companies.fields.turnover', { currency: baseCurrency }), placeholder: t('companies.placeholders.turnover') },
   ];
 
   return (

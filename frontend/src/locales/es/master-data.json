@@ -145,7 +145,7 @@
       "year": "Año",
       "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
-      "turnover": "Facturación (M€)"
+      "turnover": "Facturación (M {{currency}})"
     },
     "status": {
       "enabled": "Activado",

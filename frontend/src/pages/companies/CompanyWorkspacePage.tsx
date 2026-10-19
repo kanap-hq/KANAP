@@ -2,7 +2,7 @@ import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, FormHelperText, Stack, TextField, Typography } from '@mui/material';
 import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -20,6 +20,7 @@ import {
   normalizeStatus,
 } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
+import { taskDetailTypography } from '../tasks/theme/taskDetailTokens';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
@@ -29,6 +30,8 @@ import CompanyMetricsTab from './CompanyMetricsTab';
 type TabKey = 'overview' | 'details';
 const TAB_KEYS: TabKey[] = ['overview', 'details'];
 const LIST_PATH = '/master-data/companies';
+/** How long Saved stays after a field is saved. */
+const SAVED_LINGER_MS = 1500;
 
 type Company = {
   id: string;
@@ -156,30 +159,53 @@ export default function CompanyWorkspacePage() {
   };
 
   const patch = React.useCallback(
-    (body: Partial<Company>, field: CompanyField): Promise<void> => {
+    (body: Partial<Company>, field: CompanyField): Promise<boolean> => {
       const recordId = data?.id;
-      if (!recordId || !canEdit) return Promise.resolve();
+      if (!recordId || !canEdit) return Promise.resolve(false);
       setErrors((prev) => ({ ...prev, [field]: undefined }));
-      const run = async () => {
+      const run = async (): Promise<boolean> => {
         try {
           const res = await api.patch<Company>(`/companies/${recordId}`, body);
           queryClient.setQueryData(['companies', recordId], res.data);
           void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== recordId });
+          return true;
         } catch (e) {
-          if (currentIdRef.current !== recordId) return;
+          if (currentIdRef.current !== recordId) return false;
           const target = companyRefusalField(e) ?? field;
           const message = target === 'name' && isDuplicateError(e)
             ? t('companies.messages.nameTaken')
             : getApiErrorMessage(e, t, t('companies.messages.saveFailed'));
           setErrors((prev) => ({ ...prev, [target]: message }));
+          return false;
         }
       };
       const result = chainRef.current.then(run, run);
-      chainRef.current = result.catch(() => undefined);
+      chainRef.current = result.then(() => undefined, () => undefined);
       return result;
     },
     [canEdit, data?.id, queryClient, t],
   );
+
+  // Fields saved on blur show Saving, then Saved. A skipped or refused save does not.
+  const [fieldSaves, setFieldSaves] = React.useState(0);
+  const [fieldSaved, setFieldSaved] = React.useState(false);
+  const savedTimerRef = React.useRef<number | null>(null);
+  React.useEffect(() => () => {
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+  }, []);
+  const trackSave = React.useCallback((pending: Promise<boolean>) => {
+    if (savedTimerRef.current != null) window.clearTimeout(savedTimerRef.current);
+    setFieldSaved(false);
+    setFieldSaves((n) => n + 1);
+    void pending.then((saved) => {
+      if (!saved) return;
+      setFieldSaved(true);
+      savedTimerRef.current = window.setTimeout(() => {
+        savedTimerRef.current = null;
+        setFieldSaved(false);
+      }, SAVED_LINGER_MS);
+    }).finally(() => setFieldSaves((n) => n - 1));
+  }, []);
 
   const clearError = (field: CompanyField) => {
     setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
@@ -199,7 +225,7 @@ export default function CompanyWorkspacePage() {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
       return true;
     }
-    void patch({ [field]: next }, field);
+    trackSave(patch({ [field]: next }, field));
     return true;
   };
 
@@ -214,7 +240,7 @@ export default function CompanyWorkspacePage() {
     if (current && current.scope === 'COUNTRY' && current.country_iso !== country) {
       body.coa_id = defaultCoaFor(coas, country);
     }
-    void patch(body, 'country_iso');
+    trackSave(patch(body, 'country_iso'));
   };
 
   const setYear = (next: number) => {
@@ -247,8 +273,8 @@ export default function CompanyWorkspacePage() {
   const statusLabel = (value: StatusValue) => (value === STATUS_DISABLED ? t('companies.status.disabled') : t('companies.status.enabled'));
   const changeStatus = (next: StatusValue) => {
     if (!data || next === status) return;
-    if (next === STATUS_DISABLED) void patch({ status: STATUS_DISABLED }, 'disabled_at');
-    else void patch({ status: STATUS_ENABLED, disabled_at: null }, 'disabled_at');
+    if (next === STATUS_DISABLED) trackSave(patch({ status: STATUS_DISABLED }, 'disabled_at'));
+    else trackSave(patch({ status: STATUS_ENABLED, disabled_at: null }, 'disabled_at'));
   };
   const metadata = data ? (
     <PortfolioMetadataItem label={t('companies.fields.status')}>
@@ -281,7 +307,7 @@ export default function CompanyWorkspacePage() {
         <CurrencyField
           value={data.base_currency ?? ''}
           onChange={(currency) => {
-            if (currency && currency !== data.base_currency) void patch({ base_currency: currency }, 'base_currency');
+            if (currency && currency !== data.base_currency) trackSave(patch({ base_currency: currency }, 'base_currency'));
           }}
           clearable={false}
           disabled={disabled}
@@ -294,7 +320,7 @@ export default function CompanyWorkspacePage() {
           country={data.country_iso}
           value={data.coa_id}
           onChange={(coaId) => {
-            if (coaId && coaId !== data.coa_id) void patch({ coa_id: coaId }, 'coa_id');
+            if (coaId && coaId !== data.coa_id) trackSave(patch({ coa_id: coaId }, 'coa_id'));
           }}
           // The server gives an emptied chart the country default back, so it is not cleared here.
           clearable={false}
@@ -313,10 +339,10 @@ export default function CompanyWorkspacePage() {
           disabledAt={data.disabled_at}
           onDisabledAtChange={(disabledAt) => {
             if (disabledAt === data.disabled_at) return;
-            void patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at');
+            trackSave(patch({ status: deriveStatusFromDisabledAt(disabledAt), disabled_at: disabledAt }, 'disabled_at'));
           }}
           // Disable now: the status alone, the server sets the end of validity from its own clock.
-          onDisableNow={() => void patch({ status: STATUS_DISABLED }, 'disabled_at')}
+          onDisableNow={() => trackSave(patch({ status: STATUS_DISABLED }, 'disabled_at'))}
           disabled={disabled}
           disabledAtError={!!errors.disabled_at}
           disabledAtHelperText={errors.disabled_at}
@@ -355,11 +381,17 @@ export default function CompanyWorkspacePage() {
         onBack={handleClose}
         title={data?.name ?? ''}
         titleFallback={t('companies.companyFallback')}
-        titleError={errors.name}
-        canEditTitle={canEdit && !!data}
-        onTitleSave={(next) => {
-          if (data && next !== data.name) void patch({ name: next }, 'name');
-        }}
+        titleEditor={data ? (
+          <CompanyNameTitle
+            key={data.id}
+            name={data.name}
+            fallback={t('companies.companyFallback')}
+            canEdit={canEdit}
+            error={errors.name}
+            onSave={(next) => { trackSave(patch({ name: next }, 'name')); }}
+            onClearError={() => clearError('name')}
+          />
+        ) : undefined}
         nav={nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,
@@ -371,6 +403,11 @@ export default function CompanyWorkspacePage() {
           nextLabel: t('companies.next'),
         } : undefined}
         metadata={metadata}
+        actions={fieldSaves > 0 || fieldSaved ? (
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>
+            {fieldSaves > 0 ? t('common:status.saving') : t('common:status.saved')}
+          </Typography>
+        ) : undefined}
         properties={properties}
       >
         {data && tab === 'overview' && (
@@ -399,10 +436,131 @@ export default function CompanyWorkspacePage() {
             year={year}
             onYearChange={setYear}
             readOnly={!canEdit}
+            baseCurrency={data.base_currency ?? ''}
+            onSave={trackSave}
           />
         )}
       </PortfolioDetailWorkspaceShell>
     </Box>
+  );
+}
+
+/**
+ * The company name as the page title. A name the server refuses stays on screen with its message.
+ * The message goes as soon as the name changes, and cancelling shows the stored name again.
+ */
+function CompanyNameTitle({
+  name,
+  fallback,
+  canEdit,
+  error,
+  onSave,
+  onClearError,
+}: {
+  name: string;
+  fallback: string;
+  canEdit: boolean;
+  error?: string;
+  onSave: (next: string) => void;
+  onClearError: () => void;
+}) {
+  const { t } = useTranslation(['master-data']);
+  const [editing, setEditing] = React.useState(false);
+  const [draft, setDraft] = React.useState(name);
+  // The name just sent, kept until the stored name catches up or the user leaves it.
+  // Not dropped when the save clears the error at the start of the request.
+  const [pending, setPending] = React.useState<string | null>(null);
+  const openRef = React.useRef(false);
+  const shown = pending ?? name;
+
+  React.useEffect(() => {
+    if (pending !== null && name === pending) setPending(null);
+  }, [name, pending]);
+
+  const helper = error ? <FormHelperText error sx={{ mt: 0.5 }}>{error}</FormHelperText> : null;
+
+  if (!editing) {
+    return (
+      <>
+        <Typography
+          component="span"
+          onClick={canEdit ? () => {
+            setDraft(shown);
+            openRef.current = true;
+            setEditing(true);
+          } : undefined}
+          sx={(theme) => ({
+            ...taskDetailTypography.title,
+            display: 'inline',
+            color: shown ? 'inherit' : theme.palette.kanap.text.tertiary,
+            cursor: canEdit ? 'text' : 'default',
+            '&:hover': canEdit ? { opacity: 0.85 } : undefined,
+          })}
+        >
+          {shown || fallback}
+        </Typography>
+        {helper}
+      </>
+    );
+  }
+
+  const closeAsStored = () => {
+    openRef.current = false;
+    setPending(null);
+    onClearError();
+    setEditing(false);
+  };
+  const commit = () => {
+    if (!openRef.current) return;
+    const next = draft.trim();
+    if (!next || next === name) {
+      closeAsStored();
+      return;
+    }
+    openRef.current = false;
+    setPending(next);
+    setEditing(false);
+    onSave(next);
+  };
+
+  return (
+    <>
+      <Box
+        component="input"
+        autoFocus
+        value={draft}
+        aria-label={t('companies.fields.name')}
+        aria-invalid={error ? true : undefined}
+        onChange={(event: React.ChangeEvent<HTMLInputElement>) => {
+          setDraft(event.target.value);
+          onClearError();
+        }}
+        onBlur={commit}
+        onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
+          if (event.key === 'Enter') {
+            event.preventDefault();
+            commit();
+          }
+          if (event.key === 'Escape') {
+            event.preventDefault();
+            closeAsStored();
+          }
+        }}
+        sx={(theme) => ({
+          font: 'inherit',
+          color: 'inherit',
+          bgcolor: 'transparent',
+          border: 'none',
+          borderBottom: `1px solid ${error ? theme.palette.error.main : theme.palette.kanap.border.default}`,
+          outline: 'none',
+          p: 0,
+          m: 0,
+          width: '100%',
+          '&:focus': { borderBottomColor: error ? theme.palette.error.main : theme.palette.kanap.teal },
+        })}
+      />
+      {helper}
+    </>
   );
 }
 
@@ -539,10 +697,13 @@ function CompanyCreate({
 
   const set = <K extends keyof CreateValues>(field: K, value: CreateValues[K]) => {
     setValues((prev) => ({ ...prev, [field]: value }));
+    const key = field as CompanyField;
+    setErrors((prev) => (prev[key] ? { ...prev, [key]: undefined } : prev));
   };
 
   /** The chart is preselected from the country (country default, else global default, else any global chart). */
   const changeCountry = (country: string) => {
+    setErrors((prev) => (prev.country_iso ? { ...prev, country_iso: undefined } : prev));
     setValues((prev) => {
       const current = coas.find((coa) => coa.id === prev.coa_id);
       const keep = current && !(current.scope === 'COUNTRY' && current.country_iso !== country);

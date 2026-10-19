@@ -145,7 +145,7 @@
       "year": "Year",
       "headcount": "Headcount",
       "itUsers": "IT users",
-      "turnover": "Turnover (M€)"
+      "turnover": "Turnover (M {{currency}})"
     },
     "status": {
       "enabled": "Enabled",

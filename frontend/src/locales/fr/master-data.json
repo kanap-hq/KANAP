@@ -145,7 +145,7 @@
       "year": "Année",
       "headcount": "Effectif",
       "itUsers": "Utilisateurs IT",
-      "turnover": "Chiffre d'affaires (M€)"
+      "turnover": "Chiffre d'affaires (M {{currency}})"
     },
     "status": {
       "enabled": "Activé",
