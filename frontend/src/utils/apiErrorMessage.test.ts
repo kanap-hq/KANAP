@@ -65,6 +65,25 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(frozen, i18n.getFixedT('fr'), 'fallback')).toMatch(/^Cette ligne a des montants dans Budget 2026/);
   });
 
+  it('translates a refused company metric', () => {
+    const refused = {
+      response: {
+        status: 400,
+        data: { code: 'COMPANY_METRIC_HEADCOUNT_INVALID', message: 'headcount is required and must be a non-negative integer' },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe('Headcount is required and must be a whole number, 0 or more.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      "L'effectif est obligatoire et doit être un nombre entier, 0 ou plus.",
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('de'), 'fallback')).toBe(
+      'Die Mitarbeiterzahl ist erforderlich und muss eine ganze Zahl ab 0 sein.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('es'), 'fallback')).toBe(
+      'La plantilla es obligatoria y debe ser un número entero, 0 o más.',
+    );
+  });
+
   it('translates a frozen year for each scope, and a refused action', () => {
     const companies = {
       response: {
