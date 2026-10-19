@@ -581,6 +581,36 @@ async function testAssetsPage() {
   });
 }
 
+async function testZoneSort() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-sort');
+    // Codes in an order the alphabet does not give: the catalog says core, servers, endpoints.
+    const catalog = [
+      { code: 'core', label: 'Core' },
+      { code: 'servers', label: 'Servers' },
+      { code: 'retired_zone', label: 'Retired zone', deprecated: true },
+      { code: 'endpoints', label: 'Endpoints' },
+    ];
+    for (const [name, zone] of [
+      ['n-none', null], ['e1', 'endpoints'], ['s1', 'servers'], ['c2', 'core'], ['c1', 'core'],
+      ['r1', 'retired_zone'], ['u1', 'zz_unknown'], ['u2', 'aa_unknown'], ['n-blank', '  '],
+    ] as Array<[string, string | null]>) {
+      const id = await asset(runner, a, name);
+      await runner.query(`UPDATE assets SET admin_zone = $3 WHERE tenant_id = $1 AND id = $2`, [a, id, zone]);
+    }
+    const svc = service(new Map([[a, { adminZones: catalog, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }]]));
+    const opts = { manager: runner.manager, tenantId: a };
+    const names = async (sort: string) => (await svc.assets({ sort, limit: 50 }, opts)).items.map((item) => item.name);
+    assert.deepEqual(await names('zone:ASC'), ['c1', 'c2', 's1', 'r1', 'e1', 'u2', 'u1', 'n-blank', 'n-none'], 'catalog order, unknown codes after it, no zone last');
+    assert.deepEqual(await names('zone:DESC'), ['e1', 'r1', 's1', 'c1', 'c2', 'u1', 'u2', 'n-blank', 'n-none'], 'reversed catalog, unknown codes after it, no zone still last');
+    const page = await svc.assets({ sort: 'zone:ASC', limit: 2, page: 2, filters: setFilter('zone', ['core', 'servers', 'endpoints']) }, opts);
+    assert.deepEqual({ total: page.total, names: page.items.map((item) => item.name) }, { total: 4, names: ['s1', 'e1'] }, 'the count does not bind the catalog');
+    const file = await svc.csv({ sort: 'zone:ASC', language: 'en' }, opts);
+    const zones = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/).slice(1).map((line) => line.split(',')[0]);
+    assert.deepEqual(zones, ['Core', 'Core', 'Servers', 'Retired zone', 'Endpoints', 'aa_unknown', 'zz_unknown', '', ''], 'the export follows the same order');
+  });
+}
+
 async function zoneOf(runner: QueryRunner, id: string): Promise<string | null> {
   const [row] = await runner.query(`SELECT admin_zone FROM assets WHERE id = $1`, [id]);
   return row.admin_zone;
@@ -877,6 +907,7 @@ void runSpecs('Administration view', [
   ['a zone code the catalog no longer has, an empty catalog', testUnknownZoneAndEmptyCatalog],
   ['each control point, with one case that stays out', testControls],
   ['the asset page: order, filters, caps', testAssetsPage],
+  ['sort by zone in catalog order', testZoneSort],
   ['bulk zone assignment', testBulk],
   ['CSV export of assets and domains', testExport],
   ['a page of 50 on 2000 assets, and the bulk and export caps', testScale],

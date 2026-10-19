@@ -65,6 +65,7 @@ export const CONTROL_TITLES: Record<ControlKey, string> = {
 /** English relation names in the export. The screen uses the same words, translated. */
 const TRUST_RELATION_LABEL = { contains: 'Runs', cluster: 'Member of cluster' } as const;
 
+/** Sortable fields. `zone` sorts in catalog order, see `orderOf`. */
 const SORTS: Record<string, string> = {
   name: 'lower(a.name)',
   reference: 'a.asset_reference',
@@ -385,7 +386,9 @@ export class AdministrationViewService {
     const { limit, offset, page } = this.pageOf(query);
     const params: unknown[] = [opts.tenantId];
     const where = this.whereOf(query, ctx, params);
-    const order = this.orderOf(query.sort);
+    // The order may bind the catalog: the count statement keeps the parameters it names.
+    const pageParams = [...params];
+    const order = this.orderOf(query.sort, ctx, pageParams);
     const [counted] = await opts.manager.query(
       `SELECT count(*)::int AS n FROM assets a WHERE ${where}`,
       params,
@@ -397,7 +400,7 @@ export class AdministrationViewService {
         WHERE ${where}
         ORDER BY ${order}
         LIMIT ${limit} OFFSET ${offset}`,
-      params,
+      pageParams,
     );
     return { items: await this.decorate(opts, ctx, rows, LINK_CAP), total, limit, offset, page };
   }
@@ -741,13 +744,23 @@ export class AdministrationViewService {
     return `(${parts.join(' OR ')})`;
   }
 
-  private orderOf(sort: unknown): string {
+  /**
+   * The ORDER BY of the asset list. `zone` follows the catalog order (deprecated zones at their
+   * place), then the codes the catalog does not have, by code; assets without a zone come last in
+   * both directions. The catalog is bound on `params`.
+   */
+  private orderOf(sort: unknown, ctx: RankCtx, params: unknown[]): string {
     const [rawField, rawDir] = String(sort ?? '').split(':');
     const field = rawField === 'type' ? 'kind' : rawField;
     if (field && !Object.prototype.hasOwnProperty.call(SORTS, field)) {
       throw new BadRequestException('sort must be name, reference, kind or zone.');
     }
     const direction = String(rawDir ?? '').toUpperCase() === 'DESC' ? 'DESC' : 'ASC';
+    if (field === 'zone') {
+      params.push(ctx.catalog.map((option) => option.code));
+      const zone = zoneOf('a');
+      return `(${zone} IS NULL) ASC, array_position($${params.length}::text[], ${zone}) ${direction} NULLS LAST, ${zone} ${direction}, lower(a.name) ASC, a.id ASC`;
+    }
     const primary = field ? `${SORTS[field]} ${direction} NULLS LAST` : `${SORTS.name} ASC`;
     return field && field !== 'name' ? `${primary}, lower(a.name) ASC, a.id ASC` : `${primary}, a.id ASC`;
   }
@@ -886,6 +899,8 @@ export class AdministrationViewService {
     const ctx = await this.context(opts);
     const params: unknown[] = [opts.tenantId];
     const where = this.whereOf(query, ctx, params);
+    const pageParams = [...params];
+    const order = this.orderOf(query.sort, ctx, pageParams);
     const [counted] = await opts.manager.query(`SELECT count(*)::int AS n FROM assets a WHERE ${where}`, params);
     const total = Number(counted?.n ?? 0);
     if (total > EXPORT_MAX_ROWS) {
@@ -895,8 +910,8 @@ export class AdministrationViewService {
       `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, ${zoneOf('a')} AS zone
          FROM assets a
         WHERE ${where}
-        ORDER BY ${this.orderOf(query.sort)}`,
-      params,
+        ORDER BY ${order}`,
+      pageParams,
     );
     const items = await this.decorate(opts, ctx, rows, null);
     const zoneLabel = (code: string | null) => (code ? ctx.catalog.find((option) => option.code === code)?.label || code : '');
