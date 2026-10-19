@@ -1,6 +1,9 @@
 import 'reflect-metadata';
 import * as assert from 'node:assert/strict';
 import { randomUUID } from 'node:crypto';
+import { AddressInfo } from 'node:net';
+import * as express from 'express';
+import { HttpException } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 
@@ -16,6 +19,7 @@ import { DataSource, QueryRunner } from 'typeorm';
 //   Contributor's own applications, none (null, section absent) without the applications right.
 // - A user without the infrastructure right is refused, and sees no technology section.
 // - Another tenant's technologies are never listed, counted or read.
+// - Through the tool registry on the MCP surface, query_entities is read only.
 // The AI surface checks (tenant settings, provider) are not under test: stubbed open.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -425,6 +429,109 @@ async function testTenantIsolation(harness: Harness, runner: QueryRunner, s: See
   assert.equal(detail.entity.id, s.tech.pg, 'TEC-1 is this tenant\'s');
 }
 
+async function testMcpReadOnly(harness: Harness, runner: QueryRunner, s: Seed) {
+  const definition = harness.tools.listRegisteredTools().find((tool: any) => tool.name === 'query_entities');
+  assert.equal(definition.readOnly, true, 'query_entities is a read-only tool');
+  const statements: string[] = [];
+  const original = runner.query.bind(runner);
+  (runner as any).query = (sql: string, ...rest: unknown[]) => {
+    statements.push(sql);
+    return original(sql, ...(rest as [any]));
+  };
+  let result: any;
+  try {
+    result = await harness.tools.execute(ctx(runner, s, 'full'), 'query_entities', {
+      entity_type: 'technologies',
+      filters: { end_of_support: { op: 'before', value: '2025-01-01' } },
+    });
+  } finally {
+    (runner as any).query = original;
+  }
+  assert.deepEqual(result.items.map((item: any) => item.ref), ['TEC-2'], 'the MCP surface answers');
+  const writes = statements.filter((sql) => /^\s*(INSERT|UPDATE|DELETE|MERGE|TRUNCATE)\b/i.test(sql) || /\b(INSERT\s+INTO|UPDATE\s+\w+\s+SET|DELETE\s+FROM)\b/i.test(sql));
+  assert.deepEqual(writes, [], 'and writes nothing');
+}
+
+/**
+ * tools/call of query_entities on technologies through the MCP endpoint: the real controller,
+ * exposure policy and dispatcher, on this transaction (the tenant executor is the only stub).
+ * The tool is advertised read only, answers, and writes no business table.
+ */
+async function testMcpToolsCall(harness: Harness, runner: QueryRunner, s: Seed) {
+  const { AiMcpController } = require('../ai-mcp.controller');
+  const { AiCapabilityDispatcherService } = require('../control-plane/dispatcher/ai-capability-dispatcher.service');
+  const { AiMcpExposureService } = require('../control-plane/mcp/ai-mcp-exposure.service');
+  const { AiMcpAuditService } = require('../control-plane/mcp/ai-mcp-audit.service');
+  const controller = new AiMcpController(
+    harness.app.get(AiCapabilityDispatcherService),
+    harness.app.get(AiMcpExposureService),
+    harness.app.get(AiMcpAuditService),
+    { assertAllowed: () => undefined },
+    { runWithContext: async (context: any, fn: (ctx: any) => Promise<unknown>) => fn({ ...context, manager: runner.manager }) },
+  );
+  const server = express();
+  server.use(express.json());
+  server.post('/ai/mcp', (req: any, res, next) => {
+    req.tenant = { id: s.tenantId };
+    req.user = { sub: s.users.full, aiApiKeyId: null };
+    req.aiApiKey = {
+      id: null,
+      tenant_id: s.tenantId,
+      user_id: s.users.full,
+      mcp_scopes: ['mcp:tools:list', 'mcp:tools:execute'],
+      mcp_allowed_capabilities: ['kanap.read.core'],
+      mcp_denied_capabilities: [],
+      mcp_max_effect: 'read',
+      mcp_rate_limit_per_minute: 60,
+    };
+    controller.handlePost(req, res).catch(next);
+  });
+  server.use((error: any, _req: any, res: any, _next: any) => {
+    res.status(error instanceof HttpException ? error.getStatus() : 500).json({ message: String(error?.message ?? error) });
+  });
+  const listener = server.listen(0);
+  await new Promise((resolve) => listener.once('listening', resolve));
+  const url = `http://127.0.0.1:${(listener.address() as AddressInfo).port}/ai/mcp`;
+  const rpc = async (body: unknown) => {
+    const response = await fetch(url, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', accept: 'application/json, text/event-stream' },
+      body: JSON.stringify(body),
+    });
+    const text = await response.text();
+    assert.equal(response.status, 200, text);
+    const data = text.split('\n').find((line) => line.startsWith('data: '));
+    return JSON.parse(data ? data.slice('data: '.length) : text);
+  };
+  const statements: string[] = [];
+  const original = runner.query.bind(runner);
+  (runner as any).query = (sql: string, ...rest: unknown[]) => {
+    statements.push(sql);
+    return original(sql, ...(rest as [any]));
+  };
+  try {
+    const listed = await rpc({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+    const tool = listed.result.tools.find((t: any) => t.name === 'query_entities');
+    assert.ok(tool, 'query_entities is exposed over MCP');
+    assert.equal(tool.annotations.readOnlyHint, true, 'read only');
+    assert.ok(tool.inputSchema.properties.entity_type.enum.includes('technologies'), 'technologies is one of its families');
+    const called = await rpc({
+      jsonrpc: '2.0',
+      id: 2,
+      method: 'tools/call',
+      params: { name: 'query_entities', arguments: { entity_type: 'technologies', filters: { publisher: ['Microsoft'] } } },
+    });
+    assert.equal(called.result.isError, undefined, JSON.stringify(called.result));
+    const output = JSON.parse(called.result.content[0].text);
+    assert.deepEqual(output.items.map((item: any) => item.ref), ['TEC-3', 'TEC-2']);
+  } finally {
+    (runner as any).query = original;
+    await new Promise((resolve) => listener.close(resolve));
+  }
+  const businessWrites = statements.filter((sql) => /\b(INSERT\s+INTO|UPDATE|DELETE\s+FROM)\s+"?(technolog|asset|application|app_|contract)/i.test(sql));
+  assert.deepEqual(businessWrites, [], 'no business table is written');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -442,6 +549,8 @@ async function run() {
       await testInfrastructureRight(harness, runner, s);
       await testTenantIsolation(harness, runner, s);
       await testContexts(harness, runner, s);
+      await testMcpReadOnly(harness, runner, s);
+      await testMcpToolsCall(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
