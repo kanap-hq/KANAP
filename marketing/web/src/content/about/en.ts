@@ -46,8 +46,8 @@ const content: AboutContent = {
     {
       title: 'An independent project',
       paragraphs: [
-        'KANAP is published by KANAP, a single-member French company (EURL) based in Obernai, Alsace. The project is developed with my own funds, alongside my work as a CIO. That keeps it fully independent and focused on what its users need.',
-        'As open source software, KANAP is entirely free. Paid services are optional and are there to save you time, secure your use or adapt the application: support, hosting, guidance and custom development. I deliver that guidance myself, with a CIO\'s eye. <a href="/offer">See the offer</a>',
+        'KANAP is published by KANAP, a single-member French company (EURL) based in Obernai, Alsace. The project is self-funded and developed alongside my work as a CIO. That keeps it fully independent.',
+        'As open source software, KANAP is entirely free. Paid services are optional and are there to save you time, secure your use or adapt the application: support, hosting, guidance and custom development. I bring you that guidance myself, with a CIO\'s eye. <a href="/offer">See the offer</a>',
         'Either way, the complete <a href="https://doc.kanap.net/">online help</a>, in four languages, guides you from your first steps to expert use.',
       ],
     },

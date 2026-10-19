@@ -46,8 +46,8 @@ const content: AboutContent = {
     {
       title: 'Un proyecto independiente',
       paragraphs: [
-        'KANAP lo edita la sociedad KANAP, una empresa francesa unipersonal (EURL) con sede en Obernai, en Alsacia. El proyecto se desarrolla con fondos propios, en paralelo a mi actividad como CIO. Así sigue siendo totalmente independiente y centrado en las necesidades de sus usuarios.',
-        'Como software open source, KANAP es totalmente gratuito. Los servicios de pago son opcionales y sirven para ahorrarle tiempo, asegurar el uso o adaptar la aplicación: soporte, alojamiento, acompañamiento y desarrollo a medida. Ese acompañamiento lo presto yo mismo, con la mirada de un CIO. <a href="/es/offer">Ver la oferta</a>',
+        'KANAP lo edita la sociedad KANAP, una empresa francesa unipersonal (EURL) con sede en Obernai, en Alsacia. El proyecto se desarrolla con fondos propios, en paralelo a mi actividad como CIO. Así sigue siendo totalmente independiente.',
+        'Como software open source, KANAP es totalmente gratuito. Los servicios de pago son opcionales y sirven para ahorrarle tiempo, asegurar el uso o adaptar la aplicación: soporte, alojamiento, acompañamiento y desarrollo a medida. Ese acompañamiento se lo ofrezco yo mismo, con la mirada de un CIO. <a href="/es/offer">Ver la oferta</a>',
         'En cualquier caso, la <a href="https://doc.kanap.net/es/">ayuda en línea</a> completa, en cuatro idiomas, le guía desde los primeros pasos hasta el uso experto.',
       ],
     },
