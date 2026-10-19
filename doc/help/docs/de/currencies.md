@@ -91,7 +91,7 @@ Die Schaltfläche **FX-Kurse erzwingen** löst manuell eine Hintergrundaktualisi
 
 ## FX-Kurs-Snapshot-Tabelle
 
-Unterhalb des Einstellungsformulars zeigt die Tabelle **Neueste FX-Kurs-Snapshots** die aktuellsten erfassten Wechselkurse für jedes Geschäftsjahr.
+Unterhalb des Einstellungsformulars zeigt die Tabelle **Neueste FX-Kurs-Snapshots** die aktuellsten erfassten Wechselkurse für jedes Geschäftsjahr, in der aktuellen Berichtswährung. Eine Zeile ist die Berichtswährung, eine Standardwährung, eine zugelassene Währung oder eine Währung, die eine Budgetzeile, ein Unternehmen oder ein Vertrag verwendet. Eine Währung, für die ein manueller Kurs gespeichert ist, bleibt in der Tabelle. Kurse, die für eine frühere Berichtswährung gespeichert wurden, werden nicht angezeigt.
 
 **Spalten**:
   - **Währung**: Der 3-stellige ISO-Code

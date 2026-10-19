@@ -347,35 +347,32 @@ async function testApiContract() {
   const capturedAt = new Date('2024-06-01T00:00:00.000Z');
   const older = new Date('2024-01-01T00:00:00.000Z');
   const listManager = {
-    query: async () => [],
-    getRepository: () => ({
-      find: async () => [
-        {
-          fiscal_year: 2024,
-          base_currency: 'EUR',
-          rates: { EUR: 1, GBP: 1.2 },
-          rate_sources: null,
-          captured_at: capturedAt,
-          source: 'world-bank-annual',
-        },
-        {
-          fiscal_year: 2024,
-          base_currency: 'EUR',
-          rates: { EUR: 1 },
-          rate_sources: { EUR: 'identity' },
-          captured_at: older,
-          source: 'world-bank-annual',
-        },
-        {
-          fiscal_year: 2023,
-          base_currency: 'EUR',
-          rates: { EUR: 1 },
-          rate_sources: { EUR: 'identity', USD: 'manual' },
-          captured_at: older,
-          source: 'manual',
-        },
-      ],
-    }),
+    // The matrix reads sets with SQL (latest per year, reporting base only). The
+    // older 2024 set is not the latest, so the query does not return it.
+    query: async (sql: string) => {
+      if (sql.includes('DISTINCT ON (fiscal_year)') && sql.includes('rate_sources')) {
+        return [
+          {
+            fiscal_year: 2023,
+            base_currency: 'EUR',
+            rates: { EUR: 1 },
+            rate_sources: { EUR: 'identity', USD: 'manual' },
+            captured_at: older,
+            source: 'manual',
+          },
+          {
+            fiscal_year: 2024,
+            base_currency: 'EUR',
+            rates: { EUR: 1, GBP: 1.2 },
+            rate_sources: null,
+            captured_at: capturedAt,
+            source: 'world-bank-annual',
+          },
+        ];
+      }
+      return [];
+    },
+    getRepository: () => ({ find: async () => [] }),
   };
   const missingManager = {
     query: async (sql: string) => {
@@ -389,24 +386,28 @@ async function testApiContract() {
   const controller = new CurrencyController({} as any, {} as any, service, { manager: listManager } as any);
 
   const listed = await controller.listRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: listManager } });
-  assert.deepEqual(listed, [
-    {
-      fiscalYear: 2023,
-      baseCurrency: 'EUR',
-      rates: { EUR: 1 },
-      rateSources: { EUR: 'identity', USD: 'manual' },
-      capturedAt: older,
-      source: 'manual',
-    },
-    {
-      fiscalYear: 2024,
-      baseCurrency: 'EUR',
-      rates: { EUR: 1, GBP: 1.2 },
-      rateSources: {},
-      capturedAt,
-      source: 'world-bank-annual',
-    },
-  ]);
+  // GBP is stored but not in use and not manual, so the matrix drops it. USD stays: it carries a manual rate.
+  assert.deepEqual(listed, {
+    currencies: ['EUR', 'USD'],
+    rates: [
+      {
+        fiscalYear: 2023,
+        baseCurrency: 'EUR',
+        rates: { EUR: 1 },
+        rateSources: { EUR: 'identity', USD: 'manual' },
+        capturedAt: older,
+        source: 'manual',
+      },
+      {
+        fiscalYear: 2024,
+        baseCurrency: 'EUR',
+        rates: { EUR: 1 },
+        rateSources: {},
+        capturedAt,
+        source: 'world-bank-annual',
+      },
+    ],
+  });
 
   const missing = await controller.listMissingRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: missingManager } });
   assert.deepEqual(missing, {

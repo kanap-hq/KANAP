@@ -91,7 +91,7 @@ El botón **Forzar sincronización de tasas FX** desencadena manualmente una act
 
 ## Tabla de instantáneas de tasas FX
 
-Debajo del formulario de configuración, la tabla **Últimas instantáneas de tasas FX** muestra los tipos de cambio más recientes capturados para cada ejercicio fiscal.
+Debajo del formulario de configuración, la tabla **Últimas instantáneas de tasas FX** muestra los tipos de cambio más recientes capturados para cada ejercicio fiscal, en la moneda de reporte actual. Una fila es la moneda de reporte, una moneda predeterminada, una moneda permitida o una moneda usada por una línea presupuestaria, una empresa o un contrato. Una moneda para la que hay una tasa manual guardada permanece en la tabla. Las tasas guardadas para una moneda de reporte anterior no se muestran.
 
 **Columnas**:
   - **Moneda**: El código ISO de 3 letras

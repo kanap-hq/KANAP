@@ -91,7 +91,7 @@ Le bouton **Forcer la synchronisation des taux** déclenche manuellement un rafr
 
 ## Tableau des instantanés de taux de change
 
-Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de change** affiche les taux de change les plus récents capturés pour chaque année fiscale.
+Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de change** affiche les taux de change les plus récents capturés pour chaque année fiscale, dans la devise de reporting actuelle. Une ligne est la devise de reporting, une devise par défaut, une devise autorisée, ou une devise utilisée par une ligne budgétaire, une société ou un contrat. Une devise pour laquelle un taux manuel est enregistré reste dans le tableau. Les taux enregistrés pour une devise de reporting précédente ne sont pas affichés.
 
 **Colonnes** :
   - **Devise** : Le code ISO à 3 lettres

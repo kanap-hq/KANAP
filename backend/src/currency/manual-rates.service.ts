@@ -13,6 +13,36 @@ export type ManualRateTarget = { currency: string; year: number };
 export type ManualRateRemoval = { ok: true; refreshQueued: boolean };
 export type MissingRatePair = { currency: string; year: number };
 
+/** One year of the rate matrix: the latest set whose base is the reporting currency. */
+export type CurrencyRateYear = {
+  fiscalYear: number;
+  baseCurrency: string;
+  rates: Record<string, number | null>;
+  rateSources: Record<string, string>;
+  capturedAt: Date | string | null;
+  source: string | null;
+};
+
+/**
+ * `GET /currency/rates`. `currencies` is the row list (reporting currency first);
+ * `rates` is one object per year, and each object's maps hold only those rows.
+ */
+export type CurrencyRateMatrix = {
+  currencies: string[];
+  rates: CurrencyRateYear[];
+};
+
+/**
+ * Currencies the tenant uses. `currencies` is the matrix universe (reporting,
+ * defaults, allowed, budget lines, company turnovers, contracts). `pairs` is
+ * the year-specific part of that universe, the input of the missing-rate list.
+ */
+export type CurrenciesInUse = {
+  reporting: string;
+  currencies: Set<string>;
+  pairs: MissingRatePair[];
+};
+
 const YEAR_MIN = 1990;
 const YEAR_MAX = 2100;
 const RATE_MAX = 1e9;
@@ -121,6 +151,53 @@ function parseYear(input: unknown): number {
     codedError(400, MANUAL_RATE_YEAR_CODE, MANUAL_RATE_YEAR_MESSAGE);
   }
   return input;
+}
+
+function asRecord(value: unknown): Record<string, unknown> {
+  return value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+}
+
+/** Reporting currency first, then the other codes in alphabetical order. */
+export function sortMatrixCurrencies(reporting: string, codes: Iterable<string>): string[] {
+  const rest = new Set<string>();
+  for (const code of codes) {
+    const normalized = typeof code === 'string' ? code.trim().toUpperCase() : '';
+    if (normalized !== reporting && /^[A-Z]{3}$/.test(normalized)) rest.add(normalized);
+  }
+  return [reporting, ...Array.from(rest).sort()];
+}
+
+/**
+ * Keeps currencies in use, plus any currency whose source on this set is `manual`.
+ * Keys come out uppercased. A manual source with no stored rate stays in `rateSources`.
+ */
+function filterRateMaps(
+  rates: Record<string, unknown>,
+  sources: Record<string, unknown>,
+  inUse: Set<string>,
+): { rates: Record<string, number | null>; rateSources: Record<string, string> } {
+  const sourceByCode = new Map<string, string>();
+  for (const [key, value] of Object.entries(sources)) {
+    if (typeof value === 'string' && value.length > 0) sourceByCode.set(key.toUpperCase(), value);
+  }
+  const outRates: Record<string, number | null> = {};
+  const outSources: Record<string, string> = {};
+  const seen = new Set<string>();
+  for (const [key, value] of Object.entries(rates)) {
+    const code = key.toUpperCase();
+    if (seen.has(code)) continue;
+    seen.add(code);
+    const source = sourceByCode.get(code);
+    if (!inUse.has(code) && source !== 'manual') continue;
+    if (typeof value === 'number' && Number.isFinite(value)) outRates[code] = value;
+    else if (value === null) outRates[code] = null;
+    if (source) outSources[code] = source;
+  }
+  for (const [code, source] of sourceByCode) {
+    if (source !== 'manual' || seen.has(code)) continue;
+    outSources[code] = source;
+  }
+  return { rates: outRates, rateSources: outSources };
 }
 
 function parseRate(input: unknown): number {
@@ -254,18 +331,103 @@ export class ManualRatesService {
 
   /**
    * Pairs in use that the latest set of the year, in the reporting currency,
-   * does not rate with a finite value above 0. One query per source. The years
-   * found are reported so the page that lists them also tries the sources.
-   * `report: false` only reads: a forced sync collects the years, then waits
-   * for its own refresh, and must not start that refresh early.
+   * does not rate with a finite value above 0. One query per source
+   * (`currenciesInUse`). The years found are reported so the page that lists
+   * them also tries the sources. `report: false` only reads: a forced sync
+   * collects the years, then waits for its own refresh, and must not start
+   * that refresh early.
    */
   async listMissingPairs(
     tenantId: string,
     manager: EntityManager,
     opts?: { report?: boolean },
   ): Promise<MissingRatePair[]> {
+    const use = await this.currenciesInUse(tenantId, manager);
+    const rateRows = await manager.query(
+      `SELECT DISTINCT ON (fiscal_year) fiscal_year, rates
+         FROM currency_rate_sets
+        WHERE tenant_id = $1
+          AND UPPER(TRIM(base_currency)) = $2
+        ORDER BY fiscal_year, captured_at DESC`,
+      [tenantId, use.reporting],
+    );
+
+    const ratesByYear = new Map<number, Record<string, unknown>>();
+    for (const row of rateRows as Array<{ fiscal_year: unknown; rates: unknown }>) {
+      const year = typeof row.fiscal_year === 'number' ? row.fiscal_year : Number(row.fiscal_year);
+      if (!Number.isInteger(year)) continue;
+      ratesByYear.set(year, asRecord(row.rates));
+    }
+
+    const items: MissingRatePair[] = [];
+    for (const pair of use.pairs) {
+      if (pair.currency === use.reporting) continue;
+      if (yearHasUsableRate(ratesByYear.get(pair.year), pair.currency)) continue;
+      items.push(pair);
+    }
+    items.sort((a, b) => a.year - b.year || (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0));
+    if (opts?.report !== false) this.fxRates.reportMissingYears(tenantId, items.map((item) => item.year));
+    return items;
+  }
+
+  /**
+   * The rate matrix: the latest set of each year whose base is the current
+   * reporting currency. Each year's maps keep the currencies in use
+   * (`currenciesInUse`) and any currency carrying a manual rate on that set.
+   * `currencies` is the row list, reporting currency first.
+   */
+  async listRateMatrix(tenantId: string, manager: EntityManager): Promise<CurrencyRateMatrix> {
+    const use = await this.currenciesInUse(tenantId, manager);
+    const rows = await manager.query(
+      `SELECT DISTINCT ON (fiscal_year)
+              fiscal_year,
+              TRIM(base_currency) AS base_currency,
+              rates,
+              rate_sources,
+              captured_at,
+              source
+         FROM currency_rate_sets
+        WHERE tenant_id = $1
+          AND UPPER(TRIM(base_currency)) = $2
+        ORDER BY fiscal_year ASC, captured_at DESC`,
+      [tenantId, use.reporting],
+    );
+
+    const manual = new Set<string>();
+    const rates: CurrencyRateYear[] = [];
+    for (const row of rows as Array<Record<string, unknown>>) {
+      const year = typeof row.fiscal_year === 'number' ? row.fiscal_year : Number(row.fiscal_year);
+      if (!Number.isInteger(year)) continue;
+      const sources = asRecord(row.rate_sources);
+      for (const [key, value] of Object.entries(sources)) {
+        if (value === 'manual') manual.add(key.toUpperCase());
+      }
+      const filtered = filterRateMaps(asRecord(row.rates), sources, use.currencies);
+      const base = typeof row.base_currency === 'string' ? row.base_currency.trim() : '';
+      rates.push({
+        fiscalYear: year,
+        baseCurrency: base,
+        rates: filtered.rates,
+        rateSources: filtered.rateSources,
+        capturedAt: (row.captured_at as Date | string | null) ?? null,
+        source: typeof row.source === 'string' ? row.source : null,
+      });
+    }
+    return {
+      currencies: sortMatrixCurrencies(use.reporting, [...use.currencies, ...manual]),
+      rates,
+    };
+  }
+
+  /**
+   * The currencies in use, shared by the missing-rate list and the rate matrix.
+   * Standing currencies (reporting, the two defaults, the allowed list) belong
+   * to every year. Budget lines, company turnovers and contracts name a year.
+   */
+  async currenciesInUse(tenantId: string, manager: EntityManager): Promise<CurrenciesInUse> {
     await this.setTenant(manager, tenantId);
-    const reporting = (await this.settings.getSettings(tenantId, { manager })).reportingCurrency.toUpperCase();
+    const settings = await this.settings.getSettings(tenantId, { manager });
+    const reporting = settings.reportingCurrency.toUpperCase();
     const currentYear = new Date().getFullYear();
 
     const budgetRows = await manager.query(
@@ -307,39 +469,27 @@ export class ManualRatesService {
           AND c.currency IS NOT NULL`,
       [tenantId, currentYear],
     );
-    const rateRows = await manager.query(
-      `SELECT DISTINCT ON (fiscal_year) fiscal_year, rates
-         FROM currency_rate_sets
-        WHERE tenant_id = $1
-          AND UPPER(TRIM(base_currency)) = $2
-        ORDER BY fiscal_year, captured_at DESC`,
-      [tenantId, reporting],
-    );
-
-    const ratesByYear = new Map<number, Record<string, unknown>>();
-    for (const row of rateRows as Array<{ fiscal_year: unknown; rates: unknown }>) {
-      const year = typeof row.fiscal_year === 'number' ? row.fiscal_year : Number(row.fiscal_year);
-      if (!Number.isInteger(year)) continue;
-      ratesByYear.set(year, row.rates && typeof row.rates === 'object' ? row.rates as Record<string, unknown> : {});
-    }
 
     const seen = new Set<string>();
-    const items: MissingRatePair[] = [];
+    const pairs: MissingRatePair[] = [];
     for (const pair of [
       ...readPairs(budgetRows),
       ...readPairs(companyRows),
       ...readPairs(contractRows),
     ]) {
-      if (pair.currency === reporting) continue;
       const key = `${pair.year}:${pair.currency}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      if (yearHasUsableRate(ratesByYear.get(pair.year), pair.currency)) continue;
-      items.push(pair);
+      pairs.push(pair);
     }
-    items.sort((a, b) => a.year - b.year || (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0));
-    if (opts?.report !== false) this.fxRates.reportMissingYears(tenantId, items.map((item) => item.year));
-    return items;
+
+    const currencies = new Set<string>([reporting]);
+    for (const code of [settings.defaultSpendCurrency, settings.defaultCapexCurrency, ...(settings.allowedCurrencies ?? [])]) {
+      const normalized = typeof code === 'string' ? code.trim().toUpperCase() : '';
+      if (/^[A-Z]{3}$/.test(normalized)) currencies.add(normalized);
+    }
+    for (const pair of pairs) currencies.add(pair.currency);
+    return { reporting, currencies, pairs };
   }
 
   private async setTenant(manager: EntityManager, tenantId: string): Promise<void> {

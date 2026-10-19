@@ -73,30 +73,7 @@ export class CurrencyController {
     const tenantId = this.requireTenantId(req);
     const entityManager = req?.queryRunner?.manager ?? this.rateSets.manager;
     await this.ensureTenantContext(entityManager, tenantId);
-    const repo = entityManager.getRepository(CurrencyRateSet);
-    const rows = await repo.find({
-      where: { tenant_id: tenantId },
-      order: { fiscal_year: 'ASC' as any, captured_at: 'DESC' as any },
-    });
-
-    const latestByYear = new Map<number, CurrencyRateSet>();
-    for (const row of rows) {
-      const year = row.fiscal_year;
-      if (!latestByYear.has(year)) {
-        latestByYear.set(year, row);
-      }
-    }
-
-    return Array.from(latestByYear.entries())
-      .sort((a, b) => a[0] - b[0])
-      .map(([year, row]) => ({
-        fiscalYear: year,
-        baseCurrency: row.base_currency,
-        rates: row.rates,
-        rateSources: row.rate_sources ?? {},
-        capturedAt: row.captured_at,
-        source: row.source,
-      }));
+    return this.manualRates.listRateMatrix(tenantId, entityManager);
   }
 
   // Static path: declared before `rates/manual/:year/:currency`.

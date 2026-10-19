@@ -91,7 +91,7 @@ The **Force FX rates sync** button manually triggers a background refresh of exc
 
 ## FX Rate Snapshots table
 
-Below the settings form, the **Latest FX Rate Snapshots** table shows the most recent exchange rates captured for each fiscal year.
+Below the settings form, the **Latest FX Rate Snapshots** table shows the most recent exchange rates captured for each fiscal year, in the current reporting currency. A row is the reporting currency, a default currency, an allowed currency, or a currency used by a budget line, a company or a contract. A currency for which a manual rate is stored stays in the table. Rates stored for a previous reporting currency are not shown.
 
 **Columns**:
   - **Currency**: The ISO 3-letter code
