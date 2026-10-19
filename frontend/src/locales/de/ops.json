@@ -601,6 +601,8 @@
       "total_one": "Gesamt ({{count}} Zeile)",
       "total_other": "Gesamt ({{count}} Zeilen)",
       "noRate": "Kein Kurs für {{currency}}",
+      "unknownFx": "Unbekannt: eine verknüpfte Zeile hat keinen Wechselkurs",
+      "linkedFxMissing": "Eine verknüpfte Zeile hat keinen Wechselkurs im Jahr {{year}}: nicht in diesem Betrag enthalten.",
       "states": {
         "covered": "Gedeckt",
         "under": "Unterbudgetiert",

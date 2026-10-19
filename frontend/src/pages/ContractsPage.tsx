@@ -21,6 +21,8 @@ import { statusScopeParams } from '../utils/statusScopeParams';
 import { CONTRACT_TERM_STATE_COLORS, getDotColor } from '../utils/statusColors';
 import { attentionDotSx, compactSelectMenuProps, drawerMenuItemSx, drawerSelectSx, inlineControlSx, neutralLinkSx } from '../theme/formSx';
 import type { AmountMeasure } from '../components/finance/roundPeriod';
+import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
+import type { FxMissing } from '../components/finance/fxMissing';
 import ForbiddenPage from './ForbiddenPage';
 import {
   CONTRACT_BUDGET_STATES,
@@ -69,6 +71,8 @@ type ContractRow = {
   /** With a budget year and column, for a reader of the budget (`backend/src/contracts/contract-budget.ts`). */
   budget_committed?: number | null;
   budget_linked?: number;
+  /** A linked line has an amount without a rate that year: left out of `budget_linked`, gap and state unknown (null). */
+  budget_linked_fx_missing?: boolean;
   budget_gap?: number | null;
   budget_state?: ContractBudgetState | null;
   /** What the compliance register expects of the contract and what is missing (`backend/src/contracts/contract-compliance.ts`). */
@@ -93,6 +97,8 @@ type ContractTotals = {
     committed: number;
     linked: number;
     gap: number;
+    /** The linked lines left out of `linked` for lack of a rate. */
+    linked_fx_missing?: FxMissing[];
     excluded: Array<{ currency: string; count: number }>;
     no_line_count: number;
     under_count: number;
@@ -211,9 +217,18 @@ function BudgetCommittedCell({ data }: { data?: ContractRow }) {
   return <Box component="span" sx={amountSx}>{formatNumber(data.budget_committed)}</Box>;
 }
 
-function BudgetLinkedCell({ data }: { data?: ContractRow }) {
+/** The linked lines' sum; a line left out for lack of a rate puts the mark beside it. */
+function BudgetLinkedCell({ data, year }: { data?: ContractRow; year?: number }) {
+  const { t } = useTranslation('ops');
   if (!data || data.budget_linked === undefined) return null;
-  return <Box component="span" sx={[amountSx, data.budget_linked === 0 ? tertiarySx : {}]}>{formatNumber(data.budget_linked)}</Box>;
+  const amountSxs = [amountSx, data.budget_linked === 0 ? tertiarySx : {}];
+  if (!data.budget_linked_fx_missing) return <Box component="span" sx={amountSxs}>{formatNumber(data.budget_linked)}</Box>;
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', gap: '4px', width: '100%' }}>
+      <Box component="span" sx={[...amountSxs, { width: 'auto' }]}>{formatNumber(data.budget_linked)}</Box>
+      <FxMissingMark label={t('contracts.budget.linkedFxMissing', { year })} />
+    </Box>
+  );
 }
 
 /** The gap with its sign, a shortfall in orange; "no line" or "contract expired" when that is the point. */
@@ -276,6 +291,7 @@ function budgetColumns(t: TFunction, year: number): EnhancedColDef<ContractRow>[
       filter: 'agNumberColumnFilter',
       valueFormatter: amount,
       cellRenderer: BudgetLinkedCell,
+      cellRendererParams: { year },
     },
     {
       field: 'budget_gap',
@@ -636,6 +652,8 @@ export default function ContractsPage() {
         extraParams={budgetParams}
         toolbarExtras={quickFilter}
         pinnedBottomRowData={pinnedTotals}
+        // The linked lines the budget sums leave out for lack of a rate, under the totals row.
+        footer={budgetTotals?.linked_fx_missing?.length ? <FxMissingNotice items={budgetTotals.linked_fx_missing} /> : undefined}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}

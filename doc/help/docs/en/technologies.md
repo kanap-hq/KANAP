@@ -222,7 +222,7 @@ The levels and waves come from **Classifications and continuity** in [IT Landsca
 
 The records linked to the technology, one section per kind:
 
-- **Budget lines**: with the amount of the current year in the budget column of your workspace, and a total.
+- **Budget lines**: with the amount of the current year in the budget column of your workspace, and a total. A line whose currency has no exchange rate for the year shows its amount in its own currency with a small orange mark, and the total leaves it out. A one-line warning under the table names it. See [Manual rates](currencies.md#manual-rates).
 - **Contracts**: supplier, end date and yearly amount, with a total per currency.
 - **Projects**: status and planned end.
 - **Incidents**: severity, status and detection date. Linking an incident needs `incidents:contributor`. A closed or cancelled incident cannot be linked or unlinked.

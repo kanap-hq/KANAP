@@ -678,8 +678,9 @@ export async function budgetListAggregateRequest(
  * amount its row would show. Cents per line and key, null when the line's
  * currency has no rate that year (the amount is left out, as in the list's
  * totals); lines of another tenant or of no budget nature are left out, and
- * keys that name no amount ignored. The contracts' budget columns read their
- * lines' amounts here (lot CB): a null counts as nothing there.
+ * keys that name no amount ignored. `local_…` keys give the amount in the
+ * line's own currency (never null). The contracts' budget columns read their
+ * lines' amounts here (lot CB): a null leaves the line out of their sums.
  */
 export async function budgetListAmountsByIds(
   scope: SummaryReadScopeConfig,
@@ -688,7 +689,7 @@ export async function budgetListAmountsByIds(
   ids: string[],
   keys: string[],
 ): Promise<Map<string, Record<string, bigint | null>>> {
-  const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null)));
+  const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null || resolveLocalAmountField(key) != null)));
   const lineIds = Array.from(new Set(ids.filter(Boolean)));
   const result = new Map<string, Record<string, bigint | null>>();
   if (!amountKeys.length || !lineIds.length) return result;

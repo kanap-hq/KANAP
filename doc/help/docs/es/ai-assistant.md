@@ -112,6 +112,8 @@ Plaid usa un pequeño conjunto de herramientas internas para responder preguntas
 
 `Search all` encuentra las líneas presupuestarias por el nombre de sus valores analíticos e indica a Plaid qué valores tiene cada línea. Plaid nombra una línea presupuestaria por su referencia `BL-12`, y sus enlaces abren la línea.
 
+Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
+
 ## Artefactos y vistas previas
 
 Algunas respuestas incluyen material adicional que no encaja de forma natural dentro del hilo de chat. KANAP los llama **artefactos**.

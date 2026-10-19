@@ -601,6 +601,8 @@
       "total_one": "Total ({{count}} línea)",
       "total_other": "Total ({{count}} líneas)",
       "noRate": "Sin tipo de cambio {{currency}}",
+      "unknownFx": "Desconocido: una línea vinculada no tiene tipo de cambio",
+      "linkedFxMissing": "Una línea vinculada no tiene tipo de cambio para {{year}}: excluida de este importe.",
       "states": {
         "covered": "Cubierto",
         "under": "Infrapresupuestado",

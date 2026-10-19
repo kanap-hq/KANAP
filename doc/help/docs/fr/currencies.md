@@ -103,12 +103,7 @@ Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de
       - **Spot en temps réel** : Taux spot actuel d'ExchangeRate-API (année en cours)
       - **Estimation prospective** : Taux de l'année en cours réutilisé pour les années futures
   - **Marques dans les cellules** : un astérisque (*) après un taux saisi à la main, expliqué par la note **Taux saisi manuellement** sous le tableau (affichée seulement quand le tableau contient un tel taux) ; **estimation** à côté d'un taux pris sur l'année publiée la plus proche (survolez la marque pour en voir la raison)
-  - **Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting pour cette année. Cela concerne la liste des lignes budgétaires, la vue d'ensemble de la gestion budgétaire et les rapports budgétaires. L'écran le signale là où cela compte :
-
-- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble et en haut de chaque rapport budgétaire. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page.
-- Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
-
-KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
+  - **Taux manquant** : une paire sans taux affiche `—` dans la couleur d'avertissement
 
 **Exemple** :
 Si votre devise de reporting est EUR :
@@ -199,7 +194,12 @@ Réutilise le taux de l'année en cours comme estimation prospective. Cela fourn
 ### Années gelées
 Geler la colonne budgétaire par défaut d'une année fige les taux de cette année pour le type gelé (OPEX ou CAPEX) : KANAP rafraîchit les taux de l'année, puis conserve ce jeu pour tous les montants de l'année, même quand de nouveaux taux arrivent. Dégeler la colonne par défaut les libère. Voir [Geler la colonne par défaut fige les taux de change](budget-operations.md#geler-la-colonne-par-defaut-fige-les-taux-de-change).
 
-**Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants dans cette devise sont comptés à **1,00**, comme s'ils étaient déjà dans la devise de reporting. Le serveur journalise un avertissement et récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour le repérer, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
+**Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants des lignes budgétaires dans cette devise sont exclus de tous les totaux en devise de reporting pour cette année. Cela concerne la liste des lignes budgétaires, la vue d'ensemble de la gestion budgétaire, les rapports budgétaires et de refacturation, les contrats et les onglets Relations des applications et des technologies. L'écran le signale là où cela compte :
+
+- Un avertissement d'une ligne indique ce qui est exclu, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Il s'affiche sous les totaux de la liste des lignes budgétaires, sur les tuiles de la vue d'ensemble, en haut de chaque rapport budgétaire et de refacturation, et sous les chiffres budgétaires des contrats, des applications et des technologies. Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre cette page.
+- Sur la ligne elle-même, le montant s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
+
+KANAP récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour repérer les taux manquants, consultez le bloc des taux manquants au-dessus du tableau des instantanés de taux de change, et lancez la synchronisation des taux pour les récupérer tout de suite. Saisir un [taux manuel](#taux-manuels) corrige le problème immédiatement.
 
 ## Conseils
 

@@ -4,6 +4,7 @@ import { randomUUID } from 'node:crypto';
 import { NestFactory } from '@nestjs/core';
 import { DataSource, QueryRunner } from 'typeorm';
 import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util';
+import { seedMonths, seedVersion } from '../../spend/__tests__/round-inputs.fixtures';
 
 // The contract between the AI query registries (`query/registries/*`) and the list services
 // they call, for every entity family. Plaid chat and the MCP server read through them.
@@ -25,7 +26,8 @@ import { ensureDefaultAnalyticsAxis } from '../../analytics/analytics-axes.util'
 //   reduced page size is named in `limit_capped`.
 // - The currency of the amounts: budget lines in the tenant's reporting currency
 //   (`amounts_currency`), in lists, sums and details; contracts in each contract's own; a line's
-//   years without a rate named in `amounts_fx_missing_years`.
+//   years without a rate named in `amounts_fx_missing_years`; a sum's amounts left out for lack
+//   of a rate named in `amounts_fx_missing` and in the note.
 // - A field flagged `sortable` is a sort field, and the other way around.
 
 process.env.STRIPE_SECRET_KEY = '';
@@ -342,8 +344,11 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
 
     const sum = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency', metric: 'y_budget', function: 'sum' });
     assert.equal(sum.amounts_currency, 'CHF', `${entityType}: a sum of amounts names their currency`);
+    assert.deepEqual(sum.amounts_fx_missing, [], `${entityType}: no amount left out`);
+    assert.doesNotMatch(sum.amounts_currency_note, /not included/, `${entityType}: nothing to tell`);
     const count = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency' });
     assert.equal(count.amounts_currency, undefined, `${entityType}: a count has no currency`);
+    assert.equal(count.amounts_fx_missing, undefined, `${entityType}: a count leaves nothing out`);
     const fte = await harness.aggregates.execute(ctx, { entity_type: entityType, group_by: 'currency', metric: 'y_budget_fte', function: 'sum' });
     assert.equal(fte.amounts_currency, undefined, `${entityType}: nor an FTE`);
 
@@ -359,6 +364,16 @@ async function testAmountsCurrency(harness: Harness, runner: QueryRunner, seed: 
   assert.match(contractSum.amounts_currency_note, /do not add up/, 'contracts: a sum warns across currencies');
   const users = await runQuery(runner, harness.executor, ctx, { entity_type: 'users' });
   assert.equal('amounts_currency' in users.result, false, 'a family without amounts says nothing');
+
+  // An EUR line with an amount this year, and no EUR rate into CHF: left out of the sum, named.
+  const year = new Date().getFullYear();
+  const versionId = await seedVersion(runner, 'opex', seed.tenantId, seed.rows.spend_items.newer, year);
+  await seedMonths(runner, 'opex', seed.tenantId, versionId, year, { planned: [1200, ...Array(11).fill(0)] });
+  const leftOut = await harness.aggregates.execute(ctx, { entity_type: 'spend_items', group_by: 'currency', metric: 'y_budget', function: 'sum' });
+  assert.deepEqual(leftOut.amounts_fx_missing, [{ currency: 'EUR', year, lines: 1 }], 'the pair and its lines');
+  assert.equal(Number(leftOut.groups.find((group: any) => group.key === 'EUR')?.value), 0, 'the 1,200 EUR are left out, never counted at 1');
+  assert.match(leftOut.amounts_currency_note, new RegExp(`EUR ${year} \\(1 line\\)`), 'the note names the pair');
+  assert.match(leftOut.amounts_currency_note, /Tell the user that those amounts are not included/, 'and asks to say so');
 
   const { budgetFxMissingYears } = require('../query/ai-query.executor');
   const reporting = (currency: string, fx_source: string) => ({ reporting: { currency, reporting_currency: 'EUR', fx_source } });

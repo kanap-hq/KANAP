@@ -222,7 +222,7 @@ Die Stufen und Wellen stammen aus **Einstufungen und Kontinuität** in den [IT-L
 
 Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
 
-- **Budgetzeilen**: mit dem Betrag des laufenden Jahres in der Budgetspalte Ihres Arbeitsbereichs und einer Summe.
+- **Budgetzeilen**: mit dem Betrag des laufenden Jahres in der Budgetspalte Ihres Arbeitsbereichs und einer Summe. Eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, zeigt ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung, und die Summe lässt sie aus. Ein einzeiliger Hinweis unter der Tabelle nennt sie. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
 - **Verträge**: Lieferant, Enddatum und Jahresbetrag, mit einer Summe pro Währung.
 - **Projekte**: Status und geplantes Ende.
 - **Vorfälle**: Schweregrad, Status und Erkennungsdatum. Das Verknüpfen eines Vorfalls erfordert `incidents:contributor`. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden.

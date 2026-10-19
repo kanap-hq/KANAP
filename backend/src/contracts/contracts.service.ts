@@ -53,6 +53,7 @@ import {
   contractBudgetSql,
   contractBudgetYears,
   contractFxRates,
+  contractLinesFxMissing,
   loadContractBudgetInputs,
   parseContractBudgetSelection,
   readContractBudgetRows,
@@ -144,6 +145,8 @@ type ListItem = Contract & ContractTermFields & {
    */
   budget_committed?: number | null;
   budget_linked?: number;
+  /** A linked line has an amount without an exchange rate that year: left out of `budget_linked`; gap and state are null. */
+  budget_linked_fx_missing?: boolean;
   budget_gap?: number | null;
   budget_state?: ContractBudgetState | null;
   /** What the compliance register expects of the contract and what is missing (`contract-compliance.ts`). */
@@ -491,6 +494,7 @@ export class ContractsService {
           ? {
               budget_committed: figures?.committed ?? null,
               budget_linked: figures?.linked ?? 0,
+              budget_linked_fx_missing: figures?.linked_fx_missing ?? false,
               budget_gap: figures?.gap ?? null,
               budget_state: figures?.state ?? null,
             }
@@ -514,6 +518,8 @@ export class ContractsService {
    * whose currency has no rate that year left out and counted in `excluded`), linked, gap (over
    * the contracts with a committed amount), the counts of the "no budget line" and "under-budgeted"
    * quick filters (the budget state filter left out), and the years the selector offers.
+   * `linked_fx_missing`: the linked lines of those contracts left out of `linked` for lack of a
+   * rate, by currency and year (`[{ currency, year, lines }]`, `[]` when none).
    */
   async totals(query: any, opts?: ListReadOptions & { tenantId?: string }) {
     const mg = opts?.manager ?? this.repo.manager;
@@ -589,6 +595,18 @@ export class ContractsService {
       .getRawOne() ?? { no_line: '0', under: '0' };
     const units = (cents: string | null) => (cents == null ? 0 : Math.round(Number(cents)) / 100);
     const [year] = budget.years;
+    // The linked lines without a rate of the contracts in scope (the list's request), each line once.
+    let linkedFxMissing: ReturnType<typeof contractLinesFxMissing> = [];
+    if (budget.lineFxMissing.size > 0) {
+      const incomplete: Array<{ id: string }> = await qb.clone().select('c.id', 'id').andWhere('cb.linked_fx_missing').getRawMany();
+      if (incomplete.length > 0) {
+        const links: Array<{ id: string }> = await mg.query(
+          `SELECT DISTINCT l.spend_item_id AS id FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = ANY($2::uuid[])`,
+          [budget.tenantId, incomplete.map((row) => row.id)],
+        );
+        linkedFxMissing = contractLinesFxMissing(budget, links.map((row) => row.id), [year]);
+      }
+    }
     return {
       year,
       column: budget.column,
@@ -596,6 +614,7 @@ export class ContractsService {
       committed: units(sums.committed),
       linked: units(sums.linked),
       gap: units(sums.gap),
+      linked_fx_missing: linkedFxMissing,
       excluded: excluded.map((entry) => ({ currency: entry.currency, count: Number(entry.count) })),
       no_line_count: Number(counts.no_line),
       under_count: Number(counts.under),
@@ -1409,7 +1428,9 @@ export class ContractsService {
    * budget line in that year and column, as the budget list shows it, and for each year the
    * selector offers, the commitment, the linked lines' sum, the gap and the state
    * (`contract-budget.ts`). Amounts in the reporting currency; the commitment also in the
-   * contract's currency. Needs the right to read the budget.
+   * contract's currency. A line whose currency has no rate that year answers `amount: null` and
+   * `fx_missing: { currency, amount }` (its amount in its own currency), and `lines_fx_missing`
+   * names those lines by currency and year, for every year answered. Needs the right to read the budget.
    */
   async budgetCoverage(contractId: string, query: any, opts?: ListReadOptions) {
     const mg = opts?.manager ?? this.repo.manager;
@@ -1428,9 +1449,14 @@ export class ContractsService {
       reporting_currency: inputs.reportingCurrency,
       currency: String(contract.currency || 'EUR').trim().toUpperCase() || 'EUR',
       lines: items.map((line) => {
-        const cents = inputs.lineAmounts.get(line.id)?.get(selection.year) ?? 0n;
-        return { id: line.id, amount: centsToNumber(cents) };
+        const cents = inputs.lineAmounts.get(line.id)?.get(selection.year);
+        if (cents === null) {
+          const missing = inputs.lineFxMissing.get(line.id)!;
+          return { id: line.id, amount: null, fx_missing: { currency: missing.currency, amount: centsToNumber(missing.local.get(selection.year)!) } };
+        }
+        return { id: line.id, amount: centsToNumber(cents ?? 0n) };
       }),
+      lines_fx_missing: contractLinesFxMissing(inputs, items.map((line) => line.id)),
       years: rows.map(({ contract_id: _contract, ...row }) => row),
     };
   }

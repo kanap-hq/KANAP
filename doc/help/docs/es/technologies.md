@@ -222,7 +222,7 @@ Los niveles y las olas vienen de **Clasificaciones y continuidad** en la [Config
 
 Los registros vinculados a la tecnología, una sección por tipo:
 
-- **Líneas presupuestarias**: con el importe del año en curso en la columna presupuestaria de su espacio de trabajo, y un total.
+- **Líneas presupuestarias**: con el importe del año en curso en la columna presupuestaria de su espacio de trabajo, y un total. Una línea cuya moneda no tiene tipo de cambio para el año muestra su importe en su propia moneda con una pequeña marca naranja, y el total la excluye. Un aviso de una línea bajo la tabla la indica. Vea [Tasas manuales](currencies.md#tasas-manuales).
 - **Contratos**: proveedor, fecha de fin e importe anual, con un total por moneda.
 - **Proyectos**: estado y fin previsto.
 - **Incidentes**: gravedad, estado y fecha de detección. Vincular un incidente requiere `incidents:contributor`. Un incidente cerrado o cancelado no se puede vincular ni desvincular.

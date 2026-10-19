@@ -89,7 +89,9 @@ With read access to budget lines (`budget:reader`), the right of the toolbar sho
 - **Gap**: budget minus commitment. A shortfall shows in orange. **No line** means nothing is budgeted on a linked line, and **Contract expired** means budget remains on a contract that has ended
 - **Budget coverage** (hidden by default): one of the six coverage states
 
-A contract in a currency that has no exchange rate for the year shows "No USD rate" instead of an amount. Without the budget right, these columns, the selector and the two budget quick filters are hidden.
+A contract in a currency that has no exchange rate for the year shows "No USD rate" instead of an amount.
+
+When a linked budget line has no exchange rate for the year, the **Budget** amount leaves it out and shows a small orange mark. **Gap** and **Budget coverage** stay empty, since the coverage is unknown. A one-line warning under the list names the lines left out, for example "Excluding 1 line with no exchange rate: USD 2026." See [Manual rates](currencies.md#manual-rates). Without the budget right, these columns, the selector and the two budget quick filters are hidden.
 
 ### Totals row
 
@@ -177,6 +179,8 @@ For example, a contract of 350 000 a year that renews every 1 July commits 350 0
 - **Under-budgeted**: the linked lines hold less than the commitment
 - **Budget above the contract**: the linked lines hold more than the commitment plus 10%
 - **Covered**: anything else
+
+When a linked line has no exchange rate for a year, its amount shows in its own currency with a small orange mark, and the total and **Linked lines** leave it out. The state of that year reads **Unknown: a linked line has no exchange rate**. A one-line warning under the coverage table names the lines left out, for example "Excluding 1 line with no exchange rate: USD 2026." See [Missing rate](currencies.md#conversion-mechanics-quick-reference) and [Manual rates](currencies.md#manual-rates).
 
 ### Compliance
 

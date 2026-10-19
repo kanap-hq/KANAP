@@ -90,6 +90,8 @@ So funktionieren sie:
 
 Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, lassen die Budgetberichte, **Personal nach Monat** und **Kosten pro VZÄ** die Beträge dieser Zeile für das Jahr bei ihren Zahlen aus. Ein einzeiliger Hinweis oben im Bericht nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet. Der Hinweis wird nicht gedruckt. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
 
+Die beiden Leistungsverrechnungsberichte lassen diese Beträge bei allen Zahlen aus: bezahlt, verbraucht, Abteilungen und konzerninterne Flüsse. So bleibt jeder Bericht für das, was er zählt, ausgeglichen. Derselbe Hinweis erscheint über dem Bericht.
+
 ### Die Liste aus einem Bericht öffnen
 
 In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die [Liste der Budgetzeilen](budget-lines.md) in einem neuen Tab öffnet, mit den Budgetzeilen, die die Zeile zählt:
