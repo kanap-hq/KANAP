@@ -86,6 +86,10 @@ Cómo funcionan:
 - Si el enlace incluye un filtro analítico y las dimensiones no se pudieron cargar, el informe no muestra ninguna línea y sí una línea de texto: "No se pudo aplicar el filtro analítico. Quítelo o vuelva a intentarlo." Haga clic en **Quitar el filtro** para quitar los filtros analíticos y volver a ver el informe.
 - Los dos informes de contracargo no tienen estos filtros y no se ven afectados.
 
+### Importes sin tipo de cambio
+
+Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. El aviso no se imprime. Vea [Tasas manuales](currencies.md#tasas-manuales).
+
 ### Abrir la lista desde un informe
 
 En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la [lista de líneas presupuestarias](budget-lines.md) en una pestaña nueva, con las líneas que cuenta la fila:

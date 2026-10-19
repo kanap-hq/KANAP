@@ -166,7 +166,7 @@ describe('CurrencySettingsPage', () => {
     expect(await screen.findByText('1 exchange rate missing')).toBeInTheDocument();
     expect(screen.getByText('NOK · 2025')).toBeInTheDocument();
     expect(screen.getByText(
-      'No source publishes this rate yet; amounts in this currency are not converted correctly until it has one.',
+      'No source publishes this rate yet; amounts in this currency are left out of totals until it has one.',
     )).toBeInTheDocument();
     expect(screen.queryByText('Every currency in use has a rate.')).not.toBeInTheDocument();
 

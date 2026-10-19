@@ -1,7 +1,8 @@
-import { useRef } from 'react';
+import { useMemo, useRef } from 'react';
 import { useQueries, useQuery, type UseQueryResult } from '@tanstack/react-query';
 import api from '../../api';
 import type { AggregateRequest, AggregateResult, BudgetScope } from './reportAggregates';
+import { mergeFxMissing, type FxMissing } from '../../components/finance/fxMissing';
 
 /** The aggregate route of each item type. */
 export const AGGREGATE_ENDPOINT: Record<BudgetScope, string> = {
@@ -69,12 +70,15 @@ export function useBudgetAggregate(scope: BudgetScope, request: AggregateRequest
   });
 }
 
-/** Several aggregates of one type, asked together; `data` holds every answer once all are in. */
+/**
+ * Several aggregates of one type, asked together; `data` holds every answer once all are in, and
+ * `fxMissing` what they leave out for lack of an exchange rate, merged.
+ */
 export function useBudgetAggregates(
   scope: BudgetScope,
   requests: readonly AggregateRequest[] | null,
   options: Options = {},
-): { data: AggregateResult[] | undefined; isLoading: boolean; isPlaceholderData: boolean; isError: boolean; refetch: () => void } {
+): { data: AggregateResult[] | undefined; fxMissing: FxMissing[]; isLoading: boolean; isPlaceholderData: boolean; isError: boolean; refetch: () => void } {
   const results = useQueries({
     queries: (requests ?? []).map((request) => ({
       queryKey: aggregateQueryKey(scope, request),
@@ -92,8 +96,11 @@ export function useBudgetAggregates(
   const previous = stable.current;
   if (!data) stable.current = undefined;
   else if (!previous || previous.length !== data.length || data.some((answer, i) => answer !== previous[i])) stable.current = data;
+  const answers = stable.current;
+  const fxMissing = useMemo(() => mergeFxMissing(...(answers ?? []).map((answer) => answer.fxMissing)), [answers]);
   return {
-    data: stable.current,
+    data: answers,
+    fxMissing,
     isLoading,
     isPlaceholderData,
     isError,

@@ -86,6 +86,10 @@ How they work:
 - If the link carries an analytics filter and the dimensions could not be loaded, the report shows no lines and one line of text: "The analytics filter could not be applied. Clear it or try again." Click **Clear filter** to remove the analytics filters and see the report again.
 - The two chargeback reports have no such filters and are not affected.
 
+### Amounts without an exchange rate
+
+When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. The warning does not print. See [Manual rates](currencies.md#manual-rates).
+
 ### Opening the list from a report
 
 In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the [budget lines list](budget-lines.md) in a new tab, on the lines the row counts:

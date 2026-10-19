@@ -155,6 +155,13 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 - Each shown FTE column shows the sum of the lines' FTE. When some lines have no FTE, the count follows the total, for example "3.50 · 12 unknown". Hover it for the full sentence: "Unknown for 12 lines". When no line has an FTE, the total is blank and only the count shows
 - Totals respect your current filters and search
 
+**Amounts without an exchange rate**:
+
+- When a line's currency has no exchange rate for a year, its amount for that year shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
+- The totals leave these amounts out, and a one-line warning under the list names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings.
+- In a sorted column, these lines come last. An amount filter never keeps them.
+- See [Manual rates](currencies.md#manual-rates) to enter the missing rate yourself.
+
 **Deep linking**:
 
 - Clicking any cell opens the workspace on the most relevant tab:

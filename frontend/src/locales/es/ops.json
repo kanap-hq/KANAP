@@ -1008,7 +1008,7 @@
       "missingNone": "Cada moneda en uso tiene un tipo.",
       "missingTitle_one": "Falta {{count}} tipo de cambio",
       "missingTitle_other": "Faltan {{count}} tipos de cambio",
-      "missingReason": "Ninguna fuente publica todavía este tipo; los importes en esta moneda no se convierten correctamente hasta que lo tenga.",
+      "missingReason": "Ninguna fuente publica todavía este tipo; los importes en esta moneda quedan excluidos de los totales hasta que lo tenga.",
       "enterRate": "Introducir un tipo",
       "enterRateFor": "Introducir un tipo para {{currency}} en {{year}}",
       "loadMissingError": "No se pudieron comprobar los tipos de cambio en uso.",
@@ -1267,6 +1267,16 @@
     "allocationWarnings": {
       "turnoverFxMissing": "Aún no hay tipos de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en estas monedas se cuenta sin convertir hasta que los tipos estén disponibles.",
       "turnoverFxMissing_one": "Aún no hay tipo de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible."
+    },
+    "fxMissing": {
+      "excluding_one": "Se excluye {{count}} línea sin tipo de cambio: {{pairs}}.",
+      "excluding_other": "Se excluyen {{count}} líneas sin tipo de cambio: {{pairs}}.",
+      "excludingSeveral": "Se excluyen líneas sin tipo de cambio: {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Introducir un tipo",
+      "lineTooltip": "Sin tipo de cambio de {{currency}} para {{year}}: excluido de los totales.",
+      "localAmount": "{{amount}} {{currency}}"
     },
     "turnoverMillions": "{{value}} M {{currency}}"
   },

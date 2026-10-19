@@ -40,6 +40,14 @@ export function itemName(scope: Scope, row: Row): string {
   return (scope === 'capex' ? row.description : row.product_name) ?? '';
 }
 
+/**
+ * Not the former browser's (PR 3, amounts without an exchange rate): a slot whose version has no rate
+ * for its year carries null reporting amounts, and the engine leaves the line out of a variance.
+ */
+function withoutRate(row: Row, ...years: number[]): boolean {
+  return years.some((year) => pickYearSlot(row, year)?.reporting?.fx_source === 'missing');
+}
+
 function reportValue(row: Row, year: number, metric: string): number {
   const slot = pickYearSlot(row, year);
   const totals = (slot?.reporting ?? slot?.totals) as Record<string, number | undefined> | undefined;
@@ -170,7 +178,9 @@ export function delta(
   },
 ) {
   const { sourceYear, sourceMetric, destinationYear, destinationMetric, modes, topCount, excludedIds, excludedAccounts } = p;
-  const items = rows.map((r) => {
+  // PR 3: a line without a rate on either side has no variance.
+  const compared = rows.filter((r) => !withoutRate(r, sourceYear, destinationYear));
+  const items = compared.map((r) => {
     const curr = reportValue(r, destinationYear, destinationMetric);
     const prev = reportValue(r, sourceYear, sourceMetric);
     const d = curr - prev;
@@ -194,7 +204,7 @@ export function delta(
   let grossIncrease = 0;
   let grossDecrease = 0;
   let net = 0;
-  for (const r of rows) {
+  for (const r of compared) {
     if (excludedIds.includes(r.id)) continue;
     const accountName = r.account_display?.trim();
     if (accountName && excludedAccounts.includes(accountName)) continue;
@@ -360,7 +370,10 @@ function getColumnValueFromRow(row: Row, year: 'y' | 'yMinus1' | 'yPlus1', colum
 }
 
 export function topIncreases(scope: Scope, rows: Row[], column: string, limit = 5) {
+  const Y = new Date().getFullYear();
+  // PR 3: a line without a rate in Y or Y-1 has no variance (the page read its own currency's amount).
   return rows
+    .filter((row) => !withoutRate(row, Y, Y - 1))
     .map((row) => {
       const y = getColumnValueFromRow(row, 'y', column);
       const yMinus1 = getColumnValueFromRow(row, 'yMinus1', column);

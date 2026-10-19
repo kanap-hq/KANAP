@@ -1008,7 +1008,7 @@
       "missingNone": "Chaque devise utilisée a un taux.",
       "missingTitle_one": "{{count}} taux de change manquant",
       "missingTitle_other": "{{count}} taux de change manquants",
-      "missingReason": "Aucune source ne publie encore ce taux ; les montants dans cette devise ne sont pas convertis correctement tant qu'elle n'en a pas un.",
+      "missingReason": "Aucune source ne publie encore ce taux ; les montants dans cette devise sont exclus des totaux tant qu'elle n'en a pas un.",
       "enterRate": "Saisir un taux",
       "enterRateFor": "Saisir un taux pour {{currency}} en {{year}}",
       "loadMissingError": "Les taux de change utilisés n'ont pas pu être vérifiés.",
@@ -1268,6 +1268,16 @@
     "allocationWarnings": {
       "turnoverFxMissing": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans ces devises est compté sans conversion jusqu'à ce que les taux soient disponibles.",
       "turnoverFxMissing_one": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible."
+    },
+    "fxMissing": {
+      "excluding_one": "{{count}} ligne sans taux de change exclue : {{pairs}}.",
+      "excluding_other": "{{count}} lignes sans taux de change exclues : {{pairs}}.",
+      "excludingSeveral": "Lignes sans taux de change exclues : {{pairs}}.",
+      "pair": "{{currency}} {{year}}",
+      "pairWithCount": "{{currency}} {{year}} ({{count}})",
+      "enterRate": "Saisir un taux",
+      "lineTooltip": "Pas de taux de change {{currency}} pour {{year}} : exclu des totaux.",
+      "localAmount": "{{amount}} {{currency}}"
     },
     "turnoverMillions": "{{value}} M {{currency}}"
   },

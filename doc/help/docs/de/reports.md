@@ -86,6 +86,10 @@ So funktionieren sie:
 - Enthält der Link einen Analysefilter und konnten die Dimensionen nicht geladen werden, zeigt der Bericht keine Zeilen und eine Textzeile: „Der Analysefilter konnte nicht angewendet werden. Entfernen Sie ihn oder versuchen Sie es erneut.“ Klicken Sie auf **Filter entfernen**, um die Analysefilter zu entfernen und den Bericht wieder zu sehen.
 - Die beiden Leistungsverrechnungsberichte haben keine solchen Filter und sind nicht betroffen.
 
+### Beträge ohne Wechselkurs
+
+Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, lassen die Budgetberichte, **Personal nach Monat** und **Kosten pro VZÄ** die Beträge dieser Zeile für das Jahr bei ihren Zahlen aus. Ein einzeiliger Hinweis oben im Bericht nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet. Der Hinweis wird nicht gedruckt. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
+
 ### Die Liste aus einem Bericht öffnen
 
 In **Personal nach Monat**, **Kosten pro VZÄ**, **Analysedimensionen** und **Konsolidierungskonten** ist der Name einer Gruppe ein Link, der die [Liste der Budgetzeilen](budget-lines.md) in einem neuen Tab öffnet, mit den Budgetzeilen, die die Zeile zählt:

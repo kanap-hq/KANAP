@@ -150,7 +150,7 @@ async function testLineAmountsAreTheBudgetList() {
     assert.equal(amounts.get(lines.usd)?.[key], 90000n, 'USD converted with the year rate');
     assert.equal(amounts.get(lines.ended)?.[key], 0n, 'nothing after the end of validity');
     const totals = await engine.budgetListTotals(SUMMARY_SCOPES.all, deps, { amounts: key, includeDisabled: 'true' }, m);
-    const sum = Array.from(amounts.values()).reduce((acc, byKey) => acc + byKey[key], 0n);
+    const sum = Array.from(amounts.values()).reduce((acc, byKey) => acc + (byKey[key] ?? 0n), 0n);
     assert.equal(toCents(totals[key] as number), sum, 'the footer of the budget list');
     assert.equal((await engine.budgetListAmountsByIds(SUMMARY_SCOPES.all, deps, m, [], [key])).size, 0, 'no line, no statement');
   });

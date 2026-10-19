@@ -151,7 +151,9 @@ export class BudgetListConfig implements ListConfig {
 
   /**
    * The converted cents of one measure of the version of `year` (0 without a
-   * version or without amounts, or after the line's end of validity); with
+   * version or without amounts, or after the line's end of validity; null
+   * when the version's currency has no rate that year, so the amount is left
+   * out of every sum, sorts last and matches no amount filter); with
    * `local`, the cents in the line's own currency, not converted (a row's
    * `totals`).
    *
@@ -170,7 +172,10 @@ export class BudgetListConfig implements ListConfig {
     const column = local ? `${measure}_local` : measure;
     wanted.get(year)!.add(column);
     stmt.joinLazy('am', () => this.amountsJoinSql(stmt, wanted));
-    return { kind: 'money', sql: `coalesce(am.y${year}_${column}, 0::float8)`, joins: ['am'] };
+    const sql = local
+      ? `coalesce(am.y${year}_${column}, 0::float8)`
+      : `(CASE WHEN am.y${year}_fx_missing THEN NULL ELSE coalesce(am.y${year}_${column}, 0::float8) END)`;
+    return { kind: 'money', sql, joins: ['am'] };
   }
 
   private amountsJoinSql(stmt: SqlStatement, wanted: Map<number, Set<string>>): string {
@@ -184,23 +189,31 @@ export class BudgetListConfig implements ListConfig {
     // The builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`: the product once per
     // version below, rounded once per line and year above (at most one version per line and year: `max`
     // picks it, and the rounding reads the one aggregate). A local column is the same chain at rate 1.
+    // A version without a rate (null) converts to null, and `y<year>_fx_missing` says so for the year
+    // (a year a line has no version in reads null there too, its amounts then 0).
     const converted = columns
       .map((column) => {
         const local = column.endsWith('_local');
         const measure = local ? column.slice(0, -'_local'.length) : column;
         return local
           ? `${decimal2ToFloat(`at.${measure}`)} * 100 AS ${column}`
-          : `${decimal2ToFloat(`at.${measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column}`;
+          : `${decimal2ToFloat(`at.${measure}`)} * fx.rate * 100 AS ${column}`;
       })
       .join(',\n            ');
     const pivot = years
-      .flatMap((year) => Array.from(wanted.get(year)!).sort().map((column) => `${jsRound(`max(x.${column}) FILTER (WHERE x.yr = ${year})`)} AS y${year}_${column}`))
+      .flatMap((year) => {
+        const yearColumns = Array.from(wanted.get(year)!).sort();
+        const flag = yearColumns.some((column) => !column.endsWith('_local'))
+          ? [`bool_or(x.fx_missing) FILTER (WHERE x.yr = ${year}) AS y${year}_fx_missing`]
+          : [];
+        return [...yearColumns.map((column) => `${jsRound(`max(x.${column}) FILTER (WHERE x.yr = ${year})`)} AS y${year}_${column}`), ...flag];
+      })
       .join(',\n          ');
     return `LEFT JOIN (
         SELECT x.item_id,
           ${pivot}
         FROM (
-          SELECT av.${s.versionItemFk} AS item_id, av.budget_year AS yr,
+          SELECT av.${s.versionItemFk} AS item_id, av.budget_year AS yr, fx.rate IS NULL AS fx_missing,
             ${converted}
           FROM ${s.versionTable} av
           JOIN ${s.itemTable} ai ON ai.tenant_id = ${t} AND ai.id = av.${s.versionItemFk}${natureAnd('ai', s.nature)}
@@ -285,7 +298,7 @@ export class BudgetListConfig implements ListConfig {
    *   out), in the line's currency, converted like the column's amount: the
    *   version's rate (its rate set, else `live`), `Math.round(local × rate ×
    *   100)` once per line and year, the chain of `amountsJoinSql`; 0 without
-   *   detail;
+   *   detail; null when the version's currency has no rate that year;
    * - `staff_fte`: the lines' result's own `fte` (the column's full-year
    *   average, rounded once; pieces carry no FTE, so it is the FTE of the
    *   people and days lines), null without detail. Never the sum of the
@@ -311,7 +324,12 @@ export class BudgetListConfig implements ListConfig {
       default: {
         const fx = this.versionRate(stmt, year, v);
         const local = `${join}.${variant}`;
-        return { kind: 'money', sql: `coalesce(${jsRound(`${local} * coalesce(${fx}.rate, 1::float8) * 100`)}, 0::float8)`, joins: [join, fx] };
+        // A version without a rate: null, as its column amounts (`amountCents`).
+        return {
+          kind: 'money',
+          sql: `(CASE WHEN ${v}.id IS NOT NULL AND ${fx}.rate IS NULL THEN NULL ELSE coalesce(${jsRound(`${local} * ${fx}.rate * 100`)}, 0::float8) END)`,
+          joins: [join, fx],
+        };
       }
     }
   }

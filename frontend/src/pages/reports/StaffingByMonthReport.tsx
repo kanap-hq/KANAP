@@ -159,6 +159,7 @@ export default function StaffingByMonthReport() {
   return (
     <ReportLayout
       busy={busy}
+      fxMissing={report.data?.fxMissing}
       title={t('reports.staffing.title')}
       subtitle={t('reports.staffing.subtitle', { type: scopeLabel, context: scope, group: groupInSentence })}
       filters={(

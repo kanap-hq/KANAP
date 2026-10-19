@@ -29,7 +29,7 @@ export async function aiAmountsCurrency(
       : `Every amount (y_budget, yearly_totals, sums...) is in ${currency}.`;
     return {
       amounts_currency: currency,
-      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts are counted unconverted.`,
+      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts have no value in ${currency} and are left out of every sum.`,
     };
   }
   if (entityType === 'contracts') {

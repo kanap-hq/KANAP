@@ -197,4 +197,32 @@ describe.each([
     expect(locks()[0].closest('.ag-row')).toBe(totalRow());
   }, 20_000);
 
+  it('marks a line amount without an exchange rate and names what the totals leave out under the grid', async () => {
+    const line = {
+      id: 'l-1', item_number: 7, nature: 'opex', product_name: 'Cloud', currency: 'USD', status: 'enabled', created_at: '2026-01-01',
+      versions: { y: {
+        year: new Date().getFullYear(),
+        reporting: { budget: null, revision: null, forecast: null, follow_up: null, landing: null },
+        fx_missing: { currency: 'USD', amounts: { budget: 12000, revision: 0, forecast: 0, follow_up: 0, landing: 0 } },
+      } },
+    };
+    const base = get.getMockImplementation() as (url: string, config?: unknown) => Promise<unknown>;
+    get.mockImplementation(async (url: string, config?: unknown) => {
+      if (url === rows) return { data: { items: [line], total: 1, page: 1, limit: 50 } };
+      if (url === totals) return { data: { yBudget: 0, reportingCurrency: 'EUR', fxMissing: [{ currency: 'USD', year: 2026, lines: 1 }] } };
+      return base(url, config);
+    });
+    renderPage();
+    await waitFor(() => expect(grid.api).not.toBeNull());
+    await settle();
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('shared.fxMissing.excluding'));
+    const cell = await waitFor(() => {
+      const found = document.querySelector('.ag-center-cols-container [row-id="l-1"] [col-id="yBudget"]');
+      expect(found).not.toBeNull();
+      return found!;
+    });
+    expect(cell.textContent).toBe('ops:shared.fxMissing.localAmount');
+    expect(cell.querySelector('[aria-label="shared.fxMissing.lineTooltip"]')).not.toBeNull();
+  }, 20_000);
+
 });

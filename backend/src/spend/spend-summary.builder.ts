@@ -238,17 +238,34 @@ export const FIXED_SORT_ORDERS: Record<string, readonly string[]> = {
 
 export type SummarySlotTotals = Record<SlotMetric, number>;
 
+/** The five amounts in the reporting currency: all null when the version has no exchange rate. */
+export type SummarySlotAmounts = Record<SlotMetric, number | null>;
+
 export type SummarySlot = {
   year?: number;
   version_id?: string;
+  /** In the line's own currency. */
   totals: SummarySlotTotals;
-  reporting?: SummarySlotTotals & {
+  /**
+   * In the reporting currency. With `fx_source` `missing` (no rate for the line's currency that
+   * year), the five amounts and `fx_rate` are null: the amounts are never counted at a rate of 1.
+   */
+  reporting?: SummarySlotAmounts & {
     currency: string;
     reporting_currency: string;
-    fx_rate: number;
+    fx_rate: number | null;
     fx_source: FxResolvedRate['source'];
     fx_rate_set_id: string | null;
   };
+};
+
+/**
+ * A year slot of the grid shape: the five amounts in the reporting currency; when the version has
+ * no exchange rate, those are null and `fx_missing` carries the five amounts in the line's currency.
+ */
+export type GridSummarySlot = {
+  reporting?: SummarySlotAmounts;
+  fx_missing?: { currency: string; amounts: SummarySlotTotals };
 };
 
 export type BudgetSummaryRow = Record<string, any> & {
@@ -327,10 +344,11 @@ export interface BuildRowsOptions {
 type Cents = Record<SlotMetric, bigint>;
 
 type VersionReporting = {
-  cents: Cents;
+  /** Null when the line's currency has no rate that year (`fx_source` `missing`): nothing to convert with. */
+  cents: Cents | null;
   currency: string;
   reporting_currency: string;
-  fx_rate: number;
+  fx_rate: number | null;
   fx_source: FxResolvedRate['source'];
   fx_rate_set_id: string | null;
 };
@@ -340,7 +358,7 @@ export interface VersionTotals {
   versionsByItemYear: Map<string, Map<number, any>>;
   /** Per version, in the item's currency. */
   cents: Map<string, Cents>;
-  /** Per version with amounts, converted to the reporting currency. */
+  /** Per version with amounts, converted to the reporting currency (null cents without a rate). */
   reporting: Map<string, VersionReporting>;
   reportingCurrency: string;
   /**
@@ -383,16 +401,23 @@ const GRID_DERIVED_FIELDS = [
  * A year slot as the grid reads it: the five amounts the cells show, in the
  * reporting currency (`reporting`, the key the full shape uses), or nothing
  * when the line has no version that year (the cells show 0, as for the full
- * slot's zero totals).
+ * slot's zero totals). A version without an exchange rate shows five nulls
+ * there, and `fx_missing` its five amounts in the line's own currency.
  */
-function gridSlot(slot: SummarySlot | undefined): { reporting?: SummarySlotTotals } {
+function gridSlot(slot: SummarySlot | undefined): GridSummarySlot {
   if (!slot?.version_id) return {};
-  const source: SummarySlotTotals = slot.reporting ?? slot.totals;
-  return { reporting: Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, source[c.key]])) as SummarySlotTotals };
+  const pick = <T>(source: Record<SlotMetric, T>) => Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, source[c.key]])) as Record<SlotMetric, T>;
+  if (slot.reporting?.fx_source === 'missing') {
+    return { reporting: pick(slot.reporting), fx_missing: { currency: slot.reporting.currency, amounts: pick(slot.totals) } };
+  }
+  return { reporting: pick<number | null>(slot.reporting ?? slot.totals) };
 }
 
-export function centsToNumbers(cents: Cents): SummarySlotTotals {
-  return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, centsToNumber(cents[c.key])])) as SummarySlotTotals;
+export function centsToNumbers(cents: Cents): SummarySlotTotals;
+export function centsToNumbers(cents: Cents | null): SummarySlotAmounts;
+/** Cents to amounts; null cents (a version without an exchange rate) give five nulls. */
+export function centsToNumbers(cents: Cents | null): SummarySlotAmounts {
+  return Object.fromEntries(SUMMARY_COLUMNS.map((c) => [c.key, cents ? centsToNumber(cents[c.key]) : null])) as SummarySlotAmounts;
 }
 
 /** The tenant of the request transaction; every engine query names it explicitly besides RLS. */
@@ -574,7 +599,9 @@ export function summaryRowProjectNames(row: any, field: string): string[] {
  * Versions of the items for the given years (the newest per item and year) and
  * their totals: the stored sums of each version's months of its own year (a
  * version without such a month has no totals row, so no entry), kept in cents,
- * and each version converted to the reporting currency once.
+ * and each version converted to the reporting currency once. A version whose
+ * currency has no rate that year (`missing`) gets null cents and a null rate:
+ * its amounts are left out, never counted at 1.
  */
 export async function loadVersionTotals(
   config: SummaryReadScopeConfig,
@@ -644,12 +671,15 @@ export async function loadVersionTotals(
     if (!cents) continue;
     const currency = currencyOf(version);
     const rate = fx.map.get(`${version.fx_rate_set_id || 'live'}:${Number(version.budget_year)}:${currency}`);
-    const fxRate = rate?.rate ?? 1;
+    // The service answers every key it is asked; a test double that answers none converts at 1 (`identity`), as before.
+    const fxRate = rate?.source === 'missing' ? null : rate?.rate ?? 1;
     result.reporting.set(version.id, {
-      cents: Object.fromEntries(SUMMARY_COLUMNS.map((c) => [
-        c.key,
-        toCents(deps.fxRates.convertValue(centsToNumber(cents[c.key]), fxRate)),
-      ])) as Cents,
+      cents: fxRate == null
+        ? null
+        : Object.fromEntries(SUMMARY_COLUMNS.map((c) => [
+          c.key,
+          toCents(deps.fxRates.convertValue(centsToNumber(cents[c.key]), fxRate)),
+        ])) as Cents,
       currency,
       reporting_currency: rate?.reportingCurrency ?? result.reportingCurrency,
       fx_rate: fxRate,

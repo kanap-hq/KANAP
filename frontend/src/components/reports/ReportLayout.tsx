@@ -11,6 +11,8 @@ import { lightIslandTheme } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
 import { prepareReportPrint, setReportPrinting, useReportPrinting } from './reportPrint';
 import { REPORT_DATA_STATUS_CLASS } from './ReportDataStatus';
+import FxMissingNotice from '../finance/FxMissingNotice';
+import type { FxMissing } from '../finance/fxMissing';
 
 /**
  * Label-above wrapper for a filter control in a report filter bar. The charter bans
@@ -146,6 +148,7 @@ export default function ReportLayout({
   onExportTableCsv,
   onExportChartPng,
   busy = false,
+  fxMissing,
   children,
 }: {
   title: string;
@@ -159,6 +162,8 @@ export default function ReportLayout({
    * and the tables are dimmed (the status line is not), and the exports and the print wait.
    */
   busy?: boolean;
+  /** The amounts the report's numbers leave out for lack of an exchange rate: one line under the toolbar. */
+  fxMissing?: ReadonlyArray<FxMissing> | null;
   children: React.ReactNode;
 }) {
   const { t } = useTranslation(['ops']);
@@ -254,6 +259,12 @@ export default function ReportLayout({
             </Stack>
           </Stack>
         </Box>
+        {/* A note for the screen: paper carries the drawing and the date only. */}
+        {!!fxMissing?.length && (
+          <Box className="report-print-hide">
+            <FxMissingNotice items={fxMissing} />
+          </Box>
+        )}
         <Box
           aria-busy={busy || undefined}
           sx={{

@@ -16,9 +16,11 @@ import {
   buildBudgetSummaryRows,
   BudgetSummaryRow,
   FIXED_SLOTS,
+  isMoneyVariant,
   parseSummaryYears,
   resolveAmountField,
   resolveFteField,
+  resolveFteVariantField,
   resolveLocalAmountField,
   SUMMARY_COLUMNS,
   SummaryDeps,
@@ -29,7 +31,7 @@ import {
 import { BudgetListConfig, budgetRuntimeNeeds } from './budget-list.config';
 import { natureAnd, type BudgetNature } from '../budget-nature';
 import { presentLine, presentNativeLine, selectLineColumns } from '../budget-line-presentation';
-import { fxKeyCurrency, fxSetKeySql, fxTableSql, RequestFxRates } from './budget-fx-table';
+import { fxKeyCurrency, fxSetKeySql, fxTableSql, FxTable, lineCurrencySql, RequestFxRates } from './budget-fx-table';
 import { BudgetListRuntime, loadBudgetRuntime, mergeNeeds, RuntimeNeeds } from './budget-list.runtime';
 
 /**
@@ -401,7 +403,40 @@ async function orderAnalyticsFilterValues(
  */
 export type FteTotal = { total: number | null; unknown: number };
 
-export type SummaryTotals = Record<string, number | string> & { fte?: Record<string, FteTotal> };
+/**
+ * A line currency and budget year whose amounts a total or an aggregate left out: the versions of
+ * that year of `lines` distinct lines in scope have amounts in `currency` and no exchange rate to
+ * the reporting currency (`fx-rate.service.ts`, source `missing`).
+ */
+export type FxMissingPair = { currency: string; year: number; lines: number };
+
+export type SummaryTotals = Record<string, number | string> & { fte?: Record<string, FteTotal>; fxMissing: FxMissingPair[] };
+
+/**
+ * The statement part that lists the `FxMissingPair`s of the lines of the CTE `core` (columns `id`,
+ * `currency`, `disabled_at`: the lines in the request's scope) for the versions of `years` with
+ * amounts (a totals row) whose rate is null in the engine's FX table, joined as the amounts join it
+ * (`amountsJoinSql`): a version after its line's end of validity does not count. A JSON array
+ * ordered by currency and year, `[]` when nothing is left out.
+ */
+function fxMissingJsonSql(stmt: SqlStatement, scope: SummaryReadScopeConfig, fx: FxTable, years: number[]): string {
+  const s = scope;
+  return `(SELECT coalesce(json_agg(m ORDER BY m.currency COLLATE "C", m.year), '[]'::json) FROM (
+      SELECT ${lineCurrencySql('c')} AS currency, v.budget_year AS year, count(DISTINCT c.id)::int AS lines
+      FROM core c
+      JOIN ${s.versionTable} v ON v.tenant_id = ${stmt.tenant} AND v.${s.versionItemFk} = c.id
+        AND v.budget_year = ANY(${stmt.bind(years, 'int[]')})
+        AND (c.disabled_at IS NULL OR v.budget_year <= extract(year FROM c.disabled_at AT TIME ZONE 'UTC'))
+      JOIN ${s.totalsTable} t ON t.tenant_id = ${stmt.tenant} AND t.version_id = v.id
+      LEFT JOIN ${fxTableSql(stmt, fx, 'fxm')} ON fxm.yr = v.budget_year AND fxm.cur = ${fxKeyCurrency('c')} AND fxm.set_key = ${fxSetKeySql(stmt, fx, 'v.fx_rate_set_id')}
+      WHERE fxm.rate IS NULL
+      GROUP BY 1, 2
+    ) m)`;
+}
+
+function readFxMissing(json: unknown): FxMissingPair[] {
+  return (Array.isArray(json) ? json : []).map((entry: any) => ({ currency: String(entry.currency), year: Number(entry.year), lines: Number(entry.lines) }));
+}
 
 /**
  * The footer totals of what the list shows: every `<slot><Suffix>` of the
@@ -409,9 +444,11 @@ export type SummaryTotals = Record<string, number | string> & { fte?: Record<str
  * after each line's end of validity. With `amounts=<keys>`, only those keys
  * (the amount columns the grid shows; their years and columns alone are
  * read). Each version is converted to the cent
- * once and the sums are exact (numeric cents). With `fte=<keys>`, `fte` sums
- * each FTE key over the lines and counts the lines whose FTE is unknown.
- * Without a status: the Enabled lines.
+ * once and the sums are exact (numeric cents). A version whose currency has
+ * no rate that year is left out of the sums, and `fxMissing` names each line
+ * currency and year left out with its number of lines (`[]` when none). With
+ * `fte=<keys>`, `fte` sums each FTE key over the lines and counts the lines
+ * whose FTE is unknown. Without a status: the Enabled lines.
  */
 export async function budgetListTotals(
   scope: SummaryReadScopeConfig,
@@ -443,7 +480,8 @@ export async function budgetListTotals(
   const validity = `(c.disabled_at IS NULL OR v.budget_year <= extract(year FROM c.disabled_at AT TIME ZONE 'UTC'))`;
   // Each version converted once (the builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`),
   // the products computed once per row (OFFSET 0 keeps the subquery from being flattened into the sums).
-  const products = columns.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column.measure}`).join(',\n          ');
+  // A version without a rate (null) converts to null, which the sums skip.
+  const products = columns.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * fx.rate * 100 AS ${column.measure}`).join(',\n          ');
   const rounded = columns.map((column) => `${jsRound(`p.${column.measure}`)} AS ${column.measure}`).join(', ');
   const sums = columns.map((column) => `${sumJsCents(`x.${column.measure}`)}::text AS ${column.measure}`).join(',\n        ');
   const amounts = columns.length === 0 ? null : `SELECT x.yr,
@@ -469,18 +507,20 @@ export async function budgetListTotals(
     : null;
   const sql = `${stmt.withClause([['core', `SELECT i.id, i.currency, i.disabled_at\n${core.from}\n${core.where}`]])}SELECT
   ${amounts ? `(SELECT coalesce(json_agg(a), '[]'::json) FROM (${amounts}) a)` : `'[]'::json`} AS amounts,
-  ${fte ? `(SELECT coalesce(json_agg(f), '[]'::json) FROM (${fte}) f)` : `'[]'::json`} AS fte`;
+  ${fte ? `(SELECT coalesce(json_agg(f), '[]'::json) FROM (${fte}) f)` : `'[]'::json`} AS fte,
+  ${amounts ? fxMissingJsonSql(stmt, s, fx, slotYears) : `'[]'::json`} AS fx_missing`;
   const [row] = await run(manager, stmt, sql);
 
   const centsByYear = new Map<number, Record<string, bigint>>();
   for (const entry of row.amounts as Array<Record<string, any>>) {
     centsByYear.set(Number(entry.yr), Object.fromEntries(columns.map((c) => [c.measure, BigInt(entry[c.measure] ?? '0')])));
   }
-  const result: Record<string, number | string> = {};
+  const amountsByKey: Record<string, number | string> = {};
   for (const amount of wanted) {
-    result[amount.key] = Number(formatCents(centsByYear.get(amount.year)?.[amount.measure] ?? 0n));
+    amountsByKey[amount.key] = Number(formatCents(centsByYear.get(amount.year)?.[amount.measure] ?? 0n));
   }
-  result.reportingCurrency = fx.reportingCurrency;
+  amountsByKey.reportingCurrency = fx.reportingCurrency;
+  const result: SummaryTotals = Object.assign(amountsByKey, { fxMissing: readFxMissing(row.fx_missing) });
   if (!fteKeys.length) return result;
 
   const fteByKey = new Map((row.fte as Array<{ key: string; total: string | null; unknown: number; lines: number }>).map((entry) => [entry.key, entry]));
@@ -517,6 +557,11 @@ export interface BudgetListAggregate {
   groupCount: number;
   /** The currency of the amounts (null when the spec reads none). */
   reportingCurrency: string | null;
+  /**
+   * The line currencies and years whose amounts the converted amount fields of the spec left out
+   * (no exchange rate), over every line of the list state; `[]` when none or without such a field.
+   */
+  fxMissing: FxMissingPair[];
 }
 
 /**
@@ -544,6 +589,7 @@ export async function budgetListAggregate(
   const config = new BudgetListConfig(rt);
   const stmt = new SqlStatement(req.tenantId);
   const rows = await run(manager, stmt, aggregateSql(stmt, config, state, spec));
+  const fxMissing = await aggregateFxMissing(scope, rt, manager, req, state, specKeys);
 
   const money = spec.measures.map((measure) => stmt.fieldCache.get(measure.field)?.kind === 'money');
   const shape = (row: any): BudgetListAggregateRow => ({
@@ -564,7 +610,37 @@ export async function budgetListAggregate(
     groupCount: Number(total.gc),
     // Amounts in the lines' own currencies (`local_…`) are in no one currency.
     reportingCurrency: money.some((isMoney, i) => isMoney && !resolveLocalAmountField(spec.measures[i].field)) ? rt.fx?.reportingCurrency ?? null : null,
+    fxMissing,
   };
+}
+
+/**
+ * The `fxMissing` of an aggregate: the years of the converted amount fields among the spec's keys
+ * (amounts, staff and day costs; never `local_…`), over the lines of the list state, in one more
+ * statement with the same filters. No statement when the spec converts nothing.
+ */
+async function aggregateFxMissing(
+  scope: SummaryReadScopeConfig,
+  rt: BudgetListRuntime,
+  manager: EntityManager,
+  req: BudgetRequest,
+  state: ListState,
+  keys: string[],
+): Promise<FxMissingPair[]> {
+  const years = new Set<number>();
+  const yearOf = (resolved: { slot: string; year: number | null }) => resolved.year ?? req.currentYear + FIXED_SLOTS.find((slot) => slot.key === resolved.slot)!.offset;
+  for (const key of keys) {
+    const amount = resolveAmountField(key);
+    const variant = amount ? null : resolveFteVariantField(key);
+    if (amount) years.add(yearOf(amount));
+    else if (variant && isMoneyVariant(variant)) years.add(yearOf(variant));
+  }
+  if (!years.size || !rt.fx) return [];
+  const stmt = new SqlStatement(req.tenantId);
+  const core = buildCore(stmt, new BudgetListConfig(rt), state);
+  const sql = `${stmt.withClause([['core', `SELECT i.id, i.currency, i.disabled_at\n${core.from}\n${core.where}`]])}SELECT ${fxMissingJsonSql(stmt, scope, rt.fx, Array.from(years).sort((a, b) => a - b))} AS fx_missing`;
+  const [row] = await run(manager, stmt, sql);
+  return readFxMissing(row?.fx_missing);
 }
 
 /**
@@ -599,9 +675,11 @@ export async function budgetListAggregateRequest(
  * statement, so the numbers are the list's (converted to the reporting
  * currency with the list's rates, nothing after the line's end of validity).
  * No lifecycle scope: a line the list would hide by its status still gives the
- * amount its row would show. Cents per line and key; lines of another tenant
- * or of no budget nature are left out, and keys that name no amount ignored.
- * The contracts' budget columns read their lines' amounts here (lot CB).
+ * amount its row would show. Cents per line and key, null when the line's
+ * currency has no rate that year (the amount is left out, as in the list's
+ * totals); lines of another tenant or of no budget nature are left out, and
+ * keys that name no amount ignored. The contracts' budget columns read their
+ * lines' amounts here (lot CB): a null counts as nothing there.
  */
 export async function budgetListAmountsByIds(
   scope: SummaryReadScopeConfig,
@@ -609,10 +687,10 @@ export async function budgetListAmountsByIds(
   manager: EntityManager,
   ids: string[],
   keys: string[],
-): Promise<Map<string, Record<string, bigint>>> {
+): Promise<Map<string, Record<string, bigint | null>>> {
   const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null)));
   const lineIds = Array.from(new Set(ids.filter(Boolean)));
-  const result = new Map<string, Record<string, bigint>>();
+  const result = new Map<string, Record<string, bigint | null>>();
   if (!amountKeys.length || !lineIds.length) return result;
   const tenantId = await summaryTenantId(manager);
   await assertListEngineSupport(manager);
@@ -629,7 +707,7 @@ ${core.from}
 ${core.where}
   AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
   for (const row of rows) {
-    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, BigInt(row[`a${i}`])])));
+    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, row[`a${i}`] == null ? null : BigInt(row[`a${i}`])])));
   }
   return result;
 }

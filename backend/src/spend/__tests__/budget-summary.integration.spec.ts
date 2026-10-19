@@ -148,7 +148,7 @@ async function testFiveColumnsEverySlot(kind: Kind) {
 
     const totals = await svc.summaryTotals({ ...ALL, years: String(Y + 3) }, opts);
     const expected = [...FIXED_SLOTS.map((s) => s.key as string), `y${Y + 3}`].flatMap((slot) => SUMMARY_COLUMNS.map((c) => `${slot}${c.suffix}`));
-    assert.deepEqual(Object.keys(totals).sort(), [...expected, 'reportingCurrency'].sort(), `${kind}: totals carry every fixed slot and column and the requested year`);
+    assert.deepEqual(Object.keys(totals).sort(), [...expected, 'reportingCurrency', 'fxMissing'].sort(), `${kind}: totals carry every fixed slot and column and the requested year`);
     assert.equal(expected.length, 30);
     assert.equal(totals.yForecast, 60);
     assert.equal(totals.yPlus2Forecast, 84);

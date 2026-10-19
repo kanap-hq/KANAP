@@ -155,6 +155,13 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 - Chaque colonne ETP affichée montre la somme des ETP des lignes. Lorsque certaines lignes n'ont pas d'ETP, leur nombre suit le total, par exemple « 3.50 · 12 inconnues ». Survolez-le pour lire la phrase complète : « Inconnu pour 12 lignes ». Lorsqu'aucune ligne n'a d'ETP, le total est vide et seul le nombre s'affiche
 - Les totaux respectent vos filtres et votre recherche actuels
 
+**Montants sans taux de change** :
+
+- Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant de cette année s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
+- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises.
+- Dans une colonne triée, ces lignes viennent en dernier. Un filtre de montant ne les conserve jamais.
+- Voir [Taux manuels](currencies.md#taux-manuels) pour saisir vous-même le taux manquant.
+
 **Liens profonds** :
 
 - Cliquer sur n'importe quelle cellule ouvre l'espace de travail sur l'onglet le plus pertinent :

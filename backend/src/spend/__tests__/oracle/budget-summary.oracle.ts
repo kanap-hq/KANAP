@@ -312,6 +312,8 @@ export class BudgetSummaryOracle {
     const fteKeys = parseFteKeys(query?.fte, currentYear);
     const sums = new Map<string, bigint>();
     for (const slot of slots) for (const column of SUMMARY_COLUMNS) sums.set(`${slot.key}${column.suffix}`, 0n);
+    // The line currencies and years left out for lack of a rate, with their lines.
+    const missing = new Map<string, { currency: string; year: number; ids: Set<string> }>();
     const items = ids.length
       ? await this.manager.getRepository<any>(this.config.itemEntity as any)
         .createQueryBuilder('i')
@@ -325,7 +327,14 @@ export class BudgetSummaryOracle {
       const perYear = totals.versionsByItemYear.get(item.id);
       for (const slot of slots) {
         const version = versionWithinValidity(perYear, slot.year, item.disabled_at);
-        const cents = version ? totals.reporting.get(version.id)?.cents : undefined;
+        const reporting = version ? totals.reporting.get(version.id) : undefined;
+        if (reporting && !reporting.cents) {
+          const key = `${reporting.currency}:${slot.year}`;
+          const pair = missing.get(key) ?? { currency: reporting.currency, year: slot.year, ids: new Set<string>() };
+          pair.ids.add(item.id);
+          missing.set(key, pair);
+        }
+        const cents = reporting?.cents;
         if (!cents) continue;
         for (const column of SUMMARY_COLUMNS) {
           const key = `${slot.key}${column.suffix}`;
@@ -336,6 +345,9 @@ export class BudgetSummaryOracle {
     const amounts: Record<string, any> = {
       ...Object.fromEntries(Array.from(sums.entries()).map(([key, cents]) => [key, Number(formatCents(cents))])),
       reportingCurrency: totals.reportingCurrency,
+      fxMissing: Array.from(missing.values())
+        .sort((a, b) => (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : a.year - b.year))
+        .map((pair) => ({ currency: pair.currency, year: pair.year, lines: pair.ids.size })),
     };
     if (!fteKeys.length) return amounts;
     const fte: Record<string, { total: number | null; unknown: number }> = {};
@@ -375,6 +387,8 @@ export class BudgetSummaryOracle {
     const type = String(model.type ?? model.filterType ?? 'contains');
     const rowVal = getSummaryFieldValue(row, field);
     const blank = rowVal == null || String(rowVal) === '';
+    // An amount without a value (no exchange rate) matches no condition that filters something.
+    if (rowVal == null && resolveAmountField(field) && filtersSomething(model)) return false;
 
     if (type === 'set' && Array.isArray(model.values)) {
       const rawValues: any[] = model.values;
@@ -479,6 +493,16 @@ function parseDay(value: any): number | null {
   return Number.isNaN(date.getTime()) ? null : Date.UTC(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate());
 }
 
+/** Whether a model can drop a line (the engine compiles the others to `TRUE`). */
+function filtersSomething(model: any): boolean {
+  const type = String(model.type ?? model.filterType ?? 'contains');
+  if (type === 'set' && Array.isArray(model.values)) return true;
+  if (type === 'blank' || type === 'notBlank') return true;
+  if ((model.filterType === 'date' || model.dateFrom || model.dateTo) && COMPARISON_TYPES.has(type)) return true;
+  const valRaw = model.filter ?? model.value ?? (Array.isArray(model.values) ? model.values[0] : undefined);
+  return !(valRaw == null || valRaw === '');
+}
+
 function compare(type: string, value: number, from: number, to?: number): boolean {
   switch (type) {
     case 'equals': return value === from;
@@ -529,14 +553,16 @@ export function sortRows<T extends Record<string, any>>(rows: T[], field: string
     return rank < 0 ? null : rank;
   };
   const values = new Map(rows.map((row) => [row, valueOf(row)]));
+  // An amount without a value (no exchange rate) sorts last in both directions.
+  const blankAfter = resolveAmountField(field) ? 1 : dir;
   rows.sort((a, b) => {
     const av = values.get(a);
     const bv = values.get(b);
     const aBlank = av == null || av === '';
     const bBlank = bv == null || bv === '';
     if (aBlank && bBlank) return 0;
-    if (aBlank) return dir;
-    if (bBlank) return -dir;
+    if (aBlank) return blankAfter;
+    if (bBlank) return -blankAfter;
     if (typeof av === 'number' && typeof bv === 'number') return av === bv ? 0 : (av < bv ? -1 : 1) * dir;
     if (av instanceof Date && bv instanceof Date) {
       const diff = av.getTime() - bv.getTime();
