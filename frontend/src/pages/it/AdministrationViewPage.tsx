@@ -338,19 +338,19 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
   selection: Selection;
   request: ListRequest | null;
   zones: Array<{ code: string; name: string }>;
-  onDone: () => void;
+  onDone: (changed: number) => void;
 }) {
   const { t } = useTranslation('it');
-  // Each opening starts on the most sensitive zone: set while closed, so the first count is the right one.
-  const firstZone = zones[0]?.code ?? NO_ZONE;
-  const [zone, setZone] = useState<string>(firstZone);
+  // Each opening starts without a zone: nothing is counted or assigned before an explicit choice.
+  const [zone, setZone] = useState<string>('');
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   useEffect(() => {
     if (open) return;
-    setZone(firstZone);
+    setZone('');
     setError(null);
-  }, [open, firstZone]);
+  }, [open]);
+  const chosen = zone !== '';
   const ids = useMemo(() => Array.from(selection.ids), [selection.ids]);
   const scope = useMemo(() => ({
     zone: zone === NO_ZONE ? null : zone,
@@ -361,7 +361,7 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
   const count = useQuery({
     queryKey: ['technologies', 'reports', 'administration', 'assign-count', scope],
     queryFn: async () => (await api.post<{ rows: number; changes: number; as_of: string }>(`${ASSETS_ENDPOINT}/zone`, { ...scope, dry_run: true })).data,
-    enabled: open,
+    enabled: open && chosen,
     retry: false,
     placeholderData: keepPreviousData,
   });
@@ -375,8 +375,8 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
     setError(null);
     try {
       // Only the assets of the count: one created after it is left out, and more than counted is refused (409).
-      await api.post(`${ASSETS_ENDPOINT}/zone`, { ...scope, as_of: count.data?.as_of, expected_rows: count.data?.rows });
-      onDone();
+      const res = await api.post<{ rows: number; changed: number }>(`${ASSETS_ENDPOINT}/zone`, { ...scope, as_of: count.data?.as_of, expected_rows: count.data?.rows });
+      onDone(Number(res.data?.changed ?? 0));
     } catch (failure: any) {
       if (failure?.response?.status === 409) {
         setError(t('pages.administrationView.bulk.changed'));
@@ -395,7 +395,7 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
       onClose={onClose}
       onSave={save}
       saveLabel={t('pages.administrationView.bulk.save')}
-      saveDisabled={!count.data || count.isPlaceholderData || count.isError || count.data.rows === 0 || count.data.changes === 0}
+      saveDisabled={!chosen || !count.data || count.isPlaceholderData || count.isError || count.data.rows === 0 || count.data.changes === 0}
       saveLoading={saving}
     >
       <Stack spacing={1.5}>
@@ -405,7 +405,14 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
             variant="standard"
             value={zone}
             onChange={(event) => setZone(event.target.value)}
-            SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.administrationView.bulk.zone') } }}
+            SelectProps={{
+              displayEmpty: true,
+              renderValue: (value) => (value === ''
+                ? <Box component="span" sx={quietSx}>{t('pages.administrationView.bulk.choose')}</Box>
+                : value === NO_ZONE ? t('pages.administrationView.noZone') : zones.find((option) => option.code === value)?.name ?? String(value)),
+              MenuProps: reportFilterMenuProps,
+              inputProps: { 'aria-label': t('pages.administrationView.bulk.zone') },
+            }}
             sx={drawerSelectSx}
           >
             {zones.map((option) => <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.name}</MenuItem>)}
@@ -418,15 +425,17 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
             : t('pages.administrationView.bulk.scopeSelected', { count: ids.length })}
         </Typography>
         <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-          {tooMany
-            ? t('pages.administrationView.bulk.tooMany')
-            : refused
-              ? refused
-              : count.isError
-                ? t('pages.administrationView.bulk.countFailed')
-                : count.data
-                  ? t('pages.administrationView.bulk.count', { count: count.data.changes, rows: count.data.rows })
-                  : t('pages.administrationView.bulk.counting')}
+          {!chosen
+            ? t('pages.administrationView.bulk.chooseHint')
+            : tooMany
+              ? t('pages.administrationView.bulk.tooMany')
+              : refused
+                ? refused
+                : count.isError
+                  ? t('pages.administrationView.bulk.countFailed')
+                  : count.data
+                    ? t('pages.administrationView.bulk.count', { count: count.data.changes, rows: count.data.rows })
+                    : t('pages.administrationView.bulk.counting')}
         </Typography>
         {error && <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{error}</Typography>}
       </Stack>

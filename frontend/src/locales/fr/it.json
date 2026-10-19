@@ -600,7 +600,9 @@
         "countFailed": "Les actifs n'ont pas pu être comptés. Réessayez.",
         "tooMany": "Plus de 5 000 actifs : affinez les filtres.",
         "changed": "La liste a changé depuis le décompte. Vérifiez le nouveau décompte, puis confirmez à nouveau.",
-        "failed": "La zone n'a pas pu être affectée."
+        "failed": "La zone n'a pas pu être affectée.",
+        "choose": "Choisir une zone",
+        "chooseHint": "Choisissez une zone pour voir combien d'actifs changent."
       },
       "domains": "Domaines",
       "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine qui portent une technologie d'annuaire, ou qui sont affectés avec le rôle « Contrôleur de domaine » sur une application en service.",

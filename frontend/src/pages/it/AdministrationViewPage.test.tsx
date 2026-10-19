@@ -326,13 +326,20 @@ describe('AdministrationViewPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (2)' }));
     const dialog = await screen.findByRole('dialog');
     expect(dialog.textContent).toContain('The 2 selected assets.');
-    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the zone of 1 asset of 2.'));
-    expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { zone: 'tier_0', ids: ['asset-host', 'asset-bare'], dry_run: true });
+    // No zone is chosen at the opening: nothing is counted, nothing can be assigned.
+    expect(within(dialog).getByRole('combobox', { name: 'Zone' }).textContent).toBe('Choose a zone');
+    expect(within(dialog).getByRole('status').textContent).toBe('Choose a zone to see how many assets change.');
+    expect((within(dialog).getByRole('button', { name: 'Assign' }) as HTMLButtonElement).disabled).toBe(true);
+    expect(postMock).not.toHaveBeenCalled();
     // The zones offered: those of the catalog still offered, then No zone.
     fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
     const options = (await screen.findAllByRole('option')).map((option) => option.textContent);
     expect(options).toEqual(['Niveau 0', 'Tier 1', 'No zone']);
-    fireEvent.click(screen.getByRole('option', { name: 'Tier 1' }));
+    fireEvent.click(screen.getByRole('option', { name: 'Niveau 0' }));
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the zone of 1 asset of 2.'));
+    expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { zone: 'tier_0', ids: ['asset-host', 'asset-bare'], dry_run: true });
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Tier 1' }));
     await waitFor(() => expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { zone: 'tier_1', ids: ['asset-host', 'asset-bare'], dry_run: true }));
     const assign = within(dialog).getByRole('button', { name: 'Assign' }) as HTMLButtonElement;
     await waitFor(() => expect(assign.disabled).toBe(false));
@@ -383,6 +390,8 @@ describe('AdministrationViewPage', () => {
     fireEvent.click(box('Select every asset of the filter'));
     fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (9000)' }));
     const dialog = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Tier 1' }));
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('More than 5,000 assets: narrow the filters.'));
     expect((within(dialog).getByRole('button', { name: 'Assign' }) as HTMLButtonElement).disabled).toBe(true);
   });
@@ -403,6 +412,8 @@ describe('AdministrationViewPage', () => {
     fireEvent.click(box('Select every asset of the filter'));
     fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (40)' }));
     const dialog = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'Tier 1' }));
     await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('40 assets of 40'));
     fireEvent.click(within(dialog).getByRole('button', { name: 'Assign' }));
     expect((await within(dialog).findByRole('alert')).textContent).toBe('The list changed since the count. Check the new count, then confirm again.');

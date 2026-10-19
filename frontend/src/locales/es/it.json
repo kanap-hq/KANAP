@@ -600,7 +600,9 @@
         "countFailed": "No se pudieron contar los activos. Inténtelo de nuevo.",
         "tooMany": "Más de 5.000 activos: acote los filtros.",
         "changed": "La lista cambió desde el recuento. Compruebe el nuevo recuento y confirme de nuevo.",
-        "failed": "No se pudo asignar la zona."
+        "failed": "No se pudo asignar la zona.",
+        "choose": "Elegir una zona",
+        "chooseHint": "Elija una zona para ver cuántos activos cambian."
       },
       "domains": "Dominios",
       "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",
