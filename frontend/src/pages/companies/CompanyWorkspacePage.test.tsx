@@ -8,10 +8,17 @@ import { createAppTheme } from '../../config/ThemeContext';
 
 const navigateMock = vi.hoisted(() => vi.fn());
 const auth = vi.hoisted(() => ({ canEdit: true }));
+const i18nLanguage = vi.hoisted(() => ({ current: 'en' }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
-  useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } }),
+  useTranslation: () => ({
+    t: (key: string) => key,
+    i18n: {
+      get language() { return i18nLanguage.current; },
+      get resolvedLanguage() { return i18nLanguage.current; },
+    },
+  }),
 }));
 vi.mock('react-router-dom', async (importOriginal) => ({
   ...(await importOriginal<typeof import('react-router-dom')>()),
@@ -29,6 +36,10 @@ vi.mock('../../hooks/useFreezeState', () => ({
 }));
 
 import api from '../../api';
+import frMasterData from '../../locales/fr/master-data.json';
+import deMasterData from '../../locales/de/master-data.json';
+import esMasterData from '../../locales/es/master-data.json';
+import enMasterData from '../../locales/en/master-data.json';
 import CompanyWorkspacePage from './CompanyWorkspacePage';
 
 const mocked = api as unknown as {
@@ -92,6 +103,7 @@ async function pickOption(label: string, typed: string, option: string) {
 describe('CompanyWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    i18nLanguage.current = 'en';
     auth.canEdit = true;
     mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
       if (url === '/companies/co-1') return { data: COMPANY };
@@ -317,11 +329,32 @@ describe('CompanyWorkspacePage', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 
+  it('shows a comma in the turnover example for French, German and Spanish', () => {
+    expect(frMasterData.companies.placeholders.turnover).toBe('ex. 12,5');
+    expect(deMasterData.companies.placeholders.turnover).toBe('z. B. 12,5');
+    expect(esMasterData.companies.placeholders.turnover).toBe('p. ej., 12,5');
+    expect(enMasterData.companies.placeholders.turnover).toBe('e.g., 12.5');
+  });
+
+  it('reads a comma as the decimal mark when the application is in French', async () => {
+    i18nLanguage.current = 'fr';
+    renderAt(`/master-data/companies/co-1/details?year=${Y}`);
+    const turnover = await screen.findByLabelText('companies.fields.turnover');
+    await waitFor(() => expect(turnover).toHaveValue('12,5'));
+    expect(turnover).toHaveAttribute('inputmode', 'decimal');
+    expect(turnover).not.toHaveAttribute('type', 'number');
+    fireEvent.change(turnover, { target: { value: '8,25' } });
+    fireEvent.blur(turnover);
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(
+      '/company-metrics/co-1', { headcount: 50, it_users: 10, turnover: 8.25 }, { params: { year: Y } },
+    ));
+  });
+
   it('saves each metric for the selected year with the stored values of the others', async () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
-    await waitFor(() => expect(headcount).toHaveValue(50));
-    expect(screen.getByLabelText('companies.fields.turnover')).toHaveValue(12.5);
+    await waitFor(() => expect(headcount).toHaveValue('50'));
+    expect(screen.getByLabelText('companies.fields.turnover')).toHaveValue('12.5');
     fireEvent.change(headcount, { target: { value: '55' } });
     fireEvent.blur(headcount);
     const itUsers = screen.getByLabelText('companies.fields.itUsers');
@@ -338,9 +371,9 @@ describe('CompanyWorkspacePage', () => {
   it('starts a year without metrics with a zero headcount and empty optional values', async () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y + 1}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
-    await waitFor(() => expect(headcount).toHaveValue(0));
+    await waitFor(() => expect(headcount).toHaveValue('0'));
     const turnover = screen.getByLabelText('companies.fields.turnover');
-    expect(turnover).toHaveValue(null);
+    expect(turnover).toHaveValue('');
     fireEvent.change(turnover, { target: { value: '3.25' } });
     fireEvent.blur(turnover);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith(
@@ -351,7 +384,7 @@ describe('CompanyWorkspacePage', () => {
   it('says what a valid metric is in plain words', async () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
-    await waitFor(() => expect(headcount).toHaveValue(50));
+    await waitFor(() => expect(headcount).toHaveValue('50'));
     fireEvent.change(headcount, { target: { value: '' } });
     fireEvent.blur(headcount);
     expect(await screen.findByText('companies.messages.headcountInvalid')).toBeInTheDocument();
@@ -367,12 +400,12 @@ describe('CompanyWorkspacePage', () => {
     mocked.patch.mockImplementationOnce(() => new Promise((resolve) => { finish = resolve; }));
     renderAt(`/master-data/companies/co-1/details?year=${Y}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
-    await waitFor(() => expect(headcount).toHaveValue(50));
+    await waitFor(() => expect(headcount).toHaveValue('50'));
     fireEvent.change(headcount, { target: { value: '60' } });
     fireEvent.blur(headcount);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('tab', { name: String(Y + 1) }));
-    await waitFor(() => expect(screen.getByLabelText('companies.fields.headcount')).toHaveValue(0));
+    await waitFor(() => expect(screen.getByLabelText('companies.fields.headcount')).toHaveValue('0'));
     expect(screen.getByLabelText('companies.fields.headcount')).not.toBeDisabled();
     finish({ data: { headcount: 60, it_users: 10, turnover: '12.5' } });
   });

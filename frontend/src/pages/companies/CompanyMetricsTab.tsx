@@ -1,12 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Stack, TextField, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import YearTabs from '../../components/navigation/YearTabs';
+import FormattedNumberField from '../../components/inputs/FormattedNumberField';
 import { PropertyRow } from '../../components/design';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { useFreezeState } from '../../hooks/useFreezeState';
+import { decimalMark } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
@@ -52,6 +55,9 @@ const INVALID_MESSAGE: Record<MetricField, string> = {
  */
 export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
+  const locale = useLocale();
+  // The application language decides the decimal mark, not the browser's.
+  const separator = decimalMark(locale);
   const queryClient = useQueryClient();
   const availableYears = React.useMemo(() => {
     const current = new Date().getFullYear();
@@ -115,10 +121,10 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
 
   // Not disabled while a save runs (a click on the next year must land); disabled when nothing reliable is loaded.
   const disabled = readOnly || frozen || freezeLoading || isLoading || !!loadError;
-  const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string; step: number }> = [
-    { field: 'headcount', label: t('companies.fields.headcount'), required: true, step: 1 },
-    { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers'), step: 1 },
-    { field: 'turnover', label: t('companies.fields.turnover'), placeholder: t('companies.placeholders.turnover'), step: 0.001 },
+  const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string }> = [
+    { field: 'headcount', label: t('companies.fields.headcount'), required: true },
+    { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers') },
+    { field: 'turnover', label: t('companies.fields.turnover'), placeholder: t('companies.placeholders.turnover') },
   ];
 
   return (
@@ -145,7 +151,7 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
             label={row.label}
             required={row.required}
             placeholder={row.placeholder}
-            step={row.step}
+            decimalSeparator={separator}
             storedText={stored && stored[row.field] != null ? String(stored[row.field]) : ''}
             disabled={disabled}
             error={errors[row.field]}
@@ -162,7 +168,7 @@ function MetricRow({
   label,
   required,
   placeholder,
-  step,
+  decimalSeparator,
   storedText,
   disabled,
   error,
@@ -171,19 +177,23 @@ function MetricRow({
   label: string;
   required?: boolean;
   placeholder?: string;
-  step: number;
+  decimalSeparator: '.' | ',';
   storedText: string;
   disabled: boolean;
   error?: string;
   onCommit: (raw: string) => void;
 }) {
   // The field follows the stored value, except while the user is typing in it.
+  // Kept wide on purpose: the field must not drop a fourth decimal before the check can refuse it.
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(storedText);
   return (
     <PropertyRow label={label} required={required} valueSx={{ maxWidth: 200 }}>
-      <TextField
+      <FormattedNumberField
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        emit="string"
+        decimals={12}
+        decimalSeparator={decimalSeparator}
+        onChange={(event) => setDraft(String(event.target.value ?? ''))}
         onFocus={onFocus}
         onBlur={() => {
           onBlur();
@@ -192,14 +202,13 @@ function MetricRow({
         onKeyDown={(event) => {
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
         }}
-        type="number"
         variant="standard"
         sx={drawerFieldValueSx}
         placeholder={placeholder}
         disabled={disabled}
         error={!!error}
         helperText={error}
-        inputProps={{ min: 0, step, 'aria-label': label }}
+        inputProps={{ 'aria-label': label }}
       />
     </PropertyRow>
   );

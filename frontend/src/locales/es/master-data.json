@@ -169,7 +169,7 @@
       "vatNumber": "p. ej., ESB12345678",
       "notes": "p. ej., Entidad de servicios compartidos del grupo",
       "itUsers": "p. ej., 120",
-      "turnover": "p. ej., 12.5"
+      "turnover": "p. ej., 12,5"
     },
     "messages": {
       "saveFailed": "Error al guardar la empresa.",
