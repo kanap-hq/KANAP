@@ -989,7 +989,7 @@
         },
         "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui.",
         "clusters": "Clusters",
-        "clustersHint": "Choisissez le cluster KANAP de chaque cluster Netbox. Ses machines virtuelles sont alors ajoutées à ce cluster. Une machine déjà dans un autre cluster y reste, et rien n'est retiré. Un cluster laissé sans correspondance ne bloque pas l'import.",
+        "clustersHint": "Choisissez le cluster KANAP de chaque cluster Netbox. Ses machines virtuelles sont alors ajoutées à ce cluster, et rien n'est retiré : une machine déjà dans un autre cluster y reste, même après une correspondance modifiée. Une machine que vous retirez de son cluster y revient à l'exécution suivante tant qu'elle est dans ce cluster Netbox. Un cluster laissé sans correspondance ne bloque pas l'import.",
         "clustersUnavailable": "Netbox n'a pas renvoyé ses clusters, les machines virtuelles ne peuvent donc pas être rattachées à un cluster ici. Vérifiez que le jeton d'API peut lire les clusters.",
         "noClusters": "Netbox ne liste aucun cluster, il n'y a donc rien à mettre en correspondance ici.",
         "noCluster": "Aucune correspondance",

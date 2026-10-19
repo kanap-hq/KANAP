@@ -989,7 +989,7 @@
         },
         "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet.",
         "clusters": "Cluster",
-        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt. Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, und nichts wird entfernt. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
+        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt, und nichts wird entfernt: Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, auch nachdem Sie eine Zuordnung ändern. Eine Maschine, die Sie aus ihrem Cluster entfernen, kommt beim nächsten Lauf zurück, solange sie in diesem Netbox-Cluster ist. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
         "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
         "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
         "noCluster": "Keine Zuordnung",

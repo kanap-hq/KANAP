@@ -989,7 +989,7 @@
         },
         "subLocationsHint": "Inside a mapped site, the top-level Netbox locations become sub-locations here. Equipment placed deeper is attached to the top-level location above it.",
         "clusters": "Clusters",
-        "clustersHint": "Choose the KANAP cluster for each Netbox cluster. Its virtual machines are then added to that cluster. A machine already in another cluster stays there, and nothing is removed. A cluster left without a match does not block the import.",
+        "clustersHint": "Choose the KANAP cluster for each Netbox cluster. Its virtual machines are then added to that cluster, and nothing is removed: a machine already in another cluster stays there, even after you change a match. A machine you take out of its cluster comes back at the next run while it is in that Netbox cluster. A cluster left without a match does not block the import.",
         "clustersUnavailable": "Netbox did not return its clusters, so virtual machines cannot be attached to a cluster here. Check that the API token can read clusters.",
         "noClusters": "Netbox lists no cluster, so there is nothing to match here.",
         "noCluster": "No match",

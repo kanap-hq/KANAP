@@ -989,7 +989,7 @@
         },
         "subLocationsHint": "Dentro de un sitio con correspondencia, las ubicaciones de Netbox de primer nivel se convierten en sub-ubicaciones aquí. Un equipo colocado más abajo se asigna a la ubicación de primer nivel situada por encima.",
         "clusters": "Clústeres",
-        "clustersHint": "Elija el clúster de KANAP de cada clúster de Netbox. Sus máquinas virtuales se añaden entonces a ese clúster. Una máquina que ya está en otro clúster permanece en él y no se elimina nada. Un clúster sin correspondencia no bloquea la importación.",
+        "clustersHint": "Elija el clúster de KANAP de cada clúster de Netbox. Sus máquinas virtuales se añaden entonces a ese clúster y no se elimina nada: una máquina que ya está en otro clúster permanece en él, incluso después de cambiar una correspondencia. Una máquina que usted retire de su clúster vuelve en la siguiente ejecución mientras esté en ese clúster de Netbox. Un clúster sin correspondencia no bloquea la importación.",
         "clustersUnavailable": "Netbox no devolvió sus clústeres, así que aquí no se pueden vincular máquinas virtuales a un clúster. Compruebe que el token de API puede leer los clústeres.",
         "noClusters": "Netbox no lista ningún clúster, así que no hay nada que hacer corresponder aquí.",
         "noCluster": "Sin correspondencia",
