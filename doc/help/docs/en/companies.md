@@ -58,7 +58,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 - A metric that was never entered for the year shows **—**. A zero that was entered shows **0**
 - Numbers follow the language of KANAP: a decimal comma in French, German and Spanish, a decimal point in English
 - The turnover of each row is in the company's base currency. The **Total** row is in the reporting currency: each turnover is converted at the rates of the year. When the default budget column of the year is frozen, those are the rates it fixed. Otherwise they are the current rates (see [Currency Settings](currencies.md))
-- When a currency has no rate yet, its turnover is left out of the total and the total says so, for example "1,250 M EUR (no rate yet for BRL)". KANAP fetches the missing rate with the next rate refresh
+- When a currency has no rate for the year, the turnover of the companies in that currency is left out of the total, and the total names the currency and the number of companies left out. KANAP fetches the missing rate in the background. A [manual rate](currencies.md#manual-rates) fixes it at once
 
 **Actions**:
 
@@ -191,7 +191,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 **Where it matters**:
 
-- Allocations can use Headcount, IT users, or Turnover to distribute costs across companies for a given year. Turnovers in different currencies are converted to the reporting currency first. See [Allocations](budget-lines.md#allocations).
+- Allocations can use Headcount, IT users, or Turnover to distribute costs across companies for a given year. Turnovers in different currencies are converted to the reporting currency first. A company whose currency has no rate for the year gets no share of a split by turnover. See [Allocations](budget-lines.md#allocations).
 - Reports use these metrics for KPIs and ratios.
 - Only companies active for a year are considered for that year's allocation and reporting.
 

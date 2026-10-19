@@ -158,7 +158,7 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 **Amounts without an exchange rate**:
 
 - When a line's currency has no exchange rate for a year, its amount for that year shows in its own currency with a small orange mark. Hover the mark to read, for example, "No USD exchange rate for 2026: left out of totals."
-- The totals leave these amounts out, and a one-line warning under the list names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings.
+- The totals leave these amounts out, and a one-line warning under the list names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly.
 - In a sorted column, these lines come last. An amount filter never keeps them.
 - See [Manual rates](currencies.md#manual-rates) to enter the missing rate yourself.
 
@@ -527,7 +527,8 @@ The Allocations tab distributes the spend of a year across your companies and de
 **Turnover in several currencies**:
 
 - Each company enters its turnover in millions of its base currency. Before the split, KANAP converts every turnover to the reporting currency, at the rates of the budget version of the year: the rates fixed when its default column was frozen, otherwise the current rates of the year. See [Currency Settings](currencies.md)
-- When a currency has no rate yet, the companies in that currency are left out of the split and a warning shows above the table, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is left out until the rate is available." The other companies share 100 %. KANAP fetches the missing rate with the next rate refresh, and the split corrects itself
+- When a currency has no rate for the year, the companies in that currency are left out of the split: they get no share, and the other companies share 100%. A warning above the table names each company left out. KANAP fetches the missing rate in the background, and the split corrects itself once the rate is available. A [manual rate](currencies.md#manual-rates) fixes it at once
+- With **Manual by company** and the Turnover driver, when none of the selected companies has a rate, the allocation is refused with a message naming the currencies and the year. Enter the rate, or choose another driver
 
 **How to use it**:
 

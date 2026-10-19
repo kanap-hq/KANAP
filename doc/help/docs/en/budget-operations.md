@@ -78,7 +78,7 @@ The single **Total** row of [the budget lines list](budget-lines.md#working-with
 
 ### Freezing the default column fixes the exchange rates
 
-Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the type you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. If the reporting currency later changes, the frozen amounts are converted from that currency into the new one at the live rate of the year. Unfreezing the default column releases them.
+Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the type you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. If the reporting currency changes later, these amounts keep the frozen rates, then convert into the new reporting currency at that year's rate of the former one. Without that rate, they are left out of the totals and named like any missing rate. See [Frozen years](currencies.md#frozen-years). Unfreezing the default column releases them.
 
 Freezing another column does not touch the rates. Changing the default column later does not fix or release anything by itself: the rates follow the next freeze or unfreeze of the new default column. **Freeze both** freezes only the open cell, so a type whose default column is already frozen keeps the rates it fixed.
 
@@ -294,7 +294,7 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 ### Selected companies
 
 - The driver is applied to the selected companies only: their percentages are computed from their own headcount, IT users or turnover for the year
-- The page shows the resulting split, so you can check the effect before relying on it. The **Driver value** column shows each company's value. A turnover shows with the company's base currency, for example **35 M USD**, and the split uses it converted to the reporting currency, as in the [Allocations tab](budget-lines.md#allocations). When a currency has no rate yet for the year, a warning above the split says that the companies in that currency are left out of the split
+- The page shows the resulting split, so you can check the effect before relying on it. The **Driver value** column shows each company's value. A turnover shows with the company's base currency, for example **35 M USD**, and the split uses it converted to the reporting currency, as in the [Allocations tab](budget-lines.md#allocations). When a currency has no rate for the year, the companies in that currency are left out of the split: they get no share, the other selected companies share 100%, and a warning above the split names each company left out
 - A single selected company always takes **100%**, with no driver value required
 - With two companies or more, every selected company needs a value for the chosen driver. A company without one is rejected when you save. Fix the company metrics in **Master Data > Companies** first
 - A company disabled for the year cannot be selected: disabled companies are excluded from that year's allocations
