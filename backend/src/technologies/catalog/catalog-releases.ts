@@ -361,10 +361,12 @@ export type CatalogVersionValues = {
 
 /**
  * `technologies.catalog_state`: what the catalog has given a technology. `cpe_products`: the
- * identifiers it offered (one the tenant removed is not offered again). `versions`: per version
- * key, the values it last wrote; a key present was offered once (a version the tenant deleted is
- * not created again). `description`: the short description the catalog wrote on the technology;
- * absent or null while it wrote none, so an empty description is filled once and never again.
+ * identifiers it currently offers (one the tenant removed stays here while the catalog still
+ * offers it, so it is not offered again; one the shipped catalog withdrew leaves, and is added
+ * again if the catalog offers it later). `versions`: per version key, the values it last wrote;
+ * a key present was offered once (a version the tenant deleted is not created again).
+ * `description`: the short description the catalog last wrote; absent or null while it wrote
+ * none. While the technology still holds that text, a new catalog description replaces it.
  */
 export type CatalogState = {
   cpe_products: string[];
