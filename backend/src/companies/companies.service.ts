@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Company } from './company.entity';
 import { CompanyMetric } from './company-metric.entity';
+import { companyListMetric } from './company-list-metrics';
 import { Decimal } from '../common/decimal';
 import { sameStoredLifecycle, sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
@@ -254,9 +255,9 @@ export class CompaniesService {
         const r = (raw[idx] || {}) as any;
         return {
           ...ent,
-          headcount_year: (r.metrics_headcount != null ? Number(r.metrics_headcount) : 0),
-          it_users_year: (r.metrics_it_users != null ? Number(r.metrics_it_users) : 0),
-          turnover_year: (r.metrics_turnover != null ? Number(r.metrics_turnover) : 0),
+          headcount_year: companyListMetric(r.metrics_headcount),
+          it_users_year: companyListMetric(r.metrics_it_users),
+          turnover_year: companyListMetric(r.metrics_turnover),
           metrics_frozen: r.metrics_is_frozen ?? false,
         } as any;
       });
