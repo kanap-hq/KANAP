@@ -653,8 +653,8 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
     filler(),
   ];
   const domainColumns: Array<RelationsColumn<AdministrationDomain>> = [
-    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${domainName(row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
-    { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
+    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 200, render: (row) => `${domainName(row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
+    { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, hideOrder: 4, render: (row) => row.dns_suffix },
     {
       key: 'trusts',
       header: t('pages.administrationView.columns.trusts'),
@@ -674,11 +674,12 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
         )
         : <Box component="span" sx={quietSx}>{t('pages.administrationView.none')}</Box>),
     },
-    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, align: 'right', render: (row) => count(row.account_count) },
-    { key: 'computers', header: t('pages.administrationView.columns.computers'), width: 90, align: 'right', render: (row) => count(row.machine_count) },
+    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, hideOrder: 3, align: 'right', render: (row) => count(row.account_count) },
+    { key: 'computers', header: t('pages.administrationView.columns.computers'), width: 90, hideOrder: 2, align: 'right', render: (row) => count(row.machine_count) },
     {
       key: 'controllers',
       header: t('pages.administrationView.columns.domainControllers'),
+      width: 240,
       render: (row) => (row.domain_controllers.length
         ? (
           <>
@@ -693,6 +694,9 @@ function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => s
         )
         : <Box component="span" sx={quietSx}>{t('pages.administrationView.noController')}</Box>),
     },
+    // The spare width goes to an empty column: in a narrow table the name and the controllers keep
+    // most of theirs while the secondary columns hide (trusts, then computers, accounts, DNS suffix).
+    filler(),
   ];
   if (!directories.data) {
     return <ReportDataStatus loading={directories.isLoading} error={directories.isError} onRetry={() => void directories.refetch()} />;
