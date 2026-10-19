@@ -48,7 +48,8 @@ type TechnologyInput = Partial<{
   rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
   /**
    * Create only. Absent: an operating system is excluded, every other family is included.
-   * A later change of family does not move the setting (it is not a field of PATCH).
+   * A later change of family does not move the setting. PATCH refuses it (400): the setting
+   * is written by PUT /technologies/:id/vulnerability-alerts, which also clears the exceptions.
    */
   vulnerability_alerts: unknown;
   /** Gone since lot H1: refused, so a client still sending it learns it changed nothing. */
@@ -404,6 +405,10 @@ export class TechnologiesService {
     const out: Record<string, unknown> = {};
     const has = (key: keyof TechnologyInput) => body && Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined;
     if (has('mode')) throw new BadRequestException('mode is replaced by hosting_type.');
+    // A PATCH that sends it would change nothing: refused, so the client learns where it is set.
+    if (current && has('vulnerability_alerts')) {
+      throw new BadRequestException('vulnerability_alerts is set with PUT /technologies/:id/vulnerability-alerts.');
+    }
     if (has('name')) out.name = optionalText(body.name, 'Name', 200);
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
