@@ -65,10 +65,10 @@ Die Kontrollpunkte listen, was zu korrigieren ist. Die erste Zone der Einstellun
 | **Assets ohne Administrationszone** | Die Assets, die nicht außer Betrieb sind und keine Zone haben |
 | **Domänencontroller außerhalb der sensibelsten Zone** | Die Assets, die einer Anwendung in Betrieb mit der Serverrolle **Domänencontroller** zugeordnet sind, wenn ihre Zone eine andere ist |
 | **Assets mit einem Verzeichnisdienst außerhalb der sensibelsten Zone** | Die Assets, auf denen eine Verzeichnistechnologie installiert ist, etwa Active Directory, wenn ihre Zone eine andere ist |
-| **Assets in einer sensibleren Zone als das, was sie enthält** | Ein Asset in einer sensibleren Zone als das Asset, das es enthält (zum Beispiel eine virtuelle Maschine und ihr Host), oder ein Cluster-Mitglied in einer sensibleren Zone als sein Cluster. Die Zeile öffnet das enthaltende Asset oder den Cluster: Ordnen Sie es einer mindestens ebenso sensiblen Zone zu |
+| **Was ein Asset betreibt, liegt in einer weniger sensiblen Zone** | Ein enthaltenes Asset in einer sensibleren Zone als das Asset, das es enthält (zum Beispiel eine virtuelle Maschine aus Tier 0 auf einem Host aus Tier 1), oder ein Cluster-Mitglied in einer weniger sensiblen Zone als sein Cluster (zum Beispiel ein ESX-Host aus Tier 1 in einem Cluster aus Tier 0). Jede Zeile zeigt das Asset, seine Zone, die Beziehung (**Läuft auf** oder **Mitglied des Clusters**) und das Asset, von dem es abhängt, mit dessen Zone. Die Zeile öffnet das Asset in der weniger sensiblen Zone: Ordnen Sie es einer mindestens ebenso sensiblen Zone zu |
 | **In der sensibelsten Zone gehostete Anwendungen** | Jede Anwendung, die auf einem Asset dieser Zone gehostet wird, mit dem Asset. Prüfen Sie, ob sie dorthin gehört |
 
-Für diese Vertrauensprüfung liest KANAP die Beziehungen **Enthält** der Assets und die Mitglieder der Cluster. Ein Paar, bei dem eines der beiden Assets keine Zone hat, bleibt außen vor: Der erste Kontrollpunkt meldet es bereits.
+Für diese Vertrauensprüfung liest KANAP die Beziehungen **Enthält** der Assets und die Mitglieder der Cluster. Was ein Asset betreibt, muss in einer mindestens ebenso sensiblen Zone liegen. Eine Zone, die mit **Nicht mehr anbieten** markiert ist oder in den Einstellungen fehlt, wird ignoriert. Ein Asset ohne Zone unterbricht die Prüfung der Kette: KANAP vergleicht es nicht mit den verknüpften Assets, und der erste Kontrollpunkt meldet es.
 
 Ohne Zone in den Einstellungen läuft nur der erste Kontrollpunkt, und die Seite bittet Sie, eine Zone hinzuzufügen.
 
@@ -80,7 +80,7 @@ Die Datei der Zonen hat eine Spalte **Record**, die angibt, was jede Zeile ist:
 
 - **zone**: eine Zeile pro Zone, mit Administratorgruppe, Beschreibung, Anzahl der gehosteten Anwendungen und, in **Note**, der Anzahl ihrer Assets jedes Typs.
 - **asset** und **directory**: die Assets und die Verzeichnisdienste der in **Zone** genannten Zone.
-- **control**: eine Zeile pro Befund der Kontrollpunkte, mit dem Titel des Kontrollpunkts in **Zone**. **Note** nennt die Zone des Assets, das enthaltene Asset bei der Vertrauensprüfung oder das hostende Asset bei einer Anwendung. Ein Kontrollpunkt ohne Befund hat keine Zeile.
+- **control**: eine Zeile pro Befund der Kontrollpunkte, mit dem Titel des Kontrollpunkts in **Zone**. **Note** nennt die Zone des Assets oder das hostende Asset bei einer Anwendung. Bei der Vertrauensprüfung nennt **Type** die Beziehung (**Runs on** oder **Member of cluster**), und **Note** nennt die Zone des Assets, dann das Asset, von dem es abhängt, mit dessen Zone. Ein Kontrollpunkt ohne Befund hat keine Zeile.
 
 ## Tipps
 

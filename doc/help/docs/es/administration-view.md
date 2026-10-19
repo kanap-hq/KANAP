@@ -65,10 +65,10 @@ Los puntos de control enumeran lo que hay que corregir. La primera zona de la co
 | **Activos sin zona de administración** | Los activos que no están retirados y no tienen zona |
 | **Controladores de dominio fuera de la zona más sensible** | Los activos asignados con el rol de servidor **Controlador de dominio** a una aplicación en servicio, cuando su zona es otra |
 | **Activos que llevan un servicio de directorio fuera de la zona más sensible** | Los activos en los que hay instalada una tecnología de directorio, como Active Directory, cuando su zona es otra |
-| **Activos en una zona más sensible que lo que los contiene** | Un activo en una zona más sensible que el activo que lo contiene (una máquina virtual y su host, por ejemplo), o un miembro de clúster en una zona más sensible que su clúster. La fila abre el activo contenedor o el clúster: sitúelo en una zona al menos igual de sensible |
+| **Lo que ejecuta un activo está en una zona menos sensible** | Un activo contenido en una zona más sensible que su contenedor (una máquina virtual del tier 0 en un host del tier 1, por ejemplo), o un miembro de clúster en una zona menos sensible que su clúster (un host ESX del tier 1 miembro de un clúster del tier 0, por ejemplo). Cada fila muestra el activo, su zona, la relación (**Se ejecuta en** o **Miembro del clúster**) y el activo del que depende, con su zona. La fila abre el activo de la zona menos sensible: sitúelo en una zona al menos igual de sensible |
 | **Aplicaciones alojadas en la zona más sensible** | Cada aplicación alojada en un activo de esa zona, con el activo. Compruebe que debe estar ahí |
 
-Para esta comprobación de la confianza, KANAP lee las relaciones **Contiene** de los activos y los miembros de los clústeres. Un par en el que uno de los dos activos no tiene zona queda fuera: el primer punto de control ya lo señala.
+Para esta comprobación de la confianza, KANAP lee las relaciones **Contiene** de los activos y los miembros de los clústeres. Lo que ejecuta un activo debe estar en una zona al menos igual de sensible. Se ignora una zona marcada con **Dejar de proponer** o ausente de la configuración. Un activo sin zona interrumpe la comprobación de la cadena: KANAP no lo compara con los activos vinculados, y el primer punto de control lo señala.
 
 Sin ninguna zona en la configuración, solo se ejecuta el primer punto de control, y la página le pide que añada una zona.
 
@@ -80,7 +80,7 @@ El archivo de las zonas tiene una columna **Record** que indica qué es cada fil
 
 - **zone**: una fila por zona, con su grupo de administradores, su descripción, su número de aplicaciones alojadas y, en **Note**, su número de activos de cada tipo.
 - **asset** y **directory**: los activos y los servicios de directorio de la zona nombrada en **Zone**.
-- **control**: una fila por hallazgo de los puntos de control, con el título del punto de control en **Zone**. **Note** indica la zona del activo, el activo contenido para la comprobación de la confianza, o el activo que aloja una aplicación. Un punto de control sin hallazgos no tiene fila.
+- **control**: una fila por hallazgo de los puntos de control, con el título del punto de control en **Zone**. **Note** indica la zona del activo, o el activo que aloja una aplicación. Para la comprobación de la confianza, **Type** indica la relación (**Runs on** o **Member of cluster**), y **Note** indica la zona del activo y después el activo del que depende, con su zona. Un punto de control sin hallazgos no tiene fila.
 
 ## Consejos
 

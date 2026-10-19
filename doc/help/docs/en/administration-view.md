@@ -65,10 +65,10 @@ The control points list what to correct. The first zone of the settings that is 
 | **Assets without an administration zone** | The assets that are not retired and have no zone |
 | **Domain controllers outside the most sensitive zone** | The assets assigned the **Domain controller** server role on an application in service, when their zone is another one |
 | **Assets carrying a directory service outside the most sensitive zone** | The assets with a directory technology installed on them, such as Active Directory, when their zone is another one |
-| **Assets in a more sensitive zone than what contains them** | An asset in a more sensitive zone than the asset that contains it (a virtual machine and its host, for example), or a cluster member in a more sensitive zone than its cluster. The row opens the container or the cluster: place it in a zone at least as sensitive |
+| **What runs an asset is in a less sensitive zone** | A contained asset in a more sensitive zone than its container (a Tier 0 virtual machine on a Tier 1 host, for example), or a cluster member in a less sensitive zone than its cluster (a Tier 1 ESX host in a Tier 0 cluster, for example). Each row shows the asset, its zone, the relation (**Runs on** or **Member of cluster**) and the asset it depends on, with its zone. The row opens the asset in the less sensitive zone: place it in a zone at least as sensitive |
 | **Applications hosted in the most sensitive zone** | Each application hosted on an asset of that zone, with the asset. Review whether it belongs there |
 
-For the trust check, KANAP reads the **Contains** relations of the assets and the members of the clusters. A pair where one of the two assets has no zone is left out: the first control point already lists it.
+For this check, KANAP reads the **Contains** relations of the assets and the members of the clusters. What runs an asset must sit in a zone at least as sensitive. A zone marked **No longer offered** or missing from the settings is ignored. An asset without a zone interrupts the check of the chain: KANAP compares neither it nor the assets linked to it, and the first control point lists it.
 
 Without any zone in the settings, only the first control point runs, and the page asks you to add a zone.
 
@@ -80,7 +80,7 @@ The zones file has a **Record** column that says what each row is:
 
 - **zone**: one row per zone, with its administrator group, description, number of hosted applications and, in **Note**, its number of assets of each type.
 - **asset** and **directory**: the assets and the directory services of the zone named in **Zone**.
-- **control**: one row per finding of the control points, with the title of the control point in **Zone**. **Note** gives the asset's zone, the contained asset for the trust check, or the hosting asset for an application. A control point with no finding has no row.
+- **control**: one row per finding of the control points, with the title of the control point in **Zone**. **Note** gives the asset's zone, or the hosting asset for an application. For the trust check, **Type** gives the relation (**Runs on** or **Member of cluster**), and **Note** gives the asset's zone, then the asset it depends on with its zone. A control point with no finding has no row.
 
 ## Tips
 

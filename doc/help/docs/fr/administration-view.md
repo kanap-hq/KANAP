@@ -65,10 +65,10 @@ Les points de contrôle listent ce qu'il faut corriger. La première zone des pa
 | **Actifs sans zone d'administration** | Les actifs qui ne sont pas retirés et n'ont pas de zone |
 | **Contrôleurs de domaine hors de la zone la plus sensible** | Les actifs affectés avec le rôle de serveur **Contrôleur de domaine** à une application en service, quand leur zone est une autre |
 | **Actifs portant un service d'annuaire hors de la zone la plus sensible** | Les actifs sur lesquels une technologie d'annuaire est installée, comme Active Directory, quand leur zone est une autre |
-| **Actifs dans une zone plus sensible que ce qui les contient** | Un actif dans une zone plus sensible que l'actif qui le contient (une machine virtuelle et son hôte, par exemple), ou un membre de cluster dans une zone plus sensible que son cluster. La ligne ouvre le contenant ou le cluster : placez-le dans une zone au moins aussi sensible |
+| **Ce qui fait tourner un actif est dans une zone moins sensible** | Un actif contenu dans une zone plus sensible que son contenant (une machine virtuelle du tier 0 sur un hôte du tier 1, par exemple), ou un membre de cluster dans une zone moins sensible que son cluster (un hôte ESX du tier 1 membre d'un cluster du tier 0, par exemple). Chaque ligne montre l'actif, sa zone, la relation (**S'exécute sur** ou **Membre du cluster**) et l'actif dont il dépend, avec sa zone. La ligne ouvre l'actif de la zone la moins sensible : placez-le dans une zone au moins aussi sensible |
 | **Applications hébergées dans la zone la plus sensible** | Chaque application hébergée sur un actif de cette zone, avec l'actif. Vérifiez qu'elle y a sa place |
 
-Pour ce contrôle de la confiance, KANAP lit les relations **Contient** des actifs et les membres des clusters. Une paire dont l'un des deux actifs n'a pas de zone est écartée : le premier point de contrôle la signale déjà.
+Pour ce contrôle de la confiance, KANAP lit les relations **Contient** des actifs et les membres des clusters. Ce qui fait tourner un actif doit être dans une zone au moins aussi sensible. Une zone marquée **Ne plus proposer** ou absente des paramètres est ignorée. Un actif sans zone interrompt la vérification de la chaîne : KANAP ne le compare pas aux actifs qui lui sont liés, et le premier point de contrôle le signale.
 
 Sans aucune zone dans les paramètres, seul le premier point de contrôle s'exécute, et la page vous invite à ajouter une zone.
 
@@ -80,7 +80,7 @@ Le fichier des zones a une colonne **Record** qui indique la nature de chaque li
 
 - **zone** : une ligne par zone, avec son groupe d'administrateurs, sa description, son nombre d'applications hébergées et, dans **Note**, son nombre d'actifs de chaque type.
 - **asset** et **directory** : les actifs et les services d'annuaire de la zone nommée dans **Zone**.
-- **control** : une ligne par constat des points de contrôle, avec le titre du point de contrôle dans **Zone**. **Note** donne la zone de l'actif, l'actif contenu pour le contrôle de la confiance, ou l'actif hébergeur pour une application. Un point de contrôle sans constat n'a pas de ligne.
+- **control** : une ligne par constat des points de contrôle, avec le titre du point de contrôle dans **Zone**. **Note** donne la zone de l'actif, ou l'actif hébergeur pour une application. Pour le contrôle de la confiance, **Type** donne la relation (**Runs on** ou **Member of cluster**), et **Note** donne la zone de l'actif, puis l'actif dont il dépend avec sa zone. Un point de contrôle sans constat n'a pas de ligne.
 
 ## Conseils
 
