@@ -7,7 +7,7 @@
 - **Reporting currency** – the canonical currency for budgets, CAPEX, reports, and dashboards. Every tenant must pick one.
 - **Entry defaults** – separate defaults for new OPEX and CAPEX items. Editors preload this value but users can pick any authorised currency.
 - **Allowed currencies** – optional whitelist restricting the selectors shown in OPEX/CAPEX editors and CSV imports. The reporting + default currencies are always allowed even if you leave the list empty.
-- **Annual FX rate sets** – one JSON snapshot per tenant, per fiscal year. Rates now come from the World Bank data API (`PA.NUS.FCRF`, domestic currency per USD). Historic years use the published annual average, the current fiscal year blends the available quarterly averages derived from monthly observations, and forward years reuse the latest quarterly average.
+- **Annual FX rate sets** – one JSON snapshot per tenant, per fiscal year. Rates come from the World Bank series `PA.NUS.FCRF` (domestic currency per USD) and a live spot quote for the current year. Each currency in the snapshot records the source of its value in `rate_sources`. The chain is described under "How FX rates are stored".
 - **Freeze integration** – when you freeze the OPEX/CAPEX budget column for a year we capture the current rate set and pin it to the approved versions. Draft years continue to look up the latest live average until they are frozen.
 
 ## Currency Settings (UI)
@@ -28,12 +28,12 @@ Permissions: budget readers (`budget_ops:reader`) see the page read-only; budget
 The panel also contains two actions:
 
 1. **Save** – persists the settings to `tenants.metadata`, upserts any missing ISO codes into the shared `currencies` table, and refreshes totals that depend on the reporting currency.
-2. **Force FX rates sync** – downloads the latest World Bank FX dataset (`PA.NUS.FCRF`) for historical averages, fetches a live spot quote for the current year (via `FX_SPOT_BASE_URL`/`FX_SPOT_API_KEY`), computes cross‑rates for every tenant currency (plus the reporting currency, EUR, and USD), and stores them in `currency_rate_sets`. Historic fiscal years use the published annual average; the current year uses the live spot rate and falls back to the latest annual value; future years reuse the current‑year value and mark the snapshot as a forward estimate. Run this after changing the reporting currency or before freezing a new budget year. The sync automatically backfills the earliest budget year with non‑zero spend/CAPEX data alongside the requested horizon. If upstream feeds do not return a value we log a warning and capture `null` for that currency so downstream conversions fall back to identity until data is available.
+2. **Force FX rates sync** – downloads the World Bank FX dataset (`PA.NUS.FCRF`), fetches a live spot quote for the current year (via `FX_SPOT_BASE_URL`/`FX_SPOT_API_KEY`), computes cross rates for every tenant currency (the reporting currency, the defaults, the allowed list, EUR, USD, and the currencies used by budget lines, companies and contracts), and stores them in `currency_rate_sets`. The per-year chain and `rate_sources` are described under "How FX rates are stored". Run this after changing the reporting currency or before freezing a new budget year. The sync automatically backfills the earliest budget year with non-zero spend/CAPEX data alongside the requested horizon. If upstream feeds do not return a value we log a warning. A currency the latest set of that year already rates keeps that rate and the source that produced it; a currency with no stored rate is captured as `null`, and downstream conversions fall back to identity until data is available.
    - Environment overrides: set `WB_BASE_URL` to route through a proxy and `WB_CACHE_TTL_MS` (milliseconds) to adjust the in-memory cache window (defaults to 6 hours).
    - CSV cache overrides: `WB_CSV_URL` (alternate download host), `WB_CSV_CACHE_TTL_MS` (milliseconds, defaults to 30 days), `WB_CACHE_DIR` (directory for the extracted CSV).
    - Spot rate overrides: `FX_SPOT_BASE_URL`, `FX_SPOT_API_KEY`, and `FX_SPOT_CACHE_TTL_MS` (milliseconds, defaults to 30 days).
    - Login‑triggered refresh: every tenant login checks `tenants.metadata.fx_last_login_refresh_at` and, at most once per interval (default 30 days, tune via `FX_LOGIN_REFRESH_INTERVAL_MS`), silently queues the same FX sync for `[currentYear-1, currentYear, currentYear+1]`. The timestamp and years are recorded back into tenant metadata for auditing.
-   - Missing-rate refresh: when `FxRateService.resolveRates` finds no rate for a currency in a year (no snapshot for the year, or the latest one lacks the currency), the lookup answers 1 with the source `missing` and the year goes to `FxIngestionService.refreshMissingYears`, which queues the same FX sync for those years in the background. Each tenant year at most once every 6 hours per process, so a currency the sources do not publish (or a server without internet) does not call them on every read.
+   - Missing-rate refresh: when `FxRateService.resolveRates` finds no rate for a currency in a year (no snapshot for the year, or the latest one lacks the currency), the lookup answers 1 with the source `missing` and the year goes to `FxIngestionService.refreshMissingYears`, which queues the same FX sync for those years in the background. `contractFxRates` does the same for a year in which a contract currency of the tenant has no rate (`FxRateService.reportMissingYears`). Each tenant year at most once every 6 hours per process, so a currency the sources do not publish (or a server without internet) does not call them on every read.
    - Manual refresh scope: UI/API triggers are tenant‑scoped.
    - Caching: responses from the World Bank API are cached in-memory for the configured TTL. Back-to-back refreshes within that window reuse the cached payload, keeping the job fast and friendly to upstream rate limits.
 
@@ -41,16 +41,20 @@ The panel also contains two actions:
 
 ## How FX Rates Are Stored
 
-1. We download the World Bank CSV bundle for `PA.NUS.FCRF`, extract it once, and cache the annual averages in memory. Every fiscal year up to `currentYear - 1` is read from that dataset.
-2. For the current fiscal year we fetch a live spot quote (domestic currency per USD). If the spot feed does not return a value, we fall back to the latest annual average from the CSV cache. Future years reuse the current‑year value and mark the snapshot as a forward estimate so downstream consumers know the number is projected.
-3. We derive cross rates via USD: `tenant_base_per_source = (base_per_USD) / (source_per_USD)`. When neither dataset yields a quote we store `null` so downstream code can warn and fall back to identity conversions.
-4. The values are stored in `currency_rate_sets` (tenant-scoped, JSON column keyed by ISO code). Conversion multiplies spend/CAPEX amounts by the relevant rate and rounds to 2 decimals.
+1. We download the World Bank CSV bundle for `PA.NUS.FCRF`, extract it once, and cache the annual averages in memory. The series holds every published year. When a past year is missing from a copy older than 24 hours, that copy is reloaded once, bypassing the memory cache and the CSV file, and the year is looked up again. A process reloads at most once every 24 hours.
+2. Each currency is quoted in USD, then crossed into the reporting currency: `reporting_per_source = (reporting_per_USD) / (source_per_USD)`. The value for one currency and year follows this chain. USD is 1. A currency with no World Bank code stays empty.
+   - A past year (up to `currentYear - 1`) uses the published annual average, source `world-bank-annual`. When that year is not in the series, the nearest published year of the same currency is used: the closest earlier year, otherwise the closest later year. That value's source is `estimate`.
+   - The current year uses the live spot quote, source `exchangerateapi-spot`. When the spot feed has no quote, the World Bank annual of the current year is used (`world-bank-annual`). When that is not published either, the latest published annual of the currency is used (`world-bank-forward`). A refresh that asked for past years reuses the series it already loaded. A refresh of the current year alone reads `currentYear - 10` through `currentYear - 1`.
+   - A future year reuses the current-year value, or that latest published annual, with source `world-bank-forward`. A future year requested on its own reads the same window.
+   - The reporting currency follows the same chain. An estimate for it still lets the year be stored.
+3. The cross rates are stored in `currency_rate_sets.rates` (units of the reporting currency for 1 unit of the currency). `rate_sources` maps each currency code to the source of its value: `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, or `identity` (the reporting currency, and USD when USD is the reporting currency). The set-level `source` remains the source computed for the year as a whole. Readers take the latest set of the year (`captured_at` descending). A set captured before `rate_sources` existed lends its set-level `source` to each of its values.
+4. A refresh merges with that latest set before inserting. For each currency the order is: fresh real value, then the stored real value, then a fresh estimate, then the stored estimate. Every source other than `estimate` is real. A currency this fetch does not rate, including one that is no longer in the fetch list, keeps its stored value and source. The "unchanged, skip insert" check runs on the merged rates. A published World Bank value replaces an estimate and a rate captured earlier for that year. Conversion multiplies amounts by the rate and rounds to 2 decimals.
 
 Snapshot rules:
 
 - Freeze OPEX or CAPEX `budget` column → freeze service grabs/creates a rate set for that year and references it from the affected spend or capex versions.
 - Unfreeze → clears the `fx_rate_set_id` so draft calculations fall back to the latest live average.
-- Missing rates (for example, when neither the CSV dataset nor the spot feed has a quote) are stored as `null` and logged. Conversions fall back to `1.0` in the app so the UI remains usable while you adjust allowed currencies or wait for data to publish.
+- A currency no source and no previous set can rate is stored as `null` and logged. Conversions fall back to `1.0` in the app so the UI remains usable while you adjust allowed currencies or wait for data to publish.
 
 ## Editors and Validation
 
@@ -70,7 +74,7 @@ Snapshot rules:
 |------|------------|
 | Change reporting/default currencies | Budget management → Administration → Currencies → Save |
 | Force refresh FX rates | Budget Management → Currency Settings → Force FX rates sync <br> *(backend: `POST /currency/rates/refresh` with optional `{ "years": [2026, 2027] }`)* |
-| Verify rate sets | `SET LOCAL app.current_tenant = '<tenant_id>'; SELECT fiscal_year, base_currency, rates FROM currency_rate_sets ORDER BY captured_at DESC;` *(Basis of the table shown on the Currency Settings page)* |
+| Verify rate sets | `SET LOCAL app.current_tenant = '<tenant_id>'; SELECT fiscal_year, base_currency, rates, rate_sources FROM currency_rate_sets ORDER BY captured_at DESC;` *(Basis of the table shown on the Currency Settings page)* |
 | Freeze workflow | 1. Force sync (optional). <br> 2. Freeze year via Budget Management → Freeze Data or API. <br> 3. Confirm `spend_versions.fx_rate_set_id` (or `capex_versions`) is populated for the frozen year. |
 | Monitor ingestion | Logs tagged with `FxIngestionService` and `FxRateService`. Look for WARN messages indicating missing currencies. |
 
@@ -83,8 +87,8 @@ Snapshot rules:
 
 ## Frequently Asked Questions
 
-**What happens if the World Bank feed doesn’t publish a code I use?**  
-We capture a `null` rate and log a warning. Conversions default to `1.0` until data becomes available. Ideally adjust your allowed list to ISO currencies covered by the World Bank dataset. Custom/manual overrides are not supported yet.
+**What happens if the World Bank feed does not publish a code I use?**  
+A past year takes the nearest published year of that currency and records the source `estimate`. A rate already stored for that year (for example the spot captured while the year was current) is kept until the World Bank publishes the year, which then replaces it. A currency with no published year and no stored rate is captured as `null` and logged. Conversions default to `1.0` until a rate is stored. Custom/manual overrides are not supported yet.
 
 **Do I have to re-freeze a year after changing reporting currency?**  
 Yes. Existing frozen versions keep their original snapshot. If you change the reporting currency, force an FX rates sync, unfreeze, and then re-freeze to capture the updated rate set.

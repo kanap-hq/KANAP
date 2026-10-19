@@ -49,6 +49,21 @@ export class FxRateService {
     this.missingRatesListener = listener;
   }
 
+  /**
+   * Tells the missing-rate listener that these years have a currency in use
+   * with no rate. The same listener `resolveRates` calls. Never throws: a
+   * listener failure leaves the read that noticed the gap alone.
+   */
+  reportMissingYears(tenantId: string, years: number[]): void {
+    if (!this.missingRatesListener || !years.length) return;
+    try {
+      const unique = Array.from(new Set(years.filter((year) => Number.isInteger(year)))).sort((a, b) => a - b);
+      if (unique.length) this.missingRatesListener(tenantId, unique);
+    } catch (err) {
+      this.logger.warn(`Missing FX rates listener failed: ${err instanceof Error ? err.message : err}`);
+    }
+  }
+
   private repo(manager?: EntityManager) {
     return manager ? manager.getRepository(CurrencyRateSet) : this.rateSets;
   }
@@ -195,13 +210,7 @@ export class FxRateService {
       });
     }
 
-    if (missingYears.size && this.missingRatesListener) {
-      try {
-        this.missingRatesListener(tenantId, Array.from(missingYears).sort((a, b) => a - b));
-      } catch (err) {
-        this.logger.warn(`Missing FX rates listener failed: ${err instanceof Error ? err.message : err}`);
-      }
-    }
+    this.reportMissingYears(tenantId, Array.from(missingYears));
     return { map: result, settings };
   }
 
