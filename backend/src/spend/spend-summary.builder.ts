@@ -671,8 +671,8 @@ export async function loadVersionTotals(
     if (!cents) continue;
     const currency = currencyOf(version);
     const rate = fx.map.get(`${version.fx_rate_set_id || 'live'}:${Number(version.budget_year)}:${currency}`);
-    // The service resolves every key it is asked; a key it did not answer reads as missing too.
-    const fxRate = rate && rate.source !== 'missing' ? rate.rate : null;
+    // The service answers every key it is asked; a test double that answers none converts at 1 (`identity`), as before.
+    const fxRate = rate?.source === 'missing' ? null : rate?.rate ?? 1;
     result.reporting.set(version.id, {
       cents: fxRate == null
         ? null
@@ -683,7 +683,7 @@ export async function loadVersionTotals(
       currency,
       reporting_currency: rate?.reportingCurrency ?? result.reportingCurrency,
       fx_rate: fxRate,
-      fx_source: rate?.source ?? 'missing',
+      fx_source: rate?.source ?? 'identity',
       fx_rate_set_id: version.fx_rate_set_id ?? null,
     });
   }

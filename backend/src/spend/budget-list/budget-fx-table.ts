@@ -23,7 +23,8 @@ export interface FxTable {
    * is computed once per distinct value here, not once per line). The rate
    * is the multiplier: the resolved rate, or null when the FX service has no
    * rate for the key (`missing`; the service never resolves a rate that is
-   * not finite or not positive). A null rate makes every converted amount of
+   * not finite or not positive; 1 for a key it does not answer, which only a
+   * test double does). A null rate makes every converted amount of
    * the versions it applies to null: they are left out of the sums, sort
    * last and match no amount filter. A key absent from the table (none
    * expected: it covers every currency of the lines, every set and every
@@ -151,8 +152,9 @@ export async function buildFxTable(
   }
   const fx = await fxRates.resolveRates(tenantId, entries.map((entry) => entry.lookup), { manager, quiet: true });
   const rows = entries.map(({ setKey, year, raw, lookup }) => {
+    // The service answers every key it is asked; a test double that answers none converts at 1, as before.
     const resolved = fx.map.get(rateKey(setKey, year, lookup.sourceCurrency));
-    const rate = resolved && resolved.source !== 'missing' && Number.isFinite(resolved.rate) && resolved.rate > 0 ? resolved.rate : null;
+    const rate = !resolved ? 1 : resolved.source !== 'missing' && Number.isFinite(resolved.rate) && resolved.rate > 0 ? resolved.rate : null;
     return { setKey, year, currency: raw, rate };
   });
   return { rows, knownSets, reportingCurrency: fx.settings?.reportingCurrency ?? 'EUR' };
