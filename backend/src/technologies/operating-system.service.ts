@@ -13,6 +13,7 @@ import {
   splitOperatingSystemLabel,
   type OperatingSystemCode,
 } from './operating-system-codes';
+import { vulnerabilityAlertsForFamily } from '../vulnerabilities/vulnerability-alerts';
 import { readTechnology, resolveVersionLabel, UUID_RE } from './technology-rows';
 
 /**
@@ -462,11 +463,11 @@ export class OperatingSystemService {
     const hostingType = resolveHostingType(settings.hostingTypes, 'on_prem');
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const inserted: Array<{ id: string }> = await mg.query(
-      `INSERT INTO technologies (tenant_id, item_number, name, family, hosting_type)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO technologies (tenant_id, item_number, name, family, hosting_type, vulnerability_alerts)
+       VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (tenant_id, lower(name)) DO NOTHING
        RETURNING id`,
-      [tenantId, itemNumber, name, family, hostingType],
+      [tenantId, itemNumber, name, family, hostingType, vulnerabilityAlertsForFamily(family)],
     );
     const id = inserted[0]?.id ?? (await mg.query(
       `SELECT id FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2)`,

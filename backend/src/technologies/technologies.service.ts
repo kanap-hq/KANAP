@@ -14,6 +14,7 @@ import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
+import { vulnerabilityAlertsForFamily } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -45,6 +46,11 @@ type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; hosting_type: unknown; lifecycle: unknown; description: unknown; notes: unknown;
   support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
+  /**
+   * Create only. Absent: an operating system is excluded, every other family is included.
+   * A later change of family does not move the setting (it is not a field of PATCH).
+   */
+  vulnerability_alerts: unknown;
   /** Gone since lot H1: refused, so a client still sending it learns it changed nothing. */
   mode: unknown;
 }>;
@@ -283,6 +289,15 @@ export class TechnologiesService {
       values.hosting_type = resolveHostingType(settings.hostingTypes, DEFAULT_TECHNOLOGY_HOSTING_TYPE);
     }
     await this.assertNameFree(mg, tenantId, values.name as string, null);
+    // Explicit true or false wins. Otherwise an operating system starts excluded and every other family included.
+    if (Object.prototype.hasOwnProperty.call(body, 'vulnerability_alerts') && body.vulnerability_alerts !== undefined) {
+      if (body.vulnerability_alerts !== true && body.vulnerability_alerts !== false) {
+        throw new BadRequestException('vulnerability_alerts must be true or false.');
+      }
+      values.vulnerability_alerts = body.vulnerability_alerts;
+    } else {
+      values.vulnerability_alerts = vulnerabilityAlertsForFamily(typeof values.family === 'string' ? values.family : 'other');
+    }
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];
     const params = [tenantId, itemNumber, ...Object.values(values)];

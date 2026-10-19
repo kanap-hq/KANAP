@@ -6,6 +6,7 @@ import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { vulnerabilityAlertsForFamily } from '../../vulnerabilities/vulnerability-alerts';
 import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
 import { mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
@@ -214,9 +215,9 @@ export class TechnologyCatalogService {
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state],
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state, vulnerability_alerts)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) RETURNING id`,
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state, vulnerabilityAlertsForFamily(family)],
       );
       technologyId = row.id;
       created = true;
