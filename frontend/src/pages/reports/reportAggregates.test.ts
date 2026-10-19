@@ -60,7 +60,7 @@ import {
 
 const compare = (a: string, b: string) => a.localeCompare(b);
 const row = (keys: Array<string | null>, values: Record<string, number>, count = 1): AggregateRow => ({ keys, count, values, unknown: {} });
-const result = (groups: AggregateRow[], total: AggregateRow): AggregateResult => ({ groups, others: null, total, groupCount: groups.length, reportingCurrency: 'EUR' });
+const result = (groups: AggregateRow[], total: AggregateRow): AggregateResult => ({ groups, others: null, total, groupCount: groups.length, reportingCurrency: 'EUR', fxMissing: [] });
 
 describe('fields', () => {
   it('name each budget column as the list does (AMOUNT_COLUMNS suffixes)', () => {

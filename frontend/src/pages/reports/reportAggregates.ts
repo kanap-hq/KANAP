@@ -113,6 +113,8 @@ export interface AggregateResult {
   total: AggregateRow;
   groupCount: number;
   reportingCurrency: string | null;
+  /** The amounts the converted measures leave out for lack of an exchange rate (`[]` when none). */
+  fxMissing: Array<{ currency: string; year: number; lines: number }>;
 }
 
 // ----- fields and filters -----
