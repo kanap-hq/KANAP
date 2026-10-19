@@ -18,6 +18,7 @@ import { TechnologiesRelationsService } from './technologies-relations.service';
 import { TechnologyCpeEvents } from './technology-cpe-events';
 import { TechnologiesService } from './technologies.service';
 import { OperatingSystemService } from './operating-system.service';
+import { TechnologyLinksCsvService } from './technology-links-csv.service';
 import { TechnologyLinksService } from './technology-links.service';
 import { TechnologyReachService } from './technology-reach.service';
 import { EndOfSupportController } from './reports/end-of-support.controller';
@@ -38,6 +39,7 @@ import { EndOfSupportService } from './reports/end-of-support.service';
   providers: [
     TechnologiesService,
     TechnologyLinksService,
+    TechnologyLinksCsvService,
     OperatingSystemService,
     TechnologyReachService,
     TechnologiesRelationsService,

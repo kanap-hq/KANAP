@@ -78,6 +78,7 @@ export const EXPORT_RESOURCE_KEYS: Readonly<Record<string, string>> = {
   suppliers: 'suppliers',
   tasks: 'tasks',
   'technologies/applications': 'technologyApplications',
+  'technologies/asset-links': 'technologyServerLinks',
   'technologies/reports/administration': 'administrationView',
   'technologies/reports/end-of-support': 'endOfSupportReport',
   users: 'users',
