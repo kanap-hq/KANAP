@@ -62,20 +62,12 @@ export const AI_QUERY_ENTITY_TYPES = [
   'spend_items',
   'suppliers',
   'tasks',
+  'technologies',
   'users',
 ] as const;
 
-/**
- * Types the search index covers but the query/aggregate registries do not: they
- * surface in search_all and the entity picker, and are not listable or
- * aggregatable from the chat.
- */
-export const AI_SEARCH_ONLY_ENTITY_TYPES = ['technologies'] as const;
-
-export const AI_SEARCH_ENTITY_TYPES = [
-  ...AI_QUERY_ENTITY_TYPES,
-  ...AI_SEARCH_ONLY_ENTITY_TYPES,
-] as const;
+/** Every family the search index covers is also listable and aggregatable. */
+export const AI_SEARCH_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES;
 
 export const AI_CONTEXT_ENTITY_TYPES = [
   'applications',

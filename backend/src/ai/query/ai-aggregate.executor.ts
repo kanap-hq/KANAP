@@ -106,6 +106,7 @@ type SupportedAggregateEntityType =
   | 'spend_items'
   | 'suppliers'
   | 'tasks'
+  | 'technologies'
   | 'users'
   | 'documents';
 

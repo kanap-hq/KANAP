@@ -29,6 +29,7 @@ import { requestsRegistry } from './requests.registry';
 import { spendItemsRegistry } from './spend-items.registry';
 import { suppliersRegistry } from './suppliers.registry';
 import { tasksRegistry } from './tasks.registry';
+import { technologiesRegistry } from './technologies.registry';
 import { usersRegistry } from './users.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
@@ -53,6 +54,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   spend_items: spendItemsRegistry,
   suppliers: suppliersRegistry,
   tasks: tasksRegistry,
+  technologies: technologiesRegistry,
   users: usersRegistry,
 };
 

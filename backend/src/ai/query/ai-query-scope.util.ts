@@ -35,6 +35,7 @@ export type ScopedAiEntityType =
   | 'spend_items'
   | 'suppliers'
   | 'tasks'
+  | 'technologies'
   | 'users';
 
 export type ResolvedAiScope = {
