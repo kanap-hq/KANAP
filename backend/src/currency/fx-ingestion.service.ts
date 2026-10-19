@@ -11,6 +11,29 @@ import { trackBackgroundWork } from '../common/background-work';
 
 type RateSnapshot = Record<string, number | null>;
 
+/** A usable cross rate: finite and strictly positive. */
+function isUsableRate(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value) && value > 0;
+}
+
+/**
+ * Precedence of one currency's rate. A fresh real value wins, then the value
+ * already stored, then a fresh estimate, then a stored estimate. Every source
+ * other than `estimate` is real, including a value whose source was not recorded.
+ */
+function ratePrecedence(source: string | null, fresh: boolean): number {
+  if (source === 'estimate') return fresh ? 2 : 1;
+  return fresh ? 4 : 3;
+}
+
+function canonicalJson(record: Record<string, unknown> | null | undefined): string {
+  const source = record ?? {};
+  const keys = Object.keys(source).sort();
+  const ordered: Record<string, unknown> = {};
+  for (const key of keys) ordered[key] = source[key];
+  return JSON.stringify(ordered);
+}
+
 type WorldBankRateSource =
   | 'world-bank-annual'
   | 'world-bank-quarterly'
@@ -20,6 +43,8 @@ type WorldBankRateSource =
 interface YearlySnapshot {
   year: number;
   quotes: RateSnapshot;
+  /** Source of each USD quote. Absent until the per-currency chain fills it. */
+  quoteSources?: Record<string, string | null>;
   source: WorldBankRateSource;
   forwardSourceYear?: number;
   missingCurrencies: string[];
@@ -603,6 +628,89 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Source recorded for a value already stored. A set captured before
+   * `rate_sources` existed lends its set-level `source` to each value.
+   */
+  private existingRateSource(existing: CurrencyRateSet, code: string, value: number | null): string | null {
+    if (!isUsableRate(value)) return null;
+    const table = existing.rate_sources ?? {};
+    const recorded = table[code] ?? table[code.toUpperCase()] ?? table[code.toLowerCase()];
+    if (typeof recorded === 'string' && recorded.length > 0) return recorded;
+    return existing.source ?? null;
+  }
+
+  /**
+   * Merges this fetch with the latest set of the same tenant, year and base.
+   * A currency the sources miss this time (or that is no longer in the fetch
+   * list) keeps its stored value and the source that produced it.
+   */
+  private mergeWithLatest(
+    freshRates: RateSnapshot,
+    freshSources: Record<string, string | null>,
+    existing: CurrencyRateSet | null,
+  ): { rates: RateSnapshot; sources: Record<string, string> } {
+    const fresh: RateSnapshot = {};
+    const freshSourceByCode: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(freshRates)) {
+      const code = key.toUpperCase();
+      fresh[code] = value;
+      freshSourceByCode[code] = freshSources[key] ?? freshSources[code] ?? null;
+    }
+    const previous: RateSnapshot = {};
+    const previousSourceByCode: Record<string, string | null> = {};
+    for (const [key, value] of Object.entries(existing?.rates ?? {})) {
+      const code = key.toUpperCase();
+      previous[code] = value;
+      previousSourceByCode[code] = existing ? this.existingRateSource(existing, code, isUsableRate(value) ? value : null) : null;
+    }
+    const keys = new Set<string>([...Object.keys(fresh), ...Object.keys(previous)]);
+    const rates: RateSnapshot = {};
+    const sources: Record<string, string> = {};
+    for (const code of keys) {
+      const freshValue = isUsableRate(fresh[code]) ? fresh[code] : null;
+      const freshSource = freshValue != null ? (freshSourceByCode[code] ?? null) : null;
+      const previousValue = isUsableRate(previous[code]) ? previous[code] : null;
+      const previousSource = previousValue != null ? (previousSourceByCode[code] ?? null) : null;
+      const freshRank = freshValue != null ? ratePrecedence(freshSource, true) : 0;
+      const previousRank = previousValue != null ? ratePrecedence(previousSource, false) : 0;
+      if (freshRank === 0 && previousRank === 0) {
+        if (Object.prototype.hasOwnProperty.call(fresh, code)) rates[code] = null;
+        continue;
+      }
+      const keepFresh = freshRank >= previousRank;
+      const value = keepFresh ? freshValue : previousValue;
+      const source = keepFresh ? freshSource : previousSource;
+      rates[code] = value;
+      if (value != null && source) sources[code] = source;
+    }
+    return { rates, sources };
+  }
+
+  /** Source of each fresh cross rate. Per-currency sources win; the set source covers the rest. */
+  private freshRateSources(baseCurrency: string, snapshot: YearlySnapshot, rates: RateSnapshot): Record<string, string | null> {
+    const upperBase = baseCurrency.toUpperCase();
+    const quoteSources = snapshot.quoteSources ?? {};
+    const baseQuoteSource = upperBase === 'USD' ? 'identity' : (quoteSources[upperBase] ?? null);
+    const sources: Record<string, string | null> = {};
+    for (const [code, value] of Object.entries(rates)) {
+      if (!isUsableRate(value)) {
+        sources[code] = null;
+        continue;
+      }
+      if (code.toUpperCase() === upperBase) {
+        sources[code] = 'identity';
+        continue;
+      }
+      if (code.toUpperCase() === 'USD') {
+        sources[code] = baseQuoteSource ?? snapshot.source;
+        continue;
+      }
+      sources[code] = quoteSources[code] ?? snapshot.source;
+    }
+    return sources;
+  }
+
   private async saveRateSet(
     context: TenantCurrencyContext,
     snapshot: YearlySnapshot,
@@ -618,12 +726,17 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       order: { captured_at: 'DESC' as any },
     });
 
-    const rates = this.buildRateMap(context.reportingCurrency, snapshot, context.currencies);
-    const nonBaseTargets = context.currencies.filter(
-      (code) => code.toUpperCase() !== context.reportingCurrency.toUpperCase(),
+    const freshRates = this.buildRateMap(context.reportingCurrency, snapshot, context.currencies);
+    const merged = this.mergeWithLatest(
+      freshRates,
+      this.freshRateSources(context.reportingCurrency, snapshot, freshRates),
+      existing,
     );
-    const hasSignal = nonBaseTargets.length === 0 || Object.entries(rates).some(([code, value]) => {
-      if (code.toUpperCase() === context.reportingCurrency.toUpperCase()) return false;
+    const rates = merged.rates;
+    const upperBase = context.reportingCurrency.toUpperCase();
+    const hasNonBase = Object.keys(rates).some((code) => code.toUpperCase() !== upperBase);
+    const hasSignal = !hasNonBase || Object.entries(rates).some(([code, value]) => {
+      if (code.toUpperCase() === upperBase) return false;
       return typeof value === 'number' && Number.isFinite(value) && Math.abs(value - 1) > 1e-6;
     });
     if (!hasSignal) {
@@ -638,24 +751,15 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       );
     }
 
-    const sortedKeys = Object.keys(rates).sort();
-    const canonical = JSON.stringify(sortedKeys.reduce<Record<string, number | null>>((acc, key) => {
-      acc[key] = rates[key];
-      return acc;
-    }, {}));
+    const canonical = canonicalJson(rates);
+    const existingCanonical = existing ? canonicalJson(existing.rates || {}) : null;
+    // An older set has no per-currency sources: identical rates are not rewritten
+    // only to fill them in. A stored provenance that changed (an estimate the
+    // World Bank has now published, at the same number) is a new set.
+    const provenanceUnchanged = !existing?.rate_sources
+      || canonicalJson(existing.rate_sources) === canonicalJson(merged.sources);
 
-    const existingCanonical = existing
-      ? JSON.stringify(
-          Object.keys(existing.rates || {})
-            .sort()
-            .reduce<Record<string, number | null>>((acc, key) => {
-              acc[key] = existing.rates[key];
-              return acc;
-            }, {}),
-        )
-      : null;
-
-    if (existing && existingCanonical === canonical && existing.source === snapshot.source) {
+    if (existing && existingCanonical === canonical && existing.source === snapshot.source && provenanceUnchanged) {
       this.logger.debug(`FX rates unchanged for tenant ${context.tenantId} year ${snapshot.year}`);
       return existing;
     }
@@ -676,6 +780,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       fiscal_year: snapshot.year,
       base_currency: context.reportingCurrency,
       rates,
+      rate_sources: Object.keys(merged.sources).length ? merged.sources : null,
       rate_basis: this.rateBasisForSource(snapshot.source),
       source: snapshot.source,
     });
