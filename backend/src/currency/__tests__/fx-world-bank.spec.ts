@@ -214,8 +214,40 @@ async function testTenantContextCoversCompanyCurrencies() {
   assert.deepEqual(companies!.params, ['tenant-1']);
 }
 
+/** Contract amounts convert at the year's rates, so their currencies are fetched too. */
+async function testTenantContextCoversContractCurrencies() {
+  const queries: Array<{ sql: string; params: unknown[] }> = [];
+  const service = new FxIngestionService(
+    {} as any,
+    {} as any,
+    {
+      getSettings: async () => ({ reportingCurrency: 'EUR', defaultCapexCurrency: 'EUR', defaultSpendCurrency: 'EUR', allowedCurrencies: [] }),
+      ensureCurrencyRecords: async () => undefined,
+    } as any,
+    {} as any,
+    {} as any,
+  );
+  const manager = {
+    query: async (sql: string, params: unknown[] = []) => {
+      queries.push({ sql, params });
+      if (/FROM contracts/.test(sql)) return [{ currency: 'CHF' }, { currency: 'JPY' }, { currency: 'EU' }];
+      return [];
+    },
+  };
+  const context = await (service as any).buildTenantContext('tenant-1', manager);
+  assert.ok(context.currencies.includes('CHF'));
+  assert.ok(context.currencies.includes('JPY'));
+  assert.ok(!context.currencies.includes('EU'), 'a code that is not three letters is left out');
+  const contracts = queries.find((q) => /FROM contracts/.test(q.sql));
+  assert.ok(contracts);
+  assert.match(contracts!.sql, /UPPER\(TRIM\(currency\)\)/);
+  assert.match(contracts!.sql, /tenant_id = \$1/);
+  assert.deepEqual(contracts!.params, ['tenant-1']);
+}
+
 (async () => {
   await testTenantContextCoversCompanyCurrencies();
+  await testTenantContextCoversContractCurrencies();
   await testAnnualOnly();
   await testSpotRateBlending();
   await testMissingDataYieldsNull();

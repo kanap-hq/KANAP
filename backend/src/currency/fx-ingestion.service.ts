@@ -421,6 +421,15 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       const code = typeof row.currency === 'string' ? row.currency : '';
       if (code.length === 3) currencies.add(code);
     });
+    // Contract amounts convert at the year's rates, the same way company turnovers do.
+    const contractCurrencies = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(currency)) AS currency FROM contracts WHERE tenant_id = $1 AND currency IS NOT NULL`,
+      [tenantId],
+    );
+    contractCurrencies.forEach((row: any) => {
+      const code = typeof row.currency === 'string' ? row.currency : '';
+      if (code.length === 3) currencies.add(code);
+    });
 
     await this.currencySettings.ensureCurrencyRecords(currencies, { manager });
 
