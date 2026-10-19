@@ -501,6 +501,7 @@
     "administrationView": {
       "title": "Administration view",
       "intro": "Who administers what: the administration zones with their technologies and servers, then the domains with their forest, trusts and domain controllers.",
+      "lead": "Each zone lists the assets it covers and the directory services placed in it, then the points to correct.",
       "loading": "Loading…",
       "loadFailed": "The administration view could not be loaded.",
       "exportZones": "Export zones",
@@ -515,6 +516,10 @@
       "noZoneHint": "Technologies to place in a zone.",
       "unknownZone": "Unknown zone ({{code}})",
       "emptyZone": "No technology in this zone.",
+      "scope": "Scope",
+      "scopeEmpty": "No asset in this zone.",
+      "hostedApplications_one": "{{count}} application",
+      "hostedApplications_other": "{{count}} applications",
       "serversInZone": "Servers in this zone",
       "attributes": {
         "adminGroup": "Administrator group",
@@ -526,6 +531,10 @@
         "family": "Family",
         "servers": "Servers",
         "type": "Type",
+        "zone": "Zone",
+        "relation": "Relation",
+        "contained": "Contained asset",
+        "asset": "Asset",
         "domain": "Domain",
         "dnsSuffix": "DNS suffix",
         "forest": "Forest",
@@ -533,6 +542,35 @@
         "accounts": "Accounts",
         "machines": "Machines",
         "domainControllers": "Domain controllers"
+      },
+      "relation": {
+        "contains": "Contains",
+        "cluster": "Cluster"
+      },
+      "controls": "Control points",
+      "controlsHint": "The most sensitive zone is {{zone}}.",
+      "controlsNoCatalog": "Add an administration zone in the IT settings to run the other checks.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Assets without an administration zone",
+          "hint": "Set a zone on each asset that is still in use."
+        },
+        "domainControllers": {
+          "title": "Domain controllers outside the most sensitive zone",
+          "hint": "A domain controller belongs in the most sensitive zone."
+        },
+        "directoryAssets": {
+          "title": "Assets carrying a directory service outside the most sensitive zone",
+          "hint": "An asset that carries a directory service belongs in the most sensitive zone."
+        },
+        "trustRaised": {
+          "title": "Assets in a more sensitive zone than what contains them",
+          "hint": "The asset that contains another one should sit in a zone at least as sensitive."
+        },
+        "applications": {
+          "title": "Applications hosted in the most sensitive zone",
+          "hint": "Review each application hosted on an asset of the most sensitive zone."
+        }
       },
       "noServer": "No server",
       "via": "via {{name}}",

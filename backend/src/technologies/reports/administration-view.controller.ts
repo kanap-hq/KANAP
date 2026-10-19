@@ -22,7 +22,7 @@ export class AdministrationViewController {
     return { manager: requireManager(ctx.manager), tenantId: ctx.tenantId, userId: ctx.userId || null };
   }
 
-  /** Zones with their technologies, servers and directory services, then the domains. */
+  /** Zones with their assets and directory services, the domains, then the control points. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get()
