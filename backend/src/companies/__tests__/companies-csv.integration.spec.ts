@@ -237,9 +237,37 @@ async function testOptionalYearColumns() {
   });
 }
 
+/** The template carries one fictional company, enabled, with metrics for the list year only. */
+async function testTemplateExampleRow() {
+  await withCompanies('template', async (runner, _tenantId, svc) => {
+    const english = await svc.exportCsv('template', { manager: runner.manager, language: 'en', year: YEAR });
+    const lines = english.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(lines.length, 2, english.content);
+    const headers = lines[0].split(',');
+    const cells = lines[1].split(',');
+    const at = (column: string) => cells[headers.indexOf(column)];
+    assert.equal(at('name'), 'Example Company');
+    assert.equal(at('country_iso'), 'FR');
+    assert.equal(at('city'), 'Paris');
+    assert.equal(at('base_currency'), 'EUR');
+    assert.equal(at('status'), 'enabled');
+    assert.equal(at(`headcount_${YEAR}`), '120');
+    assert.equal(at(`it_users_${YEAR}`), '40');
+    assert.equal(at(`turnover_${YEAR}`), '12.5');
+    assert.equal(at(`headcount_${YEAR - 1}`), '');
+    assert.equal(at(`turnover_${YEAR + 1}`), '');
+
+    const french = await svc.exportCsv('template', { manager: runner.manager, language: 'fr', year: YEAR });
+    assert.match(french.content, /Example Company;FR;/);
+    assert.match(french.content, /;enabled;/);
+    assert.match(french.content, /;12,5(;|$)/);
+  });
+}
+
 void runSpecs('companies csv import', [
   ['a blank city is refused at the check, like the other required columns', testBlankCityRefused],
   ['metrics for a frozen year are refused at the check', testFrozenYearRefusedAtCheck],
   ['two rows with the same name are refused at the check', testDuplicateNameInFile],
   ['metric year columns are optional and a year outside the window is ignored', testOptionalYearColumns],
+  ['the template has one example company', testTemplateExampleRow],
 ]);

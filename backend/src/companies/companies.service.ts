@@ -819,6 +819,7 @@ export class CompaniesService {
     const language = opts?.language ?? 'en';
     const baseYear = this.normalizeYear(opts?.year);
     const headers = this.csvHeaders(baseYear);
+    const years = this.metricYears(baseYear);
     const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
@@ -826,7 +827,6 @@ export class CompaniesService {
       const items: Company[] = opts?.listQuery
         ? (await this.list(opts.listQuery, { manager: opts.manager, exportAll: true })).items as Company[]
         : await repo.find({ order: { created_at: 'DESC' as any, id: 'ASC' as any } });
-      const years = this.metricYears(baseYear);
       const metricsByYear = new Map<number, Map<string, { headcount: number; it_users: number | null; turnover: number | string | null }>>();
       for (const year of years) {
         const { items: metrics } = await this.companyMetrics.list(year, opts);
@@ -865,6 +865,13 @@ export class CompaniesService {
         });
         rows.push(row);
       }
+    } else {
+      // One fictional company so the file shows the shape: enabled, metrics for the list year only.
+      const example = ['Example Company', 'FR', '', '', '', 'Paris', '', '', '', 'EUR', 'enabled', '', ''];
+      for (const year of years) {
+        example.push(...(year === baseYear ? ['120', '40', formatCsvAmount('12.5', language)] : ['', '', '']));
+      }
+      rows.push(example);
     }
     const filename = scope === 'template' ? `companies_template_${baseYear}.csv` : `companies_${baseYear}.csv`;
     return { filename, content: writeCsv({ language, headers, rows }) };
