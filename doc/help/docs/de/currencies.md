@@ -56,7 +56,7 @@ Die Einschränkung zugelassener Währungen hilft, wenn:
 Klicken Sie auf **Speichern**, um Ihre Aktualisierungen anzuwenden. Das System wird:
   1. Alle Währungscodes validieren (müssen 3-stellige ISO-Codes sein)
   2. Ihre Mandanteneinstellungen aktualisieren
-  3. Automatisch eine Hintergrund-FX-Kursaktualiserung für das aktuelle Jahr und alle Jahre mit Budgetdaten auslösen
+  3. Wenn sich die Berichtswährung ändert, die Kurse jedes verwendeten Jahres für die neue Währung aktualisieren: Budgetjahre, Jahre mit Unternehmenszahlen, die Jahre der Vertragsseite, das Vorjahr und das Folgejahr sowie eingefrorene Jahre. Das Speichern wartet auf diese Aktualisierung. Läuft sie am Ende der Wartezeit noch, geht sie von allein weiter. Jede andere Änderung aktualisiert das laufende Jahr
   4. Eine Erfolgsmeldung anzeigen
 
 Klicken Sie auf **Zurücksetzen**, um nicht gespeicherte Änderungen zu verwerfen und auf die zuletzt gespeicherten Werte zurückzukehren.
@@ -218,8 +218,8 @@ Ihr Konzern wechselt von EUR-basierter zu USD-basierter Berichterstattung.
 **Schritte**:
   1. Gehen Sie zu **Budgetverwaltung > Administration > Währungen**
   2. Ändern Sie die Berichtswährung von `EUR` auf `USD`
-  3. Klicken Sie auf **Speichern** (löst automatisch FX-Aktualisierung aus)
-  4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle: alle Kurse sollten jetzt relativ zu USD sein
+  3. Klicken Sie auf **Speichern**. KANAP aktualisiert jedes verwendete Jahr für USD. Das Speichern gibt an, ob diese Aktualisierung rechtzeitig abgeschlossen wurde
+  4. Überprüfen Sie die FX-Kurs-Snapshot-Tabelle: USD ist die Basis dieser Jahre (jeder Kurs ist jetzt relativ zu USD)
   5. Prüfen Sie OPEX- und CAPEX-Listen: Summen und Jahresspalten zeigen nun USD
 
 **Ergebnis**: Alle Berichte, Dashboards und Listen zeigen USD. Ihre gespeicherten Zeilendaten (eigene Währung jeder Budgetzeile) bleiben unverändert.

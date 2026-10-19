@@ -56,7 +56,7 @@ Limitar las monedas permitidas ayuda cuando:
 Haga clic en **Guardar** para aplicar sus actualizaciones. El sistema:
   1. Validará todos los códigos de moneda (deben ser códigos ISO de 3 letras)
   2. Actualizará la configuración de su espacio de trabajo
-  3. Desencadenará automáticamente una actualización en segundo plano de las tasas FX para el año actual y cualquier año con datos presupuestarios
+  3. Cuando cambia la moneda de reporte, actualizar las tasas de cada año en uso para la nueva moneda: años presupuestarios, años con las cifras de una sociedad, los años que muestra la página de contratos, el año anterior y el siguiente, y los años congelados. Guardar espera esta actualización. Si sigue en curso al terminar la espera, continúa por su cuenta. Cualquier otro cambio actualiza el año en curso
   4. Mostrará un mensaje de éxito
 
 Haga clic en **Restablecer** para descartar cambios no guardados y volver a los últimos valores guardados.
@@ -218,8 +218,8 @@ Su grupo cambia de reporte basado en EUR a basado en USD.
 **Pasos**:
   1. Vaya a **Gestión presupuestaria > Administración > Monedas**
   2. Cambie la Moneda de reporte de `EUR` a `USD`
-  3. Haga clic en **Guardar** (desencadena automáticamente la actualización FX)
-  4. Verifique que la tabla de Instantáneas de tasas FX muestre USD como base (todas las tasas ahora deben ser relativas a USD)
+  3. Haga clic en **Guardar**. KANAP actualiza cada año en uso para el USD. Guardar indica si esa actualización terminó a tiempo
+  4. Verifique que la tabla de Instantáneas de tasas FX muestre USD como base de esos años (cada tasa es ahora relativa al USD)
   5. Compruebe las listas OPEX y CAPEX: los totales y columnas anuales ahora se muestran en USD
 
 **Resultado**: Todos los informes, paneles de control y listas muestran USD. Sus datos almacenados (la moneda propia de cada elemento) permanecen sin cambios.

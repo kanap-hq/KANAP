@@ -2,7 +2,7 @@ import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, UseGuards 
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
-import { CurrencySettingsService } from './currency-settings.service';
+import { CurrencySettings, CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
 import { ManualRatesService, MissingRatePair } from './manual-rates.service';
 import { EntityManager, Repository } from 'typeorm';
@@ -58,12 +58,50 @@ export class CurrencyController {
       payload.allowedCurrencies = body.allowedCurrencies.map((code: any) => String(code || '').trim().toUpperCase()).filter((code: string) => code.length === 3);
     }
 
-    const next = await this.settings.updateSettings(tenantId, payload, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-    await this.fxIngestion.refreshTenant(tenantId, new Date().getFullYear(), {
-      manual: true,
-      manager: req?.queryRunner?.manager,
-    });
+    const manager = req?.queryRunner?.manager as EntityManager | undefined;
+    const before = await this.settings.getSettings(tenantId, { manager });
+    // The rate set references currencies(code). The refresh commits on its own
+    // connection, so the new code has to be visible before that connection starts:
+    // the save's own insert is still uncommitted and would block it.
+    if (payload.reportingCurrency && payload.reportingCurrency !== before.reportingCurrency) {
+      await this.settings.ensureCurrencyRecords([payload.reportingCurrency]);
+    }
+    const next = await this.settings.updateSettings(tenantId, payload, req.user?.sub ?? null, { manager });
+    if (next.reportingCurrency !== before.reportingCurrency) {
+      return this.refreshForReportingChange(tenantId, next, manager);
+    }
+    await this.fxIngestion.refreshTenant(tenantId, new Date().getFullYear(), { manual: true, manager });
     return next;
+  }
+
+  /**
+   * A new reporting currency: refresh every year in use for that base, in this
+   * request, with the same wait as a forced sync. The answer carries that outcome.
+   * `fetched` and `stillMissing` are present only once the fetch has finished.
+   */
+  private async refreshForReportingChange(
+    tenantId: string,
+    next: CurrencySettings,
+    manager: EntityManager | undefined,
+  ): Promise<
+    | (CurrencySettings & { completed: false; years: number[] })
+    | (CurrencySettings & { completed: true; years: number[]; fetched: number; stillMissing: MissingRatePair[] })
+  > {
+    const readManager = manager ?? this.rateSets.manager;
+    await this.ensureTenantContext(readManager, tenantId);
+    const years = await this.manualRates.reportingChangeYears(tenantId, readManager);
+    const beforePairs = await this.usablePairs(readManager, tenantId, years, next.reportingCurrency);
+    const outcome = await this.fxIngestion.refreshWithin(tenantId, years, {
+      label: 'reporting-currency',
+      reportingCurrency: next.reportingCurrency,
+      enqueueAfter: true,
+    });
+    if (!outcome.completed) return { ...next, completed: false, years };
+    const afterPairs = await this.usablePairs(readManager, tenantId, years, next.reportingCurrency);
+    let fetched = 0;
+    for (const pair of afterPairs) if (!beforePairs.has(pair)) fetched += 1;
+    const stillMissing = await this.manualRates.listMissingPairs(tenantId, readManager, { report: false });
+    return { ...next, completed: true, years, fetched, stillMissing };
   }
 
   @Get('rates')
@@ -152,16 +190,31 @@ export class CurrencyController {
     return { ok: true, completed: true, years, fetched, stillMissing };
   }
 
-  /** Usable currency-year pairs on the latest set of each year: finite and strictly above 0. */
-  private async usablePairs(manager: EntityManager, tenantId: string, years: number[]): Promise<Set<string>> {
+  /**
+   * Usable currency-year pairs on the latest set of each year: finite and strictly above 0.
+   * `baseCurrency` keeps a single base, so a reporting-currency change counts pairs of the new one.
+   */
+  private async usablePairs(
+    manager: EntityManager,
+    tenantId: string,
+    years: number[],
+    baseCurrency?: string,
+  ): Promise<Set<string>> {
     if (!years.length) return new Set();
+    const params: unknown[] = [tenantId, years];
+    let baseSql = '';
+    if (baseCurrency) {
+      params.push(baseCurrency.trim().toUpperCase());
+      baseSql = 'AND UPPER(TRIM(base_currency)) = $3';
+    }
     const rows = await manager.query(
       `SELECT DISTINCT ON (fiscal_year) fiscal_year, rates
          FROM currency_rate_sets
         WHERE tenant_id = $1
           AND fiscal_year = ANY($2::int[])
+          ${baseSql}
         ORDER BY fiscal_year, captured_at DESC`,
-      [tenantId, years],
+      params,
     );
     const pairs = new Set<string>();
     for (const row of rows as Array<{ fiscal_year: unknown; rates: unknown }>) {

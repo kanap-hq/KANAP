@@ -39,6 +39,38 @@ async function testTimeoutLeavesTheJobRunning() {
   console.log('ok - a forced sync that runs long answers completed false and does not start a second fetch');
 }
 
+async function testEnqueueAfterChainsTheNextRefresh() {
+  const service = ingestion() as any;
+  const calls: Array<{ years: unknown; reportingCurrency?: string; label?: string }> = [];
+  let release: () => void = () => undefined;
+  const hung = new Promise<unknown[]>((resolve) => {
+    release = () => resolve([]);
+  });
+  service.refreshTenant = (_tenantId: string, years: unknown, opts?: { reportingCurrency?: string; label?: string }) => {
+    calls.push({ years, reportingCurrency: opts?.reportingCurrency, label: opts?.label });
+    return calls.length === 1 ? hung : Promise.resolve([]);
+  };
+
+  const first = await service.refreshWithin('tenant-1', [2024], { timeoutMs: 20 });
+  assert.deepEqual(first, { completed: false });
+  const second = await service.refreshWithin('tenant-1', [2019, 2028], {
+    label: 'reporting-currency',
+    reportingCurrency: 'CHF',
+    enqueueAfter: true,
+    timeoutMs: 20,
+  });
+  assert.deepEqual(second, { completed: false });
+  assert.equal(calls.length, 1, 'the running job is not replaced');
+
+  release();
+  await new Promise((resolve) => setTimeout(resolve, 0));
+  assert.equal(calls.length, 2, 'the chained refresh starts once the running job has released the tenant');
+  assert.deepEqual(calls[1].years, [2019, 2028]);
+  assert.equal(calls[1].reportingCurrency, 'CHF');
+  assert.equal(calls[1].label, 'reporting-currency');
+  console.log('ok - a reporting-currency refresh waits for the running job, then fetches its own years');
+}
+
 function controller(opts: {
   missing: Array<{ currency: string; year: number }>;
   completed: boolean;
@@ -114,6 +146,7 @@ async function testRefreshAnswer() {
 
 (async () => {
   await testTimeoutLeavesTheJobRunning();
+  await testEnqueueAfterChainsTheNextRefresh();
   await testRefreshAnswer();
   console.log('fx-refresh-wait.spec: ok');
 })().catch((error) => {

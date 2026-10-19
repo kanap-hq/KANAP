@@ -82,23 +82,7 @@ export function parseContractBudgetSelection(
   return { year, column: column.measure };
 }
 
-/**
- * The years the contract budget figures offer: the year before the current one when the budget
- * holds lines for it, the current year and the two after, and `extra` (the year asked for).
- */
-export async function contractBudgetYears(manager: EntityManager, tenantId: string, currentYear: number, extra?: number): Promise<number[]> {
-  const [row]: Array<{ previous: boolean }> = await manager.query(
-    `SELECT EXISTS (
-       SELECT 1 FROM spend_versions v
-         JOIN spend_items i ON i.tenant_id = v.tenant_id AND i.id = v.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
-        WHERE v.tenant_id = $1 AND v.budget_year = $2
-     ) AS previous`,
-    [tenantId, currentYear - 1],
-  );
-  const years = new Set([...(row?.previous ? [currentYear - 1] : []), currentYear, currentYear + 1, currentYear + 2]);
-  if (extra != null) years.add(extra);
-  return Array.from(years).sort((a, b) => a - b);
-}
+export { contractBudgetYears } from './contract-budget-years';
 
 /** The currency a contract converts from: its code in upper case, EUR when blank (as the list's footer). */
 export function contractCurrencySql(alias: string): string {

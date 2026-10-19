@@ -91,6 +91,12 @@ type RefreshTenantOptions = {
   manual?: boolean;
   label?: string;
   manager?: EntityManager;
+  /**
+   * Base to capture, when the settings row the refresh can see still names the previous one.
+   * A settings save commits after the handler returns, so the new reporting currency travels
+   * with the job. Three letters, or it is ignored.
+   */
+  reportingCurrency?: string;
 };
 
 @Injectable()
@@ -184,7 +190,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   async queueManualRefresh(
     tenantId: string,
     years?: number | number[],
-    opts?: { label?: string; replace?: boolean },
+    opts?: { label?: string; replace?: boolean; reportingCurrency?: string },
   ): Promise<'queued' | 'skipped'> {
     const normalizedYears = Array.isArray(years) ? [...years] : years;
     if (!opts?.replace && this.manualJobs.has(tenantId)) {
@@ -195,7 +201,11 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     }
 
     const label = opts?.label ?? 'manual';
-    const run = this.refreshTenant(tenantId, normalizedYears, { manual: true, label });
+    const run = this.refreshTenant(tenantId, normalizedYears, {
+      manual: true,
+      label,
+      reportingCurrency: opts?.reportingCurrency,
+    });
     const job = run
       .then(() => undefined)
       .catch((err) => {
@@ -221,11 +231,27 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   async refreshWithin(
     tenantId: string,
     years?: number | number[],
-    opts?: { label?: string; timeoutMs?: number },
+    opts?: { label?: string; timeoutMs?: number; reportingCurrency?: string; enqueueAfter?: boolean },
   ): Promise<{ completed: boolean }> {
-    if (this.manualJobs.has(tenantId)) return { completed: false };
+    if (this.manualJobs.has(tenantId)) {
+      // The running job keeps its own years. A reporting-currency save still has to
+      // fetch the new base afterwards: chain it, and answer that this request did not finish.
+      if (opts?.enqueueAfter) {
+        const running = this.manualJobs.get(tenantId);
+        void running?.then(() => {
+          void this.queueManualRefresh(tenantId, years, {
+            label: opts.label,
+            reportingCurrency: opts.reportingCurrency,
+          });
+        });
+      }
+      return { completed: false };
+    }
     const timeoutMs = opts?.timeoutMs ?? MANUAL_REFRESH_WAIT_MS;
-    const status = await this.queueManualRefresh(tenantId, years, { label: opts?.label });
+    const status = await this.queueManualRefresh(tenantId, years, {
+      label: opts?.label,
+      reportingCurrency: opts?.reportingCurrency,
+    });
     if (status === 'skipped') return { completed: false };
     const job = this.manualJobs.get(tenantId);
     if (!job) return { completed: true };
@@ -365,6 +391,10 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
 
       return this.withTenantManager(tenantId, opts?.manager, async (manager) => {
         const context = await this.buildTenantContext(tenantId, manager);
+        if (this.applyReportingCurrency(context, opts?.reportingCurrency)) {
+          // Same transaction as the sets that reference currencies(code).
+          await this.currencySettings.ensureCurrencyRecords([context.reportingCurrency], { manager });
+        }
 
         this.logger.log(
           `[${label}] refreshing World Bank FX rates for tenant ${tenantId}: years ${uniqueYears
@@ -434,6 +464,16 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         this.suspendScheduledUntil = Date.now() + this.manualCooldownMs;
       }
     }
+  }
+
+  /** Applies a three-letter override. Returns false when `raw` is absent or not a code. */
+  private applyReportingCurrency(context: TenantCurrencyContext, raw: string | undefined): boolean {
+    if (typeof raw !== 'string') return false;
+    const code = raw.trim().toUpperCase();
+    if (!/^[A-Z]{3}$/.test(code)) return false;
+    context.reportingCurrency = code;
+    if (!context.currencies.includes(code)) context.currencies.push(code);
+    return true;
   }
 
   private async buildTenantContext(tenantId: string, manager: EntityManager): Promise<TenantCurrencyContext> {

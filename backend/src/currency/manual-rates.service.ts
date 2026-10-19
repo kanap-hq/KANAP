@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { contractBudgetYears } from '../contracts/contract-budget-years';
 import { CurrencyRateSet } from './currency-rate-set.entity';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
@@ -435,6 +436,39 @@ export class ManualRatesService {
       currencies: sortMatrixCurrencies(use.reporting, [...use.currencies, ...manual]),
       rates,
     };
+  }
+
+  /**
+   * Every year a change of reporting currency has to refresh for the new base:
+   * budget version years (a frozen version is one of them), company metric years
+   * with a turnover, the years contract amounts are read for, and the current
+   * calendar year with the year before and the year after it.
+   */
+  async reportingChangeYears(tenantId: string, manager: EntityManager): Promise<number[]> {
+    await this.setTenant(manager, tenantId);
+    const currentYear = new Date().getFullYear();
+    const rows: Array<{ year: unknown }> = await manager.query(
+      `SELECT DISTINCT year FROM (
+         SELECT v.budget_year AS year
+           FROM spend_versions v
+          WHERE v.tenant_id = $1
+            AND v.budget_year IS NOT NULL
+         UNION
+         SELECT m.fiscal_year AS year
+           FROM company_metrics m
+          WHERE m.tenant_id = $1
+            AND m.turnover IS NOT NULL
+            AND m.fiscal_year IS NOT NULL
+       ) years`,
+      [tenantId],
+    );
+    const years = new Set<number>([currentYear - 1, currentYear, currentYear + 1]);
+    for (const row of rows) {
+      const year = typeof row.year === 'number' ? row.year : Number(row.year);
+      if (Number.isInteger(year)) years.add(year);
+    }
+    for (const year of await contractBudgetYears(manager, tenantId, currentYear)) years.add(year);
+    return Array.from(years).sort((a, b) => a - b);
   }
 
   /**

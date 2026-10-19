@@ -56,7 +56,7 @@ Limiting allowed currencies helps when:
 Click **Save** to apply your updates. The system will:
   1. Validate all currency codes (must be 3-letter ISO codes)
   2. Update your tenant settings
-  3. Automatically trigger a background FX rate refresh for the current year and any years with budget data
+  3. When the reporting currency changes, refresh the rates of every year in use for the new currency: budget years, years with company figures, the years the contracts page shows, the previous and the next calendar year, and frozen years. Saving waits for this refresh. When it is still running at the end of the wait, it continues on its own. Any other change refreshes the current year
   4. Show a success message
 
 Click **Reset** to discard unsaved changes and revert to the last saved values.
@@ -218,8 +218,8 @@ Your group switches from EUR-based to USD-based reporting.
 **Steps**:
   1. Go to **Budget management > Administration > Currencies**
   2. Change Reporting Currency from `EUR` to `USD`
-  3. Click **Save** (automatically triggers FX refresh)
-  4. Verify the FX Rate Snapshots table shows USD as the base (all rates should now be relative to USD)
+  3. Click **Save**. KANAP refreshes every year in use for USD. The save reports whether that refresh finished in time
+  4. Verify the FX Rate Snapshots table shows USD as the base for those years (every rate is now relative to USD)
   5. Check OPEX and CAPEX lists: totals and yearly columns now display in USD
 
 **Result**: All reports, dashboards, and lists show USD. Your stored line data (each line's own currency) remains unchanged.

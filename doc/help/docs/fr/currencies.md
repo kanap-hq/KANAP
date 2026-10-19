@@ -56,7 +56,7 @@ Limiter les devises autorisées est utile lorsque :
 Cliquez sur **Enregistrer** pour appliquer vos mises à jour. Le système va :
   1. Valider tous les codes de devises (doivent être des codes ISO à 3 lettres)
   2. Mettre à jour vos paramètres du tenant
-  3. Déclencher automatiquement un rafraîchissement en arrière-plan des taux de change pour l'année en cours et toutes les années avec des données budgétaires
+  3. Quand la devise de reporting change, rafraîchir les taux de chaque année utilisée pour la nouvelle devise : années budgétaires, années avec les chiffres d'une société, les années affichées sur les contrats, l'année précédente et la suivante, et les années gelées. L'enregistrement attend ce rafraîchissement. S'il est encore en cours à la fin de l'attente, il continue de lui-même. Tout autre changement rafraîchit l'année en cours
   4. Afficher un message de succès
 
 Cliquez sur **Réinitialiser** pour annuler les modifications non enregistrées et revenir aux dernières valeurs enregistrées.
@@ -218,8 +218,8 @@ Votre groupe passe d'un reporting basé EUR à un reporting basé USD.
 **Étapes** :
   1. Allez dans **Gestion budgétaire > Administration > Devises**
   2. Changez la devise de reporting de `EUR` à `USD`
-  3. Cliquez sur **Enregistrer** (déclenche automatiquement un rafraîchissement des taux)
-  4. Vérifiez que le tableau des instantanés de taux affiche USD comme base (tous les taux devraient maintenant être relatifs à USD)
+  3. Cliquez sur **Enregistrer**. KANAP rafraîchit chaque année utilisée pour l'USD. L'enregistrement indique si ce rafraîchissement s'est terminé à temps
+  4. Vérifiez que le tableau des instantanés de taux affiche USD comme base pour ces années (tous les taux sont maintenant relatifs à USD)
   5. Vérifiez les listes OPEX et CAPEX : les totaux et colonnes annuelles s'affichent maintenant en USD
 
 **Résultat** : Tous les rapports, tableaux de bord et listes affichent USD. Vos données stockées (la propre devise de chaque ligne) restent inchangées.
