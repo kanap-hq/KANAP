@@ -338,7 +338,7 @@ export async function bulkUpsertAllocations(
   if (!version) throw new BadRequestException('Invalid version');
   const method = (version.allocation_method as string | null) ?? 'default';
   const driver = (version.allocation_driver as string | null) ?? 'headcount';
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator.fxRates);
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator?.fxRates);
   return storeRows(deps, scope, tenantId, version, plan, userId);
 }
 
@@ -482,7 +482,7 @@ export async function putVersionAllocations(
   const method = request.method;
   const driver = driverFor(method, request.driver);
   // Validated and computed before anything is compared or written: a refused row answers 400.
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep', deps.calculator.fxRates);
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep', deps.calculator?.fxRates);
 
   if (request.baseSignature !== null) {
     const current = allocationSignature(state);
