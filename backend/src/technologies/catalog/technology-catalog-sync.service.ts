@@ -127,8 +127,9 @@ function optionalIdentifiers(raw: Record<string, unknown>, key: string): string[
   return lowerSorted(value);
 }
 
-function sameText(left: string | null | undefined, right: string | null | undefined): boolean {
-  return (left ?? '').trim() === (right ?? '').trim();
+/** Empty the way PostgreSQL `btrim` sees it: null, or only spaces (U+0020). A line break is a text. */
+function spaceBlank(value: string | null | undefined): boolean {
+  return value == null || /^ *$/.test(value);
 }
 
 /**
@@ -245,6 +246,8 @@ type TechnologyUpdate = {
   description: string | null;
   description_mode: 'fill' | 'update' | null;
   description_seen: string | null;
+  /** Language written into the state only when the description update is applied. */
+  description_language: string | null;
   state: CatalogState;
 };
 type VersionRow = {
@@ -507,11 +510,12 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    * - an empty description the catalog never filled receives the catalog's short description, in
    *   the tenant's language (`tenantLanguage`), and `description_language` records that language.
    *   One the catalog wrote (`catalog_state.description`) and the tenant left unchanged (the same
-   *   text, edge spaces ignored) follows the catalog's description in `description_language` when
-   *   that text changes. A change of the tenant's language rewrites nothing. A state without
-   *   `description_language` takes the language whose catalog text equals the remembered
-   *   description, and is not rewritten when none does. One the tenant changed stays. One the
-   *   catalog withdraws leaves the text in place.
+   *   characters: `description IS NOT DISTINCT FROM` the remembered text) follows the catalog's
+   *   description in `description_language` when that text changes. The state and the audit record
+   *   the new text only for a row the update changed. A change of the tenant's language rewrites
+   *   nothing. A state without `description_language` takes the language whose catalog text equals
+   *   the remembered description, and is not rewritten when none does. One the tenant changed stays.
+   *   One the catalog withdraws leaves the text in place.
    * A technology without a usable state (adopted before the living catalog, or an unreadable one,
    * named in `malformed_states`) starts from the shipped catalog and from what it holds of the
    * catalog, all counted as offered: what it lacks counts as removed by the tenant, an empty value
@@ -727,15 +731,16 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       }
       // An empty description the catalog never filled receives the catalog's, in the tenant's
       // language. One the catalog wrote follows a new text in the language it was written in
-      // (`description_language`), while the tenant left it unchanged (edge spaces ignored). A
-      // change of the tenant's language rewrites nothing. Without a recorded language, the
-      // language whose catalog text equals the remembered description is recorded, and nothing
-      // is rewritten when none equals it. One the tenant changed stays. One the catalog withdraws
-      // leaves the text in place.
+      // (`description_language`) while the tenant still holds the same characters. A space or a
+      // line break the tenant added keeps it. A change of the tenant's language rewrites nothing.
+      // Without a recorded language, the language whose catalog text equals the remembered
+      // description is recorded, and nothing is rewritten when none equals it. One the tenant
+      // changed stays. One the catalog withdraws leaves the text in place. The new text is written
+      // into the state only when the update below changes the row.
       const catalogLanguages = ['en', 'fr', 'de', 'es'] as const;
       const remembered = typeof state.description === 'string' ? state.description : null;
       let descriptionLanguage = state.description_language ?? null;
-      if (remembered && !descriptionLanguage) {
+      if (remembered && !spaceBlank(remembered) && !descriptionLanguage) {
         const matches = catalogLanguages.filter((code) => this.catalog.textIn(product.key, code) === remembered);
         descriptionLanguage = (matches.includes(language) ? language : matches[0]) ?? null;
         if (descriptionLanguage) state.description_language = descriptionLanguage;
@@ -744,26 +749,24 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       let description: string | null = null;
       let descriptionMode: 'fill' | 'update' | null = null;
       let descriptionSeen: string | null = null;
-      if (!remembered?.trim()) {
+      let writtenLanguage: string | null = null;
+      if (spaceBlank(remembered)) {
         const filled = this.catalog.description(product.key, language);
-        if (!tech.description?.trim() && filled) {
+        if (spaceBlank(tech.description) && filled) {
           description = filled;
           descriptionMode = 'fill';
-          state.description = filled;
-          state.description_language = language;
-          changeOf(tech.id).description = true;
+          writtenLanguage = language;
         }
-      } else if (descriptionLanguage && sameText(tech.description, remembered) && fresh && !sameText(fresh, remembered)) {
+      } else if (descriptionLanguage && tech.description === remembered && fresh !== null && fresh !== remembered) {
         description = fresh;
         descriptionMode = 'update';
-        descriptionSeen = remembered.trim();
-        state.description = fresh;
-        state.description_language = descriptionLanguage;
-        changeOf(tech.id).descriptionUpdated = true;
+        descriptionSeen = remembered;
+        writtenLanguage = descriptionLanguage;
       }
       techUpdates.push({
         id: tech.id, cpe_added: cpeAdded, cpe_removed: cpeRemoved, description,
-        description_mode: descriptionMode, description_seen: descriptionSeen, state,
+        description_mode: descriptionMode, description_seen: descriptionSeen,
+        description_language: writtenLanguage, state,
       });
     }
 
@@ -815,36 +818,53 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       return tech.cpe_added.length > 0 || tech.cpe_removed.length > 0 || tech.description !== null || canonical(original.catalog_state) !== canonical(tech.state);
     });
     if (written.length) {
-      await mg.query(
-        `UPDATE technologies t
-            SET catalog_state = u.state,
+      // The description flag is computed on the row as it stands, then the update applies it.
+      // An UPDATE answers [rows, count]: read the rows through the CTE. State and audit move
+      // only for a description the statement changed.
+      const described: Array<{ technology_id: string; description_applied: boolean; description_mode: 'fill' | 'update' | null }> = await mg.query(
+        `WITH changed AS (
+         UPDATE technologies t
+            SET catalog_state = CASE
+                  WHEN u.description_applied THEN u.state || jsonb_strip_nulls(jsonb_build_object(
+                    'description', u.description, 'description_language', u.description_language))
+                  ELSE u.state END,
                 cpe_products = CASE
                   WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0 THEN t.cpe_products
                   ELSE ARRAY(
-                    SELECT DISTINCT p
+                    SELECT DISTINCT id
                       FROM unnest(t.cpe_products || CASE WHEN jsonb_array_length(u.cpe_added) = 0 THEN '{}'::text[]
-                                                         ELSE ARRAY(SELECT jsonb_array_elements_text(u.cpe_added)) END) AS p
+                                                         ELSE ARRAY(SELECT jsonb_array_elements_text(u.cpe_added)) END) AS id
                      WHERE NOT EXISTS (
-                       SELECT 1 FROM jsonb_array_elements_text(u.cpe_removed) AS x WHERE lower(x) = lower(p))
+                       SELECT 1 FROM jsonb_array_elements_text(u.cpe_removed) AS x WHERE lower(x) = lower(id))
                      ORDER BY 1)
                   END,
-                -- Filled while empty, or replaced while it still holds the text the catalog wrote.
-                -- A description typed since it was read stays.
-                description = CASE
-                  WHEN u.description IS NULL THEN t.description
-                  WHEN u.description_mode = 'fill' AND NULLIF(btrim(t.description), '') IS NULL THEN u.description
-                  WHEN u.description_mode = 'update' AND btrim(t.description) = u.description_seen THEN u.description
-                  ELSE t.description
-                  END,
+                description = CASE WHEN u.description_applied THEN u.description ELSE t.description END,
                 updated_at = CASE
-                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0 AND u.description IS NULL THEN t.updated_at
+                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0
+                   AND NOT u.description_applied AND u.state = t.catalog_state THEN t.updated_at
                   ELSE now()
                   END
-           FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, cpe_removed jsonb, description text,
-                                                   description_mode text, description_seen text, state jsonb)
-          WHERE t.tenant_id = $1 AND t.id = u.id`,
+           FROM (
+             SELECT u.*,
+                    (u.description IS NOT NULL AND (
+                       (u.description_mode = 'fill' AND NULLIF(btrim(t2.description), '') IS NULL)
+                       OR (u.description_mode = 'update' AND t2.description IS NOT DISTINCT FROM u.description_seen)
+                    )) AS description_applied
+               FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, cpe_removed jsonb, description text,
+                                                       description_mode text, description_seen text, description_language text, state jsonb)
+               JOIN technologies t2 ON t2.tenant_id = $1 AND t2.id = u.id
+           ) AS u
+          WHERE t.tenant_id = $1 AND t.id = u.id
+         RETURNING t.id AS technology_id, u.description_applied, u.description_mode
+         )
+         SELECT technology_id, description_applied, description_mode FROM changed`,
         [tenantId, JSON.stringify(written)],
       );
+      for (const row of described) {
+        if (!row.description_applied) continue;
+        if (row.description_mode === 'fill') changeOf(row.technology_id).description = true;
+        else if (row.description_mode === 'update') changeOf(row.technology_id).descriptionUpdated = true;
+      }
       result.cpe_added = written.reduce((sum, tech) => sum + tech.cpe_added.length, 0);
     }
     for (const [technologyId, change] of changes) {

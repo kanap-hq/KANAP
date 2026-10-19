@@ -377,9 +377,10 @@ export function lowerSorted(ids: readonly string[]): string[] {
  * `versions`: per version key, the values it last wrote; a key present was offered once (a
  * version the tenant deleted is not created again). `description`: the short description the
  * catalog last wrote; absent or null while it wrote none. `description_language`: the language of
- * that text. A description follows the catalog when the text in that same language changes. A
- * change of the tenant's language rewrites nothing. Absent: the language whose catalog text equals
- * `description` is recorded, and nothing is rewritten when none equals it.
+ * that text. A description follows the catalog when the text in that same language changes and the
+ * technology still holds the same characters. The state records the new text only when the update
+ * changes the row. A change of the tenant's language rewrites nothing. Absent: the language whose
+ * catalog text equals `description` is recorded, and nothing is rewritten when none equals it.
  */
 export type CatalogState = {
   cpe_products: string[];

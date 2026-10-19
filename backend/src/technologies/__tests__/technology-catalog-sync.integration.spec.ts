@@ -324,6 +324,10 @@ async function testDescriptionFilled() {
     await runner.query(`UPDATE technologies SET description = NULL WHERE id = $1`, [technology.id]);
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
     assert.equal(await read(), null, 'a description the tenant emptied stays empty');
+
+    await runner.query(`UPDATE technologies SET description = E'\\n', catalog_state = catalog_state - 'description' WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), '\n', 'a line break is a description, so it is not filled');
   });
 }
 
@@ -721,6 +725,29 @@ async function testDescriptionLanguageStays() {
   });
 }
 
+/** C5 review P5: a trailing line break is the tenant's text. Nothing follows, and the state stays. */
+async function testDescriptionNewlineStays() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-nl');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
+    const english = original('postgresql', 'en')!;
+    let next: string | null = english;
+    catalog.description = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, `${english}\n`]);
+    next = 'A revised catalog description.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', catalog.shippedProduct('postgresql')!]]));
+    const [tech] = await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    assert.equal(tech.description, `${english}\n`, 'a trailing line break keeps the description');
+    assert.equal(tech.catalog_state.description, english, 'the state keeps the text the catalog wrote');
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+  });
+}
+
 /** C5: a description the tenant left unchanged follows the catalog; one the tenant changed stays. */
 async function testDescriptionFollows() {
   await inRolledBackTransaction(async (runner) => {
@@ -744,7 +771,14 @@ async function testDescriptionFollows() {
     next = 'A revised catalog description.';
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
     let row = await read();
-    assert.equal(row.description, next, 'an unchanged description follows the catalog, edge spaces ignored');
+    assert.equal(row.description, `  ${english}  `, 'a space the tenant added keeps the description');
+    assert.equal(row.catalog_state.description, english, 'the state keeps the text the catalog wrote');
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, english]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, next, 'the same text follows the catalog');
     assert.equal(row.catalog_state.description, next);
     assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 1);
 
@@ -1088,6 +1122,7 @@ async function main() {
       ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],
       ['empty shipped file withdraws nothing', testEmptyShippedFileWithdrawsNothing],
       ['description stays in the language it was written', testDescriptionLanguageStays],
+      ['description with a trailing line break stays', testDescriptionNewlineStays],
       ['description follows the catalog', testDescriptionFollows],
       ['two tenants, one follows', testTwoTenantsOneFollows],
       ['description in the users\' language', testDescriptionInUsersLanguage],
