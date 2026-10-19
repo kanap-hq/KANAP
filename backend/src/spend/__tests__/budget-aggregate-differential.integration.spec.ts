@@ -321,7 +321,37 @@ function referenceAggregate(rows: any[], spec: AggregateSpec): Omit<engine.Budge
     others: spec.others && rest.length ? output(combine(rest, spec.measures), spec.measures, false) : null,
     total: output(combine(all, spec.measures), spec.measures, false),
     groupCount: kept.length,
+    fxMissing: referenceFxMissing(rows, [...spec.groupBy, ...spec.measures.flatMap((measure) => [measure.field, ...(measure.minus ? [measure.minus] : [])])]),
   };
+}
+
+/**
+ * The line currencies and years the amount fields among `keys` left out: the rows' slots of those
+ * years whose version has amounts and no rate (`fx_source` `missing`), lines counted once per pair.
+ */
+function referenceFxMissing(rows: any[], keys: string[]): engine.FxMissingPair[] {
+  const slotOf = new Map<number, string>();
+  for (const key of keys) {
+    const amount = resolveAmountField(key);
+    if (!amount) continue;
+    const year = amount.year ?? Y + FIXED_SLOTS.find((slot) => slot.key === amount.slot)!.offset;
+    const fixed = FIXED_SLOTS.find((slot) => Y + slot.offset === year);
+    slotOf.set(year, fixed ? fixed.key : `y${year}`);
+  }
+  const lines = new Map<string, { currency: string; year: number; ids: Set<string> }>();
+  for (const row of rows) {
+    for (const [year, slotKey] of slotOf) {
+      const reporting = row.versions?.[slotKey]?.reporting;
+      if (reporting?.fx_source !== 'missing') continue;
+      const id = `${reporting.currency}:${year}`;
+      const pair = lines.get(id) ?? { currency: reporting.currency, year, ids: new Set<string>() };
+      pair.ids.add(row.id);
+      lines.set(id, pair);
+    }
+  }
+  return Array.from(lines.values())
+    .sort((a, b) => (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : a.year - b.year))
+    .map((pair) => ({ currency: pair.currency, year: pair.year, lines: pair.ids.size }));
 }
 
 // ----- cases -----
