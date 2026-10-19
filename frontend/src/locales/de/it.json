@@ -3137,6 +3137,16 @@
       "administration": "Administration",
       "other": "Sonstiges"
     },
+    "adminZones": {
+      "tier_0": "Tier 0 (Vertrauenskern)",
+      "tier_1": "Tier 1 (Server und Anwendungen)",
+      "tier_2": "Tier 2 (Arbeitsplätze)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Identitäts- und Vertrauensinfrastruktur: Verzeichnisdienste wie Active Directory oder Entra ID, PKI, Werkzeuge zur Identitätsverwaltung und die Systeme, auf denen sie laufen.",
+      "tier_1": "Geschäftsserver, Anwendungen, Datenbanken und Middleware.",
+      "tier_2": "Arbeitsplätze und Geräte der Benutzer."
+    },
     "domains": {
       "workgroup": "Arbeitsgruppe",
       "n-a": "k. A."

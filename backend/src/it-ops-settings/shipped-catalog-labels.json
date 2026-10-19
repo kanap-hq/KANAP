@@ -181,9 +181,9 @@
       "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
     },
     "adminZones": {
-      "tier_0": {"source": "Tier 0 (core of trust)", "en": "Tier 0 (core of trust)", "fr": "", "de": "", "es": ""},
-      "tier_1": {"source": "Tier 1 (servers and applications)", "en": "Tier 1 (servers and applications)", "fr": "", "de": "", "es": ""},
-      "tier_2": {"source": "Tier 2 (workstations)", "en": "Tier 2 (workstations)", "fr": "", "de": "", "es": ""}
+      "tier_0": {"source": "Tier 0 (core of trust)", "en": "Tier 0 (core of trust)", "fr": "Tier 0 (cœur de confiance)", "de": "Tier 0 (Vertrauenskern)", "es": "Tier 0 (núcleo de confianza)"},
+      "tier_1": {"source": "Tier 1 (servers and applications)", "en": "Tier 1 (servers and applications)", "fr": "Tier 1 (serveurs et applications)", "de": "Tier 1 (Server und Anwendungen)", "es": "Tier 1 (servidores y aplicaciones)"},
+      "tier_2": {"source": "Tier 2 (workstations)", "en": "Tier 2 (workstations)", "fr": "Tier 2 (postes de travail)", "de": "Tier 2 (Arbeitsplätze)", "es": "Tier 2 (puestos de trabajo)"}
     },
     "technologyFamilies": {
       "operating_system": {"source": "Operating system", "en": "Operating system", "fr": "Système d’exploitation", "de": "Betriebssystem", "es": "Sistema operativo"},

@@ -609,7 +609,7 @@
       "lists": {
         "adminZones": {
           "title": "Zonas de administración",
-          "description": "Las zonas de su modelo de administración, por ejemplo el nivel 0 para el directorio y sus controladores. Cada zona indica quién la administra. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
+          "description": "Las zonas de su modelo de administración, por ejemplo el Tier 0 para el directorio y sus controladores. Cada zona indica quién la administra. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
           "usage": "Tecnologías / Resumen, vista de la administración"
         },
         "accessMethods": {
@@ -3136,6 +3136,16 @@
       "network_security": "Red y seguridad",
       "administration": "Administración",
       "other": "Otro"
+    },
+    "adminZones": {
+      "tier_0": "Tier 0 (núcleo de confianza)",
+      "tier_1": "Tier 1 (servidores y aplicaciones)",
+      "tier_2": "Tier 2 (puestos de trabajo)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Infraestructura de identidad y confianza: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.",
+      "tier_1": "Servidores de negocio, aplicaciones, bases de datos y middleware.",
+      "tier_2": "Puestos de trabajo y dispositivos de los usuarios."
     },
     "domains": {
       "workgroup": "Grupo de trabajo",
