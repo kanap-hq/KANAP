@@ -1,11 +1,17 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, TextField, Typography, Paper } from '@mui/material';
+import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import { useTranslation } from 'react-i18next';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
-import { updateCurrencySettings, CurrencySettings, refreshCurrencyRates } from '../../services/currency';
-import useCurrencyRates, { CurrencyRateRow } from '../../hooks/useCurrencyRates';
+import {
+  updateCurrencySettings,
+  CurrencySettings,
+  refreshCurrencyRates,
+  type CurrencyRateRow,
+  type MissingRatePair,
+} from '../../services/currency';
+import useCurrencyRates, { invalidateCurrencyRateQueries, useMissingRates } from '../../hooks/useCurrencyRates';
 import { useAuth } from '../../auth/AuthContext';
 import { PropertyRow } from '../../components/design/PropertyRow';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -26,6 +32,8 @@ export default function CurrencySettingsPage() {
   const canEdit = hasLevel('budget_ops', 'admin');
   const { data, isLoading, isError } = useCurrencySettings();
   const { data: rateRows, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
+  const { data: missingPairs, isLoading: missingLoading, isError: missingError } = useMissingRates();
+  const [, setManualTarget] = React.useState<{ currency: string; year: number } | null>(null);
   const [reportingCurrency, setReportingCurrency] = React.useState('EUR');
   const [defaultSpendCurrency, setDefaultSpendCurrency] = React.useState('EUR');
   const [defaultCapexCurrency, setDefaultCapexCurrency] = React.useState('EUR');
@@ -45,7 +53,7 @@ export default function CurrencySettingsPage() {
     mutationFn: updateCurrencySettings,
     onSuccess: (next: CurrencySettings) => {
       queryClient.invalidateQueries({ queryKey: ['currency-settings'] });
-      queryClient.invalidateQueries({ queryKey: ['currency-rates'] });
+      invalidateCurrencyRateQueries(queryClient);
       setSuccessMessage(t('operations.currency.saveSuccess'));
       setReportingCurrency(next.reportingCurrency);
       setDefaultSpendCurrency(next.defaultSpendCurrency);
@@ -62,10 +70,10 @@ export default function CurrencySettingsPage() {
       } else {
         setSuccessMessage(t('operations.currency.fxSyncStarted', { years: result.years.join(', ') }));
       }
-      queryClient.invalidateQueries({ queryKey: ['currency-rates'] });
+      invalidateCurrencyRateQueries(queryClient);
       if (!result.alreadyQueued) {
         window.setTimeout(() => {
-          queryClient.invalidateQueries({ queryKey: ['currency-rates'] });
+          invalidateCurrencyRateQueries(queryClient);
         }, 5000);
       }
     },
@@ -88,6 +96,7 @@ export default function CurrencySettingsPage() {
   };
 
   const fieldDisabled = isLoading || submitting;
+  const reporting = (data?.reportingCurrency || rateRows?.[0]?.baseCurrency || '').trim().toUpperCase();
   const C = 'operations.currency';
 
   return (
@@ -189,17 +198,32 @@ export default function CurrencySettingsPage() {
           </Stack>
         )}
       </Paper>
-      <CurrencyRatesTable rows={rateRows} loading={ratesLoading} error={ratesError} canSync={canEdit} />
+      <CurrencyRatesTable
+        rows={rateRows}
+        missing={missingPairs}
+        loading={ratesLoading}
+        missingLoading={missingLoading}
+        error={ratesError}
+        missingError={missingError}
+        canEdit={canEdit}
+        reportingCurrency={reporting}
+        onEdit={setManualTarget}
+      />
     </Box>
   );
 }
 
 type RatesTableProps = {
   rows: CurrencyRateRow[] | undefined;
+  missing: MissingRatePair[] | undefined;
   loading: boolean;
+  missingLoading: boolean;
   error: boolean;
-  /** The empty state points at the sync action only for those who can run it. */
-  canSync: boolean;
+  missingError: boolean;
+  /** Editors get the sync hint, the "Enter a rate" actions and editable cells. */
+  canEdit: boolean;
+  reportingCurrency: string;
+  onEdit: (pair: MissingRatePair) => void;
 };
 
 const SOURCE_LABEL_KEYS: Record<string, string> = {
@@ -211,7 +235,16 @@ const SOURCE_LABEL_KEYS: Record<string, string> = {
 const headSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'bottom' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
 
-function CurrencyRatesTable({ rows, loading, error, canSync }: RatesTableProps) {
+function CurrencyRatesTable({
+  rows,
+  missing,
+  loading,
+  missingLoading,
+  error,
+  missingError,
+  canEdit,
+  onEdit,
+}: RatesTableProps) {
   const { t } = useTranslation(['ops']);
   const C = 'operations.currency';
   if (loading) {
@@ -220,23 +253,24 @@ function CurrencyRatesTable({ rows, loading, error, canSync }: RatesTableProps) 
   if (error) {
     return <Alert severity="error">{t(`${C}.loadRatesError`)}</Alert>;
   }
-  if (!rows || rows.length === 0) {
-    return (
-      <Alert severity="warning">
-        {canSync ? `${t(`${C}.noRatesYet`)} ${t(`${C}.noRatesHint`)}` : t(`${C}.noRatesYet`)}
-      </Alert>
-    );
-  }
+  const rateRows = rows ?? [];
+  const missingPairs = missing ?? [];
+  const noRates = rateRows.length === 0 ? (
+    <Alert severity="warning">
+      {canEdit ? `${t(`${C}.noRatesYet`)} ${t(`${C}.noRatesHint`)}` : t(`${C}.noRatesYet`)}
+    </Alert>
+  ) : null;
+  if (rateRows.length === 0 && missingPairs.length === 0) return noRates;
 
-  const years = Array.from(new Set(rows.map((r) => r.fiscalYear))).sort((a, b) => a - b);
+  const years = Array.from(new Set(rateRows.map((r) => r.fiscalYear))).sort((a, b) => a - b);
   const currencySet = new Set<string>();
-  rows.forEach((row) => Object.keys(row.rates || {}).forEach((code) => currencySet.add(code.toUpperCase())));
+  rateRows.forEach((row) => Object.keys(row.rates || {}).forEach((code) => currencySet.add(code.toUpperCase())));
   const currencies = Array.from(currencySet).sort();
 
   const matrix = currencies.map((code) => {
     const entries: Record<number, number | null> = {};
     years.forEach((year) => {
-      const ref = rows.find((r) => r.fiscalYear === year);
+      const ref = rateRows.find((r) => r.fiscalYear === year);
       const value = ref?.rates?.[code];
       entries[year] = value != null ? value : null;
     });
@@ -244,52 +278,122 @@ function CurrencyRatesTable({ rows, loading, error, canSync }: RatesTableProps) 
   });
 
   return (
-    <Paper variant="outlined" sx={{ p: 2, maxWidth: '100%' }}>
-      <Typography component="h2" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
-        {t(`${C}.fxRatesTitle`)}
-      </Typography>
-      <Box sx={{ overflowX: 'auto' }}>
-        <Box
-          component="table"
-          sx={{
-            borderCollapse: 'collapse',
-            '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
-            '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' },
-          }}
-        >
-          <Box component="thead">
-            <Box component="tr">
-              <Box component="th" sx={{ ...headSx, textAlign: 'left' }}>{t(`${C}.currencyCol`)}</Box>
-              {years.map((year) => {
-                const source = rows.find((r) => r.fiscalYear === year)?.source ?? 'world-bank';
-                const sourceLabel = t(`${C}.${SOURCE_LABEL_KEYS[source] ?? 'annualAvg'}`);
-                return (
-                  <Box component="th" key={year} sx={{ ...headSx, textAlign: 'right' }}>
-                    <Box sx={{ color: 'kanap.text.secondary', fontVariantNumeric: 'tabular-nums' }}>{year}</Box>
-                    <Box sx={{ fontSize: 11, fontWeight: 400 }}>{sourceLabel}</Box>
-                  </Box>
-                );
-              })}
-            </Box>
-          </Box>
-          <Box component="tbody">
-            {matrix.map((row) => (
-              <Box component="tr" key={row.code}>
-                <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{row.code}</Box>
+    <>
+      {noRates}
+      <Paper variant="outlined" sx={{ p: 2, maxWidth: '100%' }}>
+        <Typography component="h2" sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
+          {t(`${C}.fxRatesTitle`)}
+        </Typography>
+        <MissingRates
+          missing={missingPairs}
+          loading={missingLoading}
+          error={missingError}
+          canEdit={canEdit}
+          onEdit={onEdit}
+        />
+        <Box sx={{ overflowX: 'auto' }}>
+          <Box
+            component="table"
+            sx={{
+              borderCollapse: 'collapse',
+              '& th': { borderBottom: '1px solid', borderColor: 'kanap.border.default' },
+              '& tbody td': { borderBottom: '1px solid', borderColor: 'kanap.border.soft' },
+            }}
+          >
+            <Box component="thead">
+              <Box component="tr">
+                <Box component="th" sx={{ ...headSx, textAlign: 'left' }}>{t(`${C}.currencyCol`)}</Box>
                 {years.map((year) => {
-                  const value = row.entries[year];
-                  const display = value != null ? value.toFixed(6) : '—';
+                  const source = rateRows.find((r) => r.fiscalYear === year)?.source ?? 'world-bank';
+                  const sourceLabel = t(`${C}.${SOURCE_LABEL_KEYS[source] ?? 'annualAvg'}`);
                   return (
-                    <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right' }}>
-                      {display}
+                    <Box component="th" key={year} sx={{ ...headSx, textAlign: 'right' }}>
+                      <Box sx={{ color: 'kanap.text.secondary', fontVariantNumeric: 'tabular-nums' }}>{year}</Box>
+                      <Box sx={{ fontSize: 11, fontWeight: 400 }}>{sourceLabel}</Box>
                     </Box>
                   );
                 })}
               </Box>
-            ))}
+            </Box>
+            <Box component="tbody">
+              {matrix.map((row) => (
+                <Box component="tr" key={row.code}>
+                  <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{row.code}</Box>
+                  {years.map((year) => {
+                    const value = row.entries[year];
+                    const display = value != null ? value.toFixed(6) : '—';
+                    return (
+                      <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right' }}>
+                        {display}
+                      </Box>
+                    );
+                  })}
+                </Box>
+              ))}
+            </Box>
           </Box>
         </Box>
+      </Paper>
+    </>
+  );
+}
+
+type MissingRatesProps = {
+  missing: MissingRatePair[];
+  loading: boolean;
+  error: boolean;
+  canEdit: boolean;
+  onEdit: (pair: MissingRatePair) => void;
+};
+
+/** The pairs in use with no rate, one dense line each, above the matrix. */
+function MissingRates({ missing, loading, error, canEdit, onEdit }: MissingRatesProps) {
+  const { t } = useTranslation(['ops']);
+  const C = 'operations.currency';
+  if (loading) return null;
+  if (error) {
+    return <Alert severity="error" sx={{ mb: 1.5 }}>{t(`${C}.loadMissingError`)}</Alert>;
+  }
+  if (missing.length === 0) {
+    return (
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1.5 }}>
+        {t(`${C}.missingNone`)}
+      </Typography>
+    );
+  }
+  return (
+    <Box sx={{ mb: 2 }}>
+      <Typography component="h3" sx={{ fontSize: 13, fontWeight: 500, color: 'kanap.text.primary', mb: 0.5 }}>
+        {t(`${C}.missingTitle`, { count: missing.length })}
+      </Typography>
+      <Box component="ul" sx={{ listStyle: 'none', m: 0, p: 0 }}>
+        {missing.map((pair) => (
+          <Box
+            component="li"
+            key={`${pair.currency}-${pair.year}`}
+            sx={{ display: 'flex', alignItems: 'center', gap: 1.5, minHeight: 32, fontSize: 13 }}
+          >
+            <Box
+              component="span"
+              sx={{ fontFamily: 'monospace', color: 'warning.main', whiteSpace: 'nowrap', fontVariantNumeric: 'tabular-nums' }}
+            >
+              {`${pair.currency} · ${pair.year}`}
+            </Box>
+            <Box component="span" sx={{ flex: 1, minWidth: 0, color: 'kanap.text.secondary' }}>
+              {t(`${C}.missingReason`)}
+            </Box>
+            {canEdit && (
+              <Button
+                variant="action"
+                aria-label={t(`${C}.enterRateFor`, { currency: pair.currency, year: pair.year })}
+                onClick={() => onEdit(pair)}
+              >
+                {t(`${C}.enterRate`)}
+              </Button>
+            )}
+          </Box>
+        ))}
       </Box>
-    </Paper>
+    </Box>
   );
 }
