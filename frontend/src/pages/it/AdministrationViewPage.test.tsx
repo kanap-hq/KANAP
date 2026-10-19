@@ -352,6 +352,8 @@ describe('AdministrationViewPage', () => {
     await waitFor(() => expect(getMock.mock.calls.filter(([url]) => url === ENDPOINT).length).toBeGreaterThan(summaryReads));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.queryByTestId('administration-selection')).toBeNull();
+    // A short message gives the number of assets changed.
+    expect((await screen.findByRole('alert')).textContent).toContain('Zone changed on 1 asset.');
   });
 
   it('assigns No zone to every asset of the filter but the unticked ones, with the list request as scope', async () => {

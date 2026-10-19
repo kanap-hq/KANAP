@@ -602,7 +602,9 @@
         "changed": "La lista cambió desde el recuento. Compruebe el nuevo recuento y confirme de nuevo.",
         "failed": "No se pudo asignar la zona.",
         "choose": "Elegir una zona",
-        "chooseHint": "Elija una zona para ver cuántos activos cambian."
+        "chooseHint": "Elija una zona para ver cuántos activos cambian.",
+        "done_one": "Zona cambiada en {{count}} activo.",
+        "done_other": "Zona cambiada en {{count}} activos."
       },
       "domains": "Dominios",
       "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",

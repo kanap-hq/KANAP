@@ -602,7 +602,9 @@
         "changed": "The list changed since the count. Check the new count, then confirm again.",
         "failed": "The zone could not be assigned.",
         "choose": "Choose a zone",
-        "chooseHint": "Choose a zone to see how many assets change."
+        "chooseHint": "Choose a zone to see how many assets change.",
+        "done_one": "Zone changed on {{count}} asset.",
+        "done_other": "Zone changed on {{count}} assets."
       },
       "domains": "Domains",
       "domainsHint": "Domain controllers are the servers of the domain that carry a directory technology, or that are assigned with the \"Domain controller\" server role on an application in service.",
