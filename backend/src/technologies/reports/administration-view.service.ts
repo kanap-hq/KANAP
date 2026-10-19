@@ -414,6 +414,8 @@ export class AdministrationViewService {
     const kindLabel = new Map((settings.serverKinds ?? []).map((option) => [option.code, option.label]));
     const kind = (code: string) => kindLabel.get(code) ?? code;
     const zoneLabel = new Map(view.zones.map((zone) => [zone.code, zone.label ?? zone.code]));
+    const zoneCodeByAsset = new Map<string, string>();
+    for (const zone of view.zones) for (const asset of zone.assets) zoneCodeByAsset.set(asset.id, zone.code);
     const headers = ['Record', 'Zone', 'Administrator group', 'Description', 'Reference', 'Name', 'Type', 'Hosted applications', 'Note'];
     const rows: string[][] = [];
     for (const zone of view.zones) {
@@ -428,10 +430,10 @@ export class AdministrationViewService {
     const zoneNote = (code: string | null) => (code ? zoneLabel.get(code) ?? code : 'No zone');
     for (const asset of view.controls.assets_without_zone) control(CONTROL_TITLES.assetsWithoutZone, asset.reference ?? '', asset.name, kind(asset.kind), 'No zone');
     for (const asset of view.controls.domain_controllers_outside ?? []) {
-      control(CONTROL_TITLES.domainControllers, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(assetByZone(view, asset.id)));
+      control(CONTROL_TITLES.domainControllers, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(zoneCodeByAsset.get(asset.id) ?? null));
     }
     for (const asset of view.controls.directory_assets_outside ?? []) {
-      control(CONTROL_TITLES.directoryAssets, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(assetByZone(view, asset.id)));
+      control(CONTROL_TITLES.directoryAssets, asset.reference ?? '', asset.name, kind(asset.kind), zoneNote(zoneCodeByAsset.get(asset.id) ?? null));
     }
     for (const finding of view.controls.trust_raised ?? []) {
       const dependsOn = [finding.holder.reference, finding.holder.name].filter(Boolean).join(' ');
@@ -443,11 +445,4 @@ export class AdministrationViewService {
     }
     return { filename: 'administration_view_zones.csv', content: writeCsv({ language, headers, rows }) };
   }
-}
-
-function assetByZone(view: AdministrationView, assetId: string): string | null {
-  for (const zone of view.zones) {
-    if (zone.assets.some((asset) => asset.id === assetId)) return zone.code;
-  }
-  return null;
 }

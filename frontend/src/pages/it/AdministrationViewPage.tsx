@@ -246,9 +246,15 @@ function ControlPoints({ view }: { view: AdministrationView }) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
   const nameOf = useCatalogName();
+  const { zoneByCode, zoneCodeByAsset } = React.useMemo(() => {
+    const zoneByCode = new Map(view.zones.map((zone) => [zone.code, zone]));
+    const zoneCodeByAsset = new Map<string, string>();
+    for (const zone of zoneByCode.values()) for (const asset of zone.assets) zoneCodeByAsset.set(asset.id, zone.code);
+    return { zoneByCode, zoneCodeByAsset };
+  }, [view.zones]);
   const zoneLabel = (code: string | null) => {
     if (!code) return t('pages.administrationView.noZone');
-    const zone = view.zones.find((item) => item.code === code);
+    const zone = zoneByCode.get(code);
     if (!zone || zone.unknown) return t('pages.administrationView.unknownZone', { code });
     const name = nameOf('adminZone', code, zone.label ?? code);
     return zone.deprecated ? `${name} (${t('common:enumEditor.retiredSuffix')})` : name;
@@ -258,11 +264,11 @@ function ControlPoints({ view }: { view: AdministrationView }) {
     { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(href(row), row.reference, row.name) },
     { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.name },
     { key: 'kind', header: t('pages.administrationView.columns.type'), width: COL.type, render: (row) => kind(row.kind) },
-    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(view.zones.find((zone) => zone.assets.some((asset) => asset.id === row.id))?.code ?? null) },
+    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(zoneCodeByAsset.get(row.id) ?? null) },
     filler(),
   ];
   const most = view.controls.most_sensitive_zone;
-  const mostZone = most ? view.zones.find((zone) => zone.code === most) : undefined;
+  const mostZone = most ? zoneByCode.get(most) : undefined;
   const mostName = most ? nameOf('adminZone', most, mostZone?.label ?? most) : null;
   const section = <T,>(key: string, rows: T[], columns: Array<RelationsColumn<T>>, rowKey: (row: T) => string, rowHref: (row: T) => string) => (
     <RelationsSection title={t(`pages.administrationView.controlsList.${key}.title`)} count={rows.length}>
