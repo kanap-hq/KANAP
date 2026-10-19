@@ -109,6 +109,8 @@
   "CSV_LINK_DUPLICATE": "This link is already on row {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Name the technology by its reference (TEC-n) or its name.",
   "CSV_APPLICATION_REQUIRED": "Name the application by its reference (APP-n) or its name.",
+  "CSV_ASSET_REQUIRED": "Name the server by its reference (AST-n) or its name.",
+  "CSV_ASSET_REFERENCE_MISMATCH": "\"{{value}}\" is the server \"{{name}}\". Fix the reference or the name, or leave one of them empty.",
   "CSV_OPERATING_SYSTEM_VALUE": "\"{{value}}\" is not valid. Use yes or no.",
   "CSV_OPERATING_SYSTEM_FAMILY": "Only an operating system can be marked as the operating system.",
   "CSV_OPERATING_SYSTEM_CLUSTER": "A cluster has no operating system.",

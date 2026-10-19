@@ -178,7 +178,7 @@
           "application": "Export applications and technologies"
         },
         "importHint": {
-          "asset": "Each row adds or updates one link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first. operating_system: yes marks the server's operating system; no or an empty cell keeps the current one.",
+          "asset": "Each row adds or updates one link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first. The server matches by its reference (AST-n) when the cell is filled, otherwise by its name. operating_system: yes marks the server's operating system; no or an empty cell keeps the current one.",
           "application": "Each row adds or updates one declared link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first."
         },
         "exportNoteApplication": "The file holds the declared links. Links deduced from the servers are left out."

@@ -178,7 +178,7 @@
           "application": "Exportar aplicaciones y tecnologías"
         },
         "importHint": {
-          "asset": "Cada fila añade o actualiza un vínculo. Los vínculos que no figuran en el archivo se quedan como están. La tecnología ya debe estar en la lista: adóptela primero desde el catálogo. operating_system: yes marca el sistema operativo del servidor; no o una celda vacía conserva el actual.",
+          "asset": "Cada fila añade o actualiza un vínculo. Los vínculos que no figuran en el archivo se quedan como están. La tecnología ya debe estar en la lista: adóptela primero desde el catálogo. El servidor se busca por su referencia (AST-n) cuando la celda está rellena; si no, por su nombre. operating_system: yes marca el sistema operativo del servidor; no o una celda vacía conserva el actual.",
           "application": "Cada fila añade o actualiza un vínculo declarado. Los vínculos que no figuran en el archivo se quedan como están. La tecnología ya debe estar en la lista: adóptela primero desde el catálogo."
         },
         "exportNoteApplication": "El archivo contiene los vínculos declarados. Los vínculos deducidos de los servidores no se incluyen."

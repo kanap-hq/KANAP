@@ -178,7 +178,7 @@
           "application": "Exporter les applications et technologies"
         },
         "importHint": {
-          "asset": "Chaque ligne ajoute ou met à jour un lien. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue. operating_system : yes marque le système d'exploitation du serveur ; no ou une cellule vide garde celui en place.",
+          "asset": "Chaque ligne ajoute ou met à jour un lien. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue. Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom. operating_system : yes marque le système d'exploitation du serveur ; no ou une cellule vide garde celui en place.",
           "application": "Chaque ligne ajoute ou met à jour un lien déclaré. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue."
         },
         "exportNoteApplication": "Le fichier contient les liens déclarés. Les liens déduits des serveurs n'y figurent pas."

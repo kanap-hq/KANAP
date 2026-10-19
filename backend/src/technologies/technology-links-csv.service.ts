@@ -17,7 +17,7 @@ import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
 
 export const ASSET_LINK_CSV_HEADERS = [
-  'asset_name', 'technology_reference', 'technology_name', 'version', 'operating_system', 'notes', 'source',
+  'asset_reference', 'asset_name', 'technology_reference', 'technology_name', 'version', 'operating_system', 'notes', 'source',
 ] as const;
 
 export const APPLICATION_LINK_CSV_HEADERS = [
@@ -60,7 +60,7 @@ type LinkSide = 'asset' | 'application';
 
 /** The server or application a row names. `is_cluster` is the asset's, false for an application. */
 type Subject = { id: string; is_cluster: boolean };
-type SubjectRow = Subject & { name_key: string; reference_key: string | null };
+type SubjectRow = Subject & { name: string; name_key: string; reference_key: string | null };
 type Subjects = { byName: Map<string, SubjectRow[]>; byReference: Map<string, SubjectRow> };
 type TechRow = { id: string; name: string; item_number: number; family: string };
 type StoredLink = { id: string; subject_id: string; notes: string | null; is_operating_system: boolean };
@@ -112,10 +112,10 @@ export class TechnologyLinksCsvService {
     const rows: string[][] = [];
     if (scope === 'data') {
       const stored: Array<{
-        asset_name: string; item_number: number; technology_name: string; version: string | null;
+        asset_reference: string | null; asset_name: string; item_number: number; technology_name: string; version: string | null;
         is_operating_system: boolean; notes: string | null; source: string;
       }> = await ctx.manager.query(
-        `SELECT a.name AS asset_name, t.item_number, t.name AS technology_name, v.label AS version,
+        `SELECT a.asset_reference, a.name AS asset_name, t.item_number, t.name AS technology_name, v.label AS version,
                 at.is_operating_system, at.notes, at.source
            FROM asset_technologies at
            JOIN assets a ON a.tenant_id = at.tenant_id AND a.id = at.asset_id
@@ -127,7 +127,7 @@ export class TechnologyLinksCsvService {
       );
       for (const row of stored) {
         rows.push([
-          row.asset_name, `TEC-${row.item_number}`, row.technology_name, row.version ?? '',
+          row.asset_reference ?? '', row.asset_name, `TEC-${row.item_number}`, row.technology_name, row.version ?? '',
           row.is_operating_system ? 'yes' : 'no', row.notes ?? '', row.source,
         ]);
       }
@@ -139,19 +139,39 @@ export class TechnologyLinksCsvService {
   }
 
   /**
-   * Add or update server links. The server matches by name (unknown or several: a row error; a
-   * retired asset is accepted). `operating_system` `yes` asks for the mark; `no` and empty never
-   * clear one.
+   * Add or update server links. The server matches by `asset_reference` (`AST-n`) when the cell is
+   * filled, otherwise by name (unknown or several: a row error; a retired asset is accepted). A
+   * reference and a name that name two different servers are a row error. `operating_system`
+   * `yes` asks for the mark; `no` and empty never clear one.
    */
   async importAssetLinks(request: ImportRequest, ctx: TechnologyLinksCsvContext): Promise<TechnologyLinksImportResult> {
     return this.importLinks(request, ctx, {
       side: 'asset',
       headers: ASSET_LINK_CSV_HEADERS,
       resolve: async (rows) => {
-        const assets = await this.assetsByName(ctx, rows.map((row) => cellOf(row, 'asset_name').toLowerCase()));
+        const assets = await this.assetsByKey(
+          ctx,
+          rows.map((row) => cellOf(row, 'asset_reference').toUpperCase()),
+          rows.filter((row) => !cellOf(row, 'asset_reference')).map((row) => cellOf(row, 'asset_name').toLowerCase()),
+        );
         return (row) => {
+          const reference = cellOf(row, 'asset_reference');
           const name = cellOf(row, 'asset_name');
-          if (!name) return rowError(row.line, 'asset_name', 'CSV_VALUE_REQUIRED', 'A value is required.');
+          if (reference) {
+            const hit = assets.byReference.get(reference.toUpperCase());
+            if (!hit) return notFound(row.line, 'asset_reference', reference);
+            if (name && name.toLowerCase() !== hit.name_key) {
+              return rowError(
+                row.line, 'asset_name', 'CSV_ASSET_REFERENCE_MISMATCH',
+                `"${reference}" is the server "${hit.name}". Fix the reference or the name, or leave one of them empty.`,
+                { value: reference, name: hit.name },
+              );
+            }
+            return { id: hit.id, is_cluster: hit.is_cluster };
+          }
+          if (!name) {
+            return rowError(row.line, 'asset_reference', 'CSV_ASSET_REQUIRED', 'Name the server by its reference (AST-n) or its name.');
+          }
           return matchOne(row.line, 'asset_name', name, assets.byName.get(name.toLowerCase()) ?? []);
         };
       },
@@ -378,17 +398,17 @@ export class TechnologyLinksCsvService {
     }
   }
 
-  private async assetsByName(ctx: TechnologyLinksCsvContext, names: string[]): Promise<Subjects> {
+  private async assetsByKey(ctx: TechnologyLinksCsvContext, references: string[], names: string[]): Promise<Subjects> {
+    const refs = unique(references);
     const wanted = unique(names);
-    const rows: SubjectRow[] = wanted.length
-      ? await ctx.manager.query(
-        `SELECT id::text AS id, lower(btrim(name)) AS name_key, NULL::text AS reference_key,
-                COALESCE(is_cluster, false) AS is_cluster
-           FROM assets
-          WHERE tenant_id = $1 AND lower(btrim(name)) = ANY($2::text[])`,
-        [ctx.tenantId, wanted],
-      )
-      : [];
+    if (refs.length === 0 && wanted.length === 0) return indexSubjects([]);
+    const rows: SubjectRow[] = await ctx.manager.query(
+      `SELECT id::text AS id, btrim(name) AS name, lower(btrim(name)) AS name_key, upper(asset_reference) AS reference_key,
+              COALESCE(is_cluster, false) AS is_cluster
+         FROM assets
+        WHERE tenant_id = $1 AND (upper(asset_reference) = ANY($2::text[]) OR lower(btrim(name)) = ANY($3::text[]))`,
+      [ctx.tenantId, refs, wanted],
+    );
     return indexSubjects(rows);
   }
 
@@ -406,7 +426,7 @@ export class TechnologyLinksCsvService {
       ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('a', `$${params.length}`)}`)
       : '';
     const rows: SubjectRow[] = await ctx.manager.query(
-      `SELECT a.id::text AS id, lower(btrim(a.name)) AS name_key, upper(a.sequential_id) AS reference_key, false AS is_cluster
+      `SELECT a.id::text AS id, btrim(a.name) AS name, lower(btrim(a.name)) AS name_key, upper(a.sequential_id) AS reference_key, false AS is_cluster
          FROM applications a
         WHERE a.tenant_id = $1
           AND (upper(a.sequential_id) = ANY($2::text[]) OR lower(btrim(a.name)) = ANY($3::text[]))

@@ -109,6 +109,8 @@
   "CSV_LINK_DUPLICATE": "Ce lien figure déjà à la ligne {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Indiquez la technologie par sa référence (TEC-n) ou par son nom.",
   "CSV_APPLICATION_REQUIRED": "Indiquez l'application par sa référence (APP-n) ou par son nom.",
+  "CSV_ASSET_REQUIRED": "Indiquez le serveur par sa référence (AST-n) ou par son nom.",
+  "CSV_ASSET_REFERENCE_MISMATCH": "« {{value}} » est le serveur « {{name}} ». Corrigez la référence ou le nom, ou laissez l'un des deux vide.",
   "CSV_OPERATING_SYSTEM_VALUE": "« {{value}} » n'est pas valide. Utilisez yes ou no.",
   "CSV_OPERATING_SYSTEM_FAMILY": "Seul un système d'exploitation peut être marqué comme système d'exploitation.",
   "CSV_OPERATING_SYSTEM_CLUSTER": "Un cluster n'a pas de système d'exploitation.",

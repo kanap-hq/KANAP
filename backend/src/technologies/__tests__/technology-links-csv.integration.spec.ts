@@ -19,7 +19,7 @@ import { application, asset, installed, one, technology, version, type AuditEntr
 // applications and technologies (application_technologies, declared links).
 // A clean file writes in the caller's transaction. A file with a row error writes nothing.
 
-const HEADER = 'asset_name,technology_reference,technology_name,version,operating_system,notes,source';
+const HEADER = 'asset_reference,asset_name,technology_reference,technology_name,version,operating_system,notes,source';
 
 function csvService(entries?: AuditEntry[]) {
   const audit = { log: async (entry: AuditEntry) => { entries?.push(entry); } };
@@ -47,8 +47,14 @@ function csvFile(content: string, name = 'servers.csv'): Express.Multer.File {
   return { buffer: Buffer.from(content, 'utf8'), originalname: name } as Express.Multer.File;
 }
 
+/** Rows without `asset_reference`: the server matches by name. */
 function fileOf(lines: string[], name = 'servers.csv') {
-  return csvFile([HEADER, ...lines].join('\n'), name);
+  return csvFile([HEADER, ...lines.map((line) => `,${line}`)].join('\n'), name);
+}
+
+async function assetReference(runner: QueryRunner, assetId: string): Promise<string> {
+  const [row] = await runner.query(`SELECT asset_reference FROM assets WHERE id = $1`, [assetId]);
+  return row.asset_reference as string;
 }
 
 function textBody(content: string): string {
@@ -107,11 +113,14 @@ async function testRoundTrip() {
     assert.equal(exported.filename, 'servers-technologies.csv');
     const body = textBody(exported.content);
     assert.ok(body.includes("'=1+1"), 'a formula note is guarded');
-    assert.deepEqual(body.split('\n').slice(1).map((line) => line.split(',').slice(0, 5)), [
-      ['alpha', 'TEC-2', 'SQL Server', '', 'no'],
-      ['alpha', 'TEC-2', 'SQL Server', '2019', 'no'],
-      ['alpha', 'TEC-3', 'Windows Server', '', 'yes'],
-      ['beta', 'TEC-2', 'SQL Server', '', 'no'],
+    const alphaRef = await assetReference(runner, srv);
+    const betaRef = await assetReference(runner, old);
+    assert.match(alphaRef, /^AST-\d+$/);
+    assert.deepEqual(body.split('\n').slice(1).map((line) => line.split(',').slice(0, 6)), [
+      [alphaRef, 'alpha', 'TEC-2', 'SQL Server', '', 'no'],
+      [alphaRef, 'alpha', 'TEC-2', 'SQL Server', '2019', 'no'],
+      [alphaRef, 'alpha', 'TEC-3', 'Windows Server', '', 'yes'],
+      [betaRef, 'beta', 'TEC-2', 'SQL Server', '', 'no'],
     ]);
     const before = await storedLinks(runner, tenantId);
     const loaded = await csv.importAssetLinks({ file: csvFile(exported.content, 'round.csv'), dryRun: false, language: 'en' }, ctx);
@@ -210,7 +219,7 @@ async function testCreateProvenance() {
     assert.deepEqual(srvLink, { source: 'import', source_ref: 'first.csv', notes: 'renamed' });
 
     const blankName = await csv.importAssetLinks({
-      file: csvFile([HEADER, 'Other,,SQL Server,2019,,second,'].join('\n'), '   '),
+      file: csvFile([HEADER, ',Other,,SQL Server,2019,,second,'].join('\n'), '   '),
       dryRun: false,
       language: 'en',
     }, ctx);
@@ -224,7 +233,7 @@ async function testCreateProvenance() {
     assert.deepEqual(named, { notes: 'second', source_ref: 'first.csv' });
 
     const noSourceColumn = await csv.importAssetLinks({
-      file: csvFile('asset_name,technology_reference,technology_name,version,operating_system,notes\nSrv,TEC-2,SQL Server,,,from-short\n'),
+      file: csvFile('asset_reference,asset_name,technology_reference,technology_name,version,operating_system,notes\n,Srv,TEC-2,SQL Server,,,from-short\n'),
       dryRun: false,
       language: 'en',
     }, ctx);
@@ -284,6 +293,56 @@ async function testKeepsManualProvenance() {
   });
 }
 
+async function testHomonymServers() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'links-homonyms');
+    const prod = await asset(runner, tenantId, 'web01');
+    const test = await asset(runner, tenantId, 'WEB01');
+    await asset(runner, tenantId, 'db01');
+    const sql = await technology(runner, tenantId, 2, 'SQL Server', 'database');
+    await installed(runner, tenantId, prod, sql, null, 'manual');
+    await installed(runner, tenantId, test, sql, null, 'manual');
+    const ctx = caller(runner, tenantId);
+    const csv = csvService();
+    const prodRef = await assetReference(runner, prod);
+    const testRef = await assetReference(runner, test);
+
+    const exported = await csv.exportAssetLinks('data', ctx, 'en');
+    const lines = textBody(exported.content).split('\n').slice(1);
+    assert.deepEqual(lines.map((line) => line.split(',').slice(0, 2)).sort(), [[prodRef, 'web01'], [testRef, 'WEB01']].sort());
+    const before = await storedLinks(runner, tenantId);
+    const edited = exported.content.replace(`${testRef},WEB01,TEC-2,SQL Server,,no,,`, `${testRef},WEB01,TEC-2,SQL Server,,no,recette,`);
+    assert.notEqual(edited, exported.content, 'the note of the second web01 is edited');
+    const round = await csv.importAssetLinks({ file: csvFile(edited, 'round.csv'), dryRun: false, language: 'en' }, ctx);
+    assert.deepEqual(
+      { ok: round.ok, errors: round.errors, updated: round.updated, unchanged: round.unchanged },
+      { ok: true, errors: [], updated: 1, unchanged: 1 },
+      'two servers with one name export and import again by their reference',
+    );
+    const [testNotes] = await runner.query(`SELECT notes FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2`, [tenantId, test]);
+    assert.equal(testNotes.notes, 'recette');
+    assert.equal((await storedLinks(runner, tenantId)).length, before.length);
+
+    const refused = await csv.importAssetLinks({
+      file: csvFile([
+        HEADER,
+        `${prodRef.toLowerCase()},,,SQL Server,2019,,,`,
+        `AST-999999,web01,,SQL Server,,,,`,
+        `${prodRef},db01,,SQL Server,,,,`,
+        `,web01,,SQL Server,,,,`,
+        `${testRef}, web01 ,,SQL Server,,,lower case name,`,
+      ].join('\n')),
+      dryRun: true,
+      language: 'en',
+    }, ctx);
+    assert.deepEqual(codes(refused), [
+      { row: 3, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'AST-999999' } },
+      { row: 4, code: 'CSV_ASSET_REFERENCE_MISMATCH', params: { value: prodRef, name: 'web01' } },
+      { row: 5, code: 'CSV_NAME_AMBIGUOUS', params: { value: 'web01' } },
+    ]);
+  });
+}
+
 async function testRowErrors() {
   await inRolledBackTransaction(async (runner) => {
     const tenantId = await seedTenant(runner, 'links-errors');
@@ -322,7 +381,7 @@ async function testRowErrors() {
       { row: 8, code: 'CSV_OPERATING_SYSTEM_VALUE', params: { value: 'maybe' } },
       { row: 9, code: 'CSV_VERSION_TOO_LONG', params: { max: 100 } },
       { row: 10, code: 'CSV_NOTES_TOO_LONG', params: { max: 2000 } },
-      { row: 11, code: 'CSV_VALUE_REQUIRED', params: null },
+      { row: 11, code: 'CSV_ASSET_REQUIRED', params: null },
       { row: 12, code: 'CSV_TECHNOLOGY_REQUIRED', params: null },
     ]);
     assert.ok(refused.errors.some((error) => error.message.includes('Adopt it from the catalog first.')));
@@ -340,7 +399,7 @@ async function testRowErrors() {
     assert.deepEqual(await counts(runner, tenantId), before);
 
     const extra = await csv.importAssetLinks({
-      file: csvFile(`${HEADER},extra\nSrv,,SQL Server,,,\n`),
+      file: csvFile(`${HEADER},extra\n,Srv,,SQL Server,,,\n`),
       dryRun: false,
       language: 'en',
     }, ctx);
@@ -737,6 +796,7 @@ runSpecs('technology-links-csv.integration.spec', [
   ['round trip', testRoundTrip],
   ['create and provenance', testCreateProvenance],
   ['manual provenance stays', testKeepsManualProvenance],
+  ['servers with the same name', testHomonymServers],
   ['row errors write nothing', testRowErrors],
   ['operating system', testOperatingSystem],
   ['tenant isolation', testTenantIsolation],

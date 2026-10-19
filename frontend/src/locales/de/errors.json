@@ -109,6 +109,8 @@
   "CSV_LINK_DUPLICATE": "Diese Verknüpfung steht bereits in Zeile {{firstRow}}.",
   "CSV_TECHNOLOGY_REQUIRED": "Nennen Sie die Technologie über ihre Referenz (TEC-n) oder ihren Namen.",
   "CSV_APPLICATION_REQUIRED": "Nennen Sie die Anwendung über ihre Referenz (APP-n) oder ihren Namen.",
+  "CSV_ASSET_REQUIRED": "Nennen Sie den Server über seine Referenz (AST-n) oder seinen Namen.",
+  "CSV_ASSET_REFERENCE_MISMATCH": "„{{value}}“ ist der Server „{{name}}“. Korrigieren Sie die Referenz oder den Namen, oder lassen Sie eines der beiden Felder leer.",
   "CSV_OPERATING_SYSTEM_VALUE": "„{{value}}“ ist ungültig. Verwenden Sie yes oder no.",
   "CSV_OPERATING_SYSTEM_FAMILY": "Nur ein Betriebssystem kann als Betriebssystem markiert werden.",
   "CSV_OPERATING_SYSTEM_CLUSTER": "Ein Cluster hat kein Betriebssystem.",
