@@ -32,6 +32,7 @@ import {
   managedFieldsOf,
   mapNetboxObject,
   matchCatalogOption,
+  suggestClusterAsset,
   suggestOperatingSystem,
 } from './netbox-mapper';
 import { ExistingAsset } from './netbox-matcher';
@@ -569,9 +570,10 @@ export class NetboxSyncService {
   }
 
   /**
-   * Roles, sites and platforms as Netbox reports them, next to the KANAP asset
-   * types, locations and operating systems they can be matched with, plus a
-   * suggestion for every entry whose name already points at one.
+   * Roles, sites, platforms and clusters as Netbox reports them, next to the
+   * KANAP asset types, locations, operating systems and clusters they can be
+   * matched with, plus a suggestion for every entry whose name already points
+   * at one.
    */
   async mappingOptions(manager: EntityManager, tenantId: string) {
     const config = await this.config.getConfig(manager, tenantId);
@@ -584,8 +586,9 @@ export class NetboxSyncService {
     let sites;
     let platforms;
     let virtualMachineCount;
+    let clusters;
     try {
-      [deviceRoles, sites, platforms, virtualMachineCount] = await Promise.all([
+      [deviceRoles, sites, platforms, virtualMachineCount, clusters] = await Promise.all([
         this.client.listRoles(connection),
         this.client.listSites(connection),
         // Netbox permissions are granted per object type: a token that reads
@@ -599,6 +602,15 @@ export class NetboxSyncService {
           return null;
         }),
         this.client.countVirtualMachines(connection),
+        // Clusters are optional the same way: the import of devices and virtual
+        // machines does not need them, and a token that cannot read them must
+        // not take the rest of the tab down.
+        this.client.listClusters(connection).catch((error) => {
+          this.logger.warn(
+            `Netbox clusters could not be read for tenant ${tenantId}: ${plainErrorMessage(error)}`,
+          );
+          return null;
+        }),
       ]);
     } catch (error) {
       throw new BadRequestException(plainErrorMessage(error));
@@ -620,6 +632,12 @@ export class NetboxSyncService {
     const operatingSystems = await this.operatingSystemChoices(manager, tenantId);
     const locations: Array<{ id: string; name: string }> = await manager.query(
       `SELECT id, name FROM locations WHERE tenant_id = $1 ORDER BY name ASC`,
+      [tenantId],
+    );
+    const kanapClusters: Array<{ id: string; name: string }> = await manager.query(
+      `SELECT id, name FROM assets
+       WHERE tenant_id = $1 AND is_cluster = true AND status IS DISTINCT FROM 'retired'
+       ORDER BY name ASC`,
       [tenantId],
     );
     const assetKinds = settings.serverKinds.map((option) => ({ code: option.code, label: option.label }));
@@ -650,6 +668,15 @@ export class NetboxSyncService {
       const match = suggestOperatingSystem(platform.name, operatingSystems);
       if (match) suggestedOsMap[platform.slug] = match.code;
     }
+    // A suggestion only pre-fills the form. Nothing is attached until the
+    // administrator saves the match.
+    const savedClusterMap = saved.cluster_map ?? {};
+    const suggestedClusterMap: Record<string, string> = {};
+    for (const cluster of clusters ?? []) {
+      if (savedClusterMap[cluster.id]) continue;
+      const match = suggestClusterAsset(cluster.name, kanapClusters);
+      if (match) suggestedClusterMap[cluster.id] = match;
+    }
 
     return {
       roles,
@@ -657,15 +684,22 @@ export class NetboxSyncService {
       platforms: platforms ?? [],
       /** The token could not read them; the operating systems cannot be matched. */
       platforms_unavailable: platforms == null,
+      clusters: clusters ?? [],
+      /** The token could not read them; virtual machines cannot be attached from here. */
+      clusters_unavailable: clusters == null,
       asset_kinds: assetKinds,
       locations,
       operating_systems: operatingSystems,
+      kanap_clusters: kanapClusters,
       role_map: saved.role_map,
       site_map: saved.site_map,
       os_map: saved.os_map,
+      cluster_map: savedClusterMap,
+      cluster_names: saved.cluster_names ?? {},
       suggested_role_map: suggestedRoleMap,
       suggested_site_map: suggestedSiteMap,
       suggested_os_map: suggestedOsMap,
+      suggested_cluster_map: suggestedClusterMap,
     };
   }
 

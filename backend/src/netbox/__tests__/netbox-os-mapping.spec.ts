@@ -232,20 +232,25 @@ async function main() {
       listRoles: async () => [{ slug: 'server', name: 'Server', device_count: 3, vm_count: 0 }],
       listSites: async () => [{ slug: 'paris', name: 'Paris DC', device_count: 3, vm_count: 0 }],
       listPlatforms,
+      listClusters: async () => [],
       countVirtualMachines: async () => 2,
     };
     const config: any = {
       getConfig: async () => ({ metadata_json: {} }),
       toView: () => ({ configured: true }),
       buildConnection: () => ({ baseUrl: BASE_URL, token: 'secret' }),
-      getMapping: () => ({ role_map: {}, site_map: {}, os_map: {} }),
+      getMapping: () => ({ role_map: {}, site_map: {}, os_map: {}, cluster_map: {} }),
     };
     const itOpsSettings: any = {
       getSettings: async () => ({
         serverKinds: [{ code: 'physical_server', label: 'Server' }],
       }),
     };
-    const manager: any = { query: async () => [{ id: 'loc-1', name: 'Paris DC' }] };
+    const manager: any = {
+      query: async (sql: string) => (
+        String(sql).includes('is_cluster') ? [] : [{ id: 'loc-1', name: 'Paris DC' }]
+      ),
+    };
     const operatingSystems = { mappingChoices: async () => OPERATING_SYSTEMS };
     const service = new NetboxSyncService({} as any, config, client, itOpsSettings, {} as any, {} as any, operatingSystems as any);
     return { service, manager };

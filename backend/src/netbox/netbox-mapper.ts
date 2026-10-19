@@ -194,6 +194,27 @@ export function suggestOperatingSystem<T extends CatalogOptionLike>(
 }
 
 /**
+ * The KANAP cluster a Netbox cluster should be pre-filled with. Only an exact
+ * name, ignoring case and surrounding spaces, and only when exactly one asset
+ * has it. Two assets with that name leave the choice to the administrator.
+ * The suggestion is never written until the match is saved.
+ */
+export function suggestClusterAsset(
+  netboxName: unknown,
+  assets: Array<{ id: string; name: string }>,
+): string | null {
+  const target = String(netboxName ?? '').trim().toLowerCase();
+  if (!target) return null;
+  let found: string | null = null;
+  for (const asset of assets) {
+    if (String(asset.name ?? '').trim().toLowerCase() !== target) continue;
+    if (found) return null;
+    found = asset.id;
+  }
+  return found;
+}
+
+/**
  * The operating system, with the notice a value KANAP cannot place deserves.
  * A saved match on the platform slug decides first. Its value is a readable label
  * that the operating-system resolver turns into a technology of any family (VMware

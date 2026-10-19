@@ -69,7 +69,16 @@ export class NetboxController {
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'admin')
   @Put('mapping')
-  saveMapping(@Body() body: { role_map?: unknown; site_map?: unknown; os_map?: unknown }, @Req() req: any) {
+  saveMapping(
+    @Body() body: {
+      role_map?: unknown;
+      site_map?: unknown;
+      os_map?: unknown;
+      cluster_map?: unknown;
+      cluster_names?: unknown;
+    },
+    @Req() req: any,
+  ) {
     return this.config.saveMapping(this.manager(req), this.tenantId(req), body ?? {});
   }
 
