@@ -518,8 +518,6 @@
       "serversInZone": "Serveurs de cette zone",
       "attributes": {
         "adminGroup": "Groupe d'administrateurs",
-        "privilegeLevel": "Niveau de privilèges",
-        "secretsLocation": "Secrets",
         "directoryServices": "Services d'annuaire"
       },
       "columns": {
@@ -611,7 +609,7 @@
       "lists": {
         "adminZones": {
           "title": "Zones d'administration",
-          "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre, à quel niveau de privilèges, et où sont conservés ses secrets. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
+          "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
           "usage": "Technologies / Aperçu, vue de l'administration"
         },
         "accessMethods": {
@@ -728,9 +726,7 @@
         "accounts": "Comptes",
         "machines": "Machines",
         "trusts": "Approbations",
-        "adminGroup": "Groupe d'administrateurs",
-        "privilegeLevel": "Niveau de privilèges",
-        "secretsLocation": "Emplacement des secrets"
+        "adminGroup": "Groupe d'administrateurs"
       },
       "placeholders": {
         "connectionName": "ex. : HTTPS",
@@ -743,8 +739,6 @@
         "machineCount": "ex. : 300",
         "adminZoneName": "ex. : Tier 0",
         "adminGroup": "ex. : Admins du domaine",
-        "privilegeLevel": "ex. : Tier 0",
-        "secretsLocation": "ex. : Coffre de mots de passe, coffre A",
         "adminZoneDescription": "ex. : Services d'annuaire et d'identité",
         "select": "Sélectionner…"
       },

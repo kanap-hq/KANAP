@@ -45,8 +45,6 @@ export type AdministrationZone = {
   code: string | null;
   label: string | null;
   admin_group: string | null;
-  privilege_level: string | null;
-  secrets_location: string | null;
   description: string | null;
   deprecated: boolean;
   /** A zone code a technology or an asset carries that the catalog no longer has. */
@@ -160,8 +158,6 @@ export class AdministrationViewService {
         code,
         label: option?.label ?? code,
         admin_group: option?.admin_group ?? null,
-        privilege_level: option?.privilege_level ?? null,
-        secrets_location: option?.secrets_location ?? null,
         description: option?.description ?? null,
         deprecated: !!option?.deprecated,
         unknown,
@@ -264,10 +260,10 @@ export class AdministrationViewService {
     }
     const settings = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const familyLabel = new Map((settings.technologyFamilies ?? []).map((option) => [option.code, option.label]));
-    const headers = ['Zone', 'Administrator group', 'Privilege level', 'Secrets location', 'Technology reference', 'Technology', 'Family', 'Directory service', 'Servers', 'Servers in this zone'];
+    const headers = ['Zone', 'Administrator group', 'Technology reference', 'Technology', 'Family', 'Directory service', 'Servers', 'Servers in this zone'];
     const rows: string[][] = [];
     for (const zone of view.zones) {
-      const head = [zone.code === null ? 'No zone (to complete)' : zone.label ?? '', zone.admin_group ?? '', zone.privilege_level ?? '', zone.secrets_location ?? ''];
+      const head = [zone.code === null ? 'No zone (to complete)' : zone.label ?? '', zone.admin_group ?? ''];
       const zoneServers = zone.assets.map((asset) => asset.name).join(', ');
       if (!zone.technologies.length) rows.push([...head, '', '', '', '', '', zoneServers]);
       for (const technology of zone.technologies) {

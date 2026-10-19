@@ -19,8 +19,6 @@ export type AdministrationZone = {
   code: string | null;
   label: string | null;
   admin_group: string | null;
-  privilege_level: string | null;
-  secrets_location: string | null;
   description: string | null;
   deprecated: boolean;
   unknown: boolean;
@@ -84,13 +82,11 @@ function Servers({ servers }: { servers: Server[] }) {
   );
 }
 
-/** A zone's attributes on one quiet line: "Administrator group: … · Privilege level: … · Secrets: …". */
+/** A zone's administrator group on one quiet line. */
 function ZoneAttributes({ zone }: { zone: AdministrationZone }) {
   const { t } = useTranslation('it');
   const parts = [
     [t('pages.administrationView.attributes.adminGroup'), zone.admin_group],
-    [t('pages.administrationView.attributes.privilegeLevel'), zone.privilege_level],
-    [t('pages.administrationView.attributes.secretsLocation'), zone.secrets_location],
   ].filter(([, value]) => value) as Array<[string, string]>;
   return (
     <Stack spacing={0.25} sx={{ mb: 1 }}>

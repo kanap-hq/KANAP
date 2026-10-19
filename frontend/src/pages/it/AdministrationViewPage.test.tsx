@@ -26,15 +26,15 @@ vi.mock('../../hooks/useItOpsEnumOptions', () => ({
 const VIEW: AdministrationView = {
   zones: [
     {
-      code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core',
+      code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', description: 'Identity core',
       deprecated: false, unknown: false, server_count: 2,
       technologies: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory', family: 'directory', directory: true, servers: [{ id: 'asset-dc1', name: 'dc1', reference: null, via_name: null }] }],
       assets: [{ id: 'asset-fw1', name: 'fw1', reference: 'AST-4', kind: 'firewall' }],
       directory_services: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory' }],
     },
-    { code: 'tier_1', label: 'Tier 1', admin_group: null, privilege_level: null, secrets_location: null, description: null, deprecated: true, unknown: false, server_count: 0, technologies: [], assets: [], directory_services: [] },
+    { code: 'tier_1', label: 'Tier 1', admin_group: null, description: null, deprecated: true, unknown: false, server_count: 0, technologies: [], assets: [], directory_services: [] },
     {
-      code: null, label: null, admin_group: null, privilege_level: null, secrets_location: null, description: null, deprecated: false, unknown: false, server_count: 2,
+      code: null, label: null, admin_group: null, description: null, deprecated: false, unknown: false, server_count: 2,
       technologies: [{ id: 'tech-vs', reference: 'TEC-3', name: 'vSphere', family: 'hypervisor', directory: false, servers: [{ id: 'asset-h', name: 'host1', reference: null, via_name: null }, { id: 'asset-vm', name: 'vm1', reference: null, via_name: 'host1' }] }],
       assets: [],
       directory_services: [],
@@ -69,7 +69,6 @@ describe('AdministrationViewPage', () => {
     renderPage();
     const tier0 = await screen.findByRole('region', { name: 'Niveau 0' });
     expect(within(tier0).getByText('Domain admins')).toBeInTheDocument();
-    expect(within(tier0).getByText('Vault A')).toBeInTheDocument();
     expect(within(tier0).getByText('Identity core')).toBeInTheDocument();
     const table = within(tier0).getByRole('table', { name: 'Niveau 0' });
     expect(within(table).getByText('TEC-1')).toBeInTheDocument();

@@ -518,8 +518,6 @@
       "serversInZone": "Servidores de esta zona",
       "attributes": {
         "adminGroup": "Grupo de administradores",
-        "privilegeLevel": "Nivel de privilegios",
-        "secretsLocation": "Secretos",
         "directoryServices": "Servicios de directorio"
       },
       "columns": {
@@ -611,7 +609,7 @@
       "lists": {
         "adminZones": {
           "title": "Zonas de administración",
-          "description": "Las zonas de su modelo de administración, por ejemplo el nivel 0 para el directorio y sus controladores. Cada zona indica quién la administra, con qué nivel de privilegios y dónde se guardan sus secretos. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
+          "description": "Las zonas de su modelo de administración, por ejemplo el nivel 0 para el directorio y sus controladores. Cada zona indica quién la administra. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
           "usage": "Tecnologías / Resumen, vista de la administración"
         },
         "accessMethods": {
@@ -728,9 +726,7 @@
         "accounts": "Cuentas",
         "machines": "Equipos",
         "trusts": "Confianzas",
-        "adminGroup": "Grupo de administradores",
-        "privilegeLevel": "Nivel de privilegios",
-        "secretsLocation": "Ubicación de los secretos"
+        "adminGroup": "Grupo de administradores"
       },
       "placeholders": {
         "connectionName": "p. ej., HTTPS",
@@ -743,8 +739,6 @@
         "machineCount": "p. ej., 300",
         "adminZoneName": "p. ej., Tier 0",
         "adminGroup": "p. ej., Admins. del dominio",
-        "privilegeLevel": "p. ej., Tier 0",
-        "secretsLocation": "p. ej., Bóveda de contraseñas, caja A",
         "adminZoneDescription": "p. ej., Servicios de directorio e identidad",
         "select": "Seleccionar…"
       },

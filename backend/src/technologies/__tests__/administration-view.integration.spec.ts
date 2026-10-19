@@ -31,8 +31,8 @@ function service(settingsByTenant: Map<string, Settings>) {
 }
 
 const ZONES = [
-  { code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core' },
-  { code: 'tier_1', label: 'Tier 1', admin_group: 'Server admins', privilege_level: 'Tier 1' },
+  { code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', description: 'Identity core' },
+  { code: 'tier_1', label: 'Tier 1', admin_group: 'Server admins' },
   { code: 'old', label: 'Old zone', deprecated: true },
 ];
 const DOMAINS = [
@@ -114,8 +114,8 @@ async function testView() {
     assert.deepEqual(view.zones.map((zone) => zone.code), ['tier_0', 'tier_1', null], 'catalog zones by name, the retired empty zone hidden, no zone last');
     const [tier0, tier1, none] = view.zones;
     assert.deepEqual(
-      { group: tier0.admin_group, level: tier0.privilege_level, secrets: tier0.secrets_location, description: tier0.description },
-      { group: 'Domain admins', level: 'Tier 0', secrets: 'Vault A', description: 'Identity core' },
+      { group: tier0.admin_group, description: tier0.description },
+      { group: 'Domain admins', description: 'Identity core' },
     );
     assert.deepEqual(tier0.technologies.map((t) => [t.reference, t.name, t.servers.map((server) => server.name)]), [
       ['TEC-1', 'Active Directory', ['dc1', 'dc2']],
@@ -126,7 +126,7 @@ async function testView() {
     assert.equal(tier0.server_count, 5, 'union of technology servers and direct assets');
     assert.deepEqual(tier1.technologies, []);
     assert.deepEqual(tier1.assets, []);
-    assert.equal(tier1.secrets_location, null);
+    assert.equal(tier1.admin_group, 'Server admins');
 
     assert.equal(none.label, null);
     assert.deepEqual(none.technologies.map((t) => t.name), ['vSphere']);
@@ -183,10 +183,10 @@ async function testCsv() {
     const zones = await svc.csv({ list: 'zones', language: 'en' }, opts);
     assert.equal(zones.filename, 'administration_view_zones.csv');
     const zoneLines = zones.content.replace(/^﻿/, '').trim().split(/\r?\n/);
-    assert.equal(zoneLines[0], 'Zone,Administrator group,Privilege level,Secrets location,Technology reference,Technology,Family,Directory service,Servers,Servers in this zone');
-    assert.ok(zoneLines.includes('Tier 0,Domain admins,Tier 0,Vault A,TEC-1,Active Directory,Directory and identity,Yes,"dc1, dc2",fw1'), zones.content);
-    assert.ok(zoneLines.includes('Tier 1,Server admins,Tier 1,,,,,,,'), 'a zone without technologies has its own row');
-    assert.ok(zoneLines.includes('No zone (to complete),,,,TEC-3,vSphere,Hypervisor,No,"host1, vm1",'), zones.content);
+    assert.equal(zoneLines[0], 'Zone,Administrator group,Technology reference,Technology,Family,Directory service,Servers,Servers in this zone');
+    assert.ok(zoneLines.includes('Tier 0,Domain admins,TEC-1,Active Directory,Directory and identity,Yes,"dc1, dc2",fw1'), zones.content);
+    assert.ok(zoneLines.includes('Tier 1,Server admins,,,,,,'), 'a zone without technologies has its own row');
+    assert.ok(zoneLines.includes('No zone (to complete),,TEC-3,vSphere,Hypervisor,No,"host1, vm1",'), zones.content);
     const domains = await svc.csv({ list: 'domains', language: 'en' }, opts);
     const domainLines = domains.content.replace(/^﻿/, '').trim().split(/\r?\n/);
     assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');

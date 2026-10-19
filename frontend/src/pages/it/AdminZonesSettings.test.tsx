@@ -27,7 +27,7 @@ function wrap(children: React.ReactNode) {
 }
 
 const settings = {
-  adminZones: [{ code: 'tier_0', label: 'Tier 0', deprecated: false, admin_group: 'Domain admins', privilege_level: 'Tier 0' }],
+  adminZones: [{ code: 'tier_0', label: 'Tier 0', deprecated: false, admin_group: 'Domain admins' }],
   connectionTypes: [], subnets: [], domains: [], lockedCodes: {}, protectedCodes: {},
 } as unknown as ItOpsSettings;
 
@@ -35,9 +35,9 @@ describe('Administration zones settings', () => {
   it('hydrates the zones and marks an attribute change as a modification', () => {
     let state = reducer(initialState, { type: 'hydrate', payload: settings });
     expect(state.enums.adminZones.map((row: any) => [row.code, row.admin_group])).toEqual([['tier_0', 'Domain admins']]);
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map((row) => ({ ...row, secrets_location: 'Vault A' })) });
+    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' })) });
     expect(state.dirty.adminZones).toBe(true);
-    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map(({ secrets_location: _s, ...row }: any) => row) });
+    state = reducer(state, { type: 'setEnum', id: 'adminZones', items: state.enums.adminZones.map(({ description: _d, ...row }: any) => row) });
     expect(state.dirty.adminZones).toBe(false);
   });
 
@@ -59,8 +59,6 @@ describe('Administration zones settings', () => {
     wrap(<AdminZonesEditor items={settings.adminZones} onChange={vi.fn()} />);
     const limit = (name: string) => screen.getByRole('textbox', { name }).getAttribute('maxlength');
     expect(limit('pages.settings.columns.adminGroup Tier 0')).toBe('200');
-    expect(limit('pages.settings.columns.privilegeLevel Tier 0')).toBe('100');
-    expect(limit('pages.settings.columns.secretsLocation Tier 0')).toBe('200');
     expect(limit('pages.settings.columns.description Tier 0')).toBe('2000');
   });
 
@@ -75,9 +73,9 @@ describe('Administration zones settings', () => {
     const onChange = vi.fn();
     const { unmount } = wrap(<AdminZonesEditor items={settings.adminZones} onChange={onChange} />);
     expect(screen.getByDisplayValue('Domain admins')).toBeInTheDocument();
-    fireEvent.change(screen.getByRole('textbox', { name: 'pages.settings.columns.secretsLocation Tier 0' }), { target: { value: 'Vault A' } });
+    fireEvent.change(screen.getByRole('textbox', { name: 'pages.settings.columns.description Tier 0' }), { target: { value: 'Identity core' } });
     await vi.waitFor(() => expect(onChange).toHaveBeenCalled());
-    expect(onChange.mock.calls[onChange.mock.calls.length - 1][0][0]).toMatchObject({ code: 'tier_0', secrets_location: 'Vault A', admin_group: 'Domain admins' });
+    expect(onChange.mock.calls[onChange.mock.calls.length - 1][0][0]).toMatchObject({ code: 'tier_0', description: 'Identity core', admin_group: 'Domain admins' });
     unmount();
     wrap(<AdminZonesEditor items={[]} onChange={vi.fn()} />);
     expect(screen.getByText('pages.settings.empty.adminZones')).toBeInTheDocument();

@@ -518,8 +518,6 @@
       "serversInZone": "Server in dieser Zone",
       "attributes": {
         "adminGroup": "Administratorgruppe",
-        "privilegeLevel": "Berechtigungsstufe",
-        "secretsLocation": "Geheimnisse",
         "directoryServices": "Verzeichnisdienste"
       },
       "columns": {
@@ -611,7 +609,7 @@
       "lists": {
         "adminZones": {
           "title": "Administrationszonen",
-          "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet, mit welcher Berechtigungsstufe und wo ihre Geheimnisse aufbewahrt werden. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
+          "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
           "usage": "Technologien / Übersicht, Administrationssicht"
         },
         "accessMethods": {
@@ -728,9 +726,7 @@
         "accounts": "Konten",
         "machines": "Computer",
         "trusts": "Vertrauensstellungen",
-        "adminGroup": "Administratorgruppe",
-        "privilegeLevel": "Berechtigungsstufe",
-        "secretsLocation": "Ablageort der Geheimnisse"
+        "adminGroup": "Administratorgruppe"
       },
       "placeholders": {
         "connectionName": "z. B. HTTPS",
@@ -743,8 +739,6 @@
         "machineCount": "z. B. 300",
         "adminZoneName": "z. B. Tier 0",
         "adminGroup": "z. B. Domänen-Admins",
-        "privilegeLevel": "z. B. Tier 0",
-        "secretsLocation": "z. B. Passwort-Tresor, Tresor A",
         "adminZoneDescription": "z. B. Verzeichnis- und Identitätsdienste",
         "select": "Auswählen…"
       },

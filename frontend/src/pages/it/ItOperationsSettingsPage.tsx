@@ -107,7 +107,7 @@ const listsEqual = (a: ItOpsEnumOption[], b: ItOpsEnumOption[]): boolean => {
     if (((left as any).typicalPorts || undefined) !== ((right as any).typicalPorts || undefined)) return false;
     if (!!(left as any).is_physical !== !!(right as any).is_physical) return false;
     if (JSON.stringify((left as any).translations ?? null) !== JSON.stringify((right as any).translations ?? null)) return false;
-    for (const key of ['admin_group', 'privilege_level', 'secrets_location', 'description']) {
+    for (const key of ['admin_group', 'description']) {
       if (((left as any)[key] || undefined) !== ((right as any)[key] || undefined)) return false;
     }
   }
@@ -589,7 +589,7 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
 });
 
 /** The server's limits (`it-ops-settings.service.ts`): a longer value would be refused. */
-const ADMIN_ZONE_LIMITS = { admin_group: 200, privilege_level: 100, secrets_location: 200, description: 2000 } as const;
+const ADMIN_ZONE_LIMITS = { admin_group: 200, description: 2000 } as const;
 const MAX_COUNT = 100_000_000;
 
 interface AdminZonesEditorProps {
@@ -597,7 +597,7 @@ interface AdminZonesEditorProps {
   onChange: (items: AdminZoneOption[]) => void;
 }
 
-/** Administration zones: name, administrator group, privilege level, secrets location and description per zone. */
+/** Administration zones: name, administrator group and description per zone. */
 export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange }: AdminZonesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
@@ -637,8 +637,8 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
   const removal = useCatalogRemoval('adminZones');
   const translations = useCatalogTranslations();
   const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
-  const text = (item: any, key: 'admin_group' | 'privilege_level' | 'secrets_location' | 'description', placeholder: string) => (
-    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : key === 'privilege_level' ? 'privilegeLevel' : key === 'secrets_location' ? 'secretsLocation' : 'description'}`)} ${item.label}` }} />
+  const text = (item: any, key: 'admin_group' | 'description', placeholder: string) => (
+    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : 'description'}`)} ${item.label}` }} />
   );
 
   return (
@@ -651,19 +651,17 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
-              <TableCell sx={{ width: '12%' }}>{t('pages.settings.columns.privilegeLevel')}</TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.secretsLocation')}</TableCell>
-              <TableCell sx={{ width: '18%' }}>{t('pages.settings.columns.description')}</TableCell>
-              <TableCell sx={{ width: '6%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '12%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell sx={{ width: '22%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
+              <TableCell sx={{ width: '22%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
+              <TableCell sx={{ width: '28%' }}>{t('pages.settings.columns.description')}</TableCell>
+              <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
+              <TableCell align="right" sx={{ width: '20%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
             {localItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={5}>
                   <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.adminZones')}</Typography>
                 </TableCell>
               </TableRow>
@@ -675,8 +673,6 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
                   <IssueText issue={issues.get(localItems.indexOf(item))} />
                 </TableCell>
                 <TableCell>{text(item, 'admin_group', t('pages.settings.placeholders.adminGroup'))}</TableCell>
-                <TableCell>{text(item, 'privilege_level', t('pages.settings.placeholders.privilegeLevel'))}</TableCell>
-                <TableCell>{text(item, 'secrets_location', t('pages.settings.placeholders.secretsLocation'))}</TableCell>
                 <TableCell>{text(item, 'description', t('pages.settings.placeholders.adminZoneDescription'))}</TableCell>
                 <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

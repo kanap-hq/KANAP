@@ -102,13 +102,11 @@ export type DomainOption = {
 };
 
 /**
- * An administration zone (ANSSI mapping guide, administration view): who administers it, at which
- * privilege level, and where its secrets are kept. No zone is shipped: each organisation has its own.
+ * An administration zone (ANSSI mapping guide, administration view): the directory group or the
+ * team that administers it. No zone is shipped: each organisation has its own.
  */
 export type AdminZoneOption = ItOpsEnumOption & {
   admin_group?: string;
-  privilege_level?: string;
-  secrets_location?: string;
   description?: string;
 };
 
@@ -919,14 +917,10 @@ export class ItOpsSettingsService {
       const label = this.normalizeLabel(raw?.label, code);
       const translations = normalizeTranslations(raw?.translations);
       const admin_group = this.optionalText(raw?.admin_group, 'Administrator group', 200, strict);
-      const privilege_level = this.optionalText(raw?.privilege_level, 'Privilege level', 100, strict);
-      const secrets_location = this.optionalText(raw?.secrets_location, 'Secrets location', 200, strict);
       const description = this.optionalText(raw?.description, 'Description', 2000, strict);
       byCode.set(code, {
         code, label, deprecated: !!raw?.deprecated,
         ...(admin_group ? { admin_group } : {}),
-        ...(privilege_level ? { privilege_level } : {}),
-        ...(secrets_location ? { secrets_location } : {}),
         ...(description ? { description } : {}),
         ...(translations ? { translations } : {}),
       });

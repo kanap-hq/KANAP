@@ -518,8 +518,6 @@
       "serversInZone": "Servers in this zone",
       "attributes": {
         "adminGroup": "Administrator group",
-        "privilegeLevel": "Privilege level",
-        "secretsLocation": "Secrets",
         "directoryServices": "Directory services"
       },
       "columns": {
@@ -611,7 +609,7 @@
       "lists": {
         "adminZones": {
           "title": "Administration zones",
-          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it, at which privilege level, and where its secrets are kept. Find these in your administration policy or your privileged access model.",
+          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it. Find these in your administration policy or your privileged access model.",
           "usage": "Technologies / Overview, administration view"
         },
         "accessMethods": {
@@ -728,9 +726,7 @@
         "accounts": "Accounts",
         "machines": "Machines",
         "trusts": "Trusts",
-        "adminGroup": "Administrator group",
-        "privilegeLevel": "Privilege level",
-        "secretsLocation": "Secrets location"
+        "adminGroup": "Administrator group"
       },
       "placeholders": {
         "connectionName": "e.g., HTTPS",
@@ -743,8 +739,6 @@
         "machineCount": "e.g., 300",
         "adminZoneName": "e.g., Tier 0",
         "adminGroup": "e.g., Domain admins",
-        "privilegeLevel": "e.g., Tier 0",
-        "secretsLocation": "e.g., Password vault, safe A",
         "adminZoneDescription": "e.g., Directory and identity services",
         "select": "Select…"
       },
