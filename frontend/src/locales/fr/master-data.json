@@ -123,6 +123,7 @@
       "turnoverYear": "Chiffre d'affaires ({{year}})"
     },
     "pinnedTotal": "Total",
+    "turnoverTotalFxMissing": "{{value}} (pas encore de taux pour {{currencies}}, compté sans conversion)",
     "export": "Exporter les sociétés",
     "import": "Importer les sociétés",
     "previous": "Société précédente",

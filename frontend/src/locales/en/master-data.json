@@ -123,6 +123,7 @@
       "turnoverYear": "Turnover ({{year}})"
     },
     "pinnedTotal": "Total",
+    "turnoverTotalFxMissing": "{{value}} (no rate yet for {{currencies}}, counted unconverted)",
     "export": "Export companies",
     "import": "Import companies",
     "previous": "Previous company",

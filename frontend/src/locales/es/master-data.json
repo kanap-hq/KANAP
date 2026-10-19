@@ -123,6 +123,7 @@
       "turnoverYear": "Facturación ({{year}})"
     },
     "pinnedTotal": "Total",
+    "turnoverTotalFxMissing": "{{value}} (aún sin tipo para {{currencies}}, contado sin conversión)",
     "export": "Exportar empresas",
     "import": "Importar empresas",
     "previous": "Empresa anterior",

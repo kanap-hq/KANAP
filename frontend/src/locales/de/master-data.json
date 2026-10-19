@@ -123,6 +123,7 @@
       "turnoverYear": "Umsatz ({{year}})"
     },
     "pinnedTotal": "Gesamt",
+    "turnoverTotalFxMissing": "{{value}} (noch kein Kurs für {{currencies}}, ohne Umrechnung gezählt)",
     "export": "Unternehmen exportieren",
     "import": "Unternehmen importieren",
     "previous": "Vorheriges Unternehmen",

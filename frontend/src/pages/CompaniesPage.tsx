@@ -36,7 +36,7 @@ type CompanyRow = {
 };
 
 export default function CompaniesPage() {
-  const { t } = useTranslation(['master-data', 'common']);
+  const { t } = useTranslation(['master-data', 'common', 'ops']);
   const locale = useLocale();
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -286,7 +286,15 @@ export default function CompaniesPage() {
     },
     {
       field: 'turnover_year',
-      valueFormatter: metricValueFormatter('decimal'),
+      // Each row in millions of its base currency; the Total in the reporting currency.
+      valueFormatter: (params: any) => {
+        const value = metricValueFormatter('decimal')(params);
+        const currency = params.node?.rowPinned ? params.data?.turnover_currency : params.data?.base_currency;
+        if (params.value == null || !currency) return value;
+        const shown = t('ops:shared.turnoverMillions', { value, currency });
+        const missing: string[] = params.node?.rowPinned ? params.data?.turnover_fx_missing ?? [] : [];
+        return missing.length ? t('companies.turnoverTotalFxMissing', { value: shown, currencies: missing.join(', ') }) : shown;
+      },
       headerName: t('companies.columns.turnoverYear', { year }),
       width: 170,
       filter: 'agNumberColumnFilter',
@@ -367,6 +375,8 @@ export default function CompaniesPage() {
         headcount_year: Number(totals.headcount || 0),
         it_users_year: Number(totals.it_users || 0),
         turnover_year: Number(totals.turnover || 0),
+        turnover_currency: totals.turnover_currency ?? null,
+        turnover_fx_missing: Array.isArray(totals.turnover_fx_missing) ? totals.turnover_fx_missing : [],
       } as Partial<CompanyRow>;
       setPinnedTotals([pinned]);
     } catch (err) {
