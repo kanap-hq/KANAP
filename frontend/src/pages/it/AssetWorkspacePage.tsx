@@ -1397,6 +1397,27 @@ export default function AssetWorkspacePage() {
             {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
+        <PropertyRow label={t('workspace.asset.technical.adminZone')}>
+          <Select
+            value={adminZone}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAdminZone(next);
+              updateScalar('admin_zone', (next || null) as AssetRecord['admin_zone']);
+            }}
+            variant="standard"
+            disabled={!canManage || saving}
+            displayEmpty
+            SelectDisplayProps={{ 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
+            sx={drawerSelectSx}
+            renderValue={(value) => (value
+              ? adminZoneOptions.find((opt) => opt.value === value)?.label ?? String(value)
+              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('common:labels.none')}</Box>)}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
+            {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
+          </Select>
+        </PropertyRow>
         <PropertyRow label={t('workspace.asset.overview.lifecycle')}>
           <Select
             value={status}
@@ -2038,31 +2059,6 @@ export default function AssetWorkspacePage() {
                         .map((opt) => (
                           <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
                         ))}
-                    </TextField>
-                  </PropertyRow>
-                  <PropertyRow label={t('workspace.asset.technical.adminZone')} valueSx={{ maxWidth: 520 }}>
-                    <TextField
-                      select
-                      value={adminZone}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setAdminZone(next);
-                        if (isCreate) setDirty(true);
-                        else void patchAsset({ admin_zone: next || null });
-                      }}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                      disabled={!canManage}
-                      SelectProps={{
-                        displayEmpty: true,
-                        SelectDisplayProps: { 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>,
-                      }}
-                    >
-                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
-                      {adminZoneOptions.map((opt) => (
-                        <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-                      ))}
                     </TextField>
                   </PropertyRow>
                   <PropertyRow label={t('workspace.asset.technical.fqdn')} valueSx={{ maxWidth: 520 }}>
