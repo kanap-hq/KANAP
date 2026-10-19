@@ -21,6 +21,7 @@ const TABLES: Record<string, { table: string; where?: string }> = {
   interface: { table: 'interfaces' },
   connection: { table: 'connections' },
   contract: { table: 'contracts' },
+  company: { table: 'companies' },
   task: { table: 'tasks' },
   spend_item: { table: 'spend_items', where: naturesAnd(null, BUDGET_NATURES) },
   capex_item: { table: 'spend_items', where: naturesAnd(null, BUDGET_NATURES) },

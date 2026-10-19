@@ -32,6 +32,7 @@ async function testExisting() {
     );
 
     const asked = [
+      { type: 'company', id: companyId },
       { type: 'contract', id: contractId },
       { type: 'task', id: taskId },
       { type: 'task', id: goneTaskId },
@@ -46,7 +47,7 @@ async function testExisting() {
     const { existing } = await existingRecentItems(runner.manager, tenantId, asked);
     assert.deepEqual(
       existing.map((item) => `${item.type}:${item.id}`).sort(),
-      [`application:${appId}`, `contract:${contractId}`, `spend_item:${capexId}`, `task:${taskId}`].sort(),
+      [`application:${appId}`, `company:${companyId}`, `contract:${contractId}`, `spend_item:${capexId}`, `task:${taskId}`].sort(),
     );
 
     // The task goes with its contract: the next check no longer lists it.

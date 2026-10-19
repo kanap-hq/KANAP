@@ -7,6 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useCompanyNav } from '../../hooks/useCompanyNav';
+import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
@@ -25,6 +26,7 @@ import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessag
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
+import CompanyDeleteButton from './CompanyDeleteButton';
 import CompanyMetricsTab from './CompanyMetricsTab';
 
 type TabKey = 'overview' | 'details';
@@ -101,6 +103,7 @@ export default function CompanyWorkspacePage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
+  const { addToRecent } = useRecentlyViewed();
   const { coas } = useCoaList();
   const sections = useOptionalSections();
 
@@ -109,6 +112,7 @@ export default function CompanyWorkspacePage() {
   const rawTab = (params.tab as TabKey) || 'overview';
   const tab: TabKey = TAB_KEYS.includes(rawTab) && !(isCreate && rawTab !== 'overview') ? rawTab : 'overview';
   const canEdit = hasLevel('companies', 'manager');
+  const canDelete = hasLevel('companies', 'admin');
 
   const year = React.useMemo(() => {
     const parsed = Number(searchParams.get('year'));
@@ -131,6 +135,10 @@ export default function CompanyWorkspacePage() {
     queryFn: async () => (await api.get<Company>(`/companies/${id}`)).data,
     enabled: !isCreate && !!id,
   });
+
+  React.useEffect(() => {
+    if (!isCreate && data?.id && data.name) addToRecent('company', data.id, data.name);
+  }, [addToRecent, data?.id, data?.name, isCreate]);
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
   // Autosave never blocks the fields: writes queue one after the other, so a response never
@@ -403,10 +411,17 @@ export default function CompanyWorkspacePage() {
           nextLabel: t('companies.next'),
         } : undefined}
         metadata={metadata}
-        actions={fieldSaves > 0 || fieldSaved ? (
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>
-            {fieldSaves > 0 ? t('common:status.saving') : t('common:status.saved')}
-          </Typography>
+        actions={(fieldSaves > 0 || fieldSaved || (data && canDelete)) ? (
+          <>
+            {(fieldSaves > 0 || fieldSaved) && (
+              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center' }}>
+                {fieldSaves > 0 ? t('common:status.saving') : t('common:status.saved')}
+              </Typography>
+            )}
+            {data && canDelete && (
+              <CompanyDeleteButton companyId={data.id} companyName={data.name} onDeleted={handleClose} />
+            )}
+          </>
         ) : undefined}
         properties={properties}
       >

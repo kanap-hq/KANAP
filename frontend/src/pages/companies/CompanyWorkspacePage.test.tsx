@@ -1,13 +1,15 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
+const addToRecent = vi.hoisted(() => vi.fn());
 const i18nLanguage = vi.hoisted(() => ({ current: 'en' }));
 
 vi.mock('react-i18next', () => ({
@@ -25,9 +27,15 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => auth.canEdit, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: (_resource: string, level: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit),
+    profile: { id: 'user-1' },
+  }),
 }));
-vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../workspace/hooks/useRecentlyViewed', () => ({
+  useRecentlyViewed: () => ({ items: [], addToRecent, clearRecent: vi.fn() }),
+}));
 vi.mock('../../hooks/useCompanyNav', () => ({
   useCompanyNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -46,6 +54,7 @@ const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
   patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
 };
 
 const COMPANY = {
@@ -83,12 +92,14 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
-          <Link to="/master-data/companies/co-2/overview">go to co-2</Link>
-          <Routes>
-            <Route path="/master-data/companies/:id/:tab" element={<CompanyWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <Link to="/master-data/companies/co-2/overview">go to co-2</Link>
+            <Routes>
+              <Route path="/master-data/companies/:id/:tab" element={<CompanyWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -105,6 +116,7 @@ describe('CompanyWorkspacePage', () => {
     vi.clearAllMocks();
     i18nLanguage.current = 'en';
     auth.canEdit = true;
+    auth.canAdmin = true;
     mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
       if (url === '/companies/co-1') return { data: COMPANY };
       if (url === '/companies/co-2') return { data: { ...COMPANY, id: 'co-2', name: 'Acme Germany', address1: 'Hauptstrasse 1' } };
@@ -138,6 +150,7 @@ describe('CompanyWorkspacePage', () => {
 
   it('shows a read-only user the status without a menu', async () => {
     auth.canEdit = false;
+    auth.canAdmin = false;
     renderAt('/master-data/companies/co-1/overview');
     fireEvent.click(await screen.findByRole('button', { name: 'companies.status.enabled' }));
     expect(screen.queryByRole('menuitem', { name: 'companies.status.disabled' })).toBeNull();
@@ -264,6 +277,7 @@ describe('CompanyWorkspacePage', () => {
 
   it('shows read-only users disabled fields and no title edit', async () => {
     auth.canEdit = false;
+    auth.canAdmin = false;
     renderAt('/master-data/companies/co-1/overview');
     const city = await screen.findByLabelText('companies.fields.city');
     expect(city).toBeDisabled();
@@ -578,5 +592,56 @@ describe('CompanyWorkspacePage', () => {
     await waitFor(() => expect(screen.getByLabelText('companies.fields.headcount')).toHaveValue('0'));
     expect(screen.getByLabelText('companies.fields.headcount')).not.toBeDisabled();
     finish({ data: { headcount: 60, it_users: 10, turnover: '12.5' } });
+  });
+
+  it('remembers the company in recently viewed', async () => {
+    renderAt('/master-data/companies/co-1/overview');
+    await screen.findByText('Acme France');
+    await waitFor(() => expect(addToRecent).toHaveBeenCalledWith('company', 'co-1', 'Acme France'));
+  });
+
+  it('hides delete from someone who is not a companies admin', async () => {
+    auth.canAdmin = false;
+    renderAt('/master-data/companies/co-1/overview');
+    await screen.findByText('Acme France');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  });
+
+  it('refuses to delete a company that is in use, and offers no confirmation', async () => {
+    mocked.post.mockResolvedValue({
+      data: { refused: [{ id: 'co-1', name: 'Acme France', code: 'COMPANY_IN_USE', usages: [{ type: 'contracts', total: 2 }] }] },
+    });
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(mocked.post).toHaveBeenCalledWith('/companies/delete-check', { ids: ['co-1'] });
+    expect(within(dialog).getByText('errors:COMPANY_IN_USE')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a company nothing uses, then returns to the list', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    mocked.delete.mockResolvedValue({ data: {} });
+    renderAt('/master-data/companies/co-1/overview?year=2026');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:delete.cannotUndo')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/companies/co-1'));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/companies?year=2026');
+  });
+
+  it('does not delete a company when the confirmation is cancelled', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    renderAt('/master-data/companies/co-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.delete).not.toHaveBeenCalled();
+    expect(navigateMock).not.toHaveBeenCalled();
   });
 });
