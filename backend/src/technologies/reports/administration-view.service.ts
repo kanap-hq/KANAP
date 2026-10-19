@@ -15,12 +15,13 @@ import { inServiceSql } from '../technology-reach.service';
  * lower index among those zones is more sensitive. The five controls keep the rules reviewed in
  * lot A1d. Each one answers a count here, and the asset list names the assets it concerns.
  *
- * What runs an asset must sit in a zone at least as sensitive. A contained asset
- * (`asset_relations` of type `contains`: the asset is the content, the holder is the container)
- * raises a finding when its zone is more sensitive than its container. A cluster member raises a
- * finding when its zone is less sensitive than its cluster: the member carries the cluster. A
+ * What runs an asset must sit in a zone at least as sensitive. A container (`asset_relations` of
+ * type `contains`: `asset_id` is the container, `related_asset_id` the content) whose zone is less
+ * sensitive than its content, and a cluster member whose zone is less sensitive than its cluster,
+ * raise a `trust_raised` finding: the finding is always the asset to raise. Its `trust_peers` name
+ * the more sensitive assets it runs (`contains`) or the cluster it is a member of (`cluster`). A
  * pair is left out when either zone is missing, deprecated or outside the catalog, and a self-link
- * is left out. The asset list shows the content or the member once, with every holder it depends on.
+ * is left out.
  *
  * A domain controller, for the domains section, is an asset of the domain (`assets.domain`), not
  * retired, assigned the server role `domain-controller` on an instance in service, or carrying an
@@ -38,7 +39,7 @@ export const DOMAIN_CONTROLLER_ROLE = 'domain-controller';
 export const BULK_MAX_ROWS = 5000;
 /** Rows written by one statement of a bulk assignment. */
 const BULK_BATCH = 500;
-/** Direct links and hosted applications returned on one asset row. `total` keeps the full count. */
+/** Direct links, hosted applications and trust peers returned on one asset row. `total` keeps the full count. */
 export const LINK_CAP = 10;
 /** At most this many assets in one exported file. */
 export const EXPORT_MAX_ROWS = 10000;
@@ -62,7 +63,7 @@ export const CONTROL_TITLES: Record<ControlKey, string> = {
 };
 
 /** English relation names in the export. The screen uses the same words, translated. */
-const TRUST_RELATION_LABEL = { contains: 'Runs on', cluster: 'Member of cluster' } as const;
+const TRUST_RELATION_LABEL = { contains: 'Runs', cluster: 'Member of cluster' } as const;
 
 const SORTS: Record<string, string> = {
   name: 'lower(a.name)',
@@ -120,11 +121,16 @@ export type AdministrationAssetRow = {
   applications: { total: number; items: Array<{ reference: string | null; name: string }> };
   /** The controls that concern this asset, in `CONTROL_KEYS` order. */
   findings: ControlKey[];
-  /** Holders that raise a trust finding: the asset this one depends on. */
-  depends_on: Array<{ reference: string | null; name: string; zone: string | null; relation: 'contains' | 'cluster' }>;
+  /**
+   * For a trust finding, the assets that make this one an asset to raise: the more sensitive assets
+   * it contains (`contains`) and the more sensitive clusters it is a member of (`cluster`).
+   */
+  trust_peers: { total: number; items: TrustPeer[] };
   /** References of the applications that place the asset in `applications_on_most_sensitive`. */
   application_references: string[];
 };
+
+export type TrustPeer = { relation: 'contains' | 'cluster'; reference: string | null; name: string; zone: string | null };
 
 export type AdministrationDomain = {
   code: string;
@@ -165,7 +171,7 @@ type DirectoryRow = { id: string; item_number: number; name: string; zone: strin
 type AssetPageRow = { id: string; reference: string | null; name: string; kind: string; zone: string | null };
 type TechLink = { asset_id: string; item_number: number; name: string; version: string | null };
 type AppLink = { asset_id: string; application_id: string; name: string; reference: string | null };
-type DependLink = { asset_id: string; reference: string | null; name: string; zone: string | null; relation: 'contains' | 'cluster' };
+type PeerLink = TrustPeer & { asset_id: string };
 type LockRow = {
   id: string; name: string; asset_reference: string | null; kind: string; status: string;
   admin_zone: string | null; updated_at: Date;
@@ -224,14 +230,15 @@ function directorySql(family: string, most: string, ids?: string): string {
 }
 
 /**
- * Pairs that raise trust. `asset_id` is the content or the cluster member. A lower
- * `array_position` in the non-deprecated catalog is more sensitive, the same comparison as the
- * reviewed rule. A zone the array does not hold (missing, deprecated, unknown) drops the pair.
+ * Pairs that raise trust. `asset_id` is the asset to raise: the container, or the cluster member.
+ * The other columns name its peer: the content, or the cluster. A lower `array_position` in the
+ * non-deprecated catalog is more sensitive, the same comparison as the reviewed rule. A zone the
+ * array does not hold (missing, deprecated, unknown) drops the pair.
  */
 function trustSql(ranks: string): string {
   const ranked = (alias: string) => `array_position(${ranks}, ${zoneOf(alias)})`;
-  return `SELECT content.id AS asset_id, holder.asset_reference AS reference, holder.name,
-              ${zoneOf('holder')} AS zone, 'contains'::text AS relation
+  return `SELECT holder.id AS asset_id, content.asset_reference AS reference, content.name,
+              ${zoneOf('content')} AS zone, 'contains'::text AS relation
          FROM asset_relations r
          JOIN assets holder ON holder.tenant_id = $1 AND holder.id = r.asset_id AND holder.status <> 'retired'
          JOIN assets content ON content.tenant_id = $1 AND content.id = r.related_asset_id AND content.status <> 'retired'
@@ -713,7 +720,7 @@ export class AdministrationViewService {
     return { limit, offset, page: Math.floor(offset / limit) + 1 };
   }
 
-  /** Technologies, applications and findings of these assets. `cap` null keeps every link (the export). */
+  /** Technologies, applications, findings and trust peers of these assets. `cap` null keeps every link (the export). */
   private async decorate(opts: AdministrationOpts, ctx: RankCtx, rows: AssetPageRow[], cap: number | null): Promise<AdministrationAssetRow[]> {
     if (!rows.length) return [];
     const { manager: mg, tenantId } = opts;
@@ -753,7 +760,7 @@ export class AdministrationViewService {
 
     const controllers = new Set<string>();
     const directories = new Set<string>();
-    const depends = new Map<string, DependLink[]>();
+    const peers = new Map<string, PeerLink[]>();
     if (ctx.most) {
       // Each statement binds only the parameters it names. A hole in $1..$n is untyped.
       const controllerRows: Array<{ asset_id: string }> = await mg.query(
@@ -767,18 +774,18 @@ export class AdministrationViewService {
       );
       for (const row of directoryRows) directories.add(row.asset_id);
       const trustParams: unknown[] = [tenantId, ids, ctx.ranks];
-      const pairs: DependLink[] = await mg.query(
+      const pairs: PeerLink[] = await mg.query(
         `SELECT asset_id, reference, name, zone, relation
            FROM (${trustSql(`$3::text[]`)}) pairs
           WHERE asset_id = ANY($2::uuid[])`,
         trustParams,
       );
       for (const pair of pairs) {
-        const list = depends.get(pair.asset_id) ?? [];
+        const list = peers.get(pair.asset_id) ?? [];
         list.push(pair);
-        depends.set(pair.asset_id, list);
+        peers.set(pair.asset_id, list);
       }
-      for (const list of depends.values()) {
+      for (const list of peers.values()) {
         list.sort((a, b) => byName(a, b) || (a.reference ?? '').localeCompare(b.reference ?? '') || a.relation.localeCompare(b.relation));
       }
     }
@@ -787,12 +794,12 @@ export class AdministrationViewService {
     return rows.map((row) => {
       const techs = techByAsset.get(row.id) ?? [];
       const apps = appsByAsset.get(row.id) ?? [];
-      const holders = depends.get(row.id) ?? [];
+      const trust = peers.get(row.id) ?? [];
       const findings: ControlKey[] = [];
       if (!row.zone) findings.push('assets_without_zone');
       if (controllers.has(row.id)) findings.push('domain_controllers_outside');
       if (directories.has(row.id)) findings.push('directory_assets_outside');
-      if (holders.length) findings.push('trust_raised');
+      if (trust.length) findings.push('trust_raised');
       const onMost = !!ctx.most && row.zone === ctx.most && apps.length > 0;
       if (onMost) findings.push('applications_on_most_sensitive');
       return {
@@ -804,7 +811,7 @@ export class AdministrationViewService {
         technologies: take(techs.map((link) => ({ reference: technologyReference(link.item_number), name: link.name, version: link.version }))),
         applications: take(apps.map((link) => ({ reference: link.reference, name: link.name }))),
         findings,
-        depends_on: holders.map((link) => ({ reference: link.reference, name: link.name, zone: link.zone, relation: link.relation })),
+        trust_peers: take(trust.map((link) => ({ relation: link.relation, reference: link.reference, name: link.name, zone: link.zone }))),
         application_references: onMost ? apps.map((link) => link.reference).filter((reference): reference is string => !!reference) : [],
       };
     });
@@ -862,7 +869,7 @@ export class AdministrationViewService {
       item.technologies.items.map((link) => `${link.reference ?? ''} ${link.name}${link.version ? ` (${link.version})` : ''}`.trim()).join('; '),
       item.applications.items.map((link) => `${link.reference ? `${link.reference} ` : ''}${link.name}`.trim()).join('; '),
       item.findings.map((key) => CONTROL_TITLES[key]).join('; '),
-      item.depends_on.map((link) => {
+      item.trust_peers.items.map((link) => {
         const who = [link.reference, link.name].filter(Boolean).join(' ');
         return `${TRUST_RELATION_LABEL[link.relation]} ${who} (${zoneLabel(link.zone)})`.trim();
       }).join('; '),

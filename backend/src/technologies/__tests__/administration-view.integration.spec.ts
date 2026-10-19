@@ -290,10 +290,13 @@ async function testControls() {
     const bare = await place('bare', null);
     const gap = await place('gap', '   ');
 
+    // The finding is the asset to raise. host runs guest and guest3: one asset, two pairs. host-b
+    // runs guest as well: guest is the reason on two rows, and no finding itself.
     const guest = await place('guest', 'tier_0');
     const host = await place('host', 'tier_1');
     await contains(runner, a, host, guest);
-    // The same content on a second holder: the control counts both pairs, the asset page lists guest once.
+    const guest3 = await place('guest3', 'tier_0');
+    await contains(runner, a, host, guest3);
     const hostB = await place('host-b', 'tier_1');
     await contains(runner, a, hostB, guest);
     const node = await place('node', 'tier_0');
@@ -303,6 +306,8 @@ async function testControls() {
     const vsphere = await place('vsphere', 'tier_0');
     const esx1 = await place('esx1', 'tier_1');
     await member(runner, a, vsphere, esx1);
+    const vsphere2 = await place('vsphere2', 'tier_0');
+    await member(runner, a, vsphere2, esx1);
     const core = await place('core', 'tier_0');
     const esx0 = await place('esx0', 'tier_0');
     await member(runner, a, core, esx0);
@@ -367,7 +372,7 @@ async function testControls() {
     assert.equal(view.zones.some((zone) => zone.code === 'leftover'), false, 'a technology of another family does not open a zone');
     assert.equal(view.zones.find((zone) => zone.code === 'retired_first')?.deprecated, true);
     assert.equal(view.zones.find((zone) => zone.code === 'ghost')?.unknown, true);
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, [{ kind: 'vm', count: 14 }]);
+    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, [{ kind: 'vm', count: 16 }]);
     assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.directory_services.map((item) => item.name), ['Active Directory']);
     assert.deepEqual(view.zones.find((zone) => zone.code === 'gone')?.directory_services.map((item) => item.name), ['Gone directory']);
     assert.equal(view.zones.find((zone) => zone.code === 'old')?.asset_counts[0]?.count, 1);
@@ -377,7 +382,7 @@ async function testControls() {
     assert.equal(countOf(view, 'assets_without_zone'), 5);
     assert.equal(countOf(view, 'domain_controllers_outside'), 2);
     assert.equal(countOf(view, 'directory_assets_outside'), 2);
-    assert.equal(countOf(view, 'trust_raised'), 2, 'guest depends on host and host-b, and esx1 on vsphere: two assets, three pairs');
+    assert.equal(countOf(view, 'trust_raised'), 3, 'host runs guest and guest3, host-b runs guest, esx1 is a member of vsphere and vsphere2: three assets, five pairs');
     assert.equal(countOf(view, 'applications_on_most_sensitive'), 3, 'Portal on guest and node, Extra on guest, App dc-home on dc-home: three assets');
     for (const control of view.controls) {
       const filtered = await svc.assets({ filters: setFilter('control', [control.key]), limit: 200 }, opts);
@@ -402,17 +407,25 @@ async function testControls() {
     assert.deepEqual(row('plain').applications.items.map((item) => item.name), ['Side']);
     assert.deepEqual(row('spare').applications, { total: 0, items: [] });
     assert.deepEqual(row('spare').findings, []);
-    assert.deepEqual(row('guest').findings, ['trust_raised', 'applications_on_most_sensitive']);
-    assert.deepEqual(row('guest').depends_on.map((item) => [item.name, item.zone, item.relation]), [
-      ['host', 'tier_1', 'contains'],
-      ['host-b', 'tier_1', 'contains'],
+    assert.deepEqual(row('guest').findings, ['applications_on_most_sensitive'], 'the protected content is not the asset to raise');
+    assert.deepEqual(row('guest').trust_peers, { total: 0, items: [] });
+    assert.deepEqual(row('host').trust_peers.items.map((item) => [item.relation, item.name, item.zone]), [
+      ['contains', 'guest', 'tier_0'],
+      ['contains', 'guest3', 'tier_0'],
     ]);
+    assert.equal(row('host').trust_peers.total, 2);
+    assert.deepEqual(row('host-b').trust_peers.items.map((item) => [item.relation, item.name]), [['contains', 'guest']]);
     assert.deepEqual(row('guest').application_references, row('guest').applications.items.map((item) => item.reference));
     assert.deepEqual(row('guest').applications.items.map((item) => item.name), ['Extra', 'Portal']);
-    assert.deepEqual(row('host').findings, [], 'the holder is not the finding');
-    assert.deepEqual(row('host-b').findings, []);
-    assert.deepEqual(row('esx1').findings, ['trust_raised']);
-    assert.deepEqual(row('esx1').depends_on.map((item) => [item.name, item.zone, item.relation]), [['vsphere', 'tier_0', 'cluster']]);
+    assert.deepEqual(row('host').findings, ['trust_raised'], 'the container is the asset to raise');
+    assert.deepEqual(row('host-b').findings, ['trust_raised']);
+    assert.deepEqual(row('guest3').findings, []);
+    assert.deepEqual(row('esx1').findings, ['trust_raised'], 'the member is the asset to raise');
+    assert.deepEqual(row('esx1').trust_peers.items.map((item) => [item.relation, item.name, item.zone]), [
+      ['cluster', 'vsphere', 'tier_0'],
+      ['cluster', 'vsphere2', 'tier_0'],
+    ]);
+    assert.deepEqual(row('vsphere').findings, [], 'the cluster is not the asset to raise');
     assert.deepEqual(row('node').findings, ['applications_on_most_sensitive'], 'a member more sensitive than its cluster stays out of the trust control');
     assert.deepEqual(row('esx0').findings, []);
     assert.deepEqual(row('child').findings, []);
@@ -424,8 +437,8 @@ async function testControls() {
     assert.equal(page.items.some((item) => item.name === 'dc-retired' || item.name === 'gone-vm'), false);
 
     const trust = await svc.assets({ filters: setFilter('control', ['trust_raised']), limit: 50 }, opts);
-    assert.deepEqual(trust.items.map((item) => item.name), ['esx1', 'guest']);
-    assert.equal(trust.total, 2, 'two assets, three pairs');
+    assert.deepEqual(trust.items.map((item) => item.name), ['esx1', 'host', 'host-b']);
+    assert.equal(trust.total, 3, 'three assets, five pairs');
     const apps = await svc.assets({ filters: setFilter('control', ['applications_on_most_sensitive']), limit: 50 }, opts);
     assert.deepEqual(apps.items.map((item) => item.name), ['dc-home', 'guest', 'node']);
     assert.equal(apps.total, 3, 'three assets, four application rows');
@@ -437,6 +450,20 @@ async function testControls() {
     assert.deepEqual(bareRows.items.map((item) => item.name), ['bare', 'dc-blank', 'dir-blank', 'gap', 'loose']);
     assert.equal(row('old-box').zone, 'old');
     assert.equal(row('ghost-box').zone, 'ghost');
+
+    // The page's main action: filter on the trust control, tick everything, assign the most
+    // sensitive zone. The assets to raise move up and the trust findings of the set are gone.
+    const scope = { filters: setFilter('control', ['trust_raised']) };
+    const counted = await svc.assignZone({ zone: 'tier_0', all: true, filters: scope, dry_run: true }, opts);
+    assert.equal(counted.rows, 3);
+    const raised = await svc.assignZone({
+      zone: 'tier_0', all: true, filters: scope, as_of: 'as_of' in counted ? counted.as_of : '', expected_rows: counted.rows,
+    }, opts);
+    assert.deepEqual(raised, { ok: true, rows: 3, changed: 3 });
+    assert.equal(countOf(await svc.summary(opts), 'trust_raised'), 0, 'no trust finding left');
+    assert.equal((await svc.assets({ filters: scope.filters }, opts)).total, 0);
+    const after = await svc.assets({ limit: 200 }, opts);
+    assert.deepEqual(['guest', 'guest3', 'vsphere', 'vsphere2'].map((name) => named(after.items, name).zone), ['tier_0', 'tier_0', 'tier_0', 'tier_0'], 'the protected assets keep their zone');
 
     await setTenant(runner, b);
     const other = await svc.summary({ manager: runner.manager, tenantId: b });
@@ -696,8 +723,12 @@ async function testExport() {
     }]]);
     const svc = service(settings);
     const opts = { manager: runner.manager, tenantId: a };
+    const vsphere = await asset(runner, a, 'vsphere');
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, vsphere]);
+    await member(runner, a, vsphere, host);
     const page = await svc.assets({ q: 'guest', limit: 10 }, opts);
     const row = page.items[0];
+    const peers = await svc.assets({ q: 'sphere', limit: 10 }, opts);
     const file = await svc.csv({ q: 'guest', language: 'en' }, opts);
     assert.equal(file.filename, 'administration_view_assets.csv');
     const lines = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
@@ -709,10 +740,22 @@ async function testExport() {
       'Virtual machine',
       'TEC-1 Active Directory (2019)',
       `${row.applications.items[0].reference} Portal`,
-      'What runs an asset is in a less sensitive zone; Applications hosted in the most sensitive zone',
-      `Runs on ${row.depends_on[0].reference} host (Tier 1)`,
+      'Applications hosted in the most sensitive zone',
+      '',
     ].join(','));
     assert.equal(lines.length, 2, 'the export follows the filters and ignores the page');
+    const hostFile = await svc.csv({ q: 'host', language: 'en' }, opts);
+    const hostLines = hostFile.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(hostLines[1], [
+      'Tier 1',
+      (await svc.assets({ q: 'host', limit: 10 }, opts)).items[0].reference,
+      'host',
+      'Virtual machine',
+      '',
+      '',
+      'What runs an asset is in a less sensitive zone',
+      `Runs ${row.reference} guest (Tier 0); Member of cluster ${peers.items[0].reference} vsphere (Tier 0)`,
+    ].join(','), 'the asset to raise names what it runs and the cluster it carries');
     const formula = await svc.csv({ q: '=cmd', language: 'en' }, opts);
     assert.ok(formula.content.includes("'=cmd"), formula.content);
     const all = await svc.csv({ language: 'en' }, opts);
