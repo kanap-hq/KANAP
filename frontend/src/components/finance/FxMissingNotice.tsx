@@ -4,6 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { canUseOperation } from '../../pages/operations/operationAccess';
 import { attentionDotSx } from '../../theme/formSx';
+import { formatAmount } from '../../i18n/formatters';
 import { fxMissingText, type FxMissing } from './fxMissing';
 
 /** The administration page where a rate can be entered by hand. */
@@ -53,5 +54,19 @@ export function FxMissingMark(props: { currency: string; year: number } | { labe
     <Tooltip title={label}>
       <Box component="span" role="img" aria-label={label} sx={{ ...attentionDotSx, ml: '2px' }} />
     </Tooltip>
+  );
+}
+
+/**
+ * An amount shown in its own currency because its year has no exchange rate, with the mark: the
+ * cell of a line that the totals leave out.
+ */
+export function FxMissingLocalAmount({ amount, currency, year }: { amount: number; currency: string; year: number }) {
+  const { t } = useTranslation('ops');
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+      {t('shared.fxMissing.localAmount', { amount: formatAmount(amount), currency })}
+      <FxMissingMark currency={currency} year={year} />
+    </Box>
   );
 }

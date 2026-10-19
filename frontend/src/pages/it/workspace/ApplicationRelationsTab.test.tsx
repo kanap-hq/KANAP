@@ -227,6 +227,33 @@ describe('ApplicationRelationsTab', () => {
     expect(screen.getByRole('table', { name: 'workspace.application.relations.sections.contracts' }).querySelector('tfoot')).toBeNull();
   });
 
+  it('shows a line without a rate in its own currency, leaves it out of the total and names it under the table', async () => {
+    renderTab(relations({
+      budget_lines: [
+        { id: 'bl-12', item_number: 12, nature: 'opex', product_name: 'Licences Talend', supplier_name: 'Talend SAS', amount: 48000, currency: 'EUR', status: 'enabled' },
+        { id: 'bl-50', item_number: 50, nature: 'opex', product_name: 'Support UK', supplier_name: null, amount: null, currency: 'EUR', status: 'enabled', fx_missing: { currency: 'GBP', amount: 20000 } },
+      ],
+      contracts: [
+        { id: 'ct-1', name: 'Maintenance Talend', supplier_name: 'Talend SAS', end_date: '2027-05-31', yearly_amount: 36000, currency: 'EUR', auto_renewal: true, in_renewal_window: false, status: 'enabled' },
+        { id: 'ct-3', name: 'Support UK', supplier_name: 'Talend Ltd', end_date: '2027-01-31', yearly_amount: 10000, currency: 'GBP', auto_renewal: false, in_renewal_window: false, status: 'enabled' },
+      ],
+    }));
+    const lines = await screen.findByRole('table', { name: 'workspace.application.relations.sections.budgetLines' });
+    const row = within(lines).getByText('BL-50').closest('tr') as HTMLElement;
+    expect(row.textContent).toMatch(/shared\.fxMissing\.localAmount\(amount=20\s000,currency=GBP\)/);
+    expect(within(row).getByRole('img', { name: 'shared.fxMissing.lineTooltip(currency=GBP,year=2026)' })).toBeInTheDocument();
+    expect(lines.querySelector('tfoot tr')?.textContent).toMatch(/^workspace\.application\.relations\.total48\s000$/);
+    const notice = screen.getByRole('status');
+    expect(notice.textContent).toContain('ops:shared.fxMissing.excluding(count=1,pairs=ops:shared.fxMissing.pair(currency=GBP,year=2026))');
+    expect(lines.closest('section')).toContainElement(notice);
+
+    // The contracts keep one total per currency.
+    const contractTotals = [...screen.getByRole('table', { name: 'workspace.application.relations.sections.contracts' }).querySelectorAll('tfoot tr')].map((tr) => tr.textContent);
+    expect(contractTotals).toHaveLength(2);
+    expect(contractTotals[0]).toMatch(/36\s000 EUR$/);
+    expect(contractTotals[1]).toMatch(/10\s000 GBP$/);
+  });
+
   it('gives the year of a contract end, even in the current year', async () => {
     const thisYear = new Date().getFullYear();
     renderTab(relations({

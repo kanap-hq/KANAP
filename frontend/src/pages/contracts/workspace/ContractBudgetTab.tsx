@@ -10,7 +10,7 @@ import BudgetLinesRelationField, { type LinkedBudgetLine } from '../../../compon
 import type { AmountMeasure } from '../../../components/finance/roundPeriod';
 import { denseTableFrameSx, denseTableSx } from '../../../components/EntityTasksSection';
 import YearTabs from '../../../components/navigation/YearTabs';
-import FxMissingNotice, { FxMissingMark } from '../../../components/finance/FxMissingNotice';
+import FxMissingNotice, { FxMissingLocalAmount } from '../../../components/finance/FxMissingNotice';
 import RelationsSectionTitle from '../../portfolio/components/RelationsSectionTitle';
 import { budgetTypeChipSx } from '../../budget/budgetTypeChipSx';
 import { formatItemRef } from '../../../utils/item-ref';
@@ -68,14 +68,8 @@ function Amount({ value }: { value: number | null | undefined }) {
 
 /** A linked line's amount; without a rate that year, its amount in its own currency with the mark. */
 function LineAmount({ line, year }: { line: ContractBudgetLineAmount | undefined; year: number }) {
-  const { t } = useTranslation('ops');
   if (line?.amount == null && line?.fx_missing) {
-    return (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
-        {t('shared.fxMissing.localAmount', { amount: formatAmount(line.fx_missing.amount), currency: line.fx_missing.currency })}
-        <FxMissingMark currency={line.fx_missing.currency} year={year} />
-      </Box>
-    );
+    return <FxMissingLocalAmount amount={line.fx_missing.amount} currency={line.fx_missing.currency} year={year} />;
   }
   return <Amount value={line?.amount} />;
 }

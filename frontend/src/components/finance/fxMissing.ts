@@ -46,3 +46,19 @@ export function mergeFxMissing(...lists: ReadonlyArray<ReadonlyArray<FxMissing> 
 
 /** The `fx_missing` of a grid row's year slot: the line currency and the amounts in that currency. */
 export type SlotFxMissing = { currency: string; amounts?: Partial<Record<string, number | null>> };
+
+/**
+ * The entries of rows that carry `fx_missing` (a related budget line without a rate for the year
+ * shown): one per line currency, with its number of lines, in the order first met.
+ */
+export function fxMissingOfLines(rows: ReadonlyArray<{ fx_missing?: { currency: string } | null }>, year: number): FxMissing[] {
+  const byCurrency = new Map<string, FxMissing>();
+  for (const row of rows) {
+    const currency = row.fx_missing?.currency;
+    if (!currency) continue;
+    const known = byCurrency.get(currency);
+    if (known) known.lines += 1;
+    else byCurrency.set(currency, { currency, year, lines: 1 });
+  }
+  return Array.from(byCurrency.values());
+}
