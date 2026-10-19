@@ -218,6 +218,29 @@ export class AiPolicyService {
     }
   }
 
+  /**
+   * Whether the user reads `entityType`, without the surface checks (the tool already made them):
+   * for a section of another family inside a record, which is left out rather than refused.
+   */
+  async canReadEntityType(
+    context: AiExecutionContext,
+    entityType: AiSearchEntityType | AiContextEntityType,
+    manager: EntityManager,
+  ): Promise<boolean> {
+    if (!KNOWN_ENTITY_TYPES.has(entityType)) return false;
+    try {
+      await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
+      return true;
+    } catch (error) {
+      if (!(error instanceof ForbiddenException)) {
+        this.logger.warn(
+          `Unexpected error while probing ${entityType} read access for user ${context.userId}: ${error instanceof Error ? error.message : String(error)}`,
+        );
+      }
+      return false;
+    }
+  }
+
   async getCapabilities(
     context: AiPolicyAccessContext,
     manager: EntityManager,
