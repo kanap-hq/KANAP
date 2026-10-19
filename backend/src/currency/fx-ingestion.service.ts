@@ -606,6 +606,9 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
 
       let currentYearValue: number | null = null;
       let currentYearBasis: WorldBankRateSource | null = null;
+      // The latest published year standing in for the current year is an estimate: a spot
+      // captured earlier this year beats it in `mergeWithLatest`.
+      let currentYearEstimated = false;
       if (needCurrentYear) {
         const spot = await this.worldBank.fetchSpotRate(upper);
         if (spot != null) {
@@ -633,6 +636,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
             latestHistoricalValue = latest.value;
             latestHistoricalYear = latest.year;
             currentYearBasis = 'world-bank-forward';
+            currentYearEstimated = true;
             this.logger.warn(
               `Using latest World Bank annual value (${latest.year}) for ${upper} in place of ${currentYear}`,
             );
@@ -640,7 +644,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (currentYearValue != null) {
-          put(currentYear, currentYearValue, currentYearBasis);
+          put(currentYear, currentYearValue, currentYearEstimated ? 'estimate' : currentYearBasis);
           if (isBase && currentYearBasis) {
             basisByYear.set(currentYear, currentYearBasis);
           }
@@ -823,7 +827,8 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         sources[code] = baseQuoteSource ?? snapshot.source;
         continue;
       }
-      sources[code] = quoteSources[code] ?? snapshot.source;
+      // A cross rate is only as firm as both quotes: an estimated base makes every rate an estimate.
+      sources[code] = baseQuoteSource === 'estimate' ? 'estimate' : (quoteSources[code] ?? snapshot.source);
     }
     return sources;
   }

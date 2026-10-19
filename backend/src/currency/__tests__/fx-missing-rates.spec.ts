@@ -282,7 +282,7 @@ async function testEstimatedBaseStillStoresTheYear() {
   assert.equal(saved[0].rates.CHF, 1);
   assert.equal(saved[0].rate_sources.CHF, 'identity');
   assert.equal(saved[0].rates.EUR, Number((0.95 / 0.9).toFixed(6)));
-  assert.equal(saved[0].rate_sources.EUR, 'world-bank-annual');
+  assert.equal(saved[0].rate_sources.EUR, 'estimate', 'a cross rate on an estimated base is an estimate');
   assert.equal(saved[0].source, 'world-bank-annual');
 }
 
@@ -315,10 +315,25 @@ async function testCurrentYearAloneFallsBackToLatestPublished() {
   const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP', 'OLD'] };
   const [current] = await (fx as any).buildYearlySnapshots(ctx, [currentYear]);
   assert.equal(current.quotes.EUR, 0.91, 'the latest year inside the ten-year window');
-  assert.equal(current.quoteSources.EUR, 'world-bank-forward');
+  assert.equal(current.quoteSources.EUR, 'estimate', 'the latest published year is an estimate for the current year');
   assert.equal(current.source, 'world-bank-forward');
   assert.equal(current.quotes.GBP, 0.78);
-  assert.equal(current.quoteSources.GBP, 'world-bank-forward');
+  assert.equal(current.quoteSources.GBP, 'estimate');
+
+  // A spot captured earlier this year beats that estimate.
+  const sets: Array<Record<string, any>> = [{
+    id: 'spot', rates: { EUR: 1, GBP: 1.2, USD: 0.9 },
+    rate_sources: { EUR: 'identity', GBP: 'exchangerateapi-spot', USD: 'exchangerateapi-spot' },
+    source: 'exchangerateapi-spot',
+  }];
+  const manager = { getRepository: () => ({
+    findOne: async () => sets[sets.length - 1],
+    create: (row: Record<string, unknown>) => ({ ...row }),
+    save: async (row: Record<string, any>) => { sets.push(row); return row; },
+  }) };
+  const kept = await (fx as any).saveRateSet({ ...ctx, currencies: ['EUR', 'GBP', 'USD'] }, current, manager);
+  assert.equal(kept.rates.GBP, 1.2, 'the captured spot is not replaced by the estimate');
+  assert.equal(kept.rate_sources.GBP, 'exchangerateapi-spot');
   assert.equal(current.quotes.OLD, null, 'a publication older than the ten-year window is not the fallback');
   const fallback = calls.filter((call) => call.currency === 'EUR' && call.start === currentYear - 10 && call.end === currentYear - 1);
   assert.equal(fallback.length, 1, 'the current year alone reads the published window');
