@@ -25,7 +25,8 @@ describe('DeleteSelectedButton usages', () => {
     expect(users).toEqual(['./DeleteSelectedButton.tsx']);
     const button = files['./DeleteSelectedButton.tsx'];
     expect(button.split('deleteSelectedTitle').length - 1).toBe(1);
-    expect(button).toMatch(/named\.length === 1\s*\?\s*t\('delete\.recordTitle', \{ name: named\[0\]\.name \}\)\s*:\s*t\('delete\.deleteSelectedTitle'/);
+    expect(button).toMatch(/named\.length === 1\s*\?\s*t\('delete\.recordTitle', \{ name: named\[0\]\.name \}\)/);
+    expect(button).toMatch(/itemLabels\?\.title\?\.\(named\.length\) \?\? t\('delete\.deleteSelectedTitle'/);
   });
 
   // A record page's delete window names the record ("Delete Acme?"); its unnamed title is only the

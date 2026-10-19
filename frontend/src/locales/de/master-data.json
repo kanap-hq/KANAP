@@ -189,7 +189,11 @@
       "kept_one": "{{count}} Unternehmen wird noch verwendet und bleibt erhalten. Deaktivieren Sie es stattdessen:",
       "kept_other": "{{count}} Unternehmen werden noch verwendet und bleiben erhalten. Deaktivieren Sie sie stattdessen:",
       "deleted_one": "{{count}} Unternehmen gelöscht",
-      "deleted_other": "{{count}} Unternehmen gelöscht"
+      "deleted_other": "{{count}} Unternehmen gelöscht",
+      "title_one": "Ausgewähltes Unternehmen löschen",
+      "title_other": "{{count}} ausgewählte Unternehmen löschen",
+      "keptDone_one": "{{count}} Unternehmen behalten",
+      "keptDone_other": "{{count}} Unternehmen behalten"
     }
   },
   "departments": {

@@ -189,7 +189,11 @@
       "kept_one": "{{count}} company is still in use and is kept. Disable it instead:",
       "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:",
       "deleted_one": "{{count}} company deleted",
-      "deleted_other": "{{count}} companies deleted"
+      "deleted_other": "{{count}} companies deleted",
+      "title_one": "Delete the selected company",
+      "title_other": "Delete the {{count}} selected companies",
+      "keptDone_one": "{{count}} company kept",
+      "keptDone_other": "{{count}} companies kept"
     }
   },
   "departments": {

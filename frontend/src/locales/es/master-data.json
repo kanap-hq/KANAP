@@ -189,7 +189,11 @@
       "kept_one": "{{count}} empresa sigue en uso y se conserva. Desactívela en su lugar:",
       "kept_other": "{{count}} empresas siguen en uso y se conservan. Desactívelas en su lugar:",
       "deleted_one": "{{count}} empresa eliminada",
-      "deleted_other": "{{count}} empresas eliminadas"
+      "deleted_other": "{{count}} empresas eliminadas",
+      "title_one": "Eliminar la empresa seleccionada",
+      "title_other": "Eliminar las {{count}} empresas seleccionadas",
+      "keptDone_one": "{{count}} empresa conservada",
+      "keptDone_other": "{{count}} empresas conservadas"
     }
   },
   "departments": {
