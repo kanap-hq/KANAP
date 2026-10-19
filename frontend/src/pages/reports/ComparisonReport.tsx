@@ -104,6 +104,7 @@ export default function ComparisonReport() {
   return (
     <ReportLayout
       busy={busy}
+      fxMissing={report.data?.fxMissing}
       title={t("reports.budgetTrendOpex.title")}
       subtitle={t("reports.budgetTrendOpex.subtitle")}
       filters={(

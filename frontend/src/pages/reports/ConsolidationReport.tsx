@@ -247,6 +247,7 @@ export default function ConsolidationReport() {
   return (
     <ReportLayout
       busy={busy}
+      fxMissing={report.data?.fxMissing}
       title={t("reports.consolidation.title")}
       subtitle={t('reports.consolidation.subtitle', { type: scopeLabel, context: scope })}
       filters={(

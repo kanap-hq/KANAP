@@ -10,6 +10,7 @@ vi.mock('react-i18next', () => {
   return { useTranslation: () => translation };
 });
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => false }) }));
 
 import ReportLayout from './ReportLayout';
 

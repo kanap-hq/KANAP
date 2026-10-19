@@ -214,6 +214,7 @@ export default function BudgetColumnsCompareReport() {
   return (
     <ReportLayout
       busy={busy}
+      fxMissing={report.data?.fxMissing}
       title={t("reports.budgetColumnsCompare.title")}
       subtitle={t("reports.budgetColumnsCompare.subtitle")}
       filters={(
