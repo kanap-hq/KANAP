@@ -138,6 +138,12 @@ describe('CsvImportDialog messages', () => {
     expect(screen.queryByText(/Colonnes ignorées/)).not.toBeInTheDocument();
   });
 
+  it('counts created, updated and unchanged rows after the load', async () => {
+    check([], { ok: true, dryRun: false, total: 3, processed: 3, inserted: 1, updated: 1, unchanged: 1 });
+    expect(await screen.findByText('1 créée, 1 mise à jour, 1 inchangée')).toBeInTheDocument();
+    expect(screen.queryByText(/Chargé avec succès/)).not.toBeInTheDocument();
+  });
+
   it('counts one row in the singular, and zero too in French', async () => {
     check([], { ok: true, total: 1, inserted: 1, updated: 0, unchanged: 0 });
     expect(await screen.findByText(/Vérification OK : 1 ligne\./)).toBeInTheDocument();
