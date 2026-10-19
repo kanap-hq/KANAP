@@ -45,7 +45,7 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 
 ## Choose what is imported
 
-Open the **Mappings** tab on the Netbox page. Three tables sit there. The first two decide the whole scope of the import.
+Open the **Mappings** tab on the Netbox page. Four tables sit there. The first two decide the whole scope of the import.
 
 - **Netbox roles > KANAP asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
 - **Netbox sites > KANAP location**. Each Netbox site gets one of your locations, or **Do not import**.
@@ -69,6 +69,22 @@ Rows are pre-filled when KANAP can see the answer: the same name, or the single 
 This table is not a filter. A platform left on **No match** never keeps anything out of the import. The equipment comes in and its operating system is left exactly as it is in KANAP. Match the platform later and the next run fills the field.
 
 Netbox grants read access per object type, so a token allowed to read devices, roles and sites can still be refused the platforms. The roles and the sites keep working and the import is unaffected. Only this section is empty, and it says why.
+
+### Clusters
+
+The **Clusters** section matches each Netbox cluster with a KANAP cluster: an asset marked as a cluster, in service. Each row shows how many virtual machines the Netbox cluster holds. A KANAP cluster with the same name is suggested, and as elsewhere a suggestion counts only once you press **Save mappings**.
+
+At the next run, each virtual machine of a matched cluster is added to the **Contains** relations of its KANAP cluster. A technology installed on the cluster then reaches the machine and the applications hosted on it. A machine whose only change is its cluster shows under **To update**, with a **Cluster** line. A machine the run creates joins its cluster at once.
+
+The import only adds:
+
+- A machine already in another KANAP cluster stays there. The preview says so on the machine's row, so you can remove that relation by hand if it is out of date.
+- Changing a match adds the machines to the new cluster and keeps them in the old one.
+- A machine you take out of its cluster comes back at the next run, as long as it sits in that Netbox cluster and the match exists. To take it out for good, remove the match first, then the relation.
+
+A Netbox cluster left on **No match** attaches nothing and does not block the import. The preview mentions it once. A match on an asset that was deleted, retired or is no longer a cluster attaches nothing either, and every run reports it as a warning. It does not stop you from saving the other matches.
+
+The hosts are not attached: cluster members stay yours to manage from the cluster's page. If the API token cannot read clusters, the section says so and the rest of the tab keeps working.
 
 ---
 
@@ -266,6 +282,8 @@ The tile stays out of the way when there is nothing to do: one line saying the s
 | The run failed after a handful of objects | Ten objects in a row could not be saved, so the run stopped. The cause is usually the same for all of them, and the details are in the server log. |
 | "Netbox returned more pages than expected. Some objects were not looked at." | The inventory is larger than one run reads. What was read is applied, and nothing is marked missing. Narrow the scope in **Mappings** so the run covers what matters to you. |
 | A sub-location warns that its name is already used | Two Netbox Locations of that site share the name, or two mapped sites point at the same KANAP location and each holds a Location of that name. Rename one of them in Netbox, or merge them there. The equipment is imported either way, without a sub-location. |
+| "Netbox did not return its clusters" | The API token cannot read clusters. Give it permission on `virtualization.cluster` in Netbox, or leave it: the equipment still imports, and only the attachment of virtual machines to their cluster is out of reach. |
+| A virtual machine was not attached to its cluster | Its Netbox cluster has no match in **Mappings > Clusters**, or the match points to an asset that is retired or no longer a cluster. Fix the match, then run again. |
 | "Netbox did not return its locations" | The API token cannot read Locations. Give it permission on `dcim.location` in Netbox, or leave it: the equipment import is unaffected. |
 
 ---

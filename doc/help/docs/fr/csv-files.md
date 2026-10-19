@@ -21,6 +21,6 @@ Chaque page de données de référence dispose de **Exporter CSV** et **Importer
 
 Une date que le fichier ne peut pas trancher seul, comme `01/03/2027`, est lue dans l'ordre de la langue d'affichage de l'écran : jour d'abord en français, en allemand et en espagnol, mois d'abord en anglais. La vérification indique comment elle a lu le fichier, avec un bouton pour changer la lecture. Une date dont le jour est supérieur à 12 tranche la question seule, et le fichier ne porte aucune trace de la langue dans laquelle il a été exporté.
 
-Un import lit oui ou non dans chacune de ces langues, ainsi que les `true`, `false`, `1` et `0` des fichiers plus anciens. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches suivent le même tableau.
+Un import lit oui ou non dans chacune de ces langues, ainsi que les `true`, `false`, `1` et `0` des fichiers plus anciens. Les fichiers des applications, des actifs, des incidents, des projets, des demandes et des tâches suivent le même tableau, tout comme les fichiers de liens de la liste des technologies. Voir [Technologies](technologies.md#importer-et-exporter-les-liens).
 
 **Taille.** Un fichier contient jusqu'à 20 000 lignes.
