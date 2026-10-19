@@ -499,8 +499,6 @@
       }
     },
     "administrationView": {
-      "title": "Administrationssicht",
-      "lead": "Jede Zone listet die Assets, die sie abdeckt, und die Verzeichnisdienste, die ihr zugeordnet sind, danach die zu korrigierenden Punkte.",
       "loading": "Wird geladen…",
       "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
       "exportZones": "Zonen exportieren",

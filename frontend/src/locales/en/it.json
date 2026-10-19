@@ -499,8 +499,7 @@
       }
     },
     "administrationView": {
-      "title": "Administration view",
-      "lead": "Each zone lists the assets it covers and the directory services placed in it, then the points to correct.",
+      "subtitle": "The administration view of the ANSSI information system mapping guide.",
       "loading": "Loading…",
       "loadFailed": "The administration view could not be loaded.",
       "exportZones": "Export zones",

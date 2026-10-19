@@ -356,7 +356,7 @@ export default function AdministrationViewPage() {
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
       <PageHeader
-        title={t('pages.administrationView.title')}
+        title={t('pages.administrationView.zones')}
         actions={(
           <Stack direction="row" spacing={1}>
             <Button variant="action" disabled={!data || exporting !== null} onClick={() => void exportList('zones')}>{t('pages.administrationView.exportZones')}</Button>
@@ -364,7 +364,7 @@ export default function AdministrationViewPage() {
           </Stack>
         )}
       />
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.lead')}</Typography>
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
       {error && <Alert severity="error">{getApiErrorMessage(error, t, t('pages.administrationView.loadFailed'))}</Alert>}
       {exportError && <Alert severity="error">{exportError}</Alert>}
       {isLoading && <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('pages.administrationView.loading')}</Typography>}

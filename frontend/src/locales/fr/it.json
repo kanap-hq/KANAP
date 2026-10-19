@@ -499,8 +499,6 @@
       }
     },
     "administrationView": {
-      "title": "Vue de l'administration",
-      "lead": "Chaque zone liste les actifs qu'elle couvre et les services d'annuaire qui y sont placés, puis les points à corriger.",
       "loading": "Chargement…",
       "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
       "exportZones": "Exporter les zones",

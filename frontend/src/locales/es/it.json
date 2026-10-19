@@ -499,8 +499,6 @@
       }
     },
     "administrationView": {
-      "title": "Vista de la administración",
-      "lead": "Cada zona enumera los activos que abarca y los servicios de directorio situados en ella, y después los puntos que corregir.",
       "loading": "Cargando…",
       "loadFailed": "No se pudo cargar la vista de la administración.",
       "exportZones": "Exportar las zonas",
