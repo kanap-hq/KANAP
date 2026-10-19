@@ -12,7 +12,7 @@ import { mergeProduct, versionsOfReleases } from '../catalog/catalog-releases';
 import type { CatalogLanguage, CatalogProduct, CatalogVersion } from '../catalog/technology-catalog.service';
 import * as shippedFile from '../catalog/technologies.catalog.json';
 import { VulnerabilityMatchService } from '../../vulnerabilities/vulnerability-match.service';
-import { asset, installed, services, type AuditEntry } from './technologies.fixtures';
+import { asset, installed, services, technology, type AuditEntry } from './technologies.fixtures';
 
 // The living catalog (lot C4, withdrawals and description corrections in lot C5): the sync of a
 // tenant's adopted technologies (new version added, a date that follows the catalog, a value the
@@ -407,47 +407,36 @@ async function testShippedIdentifierWithdrawn() {
 }
 
 /**
- * C5: an identifier the tenant removed stays out while the catalog still offers it; an
- * endoflife.date answer that omits one removes nothing; one withdrawn then offered again comes
- * back; a replacement is a withdrawal plus an addition.
+ * C5: an identifier the catalog wrote and the tenant still holds is withdrawn with the shipped
+ * file, offered again later, and replaced. One the tenant removed stays out. One the tenant types
+ * again after that removal is the tenant's: a later shipped withdrawal leaves it.
  */
 async function testCpeRemovalRules() {
   await inRolledBackTransaction(async (runner) => {
     const audit: AuditEntry[] = [];
     const { catalog, sync } = syncService(audit);
     const tenantId = await seedTenant(runner, 'cat-sync-rules');
-    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const { technology: adopted } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
     const shipped = catalog.shippedProduct('postgresql')!;
     const dropped = shipped.cpe_products[0];
-    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
-
-    await runner.query(`UPDATE technologies SET cpe_products = '{}' WHERE id = $1`, [technology.id]);
-    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
-    let tech = await read();
-    assert.deepEqual(tech.cpe_products, [], 'an identifier the tenant removed does not come back');
-    assert.ok(tech.catalog_state.cpe_products.includes(dropped), 'it stays in the state while the catalog offers it');
-
-    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [technology.id, [dropped]]);
-    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withoutCpe(shipped, [dropped])]]));
-    tech = await read();
-    assert.deepEqual(tech.cpe_products, [dropped], 'an endoflife.date answer without the identifier removes nothing');
-    assert.ok(tech.catalog_state.cpe_products.includes(dropped));
-
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [adopted.id]))[0];
     const withdrawn = { ...withoutCpe(shipped, [dropped]), noCpe: 'The shipped entry withdraws its identifier.' as const };
+
     const restore = stubShipped(catalog, 'postgresql', withdrawn);
     try {
       await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
     } finally {
       restore();
     }
-    tech = await read();
-    assert.deepEqual(tech.cpe_products, [], 'the shipped catalog withdrew it');
+    let tech = await read();
+    assert.deepEqual(tech.cpe_products, [], 'the shipped catalog withdrew the identifier it wrote');
     assert.ok(!tech.catalog_state.cpe_products.includes(dropped), 'it leaves the state');
 
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
     tech = await read();
     assert.deepEqual(tech.cpe_products, [dropped], 'offered again later, it comes back');
     assert.ok(tech.catalog_state.cpe_products.includes(dropped));
+    assert.ok(tech.catalog_state.cpe_written.includes(dropped), 'coming back counts as written by the catalog');
 
     const replacement = 'a:postgresql:postgresql_server';
     const replaced = { ...shipped, cpe_products: [replacement] };
@@ -461,9 +450,79 @@ async function testCpeRemovalRules() {
     tech = await read();
     assert.deepEqual(tech.cpe_products, [replacement], 'a correction replaces the identifier');
     assert.deepEqual(tech.catalog_state.cpe_products, [replacement]);
-    const row = [...audit].reverse().find((entry) => (entry.after as any)?.catalog_sync);
+    const row = [...audit].reverse().find((entry) => (entry.after as any)?.catalog_sync?.cpe_products_added?.length);
     assert.deepEqual((row?.after as any).catalog_sync.cpe_products_removed, [dropped]);
     assert.deepEqual((row?.after as any).catalog_sync.cpe_products_added, [replacement]);
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    await runner.query(`UPDATE technologies SET cpe_products = '{}' WHERE id = $1`, [adopted.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [], 'an identifier the tenant removed does not come back');
+    assert.ok(tech.catalog_state.cpe_products.includes(dropped), 'it stays in the state while the catalog offers it');
+    assert.ok(!tech.catalog_state.cpe_written.includes(dropped), 'a tenant removal leaves the written list');
+
+    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [adopted.id, [dropped]]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withoutCpe(shipped, [dropped])]]));
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [dropped], 'an endoflife.date answer without the identifier removes nothing');
+
+    const restoreAgain = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+    } finally {
+      restoreAgain();
+    }
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [dropped], 'typed again by the tenant, a shipped withdrawal leaves it');
+  });
+}
+
+/** C5 review P3: an identifier the tenant typed, then one held before adoption, is never withdrawn. */
+async function testTenantTypedIdentifierIsNotWithdrawn() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-typed');
+    const { technology: adopted } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const own = 'a:kanapreview:pg_extension';
+    await runner.query(`UPDATE technologies SET cpe_products = cpe_products || $2::text[] WHERE id = $1`, [adopted.id, [own]]);
+    const offering = { ...shipped, cpe_products: [...shipped.cpe_products, own] };
+    const restoreOffer = stubShipped(catalog, 'postgresql', offering);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', offering]]));
+    } finally {
+      restoreOffer();
+    }
+    const [mid] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [adopted.id]);
+    assert.ok(!mid.catalog_state.cpe_written.includes(own), 'an identifier the tenant already held is not a catalog write');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [adopted.id]);
+    assert.ok(tech.cpe_products.includes(own), 'the shipped file dropping an identifier the tenant typed leaves it');
+    assert.ok(tech.cpe_products.includes(shipped.cpe_products[0]), 'the identifier the catalog wrote stays while the file still lists it');
+  });
+
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-preheld');
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const held = shipped.cpe_products[0];
+    const id = await technology(runner, tenantId, 1, 'PostgreSQL', 'database');
+    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [id, [held, 'a:tenant:own']]);
+    const adopted = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    assert.equal(adopted.technology.id, id, 'adoption attaches the catalog to the technology of the same name');
+    const [row] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [id]);
+    assert.deepEqual(row.catalog_state.cpe_written, [], 'identifiers already held are not catalog writes');
+    const withdrawn = { ...withoutCpe(shipped, [held]), noCpe: 'The shipped entry withdraws its identifier.' as const };
+    const restore = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+    } finally {
+      restore();
+    }
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [id]);
+    assert.ok(tech.cpe_products.includes(held), 'an identifier held before adoption is not withdrawn');
+    assert.ok(tech.cpe_products.includes('a:tenant:own'), 'an identifier the tenant added stays');
   });
 }
 
@@ -955,6 +1014,7 @@ async function main() {
       ['empty description filled once', testDescriptionFilled],
       ['shipped identifier withdrawn and matched again', testShippedIdentifierWithdrawn],
       ['CPE removal rules', testCpeRemovalRules],
+      ['tenant-typed identifier is not withdrawn', testTenantTypedIdentifierIsNotWithdrawn],
       ['no usable state removes nothing', testNoUsableStateRemovesNothing],
       ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],
       ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],

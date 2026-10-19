@@ -371,6 +371,9 @@ export function lowerSorted(ids: readonly string[]): string[] {
  * withdrew leaves, and is added again if the catalog offers it later. `shipped_cpe`: the
  * identifiers the shipped file listed at the last pass, in lower case. Absent on a state written
  * before that field: the next pass records the current shipped file and withdraws nothing.
+ * `cpe_written`: the identifiers the catalog itself wrote and the tenant still holds, lower case.
+ * Absent: none, so nothing is withdrawn until the catalog writes one. An identifier the tenant
+ * typed first, or held before an adoption, is not in this list.
  * `versions`: per version key, the values it last wrote; a key present was offered once (a
  * version the tenant deleted is not created again). `description`: the short description the
  * catalog last wrote; absent or null while it wrote none. While the technology still holds that
@@ -382,6 +385,8 @@ export type CatalogState = {
   description?: string | null;
   /** Identifiers of the shipped file at the last pass, lower case. Absent: not known yet. */
   shipped_cpe?: string[];
+  /** Identifiers the catalog wrote and the tenant still holds, lower case. Absent: none. */
+  cpe_written?: string[];
 };
 
 export function valuesOf(version: CatalogVersion): CatalogVersionValues {

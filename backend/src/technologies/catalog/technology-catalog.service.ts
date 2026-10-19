@@ -167,7 +167,8 @@ export class TechnologyCatalogService {
    * family (`other` when the tenant's catalog no longer has it), hosting type (the entry's, else the
    * one its mode stands for, resolved against the tenant's hosting types), CPE identifiers and short
    * description, and its versions with their dates; `catalog_state` records what was offered, for
-   * the sync that follows (`technology-catalog-sync.service.ts`). The description is in `opts.language`, failing that the user's
+   * the sync that follows (`technology-catalog-sync.service.ts`), including `shipped_cpe` and the
+   * identifiers this adoption actually added (`cpe_written`). The description is in `opts.language`, failing that the user's
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
    * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
@@ -180,8 +181,17 @@ export class TechnologyCatalogService {
     if (!shippedEntry) throw new NotFoundException('Catalog entry not found');
     const product = (await this.effectiveProducts(mg, [shippedEntry.key])).get(shippedEntry.key)!;
     const description = this.description(product.key, await languageOf(mg, tenantId, opts.userId ?? null, opts.language));
-    // `shipped_cpe` is the file, not the cache: a release product the cache added is not a withdrawal base.
-    const state = JSON.stringify({ ...offeredState(product), shipped_cpe: lowerSorted(shippedEntry.cpe_products), description });
+    // `shipped_cpe` is the file, not the cache. `cpe_written` is only what this adoption adds:
+    // an identifier the technology already holds stays the tenant's and is never withdrawn.
+    const stateFor = (heldBefore: readonly string[]) => {
+      const held = new Set(heldBefore.map((id) => id.toLowerCase()));
+      return JSON.stringify({
+        ...offeredState(product),
+        shipped_cpe: lowerSorted(shippedEntry.cpe_products),
+        cpe_written: lowerSorted(product.cpe_products.filter((id) => !held.has(id.toLowerCase()))),
+        description,
+      });
+    };
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);
 
     const existing: Array<{ id: string; catalog_key: string | null }> = await mg.query(
@@ -209,7 +219,7 @@ export class TechnologyCatalogService {
                 editor = COALESCE(editor, $5),
                 description = COALESCE(NULLIF(btrim(description), ''), $6), catalog_state = $7::jsonb, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, state],
+        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, stateFor(before.cpe_products)],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
@@ -222,7 +232,7 @@ export class TechnologyCatalogService {
       const [row]: Array<{ id: string }> = await mg.query(
         `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state],
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, stateFor([])],
       );
       technologyId = row.id;
       created = true;

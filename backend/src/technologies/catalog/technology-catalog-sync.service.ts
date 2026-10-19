@@ -164,11 +164,14 @@ export function readState(raw: unknown): CatalogState | null {
   if (description !== undefined && description !== null && typeof description !== 'string') return null;
   const shippedCpe = optionalIdentifiers(record, 'shipped_cpe');
   if (shippedCpe === null) return null;
+  const cpeWritten = optionalIdentifiers(record, 'cpe_written');
+  if (cpeWritten === null) return null;
   const out: CatalogState = {
     cpe_products: [...cpe],
     versions: {},
     ...(typeof description === 'string' ? { description } : {}),
     ...(shippedCpe !== undefined ? { shipped_cpe: shippedCpe } : {}),
+    ...(cpeWritten !== undefined ? { cpe_written: cpeWritten } : {}),
   };
   for (const [key, value] of Object.entries(versions as Record<string, unknown>)) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -275,9 +278,10 @@ function canonical(value: unknown): string {
  *   the rules of the shipped catalog (`catalog-releases.ts`). A product read less than 20 hours ago
  *   is skipped; one that fails keeps its last versions and is read again at the next run; after two
  *   failures of the service in a row, the others wait for the next run. A remote answer withdraws
- *   nothing: only the shipped file (`shippedProduct`) drops an identifier. An identifier the
- *   cache added stays until that file lists it and then drops it. A shipped file that lists no
- *   identifier, and is not marked `noCpe`, drops nothing.
+ *   nothing: only the shipped file (`shippedProduct`) drops an identifier, and only one
+ *   `cpe_written` records as written by the catalog. An identifier the cache added stays until
+ *   that file lists it and then drops it. A shipped file that lists no identifier, and is not
+ *   marked `noCpe`, drops nothing. An identifier the tenant typed is never dropped.
  * - Sync, tenant by tenant, after each refresh and at every start (the shipped catalog of a new
  *   KANAP version, in both deployment modes): `syncTenant`.
  *
@@ -483,8 +487,10 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    *   applied, the rest is, and the version is named in `dates_kept`;
    * - an identifier the catalog gained is added to `cpe_products`; one the tenant removed is not.
    *   One is removed only when `catalog_state.shipped_cpe` listed it (the shipped file at the
-   *   previous pass), the shipped file no longer lists it, and the technology still holds it
-   *   (without case). A state without `shipped_cpe` withdraws nothing and records the current
+   *   previous pass), the shipped file no longer lists it, `catalog_state.cpe_written` lists it
+   *   (the catalog wrote it and the tenant still holds it; a state without `cpe_written` withdraws
+   *   nothing until the catalog writes one), and the technology still holds it (without case).
+   *   A state without `shipped_cpe` withdraws nothing and records the current
    *   shipped file. An identifier the cache added (endoflife.date, one product per release) stays
    *   in the state while the cache omits it, so a missing cache neither removes it nor offers it
    *   again. An identifier the tenant removed stays in `cpe_products` until the shipped file has
@@ -625,9 +631,17 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
           recordShipped = false;
           this.logger.warn(`[${CATALOG_SYNC_TASK_NAME}] ${tech.catalog_key}: the shipped file lists no CPE identifier and is not marked noCpe; no identifier was withdrawn`);
         } else {
-          cpeRemoved = gone.filter((p) => has.has(p));
+          // Only an identifier the catalog wrote. One the tenant typed, or held before adoption, is absent here.
+          const written = new Set((state.cpe_written ?? []).map((p) => p.toLowerCase()));
+          cpeRemoved = gone.filter((p) => has.has(p) && written.has(p));
         }
       }
+      const removedNow = new Set(cpeRemoved);
+      const stillHeld = new Set(Array.from(has).filter((p) => !removedNow.has(p)));
+      state.cpe_written = lowerSorted([
+        ...(state.cpe_written ?? []).filter((p) => stillHeld.has(p.toLowerCase())),
+        ...cpeAdded,
+      ]);
       const seenWithdrawn = recordShipped && shippedKnown && !bootstrap
         ? new Set(Array.from(shippedBefore).filter((p) => !shippedNow.has(p)))
         : new Set<string>();
