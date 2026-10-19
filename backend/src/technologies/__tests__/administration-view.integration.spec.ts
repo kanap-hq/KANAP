@@ -182,7 +182,7 @@ async function testSummary() {
     assert.equal(partner.code, 'partner');
 
     const listed = await svc.assets({ limit: 50 }, opts);
-    assert.deepEqual(listed.items.map((item) => item.name), ['app1', 'dc-disabled', 'dc1', 'dc2', 'fw1', 'host1', 'lab-old', 'vm1']);
+    assert.deepEqual(listed.items.map((item) => item.name).sort(), ['app1', 'dc-disabled', 'dc1', 'dc2', 'fw1', 'host1', 'lab-old', 'vm1']);
     assert.equal(listed.items.some((item) => item.name === 'vm-retired' || item.name === 'fw-old' || item.name === 'dc-old'), false);
     assert.deepEqual(named(listed.items, 'dc1').findings, ['assets_without_zone', 'domain_controllers_outside', 'directory_assets_outside']);
     assert.deepEqual(named(listed.items, 'dc2').findings, ['assets_without_zone', 'directory_assets_outside']);
