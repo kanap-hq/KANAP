@@ -1,5 +1,6 @@
 import React from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Box, Button, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
 import { useTranslation } from 'react-i18next';
@@ -234,6 +235,43 @@ const SOURCE_LABEL_KEYS: Record<string, string> = {
 
 const headSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'bottom' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
+const markSx = { ml: 0.75, fontSize: 11, color: 'kanap.text.tertiary', fontVariantNumeric: 'normal' } as const;
+const editableCellSx = {
+  display: 'inline-block',
+  mx: -0.5,
+  px: 0.5,
+  borderRadius: '4px',
+  cursor: 'pointer',
+  outline: 'none',
+  '&:hover': { bgcolor: 'kanap.bg.hover' },
+  '&:focus-visible': { boxShadow: (theme: Theme) => `0 0 0 2px ${theme.palette.primary.main}` },
+} as const;
+
+const pairKey = (currency: string, year: number) => `${currency}:${year}`;
+
+/** One cell of the matrix: the rate, a small mark for a manual or estimated one, an orange dash when it is missing. */
+function RateValue({ value, source, missing }: { value: number | null; source: string | undefined; missing: boolean }) {
+  const { t } = useTranslation(['ops']);
+  const C = 'operations.currency';
+  if (value == null) {
+    return (
+      <Box component="span" sx={missing ? { color: 'warning.main' } : undefined}>
+        —
+      </Box>
+    );
+  }
+  return (
+    <>
+      <Box component="span">{value.toFixed(6)}</Box>
+      {source === 'manual' && <Box component="span" sx={markSx}>{t(`${C}.manualMark`)}</Box>}
+      {source === 'estimate' && (
+        <Tooltip title={t(`${C}.estimateTooltip`)}>
+          <Box component="span" sx={markSx}>{t(`${C}.estimateMark`)}</Box>
+        </Tooltip>
+      )}
+    </>
+  );
+}
 
 function CurrencyRatesTable({
   rows,
@@ -243,6 +281,7 @@ function CurrencyRatesTable({
   error,
   missingError,
   canEdit,
+  reportingCurrency,
   onEdit,
 }: RatesTableProps) {
   const { t } = useTranslation(['ops']);
@@ -262,20 +301,15 @@ function CurrencyRatesTable({
   ) : null;
   if (rateRows.length === 0 && missingPairs.length === 0) return noRates;
 
-  const years = Array.from(new Set(rateRows.map((r) => r.fiscalYear))).sort((a, b) => a - b);
+  const years = Array.from(
+    new Set([...rateRows.map((r) => r.fiscalYear), ...missingPairs.map((pair) => pair.year)]),
+  ).sort((a, b) => a - b);
   const currencySet = new Set<string>();
   rateRows.forEach((row) => Object.keys(row.rates || {}).forEach((code) => currencySet.add(code.toUpperCase())));
+  missingPairs.forEach((pair) => currencySet.add(pair.currency));
   const currencies = Array.from(currencySet).sort();
-
-  const matrix = currencies.map((code) => {
-    const entries: Record<number, number | null> = {};
-    years.forEach((year) => {
-      const ref = rateRows.find((r) => r.fiscalYear === year);
-      const value = ref?.rates?.[code];
-      entries[year] = value != null ? value : null;
-    });
-    return { code, entries };
-  });
+  const missingKeys = new Set(missingPairs.map((pair) => pairKey(pair.currency, pair.year)));
+  const setByYear = new Map(rateRows.map((row) => [row.fiscalYear, row]));
 
   return (
     <>
@@ -304,8 +338,8 @@ function CurrencyRatesTable({
               <Box component="tr">
                 <Box component="th" sx={{ ...headSx, textAlign: 'left' }}>{t(`${C}.currencyCol`)}</Box>
                 {years.map((year) => {
-                  const source = rateRows.find((r) => r.fiscalYear === year)?.source ?? 'world-bank';
-                  const sourceLabel = t(`${C}.${SOURCE_LABEL_KEYS[source] ?? 'annualAvg'}`);
+                  const set = setByYear.get(year);
+                  const sourceLabel = set ? t(`${C}.${SOURCE_LABEL_KEYS[set.source] ?? 'annualAvg'}`) : '';
                   return (
                     <Box component="th" key={year} sx={{ ...headSx, textAlign: 'right' }}>
                       <Box sx={{ color: 'kanap.text.secondary', fontVariantNumeric: 'tabular-nums' }}>{year}</Box>
@@ -316,15 +350,37 @@ function CurrencyRatesTable({
               </Box>
             </Box>
             <Box component="tbody">
-              {matrix.map((row) => (
-                <Box component="tr" key={row.code}>
-                  <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{row.code}</Box>
+              {currencies.map((code) => (
+                <Box component="tr" key={code}>
+                  <Box component="td" sx={{ ...cellSx, fontFamily: 'monospace', color: 'kanap.text.secondary' }}>{code}</Box>
                   {years.map((year) => {
-                    const value = row.entries[year];
-                    const display = value != null ? value.toFixed(6) : '—';
+                    const set = setByYear.get(year);
+                    const value = set?.rates?.[code];
+                    const source = set?.rateSources?.[code];
+                    // The reporting currency is 1 by definition: no manual rate for it.
+                    const editable = canEdit && code !== reportingCurrency && source !== 'identity';
+                    const content = (
+                      <RateValue value={value ?? null} source={source} missing={missingKeys.has(pairKey(code, year))} />
+                    );
                     return (
-                      <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right' }}>
-                        {display}
+                      <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right', whiteSpace: 'nowrap' }}>
+                        {editable ? (
+                          <Box
+                            role="button"
+                            tabIndex={0}
+                            aria-label={t(`${C}.editRate`, { currency: code, year })}
+                            onClick={() => onEdit({ currency: code, year })}
+                            onKeyDown={(event: React.KeyboardEvent<HTMLElement>) => {
+                              if (event.key === 'Enter' || event.key === ' ') {
+                                event.preventDefault();
+                                onEdit({ currency: code, year });
+                              }
+                            }}
+                            sx={editableCellSx}
+                          >
+                            {content}
+                          </Box>
+                        ) : content}
                       </Box>
                     );
                   })}
