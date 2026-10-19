@@ -103,7 +103,7 @@ describe('AdministrationViewPage', () => {
     const tier0 = await screen.findByRole('region', { name: 'Niveau 0' });
     expect(within(tier0).getByText('Domain admins')).toBeInTheDocument();
     expect(within(tier0).getByText('Identity core')).toBeInTheDocument();
-    expect(within(tier0).getByText('firewall: 1')).toBeInTheDocument();
+    expect(within(tier0).getByText('pages.administrationView.kindCount:{"kind":"firewall","count":1}')).toBeInTheDocument();
     expect(within(tier0).getByText('pages.administrationView.hostedApplications:{"count":2}')).toBeInTheDocument();
     const scope = within(tier0).getByRole('table', { name: 'pages.administrationView.scope' });
     expect(within(scope).getByRole('link', { name: 'AST-4' })).toHaveAttribute('href', '/it/assets/asset-fw1');
