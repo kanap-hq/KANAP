@@ -137,7 +137,7 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       ai: 'open_vulnerabilities',
       grid: 'open_vulnerabilities',
       type: 'number',
-      description: 'Number of CVE still to review that alert: a version follows its technology unless that version has its own setting, and a row with no version follows the technology. Operating systems are excluded until the workspace includes them. null when the vulnerability feed is off.',
+      description: 'Number of CVE still to review that alert: a version follows its technology unless that version has its own setting, and a row with no version follows the technology. Operating systems start excluded when created; the workspace can include them. null when the vulnerability feed is off.',
       sortable: true,
       groupable: false,
       aggregable: true,

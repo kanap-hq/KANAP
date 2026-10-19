@@ -542,7 +542,12 @@ export class VulnerabilitiesService {
     return out;
   }
 
-  /** One CVE: its record, the technologies and versions it concerns, the servers and applications reached. */
+  /**
+   * One CVE: its record, the technologies and versions it concerns, the servers and applications
+   * reached. Every row is kept, alerting or not (lot V1): each version, server and application
+   * carries `alerts`, the effective setting of its row. `servers` and `applications` count them
+   * all; `alerting` counts those of the rows that alert, as the page does.
+   */
   async detail(cveIdRaw: string, opts: VulnOpts, applications: ApplicationsAccess) {
     const { manager: mg, tenantId } = opts;
     const cveId = cveIdOrThrow(cveIdRaw);
@@ -570,6 +575,7 @@ export class VulnerabilitiesService {
         technology_name: row.technology_name,
         version_label: row.version_label,
         via_asset_name: a.via_asset_id ? assetsById.get(a.via_asset_id)?.name ?? null : null,
+        alerts: row.alerts,
       };
     }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
 
@@ -595,6 +601,7 @@ export class VulnerabilitiesService {
           technology_id: a.technology_id,
           technology_name: row.technology_name,
           version_label: row.version_label,
+          alerts: row.alerts,
         };
       }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
     }
@@ -604,6 +611,7 @@ export class VulnerabilitiesService {
       reference_urls: cve.reference_urls ?? [],
       technologies: groupByTechnology(rows),
       ...this.counts(rows, reach),
+      alerting: this.counts(rows.filter((r) => r.alerts), reach),
       servers_list: servers,
       applications_list: apps,
     };
@@ -620,17 +628,20 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
-    const [{ versions_excluded }] = await mg.query(
-      `SELECT count(*)::int AS versions_excluded
+    // The versions by effective setting, so the screen can say "excluded, except 2 versions".
+    const [{ versions_excluded, versions_included }] = await mg.query(
+      `SELECT count(*) FILTER (WHERE NOT ${vulnerabilityAlertsSql('v', 't')})::int AS versions_excluded,
+              count(*) FILTER (WHERE ${vulnerabilityAlertsSql('v', 't')})::int AS versions_included
          FROM technology_versions v
          JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
-        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND NOT ${vulnerabilityAlertsSql('v', 't')}`,
+        WHERE v.tenant_id = $1 AND v.technology_id = $2`,
       [tenantId, tech.id],
     );
     return {
       technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
       technology_alerts: tech.vulnerability_alerts,
       versions_excluded: Number(versions_excluded),
+      versions_included: Number(versions_included),
       products: await this.productStates(mg, tech.cpe_products),
       items,
     };

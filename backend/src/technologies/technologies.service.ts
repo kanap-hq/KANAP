@@ -360,11 +360,14 @@ export class TechnologiesService {
       return { versions_reset: Number(versions_reset) };
     }
     const before = await readTechnology(mg, tenantId, idOrRef, true);
-    const exceptions: Array<{ id: string; vulnerability_alerts: boolean }> = await mg.query(
-      `SELECT id, vulnerability_alerts FROM technology_versions
-        WHERE tenant_id = $1 AND technology_id = $2 AND vulnerability_alerts IS NOT NULL
-        ORDER BY id
-        FOR UPDATE`,
+    // The column is not a key: NO KEY UPDATE lets a matching that inserts rows naming these
+    // versions (foreign key checks take KEY SHARE) go on.
+    const exceptions: TechnologyVersionRow[] = await mg.query(
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.vulnerability_alerts IS NOT NULL
+        ORDER BY v.id
+        FOR NO KEY UPDATE OF v`,
       [tenantId, before.id],
     );
     if (before.vulnerability_alerts !== enabled) {
@@ -379,22 +382,26 @@ export class TechnologiesService {
       );
     }
     if (exceptions.length) {
+      const ids = exceptions.map((row) => row.id);
       await mg.query(
         `UPDATE technology_versions SET vulnerability_alerts = NULL, updated_at = now()
           WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
-        [tenantId, before.id, exceptions.map((row) => row.id)],
+        [tenantId, before.id, ids],
       );
-      await this.audit.log(
-        {
-          table: 'technology_versions',
-          recordId: before.id,
-          action: 'update',
-          before: exceptions.map((row) => ({ id: row.id, vulnerability_alerts: row.vulnerability_alerts })),
-          after: exceptions.map((row) => ({ id: row.id, vulnerability_alerts: null })),
-          userId: opts.userId ?? null,
-        },
-        { manager: mg },
+      const cleared: TechnologyVersionRow[] = await mg.query(
+        `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+           JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+          WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = ANY($3::uuid[])`,
+        [tenantId, before.id, ids],
       );
+      const afterById = new Map(cleared.map((row) => [row.id, row]));
+      // One entry per version, as a PATCH of the version writes it.
+      for (const row of exceptions) {
+        await this.audit.log(
+          { table: 'technology_versions', recordId: before.id, action: 'update', before: row, after: afterById.get(row.id) ?? null, userId: opts.userId ?? null },
+          { manager: mg },
+        );
+      }
     }
     return { enabled, versions_reset: exceptions.length };
   }
@@ -590,7 +597,10 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
-      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
+      // The alert setting does not take part in the matching: a change of it alone matches nothing again.
+      if (keys.some((key) => key !== 'vulnerability_alerts')) {
+        await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
+      }
       return after;
     }
     return before;
