@@ -366,13 +366,23 @@ export class NetboxConfigService {
     }
     // Same rule as the operating systems: a page that does not know about
     // cluster matches must not wipe the ones already saved. Sent, they replace
-    // the stored map in full, and each value has to be a cluster of this workspace.
+    // the stored map in full. Only a new or changed match has to name a cluster
+    // of this workspace: a saved match whose cluster was retired or deleted
+    // since stays as it is (the run reports it), so it never blocks saving the
+    // other matches, and removing it is always allowed.
     if (input.cluster_map !== undefined) {
       if (asRecord(input.cluster_map) == null) {
         throw new BadRequestException(CLUSTER_MAP_SHAPE_MESSAGE);
       }
-      const clusterMap = stringMap(input.cluster_map);
-      await this.assertClusterTargets(manager, tenantId, clusterMap);
+      const storedMap = stringMap(metadata.cluster_map);
+      const clusterMap: Record<string, string> = {};
+      const changed: Record<string, string> = {};
+      for (const [clusterId, assetId] of Object.entries(stringMap(input.cluster_map))) {
+        const value = assetId.toLowerCase();
+        clusterMap[clusterId] = value;
+        if (storedMap[clusterId]?.toLowerCase() !== value) changed[clusterId] = value;
+      }
+      await this.assertClusterTargets(manager, tenantId, changed);
       metadata.cluster_map = clusterMap;
       // The Netbox name is kept next to each match for display. A name the
       // page did not send keeps the one stored before.
@@ -392,8 +402,8 @@ export class NetboxConfigService {
   }
 
   /**
-   * Every saved cluster match names an asset of this tenant that is a cluster
-   * and is not retired. A miss says nothing about any other workspace.
+   * Every match given names an asset of this tenant that is a cluster and is
+   * not retired. A miss says nothing about any other workspace.
    */
   private async assertClusterTargets(
     manager: EntityManager,

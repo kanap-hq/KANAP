@@ -988,8 +988,10 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
       role_map: roleMap,
       site_map: siteMap,
       os_map: osMap,
-      // A server that does not match clusters yet sends no list: leave its matches alone.
-      ...(data?.clusters ? {
+      // A server that does not match clusters yet sends no list, and a Netbox
+      // that did not return its clusters shows no table: leave the saved
+      // cluster matches alone so the other matches still save.
+      ...(data?.clusters && !data.clusters_unavailable ? {
         cluster_map: clusterMap,
         cluster_names: Object.fromEntries(data.clusters.map((cluster) => [cluster.id, cluster.name])),
       } : {}),

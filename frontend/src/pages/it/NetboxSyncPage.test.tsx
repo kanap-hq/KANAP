@@ -1,6 +1,6 @@
 import React from 'react';
 import '../../i18n';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -467,6 +467,35 @@ describe('NetboxSyncPage', () => {
     expect(await screen.findByText('Clusters')).toBeInTheDocument();
     expect(screen.getByText(/Check that the API token can read clusters/)).toBeInTheDocument();
     expect(screen.queryByText('Netbox cluster')).not.toBeInTheDocument();
+  });
+
+  it('saves the other matches and leaves the cluster ones alone when Netbox refuses to list its clusters', async () => {
+    (apiClient.put as any).mockImplementation((_url: string, body: any) => Promise.resolve(body));
+    // A saved match on a cluster asset retired since: the backend would refuse it if sent.
+    await openMappings({ ...MAPPING_OPTIONS_WITH_CLUSTERS, clusters: [], clusters_unavailable: true });
+
+    expect(await screen.findByText(/Check that the API token can read clusters/)).toBeInTheDocument();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    const body = (apiClient.put as any).mock.calls[0][1];
+    expect(body).toHaveProperty('role_map');
+    expect(body).not.toHaveProperty('cluster_map');
+    expect(body).not.toHaveProperty('cluster_names');
+  });
+
+  it('keeps a match on a cluster asset no longer available visible, and lets it be removed', async () => {
+    (apiClient.put as any).mockImplementation((_url: string, body: any) => Promise.resolve(body));
+    await openMappings({ ...MAPPING_OPTIONS_WITH_CLUSTERS, cluster_map: { 7: 'cl-retired' }, cluster_names: {} });
+
+    const stale = await screen.findByText('Asset no longer available');
+    fireEvent.mouseDown(stale);
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'No match' }));
+    expect(screen.queryByText('Asset no longer available')).not.toBeInTheDocument();
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    // An empty choice is how a match is removed: the server drops it.
+    expect((apiClient.put as any).mock.calls[0][1].cluster_map).toEqual({ 7: '', 8: 'cl-gouda' });
   });
 
   it('leaves the cluster matches alone on a server that does not match clusters yet', async () => {

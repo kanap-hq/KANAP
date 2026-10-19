@@ -310,10 +310,11 @@ async function main() {
       assert.equal(run.status, 'success');
       assert.deepEqual(await relations(b.tenantId), []);
       assert.deepEqual(await relations(a.tenantId), before);
-      // Saving that match is refused the same way as an asset that does not exist.
+      // Matching another Netbox cluster to that asset is refused the same way
+      // as an asset that does not exist.
       await assert.rejects(
         () => withTenantExecution(dataSource, b.tenantId, (manager) => config.saveMapping(manager, b.tenantId, {
-          role_map: {}, site_map: {}, cluster_map: { [PARIS.id]: a.clusters.paris },
+          role_map: {}, site_map: {}, cluster_map: { [GOUDA.id]: a.clusters.paris },
         })),
         (error: unknown) => error instanceof BadRequestException && /not in this workspace/.test((error as Error).message),
       );

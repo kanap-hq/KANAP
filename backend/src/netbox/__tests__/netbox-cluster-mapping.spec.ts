@@ -143,6 +143,55 @@ async function main() {
     assert.deepEqual(config.metadata_json.cluster_map, { 8: CLUSTER_B });
   }
 
+  // A saved match whose cluster was retired, deleted or unmarked since never
+  // blocks saving: sent back unchanged it stays, the other matches save, and
+  // only the new ones are checked.
+  for (const staleTarget of [RETIRED, 'ffffffff-ffff-4fff-8fff-ffffffffffff', SERVER]) {
+    const { config, manager, queries, service } = harness({
+      cluster_map: { 7: staleTarget },
+      cluster_names: { 7: 'Paris vSphere' },
+    });
+    const view = await service.saveMapping(manager, TENANT, {
+      role_map: { 3: 'server' },
+      site_map: {},
+      cluster_map: { 7: staleTarget.toUpperCase(), 8: CLUSTER_B },
+    });
+    assert.deepEqual(view.cluster_map, { 7: staleTarget, 8: CLUSTER_B });
+    assert.deepEqual(config.metadata_json.role_map, { 3: 'server' });
+    assert.equal(queries.length, 1);
+    assert.deepEqual(queries[0].params[1], [CLUSTER_B]);
+  }
+
+  // Removing it is always allowed, and a sent-back unchanged map reads nothing.
+  {
+    const { config, manager, queries, service } = harness({ cluster_map: { 7: RETIRED, 8: CLUSTER_B } });
+    await service.saveMapping(manager, TENANT, { role_map: {}, site_map: {}, cluster_map: { 8: CLUSTER_B } });
+    assert.deepEqual(config.metadata_json.cluster_map, { 8: CLUSTER_B });
+    assert.equal(queries.length, 0);
+  }
+
+  // Pointing a saved match at a retired cluster is a change, so it is refused.
+  {
+    const { config, manager, service } = harness({ cluster_map: { 7: CLUSTER_A } });
+    await assert.rejects(
+      () => service.saveMapping(manager, TENANT, { role_map: {}, site_map: {}, cluster_map: { 7: RETIRED } }),
+      /"PAR-OLD-CL" is retired/,
+    );
+    assert.deepEqual(config.metadata_json.cluster_map, { 7: CLUSTER_A });
+  }
+
+  // An id sent in capitals is stored in lower case, as the page compares it.
+  {
+    const { config, manager, service } = harness({});
+    const view = await service.saveMapping(manager, TENANT, {
+      role_map: {},
+      site_map: {},
+      cluster_map: { 7: CLUSTER_A.toUpperCase() },
+    });
+    assert.deepEqual(view.cluster_map, { 7: CLUSTER_A });
+    assert.deepEqual(config.metadata_json.cluster_map, { 7: CLUSTER_A });
+  }
+
   // Nothing saved yet reads as no match, never as undefined.
   {
     const { config, service } = harness({});
