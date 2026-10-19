@@ -160,12 +160,140 @@ async function testOldSetWithoutProvenanceLendsItsSource() {
   assert.equal(set.rate_sources.GBP, 'exchangerateapi-spot', 'the set source stands in for a missing rate_sources');
 }
 
+function annualClient(annual: Record<string, Record<number, number>>, spot: Record<string, number | null> = {}) {
+  return {
+    resolveCode: (currency: string) => (currency.toUpperCase() === 'USD' ? 'USA' : currency.toUpperCase()),
+    fetchAnnualRates: async (currency: string, startYear: number, endYear: number) => {
+      const series = annual[currency.toUpperCase()] ?? {};
+      const map = new Map<number, number>();
+      const first = Math.min(startYear, endYear);
+      const last = Math.max(startYear, endYear);
+      for (let year = first; year <= last; year += 1) {
+        if (series[year] != null) map.set(year, series[year]);
+      }
+      return map;
+    },
+    fetchSpotRate: async (currency: string) => {
+      const upper = currency.toUpperCase();
+      return Object.prototype.hasOwnProperty.call(spot, upper) ? spot[upper] : null;
+    },
+  };
+}
+
+/**
+ * A past year the World Bank has not published takes the nearest published
+ * year (closest earlier, otherwise closest later) as an estimate. A real rate
+ * captured for that year beats the estimate. The published value replaces both.
+ * The reporting currency follows the same chain, so a missing base quote with
+ * an estimate still stores the year.
+ */
+async function testPastYearEstimateChain() {
+  const annual: Record<string, Record<number, number>> = {
+    EUR: { 2020: 0.9 },
+    GBP: { 2010: 0.7, 2021: 0.99 },
+    JPY: { 2021: 110 },
+  };
+  const fx = new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {} as any,
+    { getLatestRateSet: async () => null } as any,
+    annualClient(annual) as any,
+  );
+  const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP', 'JPY', 'USD'] };
+  const sets: Array<Record<string, any>> = [];
+  const repo = {
+    findOne: async () => sets[sets.length - 1] ?? null,
+    create: (row: Record<string, unknown>) => ({ ...row }),
+    save: async (row: Record<string, any>) => {
+      const stored = { id: `s${sets.length + 1}`, captured_at: new Date(), ...row };
+      sets.push(stored);
+      return stored;
+    },
+  };
+  const manager = { getRepository: () => repo };
+  const snap = async () => ((await (fx as any).buildYearlySnapshots(ctx, [2020])) as Array<Record<string, any>>)[0];
+
+  const first = await snap();
+  assert.equal(first.quotes.GBP, 0.7, 'an earlier published year wins over a closer later one');
+  assert.equal(first.quoteSources.GBP, 'estimate');
+  assert.equal(first.quotes.JPY, 110, 'with no earlier year, the closest later year is the estimate');
+  assert.equal(first.quoteSources.JPY, 'estimate');
+  assert.equal(first.quotes.EUR, 0.9);
+  assert.equal(first.quoteSources.EUR, 'world-bank-annual');
+  assert.equal(first.source, 'world-bank-annual');
+  assert.ok(!first.missingCurrencies.includes('GBP'));
+
+  const estimated = await (fx as any).saveRateSet(ctx, first, manager);
+  assert.equal(estimated.rates.GBP, Number((0.9 / 0.7).toFixed(6)));
+  assert.equal(estimated.rate_sources.GBP, 'estimate');
+  assert.equal(estimated.rate_sources.EUR, 'identity');
+
+  sets[sets.length - 1] = {
+    ...estimated,
+    rates: { ...estimated.rates, GBP: 1.17 },
+    rate_sources: { ...estimated.rate_sources, GBP: 'exchangerateapi-spot' },
+  };
+  const held = await (fx as any).saveRateSet(ctx, await snap(), manager);
+  assert.equal(held.rates.GBP, 1.17, 'the spot captured for that year beats the estimate');
+  assert.equal(held.rate_sources.GBP, 'exchangerateapi-spot');
+
+  annual.GBP[2020] = 0.75;
+  const published = await snap();
+  assert.equal(published.quotes.GBP, 0.75);
+  assert.equal(published.quoteSources.GBP, 'world-bank-annual');
+  const replaced = await (fx as any).saveRateSet(ctx, published, manager);
+  assert.equal(replaced.rates.GBP, Number((0.9 / 0.75).toFixed(6)));
+  assert.equal(replaced.rate_sources.GBP, 'world-bank-annual', 'the published value replaces the captured rate and the estimate');
+}
+
+async function testEstimatedBaseStillStoresTheYear() {
+  const fx = new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {
+      getSettings: async () => ({
+        reportingCurrency: 'CHF',
+        defaultCapexCurrency: 'CHF',
+        defaultSpendCurrency: 'CHF',
+        allowedCurrencies: ['EUR'],
+      }),
+      ensureCurrencyRecords: async () => undefined,
+    } as any,
+    { getLatestRateSet: async () => null } as any,
+    annualClient({ CHF: { 2019: 0.95 }, EUR: { 2020: 0.9 } }) as any,
+  );
+  const saved: Array<Record<string, any>> = [];
+  const manager = {
+    queryRunner: {},
+    query: async () => [],
+    getRepository: () => ({
+      findOne: async () => null,
+      create: (row: Record<string, unknown>) => ({ ...row }),
+      save: async (row: Record<string, any>) => {
+        const stored = { id: 'chf-2020', ...row };
+        saved.push(stored);
+        return stored;
+      },
+    }),
+  };
+  const sets = await fx.refreshTenant('tenant-1', [2020], { manager: manager as any });
+  assert.equal(sets.length, 1, 'an estimate for the reporting currency stores the year');
+  assert.equal(saved[0].rates.CHF, 1);
+  assert.equal(saved[0].rate_sources.CHF, 'identity');
+  assert.equal(saved[0].rates.EUR, Number((0.95 / 0.9).toFixed(6)));
+  assert.equal(saved[0].rate_sources.EUR, 'world-bank-annual');
+  assert.equal(saved[0].source, 'world-bank-annual');
+}
+
 (async () => {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
   await testFreshRealReplacesStoredEstimate();
   await testUnchangedMergedSetIsNotInserted();
   await testOldSetWithoutProvenanceLendsItsSource();
+  await testPastYearEstimateChain();
+  await testEstimatedBaseStillStoresTheYear();
   console.log('FX refresh keeps a known rate.');
 })().catch((err) => {
   console.error(err);

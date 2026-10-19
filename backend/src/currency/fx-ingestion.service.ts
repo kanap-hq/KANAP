@@ -11,6 +11,9 @@ import { trackBackgroundWork } from '../common/background-work';
 
 type RateSnapshot = Record<string, number | null>;
 
+/** First year the World Bank official-exchange-rate series carries. */
+const WORLD_BANK_SERIES_START = 1960;
+
 /** A usable cross rate: finite and strictly positive. */
 function isUsableRate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -24,6 +27,24 @@ function isUsableRate(value: unknown): value is number {
 function ratePrecedence(source: string | null, fresh: boolean): number {
   if (source === 'estimate') return fresh ? 2 : 1;
   return fresh ? 4 : 3;
+}
+
+/**
+ * The published year nearest to `year`: the closest earlier year, otherwise
+ * the closest later one. The year itself is never a candidate.
+ */
+function nearestPublished(series: Map<number, number>, year: number): { year: number; value: number } | null {
+  let earlier = -Infinity;
+  let later = Infinity;
+  for (const candidate of series.keys()) {
+    if (candidate < year && candidate > earlier) earlier = candidate;
+    else if (candidate > year && candidate < later) later = candidate;
+  }
+  const chosen = earlier !== -Infinity ? earlier : later !== Infinity ? later : null;
+  if (chosen == null) return null;
+  const value = series.get(chosen);
+  if (!isUsableRate(value)) return null;
+  return { year: chosen, value };
 }
 
 function canonicalJson(record: Record<string, unknown> | null | undefined): string {
@@ -43,7 +64,7 @@ type WorldBankRateSource =
 interface YearlySnapshot {
   year: number;
   quotes: RateSnapshot;
-  /** Source of each USD quote. Absent until the per-currency chain fills it. */
+  /** Source of each USD quote (`world-bank-annual`, `estimate`, a spot source, or `identity` for USD). */
   quoteSources?: Record<string, string | null>;
   source: WorldBankRateSource;
   forwardSourceYear?: number;
@@ -444,12 +465,14 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     const needCurrentYear = years.includes(currentYear);
 
     const currencyResults = new Map<string, Map<number, number | null>>();
+    const sourceResults = new Map<string, Map<number, string | null>>();
     const missingByYear = new Map<number, Set<string>>();
     const basisByYear = new Map<number, WorldBankRateSource>();
 
     for (const currency of Array.from(currencies)) {
       const upper = currency.toUpperCase();
       const yearMap = new Map<number, number | null>();
+      const sourceByYear = new Map<number, string | null>();
       const isBase = upper === baseCode;
       let latestHistoricalValue: number | null = null;
       let latestHistoricalYear = -Infinity;
@@ -457,10 +480,15 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         if (!missingByYear.has(year)) missingByYear.set(year, new Set());
         missingByYear.get(year)?.add(upper);
       };
+      const put = (year: number, value: number | null, source: string | null) => {
+        yearMap.set(year, value);
+        sourceByYear.set(year, value != null ? source : null);
+      };
 
       if (upper === 'USD') {
-        years.forEach((year) => yearMap.set(year, 1));
+        years.forEach((year) => put(year, 1, 'identity'));
         currencyResults.set(upper, yearMap);
+        sourceResults.set(upper, sourceByYear);
         continue;
       }
 
@@ -468,38 +496,48 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       if (!code) {
         years.forEach((year) => {
           recordMissing(year);
-          yearMap.set(year, null);
+          put(year, null, null);
         });
         this.logger.warn(`No World Bank ISO3 mapping for ${upper}`);
         currencyResults.set(upper, yearMap);
+        sourceResults.set(upper, sourceByYear);
         continue;
       }
 
       if (annualYears.length) {
-        const start = Math.min(...annualYears);
-        const end = Math.max(...annualYears);
+        // The whole series, so a year the World Bank has not published can take
+        // the nearest year it has, including one outside the requested range.
+        const end = Math.max(currentYear - 1, ...annualYears);
         try {
-          const annualMap = await this.worldBank.fetchAnnualRates(upper, start, end);
+          const annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          for (const [publishedYear, publishedValue] of annualMap) {
+            if (publishedYear <= currentYear - 1 && publishedYear > latestHistoricalYear && isUsableRate(publishedValue)) {
+              latestHistoricalValue = publishedValue;
+              latestHistoricalYear = publishedYear;
+            }
+          }
           annualYears.forEach((year) => {
-            const value = annualMap.get(year) ?? null;
-            yearMap.set(year, value);
-            if (value != null && year <= currentYear - 1 && year > latestHistoricalYear) {
-              latestHistoricalValue = value;
-              latestHistoricalYear = year;
+            const published = annualMap.get(year) ?? null;
+            if (isUsableRate(published)) {
+              put(year, published, 'world-bank-annual');
+              if (isBase) basisByYear.set(year, 'world-bank-annual');
+              return;
             }
-            if (value == null) {
-              recordMissing(year);
-              this.logger.warn(`No World Bank annual value for ${upper} ${year}`);
-            } else if (isBase) {
-              basisByYear.set(year, 'world-bank-annual');
+            this.logger.warn(`No World Bank annual value for ${upper} ${year}`);
+            const nearest = nearestPublished(annualMap, year);
+            if (nearest) {
+              put(year, nearest.value, 'estimate');
+              return;
             }
+            recordMissing(year);
+            put(year, null, null);
           });
         } catch (err) {
           const reason = err instanceof Error ? err.message : String(err);
           this.logger.warn(`World Bank annual fetch failed for ${upper}: ${reason}`);
           annualYears.forEach((year) => {
             recordMissing(year);
-            yearMap.set(year, null);
+            put(year, null, null);
           });
         }
       }
@@ -535,13 +573,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         }
 
         if (currentYearValue != null) {
-          yearMap.set(currentYear, currentYearValue);
+          put(currentYear, currentYearValue, currentYearBasis);
           if (isBase && currentYearBasis) {
             basisByYear.set(currentYear, currentYearBasis);
           }
         } else {
           recordMissing(currentYear);
-          yearMap.set(currentYear, null);
+          put(currentYear, null, null);
           this.logger.warn(`Missing World Bank data for ${upper} ${currentYear}`);
         }
       }
@@ -550,13 +588,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       if (futureYears.length) {
         if (forwardValue != null) {
           futureYears.forEach((year) => {
-            yearMap.set(year, forwardValue as number);
+            put(year, forwardValue as number, 'world-bank-forward');
             if (isBase) basisByYear.set(year, 'world-bank-forward');
           });
         } else {
           futureYears.forEach((year) => {
             recordMissing(year);
-            yearMap.set(year, null);
+            put(year, null, null);
             this.logger.warn(`Cannot derive World Bank estimate for ${upper} ${year} (no historical data)`);
           });
         }
@@ -565,24 +603,29 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       years.forEach((year) => {
         if (!yearMap.has(year)) {
           recordMissing(year);
-          yearMap.set(year, null);
+          put(year, null, null);
         }
       });
 
       currencyResults.set(upper, yearMap);
+      sourceResults.set(upper, sourceByYear);
     }
 
     return years.map((year) => {
       const basis = basisByYear.get(year);
       const source = basis ?? this.determineSource(year, currentYear);
       const quotes: RateSnapshot = {};
+      const quoteSources: Record<string, string | null> = {};
       currencyResults.forEach((map, currency) => {
         quotes[currency] = map.get(year) ?? null;
+        quoteSources[currency] = sourceResults.get(currency)?.get(year) ?? null;
       });
       quotes.USD = 1;
+      quoteSources.USD = 'identity';
       return {
         year,
         quotes,
+        quoteSources,
         source,
         forwardSourceYear: source === 'world-bank-forward' ? currentYear : undefined,
         missingCurrencies: Array.from(missingByYear.get(year)?.values() ?? []).filter((code) => code !== 'USD'),
