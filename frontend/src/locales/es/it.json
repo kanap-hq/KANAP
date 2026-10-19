@@ -164,6 +164,25 @@
       "title": "Tecnologías",
       "newTechnology": "Nueva tecnología",
       "empty": "Todavía no hay tecnologías.",
+      "importCsv": "Importar CSV",
+      "exportCsv": "Exportar CSV",
+      "linkFiles": {
+        "asset": "Servidores y tecnologías",
+        "application": "Aplicaciones y tecnologías",
+        "importTitle": {
+          "asset": "Importar servidores y tecnologías",
+          "application": "Importar aplicaciones y tecnologías"
+        },
+        "exportTitle": {
+          "asset": "Exportar servidores y tecnologías",
+          "application": "Exportar aplicaciones y tecnologías"
+        },
+        "importHint": {
+          "asset": "Cada fila añade o actualiza un vínculo. Los vínculos que no figuran en el archivo se quedan como están. La tecnología ya debe estar en la lista: adóptela primero desde el catálogo. operating_system: yes marca el sistema operativo del servidor; no o una celda vacía conserva el actual.",
+          "application": "Cada fila añade o actualiza un vínculo declarado. Los vínculos que no figuran en el archivo se quedan como están. La tecnología ya debe estar en la lista: adóptela primero desde el catálogo."
+        },
+        "exportNoteApplication": "El archivo contiene los vínculos declarados. Los vínculos deducidos de los servidores no se incluyen."
+      },
       "columns": {
         "reference": "Referencia",
         "family": "Familia",
