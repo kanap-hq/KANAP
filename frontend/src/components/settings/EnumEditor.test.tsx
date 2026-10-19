@@ -1,11 +1,11 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import '../../i18n';
 import { createAppTheme } from '../../config/ThemeContext';
-import EnumEditor, { AssetKindEditor } from './EnumEditor';
+import EnumEditor, { AssetKindEditor, HostingTypeEditor } from './EnumEditor';
 import { catalogListIssues } from './catalogValidation';
 
 const serviceMocks = vi.hoisted(() => ({ fetchCatalogUsage: vi.fn() }));
@@ -55,6 +55,22 @@ describe('EnumEditor', () => {
     expect(names).toHaveLength(3);
     fireEvent.change(names[1], { target: { value: 'analytics' } });
     expect(screen.getAllByText('This name already exists')).toHaveLength(2);
+  });
+
+  it('shows the catalog name example and no shared tier example', () => {
+    renderEditor({ namePlaceholder: 'e.g., Productivity' });
+    expect(screen.getAllByRole('textbox', { name: 'Name' })[0]).toHaveAttribute('placeholder', 'e.g., Productivity');
+    expect(screen.queryByPlaceholderText('e.g., Tier 1')).not.toBeInTheDocument();
+    cleanup();
+    render(
+      <MemoryRouter>
+        <ThemeProvider theme={createAppTheme('light')}>
+          <HostingTypeEditor items={[{ code: 'colocation', label: 'Colocation' }]} onChange={() => undefined} namePlaceholder="e.g., Colocation" hideAddButton />
+        </ThemeProvider>
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('textbox', { name: 'Name' })).toHaveAttribute('placeholder', 'e.g., Colocation');
+    expect(screen.queryByPlaceholderText('e.g., Tier 1')).not.toBeInTheDocument();
   });
 
   it('marks Name as required and does not show a helper under an empty name', () => {

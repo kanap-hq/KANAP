@@ -33,7 +33,7 @@ const headerSx = { fontSize: 11, fontWeight: 500, color: 'kanap.text.tertiary' }
 const columns = (kind: Kind) => kind === 'business' ? '52px 150px minmax(180px,1fr) 105px 84px 116px' : '52px 150px minmax(180px,1fr) 84px 116px';
 
 /** Rows are the order: first = most severe (or first restored). The server assigns ranks from that order and generates codes from names. */
-function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | RecoveryWave>({ rows, kind, help, usageList, onChange }: { rows: T[]; kind: Kind; help: string; usageList: string; onChange: (rows: T[]) => void }) {
+function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | RecoveryWave>({ rows, kind, help, nameExample, usageList, onChange }: { rows: T[]; kind: Kind; help: string; nameExample: string; usageList: string; onChange: (rows: T[]) => void }) {
   const { t, i18n } = useTranslation('common');
   const patch = (index: number, next: Partial<T>) => onChange(rows.map((row, i) => i === index ? { ...row, ...next } : row));
   const removal = useCatalogRemoval(usageList);
@@ -65,7 +65,7 @@ function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | Re
         <IconButton size="small" aria-label={classificationText('Move down')} disabled={index === rows.length - 1} onClick={() => move(index, 1)} sx={{ p: 0.25, color: 'kanap.text.secondary' }}><KeyboardArrowDownIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
       <Box>
-        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder={classificationText('e.g., Tier 1')} size="small" sx={fieldSx} required inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
+        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder={classificationText(nameExample)} size="small" sx={fieldSx} required inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
         {issues.get(index) && issues.get(index) !== 'nameRequired' && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issues.get(index)}`)}</Typography>}
         {shownAs(row) && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t('enumEditor.shownAs', { value: shownAs(row) })}</Typography>}
       </Box>
@@ -100,11 +100,11 @@ export default function ClassificationCatalogSettings({ settings }: Props) {
   });
   const invalid = ([draft.businessCriticalityLevels, draft.cyberCriticalityLevels, draft.dataClasses, draft.recoveryWaves] as Array<Array<{ code: string; label: string }>>).some((rows) => catalogListIssues(rows).size > 0);
   const severityHelp = classificationText('From the most critical level at the top to the least critical at the bottom.');
-  const sections: Array<{ key: keyof ApplicationClassificationCatalog; title: string; kind: Kind; help: string }> = [
-    { key: 'businessCriticalityLevels', title: classificationText('Business criticality'), kind: 'business', help: `${severityHelp} ${classificationText('The maximum tolerable downtime documents each level and warns when an RTO exceeds it.')}` },
-    { key: 'cyberCriticalityLevels', title: classificationText('Cyber criticality'), kind: 'level', help: severityHelp },
-    { key: 'dataClasses', title: classificationText('Data confidentiality'), kind: 'level', help: severityHelp },
-    { key: 'recoveryWaves', title: classificationText('Recovery waves'), kind: 'wave', help: classificationText('In restoration order: the first wave is restored first.') },
+  const sections: Array<{ key: keyof ApplicationClassificationCatalog; title: string; kind: Kind; help: string; nameExample: string }> = [
+    { key: 'businessCriticalityLevels', title: classificationText('Business criticality'), kind: 'business', nameExample: 'e.g., Critical', help: `${severityHelp} ${classificationText('The maximum tolerable downtime documents each level and warns when an RTO exceeds it.')}` },
+    { key: 'cyberCriticalityLevels', title: classificationText('Cyber criticality'), kind: 'level', nameExample: 'e.g., High', help: severityHelp },
+    { key: 'dataClasses', title: classificationText('Data confidentiality'), kind: 'level', nameExample: 'e.g., Confidential', help: severityHelp },
+    { key: 'recoveryWaves', title: classificationText('Recovery waves'), kind: 'wave', nameExample: 'e.g., Foundation', help: classificationText('In restoration order: the first wave is restored first.') },
   ];
   return <Box sx={(theme) => ({ p: 2, border: `1px solid ${theme.palette.kanap.border.default}`, borderRadius: '8px' })}>
     <Stack direction="row" justifyContent="space-between" alignItems="center">
@@ -120,7 +120,7 @@ export default function ClassificationCatalogSettings({ settings }: Props) {
         <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{classificationText('Renaming, reordering or retiring a level never changes the applications that use it.')}</Typography>
         {sections.map((section) => <Box key={section.key}>
           <Typography sx={{ fontSize: 14, fontWeight: 500, mb: 0.5 }}>{section.title}</Typography>
-          <LevelRows rows={draft[section.key] as any[]} kind={section.kind} help={section.help} usageList={section.key} onChange={(rows) => setDraft({ ...draft, [section.key]: rows })} />
+          <LevelRows rows={draft[section.key] as any[]} kind={section.kind} help={section.help} nameExample={section.nameExample} usageList={section.key} onChange={(rows) => setDraft({ ...draft, [section.key]: rows })} />
         </Box>)}
       </Stack>
     </KanapDialog>

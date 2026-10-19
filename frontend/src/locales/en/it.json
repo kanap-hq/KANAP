@@ -740,6 +740,24 @@
         "adminZoneName": "e.g., Tier 0",
         "adminGroup": "e.g., Domain admins",
         "adminZoneDescription": "e.g., Directory and identity services",
+        "hostingTypeName": "e.g., Colocation",
+        "assetKindName": "e.g., Virtual machine",
+        "serverRoleName": "e.g., Domain controller",
+        "entityName": "e.g., Internal users",
+        "applicationCategoryName": "e.g., Productivity",
+        "networkSegmentName": "e.g., DMZ",
+        "ipAddressTypeName": "e.g., Host",
+        "technologyFamilyName": "e.g., Database",
+        "serverProviderName": "e.g., AWS",
+        "lifecycleStateName": "e.g., Active",
+        "interfaceProtocolName": "e.g., HTTPS",
+        "interfaceDataCategoryName": "e.g., Master data",
+        "interfaceTriggerTypeName": "e.g., Scheduled",
+        "interfacePatternName": "e.g., Webhook",
+        "interfaceFormatName": "e.g., JSON",
+        "interfaceAuthModeName": "e.g., OAuth2",
+        "accessMethodName": "e.g., Web",
+        "incidentCategoryName": "e.g., Infrastructure",
         "select": "Select…"
       },
       "empty": {
@@ -2966,7 +2984,11 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Data at the highest confidentiality level with the lowest cyber criticality: check the cyber assessment.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level.",
-    "e_g_tier_1": "e.g., Tier 1"
+    "e_g_tier_1": "e.g., Tier 1",
+    "e_g_critical": "e.g., Critical",
+    "e_g_high": "e.g., High",
+    "e_g_confidential": "e.g., Confidential",
+    "e_g_foundation": "e.g., Foundation"
   },
   "catalogDefaults": {
     "applicationCategories": {

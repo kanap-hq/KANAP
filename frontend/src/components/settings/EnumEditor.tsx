@@ -64,6 +64,8 @@ export interface EnumEditorProps<T extends EnumItem> {
   /** Names of this list end up in a comma-separated CSV cell. */
   forbidComma?: boolean;
   hideAddButton?: boolean;
+  /** Example shown in the name field. Already translated. Absent means no example. */
+  namePlaceholder?: string;
   addButtonLabel?: string;
   onAddRequest?: () => void;
   addRequestToken?: number;
@@ -85,7 +87,7 @@ const withLocalIds = <T extends EnumItem>(items: T[], prefix = 'enum'): (T & { l
 const issueTextSx = { fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 } as const;
 
 /** Name column shared by every editor: the visible identity of a value. */
-export function nameColumn<T extends EnumItem>(t: TFunction, width = '40%'): EnumEditorColumn<T> {
+export function nameColumn<T extends EnumItem>(t: TFunction, width = '40%', placeholder?: string): EnumEditorColumn<T> {
   return {
     key: 'label',
     header: t('enumEditor.name'),
@@ -98,7 +100,7 @@ export function nameColumn<T extends EnumItem>(t: TFunction, width = '40%'): Enu
         size="small"
         fullWidth
         required
-        placeholder={t('enumEditor.displayLabel')}
+        placeholder={placeholder}
         disabled={isLocked}
         inputRef={isFocused ? focusRef : undefined}
         inputProps={{ 'aria-label': t('enumEditor.name') }}
@@ -125,7 +127,7 @@ export function retiredColumn<T extends EnumItem>(t: TFunction, width = '20%'): 
   };
 }
 
-const buildDefaultColumns = <T extends EnumItem>(t: TFunction): EnumEditorColumn<T>[] => [nameColumn<T>(t, '55%'), retiredColumn<T>(t)];
+const buildDefaultColumns = <T extends EnumItem>(t: TFunction, placeholder?: string): EnumEditorColumn<T>[] => [nameColumn<T>(t, '55%', placeholder), retiredColumn<T>(t)];
 
 /**
  * Generic editor component for enum/lookup tables.
@@ -142,6 +144,7 @@ export function EnumEditor<T extends EnumItem>({
   usageList,
   forbidComma,
   hideAddButton,
+  namePlaceholder,
   addButtonLabel: addButtonLabelProp,
   onAddRequest,
   addRequestToken,
@@ -253,7 +256,7 @@ export function EnumEditor<T extends EnumItem>({
     onRetire: () => handleUpdate(item.localId, { deprecated: true } as Partial<T>),
   });
 
-  const effectiveColumns = React.useMemo(() => columns || buildDefaultColumns<T>(t), [columns, t]);
+  const effectiveColumns = React.useMemo(() => columns || buildDefaultColumns<T>(t, namePlaceholder), [columns, namePlaceholder, t]);
   const totalColumns = effectiveColumns.length + 1; // +1 for actions column
   const issues = React.useMemo(() => catalogListIssues(localItems, { forbidComma, skipCodes: lockedSet }), [forbidComma, localItems, lockedSet]);
   const issueOf = (item: T): CatalogIssue | undefined => issues.get(localItems.indexOf(item));
@@ -392,12 +395,13 @@ type DerivedEditorProps<T extends EnumItem> = {
   usageList?: string;
   lockedCodes?: string[];
   protectedCodes?: string[];
+  namePlaceholder?: string;
 };
 
 export type HostingTypeEditorProps = DerivedEditorProps<HostingTypeItem>;
 
-const buildHostingTypeColumns = (t: TFunction): EnumEditorColumn<HostingTypeItem>[] => [
-  nameColumn<HostingTypeItem>(t, '35%'),
+const buildHostingTypeColumns = (t: TFunction, placeholder?: string): EnumEditorColumn<HostingTypeItem>[] => [
+  nameColumn<HostingTypeItem>(t, '35%', placeholder),
   {
     key: 'category',
     header: t('enumEditor.category'),
@@ -416,9 +420,9 @@ const buildHostingTypeColumns = (t: TFunction): EnumEditorColumn<HostingTypeItem
   retiredColumn<HostingTypeItem>(t, '15%'),
 ];
 
-export function HostingTypeEditor(props: HostingTypeEditorProps) {
+export function HostingTypeEditor({ namePlaceholder, ...props }: HostingTypeEditorProps) {
   const { t } = useTranslation('common');
-  const columns = React.useMemo(() => buildHostingTypeColumns(t), [t]);
+  const columns = React.useMemo(() => buildHostingTypeColumns(t, namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<HostingTypeItem>
       title={t('enumEditor.hostingTypes.title')}
@@ -437,8 +441,8 @@ export interface AssetKindItem extends EnumItem {
 
 export type AssetKindEditorProps = DerivedEditorProps<AssetKindItem>;
 
-const buildAssetKindColumns = (t: TFunction): EnumEditorColumn<AssetKindItem>[] => [
-  nameColumn<AssetKindItem>(t, '45%'),
+const buildAssetKindColumns = (t: TFunction, placeholder?: string): EnumEditorColumn<AssetKindItem>[] => [
+  nameColumn<AssetKindItem>(t, '45%', placeholder),
   {
     key: 'is_physical',
     header: t('enumEditor.physical'),
@@ -456,9 +460,9 @@ const buildAssetKindColumns = (t: TFunction): EnumEditorColumn<AssetKindItem>[] 
   retiredColumn<AssetKindItem>(t, '20%'),
 ];
 
-export function AssetKindEditor(props: AssetKindEditorProps) {
+export function AssetKindEditor({ namePlaceholder, ...props }: AssetKindEditorProps) {
   const { t } = useTranslation('common');
-  const columns = React.useMemo(() => buildAssetKindColumns(t), [t]);
+  const columns = React.useMemo(() => buildAssetKindColumns(t, namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<AssetKindItem>
       title={t('enumEditor.assetTypes.title')}
@@ -486,8 +490,9 @@ export interface EntityItem extends EnumItem {
 const buildTieredColumns = <T extends EnumItem & { graph_tier?: GraphTier }>(
   t: TFunction,
   defaultTier: GraphTier,
+  placeholder?: string,
 ): EnumEditorColumn<T>[] => [
-  nameColumn<T>(t, '40%'),
+  nameColumn<T>(t, '40%', placeholder),
   {
     key: 'graph_tier',
     header: t('enumEditor.graphTier'),
@@ -514,9 +519,9 @@ const buildTieredColumns = <T extends EnumItem & { graph_tier?: GraphTier }>(
 
 export type ServerRoleEditorProps = DerivedEditorProps<ServerRoleItem>;
 
-export function ServerRoleEditor(props: ServerRoleEditorProps) {
+export function ServerRoleEditor({ namePlaceholder, ...props }: ServerRoleEditorProps) {
   const { t } = useTranslation('common');
-  const columns = React.useMemo(() => buildTieredColumns<ServerRoleItem>(t, 'center'), [t]);
+  const columns = React.useMemo(() => buildTieredColumns<ServerRoleItem>(t, 'center', namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<ServerRoleItem>
       title={t('enumEditor.serverRoles.title')}
@@ -531,9 +536,9 @@ export function ServerRoleEditor(props: ServerRoleEditorProps) {
 
 export type EntityEditorProps = DerivedEditorProps<EntityItem>;
 
-export function EntityEditor(props: EntityEditorProps) {
+export function EntityEditor({ namePlaceholder, ...props }: EntityEditorProps) {
   const { t } = useTranslation('common');
-  const columns = React.useMemo(() => buildTieredColumns<EntityItem>(t, 'top'), [t]);
+  const columns = React.useMemo(() => buildTieredColumns<EntityItem>(t, 'top', namePlaceholder), [namePlaceholder, t]);
   return (
     <EnumEditor<EntityItem>
       title={t('enumEditor.entities.title')}

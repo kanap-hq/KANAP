@@ -164,6 +164,28 @@ type EnumSectionConfig = {
   kind?: 'enum' | 'hosting' | 'serverKind' | 'serverRole' | 'entity' | 'adminZone';
 };
 
+/** Name-field example for each catalog. Administration zones, connections, domains and subnets have their own. */
+const nameExampleKey: Partial<Record<EnumListId, string>> = {
+  accessMethods: 'accessMethodName',
+  applicationCategories: 'applicationCategoryName',
+  entities: 'entityName',
+  hostingTypes: 'hostingTypeName',
+  incidentCategories: 'incidentCategoryName',
+  interfaceAuthModes: 'interfaceAuthModeName',
+  interfaceDataCategories: 'interfaceDataCategoryName',
+  interfaceFormats: 'interfaceFormatName',
+  interfacePatterns: 'interfacePatternName',
+  interfaceProtocols: 'interfaceProtocolName',
+  interfaceTriggerTypes: 'interfaceTriggerTypeName',
+  ipAddressTypes: 'ipAddressTypeName',
+  lifecycleStates: 'lifecycleStateName',
+  networkSegments: 'networkSegmentName',
+  serverKinds: 'assetKindName',
+  serverProviders: 'serverProviderName',
+  serverRoles: 'serverRoleName',
+  technologyFamilies: 'technologyFamilyName',
+};
+
 const enumSections: EnumSectionConfig[] = [
   { id: 'adminZones', group: 'serversConnections', kind: 'adminZone' },
   { id: 'accessMethods', group: 'appsInterfaces' },
@@ -1020,6 +1042,8 @@ export default function ItOperationsSettingsPage() {
                 const items = state.enums[enumSection.id] || [];
                 const dirty = !!state.dirty[enumSection.id];
                 const saving = state.pending === enumSection.id && submitting;
+                const exampleKey = nameExampleKey[enumSection.id];
+                const namePlaceholder = exampleKey ? t(`pages.settings.placeholders.${exampleKey}`) : undefined;
 
                 return (
                   <SettingsSection key={enumSection.id} title={enumSection.title} description={t(listUsageKey(enumSection.id))}>
@@ -1029,17 +1053,17 @@ export default function ItOperationsSettingsPage() {
                       dirty={dirty}
                     />
                     {enumSection.kind === 'hosting' ? (
-                      <HostingTypeEditor items={items as HostingTypeItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <HostingTypeEditor items={items as HostingTypeItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'serverKind' ? (
-                      <AssetKindEditor items={items as AssetKindItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <AssetKindEditor items={items as AssetKindItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'serverRole' ? (
-                      <ServerRoleEditor items={items as ServerRoleItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <ServerRoleEditor items={items as ServerRoleItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'adminZone' ? (
                       <AdminZonesEditor items={items as AdminZoneOption[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} />
                     ) : enumSection.kind === 'entity' ? (
-                      <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : (
-                      <EnumEditor title={enumSection.title} description={t(listDescriptionKey(enumSection.id))} items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
+                      <EnumEditor title={enumSection.title} description={t(listDescriptionKey(enumSection.id))} items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
                     )}
                   </SettingsSection>
                 );

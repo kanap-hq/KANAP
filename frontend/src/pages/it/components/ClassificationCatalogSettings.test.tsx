@@ -56,6 +56,17 @@ describe('ClassificationCatalogSettings', () => {
     serviceMocks.updateItOpsSettings.mockResolvedValue(settings);
   });
 
+  it('gives each classification catalog its own name example', () => {
+    renderSettings();
+    const names = screen.getAllByRole('textbox', { name: 'Name' });
+    expect(names.map((field) => field.getAttribute('placeholder'))).toEqual([
+      'e.g., Critical', 'e.g., Critical', 'e.g., Critical',
+      'e.g., High',
+      'e.g., Confidential',
+      'e.g., Foundation',
+    ]);
+  });
+
   it('saves in one step, with the rows in their displayed order', async () => {
     renderSettings();
     expect(screen.queryByRole('button', { name: /Preview/ })).not.toBeInTheDocument();
