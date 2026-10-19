@@ -207,8 +207,40 @@ export function turnoverFxMissingWarning(missingCurrencies: string[], fiscalYear
   return { code: 'turnover_fx_missing', currencies: [...missingCurrencies], year: fiscalYear, reportingCurrency };
 }
 
+/**
+ * A report computed without some amounts: the budget lines in `items[].currency` had no rate into
+ * `reportingCurrency` for `items[].year`, so their amounts are left out of every sum in the
+ * reporting currency (`lines`: the number of distinct budget lines left out). One warning per
+ * report, listing every pair. Data, not a sentence, as `TurnoverFxMissingWarning`.
+ */
+export type AmountFxMissingWarning = {
+  code: 'amount_fx_missing';
+  items: Array<{ currency: string; year: number; lines: number }>;
+  reportingCurrency: string;
+};
+
+/** The structured warnings of an allocation or a chargeback, each screen words them. */
+export type AllocationWarning = TurnoverFxMissingWarning | AmountFxMissingWarning;
+
+/** The warning of a report that left out amounts without a rate, or null when none was left out. */
+export function amountFxMissingWarning(
+  items: Array<{ currency: string; year: number; lines: number }>,
+  reportingCurrency: string,
+): AmountFxMissingWarning | null {
+  if (items.length === 0) return null;
+  const sorted = [...items].sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
+  return { code: 'amount_fx_missing', items: sorted.map((item) => ({ ...item })), reportingCurrency };
+}
+
 /** The warning in English, for the API's text fields that are not shown as such (the AI's summary rows). */
-export function describeAllocationWarning(warning: TurnoverFxMissingWarning): string {
+export function describeAllocationWarning(warning: AllocationWarning): string {
+  if (warning.code === 'amount_fx_missing') {
+    const pairs = warning.items
+      .map((item) => `${item.currency} in ${item.year} (${item.lines} ${item.lines === 1 ? 'line' : 'lines'})`)
+      .join(', ');
+    return `No ${warning.reportingCurrency} exchange rate for ${pairs}: `
+      + 'the amounts of those lines are left out of the totals until the rate is available.';
+  }
   return `No ${warning.reportingCurrency} exchange rate for ${warning.currencies.join(', ')} in ${warning.year}: `
     + 'the turnover of the companies in that currency is counted unconverted until the rate is available.';
 }

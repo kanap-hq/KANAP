@@ -1663,6 +1663,9 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
 - GET `/reports/chargeback/company?companyId=<uuid>&year=YYYY&metric=<column>`
   - `metric`: one of `budget`, `revision`, `forecast`, `follow_up`, `landing`; omitted = the tenant's default column (`/budget-columns`); anything else is a 400 listing the five names
   - Requires `reporting:reader`
+  - `warnings`: sentences, or structured warnings each screen words in the user's language:
+    - `{ code: 'turnover_fx_missing', currencies, year, reportingCurrency }`: turnovers without a rate, counted unconverted in the turnover indicators
+    - `{ code: 'amount_fx_missing', items: [{ currency, year, lines }], reportingCurrency }`: a budget line whose currency has no rate for its year is left out of every sum of the report (paid, consumed, departments, items, intercompany flows, KPIs, raw amounts included), so the report balances on what it counts. One warning per report lists every pair with its number of distinct lines. Example: `{ "code": "amount_fx_missing", "items": [{ "currency": "JPY", "year": 2026, "lines": 2 }], "reportingCurrency": "EUR" }`
 
 ### Disabled Date Semantics (applies to Reporting endpoints)
 - Fiscal year = calendar year.
