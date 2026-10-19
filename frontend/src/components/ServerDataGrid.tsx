@@ -223,7 +223,7 @@ export function gridRowSelection(enableRowSelection: boolean): {
 /** A flex column with no minimum of its own stays wide enough to read its header ("Nom", "Total"). */
 export const FLEX_COLUMN_MIN_WIDTH = 160;
 
-export function columnMinWidth(col: { minWidth?: number | null; flex?: number | null }): number | undefined {
+export function columnMinWidth(col: { minWidth?: number | null; flex?: number | null; width?: number | null }): number | undefined {
   if (typeof col.minWidth === 'number') return col.minWidth;
   if (typeof col.flex === 'number' && col.flex > 0) return FLEX_COLUMN_MIN_WIDTH;
   return undefined;

@@ -44,14 +44,14 @@ describe('floorSavedColumnWidths', () => {
         { colId: 'name', width: 36 },
         { colId: 'city', width: 80 },
         { colId: 'notes', width: 200 },
-        { colId: 'name2', width: null },
+        { colId: 'name2' },
       ],
       mins,
     );
     expect(state.find((col) => col.colId === 'name')?.width).toBe(160);
     expect(state.find((col) => col.colId === 'city')?.width).toBe(80);
     expect(state.find((col) => col.colId === 'notes')?.width).toBe(200);
-    expect(state.find((col) => col.colId === 'name2')?.width).toBeNull();
+    expect(state.find((col) => col.colId === 'name2')?.width).toBeUndefined();
   });
 });
 
