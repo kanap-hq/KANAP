@@ -4,7 +4,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
-import { ManualRatesService } from './manual-rates.service';
+import { ManualRatesService, MissingRatePair } from './manual-rates.service';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
@@ -145,7 +145,13 @@ export class CurrencyController {
   @Post('rates/refresh')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
-  async refreshRates(@Body() body: { years?: number[]; year?: number } | undefined, @Req() req: any) {
+  async refreshRates(
+    @Body() body: { years?: number[]; year?: number } | undefined,
+    @Req() req: any,
+  ): Promise<
+    | { ok: true; completed: false; years: number[] }
+    | { ok: true; completed: true; years: number[]; fetched: number; stillMissing: MissingRatePair[] }
+  > {
     const tenantId = this.requireTenantId(req);
     const requested = Array.isArray(body?.years) && body?.years.length
       ? body?.years
@@ -154,13 +160,38 @@ export class CurrencyController {
         : undefined;
     const entityManager = req?.queryRunner?.manager ?? this.rateSets.manager;
     const years = await this.resolveSyncYears(tenantId, requested, entityManager);
-    const status = await this.fxIngestion.queueManualRefresh(tenantId, years, { label: 'manual-api' });
-    return {
-      ok: true,
-      queued: status === 'queued',
-      alreadyQueued: status === 'skipped',
-      years,
-    };
+    const before = await this.usablePairs(entityManager, tenantId, years);
+    // The fetch commits on its own connection. This request only waits, then reads.
+    const outcome = await this.fxIngestion.refreshWithin(tenantId, years, { label: 'manual-api' });
+    if (!outcome.completed) return { ok: true, completed: false, years };
+    const after = await this.usablePairs(entityManager, tenantId, years);
+    let fetched = 0;
+    for (const pair of after) if (!before.has(pair)) fetched += 1;
+    const stillMissing = await this.manualRates.listMissingPairs(tenantId, entityManager, { report: false });
+    return { ok: true, completed: true, years, fetched, stillMissing };
+  }
+
+  /** Usable currency-year pairs on the latest set of each year: finite and strictly above 0. */
+  private async usablePairs(manager: EntityManager, tenantId: string, years: number[]): Promise<Set<string>> {
+    if (!years.length) return new Set();
+    const rows = await manager.query(
+      `SELECT DISTINCT ON (fiscal_year) fiscal_year, rates
+         FROM currency_rate_sets
+        WHERE tenant_id = $1
+          AND fiscal_year = ANY($2::int[])
+        ORDER BY fiscal_year, captured_at DESC`,
+      [tenantId, years],
+    );
+    const pairs = new Set<string>();
+    for (const row of rows as Array<{ fiscal_year: unknown; rates: unknown }>) {
+      const year = typeof row.fiscal_year === 'number' ? row.fiscal_year : Number(row.fiscal_year);
+      if (!Number.isInteger(year)) continue;
+      const rates = row.rates && typeof row.rates === 'object' ? row.rates as Record<string, unknown> : {};
+      for (const [key, value] of Object.entries(rates)) {
+        if (typeof value === 'number' && Number.isFinite(value) && value > 0) pairs.add(`${year}:${key.toUpperCase()}`);
+      }
+    }
+    return pairs;
   }
 
   private presentSet(set: CurrencyRateSet) {
@@ -227,7 +258,12 @@ export class CurrencyController {
       });
     } else {
       const currentYear = new Date().getFullYear();
+      yearsSet.add(currentYear - 1);
       yearsSet.add(currentYear);
+      yearsSet.add(currentYear + 1);
+      // Read only. Reporting here would queue a refresh, and the forced sync would see it as already running.
+      const missing = await this.manualRates.listMissingPairs(tenantId, manager, { report: false });
+      missing.forEach((pair) => yearsSet.add(pair.year));
     }
 
     const budgetYears = await this.findBudgetYears(manager);

@@ -118,6 +118,7 @@ Readers are `budget_ops:reader` or `budget:reader` (`CURRENCY_READERS`). Writers
 - `GET /currency/rates/missing` returns `{ items: Array<{ currency: string, year: number }> }`. Declared before the parameterised delete route.
 - `PUT /currency/rates/manual` with `{ currency: string, year: number, rate: number }` returns the new set as `{ fiscalYear, baseCurrency, rates, rateSources, capturedAt, source }`. `baseCurrency` is trimmed. The currency must be a key of `ISO_CURRENCIES` (the same list as currency settings). Invalid input answers 400 `{ code, message }`. `error.message` is the English `message`. Codes: `currency_invalid` (`Currency must be a 3-letter ISO code.`), `currency_reporting` (`A manual rate cannot be set for the reporting currency.`), `year_out_of_range` (`Year must be an integer between 1990 and 2100.`), `rate_out_of_range` (`Rate must be a finite number greater than 0 and at most 1000000000.`), `rate_too_small` (`Rate rounds to 0 at 6 decimal places and cannot be stored.`). A finite rate above 0 that rounds to 0 at 6 decimals is `rate_too_small`.
 - `DELETE /currency/rates/manual/:year/:currency` returns `{ ok: true, refreshQueued: boolean }`. Unknown currency or year uses the same 400 codes. A year that has no manual value for that currency answers 404 `{ code: 'manual_rate_not_found', message }`.
+- `POST /currency/rates/refresh` with an optional `{ years: number[] }` (or `{ year }`) runs the fetch in the request when none is already running for the tenant, and waits up to 20 seconds. The fetch commits on its own connection. Without years, the set is the previous, current and next calendar years, every year of a missing currency pair, and every year that already has a non-zero budget amount. With years, it is the requested years plus those budget-amount years. A finished run answers `{ ok: true, completed: true, years, fetched, stillMissing }`. `fetched` counts the currency-year pairs that gained a usable rate (finite and above 0), keys uppercased. `stillMissing` is `[{ currency, year }, ...]`, the pairs still without one. If a refresh is already running, or the wait ends first, the answer is `{ ok: true, completed: false, years }` and the running fetch continues.
 
 ## Editors and Validation
 
@@ -160,7 +161,7 @@ A past year takes the nearest published year of that currency and records the so
 Yes. Existing frozen versions keep their original snapshot. If you change the reporting currency, force an FX rates sync, unfreeze, and then re-freeze to capture the updated rate set.
 
 **Can I force-sync older fiscal years?**  
-Use `POST /currency/rates/refresh` with the `years` array (e.g., `[2023, 2024]`). The UI defaults to current + next year because that’s what freeze operations need most often.
+Use `POST /currency/rates/refresh` with the `years` array (e.g., `[2023, 2024]`). Without `years`, the sync covers the previous, current and next calendar years, the years of missing pairs, and the years that already have amounts. The answer's `completed` says whether the fetch finished within 20 seconds.
 
 **Is UTC relevant?**  
 Yes – the ingestion job timestamps snapshots in UTC. If you schedule anything externally, run it after the World Bank publishes the refreshed annual CSV (usually early in the new year) so Y-1 values are available, and be mindful of your spot-rate provider’s update cadence.

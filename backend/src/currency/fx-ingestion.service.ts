@@ -18,6 +18,9 @@ const WORLD_BANK_SERIES_START = 1960;
 /** A past year missing from a dataset older than this triggers one reload. */
 const ANNUAL_DATASET_MAX_AGE_MS = 24 * 60 * 60 * 1000;
 
+/** How long a forced sync waits for the fetch before answering that it is still running. */
+export const MANUAL_REFRESH_WAIT_MS = 20_000;
+
 /** A usable cross rate: finite and strictly positive. */
 function isUsableRate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -207,6 +210,35 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     // A stop waits for it (background-work.ts) before it closes the pool.
     void trackBackgroundWork(job);
     return 'queued';
+  }
+
+  /**
+   * Runs the refresh in this request when none is already running for the tenant,
+   * and waits up to `timeoutMs` (default 20s). The job keeps its own transaction:
+   * the request manager is never passed in. On timeout the job continues.
+   * A job that finished before this reads the map counts as completed.
+   */
+  async refreshWithin(
+    tenantId: string,
+    years?: number | number[],
+    opts?: { label?: string; timeoutMs?: number },
+  ): Promise<{ completed: boolean }> {
+    if (this.manualJobs.has(tenantId)) return { completed: false };
+    const timeoutMs = opts?.timeoutMs ?? MANUAL_REFRESH_WAIT_MS;
+    const status = await this.queueManualRefresh(tenantId, years, { label: opts?.label });
+    if (status === 'skipped') return { completed: false };
+    const job = this.manualJobs.get(tenantId);
+    if (!job) return { completed: true };
+    let timer: NodeJS.Timeout | undefined;
+    const timeout = new Promise<'timeout'>((resolve) => {
+      timer = setTimeout(() => resolve('timeout'), timeoutMs);
+    });
+    try {
+      const outcome = await Promise.race([job.then(() => 'done' as const), timeout]);
+      return { completed: outcome === 'done' };
+    } finally {
+      if (timer) clearTimeout(timer);
+    }
   }
 
   /**

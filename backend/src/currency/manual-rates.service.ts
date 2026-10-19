@@ -256,8 +256,14 @@ export class ManualRatesService {
    * Pairs in use that the latest set of the year, in the reporting currency,
    * does not rate with a finite value above 0. One query per source. The years
    * found are reported so the page that lists them also tries the sources.
+   * `report: false` only reads: a forced sync collects the years, then waits
+   * for its own refresh, and must not start that refresh early.
    */
-  async listMissingPairs(tenantId: string, manager: EntityManager): Promise<MissingRatePair[]> {
+  async listMissingPairs(
+    tenantId: string,
+    manager: EntityManager,
+    opts?: { report?: boolean },
+  ): Promise<MissingRatePair[]> {
     await this.setTenant(manager, tenantId);
     const reporting = (await this.settings.getSettings(tenantId, { manager })).reportingCurrency.toUpperCase();
     const currentYear = new Date().getFullYear();
@@ -332,7 +338,7 @@ export class ManualRatesService {
       items.push(pair);
     }
     items.sort((a, b) => a.year - b.year || (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0));
-    this.fxRates.reportMissingYears(tenantId, items.map((item) => item.year));
+    if (opts?.report !== false) this.fxRates.reportMissingYears(tenantId, items.map((item) => item.year));
     return items;
   }
 
