@@ -74,6 +74,6 @@ describe('ComparisonReport', () => {
     const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
     render(<QueryClientProvider client={queryClient}><MemoryRouter><ComparisonReport /></MemoryRouter></QueryClientProvider>);
     // Once, for the report's aggregates together.
-    expect(await screen.findAllByText('shared.fxMissing.excludingSeveral')).toHaveLength(1);
+    expect(await screen.findAllByText('ops:shared.fxMissing.excludingSeveral')).toHaveLength(1);
   });
 });
