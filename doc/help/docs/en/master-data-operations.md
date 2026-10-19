@@ -28,7 +28,7 @@ Use this tool to lock or unlock company and department metrics for a specific ye
 
 The page shows a status card for each scope:
 
-- **Frozen** (red): data is read-only for that year; the card shows who froze it and when
+- **Frozen** (red): data is read-only for that year. The card reads **Frozen by**, then the name of the person who froze it and the date
 - **Editable**: data can still be modified
 
 ### What freezing affects

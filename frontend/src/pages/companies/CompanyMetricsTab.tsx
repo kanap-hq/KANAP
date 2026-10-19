@@ -1,12 +1,15 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
-import { Box, Stack, TextField, Typography } from '@mui/material';
+import { Box, Stack, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../api';
 import YearTabs from '../../components/navigation/YearTabs';
+import FormattedNumberField from '../../components/inputs/FormattedNumberField';
 import { PropertyRow } from '../../components/design';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import { useFreezeState } from '../../hooks/useFreezeState';
+import { decimalMark } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { drawerFieldValueSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
@@ -15,9 +18,14 @@ type Props = {
   year: number;
   onYearChange: (year: number) => void;
   readOnly: boolean;
+  /** Code of the company base currency. Turnover is entered in millions of it. */
+  baseCurrency: string;
+  /** Told when a value is actually sent, so the page can show Saving, then Saved. */
+  onSave?: (pending: Promise<boolean>) => void;
 };
 
-type Metrics = { headcount: number; it_users: number | null; turnover: number | null };
+/** `headcount` is `null` only for a year with nothing stored. */
+type Metrics = { headcount: number | null; it_users: number | null; turnover: number | null };
 type MetricField = keyof Metrics;
 type MetricErrors = Partial<Record<MetricField, string>>;
 
@@ -25,7 +33,7 @@ type RawMetrics = { headcount?: unknown; it_users?: unknown; turnover?: unknown 
 
 function toMetrics(raw: RawMetrics): Metrics {
   return {
-    headcount: raw?.headcount != null ? Number(raw.headcount) : 0,
+    headcount: raw?.headcount != null ? Number(raw.headcount) : null,
     it_users: raw?.it_users != null ? Number(raw.it_users) : null,
     turnover: raw?.turnover != null ? Number(raw.turnover) : null,
   };
@@ -50,8 +58,11 @@ const INVALID_MESSAGE: Record<MetricField, string> = {
  * Headcount, IT users and turnover per year; each is saved for the selected year when its field
  * loses focus. The endpoint replaces the whole year, so every write carries the three values.
  */
-export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly }: Props) {
+export default function CompanyMetricsTab({ companyId, year, onYearChange, readOnly, baseCurrency, onSave }: Props) {
   const { t } = useTranslation(['master-data', 'common']);
+  const locale = useLocale();
+  // The application language decides the decimal mark, not the browser's.
+  const separator = decimalMark(locale);
   const queryClient = useQueryClient();
   const availableYears = React.useMemo(() => {
     const current = new Date().getFullYear();
@@ -80,45 +91,59 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
     setErrors({});
   }, [scope]);
 
-  const save = (field: MetricField, value: number | null) => {
+  const save = (field: MetricField, value: number | null): Promise<boolean> => {
     const key = metricsKey;
     const target = scope;
     const run = async () => {
       const base = queryClient.getQueryData<Metrics>(key) ?? stored;
-      if (!base || base[field] === value) return;
-      const body: Metrics = { ...base, [field]: value };
+      if (!base || base[field] === value) return true;
+      // A year written for the first time from another field starts with a headcount of zero, as before.
+      const body: Metrics = { ...base, headcount: base.headcount ?? 0, [field]: value };
       try {
         const res = await api.patch<RawMetrics>(`/company-metrics/${companyId}`, body, { params: { year: key[2] } });
         queryClient.setQueryData(key, toMetrics({ ...body, ...(res.data ?? {}) }));
         void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== companyId });
+        return true;
       } catch (e) {
         if (currentScopeRef.current === target) {
           setErrors((prev) => ({ ...prev, [field]: getApiErrorMessage(e, t, t('shared.messages.failedToSaveMetrics')) }));
         }
+        return false;
       }
     };
     const result = chainRef.current.then(run, run);
-    chainRef.current = result.catch(() => undefined);
+    chainRef.current = result.then(() => undefined, () => undefined);
     return result;
   };
 
-  const commit = (field: MetricField, raw: string) => {
-    if (readOnly || frozen || !stored) return;
+  /** `'invalid'` keeps the message and the caller puts the stored value back. A promise is the save. */
+  const commit = (field: MetricField, raw: string): 'invalid' | Promise<boolean> => {
+    if (readOnly || frozen || !stored) return Promise.resolve(true);
+    // An empty field of a year with nothing stored was left as it was.
+    if (raw.trim() === '' && stored[field] == null) return Promise.resolve(true);
     const value = parseMetric(field, raw.trim());
     if (value === undefined) {
       setErrors((prev) => ({ ...prev, [field]: t(INVALID_MESSAGE[field]) }));
-      return;
+      return 'invalid';
     }
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    void save(field, value);
+    // The same value is not a save: no request, and no Saving.
+    if ((stored[field] ?? null) === value) return Promise.resolve(true);
+    const pending = save(field, value);
+    onSave?.(pending);
+    return pending;
+  };
+
+  const clearError = (field: MetricField) => {
+    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
   };
 
   // Not disabled while a save runs (a click on the next year must land); disabled when nothing reliable is loaded.
   const disabled = readOnly || frozen || freezeLoading || isLoading || !!loadError;
-  const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string; step: number }> = [
-    { field: 'headcount', label: t('companies.fields.headcount'), required: true, step: 1 },
-    { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers'), step: 1 },
-    { field: 'turnover', label: t('companies.fields.turnover'), placeholder: t('companies.placeholders.turnover'), step: 0.001 },
+  const rows: Array<{ field: MetricField; label: string; required?: boolean; placeholder?: string }> = [
+    { field: 'headcount', label: t('companies.fields.headcount'), required: true },
+    { field: 'it_users', label: t('companies.fields.itUsers'), placeholder: t('companies.placeholders.itUsers') },
+    { field: 'turnover', label: t('companies.fields.turnover', { currency: baseCurrency }), placeholder: t('companies.placeholders.turnover') },
   ];
 
   return (
@@ -145,11 +170,12 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
             label={row.label}
             required={row.required}
             placeholder={row.placeholder}
-            step={row.step}
+            decimalSeparator={separator}
             storedText={stored && stored[row.field] != null ? String(stored[row.field]) : ''}
             disabled={disabled}
             error={errors[row.field]}
             onCommit={(raw) => commit(row.field, raw)}
+            onEdit={() => clearError(row.field)}
           />
         ))}
       </Box>
@@ -162,44 +188,60 @@ function MetricRow({
   label,
   required,
   placeholder,
-  step,
+  decimalSeparator,
   storedText,
   disabled,
   error,
   onCommit,
+  onEdit,
 }: {
   label: string;
   required?: boolean;
   placeholder?: string;
-  step: number;
+  decimalSeparator: '.' | ',';
   storedText: string;
   disabled: boolean;
   error?: string;
-  onCommit: (raw: string) => void;
+  onCommit: (raw: string) => 'invalid' | Promise<boolean>;
+  onEdit: () => void;
 }) {
   // The field follows the stored value, except while the user is typing in it.
-  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(storedText);
+  // Kept wide on purpose: the field must not drop a fourth decimal before the check can refuse it.
+  const { draft, setDraft, onFocus, onBlur, revert } = useFieldDraft(storedText);
   return (
     <PropertyRow label={label} required={required} valueSx={{ maxWidth: 200 }}>
-      <TextField
+      <FormattedNumberField
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        emit="string"
+        decimals={12}
+        decimalSeparator={decimalSeparator}
+        onChange={(event) => {
+          setDraft(String(event.target.value ?? ''));
+          onEdit();
+        }}
         onFocus={onFocus}
         onBlur={() => {
           onBlur();
-          onCommit(draft);
+          const outcome = onCommit(draft);
+          // The check refused it: the stored value comes back, the message stays until the next input.
+          if (outcome === 'invalid') {
+            setDraft(storedText);
+            return;
+          }
+          void outcome.then((saved) => {
+            if (!saved) revert();
+          });
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
         }}
-        type="number"
         variant="standard"
         sx={drawerFieldValueSx}
         placeholder={placeholder}
         disabled={disabled}
         error={!!error}
         helperText={error}
-        inputProps={{ min: 0, step, 'aria-label': label }}
+        inputProps={{ 'aria-label': label }}
       />
     </PropertyRow>
   );

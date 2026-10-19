@@ -1,4 +1,5 @@
 import api from '../api';
+import type { TurnoverFxMissingWarning } from '../utils/allocationWarnings';
 
 export type AllocationMethod = 'headcount' | 'it_users' | 'turnover';
 export type AllocationRuleMode = 'auto' | 'manual_company';
@@ -22,6 +23,8 @@ export type AllocationRuleResolution = {
   shares: AllocationRuleShare[];
   /** Why the effective selection cannot be computed (missing metric, disabled company…). */
   preview_error: string | null;
+  /** The split is computed, but turnovers without a rate into the reporting currency were counted unconverted. */
+  preview_warning?: TurnoverFxMissingWarning | null;
 };
 
 export type AllocationRulePayload = {

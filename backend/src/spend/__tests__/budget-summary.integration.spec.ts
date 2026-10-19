@@ -24,6 +24,7 @@ import {
 } from './round-inputs.fixtures';
 import { seedCompany as seedCostCenterCompany, seedCostCenter, seedUser } from './cost-center.fixtures';
 import { exportBudgetFile, fileRows } from './budget-file.fixtures';
+import { realAllocationCalculator } from './oracle/oracle-deps';
 
 // The OPEX and CAPEX lists on the SQL list engine (`budget-list/`) against the
 // database, with the same assertions for both: five columns in every slot, sort and
@@ -526,10 +527,11 @@ const aiContext = (runner: QueryRunner, tenantId: string) => ({
   manager: runner.manager,
 });
 
-// Constructor positions of the item services: spendItems 5, capexItems 17 (both executors).
+// Constructor positions of the item services: spendItems 5, capexItems 17 (both executors); the query executor's allocation calculator 23.
 function queryExecutor(items: unknown, kind: Kind = 'capex'): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  const args: any[] = Array.from({ length: 24 }, () => ({}));
   args[kind === 'opex' ? 5 : 17] = items;
+  args[23] = realAllocationCalculator();
   return new (AiQueryExecutor as any)(...args);
 }
 
@@ -564,9 +566,10 @@ async function testAiCapexDetail() {
       `INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES ($1, $2, $3)`,
       [tenantId, app.id, ids.alpha],
     );
-    const args: any[] = Array.from({ length: 23 }, () => ({}));
+    const args: any[] = Array.from({ length: 24 }, () => ({}));
     args[6] = { listContractsForCapexItem: async () => ({ items: [] }) };
     args[17] = svc;
+    args[23] = realAllocationCalculator();
     // By reference: the detail reads the line under its id.
     const detail: any = await new (AiQueryExecutor as any)(...args).executeDetail(aiContext(runner, tenantId), {
       entity_type: 'capex_items',

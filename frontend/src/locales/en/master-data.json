@@ -146,7 +146,7 @@
       "year": "Year",
       "headcount": "Headcount",
       "itUsers": "IT users",
-      "turnover": "Turnover (M€)"
+      "turnover": "Turnover (M {{currency}})"
     },
     "status": {
       "enabled": "Enabled",
@@ -175,6 +175,7 @@
     "messages": {
       "saveFailed": "Failed to save the company.",
       "createFailed": "Failed to create the company.",
+      "deleteFailed": "Failed to delete the company.",
       "nameRequired": "Enter a name.",
       "nameTaken": "Another company already has this name.",
       "countryRequired": "Choose a country.",

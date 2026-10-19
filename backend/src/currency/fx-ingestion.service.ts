@@ -366,7 +366,15 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       const code = typeof row.currency === 'string' ? row.currency.trim().toUpperCase() : '';
       if (code.length === 3) currencies.add(code);
     });
-
+    // The base currencies of the companies: their turnovers are converted at the year's rates.
+    const companyCurrencies = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(base_currency)) AS currency FROM companies WHERE tenant_id = $1 AND base_currency IS NOT NULL`,
+      [tenantId],
+    );
+    companyCurrencies.forEach((row: any) => {
+      const code = typeof row.currency === 'string' ? row.currency : '';
+      if (code.length === 3) currencies.add(code);
+    });
 
     await this.currencySettings.ensureCurrencyRecords(currencies, { manager });
 

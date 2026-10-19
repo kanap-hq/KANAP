@@ -460,7 +460,8 @@
         "capexItem": "CAPEX-Zeile",
         "incident": "Vorfall",
         "location": "Standort",
-        "document": "Dokument"
+        "document": "Dokument",
+        "company": "Unternehmen"
       },
       "myTimeTitle": "Meine Zeit",
       "newRequestsTitle": "Neue Anfragen",

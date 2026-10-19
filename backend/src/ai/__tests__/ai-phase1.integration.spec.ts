@@ -1392,6 +1392,7 @@ function createAiQueryHarness(manager: any) {
     {} as any,
     {} as any,
     {} as any,
+    {} as any, // allocationCalculator
   );
   const aggregateExecutor = new AiAggregateExecutor(
     tasks as any,
@@ -3892,6 +3893,7 @@ async function testAiQueryExecutorClosesRemainingMilestone1aGapFields() {
       {} as any,
       {} as any,
       {} as any,
+      {} as any, // allocationCalculator
     );
 
     const context = {
@@ -4082,6 +4084,7 @@ async function testAiQueryExecutorSpendItemsExposeRelativeYearlyTotals() {
     {} as any,
     {} as any,
     {} as any,
+    {} as any, // allocationCalculator
   );
 
   const result = await executor.execute(

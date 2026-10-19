@@ -4,11 +4,47 @@ import { EntityManager } from 'typeorm';
 import { Company } from '../../companies/company.entity';
 import { CompanyMetric } from '../../companies/company-metric.entity';
 import {
+  TurnoverFxRates,
   buildCompanyWeights,
   computeCompanyShares,
+  computeCompanySharesWithFx,
+  convertTurnovers,
   fiscalYearStart,
+  describeAllocationWarning,
   normalizeWeights,
+  turnoverFxMissingWarning,
 } from '../allocation-distribution';
+
+/**
+ * `resolveRates` stub: `rates` maps `<rate set or live>:<year>:<currency>` to the rate into the
+ * reporting currency (`amount * rate`); an unknown key answers rate 1 with the source `missing`,
+ * as `FxRateService` does.
+ */
+function fakeFx(reportingCurrency: string, rates: Record<string, number>) {
+  const calls: any[][] = [];
+  const fx = {
+    calls,
+    resolveRates: async (tenantId: string, lookups: any[]) => {
+      calls.push([tenantId, lookups]);
+      const map = new Map<string, any>();
+      for (const l of lookups) {
+        const key = `${l.rateSetId || 'live'}:${l.fiscalYear}:${String(l.sourceCurrency).toUpperCase()}`;
+        const same = String(l.sourceCurrency).toUpperCase() === reportingCurrency;
+        const rate = same ? 1 : rates[key];
+        map.set(key, {
+          rate: rate ?? 1,
+          rateSetId: l.rateSetId ?? null,
+          fiscalYear: l.fiscalYear,
+          reportingCurrency,
+          source: same ? 'identity' : rate != null ? (l.rateSetId ? 'snapshot' : 'live') : 'missing',
+          capturedAt: null,
+        });
+      }
+      return { map, settings: { reportingCurrency } as any };
+    },
+  };
+  return fx as unknown as TurnoverFxRates & { calls: any[][] };
+}
 
 function sum(values: number[]): number {
   return values.reduce((acc, value) => acc + value, 0);
@@ -126,7 +162,7 @@ async function testSharesUseDriverValues() {
     ],
   });
   const shares = await computeCompanyShares({
-    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount',
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount', fxRates: undefined,
   });
   assert.deepEqual(Array.from(shares.entries()), [['a', 75], ['b', 25]]);
 
@@ -141,16 +177,79 @@ async function testSharesUseDriverValues() {
 
 async function testTurnoverColumnIsUsedForTheTurnoverDriver() {
   const manager = fakeManager({
-    companies: [{ id: 'a' }, { id: 'b' }],
+    companies: [{ id: 'a', base_currency: 'EUR' }, { id: 'b', base_currency: 'EUR' }],
     metrics: [
       { company_id: 'a', headcount: 10, turnover: '180' },
       { company_id: 'b', headcount: 990, turnover: '60' },
     ],
   });
   const shares = await computeCompanyShares({
-    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'turnover',
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'turnover', fxRates: fakeFx('EUR', {}),
   });
   assert.deepEqual(Array.from(shares.entries()), [['a', 75], ['b', 25]]);
+}
+
+/** 70 M EUR and 35 M USD at 0.9: 70 / 101.5 and 31.5 / 101.5, not 70 / 105 and 35 / 105. */
+async function testTurnoversInOtherCurrenciesAreConvertedAtTheVersionRates() {
+  const manager = fakeManager({
+    companies: [{ id: 'eu', base_currency: 'EUR' }, { id: 'us', base_currency: 'usd' }],
+    metrics: [
+      { company_id: 'eu', turnover: '70' },
+      { company_id: 'us', turnover: '35' },
+    ],
+  });
+  const fx = fakeFx('EUR', { 'live:2026:USD': 0.9, 'set-1:2026:USD': 0.8 });
+  const live = await computeCompanySharesWithFx({
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['eu', 'us'], driver: 'turnover', fxRates: fx, rateSetId: null,
+  });
+  assert.deepEqual(Array.from(live.shares.entries()), [['eu', 68.9655], ['us', 31.0345]]);
+  assert.deepEqual(live.fxMissing, []);
+  assert.equal(fx.calls[0][0], 't1');
+  assert.deepEqual(fx.calls[0][1].map((l: any) => [l.rateSetId, l.fiscalYear, l.sourceCurrency]), [[null, 2026, 'EUR'], [null, 2026, 'USD']]);
+
+  // A frozen version converts at its rate set: 35 × 0.8 = 28.
+  const frozen = await computeCompanySharesWithFx({
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['eu', 'us'], driver: 'turnover', fxRates: fx, rateSetId: 'set-1',
+  });
+  assert.deepEqual(Array.from(frozen.shares.entries()), [['eu', 71.4286], ['us', 28.5714]]);
+}
+
+async function testTurnoverWithoutARateIsCountedUnconvertedAndReported() {
+  const fx = fakeFx('EUR', {});
+  const converted = await convertTurnovers({
+    fxRates: fx, manager: {} as EntityManager, tenantId: 't1', fiscalYear: 2027, rateSetId: null,
+    entries: [
+      { companyId: 'eu', currency: 'EUR', turnover: 70 },
+      { companyId: 'us', currency: 'USD', turnover: '35' },
+      { companyId: 'none', currency: 'USD', turnover: null },
+    ],
+  });
+  assert.equal(converted.reportingCurrency, 'EUR');
+  assert.deepEqual(Array.from(converted.values.entries()), [['eu', 70], ['us', 35], ['none', null]]);
+  assert.deepEqual(converted.missingCurrencies, ['USD']);
+}
+
+async function testSameCurrencyIsNotConverted() {
+  const fx = fakeFx('USD', { 'live:2026:EUR': 1.1 });
+  const converted = await convertTurnovers({
+    fxRates: fx, manager: {} as EntityManager, tenantId: 't1', fiscalYear: 2026, rateSetId: null,
+    entries: [
+      { companyId: 'us', currency: 'USD', turnover: 35.123 },
+      { companyId: 'eu', currency: 'EUR', turnover: 10 },
+      { companyId: 'blank', currency: null, turnover: 2 },
+    ],
+  });
+  assert.equal(converted.values.get('us'), 35.123);
+  assert.equal(Math.round(converted.values.get('eu')! * 1000) / 1000, 11);
+  // A company without base currency counts as the reporting currency.
+  assert.equal(converted.values.get('blank'), 2);
+  assert.deepEqual(converted.missingCurrencies, []);
+}
+
+async function testTurnoverConversionNeedsTheRates() {
+  await assert.rejects(() => convertTurnovers({
+    fxRates: undefined, manager: {} as EntityManager, tenantId: 't1', fiscalYear: 2026, rateSetId: null, entries: [],
+  }), /exchange rates/);
 }
 
 async function testCompanyDisabledForTheYearIsRejected() {
@@ -161,7 +260,7 @@ async function testCompanyDisabledForTheYearIsRejected() {
   });
   await assert.rejects(
     () => computeCompanyShares({
-      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount',
+      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount', fxRates: undefined,
     }),
     (err: unknown) =>
       err instanceof BadRequestException && /not available for manual allocation/.test((err as Error).message),
@@ -175,7 +274,7 @@ async function testCompanyWithoutMetricIsRejected() {
   });
   await assert.rejects(
     () => computeCompanyShares({
-      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount',
+      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a', 'b'], driver: 'headcount', fxRates: undefined,
     }),
     (err: unknown) =>
       err instanceof BadRequestException && /Provide headcount values/.test((err as Error).message),
@@ -193,7 +292,7 @@ function testSingleCompanyTakesEverythingWithoutADriverValue() {
 async function testSingleCompanySharesAreOneHundredWithoutMetrics() {
   const manager = fakeManager({ companies: [{ id: 'a' }], metrics: [] });
   const shares = await computeCompanyShares({
-    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a'], driver: 'headcount',
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a'], driver: 'headcount', fxRates: undefined,
   });
   assert.deepEqual(Array.from(shares.entries()), [['a', 100]]);
 }
@@ -202,14 +301,26 @@ async function testSingleDisabledCompanyIsStillRejected() {
   const manager = fakeManager({ companies: [], metrics: [] });
   await assert.rejects(
     () => computeCompanyShares({
-      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a'], driver: 'headcount',
+      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['a'], driver: 'headcount', fxRates: undefined,
     }),
     (err: unknown) =>
       err instanceof BadRequestException && /not available for manual allocation/.test((err as Error).message),
   );
 }
 
+/**
+ * The warning of turnovers counted unconverted is data, worded by each screen in the user's
+ * language; the API's text fields (the AI's summary rows) get it in English.
+ */
+function testFxMissingWarningIsStructured() {
+  assert.equal(turnoverFxMissingWarning([], 2026, 'EUR'), null);
+  const warning = turnoverFxMissingWarning(['JPY', 'USD'], 2026, 'EUR');
+  assert.deepEqual(warning, { code: 'turnover_fx_missing', currencies: ['JPY', 'USD'], year: 2026, reportingCurrency: 'EUR' });
+  assert.match(describeAllocationWarning(warning!), /No EUR exchange rate for JPY, USD in 2026/);
+}
+
 function run() {
+  testFxMissingWarningIsStructured();
   testEqualWeightsRoundToExactlyOneHundred();
   testLastEntryAbsorbsTheRoundingRemainder();
   testSingleEntryTakesEverything();
@@ -223,6 +334,10 @@ function run() {
   return Promise.resolve()
     .then(testSharesUseDriverValues)
     .then(testTurnoverColumnIsUsedForTheTurnoverDriver)
+    .then(testTurnoversInOtherCurrenciesAreConvertedAtTheVersionRates)
+    .then(testTurnoverWithoutARateIsCountedUnconvertedAndReported)
+    .then(testSameCurrencyIsNotConverted)
+    .then(testTurnoverConversionNeedsTheRates)
     .then(testCompanyDisabledForTheYearIsRejected)
     .then(testCompanyWithoutMetricIsRejected)
     .then(testSingleCompanySharesAreOneHundredWithoutMetrics)

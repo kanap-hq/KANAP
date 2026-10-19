@@ -149,8 +149,8 @@ Vea las asignaciones de costes entre todas las empresas con KPI resumen y flujos
 | Importe | Total de la métrica seleccionada |
 | Plantilla | Plantilla total |
 | Usuarios IT | Conteo de usuarios IT |
-| Facturación | Facturación anual |
-| Costes IT vs facturación | Ratio porcentual |
+| Facturación | Facturación anual, en millones de la moneda de reporte |
+| Costes IT vs facturación | Ratio porcentual, ambos términos en la moneda de reporte |
 | Costes IT por usuario | Importe dividido por plantilla |
 | Costes IT por usuario IT | Importe dividido por usuarios IT |
 
@@ -183,6 +183,8 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 ### Qué verá
 
 **Tarjeta resumen de la empresa**: Nombre de la empresa, importe total, moneda de reporte, plantilla, usuarios IT, coste por usuario, coste por usuario IT y costes IT vs facturación.
+
+**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda aún no tiene tipo para el año, sus facturaciones se cuentan sin convertir y el informe muestra un aviso, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos.
 
 **Totales por departamento** (cuando está habilitado):
 

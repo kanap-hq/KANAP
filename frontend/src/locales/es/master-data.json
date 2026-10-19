@@ -146,7 +146,7 @@
       "year": "Año",
       "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
-      "turnover": "Facturación (M€)"
+      "turnover": "Facturación (M {{currency}})"
     },
     "status": {
       "enabled": "Activado",
@@ -170,11 +170,12 @@
       "vatNumber": "p. ej., ESB12345678",
       "notes": "p. ej., Entidad de servicios compartidos del grupo",
       "itUsers": "p. ej., 120",
-      "turnover": "p. ej., 12.5"
+      "turnover": "p. ej., 12,5"
     },
     "messages": {
       "saveFailed": "Error al guardar la empresa.",
       "createFailed": "Error al crear la empresa.",
+      "deleteFailed": "Error al eliminar la empresa.",
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otra empresa ya tiene este nombre.",
       "countryRequired": "Elija un país.",
