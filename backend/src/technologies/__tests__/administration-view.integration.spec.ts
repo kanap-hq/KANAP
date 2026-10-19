@@ -671,6 +671,61 @@ async function testBulk() {
   });
 }
 
+async function testExport() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-csv');
+    const host = await asset(runner, a, 'host');
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_1' WHERE tenant_id = $1 AND id = $2`, [a, host]);
+    const guest = await asset(runner, a, 'guest');
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, guest]);
+    await contains(runner, a, host, guest);
+    const ad = await technology(runner, a, 1, 'Active Directory', 'directory');
+    const release = await version(runner, a, ad, '2019');
+    await installed(runner, a, guest, ad, release);
+    const portal = await application(runner, a, 'Portal');
+    await assign(runner, a, portal, guest);
+    await asset(runner, a, '=cmd');
+    const retired = await asset(runner, a, 'gone-export');
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [a, retired]);
+    const settings = new Map<string, Settings>([[a, {
+      adminZones: ZONES, domains: DOMAINS, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [{ code: 'vm', label: 'Virtual machine' }],
+    }]]);
+    const svc = service(settings);
+    const opts = { manager: runner.manager, tenantId: a };
+    const page = await svc.assets({ q: 'guest', limit: 10 }, opts);
+    const row = page.items[0];
+    const file = await svc.csv({ q: 'guest', language: 'en' }, opts);
+    assert.equal(file.filename, 'administration_view_assets.csv');
+    const lines = file.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(lines[0], 'Zone,Reference,Name,Type,Technologies,Applications,Controls,Dependency');
+    assert.equal(lines[1], [
+      'Tier 0',
+      row.reference,
+      'guest',
+      'Virtual machine',
+      'TEC-1 Active Directory (2019)',
+      `${row.applications.items[0].reference} Portal`,
+      'What runs an asset is in a less sensitive zone; Applications hosted in the most sensitive zone',
+      `Runs on ${row.depends_on[0].reference} host (Tier 1)`,
+    ].join(','));
+    assert.equal(lines.length, 2, 'the export follows the filters and ignores the page');
+    const formula = await svc.csv({ q: '=cmd', language: 'en' }, opts);
+    assert.ok(formula.content.includes("'=cmd"), formula.content);
+    const all = await svc.csv({ language: 'en' }, opts);
+    assert.equal(all.filename, 'administration_view_assets.csv');
+    assert.equal(all.content.includes('gone-export'), false);
+    await assert.rejects(svc.csv({ list: 'zones', language: 'en' }, opts), (error: any) => error instanceof BadRequestException && /assets or domains/.test(error.message));
+
+    const s = await seed(runner);
+    const domains = await service(s.settings).csv({ list: 'domains', language: 'en' }, { manager: runner.manager, tenantId: s.a });
+    assert.equal(domains.filename, 'administration_view_domains.csv');
+    const domainLines = domains.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
+    assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');
+    assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
+    assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
+  });
+}
+
 async function testRoutes() {
   assert.equal(Reflect.getMetadata(PATH_METADATA, AdministrationViewController), 'technologies/reports/administration');
   const proto = AdministrationViewController.prototype as any;
@@ -690,5 +745,6 @@ void runSpecs('Administration view', [
   ['each control point, with one case that stays out', testControls],
   ['the asset page: order, filters, caps', testAssetsPage],
   ['bulk zone assignment', testBulk],
+  ['CSV export of assets and domains', testExport],
   ['routes: paths and permission', testRoutes],
 ]);
