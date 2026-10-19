@@ -715,6 +715,7 @@ export class ChargebackReportService {
         reportingCurrency,
         source: upper === reportingCurrency.toUpperCase() ? 'identity' : 'missing',
         capturedAt: null,
+        via: null,
       };
     };
 

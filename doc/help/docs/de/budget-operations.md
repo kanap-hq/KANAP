@@ -78,7 +78,7 @@ Die einzige Zeile **Gesamt** [der Liste der Budgetzeilen](budget-lines.md#mit-de
 
 ### Das Einfrieren der Standardspalte schreibt die Wechselkurse fest
 
-Wenn Sie die [Standardspalte](#budgetspalten) für ein Jahr einfrieren, werden auch die Wechselkurse dieses Jahres für den eingefrorenen Typ festgeschrieben. KANAP aktualisiert die Kurse des Jahres und behält dann den neuesten Satz für jeden OPEX- oder CAPEX-Betrag dieses Jahres. Berichte rechnen diese Beträge danach mit denselben Kursen um, auch wenn neuere Kurse eintreffen. Das Auftauen der Standardspalte gibt sie wieder frei.
+Wenn Sie die [Standardspalte](#budgetspalten) für ein Jahr einfrieren, werden auch die Wechselkurse dieses Jahres für den eingefrorenen Typ festgeschrieben. KANAP aktualisiert die Kurse des Jahres und behält dann den neuesten Satz für jeden OPEX- oder CAPEX-Betrag dieses Jahres. Berichte rechnen diese Beträge danach mit denselben Kursen um, auch wenn neuere Kurse eintreffen. Wechselt die Berichtswährung später, werden die eingefrorenen Beträge von dieser Währung in die neue zum aktuellen Kurs des Jahres umgerechnet. Das Auftauen der Standardspalte gibt sie wieder frei.
 
 Das Einfrieren einer anderen Spalte berührt die Kurse nicht. Eine spätere Änderung der Standardspalte schreibt von sich aus nichts fest und gibt nichts frei: Die Kurse folgen dem nächsten Einfrieren oder Auftauen der neuen Standardspalte. **Beide einfrieren** friert nur die offene Zelle ein, sodass ein Typ, dessen Standardspalte bereits eingefroren ist, die festgeschriebenen Kurse behält.
 

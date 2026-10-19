@@ -78,7 +78,7 @@ The single **Total** row of [the budget lines list](budget-lines.md#working-with
 
 ### Freezing the default column fixes the exchange rates
 
-Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the type you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. Unfreezing the default column releases them.
+Freezing the [default column](#budget-columns) for a year also fixes that year's exchange rates for the type you freeze. KANAP refreshes the rates for the year, then keeps the latest set for every OPEX or CAPEX amount of that year. Reports then convert those amounts with the same rates, even when newer rates arrive. If the reporting currency later changes, the frozen amounts are converted from that currency into the new one at the live rate of the year. Unfreezing the default column releases them.
 
 Freezing another column does not touch the rates. Changing the default column later does not fix or release anything by itself: the rates follow the next freeze or unfreeze of the new default column. **Freeze both** freezes only the open cell, so a type whose default column is already frozen keeps the rates it fixed.
 

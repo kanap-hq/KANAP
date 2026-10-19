@@ -78,7 +78,7 @@ La fila **Total** única de [la lista de líneas presupuestarias](budget-lines.m
 
 ### Congelar la columna por defecto fija los tipos de cambio
 
-Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el tipo de línea que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Descongelar la columna por defecto los libera.
+Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el tipo de línea que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Si la moneda de reporte cambia más adelante, los importes congelados se convierten de esa moneda a la nueva al tipo vigente del año. Descongelar la columna por defecto los libera.
 
 Congelar otra columna no afecta a los tipos. Cambiar más tarde la columna por defecto no fija ni libera nada por sí solo: los tipos siguen la próxima congelación o descongelación de la nueva columna por defecto. **Congelar ambas** solo congela la celda abierta, así que un tipo de línea cuya columna por defecto ya está congelada conserva los tipos de cambio ya fijados.
 

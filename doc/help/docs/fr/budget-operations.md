@@ -78,7 +78,7 @@ La ligne **Total** unique de [la liste des lignes budgétaires](budget-lines.md#
 
 ### Geler la colonne par défaut fige les taux de change
 
-Geler la [colonne par défaut](#colonnes-budgetaires) pour une année fige aussi les taux de change de cette année pour le type que vous gelez. KANAP actualise les taux de l'année, puis conserve le dernier jeu de taux pour chaque montant OPEX ou CAPEX de cette année. Les rapports convertissent ensuite ces montants avec les mêmes taux, même quand des taux plus récents arrivent. Dégeler la colonne par défaut les libère.
+Geler la [colonne par défaut](#colonnes-budgetaires) pour une année fige aussi les taux de change de cette année pour le type que vous gelez. KANAP actualise les taux de l'année, puis conserve le dernier jeu de taux pour chaque montant OPEX ou CAPEX de cette année. Les rapports convertissent ensuite ces montants avec les mêmes taux, même quand des taux plus récents arrivent. Si la devise de reporting change ensuite, les montants gelés sont convertis de cette devise vers la nouvelle au taux en vigueur de l'année. Dégeler la colonne par défaut les libère.
 
 Geler une autre colonne ne touche pas aux taux. Changer ensuite de colonne par défaut ne fige ni ne libère rien à lui seul : les taux suivent le prochain gel ou dégel de la nouvelle colonne par défaut. **Geler les deux** ne gèle que la cellule ouverte : un type dont la colonne par défaut est déjà gelée garde les taux qu'il a figés.
 

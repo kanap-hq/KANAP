@@ -192,7 +192,7 @@ Live spot rate from ExchangeRate-API is used (falls back to the latest annual ra
 Reuse the current year's rate as a forward estimate. This provides budget planning guidance but should be reviewed as those years approach.
 
 ### Frozen years
-Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
+Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. If the reporting currency later changes, those amounts stay on the frozen rates and are then converted from that currency into the new reporting currency at the live rate of the year. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
 
 **Missing rate**: When a year has no rate for a currency in use, the budget line amounts in that currency are left out of every total in the reporting currency for that year. This covers the budget lines list, the budget management overview, the budget and chargeback reports, the contracts and the Relations tabs of applications and technologies. The screen says so where it matters:
 

@@ -128,6 +128,7 @@ Readers are `budget_ops:reader` or `budget:reader` (`CURRENCY_READERS`). Writers
 
 ## Reporting & Totals
 
+- A frozen version keeps the rate set pinned at freeze time. When that set's base is still the reporting currency, its rates apply as stored. When the reporting currency has since changed, each amount is converted with `pinned[source → old base] × live[old base → reporting]` for the same year. An amount already in the old base takes the live rate alone. An amount in the new reporting currency still goes through the pinned rate (that frozen rate stays the anchor). If the live rate of the old base is missing, the amount is left out and the year is fetched, the same way as any other missing rate. The resolved rate names the current reporting currency and records the old base in `via`.
 - Every backend aggregation (`/spend-items/summary`, `/capex-items/summary`, report endpoints, chargeback) now emits converted values alongside the original sums.
 - Frontend totals, charts, and pinned rows show the reporting currency in headers and labels (e.g., “Y Budget (2026) [USD]”).
 - API consumers can still access raw amounts in the `totals` structure; converted values live under a matching `reporting` object.
