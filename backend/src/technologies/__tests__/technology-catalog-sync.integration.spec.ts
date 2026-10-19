@@ -301,13 +301,14 @@ async function testDescriptionFilled() {
     await runner.query(`UPDATE tenants SET metadata = '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
     const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
     const shipped = catalog.shippedProduct('postgresql')!;
+    const english = catalog.description('postgresql', 'en')!;
     const french = catalog.description('postgresql', 'fr')!;
-    assert.ok(french && french !== catalog.description('postgresql', 'en'));
+    assert.ok(french && french !== english);
     const read = async () => (await runner.query(`SELECT description FROM technologies WHERE id = $1`, [technology.id]))[0].description;
 
-    assert.notEqual(await read(), french, 'adopted in English');
+    assert.equal(await read(), english, 'adopted in English');
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
-    assert.equal(await read(), french, 'the tenant left the catalog text unchanged, so it follows in the tenant language');
+    assert.equal(await read(), english, 'a tenant language does not rewrite a description the catalog did not change');
 
     // Adopted before the catalog had descriptions: empty, no state.
     await runner.query(`UPDATE technologies SET description = '  ', catalog_state = NULL WHERE id = $1`, [technology.id]);
@@ -660,6 +661,66 @@ async function testEmptyShippedFileWithdrawsNothing() {
   });
 }
 
+/**
+ * C5 review P4: a description follows the catalog in the language it was written in.
+ * An English adoption on a French tenant stays English the next night. Without
+ * `description_language`, the language whose catalog text equals the remembered description
+ * is recorded, and nothing is rewritten when none equals it.
+ */
+async function testDescriptionLanguageStays() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-lang');
+    await runner.query(`UPDATE tenants SET metadata = '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const english = catalog.description('postgresql', 'en')!;
+    const french = catalog.description('postgresql', 'fr')!;
+    assert.notEqual(english, french);
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const read = async () => (await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    let row = await read();
+    assert.equal(row.description, english, 'adopted in English on a French tenant: the next night leaves it');
+    assert.equal(row.catalog_state.description_language, 'en');
+    assert.equal(row.catalog_state.description, english);
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+
+    await runner.query(`UPDATE technologies SET catalog_state = catalog_state - 'description_language' WHERE id = $1`, [technology.id]);
+    const originalText = catalog.textIn.bind(catalog);
+    const texts: Partial<Record<CatalogLanguage, string>> = {};
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' && texts[language] !== undefined ? texts[language]! : originalText(key, language));
+    texts.fr = 'Texte français révisé.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, english, 'a French revision does not rewrite an English description');
+    assert.equal(row.catalog_state.description_language, 'en', 'the language is the one whose catalog text equals the remembered description');
+    assert.equal(row.catalog_state.description, english);
+
+    texts.en = 'A revised English description.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, texts.en, 'the catalog text in the recorded language replaces it');
+    assert.equal(row.catalog_state.description, texts.en);
+    assert.equal(row.catalog_state.description_language, 'en');
+
+    await runner.query(
+      `UPDATE technologies SET description = 'Hand written', catalog_state = jsonb_set(catalog_state, '{description}', '"Hand written"') - 'description_language' WHERE id = $1`,
+      [technology.id],
+    );
+    texts.en = 'Brand new English.';
+    texts.fr = 'Texte français encore révisé.';
+    const before = audit.length;
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, 'Hand written', 'a remembered text that equals no catalog language stays');
+    assert.equal(row.catalog_state.description, 'Hand written');
+    assert.equal(row.catalog_state.description_language ?? null, null);
+    assert.equal(audit.length, before, 'nothing is audited when the description stays');
+  });
+}
+
 /** C5: a description the tenant left unchanged follows the catalog; one the tenant changed stays. */
 async function testDescriptionFollows() {
   await inRolledBackTransaction(async (runner) => {
@@ -668,9 +729,14 @@ async function testDescriptionFollows() {
     const tenantId = await seedTenant(runner, 'cat-sync-follow');
     const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
     const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
     const english = original('postgresql', 'en')!;
     let next: string | null = english;
-    catalog.description = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    // The follow reads `textIn` (that language only). Stub both, or the English fallback of
+    // `description` would hide a missing translation.
+    const revised = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.description = revised;
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
     const shipped = catalog.shippedProduct('postgresql')!;
     const read = async () => (await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
 
@@ -709,8 +775,10 @@ async function testTwoTenantsOneFollows() {
   await inRolledBackTransaction(async (runner) => {
     const { catalog, sync } = syncService();
     const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
     let next: string | null = original('postgresql', 'en');
     catalog.description = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
     const left = await seedTenant(runner, 'cat-sync-left');
     const right = await seedTenant(runner, 'cat-sync-right');
     const adopted = async (tenantId: string) => {
@@ -1019,6 +1087,7 @@ async function main() {
       ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],
       ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],
       ['empty shipped file withdraws nothing', testEmptyShippedFileWithdrawsNothing],
+      ['description stays in the language it was written', testDescriptionLanguageStays],
       ['description follows the catalog', testDescriptionFollows],
       ['two tenants, one follows', testTwoTenantsOneFollows],
       ['description in the users\' language', testDescriptionInUsersLanguage],

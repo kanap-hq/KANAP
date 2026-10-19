@@ -122,6 +122,11 @@ export class TechnologyCatalogService {
     return texts?.[language]?.trim() || texts?.en?.trim() || null;
   }
 
+  /** The short description written in `language` only, null when that language has none. */
+  textIn(key: string, language: CatalogLanguage): string | null {
+    return this.descriptions[key]?.[language]?.trim() || null;
+  }
+
   /** The editors the catalog names, once each. */
   editors(): string[] {
     return Array.from(new Set(this.products.map((product) => product.editor)));
@@ -167,8 +172,9 @@ export class TechnologyCatalogService {
    * family (`other` when the tenant's catalog no longer has it), hosting type (the entry's, else the
    * one its mode stands for, resolved against the tenant's hosting types), CPE identifiers and short
    * description, and its versions with their dates; `catalog_state` records what was offered, for
-   * the sync that follows (`technology-catalog-sync.service.ts`), including `shipped_cpe` and the
-   * identifiers this adoption actually added (`cpe_written`). The description is in `opts.language`, failing that the user's
+   * the sync that follows (`technology-catalog-sync.service.ts`), including `shipped_cpe`, the
+   * identifiers this adoption actually added (`cpe_written`), and `description_language` (the
+   * language of the description this adoption writes). The description is in `opts.language`, failing that the user's
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
    * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
@@ -180,9 +186,11 @@ export class TechnologyCatalogService {
     const shippedEntry = this.byKey.get(String(key || '').trim());
     if (!shippedEntry) throw new NotFoundException('Catalog entry not found');
     const product = (await this.effectiveProducts(mg, [shippedEntry.key])).get(shippedEntry.key)!;
-    const description = this.description(product.key, await languageOf(mg, tenantId, opts.userId ?? null, opts.language));
+    const descriptionLanguage = await languageOf(mg, tenantId, opts.userId ?? null, opts.language);
+    const description = this.description(product.key, descriptionLanguage);
     // `shipped_cpe` is the file, not the cache. `cpe_written` is only what this adoption adds:
     // an identifier the technology already holds stays the tenant's and is never withdrawn.
+    // `description_language` is the language of the text this adoption writes.
     const stateFor = (heldBefore: readonly string[]) => {
       const held = new Set(heldBefore.map((id) => id.toLowerCase()));
       return JSON.stringify({
@@ -190,6 +198,7 @@ export class TechnologyCatalogService {
         shipped_cpe: lowerSorted(shippedEntry.cpe_products),
         cpe_written: lowerSorted(product.cpe_products.filter((id) => !held.has(id.toLowerCase()))),
         description,
+        description_language: descriptionLanguage,
       });
     };
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);

@@ -166,12 +166,15 @@ export function readState(raw: unknown): CatalogState | null {
   if (shippedCpe === null) return null;
   const cpeWritten = optionalIdentifiers(record, 'cpe_written');
   if (cpeWritten === null) return null;
+  const descriptionLanguage = record.description_language;
+  if (descriptionLanguage != null && (typeof descriptionLanguage !== 'string' || !['en', 'fr', 'de', 'es'].includes(descriptionLanguage))) return null;
   const out: CatalogState = {
     cpe_products: [...cpe],
     versions: {},
     ...(typeof description === 'string' ? { description } : {}),
     ...(shippedCpe !== undefined ? { shipped_cpe: shippedCpe } : {}),
     ...(cpeWritten !== undefined ? { cpe_written: cpeWritten } : {}),
+    ...(typeof descriptionLanguage === 'string' ? { description_language: descriptionLanguage as CatalogState['description_language'] } : {}),
   };
   for (const [key, value] of Object.entries(versions as Record<string, unknown>)) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
@@ -281,7 +284,10 @@ function canonical(value: unknown): string {
  *   nothing: only the shipped file (`shippedProduct`) drops an identifier, and only one
  *   `cpe_written` records as written by the catalog. An identifier the cache added stays until
  *   that file lists it and then drops it. A shipped file that lists no identifier, and is not
- *   marked `noCpe`, drops nothing. An identifier the tenant typed is never dropped.
+ *   marked `noCpe`, drops nothing. An identifier the tenant typed is never dropped. A description
+ *   follows the catalog in `description_language`, the language it was written in. A change of the
+ *   tenant's language rewrites nothing. A state without that field takes the language whose catalog
+ *   text equals the remembered description, and nothing is rewritten when none does.
  * - Sync, tenant by tenant, after each refresh and at every start (the shipped catalog of a new
  *   KANAP version, in both deployment modes): `syncTenant`.
  *
@@ -499,10 +505,13 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    *   file that lists no identifier, and is not marked `noCpe`, withdraws nothing: the pass logs
    *   it and keeps the previous `shipped_cpe`;
    * - an empty description the catalog never filled receives the catalog's short description, in
-   *   the tenant's language (`tenantLanguage`). One the catalog wrote (`catalog_state.description`)
-   *   and the tenant left unchanged (the same text, edge spaces ignored) follows the catalog's
-   *   description in that language when it changes. One the tenant changed stays. One the catalog
-   *   withdraws leaves the text in place.
+   *   the tenant's language (`tenantLanguage`), and `description_language` records that language.
+   *   One the catalog wrote (`catalog_state.description`) and the tenant left unchanged (the same
+   *   text, edge spaces ignored) follows the catalog's description in `description_language` when
+   *   that text changes. A change of the tenant's language rewrites nothing. A state without
+   *   `description_language` takes the language whose catalog text equals the remembered
+   *   description, and is not rewritten when none does. One the tenant changed stays. One the
+   *   catalog withdraws leaves the text in place.
    * A technology without a usable state (adopted before the living catalog, or an unreadable one,
    * named in `malformed_states`) starts from the shipped catalog and from what it holds of the
    * catalog, all counted as offered: what it lacks counts as removed by the tenant, an empty value
@@ -717,26 +726,39 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         updates.push({ id: row.id, catalog_key: row.catalog_key, ...target, attach: false, seen: { ...current, catalog_key: row.catalog_key } });
       }
       // An empty description the catalog never filled receives the catalog's, in the tenant's
-      // language. One the catalog wrote and the tenant left unchanged (edge spaces ignored)
-      // follows a new catalog description in that language. One the tenant changed stays. One
-      // the catalog withdraws leaves the text in place.
-      const fresh = this.catalog.description(product.key, language);
+      // language. One the catalog wrote follows a new text in the language it was written in
+      // (`description_language`), while the tenant left it unchanged (edge spaces ignored). A
+      // change of the tenant's language rewrites nothing. Without a recorded language, the
+      // language whose catalog text equals the remembered description is recorded, and nothing
+      // is rewritten when none equals it. One the tenant changed stays. One the catalog withdraws
+      // leaves the text in place.
+      const catalogLanguages = ['en', 'fr', 'de', 'es'] as const;
       const remembered = typeof state.description === 'string' ? state.description : null;
+      let descriptionLanguage = state.description_language ?? null;
+      if (remembered && !descriptionLanguage) {
+        const matches = catalogLanguages.filter((code) => this.catalog.textIn(product.key, code) === remembered);
+        descriptionLanguage = (matches.includes(language) ? language : matches[0]) ?? null;
+        if (descriptionLanguage) state.description_language = descriptionLanguage;
+      }
+      const fresh = descriptionLanguage ? this.catalog.textIn(product.key, descriptionLanguage) : null;
       let description: string | null = null;
       let descriptionMode: 'fill' | 'update' | null = null;
       let descriptionSeen: string | null = null;
       if (!remembered?.trim()) {
-        if (!tech.description?.trim() && fresh) {
-          description = fresh;
+        const filled = this.catalog.description(product.key, language);
+        if (!tech.description?.trim() && filled) {
+          description = filled;
           descriptionMode = 'fill';
-          state.description = fresh;
+          state.description = filled;
+          state.description_language = language;
           changeOf(tech.id).description = true;
         }
-      } else if (sameText(tech.description, remembered) && fresh && !sameText(fresh, remembered)) {
+      } else if (descriptionLanguage && sameText(tech.description, remembered) && fresh && !sameText(fresh, remembered)) {
         description = fresh;
         descriptionMode = 'update';
         descriptionSeen = remembered.trim();
         state.description = fresh;
+        state.description_language = descriptionLanguage;
         changeOf(tech.id).descriptionUpdated = true;
       }
       techUpdates.push({

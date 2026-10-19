@@ -376,13 +376,17 @@ export function lowerSorted(ids: readonly string[]): string[] {
  * typed first, or held before an adoption, is not in this list.
  * `versions`: per version key, the values it last wrote; a key present was offered once (a
  * version the tenant deleted is not created again). `description`: the short description the
- * catalog last wrote; absent or null while it wrote none. While the technology still holds that
- * text, a new catalog description replaces it.
+ * catalog last wrote; absent or null while it wrote none. `description_language`: the language of
+ * that text. A description follows the catalog when the text in that same language changes. A
+ * change of the tenant's language rewrites nothing. Absent: the language whose catalog text equals
+ * `description` is recorded, and nothing is rewritten when none equals it.
  */
 export type CatalogState = {
   cpe_products: string[];
   versions: Record<string, CatalogVersionValues>;
   description?: string | null;
+  /** Language of `description`. Absent: inferred from the catalog text, or left alone. */
+  description_language?: 'en' | 'fr' | 'de' | 'es';
   /** Identifiers of the shipped file at the last pass, lower case. Absent: not known yet. */
   shipped_cpe?: string[];
   /** Identifiers the catalog wrote and the tenant still holds, lower case. Absent: none. */
