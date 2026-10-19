@@ -179,10 +179,9 @@ async function testMissingYearsRefreshedOnceInAWhile() {
   const fxRates = createService();
   const ingestion = new FxIngestionService({} as any, {} as any, {} as any, fxRates, {} as any);
   const queued: Array<{ tenantId: string; years: number[] }> = [];
-  let answer: 'queued' | 'skipped' = 'queued';
   (ingestion as any).queueManualRefresh = async (tenantId: string, years: number[]) => {
     queued.push({ tenantId, years });
-    return answer;
+    return 'queued';
   };
   ingestion.onModuleInit();
   const lookup = (fiscalYear: number) => ({ key: '', rateSetId: null, fiscalYear, sourceCurrency: 'USD' });
@@ -197,16 +196,6 @@ async function testMissingYearsRefreshedOnceInAWhile() {
     { tenantId: 'other', years: [2025] },
   ], 'each tenant year once');
 
-  queued.length = 0;
-  answer = 'skipped';
-  await fxRates.resolveRates('t', [lookup(2031)]);
-  await new Promise((resolve) => setImmediate(resolve));
-  answer = 'queued';
-  await fxRates.resolveRates('t', [lookup(2031)]);
-  await new Promise((resolve) => setImmediate(resolve));
-  // Skipped behind a running refresh: asked again once it ends (here at once, the stub runs
-  // none), and when that is skipped too, by the next read.
-  assert.deepEqual(queued.map((call) => call.years), [[2031], [2031], [2031]], 'a refresh skipped behind another one is asked again');
 }
 
 async function testReportMissingYearsNeverThrows() {

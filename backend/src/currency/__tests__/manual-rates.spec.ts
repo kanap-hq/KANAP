@@ -42,7 +42,8 @@ function harness(reporting = 'EUR') {
   const locks: string[] = [];
   const queued: Array<{ tenantId: string; years: unknown; label?: string }> = [];
   const reported: number[][] = [];
-  let queueStatus: 'queued' | 'skipped' = 'queued';
+  let queueStatus: 'queued' | 'merged' = 'queued';
+  const queuedFresh: unknown[] = [];
   let tick = 0;
   let ids = 0;
 
@@ -111,8 +112,9 @@ function harness(reporting = 'EUR') {
     reported.push(years);
   });
   const ingestion = {
-    queueManualRefresh: async (tenantId: string, years: unknown, opts?: { label?: string }) => {
+    queueManualRefresh: async (tenantId: string, years: unknown, opts?: { label?: string; fresh?: boolean }) => {
       queued.push({ tenantId, years, label: opts?.label });
+      queuedFresh.push(opts?.fresh);
       return queueStatus;
     },
   };
@@ -131,7 +133,8 @@ function harness(reporting = 'EUR') {
     locks,
     queued,
     reported,
-    setQueueStatus: (status: 'queued' | 'skipped') => {
+    queuedFresh,
+    setQueueStatus: (status: 'queued' | 'merged') => {
       queueStatus = status;
     },
     seed(row: Partial<Row> & Pick<Row, 'fiscal_year' | 'rates'>) {
@@ -303,19 +306,20 @@ async function testRemoveClearsTheCurrencyAndQueuesARefresh() {
   console.log('ok - removing a manual rate clears it and queues a refresh of the year');
 }
 
-async function testSkippedRefreshReportsTheYear() {
-  const { service, manager, reported, queued, seed, setQueueStatus } = harness();
+async function testRemovalJoinsTheNextRun() {
+  const { service, manager, reported, queued, queuedFresh, seed, setQueueStatus } = harness();
   seed({
     fiscal_year: 2024,
     rates: { EUR: 1, GBP: 1.2 },
     rate_sources: { EUR: 'identity', GBP: 'manual' },
   });
-  setQueueStatus('skipped');
+  setQueueStatus('merged');
   const removed = await service.removeManualRate('tenant-1', { currency: 'GBP', year: 2024 }, 'user-1', manager as any);
-  assert.deepEqual(removed, { ok: true, refreshQueued: false });
+  assert.deepEqual(removed, { ok: true, refreshQueued: true });
   assert.equal(queued.length, 1);
-  assert.deepEqual(reported, [[2024]]);
-  console.log('ok - a refresh already running is followed through the missing-year report');
+  assert.deepEqual(queuedFresh, [true], 'a run already going read the rate before the removal');
+  assert.deepEqual(reported, []);
+  console.log('ok - a refresh already running takes the year into its next run');
 }
 
 async function testLatestSetWins() {
@@ -494,7 +498,7 @@ async function testFrozenVersions() {
   await testSetCopiesTheLatestSet();
   await testRemoveRequiresAManualValue();
   await testRemoveClearsTheCurrencyAndQueuesARefresh();
-  await testSkippedRefreshReportsTheYear();
+  await testRemovalJoinsTheNextRun();
   await testLatestSetWins();
   await testApiContract();
   await testFrozenVersions();

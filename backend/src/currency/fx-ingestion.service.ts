@@ -87,6 +87,37 @@ interface TenantCurrencyContext {
   currencies: string[];
 }
 
+type RefreshOutcome = 'ok' | 'failed';
+
+type RefreshRequestOptions = {
+  label?: string;
+  /** Base to capture (a reporting-currency change). The latest request wins. */
+  reportingCurrency?: string;
+  /** Never answered by the run already going: it read the rates before this request. */
+  fresh?: boolean;
+  /** The run starts once this settles (the request transaction that saved the settings). */
+  startAfter?: Promise<unknown>;
+};
+
+/** One run of a tenant's refresh queue: the years and base merged from every request it answers. */
+type QueuedRefresh = {
+  years: Set<number>;
+  reportingCurrency?: string;
+  labels: Set<string>;
+  gates: Promise<unknown>[];
+  done: Promise<RefreshOutcome>;
+  resolve: (outcome: RefreshOutcome) => void;
+};
+
+type TenantRefreshQueue = { running?: QueuedRefresh; next?: QueuedRefresh };
+
+/** A three-letter code, upper case, or undefined. */
+function normalizeCode(raw: string | undefined): string | undefined {
+  if (typeof raw !== 'string') return undefined;
+  const code = raw.trim().toUpperCase();
+  return /^[A-Z]{3}$/.test(code) ? code : undefined;
+}
+
 type RefreshTenantOptions = {
   manual?: boolean;
   label?: string;
@@ -106,7 +137,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   private suspendScheduledUntil = 0;
   private readonly manualCooldownMs = 2 * 60 * 1000;
   private manualInProgress = 0;
-  private readonly manualJobs = new Map<string, Promise<void>>();
+  private readonly refreshQueues = new Map<string, TenantRefreshQueue>();
   private readonly loginAutoIntervalMs: number;
   private readonly loginAutoLabel = 'login-auto';
   /** Per `tenant:year`: when a missing rate last queued a refresh of that year. */
@@ -173,7 +204,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       this.logger.debug('Skipping scheduled World Bank FX refresh; manual run recently triggered.');
       return;
     }
-    if (this.manualInProgress > 0 || this.manualJobs.size > 0) {
+    if (this.manualInProgress > 0 || this.refreshQueues.size > 0) {
       this.logger.debug('Skipping scheduled World Bank FX refresh; manual run currently in progress.');
       return;
     }
@@ -187,92 +218,141 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * Queues a refresh of these years for the tenant. A refresh already running
+   * that covers them (same years, same target base) answers this request too;
+   * otherwise the years and the target base are merged into the next run, which
+   * starts when the running one ends. Never drops a request. Answers 'queued'
+   * when this call created the next run, 'merged' when it joined one.
+   */
   async queueManualRefresh(
     tenantId: string,
     years?: number | number[],
-    opts?: { label?: string; replace?: boolean; reportingCurrency?: string },
-  ): Promise<'queued' | 'skipped'> {
-    const normalizedYears = Array.isArray(years) ? [...years] : years;
-    if (!opts?.replace && this.manualJobs.has(tenantId)) {
-      this.logger.debug(
-        `[manual] FX refresh already queued for tenant ${tenantId}; ignoring duplicate request.`,
-      );
-      return 'skipped';
-    }
-
-    const label = opts?.label ?? 'manual';
-    const run = this.refreshTenant(tenantId, normalizedYears, {
-      manual: true,
-      label,
-      reportingCurrency: opts?.reportingCurrency,
-    });
-    const job = run
-      .then(() => undefined)
-      .catch((err) => {
-        const reason = err instanceof Error ? err.message : String(err);
-        this.logger.error(`[${label}] Queued FX refresh failed for tenant ${tenantId}: ${reason}`);
-      })
-      .finally(() => {
-        this.manualJobs.delete(tenantId);
-      });
-
-    this.manualJobs.set(tenantId, job);
-    // A stop waits for it (background-work.ts) before it closes the pool.
-    void trackBackgroundWork(job);
-    return 'queued';
+    opts?: RefreshRequestOptions,
+  ): Promise<'queued' | 'merged'> {
+    return this.enqueueRefresh(tenantId, years, opts).created ? 'queued' : 'merged';
   }
 
   /**
-   * Runs the refresh in this request when none is already running for the tenant,
-   * and waits up to `timeoutMs` (default 20s). The job keeps its own transaction:
-   * the request manager is never passed in. On timeout the job continues.
-   * A job that finished before this reads the map counts as completed.
+   * Waits up to `timeoutMs` (default 20 s) for the run that covers these years:
+   * the running one when it covers them, otherwise the next one. The run keeps
+   * its own transaction: the request manager is never passed in. On timeout the
+   * run continues. `failed` is true when that run captured nothing (source
+   * unreachable, job error).
    */
   async refreshWithin(
     tenantId: string,
     years?: number | number[],
-    opts?: { label?: string; timeoutMs?: number; reportingCurrency?: string; enqueueAfter?: boolean },
-  ): Promise<{ completed: boolean }> {
-    if (this.manualJobs.has(tenantId)) {
-      // The running job keeps its own years. A reporting-currency save still has to
-      // fetch the new base afterwards: chain it, and answer that this request did not finish.
-      if (opts?.enqueueAfter) {
-        const running = this.manualJobs.get(tenantId);
-        void running?.then(() => {
-          void this.queueManualRefresh(tenantId, years, {
-            label: opts.label,
-            reportingCurrency: opts.reportingCurrency,
-          });
-        });
-      }
-      return { completed: false };
-    }
+    opts?: RefreshRequestOptions & { timeoutMs?: number },
+  ): Promise<{ completed: false } | { completed: true; failed: boolean }> {
     const timeoutMs = opts?.timeoutMs ?? MANUAL_REFRESH_WAIT_MS;
-    const status = await this.queueManualRefresh(tenantId, years, {
-      label: opts?.label,
-      reportingCurrency: opts?.reportingCurrency,
-    });
-    if (status === 'skipped') return { completed: false };
-    const job = this.manualJobs.get(tenantId);
-    if (!job) return { completed: true };
+    const { done } = this.enqueueRefresh(tenantId, years, opts);
     let timer: NodeJS.Timeout | undefined;
     const timeout = new Promise<'timeout'>((resolve) => {
       timer = setTimeout(() => resolve('timeout'), timeoutMs);
     });
     try {
-      const outcome = await Promise.race([job.then(() => 'done' as const), timeout]);
-      return { completed: outcome === 'done' };
+      const outcome = await Promise.race([done, timeout]);
+      if (outcome === 'timeout') return { completed: false };
+      return { completed: true, failed: outcome === 'failed' };
     } finally {
       if (timer) clearTimeout(timer);
     }
   }
 
+  /** Whether a refresh of the tenant is running or waiting. */
+  hasQueuedRefresh(tenantId: string): boolean {
+    return this.refreshQueues.has(tenantId);
+  }
+
+  private enqueueRefresh(
+    tenantId: string,
+    years: number | number[] | undefined,
+    opts: RefreshRequestOptions | undefined,
+  ): { done: Promise<RefreshOutcome>; created: boolean } {
+    const requested = (Array.isArray(years) ? years : years != null ? [years] : [new Date().getFullYear()])
+      .filter((year) => Number.isInteger(year));
+    if (!requested.length) requested.push(new Date().getFullYear());
+    const target = normalizeCode(opts?.reportingCurrency);
+    const label = opts?.label ?? 'manual';
+
+    let queue = this.refreshQueues.get(tenantId);
+    if (!queue) {
+      queue = {};
+      this.refreshQueues.set(tenantId, queue);
+    }
+    const running = queue.running;
+    if (
+      running
+      && !opts?.fresh
+      && !opts?.startAfter
+      && requested.every((year) => running.years.has(year))
+      && (!target || running.reportingCurrency === target)
+    ) {
+      return { done: running.done, created: false };
+    }
+
+    let created = false;
+    let next = queue.next;
+    if (!next) {
+      let resolve: (outcome: RefreshOutcome) => void = () => undefined;
+      const done = new Promise<RefreshOutcome>((r) => { resolve = r; });
+      next = { years: new Set<number>(), labels: new Set<string>(), gates: [], done, resolve };
+      queue.next = next;
+      created = true;
+    }
+    requested.forEach((year) => next!.years.add(year));
+    // The latest request names the base: a second change of reporting currency wins.
+    if (target) next.reportingCurrency = target;
+    next.labels.add(label);
+    if (opts?.startAfter) next.gates.push(opts.startAfter);
+    if (!queue.running) this.startNextRefresh(tenantId, queue);
+    return { done: next.done, created };
+  }
+
+  private startNextRefresh(tenantId: string, queue: TenantRefreshQueue): void {
+    const run = queue.next;
+    if (!run) {
+      this.refreshQueues.delete(tenantId);
+      return;
+    }
+    queue.running = run;
+    queue.next = undefined;
+    const label = Array.from(run.labels).join('+');
+    const work = (async (): Promise<RefreshOutcome> => {
+      // A gate (a settings save) never rejects the run: it only delays it.
+      if (run.gates.length) await Promise.allSettled(run.gates);
+      try {
+        await this.refreshTenant(tenantId, Array.from(run.years), {
+          manual: true,
+          label,
+          reportingCurrency: run.reportingCurrency,
+        });
+        return 'ok';
+      } catch (err) {
+        const reason = err instanceof Error ? err.message : String(err);
+        this.logger.error(`[${label}] Queued FX refresh failed for tenant ${tenantId}: ${reason}`);
+        return 'failed';
+      }
+    })();
+    const job = work
+      .catch(() => 'failed' as const)
+      .then((outcome) => {
+        queue.running = undefined;
+        run.resolve(outcome);
+        this.startNextRefresh(tenantId, queue);
+        return outcome;
+      });
+    // A stop waits for it (background-work.ts) before it closes the pool.
+    void trackBackgroundWork(job);
+  }
+
   /**
    * A read found no rate for a currency in use in these years: fetch them in
-   * the background (the read itself goes on with a rate of 1, marked
-   * `missing`). Each tenant year at most once every 6 hours per process, so
-   * a rate the sources do not have (or a server without internet) does not
-   * call them on every read.
+   * the background (the read itself leaves the amount out, marked `missing`).
+   * Each tenant year at most once every 6 hours per process, so a rate the
+   * sources do not have (or a server without internet) does not call them on
+   * every read. A refresh already running takes these years into its next run.
    */
   refreshMissingYears(tenantId: string, years: number[]): void {
     const now = Date.now();
@@ -281,14 +361,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     if (!due.length) return;
     due.forEach((year) => this.missingRefreshAt.set(keyOf(year), now));
     this.logger.log(`[missing-rate] queuing FX refresh for tenant ${tenantId}: years ${due.join(', ')}`);
-    const queue = () => this.queueManualRefresh(tenantId, due, { label: 'missing-rate' });
-    void queue().then(async (status) => {
-      if (status !== 'skipped') return;
-      // Another refresh of the tenant is running (often for another year read at the same
-      // time): these years follow it. The running job never rejects.
-      await this.manualJobs.get(tenantId);
-      if ((await queue()) === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
-    }).catch(() => undefined);
+    void this.queueManualRefresh(tenantId, due, { label: 'missing-rate' });
   }
 
   async maybeRefreshOnLogin(tenantId: string | null | undefined): Promise<void> {

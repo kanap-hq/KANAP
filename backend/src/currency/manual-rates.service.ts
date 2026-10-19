@@ -143,7 +143,7 @@ function yearHasUsableRate(rates: Record<string, unknown> | undefined, currency:
   return false;
 }
 
-function parseCurrency(input: unknown): string {
+export function parseCurrency(input: unknown): string {
   if (typeof input !== 'string') codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
   const code = input.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(code)) codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
@@ -332,9 +332,9 @@ export class ManualRatesService {
       { manager },
     );
 
-    const status = await this.fxIngestion.queueManualRefresh(tenantId, [year], { label: 'manual-rate-removed' });
-    if (status === 'skipped') this.fxRates.reportMissingYears(tenantId, [year]);
-    return { ok: true, refreshQueued: status === 'queued' };
+    // A run already going read the rates before this removal: the year goes into the next one.
+    await this.fxIngestion.queueManualRefresh(tenantId, [year], { label: 'manual-rate-removed', fresh: true });
+    return { ok: true, refreshQueued: true };
   }
 
   /**

@@ -200,7 +200,7 @@ async function main() {
     const reported: number[][] = [];
     fxRates.onMissingRates((_tenantId, years) => reported.push([...years]));
     const queued: Array<{ years: unknown; label?: string }> = [];
-    let queueStatus: 'queued' | 'skipped' = 'queued';
+    let queueStatus: 'queued' | 'merged' = 'queued';
     const ingestion = {
       queueManualRefresh: async (_tenantId: string, years: unknown, opts?: { label?: string }) => {
         queued.push({ years, label: opts?.label });
@@ -312,15 +312,16 @@ async function main() {
     );
     console.log('ok - a currency that is not manual answers 404');
 
-    queueStatus = 'skipped';
-    const skipped = await manual.removeManualRate(tenantA, { currency: 'USD', year: 2022 }, userId, runner.manager);
-    assert.deepEqual(skipped, { ok: true, refreshQueued: false });
+    queueStatus = 'merged';
+    const reportedBefore = reported.length;
+    const merged = await manual.removeManualRate(tenantA, { currency: 'USD', year: 2022 }, userId, runner.manager);
+    assert.deepEqual(merged, { ok: true, refreshQueued: true });
     assert.deepEqual(queued[1], { years: [2022], label: 'manual-rate-removed' });
-    assert.deepEqual(reported[reported.length - 1], [2022]);
+    assert.equal(reported.length, reportedBefore, 'the next run takes the year: nothing to report');
     const usdRow = await latestSet(runner, tenantA, 2022);
     assert.equal(usdRow.rates.USD, null);
     assert.equal(usdRow.rate_sources?.USD, undefined);
-    console.log('ok - a refresh already running is reported as a missing year');
+    console.log('ok - a refresh already running takes the removed year into its next run');
 
     const audits = await runner.query(
       `SELECT action, record_id, before_json, after_json, user_id::text AS user_id

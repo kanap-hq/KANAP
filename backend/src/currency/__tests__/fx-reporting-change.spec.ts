@@ -1,10 +1,12 @@
 import * as assert from 'node:assert/strict';
+import { EventEmitter } from 'node:events';
 import { CurrencyController } from '../currency.controller';
 
 /**
- * Saving a new reporting currency refreshes every year of that base and
- * answers with the same block as a forced sync. Saving anything else still
- * refreshes the current year and answers the settings alone.
+ * Saving the settings never waits for the fetch: it saves (currency rows in the
+ * request transaction), queues the refresh to start after the response, and
+ * answers the settings with the years queued. A reporting currency outside the
+ * ISO list is refused before any read or write.
  */
 
 type Settings = {
@@ -23,20 +25,10 @@ function settings(reportingCurrency: string): Settings {
   };
 }
 
-type SaveAnswer = Settings & {
-  completed?: boolean;
-  years?: number[];
-  fetched?: number;
-  stillMissing?: Array<{ currency: string; year: number }>;
-};
-
-function harness(opts: { before: string; after: string; completed?: boolean }) {
+function harness(opts: { before: string; after: string }) {
   const order: string[] = [];
   const ensured: string[][] = [];
-  const refreshWithinCalls: Array<{ years: number[]; opts: unknown }> = [];
-  const refreshTenantCalls: unknown[][] = [];
-  const queries: Array<{ sql: string; params?: unknown[] }> = [];
-  let rateReads = 0;
+  const queued: Array<{ years: number[]; opts: any }> = [];
   const years = [2019, 2024, 2025, 2026, 2027, 2028];
   const currency = {
     getSettings: async () => {
@@ -53,88 +45,82 @@ function harness(opts: { before: string; after: string; completed?: boolean }) {
     },
   };
   const fxIngestion = {
-    refreshWithin: async (_tenantId: string, calledYears: number[], callOpts: unknown) => {
-      order.push('refresh-within');
-      refreshWithinCalls.push({ years: calledYears, opts: callOpts });
-      return { completed: opts.completed ?? true };
+    queueManualRefresh: async (_tenantId: string, calledYears: number[], callOpts: any) => {
+      order.push('queue');
+      queued.push({ years: calledYears, opts: callOpts });
+      return 'queued';
     },
-    refreshTenant: async (...args: unknown[]) => {
-      order.push('refresh-tenant');
-      refreshTenantCalls.push(args);
-      return [];
+    refreshWithin: async () => {
+      throw new Error('the save does not wait for the fetch');
+    },
+    refreshTenant: async () => {
+      throw new Error('the save does not fetch in the request');
     },
   };
   const manualRates = {
     reportingChangeYears: async () => years,
-    listMissingPairs: async () => [{ currency: 'SEK', year: 2028 }],
   };
-  const manager = {
-    query: async (sql: string, params?: unknown[]) => {
-      queries.push({ sql, params });
-      if (!sql.includes('currency_rate_sets')) return [];
-      rateReads += 1;
-      if (rateReads === 1) return [];
-      return [{ fiscal_year: 2024, rates: { USD: 0.9, EUR: 0.95, XXX: 0, empty: null } }];
-    },
-  };
+  const manager = { query: async () => [] };
   const api = new CurrencyController(currency as any, fxIngestion as any, manualRates as any, { manager } as any);
-  const req = { tenant: { id: 'tenant-1' }, user: { sub: null }, queryRunner: { manager } };
-  return { api, req, order, ensured, refreshWithinCalls, refreshTenantCalls, queries, years };
+  const res = new EventEmitter() as EventEmitter & { writableFinished?: boolean };
+  const req = { tenant: { id: 'tenant-1' }, user: { sub: null }, queryRunner: { manager }, res };
+  return { api, req, res, order, ensured, queued, years };
 }
 
-async function testUnchangedReportingCurrencyRefreshesTheCurrentYear() {
-  const { api, req, order, ensured, refreshWithinCalls, refreshTenantCalls } = harness({ before: 'EUR', after: 'EUR' });
-  const saved = await api.updateSettings({ defaultSpendCurrency: 'USD' }, req) as SaveAnswer;
-  assert.equal('completed' in saved, false);
+async function testUnchangedReportingCurrencyQueuesTheCurrentYear() {
+  const { api, req, order, ensured, queued } = harness({ before: 'EUR', after: 'EUR' });
+  const saved = await api.updateSettings({ defaultSpendCurrency: 'USD' }, req);
   assert.equal(saved.reportingCurrency, 'EUR');
-  assert.deepEqual(ensured, []);
-  assert.deepEqual(refreshWithinCalls, []);
-  assert.equal(refreshTenantCalls.length, 1);
-  assert.equal(refreshTenantCalls[0][1], new Date().getFullYear());
-  assert.deepEqual(order, ['read', 'update', 'refresh-tenant']);
-  console.log('ok - a save that keeps the reporting currency answers the settings and refreshes the current year');
+  assert.deepEqual(saved.refreshYears, [new Date().getFullYear()]);
+  assert.deepEqual(ensured, [], 'no insert outside the settings save');
+  assert.deepEqual(order, ['read', 'update', 'queue']);
+  assert.deepEqual(queued[0].years, [new Date().getFullYear()]);
+  assert.equal(queued[0].opts.label, 'currency-settings');
+  console.log('ok - a save that keeps the reporting currency queues the current year and answers at once');
 }
 
-async function testChangedCurrencyStillRunning() {
-  const { api, req, order, ensured, refreshWithinCalls, years } = harness({ before: 'EUR', after: 'CHF', completed: false });
-  const saved = await api.updateSettings({ reportingCurrency: 'chf' }, req) as SaveAnswer;
+async function testChangedCurrencyQueuesEveryYearAfterTheResponse() {
+  const { api, req, res, order, ensured, queued, years } = harness({ before: 'EUR', after: 'CHF' });
+  const saved = await api.updateSettings({ reportingCurrency: 'chf' }, req);
   assert.equal(saved.reportingCurrency, 'CHF');
-  assert.equal(saved.completed, false);
-  assert.deepEqual(saved.years, years);
-  assert.equal('fetched' in saved, false);
-  assert.equal('stillMissing' in saved, false);
-  assert.deepEqual(ensured, [['CHF']]);
-  assert.deepEqual(order, ['read', 'ensure', 'update', 'refresh-within']);
-  assert.equal(refreshWithinCalls.length, 1);
-  assert.deepEqual(refreshWithinCalls[0].years, years);
-  assert.deepEqual(refreshWithinCalls[0].opts, {
-    label: 'reporting-currency',
-    reportingCurrency: 'CHF',
-    enqueueAfter: true,
-  });
-  console.log('ok - a new reporting currency still being fetched names the years and nothing else');
+  assert.deepEqual(saved.refreshYears, years);
+  assert.equal('completed' in saved, false);
+  assert.deepEqual(ensured, [], 'the currency row is inserted by the settings save, in the request transaction');
+  assert.deepEqual(order, ['read', 'update', 'queue']);
+  assert.deepEqual(queued[0].years, years);
+  assert.equal(queued[0].opts.label, 'reporting-currency');
+  assert.equal(queued[0].opts.reportingCurrency, 'CHF');
+  let started = false;
+  void queued[0].opts.startAfter.then(() => { started = true; });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(started, false, 'the run waits for the response (the commit)');
+  res.emit('finish');
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(started, true);
+  console.log('ok - a new reporting currency queues every year in use, started once the save has committed');
 }
 
-async function testChangedCurrencyFinished() {
-  const { api, req, queries } = harness({ before: 'EUR', after: 'CHF', completed: true });
-  const saved = await api.updateSettings({ reportingCurrency: 'CHF' }, req) as SaveAnswer;
-  assert.equal(saved.completed, true);
-  if (!saved.completed) return;
-  assert.equal(saved.fetched, 2, 'USD and EUR became usable on the new base; 0 and null did not');
-  assert.deepEqual(saved.stillMissing, [{ currency: 'SEK', year: 2028 }]);
-  const rateQueries = queries.filter((query) => query.sql.includes('currency_rate_sets'));
-  assert.equal(rateQueries.length, 2);
-  for (const query of rateQueries) {
-    assert.match(query.sql, /UPPER\(TRIM\(base_currency\)\) = \$3/);
-    assert.equal(query.params?.[2], 'CHF');
+async function testUnknownReportingCurrencyIsRefused() {
+  const { api, req, order, queued } = harness({ before: 'EUR', after: 'EUR' });
+  for (const code of ['XYZ', 'EU', '12A']) {
+    await assert.rejects(
+      api.updateSettings({ reportingCurrency: code }, req),
+      (error: any) => {
+        assert.equal(error.getStatus(), 400);
+        assert.equal(error.getResponse().code, 'currency_invalid');
+        return true;
+      },
+    );
   }
-  console.log('ok - a finished reporting-currency refresh counts pairs of the new base');
+  assert.deepEqual(order, [], 'refused before any read or write');
+  assert.deepEqual(queued, []);
+  console.log('ok - a reporting currency outside the ISO list answers 400 currency_invalid');
 }
 
 (async () => {
-  await testUnchangedReportingCurrencyRefreshesTheCurrentYear();
-  await testChangedCurrencyStillRunning();
-  await testChangedCurrencyFinished();
+  await testUnchangedReportingCurrencyQueuesTheCurrentYear();
+  await testChangedCurrencyQueuesEveryYearAfterTheResponse();
+  await testUnknownReportingCurrencyIsRefused();
   console.log('fx-reporting-change.spec: ok');
 })().catch((error) => {
   console.error(error);

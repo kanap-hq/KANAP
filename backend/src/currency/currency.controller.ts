@@ -4,7 +4,8 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
 import { CurrencySettings, CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
-import { ManualRatesService, MissingRatePair, ReportingChangeImpact } from './manual-rates.service';
+import { ManualRatesService, MissingRatePair, ReportingChangeImpact, parseCurrency } from './manual-rates.service';
+import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
@@ -16,6 +17,21 @@ const CURRENCY_READERS: RequireAnyLevelMeta = [
   { resource: 'budget_ops', level: 'reader' },
   { resource: 'budget', level: 'reader' },
 ];
+
+/**
+ * Settles once the response is sent or the connection closed: the request
+ * transaction has committed (or ended) by then. Undefined outside HTTP.
+ */
+function responseSent(req: any): Promise<void> | undefined {
+  const res = req?.res;
+  if (!res || typeof res.once !== 'function') return undefined;
+  if (res.writableFinished || res.destroyed) return Promise.resolve();
+  return new Promise<void>((resolve) => {
+    const done = () => resolve();
+    res.once('finish', done);
+    res.once('close', done);
+  });
+}
 
 @UseGuards(JwtAuthGuard)
 @Controller('currency')
@@ -44,14 +60,22 @@ export class CurrencyController {
     return this.settings.getSettings(tenantId, { manager: req?.queryRunner?.manager });
   }
 
+  /**
+   * Saves the settings in the request transaction (the new currency rows with
+   * them) and queues the rate refresh without waiting for it: the run starts
+   * once this request has committed. `refreshYears` names the years it fetches
+   * (every year in use for a new reporting currency, otherwise the current one);
+   * `POST /currency/rates/refresh` with those years waits for the result.
+   */
   @Patch('settings')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
-  async updateSettings(@Body() body: any, @Req() req: any) {
+  async updateSettings(@Body() body: any, @Req() req: any): Promise<CurrencySettings & { refreshYears: number[] }> {
     const tenantId = this.requireTenantId(req);
     const payload: any = {};
 
-    if (body.reportingCurrency) payload.reportingCurrency = String(body.reportingCurrency).trim().toUpperCase();
+    // Checked against the ISO list before any lock or write: 400 `currency_invalid`.
+    if (body.reportingCurrency) payload.reportingCurrency = parseCurrency(String(body.reportingCurrency));
     if (body.defaultSpendCurrency) payload.defaultSpendCurrency = String(body.defaultSpendCurrency).trim().toUpperCase();
     if (body.defaultCapexCurrency) payload.defaultCapexCurrency = String(body.defaultCapexCurrency).trim().toUpperCase();
     if (Array.isArray(body.allowedCurrencies)) {
@@ -60,48 +84,23 @@ export class CurrencyController {
 
     const manager = req?.queryRunner?.manager as EntityManager | undefined;
     const before = await this.settings.getSettings(tenantId, { manager });
-    // The rate set references currencies(code). The refresh commits on its own
-    // connection, so the new code has to be visible before that connection starts:
-    // the save's own insert is still uncommitted and would block it.
-    if (payload.reportingCurrency && payload.reportingCurrency !== before.reportingCurrency) {
-      await this.settings.ensureCurrencyRecords([payload.reportingCurrency]);
-    }
+    // Inserts the currency rows of the new settings in this same transaction.
     const next = await this.settings.updateSettings(tenantId, payload, req.user?.sub ?? null, { manager });
+    const startAfter = responseSent(req);
     if (next.reportingCurrency !== before.reportingCurrency) {
-      return this.refreshForReportingChange(tenantId, next, manager);
+      const readManager = manager ?? this.rateSets.manager;
+      await this.ensureTenantContext(readManager, tenantId);
+      const refreshYears = await this.manualRates.reportingChangeYears(tenantId, readManager);
+      await this.fxIngestion.queueManualRefresh(tenantId, refreshYears, {
+        label: 'reporting-currency',
+        reportingCurrency: next.reportingCurrency,
+        startAfter,
+      });
+      return { ...next, refreshYears };
     }
-    await this.fxIngestion.refreshTenant(tenantId, new Date().getFullYear(), { manual: true, manager });
-    return next;
-  }
-
-  /**
-   * A new reporting currency: refresh every year in use for that base, in this
-   * request, with the same wait as a forced sync. The answer carries that outcome.
-   * `fetched` and `stillMissing` are present only once the fetch has finished.
-   */
-  private async refreshForReportingChange(
-    tenantId: string,
-    next: CurrencySettings,
-    manager: EntityManager | undefined,
-  ): Promise<
-    | (CurrencySettings & { completed: false; years: number[] })
-    | (CurrencySettings & { completed: true; years: number[]; fetched: number; stillMissing: MissingRatePair[] })
-  > {
-    const readManager = manager ?? this.rateSets.manager;
-    await this.ensureTenantContext(readManager, tenantId);
-    const years = await this.manualRates.reportingChangeYears(tenantId, readManager);
-    const beforePairs = await this.usablePairs(readManager, tenantId, years, next.reportingCurrency);
-    const outcome = await this.fxIngestion.refreshWithin(tenantId, years, {
-      label: 'reporting-currency',
-      reportingCurrency: next.reportingCurrency,
-      enqueueAfter: true,
-    });
-    if (!outcome.completed) return { ...next, completed: false, years };
-    const afterPairs = await this.usablePairs(readManager, tenantId, years, next.reportingCurrency);
-    let fetched = 0;
-    for (const pair of afterPairs) if (!beforePairs.has(pair)) fetched += 1;
-    const stillMissing = await this.manualRates.listMissingPairs(tenantId, readManager, { report: false });
-    return { ...next, completed: true, years, fetched, stillMissing };
+    const refreshYears = [new Date().getFullYear()];
+    await this.fxIngestion.queueManualRefresh(tenantId, refreshYears, { label: 'currency-settings', startAfter });
+    return { ...next, refreshYears };
   }
 
   /** What a change of reporting currency does to manual rates, frozen versions and the allowed list. */
@@ -172,15 +171,22 @@ export class CurrencyController {
     return { ...removed, frozenVersions };
   }
 
+  /**
+   * Fetches the years and waits up to 20 s for the run that covers them (one
+   * already going, or the next one of the tenant's queue). The request
+   * transaction only reads and holds no row lock while it waits. `failed`: the
+   * run captured nothing (source unreachable, job error).
+   */
   @Post('rates/refresh')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
+  @LongRunningRequest(OUTSIDE_WORK_TIMEOUTS)
   async refreshRates(
     @Body() body: { years?: number[]; year?: number } | undefined,
     @Req() req: any,
   ): Promise<
     | { ok: true; completed: false; years: number[] }
-    | { ok: true; completed: true; years: number[]; fetched: number; stillMissing: MissingRatePair[] }
+    | { ok: true; completed: true; failed: boolean; years: number[]; fetched: number; stillMissing: MissingRatePair[] }
   > {
     const tenantId = this.requireTenantId(req);
     const requested = Array.isArray(body?.years) && body?.years.length
@@ -190,15 +196,18 @@ export class CurrencyController {
         : undefined;
     const entityManager = req?.queryRunner?.manager ?? this.rateSets.manager;
     const years = await this.resolveSyncYears(tenantId, requested, entityManager);
-    const before = await this.usablePairs(entityManager, tenantId, years);
+    const { reportingCurrency } = await this.settings.getSettings(tenantId, { manager: entityManager });
+    const before = await this.usablePairs(entityManager, tenantId, years, reportingCurrency);
     // The fetch commits on its own connection. This request only waits, then reads.
-    const outcome = await this.fxIngestion.refreshWithin(tenantId, years, { label: 'manual-api' });
+    const outcome = await this.fxIngestion.refreshWithin(tenantId, years, { label: 'manual-api', reportingCurrency });
     if (!outcome.completed) return { ok: true, completed: false, years };
-    const after = await this.usablePairs(entityManager, tenantId, years);
     let fetched = 0;
-    for (const pair of after) if (!before.has(pair)) fetched += 1;
+    if (!outcome.failed) {
+      const after = await this.usablePairs(entityManager, tenantId, years, reportingCurrency);
+      for (const pair of after) if (!before.has(pair)) fetched += 1;
+    }
     const stillMissing = await this.manualRates.listMissingPairs(tenantId, entityManager, { report: false });
-    return { ok: true, completed: true, years, fetched, stillMissing };
+    return { ok: true, completed: true, failed: outcome.failed, years, fetched, stillMissing };
   }
 
   /**

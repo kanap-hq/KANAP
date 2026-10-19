@@ -11,18 +11,13 @@ import { CurrencySettingsService } from '../currency-settings.service';
 import { FxIngestionService } from '../fx-ingestion.service';
 import { FxRateService } from '../fx-rate.service';
 import { ManualRatesService } from '../manual-rates.service';
-import type { CurrencySettings } from '../currency-settings.service';
+import { EventEmitter } from 'node:events';
 
-type SaveAnswer = CurrencySettings & {
-  completed?: boolean;
-  years?: number[];
-  fetched?: number;
-  stillMissing?: Array<{ currency: string; year: number }>;
-};
 import { createRaceTenant, dropRaceTenant, seed } from '../../spend/__tests__/race-harness';
 
-// Saving a new reporting currency refreshes every year in use for that base.
-// The World Bank client is a stub. The seed is committed first: the fetch uses
+// Saving a new reporting currency queues every year in use for that base, to
+// start once the save has committed; the forced sync with those years waits for
+// it. The World Bank client is a stub. The seed is committed first: the fetch uses
 // its own connection and must see the versions, the company year and the contract.
 // @database-spec: opens the data-source. Run it on a dedicated database, never appdb.
 
@@ -117,19 +112,34 @@ async function main() {
     const runner = dataSource.createQueryRunner();
     await runner.connect();
     await runner.startTransaction();
+    const res = new EventEmitter();
+    const req = { tenant: { id: tenantId }, user: { sub: null }, queryRunner: runner, res };
+    const saved = await controller.updateSettings({ reportingCurrency: 'CHF' }, req);
+    assert.equal(saved.reportingCurrency, 'CHF');
+    assert.equal('completed' in saved, false, 'the save does not wait for the fetch');
+    for (const year of [2019, 2024, currentYear - 1, currentYear, currentYear + 1, currentYear + 2]) {
+      assert.ok(saved.refreshYears.includes(year), `years ${saved.refreshYears.join(',')} include ${year}`);
+    }
+    assert.ok(!saved.refreshYears.includes(2018), 'a company year without turnover is not refreshed');
+    assert.ok(ingestion.hasQueuedRefresh(tenantId), 'the refresh is queued by the save');
+    await runner.commitTransaction();
+    await runner.release();
+
+    const waitRunner = dataSource.createQueryRunner();
+    await waitRunner.connect();
+    await waitRunner.startTransaction();
     try {
-      await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      const req = { tenant: { id: tenantId }, user: { sub: null }, queryRunner: runner };
-      const saved = await controller.updateSettings({ reportingCurrency: 'CHF' }, req) as SaveAnswer;
-      assert.equal(saved.reportingCurrency, 'CHF');
-      assert.equal(saved.completed, true, JSON.stringify(saved));
-      if (!saved.completed || !saved.years || saved.fetched == null || !saved.stillMissing) return;
-      for (const year of [2019, 2024, currentYear - 1, currentYear, currentYear + 1, currentYear + 2]) {
-        assert.ok(saved.years.includes(year), `years ${saved.years.join(',')} include ${year}`);
-      }
-      assert.ok(!saved.years.includes(2018), 'a company year without turnover is not refreshed');
-      assert.ok(saved.fetched > 0, 'the new base gained usable pairs');
-      assert.ok(!saved.stillMissing.some((pair) => pair.currency === 'USD' && pair.year === 2024), JSON.stringify(saved.stillMissing));
+      await waitRunner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+      const waitReq = { tenant: { id: tenantId }, user: { sub: null }, queryRunner: waitRunner };
+      // The response of the save goes out while the forced sync is already waiting.
+      setTimeout(() => res.emit('finish'), 300);
+      const synced = await controller.refreshRates({ years: saved.refreshYears }, waitReq);
+      assert.equal(synced.completed, true, JSON.stringify(synced));
+      if (!synced.completed) return;
+      assert.equal(synced.failed, false);
+      assert.ok(synced.fetched > 0, 'the new base gained usable pairs');
+      assert.ok(!synced.stillMissing.some((pair) => pair.currency === 'USD' && pair.year === 2024), JSON.stringify(synced.stillMissing));
+      const runner = waitRunner;
 
       const sets = async (tx: QueryRunner, year: number, base: string) => tx.query(
         `SELECT id, rates FROM currency_rate_sets
@@ -145,11 +155,11 @@ async function main() {
       const eur2024 = await sets(runner, 2024, 'EUR');
       assert.ok(eur2024.length > 0, 'the EUR set of the frozen year is kept');
       assert.equal(eur2024[0].rates.USD, 1.7, 'the EUR manual rate stays on the old base');
-      console.log('ok - saving a new reporting currency refreshes every year in use for that base');
+      console.log('ok - saving a new reporting currency queues every year in use; the forced sync waits for that run');
       console.log(`ok - reporting-currency refresh on ${current}`);
     } finally {
-      if (runner.isTransactionActive) await runner.rollbackTransaction();
-      await runner.release();
+      if (waitRunner.isTransactionActive) await waitRunner.rollbackTransaction();
+      await waitRunner.release();
     }
   } finally {
     await sweepLeftovers();

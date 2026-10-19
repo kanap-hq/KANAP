@@ -165,7 +165,7 @@ async function testManualQueueDeduplication() {
   const first = await service.queueManualRefresh('tenant', [2024]);
   assert.equal(first, 'queued');
   const second = await service.queueManualRefresh('tenant', [2024]);
-  assert.equal(second, 'skipped');
+  assert.equal(second, 'merged', 'the running refresh covers the same year');
   assert.equal(calls, 1);
 
   resolvers.shift()?.();
