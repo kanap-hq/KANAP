@@ -294,7 +294,7 @@ Legen Sie die Methode fest, der OPEX-Zeilen und CAPEX-Investitionen folgen, wenn
 ### Ausgewählte Unternehmen
 
 - Der Treiber wird nur auf die ausgewählten Unternehmen angewendet: ihre Prozentsätze werden aus ihrer eigenen Mitarbeiterzahl, ihren IT-Benutzern oder ihrem Umsatz für das Jahr berechnet
-- Die Seite zeigt die daraus resultierende Aufteilung, sodass Sie die Wirkung prüfen können, bevor Sie sich darauf verlassen
+- Die Seite zeigt die daraus resultierende Aufteilung, sodass Sie die Wirkung prüfen können, bevor Sie sich darauf verlassen. Die Spalte **Treiberwert** zeigt den Wert jedes Unternehmens. Ein Umsatz erscheint mit der Basiswährung des Unternehmens, zum Beispiel **35 Mio. USD**, und die Aufteilung verwendet ihn umgerechnet in die Berichtswährung, wie im [Tab Zuordnungen](budget-lines.md#zuordnungen). Hat eine Währung für das Jahr noch keinen Kurs, meldet eine Warnung über der Aufteilung, dass ihre Umsätze ohne Umrechnung gezählt werden
 - Ein einzelnes ausgewähltes Unternehmen erhält immer **100 %**, ohne dass ein Treiberwert erforderlich ist
 - Ab zwei Unternehmen benötigt jedes ausgewählte Unternehmen einen Wert für den gewählten Treiber. Ein Unternehmen ohne Wert wird beim Speichern abgelehnt. Korrigieren Sie zuerst die Unternehmenskennzahlen unter **Stammdaten > Unternehmen**
 - Ein für das Jahr deaktiviertes Unternehmen kann nicht ausgewählt werden: Deaktivierte Unternehmen sind von den Zuordnungen dieses Jahres ausgeschlossen

@@ -2,7 +2,7 @@
 
 Every master data page has **Export CSV** and **Import CSV** in its toolbar, and documents its own columns. This page describes what those files have in common. It also applies to the user list in **Administration**.
 
-**Check, then load.** An import has two steps. **Preflight check** reads the file and reports what a load would change: the rows to create, the rows to update and the rows that change nothing. **Load** writes it. Nothing is written before that, and a file with one error loads nothing. Errors name the line of the file as a text editor shows it, blank lines and cells that span several lines included.
+**Check, then load.** An import has two steps. **Preflight check** reads the file and reports what a load would change: the rows to create, the rows to update and the rows that change nothing. **Load** writes it, then the dialog counts the rows created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged". A count of zero is left out. Nothing is written before the load, and a file with one error loads nothing. Errors name the line of the file as a text editor shows it, blank lines and cells that span several lines included.
 
 **Columns are matched by name**, in any order, whatever the case, the spaces and the underscores. These files are strict: a column KANAP does not know refuses the whole file, and the message, on a **Header** line, names the unknown and the missing ones. The budget file is the one that ignores the columns it does not know. See [Load a budget from a spreadsheet](budget-file.md).
 

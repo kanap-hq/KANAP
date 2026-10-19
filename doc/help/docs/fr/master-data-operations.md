@@ -28,7 +28,7 @@ Utilisez cet outil pour verrouiller ou déverrouiller les métriques des sociét
 
 La page affiche une carte de statut pour chaque périmètre :
 
-- **Gelé** (rouge) : les données sont en lecture seule pour cette année ; la carte indique qui a gelé et quand
+- **Gelé** (rouge) : les données sont en lecture seule pour cette année. La carte affiche **Gelé par**, puis le nom de la personne qui a gelé et la date
 - **Modifiable** : les données peuvent encore être modifiées
 
 ### Ce que le gel affecte
