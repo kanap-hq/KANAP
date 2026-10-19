@@ -276,7 +276,7 @@ Une fois les actifs documentés, vous pouvez créer des **Connexions** (Serveur 
 
 ### Interfaces et carte des interfaces
 
-Allez encore plus loin : documentez les **Interfaces** entre applications pour capturer les flux de données, les points d'intégration et le contexte métier. Chaque interface a cinq onglets pour une documentation complète : Vue d'ensemble, Flux, Environnements, Mapping des données et Relations.
+Allez encore plus loin : documentez les **Interfaces** entre applications pour capturer les flux de données, les points d'intégration et le contexte métier. Chaque interface a cinq onglets pour une documentation complète : Vue d'ensemble, Flux, Environnements, Mappage des données et Relations.
 
 Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le flux applicatif complet. Dans la vue Métier par défaut, vous voyez des relations source-cible épurées. Basculez en vue Technique pour révéler les plateformes middleware sous forme de noeuds en losange, montrant le chemin réel des données. Le filtrage de profondeur ne compte que les noeuds d'application principaux : le middleware est transparent, donc sélectionner une app avec une profondeur de 2 vous montre deux sauts réels quel que soit le nombre de plateformes middleware entre les deux.
 

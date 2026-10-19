@@ -65,7 +65,7 @@ Une fois enregistré, l'espace de travail déverrouille tous les onglets pour un
 
 **Autorisations** :
 - Consultation : `applications:reader`
-- Création / modification : `applications:manager` (aussi appelé `member`)
+- Création / modification : `applications:member`
 - Import / Export / Suppression : `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - Les applications retirées sont masquées par défaut ; utilisez le filtre **Cycle de vie** pour inclure les applications retirées.
 
 **Actions** :
-- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:manager`)
+- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
 - **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
-- **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:manager`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
+- **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
 - **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
 ---
@@ -309,7 +309,7 @@ Les dates en orange demandent votre attention : un contrat dont la décision de 
 
 À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting. Les contrats ont un total par devise, sans les contrats désactivés.
 
-**Ajouter et retirer des liens** (`applications:manager`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
+**Ajouter et retirer des liens** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
 
 **Apparentés** : des suggestions d'enregistrements que vous pourriez lier, chacune avec la raison de la suggestion :
 
@@ -323,7 +323,7 @@ Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est ab
 
 **Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
-**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
+**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression nécessite `applications:member`.
 
 ---
 

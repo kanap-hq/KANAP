@@ -65,7 +65,7 @@ Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para do
 
 **Permisos**:
 - Ver: `applications:reader`
-- Crear / editar: `applications:manager` (también llamado `member`)
+- Crear / editar: `applications:member`
 - Importar / Exportar / Eliminar: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - Las aplicaciones retiradas están ocultas por defecto; use el filtro de **Ciclo de vida** para incluir Retiradas.
 
 **Acciones**:
-- **Nueva App / Servicio**: Crear una nueva entrada (`applications:manager`)
+- **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
-- **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:manager`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
+- **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
 - **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
 
 ---
@@ -309,7 +309,7 @@ Las fechas en naranja requieren atención: un contrato cuya decisión de renovac
 
 A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte. Los contratos tienen un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`applications:manager`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
+**Añadir y quitar vínculos** (`applications:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
 
 **Relacionados**: sugerencias de registros que podría vincular, cada una con el motivo de la sugerencia:
 
@@ -323,7 +323,7 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 
 **Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
+**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `applications:member`.
 
 ---
 

@@ -13,7 +13,7 @@ Navigieren Sie zu **Stammdaten > Geschäftsprozesse**, um die Liste zu öffnen.
 **Berechtigungen**:
 
 - Anzeigen: `business_processes:reader`
-- Erstellen / Bearbeiten: `business_processes:manager`
+- Erstellen / Bearbeiten: `business_processes:member`
 - Löschen, CSV importieren/exportieren: `business_processes:admin`
 
 Wenn die Seite fehlt oder Felder schreibgeschützt sind, bitten Sie Ihren Mandanten-Administrator, Ihre Rollenberechtigungen anzupassen.
@@ -43,8 +43,8 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 
 **Aktionen** (Symbolleiste oben rechts):
 
-- **Neu** (Manager+): einen neuen Geschäftsprozess erstellen.
-- **Kategorien verwalten** (Manager+): den Dialog zur Kategorieverwaltung öffnen.
+- **Neu** (`business_processes:member`): einen neuen Geschäftsprozess erstellen.
+- **Kategorien verwalten** (`business_processes:member`): den Dialog zur Kategorieverwaltung öffnen.
 - **CSV importieren** (Admin): Prozesse aus einer CSV-Datei massenimportieren.
 - **CSV exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
 - **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Schnittstellen und Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.

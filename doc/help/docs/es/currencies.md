@@ -143,11 +143,13 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ## Estado y datos históricos
 
 Cuando cambia la configuración:
-  - **Moneda de reporte**: Afecta la visualización inmediatamente; los datos históricos permanecen intactos y se convierten usando las tasas que estaban activas cuando se introdujeron los datos
+  - **Moneda de reporte**: Afecta la visualización inmediatamente; los importes guardados no cambian, y cada año se convierte a la nueva moneda con las tasas descritas en [Mecánicas de conversión](#mecanicas-de-conversion-referencia-rapida)
   - **Monedas predeterminadas**: Solo afectan nuevos elementos; los elementos existentes conservan sus monedas
   - **Monedas permitidas**: Los elementos existentes no se validan retroactivamente: las restricciones solo se aplican a elementos nuevos o editados
 
 ## Mecánicas de conversión (referencia rápida)
+
+Los importes se guardan en su propia moneda y se convierten al mostrarse. Cada año usa las últimas tasas capturadas para ese año, sea cual sea la fecha en que se introdujeron los importes. Cuando una sincronización captura nuevas tasas para un año, los importes de ese año se convierten con ellas a partir de entonces, salvo que el año esté congelado (vea [Años congelados](#anos-congelados)).
 
 ### Años pasados
 Se utilizan las tasas promedio anuales del Banco Mundial. Son estables y no cambian una vez publicadas.
@@ -158,7 +160,10 @@ Se utiliza la tasa al contado de ExchangeRate-API (con respaldo a la última tas
 ### Años futuros
 Se reutiliza la tasa del año actual como estimación futura. Esto proporciona orientación para la planificación presupuestaria pero debe revisarse a medida que esos años se acerquen.
 
-**Respaldo**: Si no se encuentra tasa para una moneda, el sistema usa **1,00** hasta que los datos estén disponibles. Esto previene errores pero puede producir conversiones imprecisas. Ejecute Forzar sincronización FX para rellenar las tasas faltantes.
+### Años congelados
+Congelar la columna presupuestaria por defecto de un año fija las tasas de ese año para el tipo congelado (OPEX o CAPEX): KANAP actualiza las tasas del año y conserva ese conjunto para todos los importes del año, aunque lleguen tasas más recientes. Descongelar la columna por defecto las libera. Vea [Congelar la columna por defecto fija los tipos de cambio](budget-operations.md#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio).
+
+**Tasa faltante**: Cuando un año no tiene tasa para una moneda en uso, los importes en esa moneda se cuentan a **1,00**, como si ya estuvieran en la moneda de reporte. El servidor registra una advertencia y obtiene las tasas de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa la nueva tasa en cuanto la fuente la publica. Para detectarlo, compruebe los valores `—` de la tabla de instantáneas de tasas FX y ejecute Forzar sincronización FX para obtener las tasas de inmediato.
 
 ## Consejos
 

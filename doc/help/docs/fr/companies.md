@@ -55,7 +55,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 **Actions** :
 
-- **Nouveau** : créer une société (nécessite `companies:manager`)
+- **Nouveau** : créer une société (nécessite `companies:member`)
 - **Import CSV** : import en masse de sociétés depuis un fichier CSV (nécessite `companies:admin`)
 - **Export CSV** : exporter les sociétés et leurs métriques en CSV (nécessite `companies:admin`)
 - **Supprimer la sélection** : supprimer une ou plusieurs sociétés sélectionnées (nécessite `companies:admin` ; possible uniquement si rien ne référence la société)
@@ -67,7 +67,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 | Action | Niveau requis |
 |--------|---------------|
 | Consulter la liste et les espaces de travail | `companies:reader` |
-| Créer ou modifier des sociétés | `companies:manager` |
+| Créer ou modifier des sociétés | `companies:member` |
 | Importer, exporter ou supprimer | `companies:admin` |
 
 ## L'espace de travail de la société
@@ -126,7 +126,7 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 - Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. »
 - Chaque année est enregistrée séparément : changer d'année charge les valeurs de cette année
 - Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
-- Vous avez besoin de `companies:manager` pour modifier les métriques
+- Vous avez besoin de `companies:member` pour modifier les métriques
 
 ## Plan comptable
 

@@ -65,7 +65,7 @@ Once you save, the workspace unlocks all tabs for detailed documentation.
 
 **Permissions**:
 - View: `applications:reader`
-- Create / edit: `applications:manager` (also called `member`)
+- Create / edit: `applications:member`
 - Import / Export / Delete: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ The Applications grid provides a comprehensive view of your application portfoli
 - Retired applications are hidden by default; use the **Lifecycle** filter to include Retired.
 
 **Actions**:
-- **New App / Service**: Create a new entry (`applications:manager`)
+- **New App / Service**: Create a new entry (`applications:member`)
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
-- **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
+- **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
 - **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
 ---
@@ -309,7 +309,7 @@ Dates in orange need attention: a contract whose renewal decision is due within 
 
 From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency. Contracts get one total per currency, without the disabled ones.
 
-**Adding and removing links** (`applications:manager`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
+**Adding and removing links** (`applications:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
 
 **Related**: suggestions of records you may want to link, each with the reason it is suggested:
 
@@ -323,7 +323,7 @@ Click **Link** to add the suggestion to its section. The section is absent when 
 
 **Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
+**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `applications:member`.
 
 ---
 

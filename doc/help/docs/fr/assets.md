@@ -260,7 +260,7 @@ Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque 
 
 **Sites web pertinents** : Ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
-**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
+**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression nécessite `infrastructure:member`.
 
 ---
 

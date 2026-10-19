@@ -14,9 +14,9 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 ## Permissions
 
 - `portfolio_projects:reader`: open the list and view project workspaces
-- `portfolio_projects:contributor`: update the managed **Purpose** document and maintain project-overhead time entries
-- `portfolio_projects:manager`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
-- `portfolio_projects:admin`: includes manager capabilities and can also import/export CSV and maintain other users' project-overhead time entries
+- `portfolio_projects:contributor`: update the managed **Purpose** document and log time on the project (project-overhead entries and project task entries)
+- `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
+- `portfolio_projects:admin`: includes member capabilities and can also import/export CSV, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access
 - Creating or linking standalone knowledge also requires a Knowledge creation role
 
@@ -65,7 +65,7 @@ The project list is designed to answer two questions quickly: "what should I car
 
 **Bulk administration**
 
-- **New Project** is available to managers
+- **New Project** is available with `portfolio_projects:member`
 - **Import CSV** and **Export CSV** are available to administrators
 
 Opening a project from the list preserves the current list context. The project workspace uses the same context for **Previous** and **Next** navigation, so you can review a filtered set without losing your place.
@@ -187,7 +187,7 @@ Below Purpose, the Summary tab includes the project activity stream:
 
 **History** lists the recorded changes (status moves, field edits, team and relation changes, edits to the Purpose document) and closes with the creation entry: who created the project and when.
 
-Managers can add and edit project comments. Comments can also be recorded as formal decisions, with an outcome and an optional status change. Use that when the discussion itself changes the project's course.
+Users with `portfolio_projects:member` can add and edit project comments. Comments can also be recorded as formal decisions, with an outcome and an optional status change. Use that when the discussion itself changes the project's course.
 
 Images can be included in activity comments when visual evidence is useful: architecture sketches, screenshots, or review evidence.
 
@@ -297,7 +297,7 @@ The **Scoring** tab keeps delivery tied to prioritization.
 
 - for request-origin projects, the source request remains visible as the scoring reference
 - for fast-track and legacy projects, scoring is maintained directly on the project
-- managers can review or update scoring, including priority overrides where portfolio rules allow it
+- users with `portfolio_projects:member` can review or update scoring; saving a priority override needs `portfolio_projects:admin`
 
 The resulting priority score matters outside this tab:
 

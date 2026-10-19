@@ -39,7 +39,7 @@ Chaque cellule d'une ligne est cliquable et ouvre la fiche du fournisseur.
 - Filtre de statut : Utilisez le bouton bascule **Afficher : Tous / Activés / Désactivés** au-dessus de la grille pour filtrer par statut. Par défaut, la liste affiche les fournisseurs activés
 
 **Actions** :
-- **Nouveau** : Créer un nouveau fournisseur (nécessite `suppliers:manager`)
+- **Nouveau** : Créer un nouveau fournisseur (nécessite `suppliers:member`)
 - **Importer CSV** : Import en masse de fournisseurs (nécessite `suppliers:admin`)
 - **Exporter CSV** : Exporter la liste en CSV (nécessite `suppliers:admin`)
 - **Supprimer la sélection** : Supprimer les fournisseurs sélectionnés (nécessite `suppliers:admin`)
@@ -67,7 +67,7 @@ La fiche comporte deux onglets : **Vue d'ensemble** et **Contacts**.
 
 **Notes** : des notes libres sur le fournisseur, dans l'onglet **Vue d'ensemble**. Elles s'enregistrent un instant après la fin de la saisie, et quand vous quittez le champ.
 
-La modification requiert la permission `suppliers:manager`. Les utilisateurs en lecture seule voient la même fiche sans pouvoir la modifier.
+La modification requiert la permission `suppliers:member`. Les utilisateurs en lecture seule voient la même fiche sans pouvoir la modifier.
 
 Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la liste.
 

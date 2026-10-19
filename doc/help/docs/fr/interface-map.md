@@ -138,7 +138,7 @@ Lorsque vous sélectionnez un nœud ou une arête, un panneau latéral s'ouvre s
 
 - **Description** : Ce que fait l'application
 - **Éditeur** : Éditeur du logiciel
-- **Criticité** : Critique métier, Haute, Moyenne ou Basse
+- **Criticité** : un niveau de criticité métier issu du catalogue de votre organisation, dans [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les niveaux par défaut sont Critique, Élevée, Modérée et Faible
 - **Serveurs** : Serveurs hébergeant cette app, regroupés par environnement. Cliquez sur un nom de serveur pour ouvrir son espace de travail.
 - **Responsables métier** et **Responsables IT** : Contacts responsables
 - **Informations de support** : Contacts de support avec leurs rôles. Cliquez sur un nom de contact pour naviguer vers l'onglet Technique de l'application.

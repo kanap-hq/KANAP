@@ -55,7 +55,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 **Acciones**:
 
-- **Nuevo**: crear una empresa (requiere `companies:manager`)
+- **Nuevo**: crear una empresa (requiere `companies:member`)
 - **Importar CSV**: importación masiva de empresas desde un archivo CSV (requiere `companies:admin`)
 - **Exportar CSV**: exportar empresas y sus métricas a CSV (requiere `companies:admin`)
 - **Eliminar seleccionadas**: eliminar una o más empresas seleccionadas (requiere `companies:admin`; solo es posible si nada referencia a la empresa)
@@ -67,7 +67,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 | Acción | Nivel requerido |
 |--------|-----------------|
 | Ver la lista y los espacios de trabajo | `companies:reader` |
-| Crear o editar empresas | `companies:manager` |
+| Crear o editar empresas | `companies:member` |
 | Importar, exportar o eliminar | `companies:admin` |
 
 ## El espacio de trabajo de la empresa
@@ -126,7 +126,7 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 - Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.»
 - Cada año se guarda por separado: al cambiar de año se cargan los valores de ese año
 - Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso indica que un administrador de presupuesto puede descongelarlas (**Gestión presupuestaria > Administración > Congelar datos maestros**)
-- Necesita `companies:manager` para editar las métricas
+- Necesita `companies:member` para editar las métricas
 
 ## Plan de cuentas
 

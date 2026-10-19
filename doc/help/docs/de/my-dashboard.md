@@ -32,6 +32,8 @@ Die Aktion **Zeit erfassen** öffnet einen fokussierten Dialog, sodass Sie Stund
 - Wählen Sie eine **Kategorie**: **IT** oder **Business**.
 - Fügen Sie **Notizen** hinzu, wenn Sie Kontext zu Ihrer Arbeit angeben möchten.
 
+Beim Speichern wird die Berechtigung für das Ziel geprüft: Ein Eintrag auf einem Projekt oder einer Projektaufgabe erfordert `portfolio_projects:contributor`, ein Eintrag auf einer eigenständigen Aufgabe erfordert `tasks:member`.
+
 Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatisch aktualisiert.
 
 ## Zeile zu den Beispieldaten

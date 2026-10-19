@@ -260,7 +260,7 @@ Retired assets stop the chain: nothing falls through them. Each table shows its 
 
 **Relevant websites**: Add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
+**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `infrastructure:member`.
 
 ---
 

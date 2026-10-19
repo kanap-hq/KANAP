@@ -143,11 +143,13 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ## Status and historical data
 
 When you change settings:
-  - **Reporting currency**: Affects display immediately; historical data remains intact and is converted using the rates that were active when the data was entered
+  - **Reporting currency**: Affects display immediately; stored amounts do not change, and each year is converted to the new currency with the rates described in [Conversion mechanics](#conversion-mechanics-quick-reference)
   - **Default currencies**: Only affect new lines; existing lines keep their currencies
   - **Allowed currencies**: Existing lines are not validated retroactively. Restrictions apply only to new or edited lines
 
 ## Conversion mechanics (quick reference)
+
+Amounts are stored in their own currency and converted when they are displayed. Each year uses the latest rates captured for that year, whatever the date the amounts were entered. When a sync captures new rates for a year, the amounts of that year are converted with them from then on, unless the year is frozen (see [Frozen years](#frozen-years)).
 
 ### Past years
 World Bank annual average rates are used. These are stable and don't change once published.
@@ -158,7 +160,10 @@ Live spot rate from ExchangeRate-API is used (falls back to latest annual rate i
 ### Future years
 Reuse the current year's rate as a forward estimate. This provides budget planning guidance but should be reviewed as those years approach.
 
-**Fallback**: If no rate is found for a currency, the system uses **1.00** until data becomes available. This prevents errors but may produce inaccurate conversions. Run Force FX sync to populate missing rates.
+### Frozen years
+Freezing the default budget column of a year fixes that year's rates for the type you freeze (OPEX or CAPEX): KANAP refreshes the year's rates, then keeps that set for every amount of the year, even when newer rates arrive. Unfreezing the default column releases them. See [Freezing the default column fixes the exchange rates](budget-operations.md#freezing-the-default-column-fixes-the-exchange-rates).
+
+**Missing rate**: When a year has no rate for a currency in use, the amounts in that currency are counted at **1.00**, as if they were already in the reporting currency. The server logs a warning and fetches the rates of that year in the background (at most once every six hours per year), so the next display uses the new rate once the source publishes it. To spot it, check the FX Rate Snapshots table for `—` values, and run Force FX sync to fetch the rates at once.
 
 ## Tips
 

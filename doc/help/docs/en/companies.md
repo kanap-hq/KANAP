@@ -55,7 +55,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 
 **Actions**:
 
-- **New**: create a company (requires `companies:manager`)
+- **New**: create a company (requires `companies:member`)
 - **Import CSV**: bulk-import companies from a CSV file (requires `companies:admin`)
 - **Export CSV**: export companies and their metrics to CSV (requires `companies:admin`)
 - **Delete Selected**: delete one or more selected companies (requires `companies:admin`; only possible if nothing references the company)
@@ -67,7 +67,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 | Action | Required level |
 |---|---|
 | View the list and workspaces | `companies:reader` |
-| Create or edit companies | `companies:manager` |
+| Create or edit companies | `companies:member` |
 | Import, export, or delete | `companies:admin` |
 
 ## The company workspace
@@ -126,7 +126,7 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 - Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more."
 - Each year is stored on its own: switching years loads that year's values
 - If the company figures for the year are **frozen**, the fields are locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
-- You need `companies:manager` to edit metrics
+- You need `companies:member` to edit metrics
 
 ## Chart of Accounts
 

@@ -42,7 +42,7 @@ Das Abteilungs-Grid gibt Ihnen einen Überblick über alle Abteilungen mit ihrer
 **Deep-Linking**: Jede Zelle im Grid ist ein anklickbarer Link. Name und Unternehmen öffnen den Übersichts-Tab; Mitarbeiterzahl öffnet den Details-Tab. Wenn Sie zu einem Arbeitsbereich navigieren und zurückkehren, bleiben Sortierreihenfolge, Suchabfrage und Filter erhalten.
 
 **Aktionen**:
-- **Neu**: Neue Abteilung erstellen (erfordert `departments:manager`)
+- **Neu**: Neue Abteilung erstellen (erfordert `departments:member`)
 - **CSV importieren**: Massenimport von Abteilungen (erfordert `departments:admin`)
 - **CSV exportieren**: Als CSV exportieren (erfordert `departments:admin`)
 - **Ausgewählte löschen**: Ausgewählte Abteilungen entfernen (erfordert `departments:admin`). Eine Abteilung, die in den Zuordnungen von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Abteilungen mit dem Grund

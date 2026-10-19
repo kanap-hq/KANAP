@@ -24,11 +24,11 @@ KANAP is organized around a simple structure. The top bar shows the sections you
 |------|-----------------|
 | **Dashboard** | Your personal hub. Click the KANAP logo or navigate to `/` |
 | **Portfolio** | Tasks, Requests, Projects, Planning, Reporting, Contributors |
-| **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Connections, Connection Map, Locations |
+| **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Technologies, Connections, Connection Map, Locations, Netbox, Incidents, End of support, Vulnerabilities |
 | **Knowledge** | Documents and templates with review workflows |
 | **Budget Management** | OPEX, CAPEX, Contracts, Reporting, Administration (currencies, budget columns, freeze and copy operations) |
 | **Master Data** | Companies, Departments, Cost centers, Suppliers, Contacts, Charts of Accounts, Working-day calendars, Analytics Dimensions, Business Processes |
-| **Admin** | Users, Roles, Audit Log, Billing, Authentication, Branding (admin-only) |
+| **Admin** | Users, Roles, Audit Log, Billing, Authentication, Branding, Integrations (admin-only) |
 
 You don't need access to everything. Your role determines which sections and actions are available to you. If something is missing from your menu, ask your administrator.
 
@@ -277,6 +277,9 @@ The weekly email and real-time notifications keep you in the loop without checki
 |-------------------|-----------|
 | Applications, servers, infrastructure | [IT Ops Fast Track](apps-and-assets.md) |
 | Requests, projects, portfolio planning | [Portfolio Fast Track](index.md) |
+| Software versions, support dates, security advisories | [Technologies](../technologies.md), [End of support](../end-of-support.md) and [Vulnerabilities](../vulnerabilities.md) pages |
+| Outages and their impact | [Incidents](../incidents.md) page |
+| Netbox inventory, service desk and other connected tools | [Netbox synchronisation](../netbox.md) and [Integrations](../integrations.md) pages |
 
 ---
 
