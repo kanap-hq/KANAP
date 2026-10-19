@@ -1,95 +1,63 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Tooltip, Typography } from '@mui/material';
 import { useQuery } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import PageHeader from '../../components/PageHeader';
-import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../components/workspace/RelationsTable';
+import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
-import type { DomainTrustDirection } from '../../services/itOpsSettings';
-
-/** Fixed columns stay next to each other; the unsized column takes the spare width. */
-const COL = { ref: 96, name: 240, type: 160, zone: 180 } as const;
-
-type ZoneAsset = { id: string; name: string; reference: string | null; kind: string };
-type DirectoryService = { id: string; reference: string | null; name: string };
-
-export type AdministrationZone = {
-  code: string;
-  label: string | null;
-  admin_group: string | null;
-  description: string | null;
-  deprecated: boolean;
-  unknown: boolean;
-  assets: ZoneAsset[];
-  asset_counts: Array<{ kind: string; count: number }>;
-  hosted_application_count: number;
-  directory_services: DirectoryService[];
-};
-
-export type AdministrationDomain = {
-  code: string;
-  label: string;
-  dns_suffix: string;
-  forest: string | null;
-  trusts: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
-  /** Trusts declared on other domains toward this one, read only, seen from this domain. */
-  declared_by: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
-  account_count: number | null;
-  machine_count: number | null;
-  domain_controllers: Array<{ id: string; name: string; reference: string | null }>;
-  deprecated: boolean;
-};
-
-export type TrustRaised = {
-  asset: ZoneAsset;
-  asset_zone: string;
-  holder: ZoneAsset;
-  holder_zone: string;
-  holder_kind: 'contains' | 'cluster';
-};
-
-export type HostedApplication = {
-  id: string;
-  name: string;
-  reference: string | null;
-  asset: ZoneAsset;
-};
-
-export type AdministrationControls = {
-  most_sensitive_zone: string | null;
-  assets_without_zone: ZoneAsset[];
-  domain_controllers_outside: ZoneAsset[] | null;
-  directory_assets_outside: ZoneAsset[] | null;
-  trust_raised: TrustRaised[] | null;
-  applications_on_most_sensitive: HostedApplication[] | null;
-};
-
-export type AdministrationView = {
-  zones: AdministrationZone[];
-  domains: AdministrationDomain[];
-  controls: AdministrationControls;
-};
 
 const ENDPOINT = '/technologies/reports/administration';
 
-function filler<T>(): RelationsColumn<T> {
-  return { key: 'room', header: '\u00a0', render: () => null };
-}
+/** The five control points, in the order the server counts them. */
+export const CONTROL_KEYS = [
+  'assets_without_zone',
+  'domain_controllers_outside',
+  'directory_assets_outside',
+  'trust_raised',
+  'applications_on_most_sensitive',
+] as const;
+export type ControlKey = (typeof CONTROL_KEYS)[number];
+
+/** A zone of the catalog, or a code the catalog no longer has (`unknown`). */
+export type AdministrationZone = {
+  code: string;
+  label: string | null;
+  description: string | null;
+  admin_group: string | null;
+  deprecated: boolean;
+  unknown: boolean;
+  asset_counts: Array<{ kind: string; count: number }>;
+  hosted_application_count: number;
+  directory_services: Array<{ id: string; reference: string | null; name: string }>;
+};
+
+/** `GET /technologies/reports/administration`. A control's `count` is null when it does not apply. */
+export type AdministrationSummary = {
+  most_sensitive: string | null;
+  zones: AdministrationZone[];
+  without_zone: { asset_count: number };
+  controls: Array<{ key: ControlKey; count: number | null }>;
+};
 
 /** A catalog value's name in the user's language (tenant translation, then the stored name). */
-function useCatalogName() {
+function useZoneName() {
+  const { t } = useTranslation(['it', 'common']);
   const { byField } = useItOpsEnumOptions();
-  return React.useCallback((field: 'adminZone' | 'domain', code: string, fallback: string) => (
-    (byField[field] || []).find((option) => option.code === code)?.label || fallback
-  ), [byField]);
+  return React.useCallback((code: string | null, zones: AdministrationZone[]) => {
+    if (!code) return t('pages.administrationView.noZone');
+    const zone = zones.find((item) => item.code === code);
+    if (!zone || zone.unknown) return t('pages.administrationView.unknownZone', { code });
+    const name = (byField.adminZone || []).find((option) => option.code === code)?.label || zone.label || code;
+    return zone.deprecated ? `${name} (${t('common:enumEditor.retiredSuffix')})` : name;
+  }, [byField, t]);
 }
 
-/** A neutral link inside a row that opens something else: it opens its own record only. */
+/** A neutral link (a record of another page): underline and teal on hover only. */
 function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
   return (
     <Box
@@ -103,288 +71,188 @@ function RecordLink({ to, children }: { to: string; children: React.ReactNode })
   );
 }
 
-function referenceLink(to: string, reference: string | null, name: string) {
-  return (
-    <RecordLink to={to}>
-      {reference ? <RelationRef>{reference}</RelationRef> : name}
-    </RecordLink>
-  );
-}
+const quietSx = { color: 'kanap.text.tertiary' } as const;
+const dot = <Box component="span" sx={{ ...quietSx, mx: 0.75 }}>·</Box>;
 
-function NameLinks({ items }: { items: Array<{ id: string; name: string }> }) {
+/**
+ * One row of the band: the zone's name with its description under it, its administrator group, then
+ * its counts on one line. A button: it narrows the asset list to the zone, again to clear.
+ */
+function ZoneRow({ name, description, adminGroup, counts, selected, onSelect }: {
+  name: string;
+  description: string | null;
+  adminGroup: string | null;
+  counts: React.ReactNode;
+  selected: boolean;
+  onSelect: () => void;
+}) {
+  const { t } = useTranslation('it');
   return (
-    <>
-      {items.map((item, index) => (
-        <React.Fragment key={item.id}>
-          {index > 0 && ', '}
-          <RecordLink to={`/it/assets/${item.id}`}>{item.name}</RecordLink>
-        </React.Fragment>
-      ))}
-    </>
-  );
-}
-
-function ZoneSection({ zone }: { zone: AdministrationZone }) {
-  const { t } = useTranslation(['it', 'common']);
-  const { labelFor } = useItOpsEnumOptions();
-  const nameOf = useCatalogName();
-  const assetColumns: Array<RelationsColumn<ZoneAsset>> = [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/assets/${row.id}`, row.reference, row.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.name },
-    { key: 'kind', header: t('pages.administrationView.columns.type'), width: COL.type, render: (row) => labelFor('serverKind', row.kind) },
-    filler(),
-  ];
-  const directoryColumns: Array<RelationsColumn<DirectoryService>> = [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/technologies/${row.id}`, row.reference, row.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.name },
-    filler(),
-  ];
-  const title = zone.unknown
-    ? t('pages.administrationView.unknownZone', { code: zone.code })
-    : `${nameOf('adminZone', zone.code, zone.label ?? zone.code)}${zone.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}`;
-  const counts = zone.asset_counts.map((item) => t('pages.administrationView.kindCount', { kind: labelFor('serverKind', item.kind), count: item.count })).join(', ');
-  return (
-    <RelationsSection title={title} count={zone.assets.length}>
-      <Stack spacing={0.25} sx={{ mb: 1 }}>
-        {zone.admin_group && (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
-            <Box component="span" sx={{ color: 'kanap.text.tertiary', mr: 0.5 }}>{t('pages.administrationView.attributes.adminGroup')}</Box>
-            <span>{zone.admin_group}</span>
-          </Typography>
-        )}
-        {zone.description && <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{zone.description}</Typography>}
-      </Stack>
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>
-        {zone.assets.length
-          ? (
-            <>
-              <Box component="span">{counts}</Box>
-              <Box component="span" sx={{ color: 'kanap.text.tertiary', mx: 0.75 }}>·</Box>
-              {t('pages.administrationView.hostedApplications', { count: zone.hosted_application_count })}
-            </>
-          )
-          : t('pages.administrationView.scopeEmpty')}
-      </Typography>
-      {zone.assets.length
-        ? (
-          <RelationsTable
-            columns={assetColumns}
-            rows={zone.assets}
-            rowKey={(row) => row.id}
-            rowHref={(row) => `/it/assets/${row.id}`}
-            ariaLabel={t('pages.administrationView.scope')}
-          />
-        )
-        : null}
-      {zone.directory_services.length > 0 && (
-        <Box sx={{ mt: 1.5 }}>
-          <Typography component="h3" sx={{ m: 0, mb: 0.75, fontSize: 13, fontWeight: 500 }}>
-            {t('pages.administrationView.attributes.directoryServices')}
-          </Typography>
-          <RelationsTable
-            columns={directoryColumns}
-            rows={zone.directory_services}
-            rowKey={(row) => row.id}
-            rowHref={(row) => `/it/technologies/${row.id}`}
-            ariaLabel={t('pages.administrationView.attributes.directoryServices')}
-          />
-        </Box>
-      )}
-    </RelationsSection>
-  );
-}
-
-function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
-  const { t } = useTranslation(['it', 'common']);
-  const nameOf = useCatalogName();
-  // An absent value: a grey dash, "Not set" on hover (the convention of an unknown version in the Relations tab).
-  const notSet = <Box component="span" title={t('pages.administrationView.notSet')} sx={{ color: 'kanap.text.tertiary' }}>—</Box>;
-  const count = (value: number | null) => (value == null ? notSet : value.toLocaleString());
-  const columns: Array<RelationsColumn<AdministrationDomain>> = [
-    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${nameOf('domain', row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
-    { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
-    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, hideOrder: 2, render: (row) => row.forest ?? notSet },
-    {
-      key: 'trusts',
-      header: t('pages.administrationView.columns.trusts'),
-      width: 220, hideOrder: 1,
-      render: (row) => (row.trusts.length || row.declared_by.length
-        ? (
+    <Box
+      component="button"
+      type="button"
+      aria-pressed={selected}
+      onClick={onSelect}
+      sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: 'minmax(180px, 2fr) minmax(140px, 1.2fr) 3fr' },
+        columnGap: 2,
+        rowGap: 0.25,
+        alignItems: 'baseline',
+        width: '100%',
+        px: 1.5,
+        py: 0.75,
+        border: 0,
+        borderBottom: '1px solid',
+        borderColor: 'kanap.border.default',
+        borderLeft: '2px solid',
+        borderLeftColor: selected ? 'primary.main' : 'transparent',
+        bgcolor: selected ? 'action.selected' : 'transparent',
+        color: 'kanap.text.primary',
+        font: 'inherit',
+        fontSize: 13,
+        textAlign: 'left',
+        cursor: 'pointer',
+        '&:last-of-type': { borderBottom: 0 },
+        '&:hover': { bgcolor: selected ? 'action.selected' : 'action.hover' },
+        '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: -2 },
+      }}
+    >
+      <Box sx={{ minWidth: 0 }}>
+        <Box sx={{ fontWeight: 500 }}>{name}</Box>
+        {description && <Box data-testid="zone-description" sx={{ ...quietSx, fontSize: 12 }}>{description}</Box>}
+      </Box>
+      <Box sx={{ minWidth: 0, color: 'kanap.text.secondary' }}>
+        {adminGroup && (
           <>
-            {row.trusts.map((trust) => `${nameOf('domain', trust.domain, trust.label)} (${t(`pages.settings.trusts.directions.${trust.direction}`)})`).join(', ')}
-            {row.declared_by.length > 0 && (
-              <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>
-                {row.trusts.length > 0 && ', '}
-                {row.declared_by.map((trust) => t('pages.administrationView.declaredTrust', { name: nameOf('domain', trust.domain, trust.label), direction: t(`pages.settings.trusts.directions.${trust.direction}`) })).join(', ')}
-              </Box>
-            )}
+            <Box component="span" sx={{ ...quietSx, mr: 0.5 }}>{t('pages.administrationView.attributes.adminGroup')}</Box>
+            {adminGroup}
           </>
-        )
-        : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.none')}</Box>),
-    },
-    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 80, align: 'right', render: (row) => count(row.account_count) },
-    { key: 'machines', header: t('pages.administrationView.columns.machines'), width: 80, align: 'right', render: (row) => count(row.machine_count) },
-    {
-      key: 'controllers',
-      header: t('pages.administrationView.columns.domainControllers'),
-      render: (row) => (row.domain_controllers.length
-        ? <><Box component="span" sx={{ mr: 0.75 }}>{row.domain_controllers.length}</Box><NameLinks items={row.domain_controllers} /></>
-        : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.administrationView.noController')}</Box>),
-    },
-  ];
-  return (
-    <RelationsSection title={t('pages.administrationView.domains')} count={domains.length}>
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.administrationView.domainsHint')}</Typography>
-      {domains.length
-        ? <RelationsTable columns={columns} rows={domains} rowKey={(row) => row.code} ariaLabel={t('pages.administrationView.domains')} />
-        : <RelationsEmpty>{t('pages.administrationView.noDomains')}</RelationsEmpty>}
-    </RelationsSection>
+        )}
+      </Box>
+      <Box sx={{ minWidth: 0, color: 'kanap.text.secondary' }}>{counts}</Box>
+    </Box>
   );
 }
 
-function ControlPoints({ view }: { view: AdministrationView }) {
+/** The zones of the catalog in their order (the most sensitive first), then "No zone". */
+function ZoneBand({ summary, selected, onSelect }: {
+  summary: AdministrationSummary;
+  selected: string | null | undefined;
+  onSelect: (code: string | null) => void;
+}) {
   const { t } = useTranslation(['it', 'common']);
   const { labelFor } = useItOpsEnumOptions();
-  const nameOf = useCatalogName();
-  const { zoneByCode, zoneCodeByAsset } = React.useMemo(() => {
-    const zoneByCode = new Map(view.zones.map((zone) => [zone.code, zone]));
-    const zoneCodeByAsset = new Map<string, string>();
-    for (const zone of zoneByCode.values()) for (const asset of zone.assets) zoneCodeByAsset.set(asset.id, zone.code);
-    return { zoneByCode, zoneCodeByAsset };
-  }, [view.zones]);
-  const zoneLabel = (code: string | null) => {
-    if (!code) return t('pages.administrationView.noZone');
-    const zone = zoneByCode.get(code);
-    if (!zone || zone.unknown) return t('pages.administrationView.unknownZone', { code });
-    const name = nameOf('adminZone', code, zone.label ?? code);
-    return zone.deprecated ? `${name} (${t('common:enumEditor.retiredSuffix')})` : name;
+  const zoneName = useZoneName();
+  const zoneCounts = (zone: AdministrationZone) => {
+    if (!zone.asset_counts.length && !zone.directory_services.length) {
+      return <Box component="span" sx={quietSx}>{t('pages.administrationView.scopeEmpty')}</Box>;
+    }
+    const kinds = zone.asset_counts.map((item) => t('pages.administrationView.kindCount', { kind: labelFor('serverKind', item.kind), count: item.count })).join(', ');
+    const services = zone.directory_services.map((service) => service.name).join(', ');
+    return (
+      <>
+        {kinds}
+        {kinds && dot}
+        {t('pages.administrationView.hostedApplications', { count: zone.hosted_application_count })}
+        {zone.directory_services.length > 0 && (
+          <>
+            {dot}
+            <Tooltip title={services}>
+              <span>{t('pages.administrationView.directoryServiceCount', { count: zone.directory_services.length })}</span>
+            </Tooltip>
+          </>
+        )}
+      </>
+    );
   };
-  const kind = (code: string) => labelFor('serverKind', code);
-  const assetColumns = (href: (row: ZoneAsset) => string): Array<RelationsColumn<ZoneAsset>> => [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(href(row), row.reference, row.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.name },
-    { key: 'kind', header: t('pages.administrationView.columns.type'), width: COL.type, render: (row) => kind(row.kind) },
-    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(zoneCodeByAsset.get(row.id) ?? null) },
-    filler(),
-  ];
-  const most = view.controls.most_sensitive_zone;
-  const mostZone = most ? zoneByCode.get(most) : undefined;
-  const mostName = most ? nameOf('adminZone', most, mostZone?.label ?? most) : null;
-  const section = <T,>(key: string, rows: T[], columns: Array<RelationsColumn<T>>, rowKey: (row: T) => string, rowHref: (row: T) => string) => (
-    <RelationsSection title={t(`pages.administrationView.controlsList.${key}.title`)} count={rows.length}>
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t(`pages.administrationView.controlsList.${key}.hint`)}</Typography>
-      {rows.length
-        ? <RelationsTable columns={columns} rows={rows} rowKey={rowKey} rowHref={rowHref} ariaLabel={t(`pages.administrationView.controlsList.${key}.title`)} />
-        : <RelationsEmpty>{t('pages.administrationView.none')}</RelationsEmpty>}
-    </RelationsSection>
-  );
-  const assetHref = (row: ZoneAsset) => `/it/assets/${row.id}`;
-  const placedColumns = assetColumns(assetHref);
-  const trustHref = (row: TrustRaised) => `/it/assets/${row.holder_kind === 'cluster' ? row.asset.id : row.holder.id}`;
-  const trustColumns: Array<RelationsColumn<TrustRaised>> = [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/assets/${row.asset.id}`, row.asset.reference, row.asset.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.asset.name },
-    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(row.asset_zone) },
-    { key: 'relation', header: t('pages.administrationView.columns.relation'), width: COL.type, render: (row) => t(`pages.administrationView.relation.${row.holder_kind}`) },
-    {
-      key: 'dependsOn',
-      header: t('pages.administrationView.columns.dependsOn'),
-      render: (row) => (
-        <>
-          {referenceLink(`/it/assets/${row.holder.id}`, row.holder.reference, row.holder.name)}
-          {row.holder.reference ? ` ${row.holder.name}` : ''}
-        </>
-      ),
-    },
-    { key: 'holderZone', header: t('pages.administrationView.columns.zone'), width: COL.zone, render: (row) => zoneLabel(row.holder_zone) },
-  ];
-  const applicationColumns: Array<RelationsColumn<HostedApplication>> = [
-    { key: 'reference', header: t('pages.administrationView.columns.reference'), width: COL.ref, render: (row) => referenceLink(`/it/applications/${row.id}`, row.reference, row.name) },
-    { key: 'name', header: t('common.name'), width: COL.name, render: (row) => row.name },
-    { key: 'asset', header: t('pages.administrationView.columns.asset'), width: COL.type, render: (row) => row.asset.reference ?? row.asset.name },
-    filler(),
-  ];
-  const { controls } = view;
   return (
-    <Box>
-      <Typography component="h2" sx={{ m: 0, mb: 1, fontSize: 16, fontWeight: 500 }}>{t('pages.administrationView.controls')}</Typography>
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1.5 }}>
-        {mostName ? t('pages.administrationView.controlsHint', { zone: mostName }) : t('pages.administrationView.controlsNoCatalog')}
-      </Typography>
-      <Stack spacing={2.5}>
-        {section('assetsWithoutZone', controls.assets_without_zone, placedColumns, (row) => row.id, assetHref)}
-        {controls.domain_controllers_outside !== null && section('domainControllers', controls.domain_controllers_outside, placedColumns, (row) => row.id, assetHref)}
-        {controls.directory_assets_outside !== null && section('directoryAssets', controls.directory_assets_outside, placedColumns, (row) => row.id, assetHref)}
-        {controls.trust_raised !== null && section('trustRaised', controls.trust_raised, trustColumns, (row) => `${row.holder.id}:${row.asset.id}:${row.holder_kind}`, trustHref)}
-        {controls.applications_on_most_sensitive !== null && section('applications', controls.applications_on_most_sensitive, applicationColumns, (row) => `${row.id}:${row.asset.id}`, (row) => `/it/applications/${row.id}`)}
-      </Stack>
+    <Box
+      role="group"
+      aria-label={t('pages.administrationView.zones')}
+      sx={{ border: '1px solid', borderColor: 'kanap.border.default', borderRadius: 1, overflow: 'hidden' }}
+    >
+      {summary.zones.map((zone) => (
+        <ZoneRow
+          key={zone.code}
+          name={zoneName(zone.code, summary.zones)}
+          description={zone.description}
+          adminGroup={zone.admin_group}
+          counts={zoneCounts(zone)}
+          selected={selected === zone.code}
+          onSelect={() => onSelect(zone.code)}
+        />
+      ))}
+      <ZoneRow
+        name={t('pages.administrationView.noZone')}
+        description={null}
+        adminGroup={null}
+        counts={summary.without_zone.asset_count
+          ? t('pages.administrationView.assetCount', { count: summary.without_zone.asset_count })
+          : <Box component="span" sx={quietSx}>{t('pages.administrationView.scopeEmpty')}</Box>}
+        selected={selected === null}
+        onSelect={() => onSelect(null)}
+      />
     </Box>
   );
 }
 
 /**
- * The administration view (ANSSI mapping guide, view 4): per administration zone, the assets it
- * covers and the directory services placed in it; the domains; then the control points.
+ * Administration zones (the administration view of the ANSSI mapping guide): the zones in a compact
+ * band, the control points, then the assets with their zone, technologies, applications and findings.
  */
 export default function AdministrationViewPage() {
   const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const [exportError, setExportError] = React.useState<string | null>(null);
-  const [exporting, setExporting] = React.useState<'zones' | 'domains' | null>(null);
-  const { data, isLoading, error } = useQuery({
-    queryKey: ['technologies', 'reports', 'administration'],
-    queryFn: async () => (await api.get<AdministrationView>(ENDPOINT)).data,
+  const [exporting, setExporting] = React.useState(false);
+  // The zone the band narrows the list to: a code, `null` for "No zone", `undefined` for none.
+  const [zoneFilter, setZoneFilter] = React.useState<string | null | undefined>(undefined);
+  const summary = useQuery({
+    queryKey: ['technologies', 'reports', 'administration', 'summary'],
+    queryFn: async () => (await api.get<AdministrationSummary>(ENDPOINT)).data,
   });
 
-  const exportList = async (list: 'zones' | 'domains') => {
-    setExporting(list);
+  const selectZone = (code: string | null) => setZoneFilter((current) => (current === code ? undefined : code));
+
+  const exportDomains = async () => {
+    setExporting(true);
     setExportError(null);
     try {
       const language = (i18n.resolvedLanguage || i18n.language || 'en').slice(0, 2);
-      const res = await api.get(`${ENDPOINT}/export`, { params: { list, language }, responseType: 'blob' });
-      downloadBlob(res.data as Blob, extractFilenameFromDisposition(res.headers?.['content-disposition']) || `administration_view_${list}.csv`);
+      const res = await api.get(`${ENDPOINT}/export`, { params: { list: 'domains', language }, responseType: 'blob' });
+      downloadBlob(res.data as Blob, extractFilenameFromDisposition(res.headers?.['content-disposition']) || 'administration_view_domains.csv');
     } catch (err) {
       setExportError(getApiErrorMessage(err, t, t('pages.administrationView.exportFailed')));
     } finally {
-      setExporting(null);
+      setExporting(false);
     }
   };
 
-  const zones = data?.zones ?? [];
-  const catalogEmpty = !!data && zones.every((zone) => zone.unknown);
+  const data = summary.data;
+  const catalogEmpty = !!data && data.zones.every((zone) => zone.unknown);
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <PageHeader
-        title={t('pages.administrationView.zones')}
-        actions={(
-          <Stack direction="row" spacing={1}>
-            <Button variant="action" disabled={!data || exporting !== null} onClick={() => void exportList('zones')}>{t('pages.administrationView.exportZones')}</Button>
-            <Button variant="action" disabled={!data || exporting !== null} onClick={() => void exportList('domains')}>{t('pages.administrationView.exportDomains')}</Button>
-          </Stack>
-        )}
-      />
-      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
-      {error && <Alert severity="error">{getApiErrorMessage(error, t, t('pages.administrationView.loadFailed'))}</Alert>}
+      <Box>
+        <PageHeader
+          title={t('pages.administrationView.zones')}
+          actions={<Button variant="action" disabled={exporting} onClick={() => void exportDomains()}>{t('pages.administrationView.exportDomains')}</Button>}
+        />
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
+      </Box>
       {exportError && <Alert severity="error">{exportError}</Alert>}
-      {isLoading && <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>{t('pages.administrationView.loading')}</Typography>}
+      {!data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
       {data && (
-        <Stack spacing={3}>
-          <Box>
-            <Typography component="h2" sx={{ m: 0, mb: 1, fontSize: 16, fontWeight: 500 }}>{t('pages.administrationView.zones')}</Typography>
-            {catalogEmpty && (
-              <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', mb: 1 }}>
-                {t('pages.administrationView.noZones')}
-                {hasLevel('settings', 'reader') && <>{' '}<RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink></>}
-              </Typography>
-            )}
-            <Stack spacing={2.5}>
-              {zones.map((zone) => <ZoneSection key={zone.code} zone={zone} />)}
-            </Stack>
-          </Box>
-          <DomainsSection domains={data.domains} />
-          <ControlPoints view={data} />
-        </Stack>
+        <Box>
+          {catalogEmpty && (
+            <Typography sx={{ fontSize: 13, ...quietSx, mb: 1 }}>
+              {t('pages.administrationView.noZones')}
+              {hasLevel('settings', 'reader') && <>{' '}<RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink></>}
+            </Typography>
+          )}
+          <ZoneBand summary={data} selected={zoneFilter} onSelect={selectZone} />
+        </Box>
       )}
     </Box>
   );

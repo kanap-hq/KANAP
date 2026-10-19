@@ -512,9 +512,13 @@
       "unknownZone": "Unknown zone ({{code}})",
       "scope": "Scope",
       "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} asset",
+      "assetCount_other": "{{count}} assets",
       "scopeEmpty": "No asset in this zone.",
       "hostedApplications_one": "{{count}} application",
       "hostedApplications_other": "{{count}} applications",
+      "directoryServiceCount_one": "{{count}} directory service",
+      "directoryServiceCount_other": "{{count}} directory services",
       "attributes": {
         "adminGroup": "Administrator group",
         "directoryServices": "Directory services"
