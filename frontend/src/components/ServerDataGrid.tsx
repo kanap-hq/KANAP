@@ -204,6 +204,22 @@ function parseUrlSort(sortFromUrl: string | null | undefined, fallback: { field:
  * columns the layout does not know yet go right after their nearest predecessor in the default
  * order (at the start when none precedes them), and columns that no longer exist are dropped.
  */
+/**
+ * Row selection for the infinite model. The header checkbox exists only for the client and server
+ * models: leaving the default on prints a warning and draws nothing. Row checkboxes stay.
+ */
+export function gridRowSelection(enableRowSelection: boolean): {
+  mode: 'singleRow' | 'multiRow';
+  checkboxes: boolean;
+  headerCheckbox?: boolean;
+  enableClickSelection: boolean;
+} {
+  if (!enableRowSelection) {
+    return { mode: 'singleRow', checkboxes: false, enableClickSelection: false };
+  }
+  return { mode: 'multiRow', checkboxes: true, headerCheckbox: false, enableClickSelection: false };
+}
+
 /** A flex column with no minimum of its own stays wide enough to read its header ("Nom", "Total"). */
 export const FLEX_COLUMN_MIN_WIDTH = 160;
 
@@ -1362,22 +1378,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     },
   }), []);
 
-  const rowSelection = useMemo(() => {
-    if (!enableRowSelection) {
-      // No box column: AG Grid draws its own (`checkboxes` defaults to true) on any row selection.
-      return {
-        mode: 'singleRow' as const,
-        checkboxes: false,
-        enableClickSelection: false,
-      };
-    }
-    return {
-      mode: 'multiRow' as const,
-      checkboxes: true,
-      // headerCheckbox not supported with infinite row model
-      enableClickSelection: false,
-    };
-  }, [enableRowSelection]);
+  const rowSelection = useMemo(() => gridRowSelection(enableRowSelection), [enableRowSelection]);
 
   const gridContext = useMemo(() => ({
     // Read by the set filters: whether "All" then untick may send an exclude model.

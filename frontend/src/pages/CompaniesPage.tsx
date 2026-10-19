@@ -71,6 +71,8 @@ export default function CompaniesPage() {
   const gridApiRef = useRef<any>(null);
 
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any; statusScope?: StatusScope } | null>(null);
+  const totalsKeyRef = useRef('');
+  const totalsGen = useRef(0);
   const [pinnedTotals, setPinnedTotals] = useState<any[]>([]);
 
   const updateSearchYear = useCallback((nextYear: number) => {
@@ -337,6 +339,16 @@ export default function CompaniesPage() {
   ], [getWorkspaceHref, locale, navigate, year, t]);
 
   const updateTotals = useCallback(async ({ q, filterModel, statusScope }: { q: string; filterModel: any; statusScope?: StatusScope }) => {
+    const key = JSON.stringify({
+      year,
+      refreshKey,
+      q: q || '',
+      filters: filterModel || {},
+      statusScope: statusScope ?? 'enabled',
+    });
+    if (key === totalsKeyRef.current) return;
+    totalsKeyRef.current = key;
+    const gen = ++totalsGen.current;
     try {
       const params: Record<string, any> = { year };
       if (q) params.q = q;
@@ -348,6 +360,7 @@ export default function CompaniesPage() {
       }
       // Filters too long for a URL go as a saved list context, like the grid's own requests.
       const res = await getWithListContext('/companies/totals', params);
+      if (gen !== totalsGen.current) return;
       const totals = res.data || {};
       const pinned = {
         name: t('companies.pinnedTotal'),
@@ -357,9 +370,11 @@ export default function CompaniesPage() {
       } as Partial<CompanyRow>;
       setPinnedTotals([pinned]);
     } catch (err) {
+      if (totalsKeyRef.current === key) totalsKeyRef.current = '';
+      if (gen !== totalsGen.current) return;
       setPinnedTotals([]);
     }
-  }, [year]);
+  }, [refreshKey, t, year]);
 
   const canCreate = hasLevel('companies', 'manager');
   const canAdmin = hasLevel('companies', 'admin');

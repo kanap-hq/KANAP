@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ColumnState } from 'ag-grid-community';
-import { columnMinWidth, floorSavedColumnWidths, mergeSavedColumnState, withoutColumnFilters } from './ServerDataGrid';
+import { columnMinWidth, floorSavedColumnWidths, gridRowSelection, mergeSavedColumnState, withoutColumnFilters } from './ServerDataGrid';
 
 const col = (colId: string, hide = false): ColumnState => ({ colId, hide });
 const ids = (state: ColumnState[]) => state.map((c) => c.colId);
@@ -52,6 +52,22 @@ describe('floorSavedColumnWidths', () => {
     expect(state.find((col) => col.colId === 'city')?.width).toBe(80);
     expect(state.find((col) => col.colId === 'notes')?.width).toBe(200);
     expect(state.find((col) => col.colId === 'name2')?.width).toBeNull();
+  });
+});
+
+describe('gridRowSelection', () => {
+  it('keeps row checkboxes and skips the header checkbox the infinite model rejects', () => {
+    expect(gridRowSelection(true)).toEqual({
+      mode: 'multiRow',
+      checkboxes: true,
+      headerCheckbox: false,
+      enableClickSelection: false,
+    });
+    expect(gridRowSelection(false)).toEqual({
+      mode: 'singleRow',
+      checkboxes: false,
+      enableClickSelection: false,
+    });
   });
 });
 
