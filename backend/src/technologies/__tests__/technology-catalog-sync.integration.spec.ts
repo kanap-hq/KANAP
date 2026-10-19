@@ -376,7 +376,9 @@ async function testShippedIdentifierWithdrawn() {
     const matcher = new VulnerabilityMatchService();
     assert.equal((await matcher.matchTenant(runner.manager, tenantId, technology.id)).added, 2, 'both products match the version in use');
 
-    const withdrawn = withoutCpe(shipped, [dropped]);
+    // PostgreSQL publishes one identifier: emptying the list is an intentional withdrawal, so the
+    // stub says `noCpe`. An empty list without that mark withdraws nothing.
+    const withdrawn = { ...withoutCpe(shipped, [dropped]), noCpe: 'The shipped entry withdraws its identifier.' as const };
     const restore = stubShipped(catalog, 'postgresql', withdrawn);
     try {
       await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
@@ -431,7 +433,7 @@ async function testCpeRemovalRules() {
     assert.deepEqual(tech.cpe_products, [dropped], 'an endoflife.date answer without the identifier removes nothing');
     assert.ok(tech.catalog_state.cpe_products.includes(dropped));
 
-    const withdrawn = withoutCpe(shipped, [dropped]);
+    const withdrawn = { ...withoutCpe(shipped, [dropped]), noCpe: 'The shipped entry withdraws its identifier.' as const };
     const restore = stubShipped(catalog, 'postgresql', withdrawn);
     try {
       await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
@@ -491,6 +493,112 @@ async function testNoUsableStateRemovesNothing() {
       assert.deepEqual(tech.cpe_products, held, `${raw === null ? 'no state' : raw}: nothing is removed`);
     });
   }
+}
+
+/**
+ * C5 review P1 and P2: an identifier the cache added (a release product) stays when the cache is
+ * missing or empty, and one the tenant then removed does not come back when the cache returns.
+ */
+async function testCacheIdentifierIsNotWithdrawnByAMissingCache() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-cache');
+    const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('mssqlserver')!;
+    const live = versionsOfReleases([{ name: '18.0', label: '2028', releaseDate: '2026-10-01', eolFrom: '2034-01-01' }], shippedDay(1), 'mssqlserver');
+    const year = 'a:microsoft:sql_server_2028';
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+    const holds = async () => (await read()).cpe_products.includes(year);
+    const removed = () => audit.some((entry) => (entry.after as { catalog_sync?: { cpe_products_removed?: string[] } })?.catalog_sync?.cpe_products_removed?.includes(year));
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), true, 'the cache adds the release identifier');
+    assert.ok(!(await read()).catalog_state.shipped_cpe.includes(year), 'the shipped file did not list it');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, null)]]));
+    assert.equal(await holds(), true, 'a missing cache removes nothing');
+    assert.equal(removed(), false, 'the audit records no removal');
+    assert.ok((await read()).catalog_state.cpe_products.includes(year), 'the identifier stays in the state');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, [])]]));
+    assert.equal(await holds(), true, 'an empty endoflife.date release list removes nothing');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    await runner.query(`UPDATE technologies SET cpe_products = array_remove(cpe_products, $2) WHERE id = $1`, [technology.id, year]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), false, 'an identifier the tenant removed stays out while the cache offers it');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, null)]]));
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), false, 'a missing cache does not undo the tenant removal when the cache returns');
+  });
+}
+
+/** C5 review B1: a readable state from before `shipped_cpe` withdraws nothing and records the shipped file. */
+async function testStateWithoutShippedCpeRemovesNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-c4');
+    const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('mssqlserver')!;
+    const dropped = shipped.cpe_products[0];
+    const [{ catalog_state: state }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    delete state.shipped_cpe;
+    await runner.query(`UPDATE technologies SET catalog_state = $2::jsonb WHERE id = $1`, [technology.id, JSON.stringify(state)]);
+    const withdrawn = withoutCpe(shipped, [dropped]);
+    const restore = stubShipped(catalog, 'mssqlserver', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', withdrawn]]));
+      let [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.ok(tech.cpe_products.includes(dropped), 'a state without shipped_cpe withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, [...withdrawn.cpe_products].sort(), 'the pass records the shipped file as it is now');
+      await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', withdrawn]]));
+      [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
+      assert.ok(tech.cpe_products.includes(dropped), 'the following pass does not withdraw it either');
+    } finally {
+      restore();
+    }
+  });
+}
+
+/** C5 review B1: a shipped file that loses every identifier, and is not marked `noCpe`, withdraws nothing. */
+async function testEmptyShippedFileWithdrawsNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const warnings: string[] = [];
+    const logger = (sync as unknown as { logger: { warn: (message: string) => void } }).logger;
+    const warn = logger.warn.bind(logger);
+    logger.warn = (message: string) => { warnings.push(message); warn(message); };
+    const tenantId = await seedTenant(runner, 'cat-sync-empty');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+    const before = (await read()).catalog_state.shipped_cpe;
+
+    const emptied = { ...shipped, cpe_products: [] as string[] };
+    const restore = stubShipped(catalog, 'postgresql', emptied);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', emptied]]));
+      const tech = await read();
+      assert.deepEqual(tech.cpe_products, shipped.cpe_products, 'an emptied shipped file withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, before, 'the previous shipped identifiers stay recorded');
+      assert.ok(warnings.some((line) => line.includes('postgresql') && line.includes('noCpe')), 'the pass logs it');
+    } finally {
+      restore();
+    }
+
+    const marked = { ...emptied, noCpe: 'The entry no longer has a CPE identifier.' as const };
+    const restoreMarked = stubShipped(catalog, 'postgresql', marked);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', marked]]));
+      const tech = await read();
+      assert.deepEqual(tech.cpe_products, [], 'an entry marked noCpe withdraws the identifiers it listed');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, [], 'the empty shipped file is recorded once it is explicit');
+    } finally {
+      restoreMarked();
+    }
+  });
 }
 
 /** C5: a description the tenant left unchanged follows the catalog; one the tenant changed stays. */
@@ -848,6 +956,9 @@ async function main() {
       ['shipped identifier withdrawn and matched again', testShippedIdentifierWithdrawn],
       ['CPE removal rules', testCpeRemovalRules],
       ['no usable state removes nothing', testNoUsableStateRemovesNothing],
+      ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],
+      ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],
+      ['empty shipped file withdraws nothing', testEmptyShippedFileWithdrawsNothing],
       ['description follows the catalog', testDescriptionFollows],
       ['two tenants, one follows', testTwoTenantsOneFollows],
       ['description in the users\' language', testDescriptionInUsersLanguage],

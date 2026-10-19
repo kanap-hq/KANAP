@@ -6,6 +6,7 @@ import { withTenant } from '../../common/tenant-runner';
 import { Features } from '../../config/features';
 import {
   endoflifeSlug,
+  lowerSorted,
   valuesOf,
   versionsOfReleases,
   type CatalogState,
@@ -112,9 +113,18 @@ function keepConsistent(target: CatalogVersionValues, current: CatalogVersionVal
   return moved;
 }
 
-/** The identifiers this sync offers: the shipped file, and the living entry on top of it. */
-function offeredIdentifiers(shipped: CatalogProduct, product: CatalogProduct): string[] {
-  return Array.from(new Set([...shipped.cpe_products, ...product.cpe_products].map((p) => p.toLowerCase()))).sort();
+/** An entry marked `noCpe` publishes an empty identifier list on purpose. */
+function markedNoCpe(product: CatalogProduct): boolean {
+  const flag = product.noCpe;
+  return flag === true || (typeof flag === 'string' && flag.trim().length > 0);
+}
+
+/** A string list stored on `catalog_state`, lower case. Absent or null: unknown. A bad shape: unreadable. */
+function optionalIdentifiers(raw: Record<string, unknown>, key: string): string[] | undefined | null {
+  if (!Object.prototype.hasOwnProperty.call(raw, key) || raw[key] == null) return undefined;
+  const value = raw[key];
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) return null;
+  return lowerSorted(value);
 }
 
 function sameText(left: string | null | undefined, right: string | null | undefined): boolean {
@@ -139,6 +149,7 @@ function startingState(shipped: CatalogProduct, product: CatalogProduct, cpeProd
   return {
     cpe_products: Array.from(new Set([...shipped.cpe_products, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
     versions,
+    shipped_cpe: lowerSorted(shipped.cpe_products),
   };
 }
 
@@ -148,9 +159,17 @@ export function readState(raw: unknown): CatalogState | null {
   const { cpe_products: cpe, versions } = raw as Record<string, unknown>;
   if (!Array.isArray(cpe) || !cpe.every((p) => typeof p === 'string')) return null;
   if (!versions || typeof versions !== 'object' || Array.isArray(versions)) return null;
-  const description = (raw as Record<string, unknown>).description;
+  const record = raw as Record<string, unknown>;
+  const description = record.description;
   if (description !== undefined && description !== null && typeof description !== 'string') return null;
-  const out: CatalogState = { cpe_products: [...cpe], versions: {}, ...(typeof description === 'string' ? { description } : {}) };
+  const shippedCpe = optionalIdentifiers(record, 'shipped_cpe');
+  if (shippedCpe === null) return null;
+  const out: CatalogState = {
+    cpe_products: [...cpe],
+    versions: {},
+    ...(typeof description === 'string' ? { description } : {}),
+    ...(shippedCpe !== undefined ? { shipped_cpe: shippedCpe } : {}),
+  };
   for (const [key, value] of Object.entries(versions as Record<string, unknown>)) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     const v = value as Record<string, unknown>;
@@ -256,7 +275,9 @@ function canonical(value: unknown): string {
  *   the rules of the shipped catalog (`catalog-releases.ts`). A product read less than 20 hours ago
  *   is skipped; one that fails keeps its last versions and is read again at the next run; after two
  *   failures of the service in a row, the others wait for the next run. A remote answer withdraws
- *   nothing: only the shipped file (`shippedProduct`) drops an identifier.
+ *   nothing: only the shipped file (`shippedProduct`) drops an identifier. An identifier the
+ *   cache added stays until that file lists it and then drops it. A shipped file that lists no
+ *   identifier, and is not marked `noCpe`, drops nothing.
  * - Sync, tenant by tenant, after each refresh and at every start (the shipped catalog of a new
  *   KANAP version, in both deployment modes): `syncTenant`.
  *
@@ -461,13 +482,16 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    *   one. A catalog date that would contradict the other date (extended before standard) is not
    *   applied, the rest is, and the version is named in `dates_kept`;
    * - an identifier the catalog gained is added to `cpe_products`; one the tenant removed is not.
-   *   One present in `catalog_state.cpe_products`, absent from the shipped catalog and from the
-   *   catalog this sync offers, and still held (without case) is removed. Afterwards the state
-   *   lists what is currently offered, so an identifier the tenant removed stays in it while the
-   *   catalog still offers it, and one the catalog withdrew leaves it and is added again if the
-   *   catalog offers it later. One the tenant added, absent from the state, stays. The shipped
-   *   file is the only source of a withdrawal: an endoflife.date answer or the cache that omits
-   *   an identifier removes nothing;
+   *   One is removed only when `catalog_state.shipped_cpe` listed it (the shipped file at the
+   *   previous pass), the shipped file no longer lists it, and the technology still holds it
+   *   (without case). A state without `shipped_cpe` withdraws nothing and records the current
+   *   shipped file. An identifier the cache added (endoflife.date, one product per release) stays
+   *   in the state while the cache omits it, so a missing cache neither removes it nor offers it
+   *   again. An identifier the tenant removed stays in `cpe_products` until the shipped file has
+   *   been seen to drop it. One the shipped file withdrew leaves the state, and is added again if
+   *   the catalog offers it later. One the tenant added, absent from the state, stays. A shipped
+   *   file that lists no identifier, and is not marked `noCpe`, withdraws nothing: the pass logs
+   *   it and keeps the previous `shipped_cpe`;
    * - an empty description the catalog never filled receives the catalog's short description, in
    *   the tenant's language (`tenantLanguage`). One the catalog wrote (`catalog_state.description`)
    *   and the tenant left unchanged (the same text, edge spaces ignored) follows the catalog's
@@ -476,9 +500,9 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    * A technology without a usable state (adopted before the living catalog, or an unreadable one,
    * named in `malformed_states`) starts from the shipped catalog and from what it holds of the
    * catalog, all counted as offered: what it lacks counts as removed by the tenant, an empty value
-   * on a version is completed, and only later additions reach it. Nothing is removed on that pass,
-   * and the state written then does not record an identifier the shipped file no longer lists, so
-   * a later pass does not remove it either.
+   * on a version is completed, and only later additions reach it. Nothing is removed on that pass.
+   * `shipped_cpe` records the shipped file as it is now, so an identifier that file no longer lists
+   * is not removed on a later pass either.
    * One audit row per technology changed (`system`, `technology-catalog`), including
    * `cpe_products_removed` and `description_updated`. A technology whose CPE identifiers changed
    * is matched again with the vulnerabilities once the transaction commits. A technology whose
@@ -581,15 +605,38 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
 
       const has = new Set(tech.cpe_products.map((p) => p.toLowerCase()));
       const offeredBefore = new Set(state.cpe_products.map((p) => p.toLowerCase()));
-      const offered = offeredIdentifiers(shipped, product);
-      const offeredNow = new Set(offered);
-      const cpeAdded = Array.from(new Set(product.cpe_products.map((p) => p.toLowerCase())))
-        .filter((p) => !offeredBefore.has(p) && !has.has(p));
-      // No usable state yet: it cannot tell an identifier the shipped catalog withdrew from one
-      // the tenant added, so this pass removes nothing. The state written here lists only what is
-      // offered now, so that withdrawn identifier is not removed on a later pass either.
-      const cpeRemoved = bootstrap ? [] : Array.from(offeredBefore).filter((p) => !offeredNow.has(p) && has.has(p)).sort();
-      state.cpe_products = offered;
+      const shippedNowList = lowerSorted(shipped.cpe_products);
+      const shippedNow = new Set(shippedNowList);
+      // Absent `shipped_cpe` (a state from before this field, or none at all): this pass withdraws
+      // nothing and records the shipped file. The cache is not a withdrawal base.
+      const shippedKnown = Array.isArray(state.shipped_cpe);
+      const shippedBefore = new Set((state.shipped_cpe ?? []).map((p) => p.toLowerCase()));
+      const offered = lowerSorted([...shipped.cpe_products, ...product.cpe_products]);
+      const cpeAdded = lowerSorted(product.cpe_products).filter((p) => !offeredBefore.has(p) && !has.has(p));
+      let cpeRemoved: string[] = [];
+      let recordShipped = true;
+      if (bootstrap || !shippedKnown) {
+        cpeRemoved = [];
+      } else {
+        const gone = Array.from(shippedBefore).filter((p) => !shippedNow.has(p)).sort();
+        // A file that lost every identifier without saying `noCpe` is a bad build, not a withdrawal.
+        if (shippedNow.size === 0 && gone.length > 0 && !markedNoCpe(shipped)) {
+          cpeRemoved = [];
+          recordShipped = false;
+          this.logger.warn(`[${CATALOG_SYNC_TASK_NAME}] ${tech.catalog_key}: the shipped file lists no CPE identifier and is not marked noCpe; no identifier was withdrawn`);
+        } else {
+          cpeRemoved = gone.filter((p) => has.has(p));
+        }
+      }
+      const seenWithdrawn = recordShipped && shippedKnown && !bootstrap
+        ? new Set(Array.from(shippedBefore).filter((p) => !shippedNow.has(p)))
+        : new Set<string>();
+      // A cache identifier stays until the shipped file itself has listed it and then dropped it.
+      state.cpe_products = lowerSorted([
+        ...state.cpe_products.filter((p) => !seenWithdrawn.has(p.toLowerCase())),
+        ...offered.filter((p) => !seenWithdrawn.has(p)),
+      ]);
+      if (recordShipped) state.shipped_cpe = shippedNowList;
       if (cpeAdded.length) changeOf(tech.id).cpe.push(...cpeAdded);
       if (cpeRemoved.length) changeOf(tech.id).removed.push(...cpeRemoved);
       const loose = new Map(rows.filter((r) => !r.catalog_key).map((r) => [r.label.toLowerCase(), r]));

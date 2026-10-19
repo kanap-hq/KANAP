@@ -359,19 +359,29 @@ export type CatalogVersionValues = {
   cpe_version: string | null;
 };
 
+/** Identifiers compared and stored without case, once each, in order. */
+export function lowerSorted(ids: readonly string[]): string[] {
+  return Array.from(new Set(ids.map((id) => id.toLowerCase()))).sort();
+}
+
 /**
  * `technologies.catalog_state`: what the catalog has given a technology. `cpe_products`: the
- * identifiers it currently offers (one the tenant removed stays here while the catalog still
- * offers it, so it is not offered again; one the shipped catalog withdrew leaves, and is added
- * again if the catalog offers it later). `versions`: per version key, the values it last wrote;
- * a key present was offered once (a version the tenant deleted is not created again).
- * `description`: the short description the catalog last wrote; absent or null while it wrote
- * none. While the technology still holds that text, a new catalog description replaces it.
+ * identifiers it offers, including one the cache added. One the tenant removed stays here until
+ * it has been seen leaving the shipped file, so it is not offered again. One the shipped file
+ * withdrew leaves, and is added again if the catalog offers it later. `shipped_cpe`: the
+ * identifiers the shipped file listed at the last pass, in lower case. Absent on a state written
+ * before that field: the next pass records the current shipped file and withdraws nothing.
+ * `versions`: per version key, the values it last wrote; a key present was offered once (a
+ * version the tenant deleted is not created again). `description`: the short description the
+ * catalog last wrote; absent or null while it wrote none. While the technology still holds that
+ * text, a new catalog description replaces it.
  */
 export type CatalogState = {
   cpe_products: string[];
   versions: Record<string, CatalogVersionValues>;
   description?: string | null;
+  /** Identifiers of the shipped file at the last pass, lower case. Absent: not known yet. */
+  shipped_cpe?: string[];
 };
 
 export function valuesOf(version: CatalogVersion): CatalogVersionValues {

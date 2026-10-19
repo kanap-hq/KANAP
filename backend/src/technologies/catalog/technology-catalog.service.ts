@@ -8,7 +8,7 @@ import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
-import { mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
+import { lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
 // Written for KANAP and kept apart from the catalog, which the script rebuilds from endoflife.date.
@@ -34,6 +34,11 @@ export type CatalogProduct = {
   /** A code of the default hosting types, when the entry names one: it wins over `mode`. */
   hosting_type?: string;
   cpe_products: string[];
+  /**
+   * Set when the entry has no CPE identifier on purpose (the reason). An empty `cpe_products`
+   * without it is not a withdrawal: the sync keeps the identifiers and logs the pass.
+   */
+  noCpe?: string | true;
   source_url: string | null;
   versions: CatalogVersion[];
 };
@@ -175,7 +180,8 @@ export class TechnologyCatalogService {
     if (!shippedEntry) throw new NotFoundException('Catalog entry not found');
     const product = (await this.effectiveProducts(mg, [shippedEntry.key])).get(shippedEntry.key)!;
     const description = this.description(product.key, await languageOf(mg, tenantId, opts.userId ?? null, opts.language));
-    const state = JSON.stringify({ ...offeredState(product), description });
+    // `shipped_cpe` is the file, not the cache: a release product the cache added is not a withdrawal base.
+    const state = JSON.stringify({ ...offeredState(product), shipped_cpe: lowerSorted(shippedEntry.cpe_products), description });
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);
 
     const existing: Array<{ id: string; catalog_key: string | null }> = await mg.query(
