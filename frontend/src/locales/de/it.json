@@ -525,6 +525,7 @@
         "zone": "Zone",
         "relation": "Beziehung",
         "contained": "Enthaltenes Asset",
+        "dependsOn": "Hängt ab von",
         "asset": "Asset",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
@@ -535,8 +536,8 @@
         "domainControllers": "Domänencontroller"
       },
       "relation": {
-        "contains": "Enthält",
-        "cluster": "Cluster"
+        "contains": "Läuft auf",
+        "cluster": "Mitglied des Clusters"
       },
       "controls": "Kontrollpunkte",
       "controlsHint": "Die sensibelste Zone ist {{zone}}.",
@@ -555,8 +556,8 @@
           "hint": "Ein Asset, das einen Verzeichnisdienst trägt, gehört in die sensibelste Zone."
         },
         "trustRaised": {
-          "title": "Assets in einer sensibleren Zone als das, was sie enthält",
-          "hint": "Das Asset, das ein anderes enthält, sollte in einer mindestens ebenso sensiblen Zone liegen."
+          "title": "Was ein Asset betreibt, liegt in einer weniger sensiblen Zone",
+          "hint": "Was ein Asset betreibt, sollte in einer mindestens ebenso sensiblen Zone liegen. Ein Asset ohne Zone unterbricht die Prüfung der Kette."
         },
         "applications": {
           "title": "In der sensibelsten Zone gehostete Anwendungen",

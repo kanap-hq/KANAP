@@ -525,6 +525,7 @@
         "zone": "Zone",
         "relation": "Relation",
         "contained": "Actif contenu",
+        "dependsOn": "Dépend de",
         "asset": "Actif",
         "domain": "Domaine",
         "dnsSuffix": "Suffixe DNS",
@@ -535,8 +536,8 @@
         "domainControllers": "Contrôleurs de domaine"
       },
       "relation": {
-        "contains": "Contient",
-        "cluster": "Cluster"
+        "contains": "S'exécute sur",
+        "cluster": "Membre du cluster"
       },
       "controls": "Points de contrôle",
       "controlsHint": "La zone la plus sensible est {{zone}}.",
@@ -555,8 +556,8 @@
           "hint": "Un actif qui porte un service d'annuaire a sa place dans la zone la plus sensible."
         },
         "trustRaised": {
-          "title": "Actifs dans une zone plus sensible que ce qui les contient",
-          "hint": "L'actif qui en contient un autre doit être dans une zone au moins aussi sensible."
+          "title": "Ce qui fait tourner un actif est dans une zone moins sensible",
+          "hint": "Ce qui fait tourner un actif devrait être dans une zone au moins aussi sensible. Un actif sans zone interrompt la vérification de la chaîne."
         },
         "applications": {
           "title": "Applications hébergées dans la zone la plus sensible",

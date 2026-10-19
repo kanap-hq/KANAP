@@ -525,6 +525,7 @@
         "zone": "Zona",
         "relation": "Relación",
         "contained": "Activo contenido",
+        "dependsOn": "Depende de",
         "asset": "Activo",
         "domain": "Dominio",
         "dnsSuffix": "Sufijo DNS",
@@ -535,8 +536,8 @@
         "domainControllers": "Controladores de dominio"
       },
       "relation": {
-        "contains": "Contiene",
-        "cluster": "Clúster"
+        "contains": "Se ejecuta en",
+        "cluster": "Miembro del clúster"
       },
       "controls": "Puntos de control",
       "controlsHint": "La zona más sensible es {{zone}}.",
@@ -555,8 +556,8 @@
           "hint": "Un activo que lleva un servicio de directorio debe estar en la zona más sensible."
         },
         "trustRaised": {
-          "title": "Activos en una zona más sensible que lo que los contiene",
-          "hint": "El activo que contiene otro debería estar en una zona al menos igual de sensible."
+          "title": "Lo que ejecuta un activo está en una zona menos sensible",
+          "hint": "Lo que ejecuta un activo debería estar en una zona al menos igual de sensible. Un activo sin zona interrumpe la comprobación de la cadena."
         },
         "applications": {
           "title": "Aplicaciones alojadas en la zona más sensible",
