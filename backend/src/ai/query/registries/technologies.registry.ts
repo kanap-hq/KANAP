@@ -1,13 +1,17 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 import {
+  SUPPORT_STATUSES,
+  technologyEndOfStandardSupportSql,
   technologyEndOfSupportSql,
   technologyOpenVulnerabilitiesSql,
   technologyServerCountSql,
+  technologySupportStatusSql,
 } from '../ai-technologies.query';
 
 /**
  * Technologies (lot C2b): read through `listAiTechnologies` (`ai-technologies.query.ts`), which
- * defines the four computed figures. `application_count` filters and sorts within the caller's
+ * defines the computed figures. The support fields follow the rule of the End of support report
+ * (`technologies/reports/version-support.ts`) over the versions in use. `application_count` filters and sorts within the caller's
  * application read scope; it is no metric, since an aggregate expression cannot carry that scope.
  */
 export const technologiesRegistry: AiEntityFilterRegistry = {
@@ -100,11 +104,30 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: false,
     },
+    support_status: {
+      ai: 'support_status',
+      grid: 'support_status',
+      type: 'set',
+      description: 'Support state of the technology, as the End of support report states it: the most severe state among the versions in use (on a server in service or declared by an application in service). out_of_support: a version in use is past every end of support, standard and extended ("Out of support" in the report); extended_support: a version in use is past its standard end but within its extended support ("Extended support"), which is not out of support; supported: every dated version in use is before its standard end; unknown: no version in use has an end of support date. A question about what is out of support filters out_of_support. Each listed technology also carries versions_in_use (no filter, no sort): its versions in use, the most severe first, each with its state, date and servers in service, at most 10 and the others counted.',
+      values: [...SUPPORT_STATUSES],
+      sortable: true,
+      groupable: true,
+    },
+    end_of_standard_support: {
+      ai: 'end_of_standard_support',
+      grid: 'end_of_standard_support',
+      type: 'date',
+      description: 'Earliest end of standard support among the versions in use (a version\'s standard end, or its extended end when it has none). A date in the past does not mean out of support: the version may still be in extended support (see support_status). Filter on it for standard support ending soon. null when no version in use has a date.',
+      blankable: true,
+      sortable: true,
+      groupable: false,
+      aggregable: true,
+    },
     end_of_support: {
       ai: 'end_of_support',
       grid: 'end_of_support',
       type: 'date',
-      description: 'Earliest end of support among the versions in use (on a server in service or declared by an application in service): a version\'s standard end, or its extended end when it has no standard one, as in the End of support report. A date in the past means a version in use is out of standard support. null when no version in use has a date.',
+      description: 'Earliest end of all support among the versions in use: for each version its extended end when later than the standard one, else its standard end; after it, that version has no support at all. A date in the past means a version in use is out of support (support_status out_of_support). Filter on it for support ending for good within a period. null when no version in use has a date.',
       blankable: true,
       sortable: true,
       groupable: false,
@@ -131,6 +154,8 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
     admin_zone: 'admin_zone',
     server_count: 'server_count',
     application_count: 'application_count',
+    support_status: 'support_status',
+    end_of_standard_support: 'end_of_standard_support',
     end_of_support: 'end_of_support',
     open_vulnerabilities: 'open_vulnerabilities',
     created_at: 'created_at',
@@ -154,10 +179,12 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
       hosting_type: { expression: 't.hosting_type' },
       lifecycle: { expression: 't.lifecycle' },
       admin_zone: { expression: 't.admin_zone' },
+      support_status: { expression: technologySupportStatusSql('t') },
     },
     metricFields: {
       server_count: { expression: technologyServerCountSql('t'), type: 'number' },
       // As text, so a minimum or maximum reads as YYYY-MM-DD (same order as the dates).
+      end_of_standard_support: { expression: `to_char(${technologyEndOfStandardSupportSql('t')}, 'YYYY-MM-DD')`, type: 'date' },
       end_of_support: { expression: `to_char(${technologyEndOfSupportSql('t')}, 'YYYY-MM-DD')`, type: 'date' },
       open_vulnerabilities: { expression: technologyOpenVulnerabilitiesSql('t'), type: 'number' },
     },

@@ -67,7 +67,7 @@ import {
   listAiTechnologies,
   resolveAiApplicationsReach,
   technologyContractCount,
-  technologyVersionServerCounts,
+  technologyVersionFigures,
 } from './ai-technologies.query';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
@@ -345,6 +345,8 @@ export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number
   spend_items: 15,
   capex_items: 15,
   applications: 30,
+  // A technology lists up to 10 versions in use (`versions_in_use`): about 1,500 characters a row.
+  technologies: 30,
 };
 
 export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
@@ -1024,7 +1026,10 @@ export class AiQueryExecutor {
         admin_zone: scalar(row.admin_zone),
         server_count: numericScalar(row.server_count),
         application_count: numericScalar(row.application_count),
+        support_status: scalar(row.support_status),
+        end_of_standard_support: scalar(row.end_of_standard_support),
         end_of_support: scalar(row.end_of_support),
+        versions_in_use: scalar(row.versions_in_use),
         open_vulnerabilities: numericScalar(row.open_vulnerabilities),
       },
     });
@@ -2470,8 +2475,8 @@ export class AiQueryExecutor {
   }
 
   /**
-   * A technology with its figures (`listAiTechnologies`), versions (servers in service per
-   * version), owners (names only) and number of contracts (null without the contracts read right).
+   * A technology with its figures (`listAiTechnologies`), versions (support state and date, use,
+   * servers in service per version), owners (names only) and number of contracts (null without the contracts read right).
    * References and names only: no id of another record.
    */
   private async technologyDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
@@ -2481,7 +2486,7 @@ export class AiQueryExecutor {
     const applications = await resolveAiApplicationsReach(context, this.policy);
     const { items: [row] } = await listAiTechnologies(context.manager, context.tenantId, {}, applications, { ids: [record.id] });
     if (!row) throw new NotFoundException('Technology not found.');
-    const servers = await technologyVersionServerCounts(context.manager, context.tenantId, record.id);
+    const figures = await technologyVersionFigures(context.manager, context.tenantId, record.id);
     const owners = (type: 'business' | 'it') => record.owners
       .filter((owner) => owner.owner_type === type)
       .map((owner) => owner.full_name)
@@ -2505,13 +2510,22 @@ export class AiQueryExecutor {
       replaced_by: record.replaced_by ? { reference: record.replaced_by.reference, name: record.replaced_by.name } : null,
       server_count: row.server_count,
       application_count: row.application_count,
+      support_status: row.support_status,
+      end_of_standard_support: row.end_of_standard_support,
       end_of_support: row.end_of_support,
+      versions_in_use: row.versions_in_use,
       open_vulnerabilities: row.open_vulnerabilities,
+      // Each version with its state on the End of support report rule: out_of_support since
+      // support_date, extended_support until support_date, supported until support_date (its
+      // standard end), unknown without a date. in_use: on a server or an application in service.
       versions: record.versions.map((version: any) => ({
         label: version.label,
         standard_support_end: version.standard_support_end ?? null,
         extended_support_end: version.extended_support_end ?? null,
-        server_count: servers.get(version.id) ?? 0,
+        support_status: figures.get(version.id)?.support_status ?? 'unknown',
+        support_date: figures.get(version.id)?.support_date ?? null,
+        in_use: figures.get(version.id)?.in_use ?? false,
+        server_count: figures.get(version.id)?.servers ?? 0,
       })),
       business_owners: owners('business'),
       it_owners: owners('it'),

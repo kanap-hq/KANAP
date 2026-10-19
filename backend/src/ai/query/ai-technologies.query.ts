@@ -3,22 +3,26 @@ import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import { Features } from '../../config/features';
 import { gridTextClause } from '../../technologies/technologies.service';
+import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
 import { assetInServiceSql, inServiceSql } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 
 /**
  * The technologies as the assistant and the MCP server read them (`query_entities`,
- * `aggregate_entities`, `get_entity_detail`): the record's columns plus four figures computed at
+ * `aggregate_entities`, `get_entity_detail`): the record's columns plus figures computed at
  * read time, each one statement shared by the list, its filters, its sort and the aggregates.
  *
  * - `server_count`: the assets the technology is installed on directly, retired ones left out.
  * - `application_count`: the applications that declare it, in service (`inServiceSql`), within the
  *   caller's read scope (a Business Contributor's own); null for a caller who cannot read
  *   applications, never a count of applications the caller cannot see.
- * - `end_of_support`: the earliest end of support among the versions in use (on an asset in service
- *   or declared by an application in service), each version dated as the End of support report
- *   dates it (its standard end, or its extended end when it has no standard one); null without a date.
+ * - Support, over the versions in use (on an asset in service or declared by an application in
+ *   service), each version dated by the rule of the End of support report (`versionSupportSql`):
+ *   `support_status`, the most severe state (out_of_support, extended_support, supported; unknown
+ *   when no version in use has a date); `end_of_standard_support`, the earliest first end;
+ *   `end_of_support`, the earliest last end, after which that version has no support at all;
+ *   `versions_in_use`, each version with its state, date and servers, the most severe first.
  * - `open_vulnerabilities`: the CVE still to review (as the technology list counts them), null while
  *   the vulnerability feed is off.
  *
@@ -44,20 +48,72 @@ export function technologyApplicationCountSql(t: string, userRef: string | null)
             WHERE cd.tenant_id = ${t}.tenant_id AND cd.technology_id = ${t}.id)`;
 }
 
-/** A version in use: on an asset in service, or declared by an application in service. */
-function versionInUseSql(v: string): string {
-  return `(EXISTS (SELECT 1 FROM asset_technologies uat
-                     JOIN assets ua ON ua.tenant_id = uat.tenant_id AND ua.id = uat.asset_id AND ${assetInServiceSql('ua')}
-                    WHERE uat.tenant_id = ${v}.tenant_id AND uat.technology_id = ${v}.technology_id AND uat.technology_version_id = ${v}.id)
-        OR EXISTS (SELECT 1 FROM application_technologies ud
-                     JOIN applications uap ON uap.tenant_id = ud.tenant_id AND uap.id = ud.application_id AND ${inServiceSql('uap')}
-                    WHERE ud.tenant_id = ${v}.tenant_id AND ud.technology_id = ${v}.technology_id AND ud.technology_version_id = ${v}.id))`;
-}
+/** The most severe first: the rank of a version's state (null, no date: 0). */
+const STATE_RANK = (state: string) => `(CASE ${state} WHEN 'out_of_support' THEN 3 WHEN 'extended_support' THEN 2 WHEN 'supported' THEN 1 ELSE 0 END)`;
+export const SUPPORT_STATUSES = ['out_of_support', 'extended_support', 'supported', 'unknown'] as const;
 
-export function technologyEndOfSupportSql(t: string): string {
-  return `(SELECT min(COALESCE(ev.standard_support_end, ev.extended_support_end))
+/** `select` over the versions in use of the technology `t` (alias `ev`). */
+function overVersionsInUse(t: string, select: string): string {
+  return `(SELECT ${select}
              FROM technology_versions ev
             WHERE ev.tenant_id = ${t}.tenant_id AND ev.technology_id = ${t}.id AND ${versionInUseSql('ev')})`;
+}
+
+/** The most severe state among the versions in use; unknown when none of them has a date. */
+export function technologySupportStatusSql(t: string): string {
+  const rank = STATE_RANK(versionSupportSql('ev').state);
+  return overVersionsInUse(t, `(ARRAY['unknown', 'supported', 'extended_support', 'out_of_support'])[COALESCE(max(${rank}), 0) + 1]`);
+}
+
+/** The earliest end of standard support among the versions in use (their first end). */
+export function technologyEndOfStandardSupportSql(t: string): string {
+  return overVersionsInUse(t, `min(${versionSupportSql('ev').first})`);
+}
+
+/** The earliest end of all support among the versions in use (their last end). */
+export function technologyEndOfSupportSql(t: string): string {
+  return overVersionsInUse(t, `min(${versionSupportSql('ev').last})`);
+}
+
+/** The versions in use listed in a row, at most. */
+const VERSIONS_IN_USE_LIMIT = 10;
+
+/**
+ * The versions in use of `t` as JSON: the first `VERSIONS_IN_USE_LIMIT`, the most severe first,
+ * then by date, each with its state, date, servers in service, and the number of versions in use.
+ */
+function technologyVersionsInUseSql(t: string): string {
+  const support = versionSupportSql('ev');
+  return `(SELECT json_agg(json_build_object('label', x.label, 'state', x.state, 'date', x.day, 'standard_end', x.standard_end,
+                                              'servers', x.servers, 'total', x.total) ORDER BY x.n)
+             FROM (SELECT ev.label, COALESCE(${support.state}, 'unknown') AS state, to_char(${support.date}, 'YYYY-MM-DD') AS day,
+                          (ev.standard_support_end IS NOT NULL AND ev.extended_support_end > ev.standard_support_end) AS standard_end,
+                          (SELECT count(DISTINCT vat.asset_id)::int
+                             FROM asset_technologies vat
+                             JOIN assets va ON va.tenant_id = vat.tenant_id AND va.id = vat.asset_id AND ${assetInServiceSql('va')}
+                            WHERE vat.tenant_id = ev.tenant_id AND vat.technology_id = ev.technology_id AND vat.technology_version_id = ev.id) AS servers,
+                          count(*) OVER () AS total,
+                          row_number() OVER (ORDER BY ${STATE_RANK(support.state)} DESC, ${support.date} ASC NULLS LAST, ev.label, ev.id) AS n
+                     FROM technology_versions ev
+                    WHERE ev.tenant_id = ${t}.tenant_id AND ev.technology_id = ${t}.id AND ${versionInUseSql('ev')}) x
+            WHERE x.n <= ${VERSIONS_IN_USE_LIMIT})`;
+}
+
+type VersionInUse = { label: string; state: string; date: string | null; standard_end: boolean; servers: number; total: number };
+
+/** One line for the model: each version, its state and date, its servers; the rest counted. */
+export function versionsInUseText(versions: VersionInUse[] | null): string | null {
+  if (!versions?.length) return null;
+  const parts = versions.map((v) => {
+    const state = v.state === 'out_of_support' ? `out of support since ${v.date}`
+      : v.state === 'extended_support' ? `extended support until ${v.date}`
+      : v.state === 'supported' ? (v.standard_end ? `supported, standard support until ${v.date}` : `supported until ${v.date}`)
+      : 'no end of support date';
+    return `${v.label}: ${state}, ${v.servers} ${v.servers === 1 ? 'server' : 'servers'}`;
+  });
+  const rest = Number(versions[0].total) - versions.length;
+  if (rest > 0) parts.push(`and ${rest} other ${rest === 1 ? 'version' : 'versions'}`);
+  return parts.join('; ');
 }
 
 export function technologyOpenVulnerabilitiesSql(t: string): string {
@@ -98,10 +154,11 @@ const SET_COLUMNS: Record<string, { ci: boolean }> = {
   hosting_type: { ci: false },
   lifecycle: { ci: false },
   admin_zone: { ci: false },
+  support_status: { ci: false },
 };
 const TEXT_COLUMNS = new Set(['name']);
 const NUMBER_COLUMNS = new Set(['server_count', 'application_count', 'open_vulnerabilities']);
-const DATE_COLUMNS = new Set(['end_of_support']);
+const DATE_COLUMNS = new Set(['end_of_support', 'end_of_standard_support']);
 
 const SORTS: Record<string, string> = {
   name: 'lower(r.name)',
@@ -113,6 +170,8 @@ const SORTS: Record<string, string> = {
   admin_zone: 'r.admin_zone',
   server_count: 'r.server_count',
   application_count: 'r.application_count',
+  support_status: STATE_RANK('r.support_status'),
+  end_of_standard_support: 'r.end_of_standard_support',
   end_of_support: 'r.end_of_support',
   open_vulnerabilities: 'r.open_vulnerabilities',
   created_at: 'r.created_at',
@@ -217,7 +276,11 @@ export type AiTechnologyRow = {
   updated_at: Date | string | null;
   server_count: number;
   application_count: number | null;
+  support_status: (typeof SUPPORT_STATUSES)[number];
+  end_of_standard_support: string | null;
   end_of_support: string | null;
+  /** The versions in use, the most severe first (`versionsInUseText`), null without one. */
+  versions_in_use: string | null;
   open_vulnerabilities: number | null;
 };
 
@@ -257,20 +320,24 @@ export async function listAiTechnologies(
     : Math.min(Math.max(Number(query.limit) || 25, 1), 500);
   const page = Math.max(Number(query.page) || 1, 1);
   const offset = opts.idsOnly ? 0 : (page - 1) * limit;
-  const rows: Array<AiTechnologyRow & { total: string }> = await mg.query(
+  const rows: Array<Omit<AiTechnologyRow, 'versions_in_use'> & { versions_in_use: VersionInUse[] | null; total: string }> = await mg.query(
     `WITH r AS (
        SELECT t.id, t.item_number, ('TEC-' || t.item_number) AS reference, t.name, t.editor, t.family, t.hosting_type,
               t.lifecycle, t.admin_zone, t.description, t.created_at, t.updated_at,
               ${technologyServerCountSql('t')} AS server_count,
               ${applicationCount} AS application_count,
+              ${technologySupportStatusSql('t')} AS support_status,
+              ${technologyEndOfStandardSupportSql('t')} AS end_of_standard_support,
               ${technologyEndOfSupportSql('t')} AS end_of_support,
               ${technologyOpenVulnerabilitiesSql('t')} AS open_vulnerabilities
+              ${opts.idsOnly ? '' : `, ${technologyVersionsInUseSql('t')} AS versions_in_use`}
          FROM technologies t
         WHERE t.tenant_id = $1 ${idFilter}
      )
      SELECT ${opts.idsOnly ? 'r.id' : `r.id, r.item_number, r.reference, r.name, r.editor, r.family, r.hosting_type, r.lifecycle,
-            r.admin_zone, r.description, r.created_at, r.updated_at, r.server_count, r.application_count,
-            to_char(r.end_of_support, 'YYYY-MM-DD') AS end_of_support, r.open_vulnerabilities`},
+            r.admin_zone, r.description, r.created_at, r.updated_at, r.server_count, r.application_count, r.support_status,
+            to_char(r.end_of_standard_support, 'YYYY-MM-DD') AS end_of_standard_support,
+            to_char(r.end_of_support, 'YYYY-MM-DD') AS end_of_support, r.open_vulnerabilities, r.versions_in_use`},
             count(*) OVER () AS total
        FROM r
       ${where.length ? `WHERE ${where.join(' AND ')}` : ''}
@@ -283,22 +350,39 @@ export async function listAiTechnologies(
     server_count: Number(row.server_count) || 0,
     application_count: row.application_count == null ? null : Number(row.application_count),
     open_vulnerabilities: row.open_vulnerabilities == null ? null : Number(row.open_vulnerabilities),
+    versions_in_use: versionsInUseText(row.versions_in_use),
   }));
   return { items, ids: rows.map((row) => row.id), total: Number(rows[0]?.total ?? 0), page, limit };
 }
 
-/** The technology's versions with the servers in service each one runs on, newest label order kept by the caller. */
-export async function technologyVersionServerCounts(mg: Pick<EntityManager, 'query'>, tenantId: string, technologyId: string): Promise<Map<string, number>> {
-  const rows: Array<{ id: string; servers: number }> = await mg.query(
+/**
+ * Each version of the technology: the servers in service it runs on, whether it is in use, and its
+ * support state (unknown without a date) and that state's date, by the End of support report rule.
+ */
+export async function technologyVersionFigures(
+  mg: Pick<EntityManager, 'query'>,
+  tenantId: string,
+  technologyId: string,
+): Promise<Map<string, { servers: number; in_use: boolean; support_status: string; support_date: string | null }>> {
+  const support = versionSupportSql('v');
+  const rows: Array<{ id: string; servers: number; in_use: boolean; support_status: string; support_date: string | null }> = await mg.query(
     `SELECT v.id, (SELECT count(DISTINCT at.asset_id)::int
                      FROM asset_technologies at
                      JOIN assets a ON a.tenant_id = at.tenant_id AND a.id = at.asset_id AND ${assetInServiceSql('a')}
-                    WHERE at.tenant_id = v.tenant_id AND at.technology_id = v.technology_id AND at.technology_version_id = v.id) AS servers
+                    WHERE at.tenant_id = v.tenant_id AND at.technology_id = v.technology_id AND at.technology_version_id = v.id) AS servers,
+            ${versionInUseSql('v')} AS in_use,
+            COALESCE(${support.state}, 'unknown') AS support_status,
+            to_char(${support.date}, 'YYYY-MM-DD') AS support_date
        FROM technology_versions v
       WHERE v.tenant_id = $1 AND v.technology_id = $2`,
     [tenantId, technologyId],
   );
-  return new Map(rows.map((row) => [row.id, Number(row.servers) || 0]));
+  return new Map(rows.map((row) => [row.id, {
+    servers: Number(row.servers) || 0,
+    in_use: row.in_use === true,
+    support_status: row.support_status,
+    support_date: row.support_date ?? null,
+  }]));
 }
 
 /** The contracts linked to the technology. */
