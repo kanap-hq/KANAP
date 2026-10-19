@@ -30,6 +30,7 @@ import { itemHref, useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
@@ -51,9 +52,9 @@ function baseFormatCurrency(value: number | null | undefined, locale: string): s
   return formatter.format(n);
 }
 
-function formatPercent(value: number | null | undefined): string {
+function formatPercent(value: number | null | undefined, locale: string): string {
   if (value == null || !Number.isFinite(value)) return '—';
-  return `${value.toFixed(2)}%`;
+  return formatPercentPoints(value, locale, 2);
 }
 
 function baseFormatCount(value: number | null | undefined, locale: string): string {
@@ -211,6 +212,10 @@ export default function CompanyChargebackReport() {
     (value: number | null | undefined) => baseFormatCount(value, locale),
     [locale],
   );
+  const formatShare = React.useCallback(
+    (value: unknown, fractionDigits: number) => formatSharePercent(value, locale, fractionDigits),
+    [locale],
+  );
 
   // Intercompany rows (partner, receivables, payables, net)
   const intercompanyColumns = useMemo<ColDef[]>(() => [
@@ -273,7 +278,7 @@ export default function CompanyChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 150,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${Number(params.value).toFixed(2)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 2),
     },
     {
       field: 'headcount',
@@ -289,7 +294,7 @@ export default function CompanyChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => formatNumber(params.value),
     },
-  ], [formatCount, formatNumber, metricLabel]);
+  ], [formatCount, formatNumber, formatShare, metricLabel]);
 
   const itemColumns = useMemo<ColDef[]>(() => [
     {
@@ -314,9 +319,9 @@ export default function CompanyChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 150,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${Number(params.value).toFixed(2)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 2),
     },
-  ], [formatNumber, metricLabel, scope]);
+  ], [formatNumber, formatShare, metricLabel, scope]);
 
   const chartData = useMemo(() => {
     return departments.map((row: CompanyChargebackDepartmentRow) => ({ label: row.departmentName, value: row.amount }));
@@ -375,7 +380,7 @@ export default function CompanyChargebackReport() {
                 title: escapeTooltipText(datum.label),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
-                  { label: t('reports.shared.share'), value: `${pct.toFixed(2)}%` },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 2) },
                 ],
               };
             },
@@ -385,7 +390,7 @@ export default function CompanyChargebackReport() {
       legend: { enabled: false },
       animation: { enabled: true, duration: 700 },
     };
-  }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, metricLabel, t]);
+  }, [chartData, data?.company, data?.total, formatCurrency, formatNumber, locale, metricLabel, t]);
 
   const exportDepartmentsCsv = () => {
     if (!companyId) return;
@@ -514,7 +519,7 @@ export default function CompanyChargebackReport() {
                 </Box>
                 <Box>
                   <Typography variant="body2" color="text.secondary">{t("reports.columns.itCostsVsTurnover")}</Typography>
-                  <Typography variant="subtitle2">{companySummary.costVsTurnoverPct != null ? formatPercent(companySummary.costVsTurnoverPct) : '—'}</Typography>
+                  <Typography variant="subtitle2">{companySummary.costVsTurnoverPct != null ? formatPercent(companySummary.costVsTurnoverPct, locale) : '—'}</Typography>
                 </Box>
               </Box>
             </Stack>
@@ -645,7 +650,7 @@ export default function CompanyChargebackReport() {
                       <TableCell align="right">{formatCount(row.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(row.itUsers)}</TableCell>
                       <TableCell align="right">{row.turnover != null ? formatTurnover(row.turnover) : '—'}</TableCell>
-                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct) : '—'}</TableCell>
+                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerUser != null ? formatCount(Math.round(row.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerItUser != null ? formatCount(Math.round(row.costPerItUser)) : '—'}</TableCell>
                     </TableRow>
@@ -664,7 +669,7 @@ export default function CompanyChargebackReport() {
                       <TableCell align="right">{formatCount(globalKpi.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(globalKpi.itUsers)}</TableCell>
                       <TableCell align="right">{globalKpi.turnover != null ? formatTurnover(globalKpi.turnover) : '—'}</TableCell>
-                      <TableCell align="right">{globalKpi.costVsTurnoverPct != null ? formatPercent(globalKpi.costVsTurnoverPct) : '—'}</TableCell>
+                      <TableCell align="right">{globalKpi.costVsTurnoverPct != null ? formatPercent(globalKpi.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{globalKpi.costPerUser != null ? formatCount(Math.round(globalKpi.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{globalKpi.costPerItUser != null ? formatCount(Math.round(globalKpi.costPerItUser)) : '—'}</TableCell>
                     </TableRow>

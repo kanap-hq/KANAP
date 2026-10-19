@@ -2,7 +2,7 @@ import React from 'react';
 import { Autocomplete, MenuItem, TextField } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import type { CurrencyOption } from '../../../constants/isoOptions';
-import { currencyLabel, useCurrencyOptions } from '../../../i18n/currencies';
+import { currencyLabel, filterCurrencyOptions, useCurrencyOptions } from '../../../i18n/currencies';
 import useCurrencySettings from '../../../hooks/useCurrencySettings';
 import { useFieldDraft } from '../../../hooks/useFieldDraft';
 import { useLocale } from '../../../i18n/useLocale';
@@ -48,6 +48,7 @@ export function CurrencyField({ value, onChange, disabled, ariaLabel }: { value:
       value={selected ?? undefined}
       onChange={(_event, option) => { if (option?.code) onChange(option.code); }}
       getOptionLabel={currencyLabel}
+      filterOptions={(listed, state) => filterCurrencyOptions(listed, state.inputValue)}
       renderOption={(props, option) => {
         const { key, ...rest } = props as React.HTMLAttributes<HTMLLIElement> & { key: string };
         return <li key={key} {...rest}>{currencyLabel(option)}</li>;

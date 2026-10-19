@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 import type { ColumnState } from 'ag-grid-community';
-import { mergeSavedColumnState, withoutColumnFilters } from './ServerDataGrid';
+import { columnMinWidth, floorSavedColumnWidths, gridRowSelection, mergeSavedColumnState, withoutColumnFilters } from './ServerDataGrid';
 
 const col = (colId: string, hide = false): ColumnState => ({ colId, hide });
 const ids = (state: ColumnState[]) => state.map((c) => c.colId);
@@ -25,6 +25,49 @@ describe('mergeSavedColumnState', () => {
   it('puts a new first column first and drops columns that no longer exist', () => {
     const saved = [col('name'), col('project_id'), col('yBudget'), col('yRevision'), col('yForecast'), col('yLanding'), col('created')];
     expect(ids(mergeSavedColumnState(saved, defaults))).toEqual(['ref', 'name', 'yBudget', 'yRevision', 'yForecast', 'yLanding', 'created']);
+  });
+});
+
+describe('columnMinWidth', () => {
+  it('gives a flex column a readable floor and keeps an explicit minimum', () => {
+    expect(columnMinWidth({ flex: 1 })).toBe(160);
+    expect(columnMinWidth({ flex: 1, minWidth: 220 })).toBe(220);
+    expect(columnMinWidth({ width: 120 })).toBeUndefined();
+  });
+});
+
+describe('floorSavedColumnWidths', () => {
+  it('lifts a stored width that is below the column minimum and leaves the rest', () => {
+    const mins = new Map([['name', 160]]);
+    const state = floorSavedColumnWidths(
+      [
+        { colId: 'name', width: 36 },
+        { colId: 'city', width: 80 },
+        { colId: 'notes', width: 200 },
+        { colId: 'name2' },
+      ],
+      mins,
+    );
+    expect(state.find((col) => col.colId === 'name')?.width).toBe(160);
+    expect(state.find((col) => col.colId === 'city')?.width).toBe(80);
+    expect(state.find((col) => col.colId === 'notes')?.width).toBe(200);
+    expect(state.find((col) => col.colId === 'name2')?.width).toBeUndefined();
+  });
+});
+
+describe('gridRowSelection', () => {
+  it('keeps row checkboxes and skips the header checkbox the infinite model rejects', () => {
+    expect(gridRowSelection(true)).toEqual({
+      mode: 'multiRow',
+      checkboxes: true,
+      headerCheckbox: false,
+      enableClickSelection: false,
+    });
+    expect(gridRowSelection(false)).toEqual({
+      mode: 'singleRow',
+      checkboxes: false,
+      enableClickSelection: false,
+    });
   });
 });
 

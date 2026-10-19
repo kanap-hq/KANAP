@@ -123,6 +123,7 @@
       "turnoverYear": "Turnover ({{year}})"
     },
     "pinnedTotal": "Total",
+    "turnoverTotalFxMissing": "{{value}} (no rate yet for {{currencies}}, counted unconverted)",
     "export": "Export companies",
     "import": "Import companies",
     "importHint": "Metrics read: {{years}}, from the year of the list. Each year is optional. Accepted status values: enabled or disabled.",
@@ -191,7 +192,11 @@
       "kept_one": "{{count}} company is still in use and is kept. Disable it instead:",
       "kept_other": "{{count}} companies are still in use and are kept. Disable them instead:",
       "deleted_one": "{{count}} company deleted",
-      "deleted_other": "{{count}} companies deleted"
+      "deleted_other": "{{count}} companies deleted",
+      "title_one": "Delete the selected company",
+      "title_other": "Delete the {{count}} selected companies",
+      "keptDone_one": "{{count}} company kept",
+      "keptDone_other": "{{count}} companies kept"
     }
   },
   "departments": {
@@ -1058,7 +1063,7 @@
       "departmentsMetrics": "Departments metrics",
       "frozen": "Frozen",
       "editable": "Editable",
-      "frozenBy": "by {{name}}"
+      "frozenBy": "Frozen by {{name}} on {{date}}"
     }
   },
   "formSchemas": {

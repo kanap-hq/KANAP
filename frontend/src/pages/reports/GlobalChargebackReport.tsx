@@ -28,6 +28,7 @@ import { escapeTooltipText } from './tooltipText';
 import { useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
+import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
@@ -50,9 +51,9 @@ function baseFormatCurrency(value: number | null | undefined, locale: string): s
   return formatter.format(n);
 }
 
-function formatPercent(value: number | null | undefined): string {
+function formatPercent(value: number | null | undefined, locale: string): string {
   if (value == null || !Number.isFinite(value)) return '—';
-  return `${value.toFixed(2)}%`;
+  return formatPercentPoints(value, locale, 2);
 }
 
 function baseFormatCount(value: number | null | undefined, locale: string): string {
@@ -157,6 +158,10 @@ export default function GlobalChargebackReport() {
     (value: number | null | undefined) => baseFormatCount(value, locale),
     [locale],
   );
+  const formatShare = React.useCallback(
+    (value: unknown, fractionDigits: number) => formatSharePercent(value, locale, fractionDigits),
+    [locale],
+  );
 
   const queryKey = ['global-chargeback-report', scope, year, metric];
   const { data, isLoading, isFetching, refetch } = useQuery<GlobalChargebackReportResponse>({
@@ -224,7 +229,7 @@ export default function GlobalChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 160,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${params.value.toFixed(1)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 1),
     },
     {
       field: 'headcount',
@@ -240,7 +245,7 @@ export default function GlobalChargebackReport() {
       type: 'rightAligned',
       valueFormatter: (params) => (params.value != null ? formatCurrency(params.value) : ''),
     },
-  ], [formatCount, formatCurrency, formatNumber, metricLabel]);
+  ], [formatCount, formatCurrency, formatNumber, formatShare, metricLabel]);
 
   const kpiRows: GlobalChargebackKpiRow[] = data?.kpis ?? [];
   const warnings = data?.warnings ?? [];
@@ -342,9 +347,9 @@ export default function GlobalChargebackReport() {
       headerName: t('reports.columns.shareOfTotal'),
       width: 160,
       type: 'rightAligned',
-      valueFormatter: (params) => (params.value != null ? `${params.value.toFixed(1)}%` : ''),
+      valueFormatter: (params) => formatShare(params.value, 1),
     },
-  ], [formatNumber, metricLabel]);
+  ], [formatNumber, formatShare, metricLabel]);
 
   const flows = data?.intercompanyFlows ?? [];
   // Build netted-by-pair flows: show only net direction per company pair
@@ -451,7 +456,7 @@ export default function GlobalChargebackReport() {
                 title: escapeTooltipText(datum.label),
                 data: [
                   { label: metricLabel, value: formatNumber(value) },
-                  { label: t('reports.shared.share'), value: `${pct.toFixed(1)}%` },
+                  { label: t('reports.shared.share'), value: formatPercentPoints(pct, locale, 1) },
                 ],
               };
             },
@@ -461,7 +466,7 @@ export default function GlobalChargebackReport() {
       legend: { enabled: false },
       animation: { enabled: true, duration: 700 },
     };
-  }, [chartData, formatCurrency, formatNumber, metricLabel, t, totalAmount, year]);
+  }, [chartData, formatCurrency, formatNumber, locale, metricLabel, t, totalAmount, year]);
 
   const exportCsv = () => {
     detailedGridApiRef.current?.exportDataAsCsv?.({ fileName: `global-chargeback-detailed-${scope}-${year}-${metricFile}.csv` });
@@ -676,7 +681,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCount(row.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(row.itUsers)}</TableCell>
                       <TableCell align="right">{row.turnover != null ? formatTurnover(row.turnover) : '—'}</TableCell>
-                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct) : '—'}</TableCell>
+                      <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerUser != null ? formatCount(Math.round(row.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerItUser != null ? formatCount(Math.round(row.costPerItUser)) : '—'}</TableCell>
                     </TableRow>
@@ -695,7 +700,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCount(kpiTotals.headcountTotal)}</TableCell>
                       <TableCell align="right">{formatCount(kpiTotals.itUsersTotal)}</TableCell>
                       <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatTurnover(kpiTotals.turnoverDisplayTotal) : '—'}</TableCell>
-                      <TableCell align="right">{kpiTotals.costVsTurnover != null ? formatPercent(kpiTotals.costVsTurnover) : '—'}</TableCell>
+                      <TableCell align="right">{kpiTotals.costVsTurnover != null ? formatPercent(kpiTotals.costVsTurnover, locale) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerUser != null ? formatCount(Math.round(kpiTotals.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerItUser != null ? formatCount(Math.round(kpiTotals.costPerItUser)) : '—'}</TableCell>
                     </TableRow>
