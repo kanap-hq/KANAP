@@ -102,15 +102,36 @@ export type DomainOption = {
 };
 
 /**
- * An administration zone (ANSSI mapping guide, administration view): who administers it, at which
- * privilege level, and where its secrets are kept. No zone is shipped: each organisation has its own.
+ * An administration zone (the tiered administration model, a recognized practice): the directory
+ * group or the team that administers it. Tenants that never customised the list receive three tiers.
  */
 export type AdminZoneOption = ItOpsEnumOption & {
   admin_group?: string;
-  privilege_level?: string;
-  secrets_location?: string;
   description?: string;
 };
+
+/**
+ * Administration zones served to tenants that never customised the list (the recognized model of
+ * Active Directory administration in three tiers). A tenant may rename, retire or replace them; an empty
+ * stored list stays empty.
+ */
+export const DEFAULT_ADMIN_ZONES: AdminZoneOption[] = [
+  {
+    code: 'tier_0',
+    label: 'Tier 0 (core of trust)',
+    description: 'Identity and trust infrastructure: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.',
+  },
+  {
+    code: 'tier_1',
+    label: 'Tier 1 (servers and applications)',
+    description: 'Business servers, applications, databases and middleware.',
+  },
+  {
+    code: 'tier_2',
+    label: 'Tier 2 (workstations)',
+    description: 'User workstations and devices.',
+  },
+];
 
 export type SubnetOption = {
   location_id: string;    // Mandatory, references locations table
@@ -452,6 +473,7 @@ export class ItOpsSettingsService {
 
   private readonly defaultIncidentCategories: ItOpsEnumOption[] = DEFAULT_INCIDENT_CATEGORIES;
   private readonly defaultTechnologyFamilies: ItOpsEnumOption[] = DEFAULT_TECHNOLOGY_FAMILIES;
+  private readonly defaultAdminZones: AdminZoneOption[] = DEFAULT_ADMIN_ZONES;
 
   private readonly lockedDomainCodes = new Set(['workgroup', 'n-a']);
 
@@ -911,22 +933,19 @@ export class ItOpsSettingsService {
     return undefined;
   }
 
-  private normalizeAdminZones(list: unknown, opts?: { strict?: boolean }): AdminZoneOption[] {
+  private normalizeAdminZones(list: unknown, defaults: AdminZoneOption[], opts?: { strict?: boolean }): AdminZoneOption[] {
     const strict = opts?.strict ?? false;
     const byCode = new Map<string, AdminZoneOption>();
-    for (const raw of Array.isArray(list) ? list : []) {
+    const source: any[] | undefined = Array.isArray(list) ? list : defaults;
+    for (const raw of source || []) {
       const code = this.normalizeCode(raw?.code ?? raw?.value);
       const label = this.normalizeLabel(raw?.label, code);
       const translations = normalizeTranslations(raw?.translations);
       const admin_group = this.optionalText(raw?.admin_group, 'Administrator group', 200, strict);
-      const privilege_level = this.optionalText(raw?.privilege_level, 'Privilege level', 100, strict);
-      const secrets_location = this.optionalText(raw?.secrets_location, 'Secrets location', 200, strict);
       const description = this.optionalText(raw?.description, 'Description', 2000, strict);
       byCode.set(code, {
         code, label, deprecated: !!raw?.deprecated,
         ...(admin_group ? { admin_group } : {}),
-        ...(privilege_level ? { privilege_level } : {}),
-        ...(secrets_location ? { secrets_location } : {}),
         ...(description ? { description } : {}),
         ...(translations ? { translations } : {}),
       });
@@ -992,7 +1011,7 @@ export class ItOpsSettingsService {
     );
     const incidentCategories = this.normalizeList(raw.incident_categories, this.defaultIncidentCategories);
     const technologyFamilies = this.normalizeList(raw.technology_families, this.defaultTechnologyFamilies);
-    const adminZones = this.normalizeAdminZones(raw.admin_zones);
+    const adminZones = this.normalizeAdminZones(raw.admin_zones, this.defaultAdminZones);
     return {
       lockedCodes: { lifecycleStates: [...this.lockedLifecycleCodes], domains: [...this.lockedDomainCodes] },
       protectedCodes: { networkSegments: this.defaultNetworkSegments.map((item) => item.code), serverKinds: this.defaultServerKinds.map((item) => item.code) },
@@ -1237,7 +1256,7 @@ export class ItOpsSettingsService {
       next.technologyFamilies = this.normalizeList(patch.technologyFamilies, this.defaultTechnologyFamilies);
     }
     if (patch.adminZones) {
-      next.adminZones = this.normalizeAdminZones(patch.adminZones, { strict: true });
+      next.adminZones = this.normalizeAdminZones(patch.adminZones, this.defaultAdminZones, { strict: true });
     }
 
     const catalogChanged = CLASSIFICATION_CATALOG_KEYS.some((key) => patch[key] !== undefined);

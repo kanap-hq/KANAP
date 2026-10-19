@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { cleanup, fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
@@ -75,6 +75,22 @@ describe('TechnologyProperties: administration zone', () => {
     renderProperties({ ...TECHNOLOGY, admin_zone: null }, false);
     expect(zoneField()).toHaveTextContent('workspace.technology.placeholders.noAdminZone');
     expect(zoneField()).toHaveAttribute('aria-disabled', 'true');
+  });
+
+  it('hides the zone on another family, and keeps a stored value as text', () => {
+    renderProperties({ ...TECHNOLOGY, family: 'database', admin_zone: null });
+    expect(screen.queryByRole('combobox', { name: 'workspace.technology.fields.adminZone' })).toBeNull();
+    expect(screen.queryByText('workspace.technology.fields.adminZoneUnused')).toBeNull();
+
+    cleanup();
+    renderProperties({ ...TECHNOLOGY, family: 'database', admin_zone: 'tier_0' });
+    expect(screen.queryByRole('combobox', { name: 'workspace.technology.fields.adminZone' })).toBeNull();
+    expect(screen.getByText('Tier 0')).toBeInTheDocument();
+    expect(screen.getByText('workspace.technology.fields.adminZoneUnused')).toBeInTheDocument();
+
+    cleanup();
+    renderProperties({ ...TECHNOLOGY, family: 'database', admin_zone: 'ghost' });
+    expect(screen.getByText('common.legacyOption:ghost')).toBeInTheDocument();
   });
 });
 

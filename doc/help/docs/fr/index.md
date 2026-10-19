@@ -40,7 +40,7 @@ Si vous souhaitez le chemin le plus court vers la productivité, commencez par l
 - [Technologies](technologies.md) - Suivez les produits sur lesquels tournent vos applications, leurs versions et leur fin de support
 - [Connexions](connections.md) - Suivez les connexions réseau et système
 - [Carte des connexions](connection-map.md) - Visualisez la topologie des connexions
-- [Vue de l'administration](administration-view.md) - Voyez qui administre quoi : zones, domaines et contrôleurs de domaine
+- [Zones d'administration](administration-view.md) - Voyez qui administre quoi : zones, points de contrôle, domaines et contrôleurs de domaine
 
 **Applications**
 

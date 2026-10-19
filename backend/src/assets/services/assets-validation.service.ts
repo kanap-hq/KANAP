@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { findCatalogOption } from '../../it-ops-settings/catalog-resolve';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { isValidHostname } from '../hostname.util';
 
@@ -64,6 +65,21 @@ export class AssetsValidationService {
       throw new BadRequestException(`Invalid domain "${value}"`);
     }
     return code;
+  }
+
+  async resolveAdminZone(
+    value: unknown,
+    tenantId: string,
+    manager?: EntityManager,
+  ): Promise<string | null> {
+    const normalized = this.normalizeNullable(value);
+    if (!normalized) return null;
+    const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
+    const option = findCatalogOption(normalized, settings.adminZones || []);
+    if (!option) {
+      throw new BadRequestException(`Unknown administration zone: ${normalized}.`);
+    }
+    return option.code;
   }
 
   validateHostname(value: string | null): boolean {

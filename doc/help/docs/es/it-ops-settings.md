@@ -31,7 +31,7 @@ Dentro de una sección, las listas se ordenan por nombre. Cada lista aparece com
 
 Cada lista tiene sus propios controles en la parte superior:
 
-- **Agregar elemento** - Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir.
+- **Agregar elemento** - Inserta una nueva fila en la parte superior de la lista, enfocada y lista para escribir. Su campo de nombre muestra un ejemplo propio de esa lista.
 - Las ediciones se guardan automáticamente alrededor de un segundo y medio después de su último cambio, una vez que todas las filas son válidas. Un indicador de guardado se muestra junto a la lista.
 
 Para listas largas (más de 25 filas), la tabla virtualiza filas, mostrando unas 20 a la vez con desplazamiento suave y encabezados fijos.
@@ -42,7 +42,7 @@ Usted solo ve y escribe **nombres**. KANAP genera un código interno estable a p
 
 Como los nombres identifican los valores, dentro de una lista se aplican algunas reglas:
 
-- todo valor necesita un nombre, y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
+- todo valor necesita un nombre (un asterisco marca la columna **Nombre**), y dos valores no pueden tener el mismo nombre (las mayúsculas y minúsculas no importan);
 - un nombre no puede ser idéntico al código interno de otro valor de la misma lista;
 - los nombres de los **Métodos de acceso** no pueden contener una coma ni un punto y coma, porque la exportación CSV los lista en una sola celda separada por comas.
 
@@ -96,23 +96,30 @@ La categoría determina qué campos aparecen al editar una Ubicación:
 
 ### Zonas de administración
 
-Las zonas de su modelo de administración, por ejemplo el tier 0 para el directorio y sus controladores, el tier 1 para los servidores, el tier 2 para los puestos de trabajo. Figuran en su política de administración o en su modelo de acceso privilegiado.
+Las zonas de su modelo de administración. KANAP incluye los tres tiers del modelo de administración por tiers, una buena práctica reconocida:
 
-**Columnas**: Nombre, Grupo de administradores, Nivel de privilegios, Ubicación de los secretos, Descripción, Dejar de proponer
+- **Tier 0 (núcleo de confianza)**: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.
+- **Tier 1 (servidores y aplicaciones)**: servidores de negocio, aplicaciones, bases de datos y middleware.
+- **Tier 2 (puestos de trabajo)**: puestos de trabajo y dispositivos de los usuarios.
 
-- **Grupo de administradores**: quién administra la zona, por ejemplo «Admins. del dominio».
-- **Nivel de privilegios**: el nivel de la zona en su modelo, por ejemplo «Tier 0».
-- **Ubicación de los secretos**: dónde se guardan los secretos de administración de la zona, por ejemplo un almacén de contraseñas.
+Cámbieles el nombre, añada los suyos o deje de proponerlos según su política de administración o su modelo de acceso privilegiado. Los tres tiers aparecen mientras la lista no se haya guardado nunca. Una vez guardada la lista, aunque esté vacía, KANAP ya no los añade: añádalos usted mismo si los necesita.
+
+El orden de la lista importa: la primera zona es la más sensible. Arrastre una fila por su asa para moverla. Una zona nueva se añade arriba: muévala después a su lugar. La página [Zonas de administración](administration-view.md) muestra las zonas en este orden y compara los activos con la primera zona que no está marcada con **Dejar de proponer**.
+
+**Columnas**: Nombre, Grupo de administradores, Descripción, Dejar de proponer
+
+- **Grupo de administradores**: el grupo del directorio o el equipo que administra la zona, por ejemplo «Admins. del dominio».
 
 **Dónde se usa**:
-- Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**
-- **Panorama IT > Vista de la administración**, que lista cada zona con sus tecnologías y sus servidores. Consulte [Vista de la administración](administration-view.md).
+- Espacio de trabajo de Activos → panel de propiedades → **Zona de administración**
+- Espacio de trabajo de Tecnologías → panel de propiedades → **Zona de administración**, para las tecnologías de la familia **Directorio e identidad**
+- **Panorama IT > Zonas de administración**, que cuenta los activos y los servicios de directorio de cada zona, ejecuta los puntos de control y asigna zonas en bloque. Consulte [Zonas de administración](administration-view.md).
 
-Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías ya situadas en ella.
+Una zona marcada con **Dejar de proponer** se mantiene en las tecnologías y los activos ya situados en ella.
 
 ### Familias de tecnologías
 
-El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, etc. La lista de tecnologías y los informes agrupan las tecnologías por familia, y la [Vista de la administración](administration-view.md) encuentra los servicios de directorio por la familia **Directorio e identidad**.
+El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, etc. La lista de tecnologías y los informes agrupan las tecnologías por familia, y la página [Zonas de administración](administration-view.md) encuentra los servicios de directorio por la familia **Directorio e identidad**.
 
 **Columnas**: Nombre, Dejar de proponer
 
@@ -138,16 +145,18 @@ Las categorías predeterminadas incluyen: Aplicación, Autenticación, Respaldo,
 
 Dominios Active Directory o DNS de los activos. Las entradas integradas no se pueden modificar. El sufijo DNS se usa para calcular el nombre de dominio completamente cualificado (FQDN) de cada activo.
 
-**Columnas**: Nombre, Sufijo DNS, Bosque, Cuentas, Equipos, Confianzas, Dejar de proponer
+**Columnas**: Nombre, Sufijo DNS, Bosque, Número de cuentas, Número de equipos, Confianzas, Dejar de proponer
 
 - **Bosque**: el bosque de Active Directory del dominio, tal como aparece en Dominios y confianzas de Active Directory.
-- **Cuentas** y **Equipos**: el número de cuentas de usuario y de equipos del dominio, tal como se cuentan en Usuarios y equipos de Active Directory. Solo números enteros.
+- **Número de cuentas** y **Número de equipos**: el número de cuentas de usuario y de equipos del dominio, tal como se cuentan en Usuarios y equipos de Active Directory o con un recuento de los objetos de usuario y de equipo del dominio. Solo números enteros.
+
+Pase el cursor sobre los encabezados **Bosque**, **Número de cuentas** y **Número de equipos** para ver dónde encontrar cada valor.
 - **Confianzas**: el botón indica cuántas confianzas tiene el dominio. Haga clic en él para listar los otros dominios con los que tiene una relación de confianza, tal como aparecen en Dominios y confianzas de Active Directory. **Añadir un dominio de confianza** añade uno; elija su **Dirección**: **saliente** (este dominio confía en el otro, cuyas cuentas pueden acceder a sus recursos), **entrante** (el otro dominio confía en este) o **bidireccional** (ambos). El cuadro de diálogo muestra también, en solo lectura, las confianzas declaradas en otros dominios hacia este. El botón aparece una vez guardado el dominio, y necesita al menos otro dominio en la lista.
 
 **Dónde se usa**:
 - Espacio de trabajo de Activos → pestaña Técnico → selector de **Dominio**
 - Espacio de trabajo de Activos → pestaña Técnico → **FQDN** (calculado automáticamente desde hostname + sufijo DNS)
-- **Panorama IT > Vista de la administración**: bosque, confianzas, recuentos y controladores de dominio. Consulte [Vista de la administración](administration-view.md#dominios).
+- **Panorama IT > Zonas de administración**: dominios agrupados por bosque, con sus confianzas, recuentos y controladores de dominio. Consulte [Zonas de administración](administration-view.md#servicios-de-directorio-y-dominios).
 
 **Entradas del sistema** (no pueden modificarse ni eliminarse):
 - **Workgroup** - Para activos independientes no unidos a un dominio
@@ -399,10 +408,10 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 |-------|--------------|
 | **Métodos de acceso** | Aplicaciones (pestaña Técnico y soporte → Métodos de acceso) |
 | **Categorías de aplicación** | Aplicaciones (Categoría) |
-| **Zonas de administración** | Tecnologías (panel de propiedades → Zona de administración), Vista de la administración |
+| **Zonas de administración** | Activos (panel de propiedades → Zona de administración), Tecnologías de la familia Directorio e identidad (panel de propiedades → Zona de administración), página Zonas de administración |
 | **Proveedores cloud** | Activos (Proveedor), Ubicaciones (Proveedor cloud) |
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
-| **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), Vista de la administración |
+| **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), página Zonas de administración |
 | **Entidades** | Conexiones (Entidad de origen/destino), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de alojamiento** | Ubicaciones (Visión general), Tecnologías (Tipo de alojamiento) |
 | **Patrones de integración** | Segmentos de interfaz (Patrón) |
@@ -418,7 +427,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Subredes** | Activos (pestaña Técnico → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de activo** | Activos (Visión general → Tipo) |
-| **Familias de tecnologías** | Tecnologías (Familia), Vista de la administración (servicios de directorio) |
+| **Familias de tecnologías** | Tecnologías (Familia), página Zonas de administración (servicios de directorio) |
 
 ---
 

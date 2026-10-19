@@ -139,6 +139,7 @@
         "hosting": "Modelo de alojamiento",
         "os": "OS",
         "networkZone": "Zona de red",
+        "adminZone": "Zona de administración",
         "lifecycle": "Ciclo de vida",
         "goLive": "Puesta en marcha",
         "endOfLife": "Fin de vida",
@@ -498,46 +499,121 @@
       }
     },
     "administrationView": {
-      "title": "Vista de la administración",
-      "intro": "Quién administra qué: las zonas de administración con sus tecnologías y servidores, y después los dominios con su bosque, sus confianzas y sus controladores de dominio.",
-      "loading": "Cargando…",
-      "loadFailed": "No se pudo cargar la vista de la administración.",
-      "exportZones": "Exportar las zonas",
+      "tabs": {
+        "assets": "Activos",
+        "directories": "Directorios y dominios"
+      },
+      "exportAssets": "Exportar activos",
       "exportDomains": "Exportar los dominios",
       "exportFailed": "La exportación ha fallado.",
-      "unplaced_one": "{{count}} tecnología no tiene zona de administración. Indíquela en su ficha.",
-      "unplaced_other": "{{count}} tecnologías no tienen zona de administración. Indíquela en sus fichas.",
       "zones": "Zonas de administración",
       "noZones": "Todavía no hay zonas de administración definidas.",
       "openSettings": "Definirlas en los ajustes de TI",
       "noZone": "Sin zona",
-      "noZoneHint": "Tecnologías que hay que asignar a una zona.",
       "unknownZone": "Zona desconocida ({{code}})",
-      "emptyZone": "Ninguna tecnología en esta zona.",
+      "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} activo",
+      "assetCount_other": "{{count}} activos",
+      "scopeEmpty": "Ningún activo en esta zona.",
+      "hostedApplications_one": "{{count}} aplicación",
+      "hostedApplications_other": "{{count}} aplicaciones",
+      "directoryServiceCount_one": "{{count}} servicio de directorio",
+      "directoryServiceCount_other": "{{count}} servicios de directorio",
       "attributes": {
         "adminGroup": "Grupo de administradores",
-        "privilegeLevel": "Nivel de privilegios",
-        "secretsLocation": "Secretos",
         "directoryServices": "Servicios de directorio"
       },
       "columns": {
         "reference": "Ref.",
-        "technology": "Tecnología",
-        "family": "Familia",
+        "type": "Tipo",
+        "zone": "Zona",
+        "technologies": "Tecnologías",
+        "applications": "Aplicaciones",
+        "controls": "Controles",
         "servers": "Servidores",
         "domain": "Dominio",
         "dnsSuffix": "Sufijo DNS",
-        "forest": "Bosque",
         "trusts": "Confianzas",
         "accounts": "Cuentas",
-        "machines": "Equipos",
+        "computers": "Equipos",
         "domainControllers": "Controladores de dominio"
       },
-      "noServer": "Ningún servidor",
-      "via": "a través de {{name}}",
+      "controls": "Puntos de control",
+      "controlsHint": "La zona más sensible es {{zone}}.",
+      "controlsNoCatalog": "Añada una zona de administración en los ajustes de TI para ejecutar las demás comprobaciones.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Activos sin zona de administración",
+          "short": "Sin zona asignada",
+          "hint": "Indique una zona en cada activo que siga en uso."
+        },
+        "domainControllers": {
+          "title": "Controladores de dominio fuera de la zona más sensible",
+          "short": "Controlador de dominio fuera",
+          "hint": "Un controlador de dominio debe estar en la zona más sensible."
+        },
+        "directoryAssets": {
+          "title": "Activos que llevan un servicio de directorio fuera de la zona más sensible",
+          "short": "Servicio de directorio fuera",
+          "hint": "Un activo que lleva un servicio de directorio debe estar en la zona más sensible."
+        },
+        "trustRaised": {
+          "title": "Lo que ejecuta un activo está en una zona menos sensible",
+          "short": "Host menos sensible",
+          "hint": "Lo que ejecuta un activo debería estar en una zona al menos igual de sensible. Un activo sin zona interrumpe la comprobación de la cadena."
+        },
+        "applications": {
+          "title": "Aplicaciones alojadas en la zona más sensible",
+          "short": "Aplicación alojada",
+          "hint": "Revise cada aplicación alojada en un activo de la zona más sensible."
+        }
+      },
+      "emptyAssets": "Todavía no hay ningún activo en servicio.",
+      "more": "+{{count}}",
+      "moreItems": "Y {{count}} más",
+      "trustPeer": {
+        "contains": "Ejecuta {{asset}} ({{zone}})",
+        "cluster": "Miembro del clúster {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "Seleccionar {{name}}",
+        "all": "Seleccionar todos los activos del filtro",
+        "some_one": "{{count}} activo seleccionado",
+        "some_other": "{{count}} activos seleccionados",
+        "whole_one": "{{count}} activo seleccionado, todo el filtro",
+        "whole_other": "{{count}} activos seleccionados, todo el filtro",
+        "clear": "Borrar la selección"
+      },
+      "actions": {
+        "assign": "Asignar a una zona",
+        "assignSelected": "Asignar a una zona ({{count}})"
+      },
+      "bulk": {
+        "title": "Asignar a una zona",
+        "zone": "Zona",
+        "save": "Asignar",
+        "scopeSelected_one": "El activo seleccionado.",
+        "scopeSelected_other": "Los {{count}} activos seleccionados.",
+        "scopeAll": "Todos los activos del filtro actual.",
+        "scopeAllBut_one": "Todos los activos del filtro actual excepto {{count}}.",
+        "scopeAllBut_other": "Todos los activos del filtro actual excepto {{count}}.",
+        "count_one": "Esto cambia la zona de {{count}} activo de {{rows}}.",
+        "count_other": "Esto cambia la zona de {{count}} activos de {{rows}}.",
+        "counting": "Contando…",
+        "countFailed": "No se pudieron contar los activos. Inténtelo de nuevo.",
+        "tooMany": "Más de 5.000 activos: acote los filtros.",
+        "changed": "La lista cambió desde el recuento. Compruebe el nuevo recuento y confirme de nuevo.",
+        "failed": "No se pudo asignar la zona.",
+        "choose": "Elegir una zona",
+        "chooseHint": "Elija una zona para ver cuántos activos cambian.",
+        "done_one": "Zona cambiada en {{count}} activo.",
+        "done_other": "Zona cambiada en {{count}} activos."
+      },
       "domains": "Dominios",
       "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",
       "noDomains": "No hay dominios definidos.",
+      "noDirectories": "Ningún servicio de directorio. Aquí aparece una tecnología de la familia Directorio e identidad.",
+      "noForest": "Sin bosque",
       "noController": "Ninguno encontrado",
       "notSet": "Sin indicar",
       "none": "Ninguna",
@@ -608,7 +684,9 @@
       "lists": {
         "adminZones": {
           "title": "Zonas de administración",
-          "description": "Las zonas de su modelo de administración, por ejemplo el nivel 0 para el directorio y sus controladores. Cada zona indica quién la administra, con qué nivel de privilegios y dónde se guardan sus secretos. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
+          "description": "Las zonas de su modelo de administración, por ejemplo el Tier 0 para el directorio y sus controladores. Cada zona indica quién la administra. Encontrará estos datos en su política de administración o en su modelo de acceso privilegiado.",
+          "orderHint": "La primera zona es la más sensible.",
+          "dragToReorder": "Arrastrar para reordenar",
           "usage": "Tecnologías / Resumen, vista de la administración"
         },
         "accessMethods": {
@@ -722,12 +800,10 @@
         "description": "Descripción",
         "dnsSuffix": "Sufijo DNS",
         "forest": "Bosque",
-        "accounts": "Cuentas",
-        "machines": "Equipos",
+        "accountCount": "Número de cuentas",
+        "computerCount": "Número de equipos",
         "trusts": "Confianzas",
-        "adminGroup": "Grupo de administradores",
-        "privilegeLevel": "Nivel de privilegios",
-        "secretsLocation": "Ubicación de los secretos"
+        "adminGroup": "Grupo de administradores"
       },
       "placeholders": {
         "connectionName": "p. ej., HTTPS",
@@ -740,10 +816,31 @@
         "machineCount": "p. ej., 300",
         "adminZoneName": "p. ej., Tier 0",
         "adminGroup": "p. ej., Admins. del dominio",
-        "privilegeLevel": "p. ej., Tier 0",
-        "secretsLocation": "p. ej., Bóveda de contraseñas, caja A",
         "adminZoneDescription": "p. ej., Servicios de directorio e identidad",
+        "hostingTypeName": "p. ej., Colocation",
+        "assetKindName": "p. ej., Máquina virtual",
+        "serverRoleName": "p. ej., Controlador de dominio",
+        "entityName": "p. ej., Usuarios internos",
+        "applicationCategoryName": "p. ej., Productividad",
+        "networkSegmentName": "p. ej., DMZ",
+        "ipAddressTypeName": "p. ej., Host",
+        "technologyFamilyName": "p. ej., Base de datos",
+        "serverProviderName": "p. ej., AWS",
+        "lifecycleStateName": "p. ej., Activo",
+        "interfaceProtocolName": "p. ej., HTTPS",
+        "interfaceDataCategoryName": "p. ej., Datos maestros",
+        "interfaceTriggerTypeName": "p. ej., Programado",
+        "interfacePatternName": "p. ej., Webhook",
+        "interfaceFormatName": "p. ej., JSON",
+        "interfaceAuthModeName": "p. ej., OAuth2",
+        "accessMethodName": "p. ej., Web",
+        "incidentCategoryName": "p. ej., Infraestructura",
         "select": "Seleccionar…"
+      },
+      "hints": {
+        "forest": "Dominios y confianzas de Active Directory.",
+        "accountCount": "Usuarios y equipos de Active Directory, o un recuento de los objetos de usuario del dominio.",
+        "computerCount": "Usuarios y equipos de Active Directory, o un recuento de los objetos de equipo del dominio."
       },
       "empty": {
         "adminZones": "No hay zonas de administración definidas.",
@@ -1602,6 +1699,7 @@
         "hostnameRequired": "El nombre de host es obligatorio cuando se selecciona un dominio",
         "hostnameInvalid": "Un nombre de host solo puede contener letras, dígitos, guiones y puntos. Cada parte entre puntos debe tener 63 caracteres como máximo.",
         "domain": "Dominio",
+        "adminZone": "Zona de administración",
         "fqdn": "FQDN",
         "aliases": "Alias",
         "aliasesPlaceholder": "Escriba y presione Enter",
@@ -1835,6 +1933,7 @@
         "editor": "Editor",
         "family": "Familia",
         "adminZone": "Zona de administración",
+        "adminZoneUnused": "Este valor ya no se utiliza.",
         "hostingType": "Tipo de alojamiento",
         "description": "Descripción",
         "notes": "Notas",
@@ -2968,7 +3067,10 @@
     "classification": "Clasificación",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Datos en el nivel de confidencialidad más alto con la criticidad cibernética más baja: compruebe la evaluación cibernética.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Ninguna prueba de recuperación en los últimos doce meses para una aplicación en el nivel más crítico.",
-    "e_g_tier_1": "p. ej., Nivel 1"
+    "e_g_critical": "p. ej., Crítica",
+    "e_g_high": "p. ej., Alta",
+    "e_g_confidential": "p. ej., Confidencial",
+    "e_g_foundation": "p. ej., Base"
   },
   "catalogDefaults": {
     "applicationCategories": {
@@ -3138,6 +3240,16 @@
       "network_security": "Red y seguridad",
       "administration": "Administración",
       "other": "Otro"
+    },
+    "adminZones": {
+      "tier_0": "Tier 0 (núcleo de confianza)",
+      "tier_1": "Tier 1 (servidores y aplicaciones)",
+      "tier_2": "Tier 2 (puestos de trabajo)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Infraestructura de identidad y confianza: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.",
+      "tier_1": "Servidores de negocio, aplicaciones, bases de datos y middleware.",
+      "tier_2": "Puestos de trabajo y dispositivos de los usuarios."
     },
     "domains": {
       "workgroup": "Grupo de trabajo",

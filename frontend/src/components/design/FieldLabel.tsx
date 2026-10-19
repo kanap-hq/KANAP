@@ -15,6 +15,15 @@ export function mergeSx(...items: Array<SxProps<Theme> | undefined>): SxProps<Th
   }) as SxProps<Theme>;
 }
 
+/** Orange asterisk for a required field, next to its label. */
+export function RequiredMark() {
+  return (
+    <Box component="span" sx={{ color: 'warning.main', ml: 0.25 }}>
+      *
+    </Box>
+  );
+}
+
 export function FieldLabel({ children, required = false, sx }: FieldLabelProps) {
   return (
     <Box
@@ -29,11 +38,7 @@ export function FieldLabel({ children, required = false, sx }: FieldLabelProps) 
       )}
     >
       {children}
-      {required && (
-        <Box component="span" sx={{ color: 'warning.main', ml: 0.25 }}>
-          *
-        </Box>
-      )}
+      {required && <RequiredMark />}
     </Box>
   );
 }

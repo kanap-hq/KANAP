@@ -48,6 +48,7 @@ export class AssetsListService extends AssetsBaseService {
       zone: 'a.zone',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
+      admin_zone: 'a.admin_zone',
       operating_system: ASSET_OS_LABEL,
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       created_at: 'a.created_at',
@@ -79,7 +80,7 @@ export class AssetsListService extends AssetsBaseService {
     const dataQuery = `
       SELECT DISTINCT ON (a.id)
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
-        a.region, a.zone, a.hostname, a.domain, a.fqdn, a.aliases,
+        a.region, a.zone, a.hostname, a.domain, a.admin_zone, a.fqdn, a.aliases,
         a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
         l.name AS location_name,
@@ -119,7 +120,7 @@ export class AssetsListService extends AssetsBaseService {
     const itemsQuery = `
       SELECT
         a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
-        a.region, a.zone, a.hostname, a.domain, a.fqdn, a.aliases,
+        a.region, a.zone, a.hostname, a.domain, a.admin_zone, a.fqdn, a.aliases,
         a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
         a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
         a.go_live_date::text AS go_live_date, a.end_of_life_date::text AS end_of_life_date,
@@ -167,6 +168,7 @@ export class AssetsListService extends AssetsBaseService {
       zone: 'a.zone',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
+      admin_zone: 'a.admin_zone',
       operating_system: ASSET_OS_LABEL,
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       created_at: 'a.created_at',
@@ -291,6 +293,7 @@ export class AssetsListService extends AssetsBaseService {
       status: 'a.status',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
+      admin_zone: 'a.admin_zone',
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',
@@ -362,6 +365,7 @@ export class AssetsListService extends AssetsBaseService {
       status: 'a.status',
       hostname: 'a.hostname',
       fqdn: 'a.fqdn',
+      admin_zone: 'a.admin_zone',
       is_cluster: 'COALESCE(a.is_cluster, false)::text',
       location_name: 'l.name',
       hosting_type: 'l.hosting_type',

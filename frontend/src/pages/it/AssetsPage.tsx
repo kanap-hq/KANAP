@@ -39,6 +39,7 @@ type AssetRow = {
   hosting_type: string | null;
   operating_system: string | null;
   network_segment: string | null;
+  admin_zone: string | null;
   assignments_count?: number;
   created_at: string;
 };
@@ -376,6 +377,20 @@ export default function AssetsPage() {
         searchable: false,
       },
       valueFormatter: (p) => labelFor('networkSegment', p.value) || p.value,
+      cellRenderer: ClickToWorkspace,
+    },
+    {
+      headerName: t('pages.assets.columns.adminZone'),
+      field: 'admin_zone',
+      width: 180,
+      hide: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: {
+        getValues: getAssetFilterValues('admin_zone', { labelFn: (v) => labelFor('adminZone', v), emptyLabel: t('pages.assets.filters.blank') }),
+        searchable: false,
+      },
+      valueFormatter: (p) => labelFor('adminZone', p.value) || p.value || '',
       cellRenderer: ClickToWorkspace,
     },
     {

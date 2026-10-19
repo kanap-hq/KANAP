@@ -178,16 +178,32 @@ const SHIPPED_LABELS: Record<string, Record<string, string>> = {
     administration: 'Administration',
     other: 'Other',
   },
+  adminZones: {
+    tier_0: 'Tier 0 (core of trust)',
+    tier_1: 'Tier 1 (servers and applications)',
+    tier_2: 'Tier 2 (workstations)',
+  },
   domains: {
     workgroup: 'Workgroup',
     'n-a': 'N/A',
   },
 };
 
+const SHIPPED_DESCRIPTIONS: Record<string, Record<string, string>> = {
+  adminZones: {
+    tier_0: 'Identity and trust infrastructure: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.',
+    tier_1: 'Business servers, applications, databases and middleware.',
+    tier_2: 'User workstations and devices.',
+  },
+};
+
 const SHIPPED: Record<string, Record<string, DefaultCopy>> = Object.fromEntries(
   Object.entries(SHIPPED_LABELS).map(([list, labels]) => [
     list,
-    Object.fromEntries(Object.entries(labels).map(([code, label]) => [code, { label }])),
+    Object.fromEntries(Object.entries(labels).map(([code, label]) => [code, {
+      label,
+      ...(SHIPPED_DESCRIPTIONS[list]?.[code] ? { description: SHIPPED_DESCRIPTIONS[list][code] } : {}),
+    }])),
   ]),
 );
 
@@ -199,7 +215,9 @@ export function itOpsCatalogDefaults(list: string): CatalogDefaults | undefined 
     source,
     translated: (locale, code) => {
       const label = i18n.getResource(locale, 'it', `catalogDefaults.${list}.${code}`);
-      return typeof label === 'string' ? { label } : undefined;
+      if (typeof label !== 'string') return undefined;
+      const description = i18n.getResource(locale, 'it', `catalogDefaults.${list}Descriptions.${code}`);
+      return { label, ...(typeof description === 'string' && description ? { description } : {}) };
     },
   };
 }

@@ -744,7 +744,6 @@
     "remove": "Supprimer",
     "locked": "Intégré",
     "protectedHint": "Valeur intégrée : elle peut être retirée de la liste proposée mais pas supprimée.",
-    "displayLabel": "ex. : Niveau 1",
     "addValue": "Ajouter une valeur",
     "noValues": "Aucune valeur configurée pour l'instant.",
     "physical": "Physique",

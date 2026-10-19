@@ -51,6 +51,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 - **Sublocalización**: Área específica dentro de la ubicación (edificio, sala, rack)
 - **Puesta en marcha**: Fecha en que el activo entró en producción
 - **Fin de vida**: Fecha planificada o efectiva de retiro
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo
 
 **Filtrado**:
 
@@ -67,6 +68,7 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 | OS | Filtrar por sistema operativo |
 | Zona de red | Filtrar por segmento de red |
 | Ciclo de vida | Filtrar por estado del ciclo de vida |
+| Zona de administración | Incluye "(Vacío)" para los activos sin zona |
 
 **Consejo**: Combine filtros entre columnas para acotar resultados. Por ejemplo, filtre por Entorno = "Prod" y Ciclo de vida = "Activo" para ver solo los activos activos de producción.
 
@@ -116,6 +118,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 
 **Estado**:
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 - **Ciclo de vida**: Activo, Obsoleto, Retirado, etc. (configurable en Configuración)
 - **Puesta en marcha**: Cuándo entró el activo en producción
 - **Fin de vida**: Fecha planificada o efectiva de retiro
@@ -318,6 +321,7 @@ Desde la lista de Activos:
 | `is_cluster` | Si es un clúster | No | `sí` o `no` |
 | `hostname` | Nombre de host de red | No | |
 | `domain` | Dominio DNS | No | Acepta código o etiqueta de Configuración |
+| `admin_zone` | Zona de administración | No | Acepta código o etiqueta de Configuración |
 | `aliases` | Alias DNS | No | Lista separada por comas |
 | `operating_system` | Sistema operativo | No | El nombre de la tecnología, seguido de su versión (`Windows Server 2019`). Vea más abajo |
 | `cluster` | Pertenencia a clúster | No | Nombre del clúster padre |
@@ -343,6 +347,7 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 | Tipo de activo (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Ciclo de vida (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Dominio | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Zona de administración (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (núcleo de confianza)`, `Tier 1 (servidores y aplicaciones)` |
 | Tipo de dirección IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, de modo que un archivo exportado se puede volver a importar tal cual.

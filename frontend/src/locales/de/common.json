@@ -744,7 +744,6 @@
     "remove": "Entfernen",
     "locked": "Integriert",
     "protectedHint": "Integrierter Wert: er kann zurückgezogen, aber nicht entfernt werden.",
-    "displayLabel": "z. B. Stufe 1",
     "addValue": "Wert hinzufügen",
     "noValues": "Noch keine Werte konfiguriert.",
     "physical": "Physisch",

@@ -36,7 +36,10 @@ function testNotCaptured() {
   const view = routesOf(AdministrationViewController);
   assert.deepEqual(view.map((r) => `${RequestMethod[r.method]} ${r.path}`).sort(), [
     'GET /technologies/reports/administration',
+    'GET /technologies/reports/administration/assets',
+    'GET /technologies/reports/administration/directories',
     'GET /technologies/reports/administration/export',
+    'POST /technologies/reports/administration/assets/zone',
   ]);
   const technologyRoutes = [TechnologiesController, EndOfSupportController, VulnerabilitiesController, TechnologyVulnerabilitiesController].flatMap(routesOf);
   assert.ok(technologyRoutes.some((r) => r.path === '/technologies/:id'), 'the record route is seen');
