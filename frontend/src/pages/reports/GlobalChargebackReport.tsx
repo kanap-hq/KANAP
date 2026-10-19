@@ -29,6 +29,7 @@ import { useReportScope } from './useReportScope';
 import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
+import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
 import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
 import { chargebackKpiTotals } from './chargebackKpiTotals';
@@ -39,12 +40,12 @@ function baseFormatNumber(value: number | null | undefined, locale: string): str
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
-function baseFormatCurrency(value: number | null | undefined, locale: string, withDecimals = false): string {
+function baseFormatCurrency(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n)) return '—';
   const formatter = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: withDecimals ? 2 : 0,
-    maximumFractionDigits: withDecimals ? 2 : 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
   return formatter.format(n);
 }
@@ -149,7 +150,7 @@ export default function GlobalChargebackReport() {
     [locale],
   );
   const formatCurrency = React.useCallback(
-    (value: number | null | undefined, withDecimals = false) => baseFormatCurrency(value, locale, withDecimals),
+    (value: number | null | undefined) => baseFormatCurrency(value, locale),
     [locale],
   );
   const formatCount = React.useCallback(
@@ -173,6 +174,11 @@ export default function GlobalChargebackReport() {
 
   const totalAmount = data?.total ?? 0;
   const reportingCurrency = (data?.reportingCurrency || 'EUR').toUpperCase();
+  // A turnover reads as money of the reporting currency, in whole units like the costs.
+  const formatTurnover = React.useCallback(
+    (value: number) => formatMoney(value, locale, reportingCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    [locale, reportingCurrency],
+  );
   const metricLabel = budgetColumns.label(metric);
   const metricFile = metricFileName(budgetColumns, metric);
 
@@ -669,7 +675,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCurrency(row.amount)}</TableCell>
                       <TableCell align="right">{formatCount(row.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(row.itUsers)}</TableCell>
-                      <TableCell align="right">{row.turnover != null ? formatCurrency(row.turnover, true) : '—'}</TableCell>
+                      <TableCell align="right">{row.turnover != null ? formatTurnover(row.turnover) : '—'}</TableCell>
                       <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerUser != null ? formatCount(Math.round(row.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerItUser != null ? formatCount(Math.round(row.costPerItUser)) : '—'}</TableCell>
@@ -688,7 +694,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCurrency(kpiTotals.amountDisplayTotal)}</TableCell>
                       <TableCell align="right">{formatCount(kpiTotals.headcountTotal)}</TableCell>
                       <TableCell align="right">{formatCount(kpiTotals.itUsersTotal)}</TableCell>
-                      <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatCurrency(kpiTotals.turnoverDisplayTotal, true) : '—'}</TableCell>
+                      <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatTurnover(kpiTotals.turnoverDisplayTotal) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costVsTurnover != null ? formatPercent(kpiTotals.costVsTurnover) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerUser != null ? formatCount(Math.round(kpiTotals.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerItUser != null ? formatCount(Math.round(kpiTotals.costPerItUser)) : '—'}</TableCell>
