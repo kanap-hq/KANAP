@@ -102,7 +102,8 @@ describe('QuickLogTimeModal', () => {
     const listbox = await openSelect();
     fireEvent.click(await within(listbox).findByText('ERP rollout'));
     fireEvent.change(screen.getByLabelText(/hours/i), { target: { value: '1.5' } });
-    fireEvent.click(screen.getAllByRole('button', { name: /log time/i }).at(-1)!);
+    const logButtons = screen.getAllByRole('button', { name: /log time/i });
+    fireEvent.click(logButtons[logButtons.length - 1]);
 
     expect(await screen.findByText(/valid hours/i)).toBeTruthy();
     expect(api.post).not.toHaveBeenCalled();
