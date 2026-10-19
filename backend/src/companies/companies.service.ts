@@ -897,6 +897,8 @@ export class CompaniesService {
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
     const normalized: { line: number; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    // The first line of each name, whatever its case: a company takes one row.
+    const firstLineByName = new Map<string, number>();
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblemErrors(row, ['disabled_at']);
@@ -919,6 +921,19 @@ export class CompaniesService {
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      else {
+        const firstRow = firstLineByName.get(name.toLowerCase());
+        if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
+        else {
+          errors.push(rowError(
+            line,
+            'name',
+            'CSV_COMPANY_NAME_DUPLICATE',
+            `'${name}' is already on row ${firstRow}. Keep one row per company.`,
+            { name, firstRow },
+          ));
+        }
+      }
       // `city` is NOT NULL, like name: a blank cell is refused for a new company and for an update.
       if (!city) errors.push(rowError(line, 'city', 'CSV_VALUE_REQUIRED', 'city is required'));
       if (!country_iso) errors.push(rowError(line, 'country_iso', 'CSV_VALUE_REQUIRED', 'country_iso is required and must be 2 letters'));
@@ -1022,20 +1037,13 @@ export class CompaniesService {
     if (errors.length > 0) {
       return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by company name: keep first occurrence
-    const uniqueByName = new Map<string, (typeof normalized)[number]>();
-    for (const item of normalized) {
-      const key = (item.company.name as string).toLowerCase();
-      if (!uniqueByName.has(key)) uniqueByName.set(key, item);
-    }
-    const unique = Array.from(uniqueByName.values());
     // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
     // A row matches the company of the same name whatever its case ("acme" updates "Acme"). The
     // stored spelling stays, and the report says which company the row matched.
     const existingByName = new Map<string, Company>();
     const warnings: ImportReportError[] = [];
-    for (const item of unique) {
+    for (const item of normalized) {
       const name = item.company.name as string;
       const existing = await repo.createQueryBuilder('c')
         .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
@@ -1067,8 +1075,8 @@ export class CompaniesService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
-    const toWrite: Array<{ item: (typeof unique)[number]; existing: Company | undefined }> = [];
-    for (const item of unique) {
+    const toWrite: Array<{ item: (typeof normalized)[number]; existing: Company | undefined }> = [];
+    for (const item of normalized) {
       const existing = existingByName.get(item.company.name as string);
       if (!existing) inserted += 1;
       else if (

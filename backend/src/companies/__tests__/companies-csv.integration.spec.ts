@@ -156,7 +156,32 @@ async function testFrozenYearRefusedAtCheck() {
   });
 }
 
+/** Two rows with the same name, whatever the case, are refused at the check. The second used to be dropped. */
+async function testDuplicateNameInFile() {
+  await withCompanies('dup', async (runner, tenantId, svc) => {
+    const run = importer(runner, svc);
+    const rows = [
+      company({ name: 'QA-Faute', city: 'Paris' }),
+      company({ name: 'Other', city: 'Lyon' }),
+      company({ name: 'qa-faute', city: 'Lyon' }),
+    ];
+    for (const dryRun of [true, false]) {
+      const report = await run(rows, dryRun);
+      assert.equal(report.ok, false, `dryRun=${dryRun}: ${JSON.stringify(report.errors)}`);
+      assert.deepEqual(report.errors, [{
+        row: 4,
+        column: 'name',
+        message: "'qa-faute' is already on row 2. Keep one row per company.",
+        code: 'CSV_COMPANY_NAME_DUPLICATE',
+        params: { name: 'qa-faute', firstRow: 2 },
+      }]);
+    }
+    assert.deepEqual(await storedCities(runner, tenantId), [], 'nothing is written');
+  });
+}
+
 void runSpecs('companies csv import', [
   ['a blank city is refused at the check, like the other required columns', testBlankCityRefused],
   ['metrics for a frozen year are refused at the check', testFrozenYearRefusedAtCheck],
+  ['two rows with the same name are refused at the check', testDuplicateNameInFile],
 ]);

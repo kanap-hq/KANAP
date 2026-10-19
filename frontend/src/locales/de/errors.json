@@ -97,6 +97,7 @@
   "CSV_DUPLICATE_KEY": "Gleiche Werte in {{columns}} wie in Zeile {{firstRow}}.",
   "CSV_NAME_MATCHED_CASE": "„{{name}}“ wurde „{{stored}}“ zugeordnet.",
   "CSV_SUPPLIER_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Lieferant.",
+  "CSV_COMPANY_NAME_DUPLICATE": "„{{name}}“ steht bereits in Zeile {{firstRow}}. Verwenden Sie eine Zeile pro Unternehmen.",
   "CSV_COMPANY_METRICS_FROZEN": "Die Kennzahlen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "CSV_CONTACT_NOT_FOUND": "Kontakt nicht gefunden: {{email}}. Legen Sie ihn zuerst unter Kontakte an.",
   "CSV_EMAIL_INVALID": "„{{value}}“ ist keine gültige E-Mail-Adresse.",

@@ -90,6 +90,17 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByText('Ligne 6, commercial_contact : « not-an-email » n\'est pas une adresse e-mail valide.')).toBeInTheDocument();
   });
 
+  it('translates a company name that the file already used', async () => {
+    check([{
+      row: 3,
+      column: 'name',
+      message: "'qa-faute' is already on row 2. Keep one row per company.",
+      code: 'CSV_COMPANY_NAME_DUPLICATE',
+      params: { name: 'qa-faute', firstRow: 2 },
+    }]);
+    expect(await screen.findByText('Ligne 3, name : « qa-faute » figure déjà à la ligne 2. Gardez une seule ligne par société.')).toBeInTheDocument();
+  });
+
   it('translates a company row whose metrics fall in a frozen year', async () => {
     check([{
       row: 2,

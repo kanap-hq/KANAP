@@ -97,6 +97,7 @@
   "CSV_DUPLICATE_KEY": "Same values in {{columns}} as row {{firstRow}}.",
   "CSV_NAME_MATCHED_CASE": "\"{{name}}\" was matched to \"{{stored}}\".",
   "CSV_SUPPLIER_NAME_DUPLICATE": "\"{{name}}\" is already on row {{firstRow}}. Keep one row per supplier.",
+  "CSV_COMPANY_NAME_DUPLICATE": "\"{{name}}\" is already on row {{firstRow}}. Keep one row per company.",
   "CSV_COMPANY_METRICS_FROZEN": "Metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "CSV_CONTACT_NOT_FOUND": "Contact not found: {{email}}. Create it in Contacts first.",
   "CSV_EMAIL_INVALID": "\"{{value}}\" is not a valid e-mail address.",

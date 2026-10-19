@@ -97,6 +97,7 @@
   "CSV_DUPLICATE_KEY": "Mismos valores en {{columns}} que en la fila {{firstRow}}.",
   "CSV_NAME_MATCHED_CASE": "«{{name}}» se ha asociado a «{{stored}}».",
   "CSV_SUPPLIER_NAME_DUPLICATE": "«{{name}}» ya figura en la fila {{firstRow}}. Deje una sola fila por proveedor.",
+  "CSV_COMPANY_NAME_DUPLICATE": "«{{name}}» ya figura en la fila {{firstRow}}. Deje una sola fila por empresa.",
   "CSV_COMPANY_METRICS_FROZEN": "Los indicadores de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "CSV_CONTACT_NOT_FOUND": "Contacto no encontrado: {{email}}. Créelo primero en Contactos.",
   "CSV_EMAIL_INVALID": "«{{value}}» no es una dirección de correo electrónico válida.",
