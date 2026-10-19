@@ -43,11 +43,12 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
 
 /**
  * The mark beside an amount shown in its own currency because its year has no exchange rate: an
- * attention dot whose tooltip says the amount is left out of the totals.
+ * attention dot whose tooltip says the amount is left out of the totals. `label` words it for a sum
+ * that left such an amount out.
  */
-export function FxMissingMark({ currency, year }: { currency: string; year: number }) {
+export function FxMissingMark(props: { currency: string; year: number } | { label: string }) {
   const { t } = useTranslation('ops');
-  const label = t('shared.fxMissing.lineTooltip', { currency, year });
+  const label = 'label' in props ? props.label : t('shared.fxMissing.lineTooltip', { currency: props.currency, year: props.year });
   return (
     <Tooltip title={label}>
       <Box component="span" role="img" aria-label={label} sx={{ ...attentionDotSx, ml: '2px' }} />

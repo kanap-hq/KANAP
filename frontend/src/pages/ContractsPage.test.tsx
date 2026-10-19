@@ -309,6 +309,33 @@ describe('ContractsPage', () => {
     expect(screen.getByText('contracts.budget.states.under')).toBeInTheDocument();
   });
 
+  it('marks a linked amount that leaves out a line without a rate, with no state, and names those lines under the totals', async () => {
+    renderPage();
+    report();
+    await waitFor(() => expect(grid.props?.pinnedBottomRowData).toHaveLength(1));
+    expect(grid.props!.footer).toBeUndefined();
+
+    const Linked = column('budget_linked').cellRenderer as unknown as React.ComponentType<any>;
+    const markName = `contracts.budget.linkedFxMissing {"year":${NEXT_YEAR}}`;
+    render(<Linked data={{ id: 'c-1', budget_linked: 1000, budget_linked_fx_missing: true, budget_gap: null, budget_state: null }} year={NEXT_YEAR} />);
+    expect(screen.getByText('1 000')).toBeInTheDocument();
+    expect(screen.getByRole('img', { name: markName })).toBeInTheDocument();
+    render(<Linked data={{ id: 'c-2', budget_linked: 500, budget_gap: 0, budget_state: 'covered' }} year={NEXT_YEAR} />);
+    expect(screen.getAllByRole('img', { name: markName })).toHaveLength(1);
+    const { container: state } = renderCell('budget_state', { id: 'c-1', budget_state: null, budget_linked_fx_missing: true });
+    expect(state.textContent).toBe('');
+
+    api.get.mockResolvedValue({ data: { ...TOTALS, budget: { ...TOTALS.budget, linked_fx_missing: [{ currency: 'GBP', year: NEXT_YEAR, lines: 1 }] } } });
+    report({ name: { filterType: 'text', type: 'contains', filter: 'SAP' } });
+    await waitFor(() => expect(grid.props?.footer).toBeTruthy());
+    render(<MemoryRouter>{grid.props!.footer}</MemoryRouter>);
+    const notice = screen.getByRole('status');
+    expect(notice).toHaveTextContent('ops:shared.fxMissing.excluding');
+    expect(notice).toHaveTextContent('GBP');
+    // The text about the contracts' own currencies stays in the totals row.
+    expect(grid.props!.pinnedBottomRowData[0].name).toContain('contracts.list.committedExcluded');
+  });
+
   it('sums the budget columns in the totals row', async () => {
     renderPage();
     report();

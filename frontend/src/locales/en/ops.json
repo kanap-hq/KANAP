@@ -601,6 +601,8 @@
       "total_one": "Total ({{count}} line)",
       "total_other": "Total ({{count}} lines)",
       "noRate": "No {{currency}} rate",
+      "unknownFx": "Unknown: a linked line has no exchange rate",
+      "linkedFxMissing": "A linked line has no exchange rate for {{year}}: left out of this amount.",
       "states": {
         "covered": "Covered",
         "under": "Under-budgeted",
