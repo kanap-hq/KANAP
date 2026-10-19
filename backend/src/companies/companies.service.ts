@@ -49,6 +49,8 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
+import { FxRateService } from '../currency/fx-rate.service';
+import { convertTurnovers } from '../spend/allocation-distribution';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -59,6 +61,8 @@ export class CompaniesService {
     @InjectRepository(Company) private readonly repo: Repository<Company>,
     private readonly audit: AuditService,
     private readonly companyMetrics: CompanyMetricsService,
+    /** Converts the turnovers of the totals into the reporting currency. */
+    private readonly fxRates?: FxRateService,
   ) {}
 
   private getRepo(manager?: EntityManager) {
@@ -489,8 +493,19 @@ export class CompaniesService {
     return results;
   }
 
-  async totals(query: any, opts?: { manager?: EntityManager }): Promise<{ headcount: number; it_users: number; turnover: number; year: number }> {
+  /**
+   * The list's totals for the year. Each company enters its turnover in millions of its base
+   * currency: the total is converted into the tenant's reporting currency (`turnover_currency`)
+   * at the live rates of the year, as an unfrozen budget version is. A currency without a rate
+   * is counted unconverted, as the version amounts are, and named in `turnover_fx_missing`.
+   */
+  async totals(
+    query: any,
+    opts: { manager?: EntityManager; tenantId: string },
+  ): Promise<{ headcount: number; it_users: number; turnover: number; turnover_currency: string; turnover_fx_missing: string[]; year: number }> {
     const repo = this.getRepo(opts?.manager);
+    const tenantId = opts?.tenantId;
+    if (!tenantId) throw new BadRequestException('A tenant is required');
     const parsed = parsePagination({ ...query, page: 1, limit: 10000 });
     const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
@@ -579,11 +594,15 @@ export class CompaniesService {
         )
       : [];
 
+    // One row per base currency: the turnovers are converted per currency below.
     const qb = repo
       .createQueryBuilder('c')
-      .select('SUM(COALESCE(m.headcount, 0))', 'headcount')
+      .select("NULLIF(UPPER(TRIM(c.base_currency)), '')", 'currency')
+      .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
       .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
-      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover');
+      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover')
+      .where('c.tenant_id = :tenantId', { tenantId })
+      .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
 
     // Apply lifecycle status for the year window
     const period = {
@@ -598,9 +617,9 @@ export class CompaniesService {
 
     // Join metrics for the selected fiscal year
     qb.leftJoin(
-      (sub) => sub.from('company_metrics', 'm').where('m.fiscal_year = :year', { year }),
+      (sub) => sub.from('company_metrics', 'm').where('m.fiscal_year = :year', { year }).andWhere('m.tenant_id = :tenantId', { tenantId }),
       'm',
-      'm.company_id = c.id',
+      'm.company_id = c.id AND m.tenant_id = c.tenant_id',
     );
 
     // Apply search and filters
@@ -616,17 +635,36 @@ export class CompaniesService {
     }
     compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
 
-    const raw = (await qb.getRawOne()) as { headcount?: any; it_users?: any; turnover?: any } | undefined;
+    const rows = (await qb.getRawMany()) as Array<{ currency?: string | null; headcount?: any; it_users?: any; turnover?: any }>;
     const toNum = (v: any) => {
       const n = Number(v ?? 0);
       return Number.isFinite(n) ? n : 0;
     };
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
-    const headcount = Math.round(toNum(raw?.headcount));
-    const it_users = Math.round(toNum(raw?.it_users));
-    const turnover = round3(toNum(raw?.turnover));
+    const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
+    const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
+    const converted = await convertTurnovers({
+      fxRates: this.fxRates,
+      manager: repo.manager,
+      tenantId,
+      fiscalYear: year,
+      rateSetId: null,
+      entries: rows
+        .filter((row) => toNum(row.turnover) !== 0)
+        // One entry per currency, keyed by its position.
+        .map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
+    });
+    let turnover = 0;
+    converted.values.forEach((value) => { turnover += value ?? 0; });
 
-    return { headcount, it_users, turnover, year };
+    return {
+      headcount,
+      it_users,
+      turnover: round3(turnover),
+      turnover_currency: converted.reportingCurrency,
+      turnover_fx_missing: converted.missingCurrencies,
+      year,
+    };
   }
 
   /**

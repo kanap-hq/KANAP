@@ -12,11 +12,12 @@ import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
 import { forwardRef } from '@nestjs/common';
 import { FreezeModule } from '../freeze/freeze.module';
+import { CurrencyModule } from '../currency/currency.module';
 import { CommonModule } from '../common/common.module';
 import { ChartOfAccounts } from '../accounts/chart-of-accounts.entity';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([Company, CompanyMetric, ChartOfAccounts]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), FreezeModule, CommonModule],
+  imports: [TypeOrmModule.forFeature([Company, CompanyMetric, ChartOfAccounts]), AuditModule, PermissionsModule, forwardRef(() => UsersModule), FreezeModule, CurrencyModule, CommonModule],
   providers: [CompaniesService, CompaniesDeleteService, CompanyMetricsService],
   controllers: [CompaniesController, CompanyMetricsController],
   exports: [CompaniesService, CompanyMetricsService],
