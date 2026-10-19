@@ -1,5 +1,8 @@
 import { BadRequestException, Body, Controller, ForbiddenException, Get, Post, Query, Req, UseGuards } from '@nestjs/common';
 import { FreezeService, FreezeTarget } from './freeze.service';
+import { attachFrozenByNames } from './freeze-actor';
+import { FreezeState } from './freeze-state.entity';
+import { EntityManager } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
@@ -45,6 +48,21 @@ export class FreezeController {
     }
     const year = Math.trunc(parsed);
     const entries = await this.freeze.getYearState(year, { manager: req?.queryRunner?.manager });
+    return this.present(year, entries, req?.queryRunner?.manager);
+  }
+
+  /** Summary and entries, with the actor's name beside the user id. */
+  private async present(year: number, entries: FreezeState[], manager?: EntityManager) {
+    const summary = this.freeze.summarize(year, entries);
+    const ids = [
+      ...entries.map((entry) => entry.frozen_by),
+      summary.scopes.companies.frozenBy,
+      summary.scopes.departments.frozenBy,
+      ...Object.values(summary.scopes.opex).map((slot) => slot.frozenBy),
+      ...Object.values(summary.scopes.capex).map((slot) => slot.frozenBy),
+    ];
+    const names = await this.freeze.userNames(ids, { manager });
+    const nameOf = (id: string | null | undefined) => (id ? names.get(id) ?? null : null);
     return {
       year,
       entries: entries.map((entry) => ({
@@ -54,10 +72,11 @@ export class FreezeController {
         isFrozen: entry.is_frozen,
         frozenAt: entry.frozen_at,
         frozenBy: entry.frozen_by,
+        frozenByName: nameOf(entry.frozen_by),
         unfrozenAt: entry.unfrozen_at,
         unfrozenBy: entry.unfrozen_by,
       })),
-      summary: this.freeze.summarize(year, entries),
+      summary: attachFrozenByNames(summary, names),
     };
   }
 
@@ -81,20 +100,7 @@ export class FreezeController {
     const targets = this.normalizeTargets(body?.scopes);
     assertCanManageTargets(targets, req);
     const entries = await this.freeze.freeze(year, targets, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-    return {
-      year,
-      entries: entries.map((entry) => ({
-        id: entry.id,
-        scope: entry.scope,
-        column: entry.columnKey === ALL_KEY ? null : entry.columnKey,
-        isFrozen: entry.is_frozen,
-        frozenAt: entry.frozen_at,
-        frozenBy: entry.frozen_by,
-        unfrozenAt: entry.unfrozen_at,
-        unfrozenBy: entry.unfrozen_by,
-      })),
-      summary: this.freeze.summarize(year, entries),
-    };
+    return this.present(year, entries, req?.queryRunner?.manager);
   }
 
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -106,19 +112,6 @@ export class FreezeController {
     const targets = this.normalizeTargets(body?.scopes);
     assertCanManageTargets(targets, req);
     const entries = await this.freeze.unfreeze(year, targets, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
-    return {
-      year,
-      entries: entries.map((entry) => ({
-        id: entry.id,
-        scope: entry.scope,
-        column: entry.columnKey === ALL_KEY ? null : entry.columnKey,
-        isFrozen: entry.is_frozen,
-        frozenAt: entry.frozen_at,
-        frozenBy: entry.frozen_by,
-        unfrozenAt: entry.unfrozen_at,
-        unfrozenBy: entry.unfrozen_by,
-      })),
-      summary: this.freeze.summarize(year, entries),
-    };
+    return this.present(year, entries, req?.queryRunner?.manager);
   }
 }

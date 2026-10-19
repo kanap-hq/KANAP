@@ -1,6 +1,7 @@
 import { BadRequestException, ForbiddenException, Injectable, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
+import { lookupUserNames } from './freeze-actor';
 import { FreezeScope, FreezeState } from './freeze-state.entity';
 import { FxIngestionService } from '../currency/fx-ingestion.service';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -283,6 +284,11 @@ export class FreezeService {
   private async columnName(column: FreezeColumn, manager: EntityManager): Promise<string> {
     const settings = await readBudgetColumns(manager, await this.requireTenantId(manager));
     return budgetColumnName(settings, FREEZE_COLUMN_MEASURE[column]);
+  }
+
+  /** Display names for freeze actors. Blank names are omitted. The id is never replaced. */
+  userNames(ids: Array<string | null | undefined>, opts?: { manager?: EntityManager }) {
+    return lookupUserNames(ids, this.manager(opts));
   }
 
   summarize(year: number, entries: FreezeState[]) {

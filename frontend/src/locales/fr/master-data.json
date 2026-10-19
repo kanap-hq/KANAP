@@ -1060,7 +1060,7 @@
       "departmentsMetrics": "Indicateurs des départements",
       "frozen": "Gelé",
       "editable": "Modifiable",
-      "frozenBy": "par {{name}}"
+      "frozenBy": "Gelé par {{name}} le {{date}}"
     }
   },
   "formSchemas": {

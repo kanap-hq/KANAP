@@ -1060,7 +1060,7 @@
       "departmentsMetrics": "Abteilungskennzahlen",
       "frozen": "Eingefroren",
       "editable": "Bearbeitbar",
-      "frozenBy": "von {{name}}"
+      "frozenBy": "Eingefroren von {{name}} am {{date}}"
     }
   },
   "formSchemas": {

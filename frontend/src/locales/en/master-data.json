@@ -1060,7 +1060,7 @@
       "departmentsMetrics": "Departments metrics",
       "frozen": "Frozen",
       "editable": "Editable",
-      "frozenBy": "by {{name}}"
+      "frozenBy": "Frozen by {{name}} on {{date}}"
     }
   },
   "formSchemas": {

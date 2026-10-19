@@ -1060,7 +1060,7 @@
       "departmentsMetrics": "Indicadores de departamentos",
       "frozen": "Congelado",
       "editable": "Editable",
-      "frozenBy": "por {{name}}"
+      "frozenBy": "Congelado por {{name}} el {{date}}"
     }
   },
   "formSchemas": {
