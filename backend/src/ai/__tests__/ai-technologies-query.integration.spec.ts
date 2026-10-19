@@ -6,14 +6,15 @@ import { DataSource, QueryRunner } from 'typeorm';
 
 // Technologies in the assistant's and the MCP server's read tools (lot C2b of
 // planning/cartographie-technologies): query_entities, aggregate_entities, get_filter_values,
-// get_entity_detail on the `technologies` family.
+// get_entity_detail and get_entity_context on the `technologies` family, and the technology
+// sections of the asset and application contexts.
 //
 // - Every field filters and sorts: reference, name, family, publisher, hosting_type, lifecycle,
 //   admin_zone, server_count, application_count, end_of_support, open_vulnerabilities.
 // - server_count leaves retired assets out; end_of_support reads the versions in use only.
-// - application_count stays in the caller's read scope: a Business Contributor's own
-//   applications, none (null) without the applications right.
-// - A user without the infrastructure right is refused.
+// - application_count and the application sections stay in the caller's read scope: a Business
+//   Contributor's own applications, none (null, section absent) without the applications right.
+// - A user without the infrastructure right is refused, and sees no technology section.
 // - Another tenant's technologies are never listed, counted or read.
 // The AI surface checks (tenant settings, provider) are not under test: stubbed open.
 
@@ -359,6 +360,51 @@ async function testDetail(harness: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(byName.data.admin_zone, 'Tier 0', 'found by name');
 }
 
+async function testContexts(harness: Harness, runner: QueryRunner, s: Seed) {
+  const group = (context: any, relation: string) => context.related.find((g: any) => g.relation === relation);
+  const winContext = await harness.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-2' });
+  assert.equal(winContext.entity.ref, 'TEC-2');
+  assert.equal(winContext.entity.metadata.family, 'operating_system');
+  const servers = group(winContext, 'servers');
+  assert.deepEqual(servers.items.map((item: any) => [item.label, item.metadata.version, item.metadata.operating_system]),
+    [['srv-a', '2019', true], ['srv-b', '2019', true]]);
+  assert.equal(servers.total, 2);
+  assert.equal(servers.truncated, false);
+  assert.deepEqual(group(winContext, 'deduced_applications').items.map((item: any) => [item.label, item.metadata.servers]),
+    [['Billing', 'srv-b'], ['Payroll', 'srv-a']], 'deduced through the servers');
+  assert.equal(group(winContext, 'declared_applications'), undefined, 'nothing declares it');
+
+  const pgContext = await harness.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-1' });
+  assert.deepEqual(group(pgContext, 'servers').items.map((item: any) => item.label), ['srv-a'], 'the retired server is left out');
+  assert.deepEqual(group(pgContext, 'declared_applications').items.map((item: any) => [item.label, item.metadata.version]),
+    [['Billing', null], ['Payroll', '15']], 'the disabled application is left out');
+
+  const assetContext = await harness.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'assets', entity_id: s.assets.srvB });
+  assert.deepEqual(group(assetContext, 'technologies').items.map((item: any) => [item.ref, item.label, item.metadata.version, item.metadata.operating_system, item.metadata.link]),
+    [['TEC-2', 'Windows Server', '2019', true, 'installed'], ['TEC-4', 'VMware vSphere', '8', false, 'carried']]);
+
+  const appContext = await harness.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'applications', entity_id: 'APP-1' });
+  assert.deepEqual(group(appContext, 'declared_technologies').items.map((item: any) => item.ref), ['TEC-1']);
+  assert.deepEqual(group(appContext, 'deduced_technologies').items.map((item: any) => [item.ref, item.metadata.servers]).sort(),
+    [['TEC-2', 'srv-b'], ['TEC-4', 'srv-b']], 'declared and deduced kept apart');
+  assert.doesNotMatch(JSON.stringify([...appContext.related].map((g: any) => g.items.map((i: any) => ({ ...i, id: undefined })))), UUID_IN_TEXT);
+
+  const appsOnlyContext = await harness.entities.getEntityContext(ctx(runner, s, 'appsOnly'), { entity_type: 'applications', entity_id: 'APP-1' });
+  assert.equal(group(appsOnlyContext, 'declared_technologies'), undefined, 'no technology section without the infrastructure right');
+  assert.equal(group(appsOnlyContext, 'deduced_technologies'), undefined);
+  await rejects(runner, () => harness.tools.execute(ctx(runner, s, 'appsOnly'), 'get_entity_context', { entity_type: 'technologies', entity_id: 'TEC-1' }),
+    /infrastructure/, 'get_entity_context of a technology without the infrastructure right');
+
+  const bcContext = await harness.entities.getEntityContext(ctx(runner, s, 'bc'), { entity_type: 'technologies', entity_id: 'TEC-1' });
+  assert.deepEqual(group(bcContext, 'declared_applications').items.map((item: any) => item.label), ['Billing'], 'Payroll is never listed');
+  assert.equal(group(bcContext, 'deduced_applications'), undefined, 'Payroll, hosted on srv-a, is out of scope');
+  const infraContext = await harness.entities.getEntityContext(ctx(runner, s, 'infraOnly'), { entity_type: 'technologies', entity_id: 'TEC-1' });
+  assert.deepEqual(infraContext.related.map((g: any) => g.relation), ['servers'], 'no application section without the applications right');
+
+  await rejects(runner, () => harness.entities.getEntityContext(ctx(runner, s, 'admin'), { entity_type: 'technologies', entity_id: s.otherTechnologyId }),
+    /not found/i, 'another tenant\'s technology has no context here');
+}
+
 async function testInfrastructureRight(harness: Harness, runner: QueryRunner, s: Seed) {
   const call = (tool: string, input: Record<string, unknown>) => harness.tools.execute(ctx(runner, s, 'appsOnly'), tool, input);
   await rejects(runner, () => call('query_entities', { entity_type: 'technologies' }), /infrastructure/, 'query_entities');
@@ -395,6 +441,7 @@ async function run() {
       await testDetail(harness, runner, s);
       await testInfrastructureRight(harness, runner, s);
       await testTenantIsolation(harness, runner, s);
+      await testContexts(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

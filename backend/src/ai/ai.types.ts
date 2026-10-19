@@ -75,6 +75,7 @@ export const AI_CONTEXT_ENTITY_TYPES = [
   'projects',
   'requests',
   'tasks',
+  'technologies',
 ] as const;
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
@@ -133,6 +134,9 @@ export type AiEntityRelationshipGroupDto = {
   relation: string;
   label: string;
   items: AiEntitySummaryDto[];
+  /** Bounded groups (`AI_CONTEXT_GROUP_ITEM_LIMIT`): every linked record, and whether `items` holds fewer. */
+  total?: number;
+  truncated?: boolean;
 };
 
 export type AiKnowledgeContextSourceDto = {
