@@ -202,7 +202,7 @@ async function testSummary() {
     assert.deepEqual(otherDirectories.services.map((item) => [item.name, item.servers]), [['Other AD', 1]]);
     assert.deepEqual(otherDirectories.forests[0].domains[0].domain_controllers.map((dc) => dc.name), ['other-dc']);
     assert.deepEqual(other.controls.map((control) => control.count), [1, 1, 1, 0, 0]);
-    assert.equal(JSON.stringify(other).includes('dc1'), false);
+    assert.equal(JSON.stringify(other).includes('"dc1"'), false, 'the other tenant never sees the asset dc1 (a quoted value: an id may contain the letters dc1)');
     assert.equal(other.zones.some((zone) => zone.unknown), false);
   });
 }
