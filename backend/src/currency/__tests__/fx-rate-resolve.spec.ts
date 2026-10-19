@@ -123,7 +123,9 @@ async function testMissingYearsRefreshedOnceInAWhile() {
   answer = 'queued';
   await fxRates.resolveRates('t', [lookup(2031)]);
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(queued.map((call) => call.years), [[2031], [2031]], 'a refresh skipped behind another one is asked again');
+  // Skipped behind a running refresh: asked again once it ends (here at once, the stub runs
+  // none), and when that is skipped too, by the next read.
+  assert.deepEqual(queued.map((call) => call.years), [[2031], [2031], [2031]], 'a refresh skipped behind another one is asked again');
 }
 
 async function testReportMissingYearsNeverThrows() {
