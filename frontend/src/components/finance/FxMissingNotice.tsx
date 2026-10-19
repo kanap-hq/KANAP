@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { canUseOperation } from '../../pages/operations/operationAccess';
 import { attentionDotSx } from '../../theme/formSx';
-import type { FxMissing } from './fxMissing';
+import { fxMissingText, type FxMissing } from './fxMissing';
 
 /** The administration page where a rate can be entered by hand. */
 export const CURRENCY_SETTINGS_PATH = '/ops/operations/currency';
@@ -18,16 +18,7 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
   const { t } = useTranslation('ops');
   const { hasLevel } = useAuth();
   if (!items?.length) return null;
-  // Counts are per currency and year: a line missing two years is in both, so several entries give
-  // no total of distinct lines.
-  const text = items.length === 1
-    ? t('shared.fxMissing.excluding', {
-      count: items[0].lines,
-      pairs: t('shared.fxMissing.pair', { currency: items[0].currency, year: items[0].year }),
-    })
-    : t('shared.fxMissing.excludingSeveral', {
-      pairs: items.map((item) => t('shared.fxMissing.pairWithCount', { currency: item.currency, year: item.year, count: item.lines })).join(', '),
-    });
+  const text = fxMissingText(t, items);
   const canEnterRate = canUseOperation('currency', hasLevel);
   return (
     <Box

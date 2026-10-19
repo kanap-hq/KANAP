@@ -1,9 +1,29 @@
+import type { TFunction } from 'i18next';
+
 /**
  * Amounts left out of the reporting currency for lack of an exchange rate: one entry per line
  * currency and budget year, with the number of distinct lines it left out (`fxMissing` of the
  * summary totals and aggregates).
  */
 export type FxMissing = { currency: string; year: number; lines: number };
+
+/**
+ * The sentence naming the amounts left out for lack of an exchange rate: the currencies and years in
+ * the order received, with their line counts (the notice's text, also a chargeback report warning).
+ * Counts are per currency and year: a line missing two years is in both, so several entries give no
+ * total of distinct lines.
+ */
+export function fxMissingText(t: TFunction, items: ReadonlyArray<FxMissing>): string {
+  if (items.length === 1) {
+    return t('ops:shared.fxMissing.excluding', {
+      count: items[0].lines,
+      pairs: t('ops:shared.fxMissing.pair', { currency: items[0].currency, year: items[0].year }),
+    });
+  }
+  return t('ops:shared.fxMissing.excludingSeveral', {
+    pairs: items.map((item) => t('ops:shared.fxMissing.pairWithCount', { currency: item.currency, year: item.year, count: item.lines })).join(', '),
+  });
+}
 
 /**
  * The entries of several answers as one list, in the order first met. The same currency and year in
