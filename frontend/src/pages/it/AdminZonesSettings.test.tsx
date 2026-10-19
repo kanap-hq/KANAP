@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
 import { KanapDialogProvider } from '../../components/design';
-import { AdminZonesEditor, autosaveBlocked, initialState, reducer } from './ItOperationsSettingsPage';
+import { AdminZonesEditor, autosaveBlocked, initialState, reducer, reorderById } from './ItOperationsSettingsPage';
 import DomainTrustsDialog from './components/DomainTrustsDialog';
 import type { DomainOption, ItOpsSettings } from '../../services/itOpsSettings';
 
@@ -53,6 +53,26 @@ describe('Administration zones settings', () => {
     const fixed = state.enums.adminZones.map((row) => ({ ...row, description: 'Identity core' }));
     state = reducer(state, { type: 'setEnum', id: 'adminZones', items: fixed });
     expect(autosaveBlocked(state, 'adminZones')).toBe(false);
+  });
+
+  it('says the first zone is the most sensitive and offers a grip on each row', () => {
+    wrap(<AdminZonesEditor items={[
+      { code: 'tier_0', label: 'Tier 0', deprecated: false },
+      { code: 'tier_1', label: 'Tier 1', deprecated: false },
+    ]} onChange={vi.fn()} />);
+    expect(screen.getByText('pages.settings.lists.adminZones.orderHint')).toBeInTheDocument();
+    expect(screen.getAllByRole('button', { name: 'pages.settings.lists.adminZones.dragToReorder' })).toHaveLength(2);
+  });
+
+  it('reorders rows by their id and leaves the list untouched when nothing moves', () => {
+    const items = [
+      { localId: 'a', code: 'tier_2' },
+      { localId: 'b', code: 'tier_0' },
+      { localId: 'c', code: 'tier_1' },
+    ];
+    expect(reorderById(items, 'c', 'a').map((row) => row.code)).toEqual(['tier_1', 'tier_2', 'tier_0']);
+    expect(reorderById(items, 'a', 'missing')).toBe(items);
+    expect(reorderById(items, 'a', 'a')).toBe(items);
   });
 
   it('limits each field to what the server accepts', () => {

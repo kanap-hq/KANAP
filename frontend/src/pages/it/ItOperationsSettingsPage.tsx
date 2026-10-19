@@ -34,6 +34,24 @@ import { useLocationOptions, type LocationOption } from '../../hooks/useLocation
 import { useCatalogRemoval } from '../../components/settings/useCatalogRemoval';
 import { useCatalogTranslations } from '../../components/settings/CatalogTranslationsDialog';
 import TranslateIcon from '@mui/icons-material/Translate';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { catalogListIssues } from '../../components/settings/catalogValidation';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { connectionTypeCategoryLabel } from '../../utils/itOpsCatalogDefaults';
@@ -619,6 +637,39 @@ interface AdminZonesEditorProps {
   onChange: (items: AdminZoneOption[]) => void;
 }
 
+/** Move the row `activeId` to the place of `overId`. Same array when nothing moves. */
+export function reorderById<T extends { localId?: string }>(items: T[], activeId: string, overId: string): T[] {
+  if (activeId === overId) return items;
+  const oldIndex = items.findIndex((row) => row.localId === activeId);
+  const newIndex = items.findIndex((row) => row.localId === overId);
+  if (oldIndex < 0 || newIndex < 0) return items;
+  return arrayMove(items, oldIndex, newIndex);
+}
+
+function SortableAdminZoneRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { t } = useTranslation(['it', 'common']);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
+    >
+      <TableCell sx={{ width: '4%', verticalAlign: 'top', px: 0.5 }}>
+        <Box
+          component="span"
+          aria-label={t('pages.settings.lists.adminZones.dragToReorder')}
+          sx={{ display: 'inline-flex', cursor: 'grab', touchAction: 'none', color: 'kanap.text.tertiary', mt: 0.75 }}
+          {...attributes}
+          {...listeners}
+        >
+          <DragIndicatorIcon sx={{ fontSize: 18 }} />
+        </Box>
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+}
+
 /** Administration zones: name, administrator group and description per zone. */
 export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange }: AdminZonesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
@@ -659,6 +710,20 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
   const removal = useCatalogRemoval('adminZones');
   const translations = useCatalogTranslations();
   const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setLocalItems((prev) => {
+      const next = reorderById(prev, String(active.id), String(over.id));
+      if (next === prev) return prev;
+      commitToParent(next);
+      return next;
+    });
+  }, [commitToParent]);
   const text = (item: any, key: 'admin_group' | 'description', placeholder: string) => (
     <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : 'description'}`)} ${item.label}` }} />
   );
@@ -667,29 +732,33 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('adminZones'))}</Typography>
+        <Typography variant="body2" color="text.secondary">{t('pages.settings.lists.adminZones.orderHint')}</Typography>
         <Typography variant="body2" color="text.secondary">{t(listDescriptionKey('adminZones'))}</Typography>
       </Stack>
       <TableContainer>
-        <Table size="small">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <Table size="small" sx={{ tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow>
+              <TableCell sx={{ width: '4%' }} />
               <TableCell sx={{ width: '22%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
-              <TableCell sx={{ width: '22%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
+              <TableCell sx={{ width: '20%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
               <TableCell sx={{ width: '28%' }}>{t('pages.settings.columns.description')}</TableCell>
               <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '20%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell align="right" sx={{ width: '18%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
+            <SortableContext items={localItems.map((item: any) => item.localId)} strategy={verticalListSortingStrategy}>
             {localItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.adminZones')}</Typography>
                 </TableCell>
               </TableRow>
             )}
             {localItems.map((item: any) => (
-              <TableRow key={item.localId}>
+              <SortableAdminZoneRow key={item.localId} id={item.localId}>
                 <TableCell sx={{ verticalAlign: 'top' }}>
                   <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth required placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
                   <IssueText issue={issues.get(localItems.indexOf(item))} />
@@ -701,10 +770,12 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
                   {item.code && <TranslateButton label={item.label} onClick={() => translations.openTranslations({ item, onSave: (next) => handleUpdate(item.localId, { translations: next } as any) })} />}
                   <Button size="small" color="error" onClick={() => void removal.requestRemoval({ name: item.label || item.code, key: item.code ? { code: item.code } : null, onRemove: () => handleRemove(item.localId), onRetire: () => handleUpdate(item.localId, { deprecated: true }) })}>{t('common:enumEditor.remove')}</Button>
                 </TableCell>
-              </TableRow>
+              </SortableAdminZoneRow>
             ))}
+            </SortableContext>
           </TableBody>
         </Table>
+        </DndContext>
       </TableContainer>
       {removal.dialog}
       {translations.dialog}

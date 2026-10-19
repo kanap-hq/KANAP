@@ -610,6 +610,8 @@
         "adminZones": {
           "title": "Administration zones",
           "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it. Find these in your administration policy or your privileged access model.",
+          "orderHint": "The first zone is the most sensitive.",
+          "dragToReorder": "Drag to reorder",
           "usage": "Technologies / Overview, administration view"
         },
         "accessMethods": {

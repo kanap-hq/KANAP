@@ -54,6 +54,13 @@ async function testZonesCatalog() {
       { code: 'tier_1', label: 'Tier 1', deprecated: false },
     ]);
     assert.deepEqual((await settingsService(runner).getSettings(tenantId, opts)).adminZones, saved.adminZones, 'served as saved');
+    const ordered = await settings.updateSettings(tenantId, { adminZones: [
+      { code: 'tier_2', label: 'Tier 2' },
+      { code: 'tier_0', label: 'Tier 0' },
+      { code: 'tier_1', label: 'Tier 1' },
+    ] as any }, opts);
+    assert.deepEqual(ordered.adminZones.map((zone) => zone.code), ['tier_2', 'tier_0', 'tier_1'], 'the saved list order is the catalog order');
+    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones.map((zone) => zone.code), ['tier_2', 'tier_0', 'tier_1']);
     assert.equal((saved.adminZones[0] as { privilege_level?: string }).privilege_level, undefined, 'a stored privilege level is ignored');
     await assert.rejects(() => settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 2', description: 'x'.repeat(2001) }] as any }, opts), BadRequestException);
     await assert.rejects(() => settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 0' }, { label: 'tier 0' }] as any }, opts), /clashes with/);
