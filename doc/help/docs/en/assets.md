@@ -118,7 +118,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 
 **Status**:
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
-- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration view](administration-view.md)
+- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 - **Lifecycle**: Active, Deprecated, Retired, etc. (configurable in Settings)
 - **Go live**: When the asset entered production
 - **End of life**: Planned or actual retirement date

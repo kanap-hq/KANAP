@@ -115,7 +115,7 @@ El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y
 ### Panel de propiedades
 
 - **Editor**, **Familia** y **Tipo de alojamiento**.
-- **Zona de administración**: solo se muestra para las tecnologías de la familia **Directorio e identidad**. Sitúa un servicio de directorio en una zona de su modelo de administración, por ejemplo el tier 0 para Entra ID, que no se ejecuta en ninguno de sus servidores. Las zonas vienen de **Panorama IT > Configuración**, y la [Vista de la administración](administration-view.md) lista los servicios de directorio de cada zona. Las demás tecnologías no llevan zona: sitúe en su lugar los servidores que las llevan. Una zona indicada antes en una tecnología de otra familia se sigue mostrando, en solo lectura, con una nota que indica que el valor ya no se utiliza.
+- **Zona de administración**: solo se muestra para las tecnologías de la familia **Directorio e identidad**. Sitúa un servicio de directorio en una zona de su modelo de administración, por ejemplo el tier 0 para Entra ID, que no se ejecuta en ninguno de sus servidores. Las zonas vienen de **Panorama IT > Configuración**, y la página [Zonas de administración](administration-view.md) lista los servicios de directorio con su zona. Las demás tecnologías no llevan zona: sitúe en su lugar los servidores que las llevan. Una zona indicada antes en una tecnología de otra familia se sigue mostrando, en solo lectura, con una nota que indica que el valor ya no se utiliza.
 - **Reemplazada por**: la tecnología que toma el relevo de esta, por ejemplo un producto más reciente al que migran sus equipos.
 - **Responsables de TI**: las personas responsables de la tecnología.
 
@@ -258,7 +258,7 @@ Registre la tecnología en el servidor donde está instalada: el host para un hi
 - **Contratos**, **líneas presupuestarias** e **incidentes**: un campo **Tecnologías** en su pestaña Relaciones, para los usuarios que pueden leer la infraestructura.
 - Informe **Fin de soporte**: las versiones que llegan a su fin de soporte, sistemas operativos incluidos, y lo que afectan. Consulte [Fin de soporte](end-of-support.md).
 - **Vulnerabilidades**: las vulnerabilidades conocidas de las versiones en uso, y los servidores y aplicaciones a los que llegan. Consulte [Vulnerabilidades](vulnerabilities.md).
-- **Vista de la administración**: los servicios de directorio de cada zona de administración, y los servidores que llevan una tecnología de directorio fuera de la zona más sensible. Consulte [Vista de la administración](administration-view.md).
+- **Zonas de administración**: los servicios de directorio con su zona, y los servidores que llevan una tecnología de directorio fuera de la zona más sensible. Consulte [Zonas de administración](administration-view.md).
 - **Contactos**: la sección **Usado en** de un contacto lista las tecnologías a las que da soporte. Consulte [Contactos](contacts.md#donde-se-usan-los-contactos).
 - **Búsqueda**: la búsqueda global y las menciones `@` del asistente encuentran las tecnologías por nombre y por referencia (`@TEC-4`).
 

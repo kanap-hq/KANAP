@@ -118,7 +118,7 @@ El panel muestra la tarjeta de identidad del activo en cada pestaña. Las edicio
 
 **Estado**:
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
-- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la [Vista de la administración](administration-view.md)
+- **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
 - **Ciclo de vida**: Activo, Obsoleto, Retirado, etc. (configurable en Configuración)
 - **Puesta en marcha**: Cuándo entró el activo en producción
 - **Fin de vida**: Fecha planificada o efectiva de retiro

@@ -104,7 +104,7 @@ Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Adminis
 
 Benennen Sie sie um, ergänzen Sie eigene oder markieren Sie sie als **Nicht mehr anbieten**, passend zu Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff. Die drei Tiers erscheinen, solange die Liste nie gespeichert wurde. Sobald sie gespeichert wurde, auch leer, fügt KANAP sie nicht mehr hinzu: Legen Sie sie bei Bedarf selbst an.
 
-Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die [Administrationssicht](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die nicht als **Nicht mehr anbieten** markiert ist.
+Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie eine Zeile an ihrem Griff, um sie zu verschieben. Eine neue Zone wird oben eingefügt: Verschieben Sie sie danach an ihren Platz. Die Seite [Administrationszonen](administration-view.md) zeigt die Zonen in dieser Reihenfolge und prüft die Assets gegen die erste Zone, die nicht als **Nicht mehr anbieten** markiert ist.
 
 **Spalten**: Name, Administratorgruppe, Beschreibung, Nicht mehr anbieten
 
@@ -113,13 +113,13 @@ Die Reihenfolge der Liste zählt: Die erste Zone ist die sensibelste. Ziehen Sie
 **Verwendung**:
 - Assets-Arbeitsbereich → Eigenschaftsleiste → **Administrationszone**
 - Technologie-Arbeitsbereich → Eigenschaftenfeld → **Administrationszone**, für die Technologien der Familie **Verzeichnis und Identität**
-- **IT-Landschaft > Administrationssicht**, die jede Zone mit ihren Assets und Verzeichnisdiensten listet, danach die Kontrollpunkte. Siehe [Administrationssicht](administration-view.md).
+- **IT-Landschaft > Administrationszonen**, die die Assets und Verzeichnisdienste jeder Zone zählt, die Kontrollpunkte ausführt und Zonen für viele Assets in einem Schritt zuordnet. Siehe [Administrationszonen](administration-view.md).
 
 Eine als **Nicht mehr anbieten** markierte Zone bleibt bei den Technologien und Assets, die ihr bereits zugeordnet sind.
 
 ### Technologiefamilien
 
-Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw. Die Technologieliste und die Berichte gruppieren Technologien nach Familie, und die [Administrationssicht](administration-view.md) findet die Verzeichnisdienste über die Familie **Verzeichnis und Identität**.
+Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw. Die Technologieliste und die Berichte gruppieren Technologien nach Familie, und die Seite [Administrationszonen](administration-view.md) findet die Verzeichnisdienste über die Familie **Verzeichnis und Identität**.
 
 **Spalten**: Name, Nicht mehr anbieten
 
@@ -145,16 +145,18 @@ Zu den Standardkategorien gehören: Anwendung, Authentifizierung, Backup, Datenb
 
 Active-Directory- oder DNS-Domänen für Assets. Integrierte Einträge können nicht geändert werden. Das DNS-Suffix dient zur Berechnung des vollqualifizierten Domänennamens (FQDN) jedes Assets.
 
-**Spalten**: Name, DNS-Suffix, Gesamtstruktur, Konten, Computer, Vertrauensstellungen, Nicht mehr anbieten
+**Spalten**: Name, DNS-Suffix, Gesamtstruktur, Anzahl der Konten, Anzahl der Computer, Vertrauensstellungen, Nicht mehr anbieten
 
 - **Gesamtstruktur**: die Active Directory-Gesamtstruktur der Domäne, wie in „Active Directory-Domänen und -Vertrauensstellungen“ angezeigt.
-- **Konten** und **Computer**: die Anzahl der Benutzerkonten und Computer der Domäne, wie in „Active Directory-Benutzer und -Computer“ gezählt. Nur ganze Zahlen.
+- **Anzahl der Konten** und **Anzahl der Computer**: die Anzahl der Benutzerkonten und Computer der Domäne, wie in „Active Directory-Benutzer und -Computer“ oder durch eine Zählung der Benutzer- und Computerobjekte der Domäne ermittelt. Nur ganze Zahlen.
+
+Fahren Sie mit der Maus über die Spaltenköpfe **Gesamtstruktur**, **Anzahl der Konten** und **Anzahl der Computer**, um zu sehen, wo Sie jeden Wert finden.
 - **Vertrauensstellungen**: Die Schaltfläche zeigt, wie viele Vertrauensstellungen die Domäne hat. Ein Klick listet die anderen Domänen, mit denen sie eine Vertrauensstellung hat, wie in „Active Directory-Domänen und -Vertrauensstellungen“ angezeigt. **Vertrauenswürdige Domäne hinzufügen** fügt eine hinzu; wählen Sie ihre **Richtung**: **ausgehend** (diese Domäne vertraut der anderen, deren Konten auf ihre Ressourcen zugreifen können), **eingehend** (die andere Domäne vertraut dieser) oder **bidirektional** (beides). Der Dialog zeigt außerdem, nur lesend, die Vertrauensstellungen, die in anderen Domänen zu dieser erfasst sind. Die Schaltfläche erscheint, sobald die Domäne gespeichert ist, und braucht mindestens eine weitere Domäne in der Liste.
 
 **Verwendung**:
 - Assets-Arbeitsbereich → Reiter Technik → Auswahl **Domäne**
 - Assets-Arbeitsbereich → Reiter Technik → **FQDN** (automatisch aus Hostname + DNS-Suffix berechnet)
-- **IT-Landschaft > Administrationssicht**: Gesamtstruktur, Vertrauensstellungen, Anzahlen und Domänencontroller. Siehe [Administrationssicht](administration-view.md#domanen).
+- **IT-Landschaft > Administrationszonen**: Domänen nach Gesamtstruktur gruppiert, mit ihren Vertrauensstellungen, Anzahlen und Domänencontrollern. Siehe [Administrationszonen](administration-view.md#verzeichnisdienste-und-domanen).
 
 **Systemeinträge** (können weder geändert noch gelöscht werden):
 - **Workgroup** - Für eigenständige Assets, die keiner Domäne beigetreten sind
@@ -406,10 +408,10 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 |------|-----------------|
 | **Zugriffsmethoden** | Anwendungen (Reiter Technik und Support → Zugriffsmethoden) |
 | **Anwendungskategorien** | Anwendungen (Kategorie) |
-| **Administrationszonen** | Assets (Eigenschaftsleiste → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenfeld → Administrationszone), Administrationssicht |
+| **Administrationszonen** | Assets (Eigenschaftsleiste → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenfeld → Administrationszone), Seite Administrationszonen |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
-| **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Administrationssicht |
+| **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Seite Administrationszonen |
 | **Entitäten** | Verbindungen (Quell-/Zielentität), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Hosting-Typen** | Standorte (Übersicht), Technologien (Hosting-Typ) |
 | **Integrationsmuster** | Schnittstellenabschnitte (Muster) |
@@ -425,7 +427,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Subnetze** | Assets (Reiter Technik → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Asset-Typen** | Assets (Übersicht → Typ) |
-| **Technologiefamilien** | Technologien (Familie), Administrationssicht (Verzeichnisdienste) |
+| **Technologiefamilien** | Technologien (Familie), Seite Administrationszonen (Verzeichnisdienste) |
 
 ---
 

@@ -40,7 +40,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende
 - [Verbindungen](connections.md) - Netzwerk- und Systemverbindungen verfolgen
 - [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
-- [Administrationssicht](administration-view.md) - Sehen, wer was verwaltet: Zonen, Domänen und Domänencontroller
+- [Administrationszonen](administration-view.md) - Sehen, wer was verwaltet: Zonen, Kontrollpunkte, Domänen und Domänencontroller
 
 **Anwendungen**
 

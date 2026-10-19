@@ -119,7 +119,7 @@ plugins:
             Incidents: Incidents
             End of support: Fins de support
             Vulnerabilities: Vulnérabilités
-            Administration view: "Vue de l'administration"
+            Administration zones: "Zones d'administration"
             "Netbox synchronisation": "Synchronisation Netbox"
             Settings: Paramètres
             Knowledge: Base de connaissances
@@ -204,7 +204,7 @@ plugins:
             Incidents: Vorfälle
             End of support: Supportende
             Vulnerabilities: Schwachstellen
-            Administration view: "Administrationssicht"
+            Administration zones: Administrationszonen
             "Netbox synchronisation": "Netbox-Synchronisierung"
             Settings: Einstellungen
             Knowledge: Wissensdatenbank
@@ -289,7 +289,7 @@ plugins:
             Incidents: Incidentes
             End of support: Fin de soporte
             Vulnerabilities: Vulnerabilidades
-            Administration view: "Vista de la administración"
+            Administration zones: "Zonas de administración"
             "Netbox synchronisation": "Sincronización con Netbox"
             Settings: Configuración
             Knowledge: Base de conocimiento
@@ -370,7 +370,7 @@ nav:
       - Technologies: technologies.md
       - Connections: connections.md
       - Connection Map: connection-map.md
-      - Administration view: administration-view.md
+      - Administration zones: administration-view.md
       - "Netbox synchronisation": netbox.md
     - Applications:
       - Applications: applications.md

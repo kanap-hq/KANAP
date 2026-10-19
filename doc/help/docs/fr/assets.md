@@ -118,7 +118,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 
 **Statut** :
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
-- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la [Vue de l'administration](administration-view.md)
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 - **Cycle de vie** : Actif, Obsolète, Retiré, etc. (configurable dans les Paramètres)
 - **Mise en production** : Quand l'actif est entré en production
 - **Fin de vie** : Date de retrait planifiée ou effective
