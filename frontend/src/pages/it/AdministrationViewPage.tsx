@@ -142,7 +142,7 @@ function ZoneSection({ zone }: { zone: AdministrationZone }) {
   const title = zone.unknown
     ? t('pages.administrationView.unknownZone', { code: zone.code })
     : `${nameOf('adminZone', zone.code, zone.label ?? zone.code)}${zone.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}`;
-  const counts = zone.asset_counts.map((item) => `${labelFor('serverKind', item.kind)}: ${item.count}`).join(', ');
+  const counts = zone.asset_counts.map((item) => t('pages.administrationView.kindCount', { kind: labelFor('serverKind', item.kind), count: item.count })).join(', ');
   return (
     <RelationsSection title={title} count={zone.assets.length}>
       <Stack spacing={0.25} sx={{ mb: 1 }}>

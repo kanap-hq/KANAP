@@ -512,6 +512,7 @@
       "noZone": "Sin zona",
       "unknownZone": "Zona desconocida ({{code}})",
       "scope": "Alcance",
+      "kindCount": "{{kind}}: {{count}}",
       "scopeEmpty": "Ningún activo en esta zona.",
       "hostedApplications_one": "{{count}} aplicación",
       "hostedApplications_other": "{{count}} aplicaciones",

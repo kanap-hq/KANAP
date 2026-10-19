@@ -512,6 +512,7 @@
       "noZone": "Keine Zone",
       "unknownZone": "Unbekannte Zone ({{code}})",
       "scope": "Umfang",
+      "kindCount": "{{kind}}: {{count}}",
       "scopeEmpty": "Kein Asset in dieser Zone.",
       "hostedApplications_one": "{{count}} Anwendung",
       "hostedApplications_other": "{{count}} Anwendungen",

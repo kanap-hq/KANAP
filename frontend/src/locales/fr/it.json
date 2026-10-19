@@ -512,6 +512,7 @@
       "noZone": "Sans zone",
       "unknownZone": "Zone inconnue ({{code}})",
       "scope": "Périmètre",
+      "kindCount": "{{kind}} : {{count}}",
       "scopeEmpty": "Aucun actif dans cette zone.",
       "hostedApplications_one": "{{count}} application",
       "hostedApplications_other": "{{count}} applications",

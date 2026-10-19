@@ -661,7 +661,7 @@ function SortableAdminZoneRow({ id, children }: { id: string; children: React.Re
         <Box
           component="span"
           aria-label={t('pages.settings.lists.adminZones.dragToReorder')}
-          sx={{ display: 'inline-flex', cursor: 'grab', touchAction: 'none', color: 'kanap.text.tertiary', mt: 0.75 }}
+          sx={{ display: 'inline-flex', cursor: 'grab', touchAction: 'none', color: 'kanap.text.secondary', mt: 0.75 }}
           {...attributes}
           {...listeners}
         >
