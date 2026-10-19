@@ -139,6 +139,7 @@
         "hosting": "Hébergement",
         "os": "OS",
         "networkZone": "Zone réseau",
+        "adminZone": "Zone d'administration",
         "lifecycle": "Cycle de vie",
         "goLive": "Mise en service",
         "endOfLife": "Fin de vie",
@@ -498,46 +499,121 @@
       }
     },
     "administrationView": {
-      "title": "Vue de l'administration",
-      "intro": "Qui administre quoi : les zones d'administration avec leurs technologies et leurs serveurs, puis les domaines avec leur forêt, leurs approbations et leurs contrôleurs de domaine.",
-      "loading": "Chargement…",
-      "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
-      "exportZones": "Exporter les zones",
+      "tabs": {
+        "assets": "Actifs",
+        "directories": "Annuaires et domaines"
+      },
+      "exportAssets": "Exporter les actifs",
       "exportDomains": "Exporter les domaines",
       "exportFailed": "L'export a échoué.",
-      "unplaced_one": "{{count}} technologie n'a pas de zone d'administration. Renseignez-la sur sa fiche.",
-      "unplaced_other": "{{count}} technologies n'ont pas de zone d'administration. Renseignez-la sur leurs fiches.",
       "zones": "Zones d'administration",
       "noZones": "Aucune zone d'administration définie pour l'instant.",
       "openSettings": "Les définir dans les réglages IT",
       "noZone": "Sans zone",
-      "noZoneHint": "Technologies à placer dans une zone.",
       "unknownZone": "Zone inconnue ({{code}})",
-      "emptyZone": "Aucune technologie dans cette zone.",
+      "kindCount": "{{kind}} : {{count}}",
+      "assetCount_one": "{{count}} actif",
+      "assetCount_other": "{{count}} actifs",
+      "scopeEmpty": "Aucun actif dans cette zone.",
+      "hostedApplications_one": "{{count}} application",
+      "hostedApplications_other": "{{count}} applications",
+      "directoryServiceCount_one": "{{count}} service d'annuaire",
+      "directoryServiceCount_other": "{{count}} services d'annuaire",
       "attributes": {
         "adminGroup": "Groupe d'administrateurs",
-        "privilegeLevel": "Niveau de privilèges",
-        "secretsLocation": "Secrets",
         "directoryServices": "Services d'annuaire"
       },
       "columns": {
         "reference": "Réf.",
-        "technology": "Technologie",
-        "family": "Famille",
+        "type": "Type",
+        "zone": "Zone",
+        "technologies": "Technologies",
+        "applications": "Applications",
+        "controls": "Contrôles",
         "servers": "Serveurs",
         "domain": "Domaine",
         "dnsSuffix": "Suffixe DNS",
-        "forest": "Forêt",
         "trusts": "Approbations",
         "accounts": "Comptes",
-        "machines": "Machines",
+        "computers": "Ordinateurs",
         "domainControllers": "Contrôleurs de domaine"
       },
-      "noServer": "Aucun serveur",
-      "via": "via {{name}}",
+      "controls": "Points de contrôle",
+      "controlsHint": "La zone la plus sensible est {{zone}}.",
+      "controlsNoCatalog": "Ajoutez une zone d'administration dans les réglages IT pour lancer les autres contrôles.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Actifs sans zone d'administration",
+          "short": "Zone non renseignée",
+          "hint": "Renseignez une zone sur chaque actif encore en service."
+        },
+        "domainControllers": {
+          "title": "Contrôleurs de domaine hors de la zone la plus sensible",
+          "short": "Contrôleur de domaine hors zone",
+          "hint": "Un contrôleur de domaine a sa place dans la zone la plus sensible."
+        },
+        "directoryAssets": {
+          "title": "Actifs portant un service d'annuaire hors de la zone la plus sensible",
+          "short": "Service d'annuaire hors zone",
+          "hint": "Un actif qui porte un service d'annuaire a sa place dans la zone la plus sensible."
+        },
+        "trustRaised": {
+          "title": "Ce qui fait tourner un actif est dans une zone moins sensible",
+          "short": "Hôte moins sensible",
+          "hint": "Ce qui fait tourner un actif devrait être dans une zone au moins aussi sensible. Un actif sans zone interrompt la vérification de la chaîne."
+        },
+        "applications": {
+          "title": "Applications hébergées dans la zone la plus sensible",
+          "short": "Application hébergée",
+          "hint": "Revoyez chaque application hébergée sur un actif de la zone la plus sensible."
+        }
+      },
+      "emptyAssets": "Aucun actif en service pour l'instant.",
+      "more": "+{{count}}",
+      "moreItems": "Et {{count}} de plus",
+      "trustPeer": {
+        "contains": "Fait tourner {{asset}} ({{zone}})",
+        "cluster": "Membre du cluster {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "Sélectionner {{name}}",
+        "all": "Sélectionner tous les actifs du filtre",
+        "some_one": "{{count}} actif sélectionné",
+        "some_other": "{{count}} actifs sélectionnés",
+        "whole_one": "{{count}} actif sélectionné, tout le filtre",
+        "whole_other": "{{count}} actifs sélectionnés, tout le filtre",
+        "clear": "Effacer la sélection"
+      },
+      "actions": {
+        "assign": "Affecter à une zone",
+        "assignSelected": "Affecter à une zone ({{count}})"
+      },
+      "bulk": {
+        "title": "Affecter à une zone",
+        "zone": "Zone",
+        "save": "Affecter",
+        "scopeSelected_one": "L'actif sélectionné.",
+        "scopeSelected_other": "Les {{count}} actifs sélectionnés.",
+        "scopeAll": "Tous les actifs du filtre actuel.",
+        "scopeAllBut_one": "Tous les actifs du filtre actuel sauf {{count}}.",
+        "scopeAllBut_other": "Tous les actifs du filtre actuel sauf {{count}}.",
+        "count_one": "Cela change la zone de {{count}} actif sur {{rows}}.",
+        "count_other": "Cela change la zone de {{count}} actifs sur {{rows}}.",
+        "counting": "Décompte…",
+        "countFailed": "Les actifs n'ont pas pu être comptés. Réessayez.",
+        "tooMany": "Plus de 5 000 actifs : affinez les filtres.",
+        "changed": "La liste a changé depuis le décompte. Vérifiez le nouveau décompte, puis confirmez à nouveau.",
+        "failed": "La zone n'a pas pu être affectée.",
+        "choose": "Choisir une zone",
+        "chooseHint": "Choisissez une zone pour voir combien d'actifs changent.",
+        "done_one": "Zone modifiée sur {{count}} actif.",
+        "done_other": "Zone modifiée sur {{count}} actifs."
+      },
       "domains": "Domaines",
       "domainsHint": "Les contrôleurs de domaine sont les serveurs du domaine qui portent une technologie d'annuaire, ou qui sont affectés avec le rôle « Contrôleur de domaine » sur une application en service.",
       "noDomains": "Aucun domaine défini.",
+      "noDirectories": "Aucun service d'annuaire. Une technologie de la famille Annuaire et identité apparaît ici.",
+      "noForest": "Sans forêt",
       "noController": "Aucun trouvé",
       "notSet": "Non renseigné",
       "none": "Aucune",
@@ -608,7 +684,9 @@
       "lists": {
         "adminZones": {
           "title": "Zones d'administration",
-          "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre, à quel niveau de privilèges, et où sont conservés ses secrets. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
+          "description": "Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs. Chaque zone indique qui l'administre. Ces informations figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.",
+          "orderHint": "La première zone est la plus sensible.",
+          "dragToReorder": "Glisser pour réorganiser",
           "usage": "Technologies / Aperçu, vue de l'administration"
         },
         "accessMethods": {
@@ -709,7 +787,7 @@
         },
         "domains": {
           "title": "Domaines",
-          "description": "Domaines Active Directory ou DNS de vos assets. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",
+          "description": "Domaines Active Directory ou DNS de vos actifs. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",
           "usage": "Actifs / Section identité"
         }
       },
@@ -722,12 +800,10 @@
         "description": "Description",
         "dnsSuffix": "Suffixe DNS",
         "forest": "Forêt",
-        "accounts": "Comptes",
-        "machines": "Machines",
+        "accountCount": "Nombre de comptes",
+        "computerCount": "Nombre d'ordinateurs",
         "trusts": "Approbations",
-        "adminGroup": "Groupe d'administrateurs",
-        "privilegeLevel": "Niveau de privilèges",
-        "secretsLocation": "Emplacement des secrets"
+        "adminGroup": "Groupe d'administrateurs"
       },
       "placeholders": {
         "connectionName": "ex. : HTTPS",
@@ -740,10 +816,31 @@
         "machineCount": "ex. : 300",
         "adminZoneName": "ex. : Tier 0",
         "adminGroup": "ex. : Admins du domaine",
-        "privilegeLevel": "ex. : Tier 0",
-        "secretsLocation": "ex. : Coffre de mots de passe, coffre A",
         "adminZoneDescription": "ex. : Services d'annuaire et d'identité",
+        "hostingTypeName": "ex. : Colocation",
+        "assetKindName": "ex. : Machine virtuelle",
+        "serverRoleName": "ex. : Contrôleur de domaine",
+        "entityName": "ex. : Utilisateurs internes",
+        "applicationCategoryName": "ex. : Productivité",
+        "networkSegmentName": "ex. : DMZ",
+        "ipAddressTypeName": "ex. : Hôte",
+        "technologyFamilyName": "ex. : Base de données",
+        "serverProviderName": "ex. : AWS",
+        "lifecycleStateName": "ex. : Actif",
+        "interfaceProtocolName": "ex. : HTTPS",
+        "interfaceDataCategoryName": "ex. : Données de référence",
+        "interfaceTriggerTypeName": "ex. : Planifié",
+        "interfacePatternName": "ex. : Webhook",
+        "interfaceFormatName": "ex. : JSON",
+        "interfaceAuthModeName": "ex. : OAuth2",
+        "accessMethodName": "ex. : Web",
+        "incidentCategoryName": "ex. : Infrastructure",
         "select": "Sélectionner…"
+      },
+      "hints": {
+        "forest": "Domaines et approbations Active Directory.",
+        "accountCount": "Utilisateurs et ordinateurs Active Directory, ou un décompte des objets utilisateur du domaine.",
+        "computerCount": "Utilisateurs et ordinateurs Active Directory, ou un décompte des objets ordinateur du domaine."
       },
       "empty": {
         "adminZones": "Aucune zone d'administration définie.",
@@ -1615,6 +1712,7 @@
         "hostnameRequired": "Le nom d'hôte est requis lorsqu'un domaine est sélectionné",
         "hostnameInvalid": "Un nom d'hôte ne peut contenir que des lettres, des chiffres, des traits d'union et des points. Chaque partie entre deux points doit faire 63 caractères au maximum.",
         "domain": "Domaine",
+        "adminZone": "Zone d'administration",
         "fqdn": "FQDN",
         "aliases": "Alias",
         "aliasesPlaceholder": "Saisissez et appuyez sur Entrée",
@@ -1848,6 +1946,7 @@
         "editor": "Éditeur",
         "family": "Famille",
         "adminZone": "Zone d'administration",
+        "adminZoneUnused": "Cette valeur n'est plus utilisée.",
         "hostingType": "Type d'hébergement",
         "description": "Description",
         "notes": "Notes",
@@ -2981,7 +3080,10 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Données au niveau de confidentialité le plus élevé avec la criticité cyber la plus faible : vérifiez l'évaluation cyber.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Aucun test de reprise depuis douze mois pour une application au niveau le plus critique.",
-    "e_g_tier_1": "ex. : Niveau 1"
+    "e_g_critical": "ex. : Critique",
+    "e_g_high": "ex. : Élevée",
+    "e_g_confidential": "ex. : Confidentiel",
+    "e_g_foundation": "ex. : Socle"
   },
   "catalogDefaults": {
     "applicationCategories": {
@@ -3151,6 +3253,16 @@
       "network_security": "Réseau et sécurité",
       "administration": "Administration",
       "other": "Autre"
+    },
+    "adminZones": {
+      "tier_0": "Tier 0 (cœur de confiance)",
+      "tier_1": "Tier 1 (serveurs et applications)",
+      "tier_2": "Tier 2 (postes de travail)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Infrastructure d'identité et de confiance : annuaires comme Active Directory ou Entra ID, PKI, outils d'administration de l'identité, et les systèmes qui les hébergent.",
+      "tier_1": "Serveurs métier, applications, bases de données et middleware.",
+      "tier_2": "Postes de travail et équipements des utilisateurs."
     },
     "domains": {
       "workgroup": "Groupe de travail",

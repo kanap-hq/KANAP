@@ -472,6 +472,32 @@ describe('ContractWorkspacePage', () => {
     expect(await screen.findAllByText('contracts.budget.states.no_line')).toHaveLength(2);
   });
 
+  it('shows a line without a rate in its own currency, leaves it out of the total and reads the year as unknown', async () => {
+    const base = mocked.get.getMockImplementation() as (url: string, options?: unknown) => Promise<unknown>;
+    mocked.get.mockImplementation(async (url: string, options?: { params?: { year: number; column: string } }) => {
+      if (url !== '/contracts/c-1/budget') return base(url, options);
+      const figures = coverage(options?.params);
+      return {
+        data: {
+          ...figures,
+          lines: [{ id: 'bl-2', amount: 300000 }, { id: 'bl-9', amount: null, fx_missing: { currency: 'GBP', amount: 55000 } }],
+          lines_fx_missing: [{ currency: 'GBP', year: NEXT_YEAR, lines: 1 }],
+          years: figures.years.map((row) => (row.year === NEXT_YEAR ? { ...row, linked: 300000, linked_fx_missing: true, gap: null, state: null } : row)),
+        },
+      };
+    });
+    renderAt('/ops/contracts/c-1/budget');
+    const local = await screen.findByText('shared.fxMissing.localAmount');
+    expect(local.closest('tr')).toHaveTextContent('BL-9');
+    expect(within(local.closest('tr') as HTMLElement).getByRole('img', { name: 'shared.fxMissing.lineTooltip' })).toBeInTheDocument();
+    expect(screen.getByText('contracts.budget.total:2').closest('tr')).toHaveTextContent(/300 000$/);
+
+    const table = screen.getByText('contracts.budget.coverage.columns.committed').closest('table') as HTMLElement;
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows[1]).toHaveTextContent(`${NEXT_YEAR}350 000300 000contracts.budget.unknownFx`);
+    expect(screen.getByRole('status')).toHaveTextContent('ops:shared.fxMissing.excluding:1');
+  });
+
   it('shows the lines without amounts to a user who cannot read the budget', async () => {
     auth.canEdit = false;
     renderAt('/ops/contracts/c-1/budget');

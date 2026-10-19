@@ -89,7 +89,7 @@ Sans accès en lecture aux lignes budgétaires (`budget:reader`), les tuiles du 
 
 ### Montants sans taux de change
 
-Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant est exclu des totaux de cette année. Les tuiles **Budget** et **Plus fortes hausses** affichent alors un avertissement d'une ligne, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises. Dans **Top lignes**, une telle ligne affiche son montant dans sa propre devise avec une petite marque orange. Voir [Taux manuels](currencies.md#taux-manuels).
+Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant est exclu des totaux de cette année. Les tuiles **Budget**, **Plus fortes hausses**, **Mon budget** et **Par centre de coûts** affichent alors un avertissement d'une ligne, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises. Dans **Top lignes**, une telle ligne affiche son montant dans sa propre devise avec une petite marque orange. Voir [Taux manuels](currencies.md#taux-manuels).
 
 ## Personnaliser la vue d'ensemble
 

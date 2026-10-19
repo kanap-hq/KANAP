@@ -16,11 +16,21 @@ export function isBudgetLineEntity(entityType: AiQueryEntityType): boolean {
   return entityType === 'spend_items' || entityType === 'capex_items';
 }
 
-/** For the families whose results carry amounts (budget lines, contracts); null for the others. */
+/** `JPY 2026 (2 lines), USD 2027 (1 line)`. */
+function describeFxMissing(pairs: Array<{ currency: string; year: number; lines: number }>): string {
+  return pairs.map((pair) => `${pair.currency} ${pair.year} (${pair.lines} ${pair.lines === 1 ? 'line' : 'lines'})`).join(', ');
+}
+
+/**
+ * For the families whose results carry amounts (budget lines, contracts); null for the others.
+ * `fxMissing`: the pairs a sum left out for lack of a rate (an aggregate's `amounts_fx_missing`),
+ * named in the note so the answer says those amounts are not included.
+ */
 export async function aiAmountsCurrency(
   context: AiExecutionContextWithManager,
   entityType: AiQueryEntityType,
   surface: 'list' | 'detail' = 'list',
+  fxMissing?: Array<{ currency: string; year: number; lines: number }>,
 ): Promise<AiAmountsCurrency | null> {
   if (isBudgetLineEntity(entityType)) {
     const currency = await readReportingCurrency(context.manager, context.tenantId);
@@ -29,7 +39,10 @@ export async function aiAmountsCurrency(
       : `Every amount (y_budget, yearly_totals, sums...) is in ${currency}.`;
     return {
       amounts_currency: currency,
-      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts have no value in ${currency} and are left out of every sum.`,
+      amounts_currency_note: `${where} ${currency} is the reporting currency: each line's amounts are converted from its own currency (its currency field) at the year's rate. A line's amounts_fx_missing_years names the years without a rate for its currency (null when every year has one): their amounts have no value in ${currency} and are left out of every sum.`
+        + (fxMissing?.length
+          ? ` These values leave out the amounts of the lines without a ${currency} rate listed in amounts_fx_missing: ${describeFxMissing(fxMissing)}. Tell the user that those amounts are not included in the figures and that they will count once the rate is available.`
+          : ''),
     };
   }
   if (entityType === 'contracts') {

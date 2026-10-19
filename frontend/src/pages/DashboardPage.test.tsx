@@ -641,6 +641,8 @@ describe('DashboardPage budget tiles', () => {
     expect(filtersOf(none)).toEqual({ cost_center_label: { filterType: 'set', values: [null] } });
     const rows = within(tile).getAllByRole('link').map((el) => el.textContent);
     expect(rows).toEqual(['dashboard.noCostCenter5k', 'IT-1 · Infrastructure3k', 'IT-2 · Workplace1k']);
+    // Every line has a rate: no notice.
+    expect(within(tile).queryByRole('status')).toBeNull();
     expect(aggregateCalls('/budget-lines/summary/aggregate')).toContainEqual({
       query: { status: 'enabled' },
       spec: {
@@ -651,6 +653,25 @@ describe('DashboardPage budget tiles', () => {
         limit: 5,
       },
     });
+  });
+
+  it('names under my budget and the cost centers the lines they leave out without an exchange rate', async () => {
+    const Y = new Date().getFullYear();
+    const base = post.getMockImplementation() as (url: string, body: any) => Promise<{ data: Record<string, unknown> }>;
+    post.mockImplementation(async (url: string, body: any) => {
+      const answer = await base(url, body);
+      const roleSum = body.spec.measures.length > 0 && 'owner_it_name' in (body.query.filters ?? {});
+      const byCostCenter = body.spec.groupBy[0] === 'cost_center_label';
+      if (roleSum) return { data: { ...answer.data, fxMissing: [{ currency: 'GBP', year: Y, lines: 1 }] } };
+      if (byCostCenter) return { data: { ...answer.data, fxMissing: [{ currency: 'JPY', year: Y, lines: 2 }] } };
+      return answer;
+    });
+    renderPage();
+    const mine = await screen.findByRole('region', { name: MY_BUDGET });
+    await within(mine).findByRole('link', { name: /roles\.itOwner/ });
+    expect(await within(mine).findByRole('status')).toHaveTextContent('shared.fxMissing.excluding');
+    const costCenters = screen.getByRole('region', { name: BY_COST_CENTER });
+    expect(await within(costCenters).findByRole('status')).toHaveTextContent('shared.fxMissing.excluding');
   });
 
   it('counts the lines without a cost center and without next year on the default column, with links', async () => {

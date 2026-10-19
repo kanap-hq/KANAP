@@ -139,6 +139,7 @@
         "hosting": "Hosting-Modell",
         "os": "OS",
         "networkZone": "Netzwerkzone",
+        "adminZone": "Administrationszone",
         "lifecycle": "Lebenszyklus",
         "goLive": "Inbetriebnahme",
         "endOfLife": "Lebensende",
@@ -498,46 +499,121 @@
       }
     },
     "administrationView": {
-      "title": "Administrationssicht",
-      "intro": "Wer verwaltet was: die Administrationszonen mit ihren Technologien und Servern, dann die Domänen mit Gesamtstruktur, Vertrauensstellungen und Domänencontrollern.",
-      "loading": "Wird geladen…",
-      "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
-      "exportZones": "Zonen exportieren",
+      "tabs": {
+        "assets": "Assets",
+        "directories": "Verzeichnisse und Domänen"
+      },
+      "exportAssets": "Assets exportieren",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
-      "unplaced_one": "{{count}} Technologie hat keine Administrationszone. Legen Sie sie im Technologiedatensatz fest.",
-      "unplaced_other": "{{count}} Technologien haben keine Administrationszone. Legen Sie sie in ihren Datensätzen fest.",
       "zones": "Administrationszonen",
       "noZones": "Noch keine Administrationszonen definiert.",
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
-      "noZoneHint": "Technologien, die einer Zone zugeordnet werden müssen.",
       "unknownZone": "Unbekannte Zone ({{code}})",
-      "emptyZone": "Keine Technologie in dieser Zone.",
+      "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} Asset",
+      "assetCount_other": "{{count}} Assets",
+      "scopeEmpty": "Kein Asset in dieser Zone.",
+      "hostedApplications_one": "{{count}} Anwendung",
+      "hostedApplications_other": "{{count}} Anwendungen",
+      "directoryServiceCount_one": "{{count}} Verzeichnisdienst",
+      "directoryServiceCount_other": "{{count}} Verzeichnisdienste",
       "attributes": {
         "adminGroup": "Administratorgruppe",
-        "privilegeLevel": "Berechtigungsstufe",
-        "secretsLocation": "Geheimnisse",
         "directoryServices": "Verzeichnisdienste"
       },
       "columns": {
         "reference": "Ref.",
-        "technology": "Technologie",
-        "family": "Familie",
+        "type": "Typ",
+        "zone": "Zone",
+        "technologies": "Technologien",
+        "applications": "Anwendungen",
+        "controls": "Kontrollen",
         "servers": "Server",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
-        "forest": "Gesamtstruktur",
         "trusts": "Vertrauensstellungen",
         "accounts": "Konten",
-        "machines": "Computer",
+        "computers": "Computer",
         "domainControllers": "Domänencontroller"
       },
-      "noServer": "Kein Server",
-      "via": "über {{name}}",
+      "controls": "Kontrollpunkte",
+      "controlsHint": "Die sensibelste Zone ist {{zone}}.",
+      "controlsNoCatalog": "Fügen Sie in den IT-Einstellungen eine Administrationszone hinzu, um die übrigen Prüfungen auszuführen.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Assets ohne Administrationszone",
+          "short": "Ohne Zone",
+          "hint": "Legen Sie für jedes noch genutzte Asset eine Zone fest."
+        },
+        "domainControllers": {
+          "title": "Domänencontroller außerhalb der sensibelsten Zone",
+          "short": "Domänencontroller außerhalb",
+          "hint": "Ein Domänencontroller gehört in die sensibelste Zone."
+        },
+        "directoryAssets": {
+          "title": "Assets mit einem Verzeichnisdienst außerhalb der sensibelsten Zone",
+          "short": "Verzeichnisdienst außerhalb",
+          "hint": "Ein Asset, das einen Verzeichnisdienst trägt, gehört in die sensibelste Zone."
+        },
+        "trustRaised": {
+          "title": "Was ein Asset betreibt, liegt in einer weniger sensiblen Zone",
+          "short": "Weniger sensibler Host",
+          "hint": "Was ein Asset betreibt, sollte in einer mindestens ebenso sensiblen Zone liegen. Ein Asset ohne Zone unterbricht die Prüfung der Kette."
+        },
+        "applications": {
+          "title": "In der sensibelsten Zone gehostete Anwendungen",
+          "short": "Gehostete Anwendung",
+          "hint": "Prüfen Sie jede Anwendung, die auf einem Asset der sensibelsten Zone gehostet wird."
+        }
+      },
+      "emptyAssets": "Noch kein Asset in Betrieb.",
+      "more": "+{{count}}",
+      "moreItems": "Und {{count}} weitere",
+      "trustPeer": {
+        "contains": "Betreibt {{asset}} ({{zone}})",
+        "cluster": "Mitglied des Clusters {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "{{name}} auswählen",
+        "all": "Alle Assets des Filters auswählen",
+        "some_one": "{{count}} Asset ausgewählt",
+        "some_other": "{{count}} Assets ausgewählt",
+        "whole_one": "{{count}} Asset ausgewählt, gesamter Filter",
+        "whole_other": "{{count}} Assets ausgewählt, gesamter Filter",
+        "clear": "Auswahl aufheben"
+      },
+      "actions": {
+        "assign": "Einer Zone zuordnen",
+        "assignSelected": "Einer Zone zuordnen ({{count}})"
+      },
+      "bulk": {
+        "title": "Einer Zone zuordnen",
+        "zone": "Zone",
+        "save": "Zuordnen",
+        "scopeSelected_one": "Das ausgewählte Asset.",
+        "scopeSelected_other": "Die {{count}} ausgewählten Assets.",
+        "scopeAll": "Alle Assets des aktuellen Filters.",
+        "scopeAllBut_one": "Alle Assets des aktuellen Filters außer {{count}}.",
+        "scopeAllBut_other": "Alle Assets des aktuellen Filters außer {{count}}.",
+        "count_one": "Dies ändert die Zone von {{count}} Asset von {{rows}}.",
+        "count_other": "Dies ändert die Zone von {{count}} Assets von {{rows}}.",
+        "counting": "Wird gezählt…",
+        "countFailed": "Die Assets konnten nicht gezählt werden. Versuchen Sie es erneut.",
+        "tooMany": "Mehr als 5.000 Assets: Grenzen Sie die Filter ein.",
+        "changed": "Die Liste hat sich seit der Zählung geändert. Prüfen Sie die neue Anzahl und bestätigen Sie erneut.",
+        "failed": "Die Zone konnte nicht zugeordnet werden.",
+        "choose": "Zone wählen",
+        "chooseHint": "Wählen Sie eine Zone, um zu sehen, wie viele Assets sich ändern.",
+        "done_one": "Zone bei {{count}} Asset geändert.",
+        "done_other": "Zone bei {{count}} Assets geändert."
+      },
       "domains": "Domänen",
       "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
       "noDomains": "Keine Domänen definiert.",
+      "noDirectories": "Kein Verzeichnisdienst. Eine Technologie der Familie Verzeichnis und Identität erscheint hier.",
+      "noForest": "Keine Gesamtstruktur",
       "noController": "Keiner gefunden",
       "notSet": "Nicht festgelegt",
       "none": "Keine",
@@ -608,7 +684,9 @@
       "lists": {
         "adminZones": {
           "title": "Administrationszonen",
-          "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet, mit welcher Berechtigungsstufe und wo ihre Geheimnisse aufbewahrt werden. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
+          "description": "Die Zonen Ihres Administrationsmodells, zum Beispiel Tier 0 für den Verzeichnisdienst und seine Controller. Jede Zone nennt, wer sie verwaltet. Sie finden diese Angaben in Ihrer Administrationsrichtlinie oder Ihrem Modell für privilegierten Zugriff.",
+          "orderHint": "Die erste Zone ist die sensibelste.",
+          "dragToReorder": "Zum Neuanordnen ziehen",
           "usage": "Technologien / Übersicht, Administrationssicht"
         },
         "accessMethods": {
@@ -722,12 +800,10 @@
         "description": "Beschreibung",
         "dnsSuffix": "DNS-Suffix",
         "forest": "Gesamtstruktur",
-        "accounts": "Konten",
-        "machines": "Computer",
+        "accountCount": "Anzahl der Konten",
+        "computerCount": "Anzahl der Computer",
         "trusts": "Vertrauensstellungen",
-        "adminGroup": "Administratorgruppe",
-        "privilegeLevel": "Berechtigungsstufe",
-        "secretsLocation": "Ablageort der Geheimnisse"
+        "adminGroup": "Administratorgruppe"
       },
       "placeholders": {
         "connectionName": "z. B. HTTPS",
@@ -740,10 +816,31 @@
         "machineCount": "z. B. 300",
         "adminZoneName": "z. B. Tier 0",
         "adminGroup": "z. B. Domänen-Admins",
-        "privilegeLevel": "z. B. Tier 0",
-        "secretsLocation": "z. B. Passwort-Tresor, Tresor A",
         "adminZoneDescription": "z. B. Verzeichnis- und Identitätsdienste",
+        "hostingTypeName": "z. B. Colocation",
+        "assetKindName": "z. B. Virtuelle Maschine",
+        "serverRoleName": "z. B. Domänencontroller",
+        "entityName": "z. B. Interne Benutzer",
+        "applicationCategoryName": "z. B. Produktivität",
+        "networkSegmentName": "z. B. DMZ",
+        "ipAddressTypeName": "z. B. Host",
+        "technologyFamilyName": "z. B. Datenbank",
+        "serverProviderName": "z. B. AWS",
+        "lifecycleStateName": "z. B. Aktiv",
+        "interfaceProtocolName": "z. B. HTTPS",
+        "interfaceDataCategoryName": "z. B. Stammdaten",
+        "interfaceTriggerTypeName": "z. B. Geplant",
+        "interfacePatternName": "z. B. Webhook",
+        "interfaceFormatName": "z. B. JSON",
+        "interfaceAuthModeName": "z. B. OAuth2",
+        "accessMethodName": "z. B. Web",
+        "incidentCategoryName": "z. B. Infrastruktur",
         "select": "Auswählen…"
+      },
+      "hints": {
+        "forest": "Active Directory-Domänen und -Vertrauensstellungen.",
+        "accountCount": "Active Directory-Benutzer und -Computer, oder eine Zählung der Benutzerobjekte der Domäne.",
+        "computerCount": "Active Directory-Benutzer und -Computer, oder eine Zählung der Computerobjekte der Domäne."
       },
       "empty": {
         "adminZones": "Keine Administrationszonen definiert.",
@@ -1615,6 +1712,7 @@
         "hostnameRequired": "Hostname ist erforderlich, wenn eine Domäne ausgewählt ist",
         "hostnameInvalid": "Ein Hostname darf nur Buchstaben, Ziffern, Bindestriche und Punkte enthalten. Jeder Teil zwischen zwei Punkten darf höchstens 63 Zeichen lang sein.",
         "domain": "Domäne",
+        "adminZone": "Administrationszone",
         "fqdn": "FQDN",
         "aliases": "Aliase",
         "aliasesPlaceholder": "Eingeben und Enter drücken",
@@ -1848,6 +1946,7 @@
         "editor": "Hersteller",
         "family": "Familie",
         "adminZone": "Administrationszone",
+        "adminZoneUnused": "Dieser Wert wird nicht mehr verwendet.",
         "hostingType": "Hosting-Typ",
         "description": "Beschreibung",
         "notes": "Notizen",
@@ -2981,7 +3080,10 @@
     "classification": "Klassifizierung",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Daten auf der höchsten Vertraulichkeitsstufe mit der niedrigsten Cyber-Kritikalität: prüfen Sie die Cyber-Bewertung.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "Kein Wiederherstellungstest in den letzten zwölf Monaten für eine Anwendung auf der kritischsten Stufe.",
-    "e_g_tier_1": "z. B. Stufe 1"
+    "e_g_critical": "z. B. Kritisch",
+    "e_g_high": "z. B. Hoch",
+    "e_g_confidential": "z. B. Vertraulich",
+    "e_g_foundation": "z. B. Grundlage"
   },
   "catalogDefaults": {
     "applicationCategories": {
@@ -3151,6 +3253,16 @@
       "network_security": "Netzwerk und Sicherheit",
       "administration": "Administration",
       "other": "Sonstiges"
+    },
+    "adminZones": {
+      "tier_0": "Tier 0 (Vertrauenskern)",
+      "tier_1": "Tier 1 (Server und Anwendungen)",
+      "tier_2": "Tier 2 (Arbeitsplätze)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Identitäts- und Vertrauensinfrastruktur: Verzeichnisdienste wie Active Directory oder Entra ID, PKI, Werkzeuge zur Identitätsverwaltung und die Systeme, auf denen sie laufen.",
+      "tier_1": "Geschäftsserver, Anwendungen, Datenbanken und Middleware.",
+      "tier_2": "Arbeitsplätze und Geräte der Benutzer."
     },
     "domains": {
       "workgroup": "Arbeitsgruppe",

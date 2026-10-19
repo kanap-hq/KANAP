@@ -237,6 +237,7 @@ const ENTITY_CONFIG: Record<AiBusinessRecordEntityType, EntityConfig> = {
       zone: { label: 'Zone', kind: 'text', nullable: true },
       hostname: { label: 'Hostname', kind: 'text', nullable: true },
       domain: { label: 'Domain', kind: 'text', nullable: true },
+      admin_zone: { label: 'Administration Zone', kind: 'text', nullable: true },
       aliases: { label: 'Aliases', kind: 'array_text', nullable: true },
       ip_addresses: { label: 'IP Addresses', kind: 'json', nullable: true },
       cluster: { label: 'Cluster', kind: 'text', nullable: true },

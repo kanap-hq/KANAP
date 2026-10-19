@@ -13,13 +13,13 @@ import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.
 import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { BudgetNature, naturesAnd } from './budget-nature';
-import { TurnoverFxMissingWarning, convertTurnovers, turnoverFxMissingWarning } from './allocation-distribution';
+import { AllocationWarning, amountFxMissingWarning, convertTurnovers, turnoverFxMissingWarning } from './allocation-distribution';
 
 /**
  * A warning of the report: a sentence, or a structured warning the screen words in the user's
- * language (`TurnoverFxMissingWarning`).
+ * language (`TurnoverFxMissingWarning`, `AmountFxMissingWarning`).
  */
-export type ChargebackWarning = string | TurnoverFxMissingWarning;
+export type ChargebackWarning = string | AllocationWarning;
 
 function warningKey(warning: ChargebackWarning): string {
   return typeof warning === 'string' ? warning : JSON.stringify(warning);
@@ -697,10 +697,16 @@ export class ChargebackReportService {
     const reportingCurrency = fxResult.settings.reportingCurrency;
     const fxMap = fxResult.map;
     const fxByVersion = new Map<string, FxResolvedRate>();
+    const fxKey = (version: SpendVersion, currency: string) => `${version.fx_rate_set_id || 'live'}:${version.budget_year}:${currency.toUpperCase()}`;
+    // The service's `missing` source: no rate for the line's currency and year (`fx-rate.service.ts`).
+    // A key the service does not answer (only a test double does) converts at 1, as before.
+    const rateMissing = (version: SpendVersion, currency: string): boolean => {
+      const found = fxMap.get(fxKey(version, currency));
+      return !!found && (found.source === 'missing' || !Number.isFinite(found.rate) || found.rate <= 0);
+    };
     const getFx = (version: SpendVersion, currency: string): FxResolvedRate => {
       const upper = currency.toUpperCase();
-      const key = `${version.fx_rate_set_id || 'live'}:${version.budget_year}:${upper}`;
-      const found = fxMap.get(key);
+      const found = fxMap.get(fxKey(version, currency));
       if (found) return found;
       return {
         rate: upper === reportingCurrency.toUpperCase() ? 1 : 1,
@@ -752,6 +758,8 @@ export class ChargebackReportService {
     const companyIds = new Set<string>();
     const departmentIds = new Set<string>();
     const versionMeta = new Map<string, { version: SpendVersion; item?: SpendItem; method: ResolvedAllocationMethod }>();
+    // `<currency>:<year>` → the lines left out of every sum for lack of a rate.
+    const fxMissingLines = new Map<string, { currency: string; year: number; lines: Set<string> }>();
 
     for (const version of fullVersions) {
       const allocationInfo = allocationData.get(version.id);
@@ -777,6 +785,19 @@ export class ChargebackReportService {
       }
       const versionTotalRaw = totalsByVersion.get(version.id) ?? 0;
       if (Math.abs(versionTotalRaw) < 0.0001) continue;
+      // No rate for the line's currency and year: the version is left out of every sum (paid,
+      // consumed, departments, intercompany), so the report balances on what it counts, and
+      // the report names it once (`amount_fx_missing`).
+      if (rateMissing(version, sourceCurrency)) {
+        const key = `${sourceCurrency}:${version.budget_year}`;
+        let entry = fxMissingLines.get(key);
+        if (!entry) {
+          entry = { currency: sourceCurrency, year: version.budget_year, lines: new Set<string>() };
+          fxMissingLines.set(key, entry);
+        }
+        entry.lines.add(version.spend_item_id);
+        continue;
+      }
       // Turnovers counted unconverted (no rate yet), for a version the report counts: one message
       // per year, not per line.
       if (allocationInfo?.warning) recordWarning(allocationInfo.warning);
@@ -856,6 +877,12 @@ export class ChargebackReportService {
       }
     }
 
+    const amountWarning = amountFxMissingWarning(
+      Array.from(fxMissingLines.values(), (entry) => ({ currency: entry.currency, year: entry.year, lines: entry.lines.size })),
+      reportingCurrency,
+    );
+    if (amountWarning) recordWarning(amountWarning);
+
     const totalRaw = Array.from(companyTotalsRaw.values()).reduce((acc, value) => acc + value, 0);
     const total = Array.from(companyTotals.values()).reduce((acc, value) => acc + value, 0);
 
@@ -917,8 +944,8 @@ export class ChargebackReportService {
   /**
    * Converts the turnovers of `companies` (their metrics of the year in `ctx.companyMetrics`)
    * into the reporting currency, at the report's rate set (`ctx.turnoverRateSetId`), into
-   * `ctx.turnovers`. A currency without a rate is counted unconverted, as the amounts are, and
-   * named in a warning.
+   * `ctx.turnovers`. A currency without a rate is counted unconverted and named in a warning
+   * (`turnover_fx_missing`).
    */
   private async convertCompanyTurnovers(
     ctx: ChargebackComputationContext,

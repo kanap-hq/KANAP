@@ -40,7 +40,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 - [Tecnologías](technologies.md) - Seguimiento de los productos sobre los que funcionan sus aplicaciones, sus versiones y su fin de soporte
 - [Conexiones](connections.md) - Seguimiento de conexiones de red y sistemas
 - [Mapa de conexiones](connection-map.md) - Visualización de la topología de conexiones
-- [Vista de la administración](administration-view.md) - Quién administra qué: zonas, dominios y controladores de dominio
+- [Zonas de administración](administration-view.md) - Quién administra qué: zonas, puntos de control, dominios y controladores de dominio
 
 **Aplicaciones**
 

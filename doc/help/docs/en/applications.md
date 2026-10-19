@@ -307,7 +307,7 @@ The Relations tab shows what this application is linked to: its budget lines, co
 
 Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. You only see the sections of the modules you can read.
 
-From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency. Contracts get one total per currency, without the disabled ones.
+From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency. A line whose currency has no exchange rate for the year shows its amount in its own currency with a small orange mark, and the total leaves it out. A one-line warning under the table names it, for example "Excluding 1 line with no exchange rate: USD 2026." See [Manual rates](currencies.md#manual-rates). Contracts get one total per currency, without the disabled ones.
 
 **Adding and removing links** (`applications:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
 

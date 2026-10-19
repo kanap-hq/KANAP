@@ -307,7 +307,7 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 
 Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. Vous ne voyez que les sections des modules que vous pouvez lire.
 
-À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting. Les contrats ont un total par devise, sans les contrats désactivés.
+À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting. Une ligne dont la devise n'a pas de taux de change pour l'année affiche son montant dans sa propre devise avec une petite marque orange, et le total l'exclut. Un avertissement d'une ligne sous le tableau l'indique, par exemple « 1 ligne sans taux de change exclue : USD 2026. » Voir [Taux manuels](currencies.md#taux-manuels). Les contrats ont un total par devise, sans les contrats désactivés.
 
 **Ajouter et retirer des liens** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
 

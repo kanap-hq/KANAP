@@ -10,6 +10,7 @@ import BudgetLinesRelationField, { type LinkedBudgetLine } from '../../../compon
 import type { AmountMeasure } from '../../../components/finance/roundPeriod';
 import { denseTableFrameSx, denseTableSx } from '../../../components/EntityTasksSection';
 import YearTabs from '../../../components/navigation/YearTabs';
+import FxMissingNotice, { FxMissingLocalAmount } from '../../../components/finance/FxMissingNotice';
 import RelationsSectionTitle from '../../portfolio/components/RelationsSectionTitle';
 import { budgetTypeChipSx } from '../../budget/budgetTypeChipSx';
 import { formatItemRef } from '../../../utils/item-ref';
@@ -24,6 +25,7 @@ import {
   offeredBudgetYears,
   useContractBudgetChoice,
   type ContractBudgetCoverage,
+  type ContractBudgetLineAmount,
 } from '../contractBudget';
 import ContractBudgetStateLabel from '../ContractBudgetStateLabel';
 
@@ -62,6 +64,14 @@ const totalsRowSx = {
 function Amount({ value }: { value: number | null | undefined }) {
   if (value == null) return null;
   return value === 0 ? <Box component="span" sx={tertiarySx}>0</Box> : <>{formatAmount(value)}</>;
+}
+
+/** A linked line's amount; without a rate that year, its amount in its own currency with the mark. */
+function LineAmount({ line, year }: { line: ContractBudgetLineAmount | undefined; year: number }) {
+  if (line?.amount == null && line?.fx_missing) {
+    return <FxMissingLocalAmount amount={line.fx_missing.amount} currency={line.fx_missing.currency} year={year} />;
+  }
+  return <Amount value={line?.amount} />;
 }
 
 /**
@@ -138,11 +148,12 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
   const sameColumn = figures?.column === choice.column;
   const amountOf = React.useMemo(() => {
     if (!figures || figures.year !== choice.year || !sameColumn) return null;
-    return new Map(figures.lines.map((line) => [line.id, line.amount]));
+    return new Map(figures.lines.map((line) => [line.id, line]));
   }, [figures, choice.year, sameColumn]);
   const showAmounts = canReadBudget;
   const amountHeader = t('contracts.budget.amountHeader', { column: choice.columnLabel, year: choice.year });
-  const total = amountOf ? shown.reduce((sum, line) => sum + (amountOf.get(line.id) ?? 0), 0) : null;
+  // A line without a rate is left out of the total (the notice under the coverage names it).
+  const total = amountOf ? shown.reduce((sum, line) => sum + (amountOf.get(line.id)?.amount ?? 0), 0) : null;
   const years = offeredBudgetYears(figures?.years.map((row) => row.year), choice.year);
 
   const hint = React.useMemo(() => {
@@ -210,7 +221,7 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
                       <Box component="td" sx={{ maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }} title={line.product_name}>{line.product_name}</Box>
                       <td><Chip size="small" label={t(`budget.${line.nature}`)} sx={budgetTypeChipSx} /></td>
                       <td>{line.company_name ?? ''}</td>
-                      {showAmounts && <Box component="td" sx={amountCellSx}><Amount value={amountOf?.get(line.id)} /></Box>}
+                      {showAmounts && <Box component="td" sx={amountCellSx}><LineAmount line={amountOf?.get(line.id)} year={choice.year} /></Box>}
                     </tr>
                   );
                 })}
@@ -279,13 +290,18 @@ export default function ContractBudgetTab({ contractId, readOnly, onChanged, ter
                       </Box>
                       <Box component="td" sx={amountCellSx}><Amount value={row.linked} /></Box>
                       <Box component="td" sx={amountCellSx}>{row.gap == null ? null : formatSignedAmount(row.gap)}</Box>
-                      <td><ContractBudgetStateLabel state={row.state} /></td>
+                      <td>
+                        {row.linked_fx_missing && row.committed != null && row.state == null
+                          ? <Box component="span" sx={[tertiarySx, { fontSize: 13 }]}>{t('contracts.budget.unknownFx')}</Box>
+                          : <ContractBudgetStateLabel state={row.state} />}
+                      </td>
                     </Box>
                   );
                 })}
               </tbody>
             </Box>
           </Box>
+          <FxMissingNotice items={figures.lines_fx_missing} />
           <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{hint}</Typography>
         </Stack>
       )}

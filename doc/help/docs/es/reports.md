@@ -90,6 +90,8 @@ Cómo funcionan:
 
 Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. El aviso no se imprime. Vea [Tasas manuales](currencies.md#tasas-manuales).
 
+Los dos informes de contracargo excluyen estos importes de todas sus cifras: pagado, consumido, departamentos y flujos intercompañía. Cada informe queda equilibrado sobre lo que cuenta. El mismo aviso aparece encima del informe.
+
 ### Abrir la lista desde un informe
 
 En **Plantilla por mes**, **Coste por ETC**, **Dimensiones analíticas** y **Cuentas de consolidación**, el nombre de un grupo es un enlace que abre la [lista de líneas presupuestarias](budget-lines.md) en una pestaña nueva, con las líneas que cuenta la fila:

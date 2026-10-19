@@ -23,7 +23,8 @@ import {
 // contracts carries the commitment, the linked sum, the gap and the state of a year and column,
 // sorts and filters on them on the server and sums them in its totals; the contract page reads
 // the same figures for every year. Two currencies besides the reporting one: USD with a rate,
-// GBP without.
+// GBP without. With `mixed`, a contract whose linked lines include a GBP line: its amount is
+// unknown in EUR, left out of the linked sum and named, never counted as 0.
 
 const Y = contractBudgetCurrentYear();
 const N1 = Y + 1;
@@ -34,7 +35,7 @@ type Seeded = { tenantId: string; contracts: Record<string, string>; lines: Reco
 /** Twelve months adding up to `total` (all of it in January). */
 const months = (total: number) => [total, ...Array(11).fill(0)];
 
-async function seed(runner: QueryRunner): Promise<Seeded> {
+async function seed(runner: QueryRunner, opts: { mixed?: boolean } = {}): Promise<Seeded> {
   const tenantId = await seedTenant(runner, 'contract-budget');
   const { companyId } = await seedCompany(runner, tenantId, 'Contract budget company');
   const [supplier] = await runner.query(`INSERT INTO suppliers (tenant_id, name) VALUES ($1, 'Contract budget supplier') RETURNING id`, [tenantId]);
@@ -102,6 +103,16 @@ async function seed(runner: QueryRunner): Promise<Seeded> {
 
   // GBP has no rate: no committed amount in EUR.
   contracts.gbp = await contract('Sterling', 1000, 'GBP');
+
+  if (opts.mixed) {
+    await runner.query(`INSERT INTO currencies (code, name) VALUES ('GBP', 'Pound sterling') ON CONFLICT (code) DO NOTHING`);
+    // 2 000 EUR committed; linked: 1 500 EUR, 400 GBP without a rate, and a GBP line at 0.
+    contracts.mixed = await contract('Mixed', 2000);
+    lines.mixedEur = await line('opex', 1500);
+    lines.mixedGbp = await line('opex', 400, 'GBP');
+    lines.mixedGbpZero = await line('opex', 0, 'GBP');
+    for (const id of [lines.mixedEur, lines.mixedGbp, lines.mixedGbpZero]) await link(contracts.mixed, id);
+  }
 
   // Ended two years ago without renewal: nothing committed, no line.
   contracts.ended = await contract('Ended', 700, 'EUR', { start: `${Y - 3}-01-01`, renewal: false });
@@ -235,6 +246,7 @@ async function testTotals() {
       linked: 1200 + 1000 + 1200 + 1100 + 900,
       // Over the contracts with a committed amount.
       gap: 0 - 1400 + 200 + 100 - 500 + 0 + 0,
+      linked_fx_missing: [],
       excluded: [{ currency: 'GBP', count: 1 }],
       no_line_count: 1,
       under_count: 1,
@@ -279,9 +291,10 @@ async function testContractPage() {
 
     const usd = await svc.budgetCoverage(contracts.usd, { year: String(N1), column: 'planned' }, opts);
     assert.equal(usd.currency, 'USD');
-    assert.deepEqual(usd.years.find((row) => row.year === N1), { year: N1, committed_local: 1000, committed: 900, linked: 900, gap: 0, state: 'covered' });
+    assert.deepEqual(usd.years.find((row) => row.year === N1), { year: N1, committed_local: 1000, committed: 900, linked: 900, linked_fx_missing: false, gap: 0, state: 'covered' });
     const gbp = await svc.budgetCoverage(contracts.gbp, { year: String(N1), column: 'planned' }, opts);
-    assert.deepEqual(gbp.years.find((row) => row.year === N1), { year: N1, committed_local: 1000, committed: null, linked: 0, gap: null, state: null }, 'no rate');
+    assert.deepEqual(gbp.years.find((row) => row.year === N1), { year: N1, committed_local: 1000, committed: null, linked: 0, linked_fx_missing: false, gap: null, state: null }, 'no rate');
+    assert.deepEqual(gbp.lines_fx_missing, []);
 
     // A year outside the selector's years joins them.
     const later = await svc.budgetCoverage(contracts.covered, { year: String(Y + 4), column: 'planned' }, opts);
@@ -293,7 +306,46 @@ async function testContractPage() {
   });
 }
 
+async function testLinkedLineWithoutARate() {
+  await inRolledBackTransaction(async (runner) => {
+    const { tenantId, contracts, lines } = await seed(runner, { mixed: true });
+    const svc = service();
+    const opts = { manager: runner.manager, budgetAccess: true };
+
+    const page = await svc.list(budgetQuery({ limit: 50 }), opts);
+    const mixed = (page.items as any[]).find((row) => row.id === contracts.mixed);
+    assert.deepEqual(
+      [mixed.budget_committed, mixed.budget_linked, mixed.budget_gap, mixed.budget_state, mixed.budget_linked_fx_missing],
+      [2000, 1500, null, null, true],
+      'the GBP line is left out of the linked sum; gap and state unknown, never covered',
+    );
+    const covered = (page.items as any[]).find((row) => row.id === contracts.covered);
+    assert.equal(covered.budget_linked_fx_missing, false);
+    const unknown = await svc.list(budgetQuery({ filters: JSON.stringify({ budget_state: { filterType: 'set', values: ['covered', 'over', 'under'] } }), limit: 50 }), opts);
+    assert.equal((unknown.items as any[]).some((row) => row.id === contracts.mixed), false, 'no state to filter on');
+
+    const totals = await svc.totals(budgetQuery(), { ...opts, tenantId });
+    assert.deepEqual(totals.budget?.linked_fx_missing, [{ currency: 'GBP', year: N1, lines: 1 }], 'the line at 0 is known whatever the rate');
+    assert.deepEqual([totals.budget?.no_line_count, totals.budget?.under_count], [1, 1]);
+    const scoped = await svc.totals(budgetQuery({ filters: JSON.stringify({ budget_state: { filterType: 'set', values: ['under'] } }) }), { ...opts, tenantId });
+    assert.deepEqual(scoped.budget?.linked_fx_missing, [], 'the contracts in scope only');
+
+    const tab = await svc.budgetCoverage(contracts.mixed, { year: String(N1), column: 'planned' }, opts);
+    const byLine = new Map(tab.lines.map((line) => [line.id, line]));
+    assert.deepEqual(byLine.get(lines.mixedEur), { id: lines.mixedEur, amount: 1500 });
+    assert.deepEqual(byLine.get(lines.mixedGbp), { id: lines.mixedGbp, amount: null, fx_missing: { currency: 'GBP', amount: 400 } });
+    assert.deepEqual(byLine.get(lines.mixedGbpZero), { id: lines.mixedGbpZero, amount: 0 });
+    assert.deepEqual(tab.lines_fx_missing, [{ currency: 'GBP', year: N1, lines: 1 }]);
+    assert.deepEqual(
+      tab.years.find((row) => row.year === N1),
+      { year: N1, committed_local: 2000, committed: 2000, linked: 1500, linked_fx_missing: true, gap: null, state: null },
+    );
+    assert.equal(tab.years.find((row) => row.year === Y)!.linked_fx_missing, false, 'no amount that year, nothing missing');
+  });
+}
+
 void runSpecs('contract-budget.integration.spec', [
+  ['testLinkedLineWithoutARate', testLinkedLineWithoutARate],
   ['testLineAmountsAreTheBudgetList', testLineAmountsAreTheBudgetList],
   ['testListFigures', testListFigures],
   ['testTotals', testTotals],

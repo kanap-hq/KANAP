@@ -4,8 +4,6 @@ import {
   FormHelperText,
   IconButton,
   Stack,
-  Tab,
-  Tabs,
   Typography,
   useMediaQuery,
 } from '@mui/material';
@@ -17,13 +15,9 @@ import ChevronRightIcon from '@mui/icons-material/ChevronRight';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
+import WorkspaceTabs, { type WorkspaceTab } from './WorkspaceTabs';
 
-export type PortfolioDetailWorkspaceTab = {
-  key: string;
-  label: string;
-  badge?: number;
-  disabled?: boolean;
-};
+export type PortfolioDetailWorkspaceTab = WorkspaceTab;
 
 type PortfolioDetailWorkspaceNav = {
   currentIndex: number;
@@ -478,80 +472,7 @@ export default function PortfolioDetailWorkspaceShell({
           </Box>
 
           {hasTabRow && (
-            <Tabs
-              value={activeTab}
-              onChange={(_, nextValue) => onTabChange(String(nextValue))}
-              variant="scrollable"
-              allowScrollButtonsMobile
-              sx={{
-                minHeight: 'auto',
-                overflow: 'visible',
-                '& .MuiTabs-indicator': { display: 'none' },
-                '& .MuiTabs-scroller': { overflow: 'visible !important' },
-                '& .MuiTabs-flexContainer': { overflow: 'visible', pt: '10px' },
-              }}
-            >
-              {tabs.map((tab) => (
-                <Tab
-                  key={tab.key}
-                  label={(
-                    <Box component="span" sx={{ position: 'relative', display: 'inline-flex', alignItems: 'center' }}>
-                      {tab.label}
-                      {typeof tab.badge === 'number' && (
-                        <Box
-                          component="span"
-                          sx={(theme) => ({
-                            position: 'absolute',
-                            top: '-9px',
-                            right: '-16px',
-                            minWidth: 15,
-                            height: 15,
-                            px: '4px',
-                            borderRadius: '999px',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            bgcolor: activeTab === tab.key ? theme.palette.kanap.teal : theme.palette.kanap.pill.bg,
-                            border: `1px solid ${activeTab === tab.key ? theme.palette.kanap.teal : theme.palette.kanap.pill.border}`,
-                            color: activeTab === tab.key ? theme.palette.kanap.tealForeground : theme.palette.kanap.text.tertiary,
-                            fontSize: 10,
-                            fontWeight: 500,
-                            lineHeight: 1,
-                            pointerEvents: 'none',
-                          })}
-                        >
-                          {tab.badge}
-                        </Box>
-                      )}
-                    </Box>
-                  )}
-                  value={tab.key}
-                  disabled={tab.disabled}
-                  sx={(theme) => ({
-                    position: 'relative',
-                    overflow: 'visible',
-                    minHeight: 'auto',
-                    pt: 0,
-                    px: 0,
-                    pb: '9px',
-                    mr: tab.badge != null ? '30px' : '24px',
-                    textTransform: 'none',
-                    minWidth: 'auto',
-                    fontSize: '14px',
-                    lineHeight: 1.35,
-                    fontWeight: activeTab === tab.key ? 500 : 400,
-                    color: activeTab === tab.key ? theme.palette.kanap.teal : theme.palette.kanap.text.secondary,
-                    '&:hover': {
-                      color: activeTab === tab.key ? theme.palette.kanap.teal : theme.palette.kanap.text.primary,
-                    },
-                    '&.Mui-disabled': {
-                      color: theme.palette.kanap.text.tertiary,
-                      opacity: 0.65,
-                    },
-                  })}
-                />
-              ))}
-            </Tabs>
+            <WorkspaceTabs tabs={tabs} activeTab={activeTab} onTabChange={onTabChange} />
           )}
         </Box>
       </Box>

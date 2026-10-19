@@ -139,6 +139,7 @@
         "hosting": "Hosting",
         "os": "OS",
         "networkZone": "Network zone",
+        "adminZone": "Administration zone",
         "lifecycle": "Lifecycle",
         "goLive": "Go-live",
         "endOfLife": "End-of-life",
@@ -498,46 +499,121 @@
       }
     },
     "administrationView": {
-      "title": "Administration view",
-      "intro": "Who administers what: the administration zones with their technologies and servers, then the domains with their forest, trusts and domain controllers.",
-      "loading": "Loading…",
-      "loadFailed": "The administration view could not be loaded.",
-      "exportZones": "Export zones",
+      "tabs": {
+        "assets": "Assets",
+        "directories": "Directories and domains"
+      },
+      "exportAssets": "Export assets",
       "exportDomains": "Export domains",
       "exportFailed": "The export failed.",
-      "unplaced_one": "{{count}} technology has no administration zone. Set it on the technology record.",
-      "unplaced_other": "{{count}} technologies have no administration zone. Set it on their records.",
       "zones": "Administration zones",
       "noZones": "No administration zones defined yet.",
       "openSettings": "Define them in the IT settings",
       "noZone": "No zone",
-      "noZoneHint": "Technologies to place in a zone.",
       "unknownZone": "Unknown zone ({{code}})",
-      "emptyZone": "No technology in this zone.",
+      "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} asset",
+      "assetCount_other": "{{count}} assets",
+      "scopeEmpty": "No asset in this zone.",
+      "hostedApplications_one": "{{count}} application",
+      "hostedApplications_other": "{{count}} applications",
+      "directoryServiceCount_one": "{{count}} directory service",
+      "directoryServiceCount_other": "{{count}} directory services",
       "attributes": {
         "adminGroup": "Administrator group",
-        "privilegeLevel": "Privilege level",
-        "secretsLocation": "Secrets",
         "directoryServices": "Directory services"
       },
       "columns": {
         "reference": "Ref",
-        "technology": "Technology",
-        "family": "Family",
+        "type": "Type",
+        "zone": "Zone",
+        "technologies": "Technologies",
+        "applications": "Applications",
+        "controls": "Controls",
         "servers": "Servers",
         "domain": "Domain",
         "dnsSuffix": "DNS suffix",
-        "forest": "Forest",
         "trusts": "Trusts",
         "accounts": "Accounts",
-        "machines": "Machines",
+        "computers": "Computers",
         "domainControllers": "Domain controllers"
       },
-      "noServer": "No server",
-      "via": "via {{name}}",
+      "controls": "Control points",
+      "controlsHint": "The most sensitive zone is {{zone}}.",
+      "controlsNoCatalog": "Add an administration zone in the IT settings to run the other checks.",
+      "controlsList": {
+        "assetsWithoutZone": {
+          "title": "Assets without an administration zone",
+          "short": "Without a zone",
+          "hint": "Set a zone on each asset that is still in use."
+        },
+        "domainControllers": {
+          "title": "Domain controllers outside the most sensitive zone",
+          "short": "Domain controller outside",
+          "hint": "A domain controller belongs in the most sensitive zone."
+        },
+        "directoryAssets": {
+          "title": "Assets carrying a directory service outside the most sensitive zone",
+          "short": "Directory service outside",
+          "hint": "An asset that carries a directory service belongs in the most sensitive zone."
+        },
+        "trustRaised": {
+          "title": "What runs an asset is in a less sensitive zone",
+          "short": "Less sensitive host",
+          "hint": "What runs an asset should sit in a zone at least as sensitive. An asset without a zone interrupts the check of the chain."
+        },
+        "applications": {
+          "title": "Applications hosted in the most sensitive zone",
+          "short": "Application hosted",
+          "hint": "Review each application hosted on an asset of the most sensitive zone."
+        }
+      },
+      "emptyAssets": "No asset in use yet.",
+      "more": "+{{count}}",
+      "moreItems": "And {{count}} more",
+      "trustPeer": {
+        "contains": "Runs {{asset}} ({{zone}})",
+        "cluster": "Member of cluster {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "Select {{name}}",
+        "all": "Select every asset of the filter",
+        "some_one": "{{count}} asset selected",
+        "some_other": "{{count}} assets selected",
+        "whole_one": "{{count}} asset selected, whole filter",
+        "whole_other": "{{count}} assets selected, whole filter",
+        "clear": "Clear selection"
+      },
+      "actions": {
+        "assign": "Assign to a zone",
+        "assignSelected": "Assign to a zone ({{count}})"
+      },
+      "bulk": {
+        "title": "Assign to a zone",
+        "zone": "Zone",
+        "save": "Assign",
+        "scopeSelected_one": "The selected asset.",
+        "scopeSelected_other": "The {{count}} selected assets.",
+        "scopeAll": "Every asset of the current filter.",
+        "scopeAllBut_one": "Every asset of the current filter but {{count}}.",
+        "scopeAllBut_other": "Every asset of the current filter but {{count}}.",
+        "count_one": "This changes the zone of {{count}} asset of {{rows}}.",
+        "count_other": "This changes the zone of {{count}} assets of {{rows}}.",
+        "counting": "Counting…",
+        "countFailed": "The assets could not be counted. Try again.",
+        "tooMany": "More than 5,000 assets: narrow the filters.",
+        "changed": "The list changed since the count. Check the new count, then confirm again.",
+        "failed": "The zone could not be assigned.",
+        "choose": "Choose a zone",
+        "chooseHint": "Choose a zone to see how many assets change.",
+        "done_one": "Zone changed on {{count}} asset.",
+        "done_other": "Zone changed on {{count}} assets."
+      },
       "domains": "Domains",
       "domainsHint": "Domain controllers are the servers of the domain that carry a directory technology, or that are assigned with the \"Domain controller\" server role on an application in service.",
       "noDomains": "No domains defined.",
+      "noDirectories": "No directory service. A technology of the directory family shows here.",
+      "noForest": "No forest",
       "noController": "None found",
       "notSet": "Not set",
       "none": "None",
@@ -608,7 +684,9 @@
       "lists": {
         "adminZones": {
           "title": "Administration zones",
-          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it, at which privilege level, and where its secrets are kept. Find these in your administration policy or your privileged access model.",
+          "description": "Zones of your administration model, for example Tier 0 for the directory and its controllers. Each zone names who administers it. Find these in your administration policy or your privileged access model.",
+          "orderHint": "The first zone is the most sensitive.",
+          "dragToReorder": "Drag to reorder",
           "usage": "Technologies / Overview, administration view"
         },
         "accessMethods": {
@@ -722,12 +800,10 @@
         "description": "Description",
         "dnsSuffix": "DNS suffix",
         "forest": "Forest",
-        "accounts": "Accounts",
-        "machines": "Machines",
+        "accountCount": "Number of accounts",
+        "computerCount": "Number of computers",
         "trusts": "Trusts",
-        "adminGroup": "Administrator group",
-        "privilegeLevel": "Privilege level",
-        "secretsLocation": "Secrets location"
+        "adminGroup": "Administrator group"
       },
       "placeholders": {
         "connectionName": "e.g., HTTPS",
@@ -740,10 +816,31 @@
         "machineCount": "e.g., 300",
         "adminZoneName": "e.g., Tier 0",
         "adminGroup": "e.g., Domain admins",
-        "privilegeLevel": "e.g., Tier 0",
-        "secretsLocation": "e.g., Password vault, safe A",
         "adminZoneDescription": "e.g., Directory and identity services",
+        "hostingTypeName": "e.g., Colocation",
+        "assetKindName": "e.g., Virtual machine",
+        "serverRoleName": "e.g., Domain controller",
+        "entityName": "e.g., Internal users",
+        "applicationCategoryName": "e.g., Productivity",
+        "networkSegmentName": "e.g., DMZ",
+        "ipAddressTypeName": "e.g., Host",
+        "technologyFamilyName": "e.g., Database",
+        "serverProviderName": "e.g., AWS",
+        "lifecycleStateName": "e.g., Active",
+        "interfaceProtocolName": "e.g., HTTPS",
+        "interfaceDataCategoryName": "e.g., Master data",
+        "interfaceTriggerTypeName": "e.g., Scheduled",
+        "interfacePatternName": "e.g., Webhook",
+        "interfaceFormatName": "e.g., JSON",
+        "interfaceAuthModeName": "e.g., OAuth2",
+        "accessMethodName": "e.g., Web",
+        "incidentCategoryName": "e.g., Infrastructure",
         "select": "Select…"
+      },
+      "hints": {
+        "forest": "Active Directory Domains and Trusts.",
+        "accountCount": "Active Directory Users and Computers, or a count of user objects in the domain.",
+        "computerCount": "Active Directory Users and Computers, or a count of computer objects in the domain."
       },
       "empty": {
         "adminZones": "No administration zones defined.",
@@ -1615,6 +1712,7 @@
         "hostnameRequired": "Hostname is required when a domain is selected",
         "hostnameInvalid": "A host name can use only letters, digits, hyphens and dots. Each part between dots must be 63 characters or less.",
         "domain": "Domain",
+        "adminZone": "Administration zone",
         "fqdn": "FQDN",
         "aliases": "Aliases",
         "aliasesPlaceholder": "Type and press enter",
@@ -1848,6 +1946,7 @@
         "editor": "Publisher",
         "family": "Family",
         "adminZone": "Administration zone",
+        "adminZoneUnused": "This value is no longer used.",
         "hostingType": "Hosting type",
         "description": "Description",
         "notes": "Notes",
@@ -2981,7 +3080,10 @@
     "classification": "Classification",
     "data_at_the_highest_confidentiality_level_with_the_lowest_cyber_criticality_check_the_cyber_assessment": "Data at the highest confidentiality level with the lowest cyber criticality: check the cyber assessment.",
     "no_recovery_test_in_the_last_twelve_months_for_an_application_at_the_most_critical_level": "No recovery test in the last twelve months for an application at the most critical level.",
-    "e_g_tier_1": "e.g., Tier 1"
+    "e_g_critical": "e.g., Critical",
+    "e_g_high": "e.g., High",
+    "e_g_confidential": "e.g., Confidential",
+    "e_g_foundation": "e.g., Foundation"
   },
   "catalogDefaults": {
     "applicationCategories": {
@@ -3151,6 +3253,16 @@
       "network_security": "Network and security",
       "administration": "Administration",
       "other": "Other"
+    },
+    "adminZones": {
+      "tier_0": "Tier 0 (core of trust)",
+      "tier_1": "Tier 1 (servers and applications)",
+      "tier_2": "Tier 2 (workstations)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Identity and trust infrastructure: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.",
+      "tier_1": "Business servers, applications, databases and middleware.",
+      "tier_2": "User workstations and devices."
     },
     "domains": {
       "workgroup": "Workgroup",

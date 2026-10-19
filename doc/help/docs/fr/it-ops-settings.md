@@ -31,7 +31,7 @@ Dans une section, les listes sont triées par nom. Chaque liste apparaît comme 
 
 Chaque liste possède ses propres contrôles en haut :
 
-- **Ajouter un élément** - Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir.
+- **Ajouter un élément** - Insère une nouvelle ligne en haut de la liste, focalisée et prête à saisir. Son champ de nom affiche un exemple propre à la liste.
 - Les modifications sont enregistrées automatiquement environ une seconde et demie après votre dernière saisie, dès que toutes les lignes sont valides. Un indicateur d'enregistrement s'affiche à côté de la liste.
 
 Pour les longues listes (plus de 25 lignes), le tableau virtualise les lignes, affichant environ 20 à la fois avec un défilement fluide et des en-têtes fixes.
@@ -42,7 +42,7 @@ Vous ne voyez et ne saisissez jamais que des **noms**. KANAP génère un code in
 
 Parce que les noms identifient les valeurs, quelques règles s'appliquent au sein d'une liste :
 
-- chaque valeur doit avoir un nom, et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
+- chaque valeur doit avoir un nom (un astérisque marque la colonne **Nom**), et deux valeurs ne peuvent pas porter le même nom (la casse n'est pas prise en compte) ;
 - un nom ne peut pas être identique au code interne d'une autre valeur de la même liste ;
 - les noms des **Méthodes d'accès** ne peuvent contenir ni virgule ni point-virgule, car l'export CSV les regroupe dans une seule cellule séparée par des virgules.
 
@@ -96,23 +96,30 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 
 ### Zones d'administration
 
-Les zones de votre modèle d'administration, par exemple le tier 0 pour l'annuaire et ses contrôleurs, le tier 1 pour les serveurs, le tier 2 pour les postes de travail. Elles figurent dans votre politique d'administration ou votre modèle d'accès à privilèges.
+Les zones de votre modèle d'administration. KANAP fournit les trois tiers du modèle d'administration en tiers, une bonne pratique reconnue :
 
-**Colonnes** : Nom, Groupe d'administrateurs, Niveau de privilèges, Emplacement des secrets, Description, Ne plus proposer
+- **Tier 0 (cœur de confiance)** : les annuaires comme Active Directory ou Entra ID, la PKI, les outils d'administration de l'identité, et les systèmes qui les hébergent.
+- **Tier 1 (serveurs et applications)** : les serveurs métier, les applications, les bases de données et le middleware.
+- **Tier 2 (postes de travail)** : les postes de travail et les équipements des utilisateurs.
 
-- **Groupe d'administrateurs** : qui administre la zone, par exemple « Admins du domaine ».
-- **Niveau de privilèges** : le niveau de la zone dans votre modèle, par exemple « Tier 0 ».
-- **Emplacement des secrets** : où sont conservés les secrets d'administration de la zone, par exemple un coffre de mots de passe.
+Renommez-les, ajoutez les vôtres ou retirez-les selon votre politique d'administration ou votre modèle d'accès à privilèges. Les trois tiers apparaissent tant que la liste n'a jamais été enregistrée. Une fois la liste enregistrée, même vide, KANAP ne les ajoute plus : ajoutez-les vous-même si vous en avez besoin.
+
+L'ordre de la liste compte : la première zone est la plus sensible. Faites glisser une ligne par sa poignée pour la déplacer. Une nouvelle zone s'ajoute en haut : déplacez-la ensuite à sa place. La page [Zones d'administration](administration-view.md) affiche les zones dans cet ordre et contrôle les actifs par rapport à la première zone qui n'est pas marquée **Ne plus proposer**.
+
+**Colonnes** : Nom, Groupe d'administrateurs, Description, Ne plus proposer
+
+- **Groupe d'administrateurs** : le groupe de l'annuaire ou l'équipe qui administre la zone, par exemple « Admins du domaine ».
 
 **Où c'est utilisé** :
-- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**
-- **Cartographie SI > Vue de l'administration**, qui liste chaque zone avec ses technologies et ses serveurs. Voir [Vue de l'administration](administration-view.md).
+- Espace de travail Actifs > panneau de propriétés > **Zone d'administration**
+- Espace de travail Technologies > panneau de propriétés > **Zone d'administration**, pour les technologies de la famille **Annuaire et identité**
+- **Cartographie SI > Zones d'administration**, qui compte les actifs et les services d'annuaire de chaque zone, lance les points de contrôle et affecte les zones en masse. Voir [Zones d'administration](administration-view.md).
 
-Une zone marquée **Ne plus proposer** reste sur les technologies déjà placées dedans.
+Une zone marquée **Ne plus proposer** reste sur les technologies et les actifs déjà placés dedans.
 
 ### Familles de technologies
 
-Le genre de chaque technologie : base de données, hyperviseur, annuaire et identité, etc. La liste des technologies et les rapports regroupent les technologies par famille, et la [Vue de l'administration](administration-view.md) trouve les services d'annuaire par la famille **Annuaire et identité**.
+Le genre de chaque technologie : base de données, hyperviseur, annuaire et identité, etc. La liste des technologies et les rapports regroupent les technologies par famille, et la page [Zones d'administration](administration-view.md) trouve les services d'annuaire par la famille **Annuaire et identité**.
 
 **Colonnes** : Nom, Ne plus proposer
 
@@ -138,16 +145,18 @@ Les catégories par défaut incluent : Application, Authentification, Sauvegarde
 
 Domaines Active Directory ou DNS des actifs. Les entrées intégrées ne peuvent pas être modifiées. Le suffixe DNS sert à calculer le nom de domaine complet (FQDN) de chaque actif.
 
-**Colonnes** : Nom, Suffixe DNS, Forêt, Comptes, Machines, Approbations, Ne plus proposer
+**Colonnes** : Nom, Suffixe DNS, Forêt, Nombre de comptes, Nombre d'ordinateurs, Approbations, Ne plus proposer
 
 - **Forêt** : la forêt Active Directory du domaine, telle qu'affichée dans Domaines et approbations Active Directory.
-- **Comptes** et **Machines** : le nombre de comptes utilisateurs et d'ordinateurs du domaine, tels que comptés dans Utilisateurs et ordinateurs Active Directory. Nombres entiers uniquement.
+- **Nombre de comptes** et **Nombre d'ordinateurs** : le nombre de comptes utilisateurs et d'ordinateurs du domaine, tels que comptés dans Utilisateurs et ordinateurs Active Directory ou par un décompte des objets utilisateur et ordinateur du domaine. Nombres entiers uniquement.
+
+Survolez les en-têtes **Forêt**, **Nombre de comptes** et **Nombre d'ordinateurs** pour savoir où trouver chaque valeur.
 - **Approbations** : le bouton indique combien d'approbations a le domaine. Cliquez dessus pour lister les autres domaines avec lesquels il a une relation d'approbation, tels qu'affichés dans Domaines et approbations Active Directory. **Ajouter un domaine approuvé** en ajoute un ; choisissez son **Sens** : **sortante** (ce domaine approuve l'autre, dont les comptes peuvent accéder à ses ressources), **entrante** (l'autre domaine approuve celui-ci) ou **bidirectionnelle** (les deux). La boîte de dialogue montre aussi, en lecture seule, les approbations déclarées sur d'autres domaines envers celui-ci. Le bouton apparaît une fois le domaine enregistré, et demande au moins un autre domaine dans la liste.
 
 **Où c'est utilisé** :
 - Espace de travail Actifs > Onglet Technique > Sélecteur **Domaine**
 - Espace de travail Actifs > Onglet Technique > **FQDN** (auto-calculé depuis hostname + suffixe DNS)
-- **Cartographie SI > Vue de l'administration** : forêt, approbations, comptages et contrôleurs de domaine. Voir [Vue de l'administration](administration-view.md#domaines).
+- **Cartographie SI > Zones d'administration** : domaines groupés par forêt, avec leurs approbations, leurs comptages et leurs contrôleurs de domaine. Voir [Zones d'administration](administration-view.md#services-dannuaire-et-domaines).
 
 **Entrées système** (ne peuvent pas être modifiées ni supprimées) :
 - **Workgroup** - Pour les actifs autonomes non joints à un domaine
@@ -399,10 +408,10 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 |-------|------------------|
 | **Méthodes d'accès** | Applications (Onglet Technique et support > Méthodes d'accès) |
 | **Catégories d'application** | Applications (Catégorie) |
-| **Zones d'administration** | Technologies (panneau de propriétés > Zone d'administration), Vue de l'administration |
+| **Zones d'administration** | Actifs (panneau de propriétés > Zone d'administration), Technologies de la famille Annuaire et identité (panneau de propriétés > Zone d'administration), page Zones d'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
-| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), Vue de l'administration |
+| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), page Zones d'administration |
 | **Entités** | Connexions (Entité source/cible), Carte des connexions (placement par niveau du graphe) |
 | **Types d'hébergement** | Sites (Vue d'ensemble), Technologies (Type d'hébergement) |
 | **Modèles d'intégration** | Segments d'interface (Modèle) |
@@ -418,7 +427,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Sous-réseaux** | Actifs (Onglet Technique > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
 | **Types d'actif** | Actifs (Vue d'ensemble > Type) |
-| **Familles de technologies** | Technologies (Famille), Vue de l'administration (services d'annuaire) |
+| **Familles de technologies** | Technologies (Famille), page Zones d'administration (services d'annuaire) |
 
 ---
 

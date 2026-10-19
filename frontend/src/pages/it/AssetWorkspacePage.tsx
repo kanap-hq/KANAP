@@ -88,6 +88,7 @@ type AssetRecord = {
   environment: string;
   hostname: string | null;
   domain: string | null;
+  admin_zone: string | null;
   fqdn: string | null;
   aliases: string[] | null;
   ip_addresses: IpAddressEntry[] | null;
@@ -429,6 +430,7 @@ export default function AssetWorkspacePage() {
   const [subLocationLoading, setSubLocationLoading] = React.useState(false);
   const [notes, setNotes] = React.useState<string>('');
   const [domain, setDomain] = React.useState<string>('');
+  const [adminZone, setAdminZone] = React.useState<string>('');
   const [aliases, setAliases] = React.useState<string[]>([]);
   const [locationDetails, setLocationDetails] = React.useState<LocationDetails | null>(null);
   const [locationCompanyName, setLocationCompanyName] = React.useState<string | null>(null);
@@ -577,6 +579,19 @@ export default function AssetWorkspacePage() {
     })),
     [settings?.domains, t],
   );
+  const adminZoneOptions = React.useMemo(() => {
+    const zones = (byField.adminZone || []).filter((option) => !option.deprecated || option.code === adminZone);
+    if (adminZone && !zones.some((option) => option.code === adminZone)) {
+      return [{ value: adminZone, label: t('common.legacyOption', { label: adminZone }) }, ...zones.map((option) => ({
+        value: option.code,
+        label: option.deprecated ? t('common.deprecatedOption', { label: option.label }) : option.label,
+      }))];
+    }
+    return zones.map((option) => ({
+      value: option.code,
+      label: option.deprecated ? t('common.deprecatedOption', { label: option.label }) : option.label,
+    }));
+  }, [adminZone, byField.adminZone, t]);
 
   // Compute FQDN from hostname and domain
   const computedFqdn = React.useMemo(() => {
@@ -663,6 +678,7 @@ export default function AssetWorkspacePage() {
     setEnvironment(data.environment);
     setHostname(data.hostname || '');
     setDomain(data.domain || '');
+    setAdminZone(data.admin_zone || '');
     setAliases(data.aliases || []);
     setIpAddresses(data.ip_addresses || []);
     setIsCluster(!!data.is_cluster);
@@ -827,6 +843,7 @@ export default function AssetWorkspacePage() {
       environment,
       hostname: hostname || null,
       domain: domain || null,
+      admin_zone: adminZone || null,
       aliases: aliases.length > 0 ? aliases : null,
       ip_addresses: ipAddresses.filter((e) => e.ip.trim()).length > 0 ? ipAddresses.filter((e) => e.ip.trim()) : null,
       is_cluster: isCluster,
@@ -1378,6 +1395,27 @@ export default function AssetWorkspacePage() {
             sx={drawerSelectSx}
           >
             {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
+          </Select>
+        </PropertyRow>
+        <PropertyRow label={t('workspace.asset.technical.adminZone')}>
+          <Select
+            value={adminZone}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAdminZone(next);
+              updateScalar('admin_zone', (next || null) as AssetRecord['admin_zone']);
+            }}
+            variant="standard"
+            disabled={!canManage || saving}
+            displayEmpty
+            SelectDisplayProps={{ 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
+            sx={drawerSelectSx}
+            renderValue={(value) => (value
+              ? adminZoneOptions.find((opt) => opt.value === value)?.label ?? String(value)
+              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('common:labels.none')}</Box>)}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
+            {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
           </Select>
         </PropertyRow>
         <PropertyRow label={t('workspace.asset.overview.lifecycle')}>

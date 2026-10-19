@@ -40,7 +40,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 - [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
 - [Connections](connections.md) - Track network and system connections
 - [Connection Map](connection-map.md) - Visualize connection topology
-- [Administration view](administration-view.md) - See who administers what: zones, domains and domain controllers
+- [Administration zones](administration-view.md) - See who administers what: zones, control points, domains and domain controllers
 
 **Applications**
 

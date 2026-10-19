@@ -8,12 +8,14 @@ import { TechnologiesService } from '../../technologies/technologies.service';
 import { TechnologyReachService } from '../../technologies/technology-reach.service';
 import { technology } from '../../technologies/__tests__/technologies.fixtures';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { ItOpsSettingsService } from '../it-ops-settings.service';
+import { DEFAULT_ADMIN_ZONES, ItOpsSettingsService } from '../it-ops-settings.service';
 
 // The "Administration zones" catalog and the enriched domains (lot A1a), against a real database in
 // transactions rolled back at the end:
-// - no zone is shipped; zones are written with names only (codes generated) and their attributes;
-//   a too long attribute is refused;
+// - the three default tiers are shipped when the catalog is absent; an empty stored list stays
+//   empty; a tenant may replace them; zones are written with names only (codes generated) and
+//   their attributes (administrator group, description); a too long attribute is refused; a
+//   stored privilege level or secrets location is ignored;
 // - domains stored before the lot are served unchanged; forest, trusts and counts are saved; a
 //   trust to the domain itself, to a system entry, to an unknown domain or twice is dropped; an
 //   invalid count or direction is refused;
@@ -28,19 +30,47 @@ async function testZonesCatalog() {
     const tenantId = await seedTenant(runner, 'adz-cat');
     const settings = settingsService(runner);
     const opts = { manager: runner.manager };
-    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones, [], 'no zone is shipped');
+    assert.deepEqual(
+      (await settings.getSettings(tenantId, opts)).adminZones,
+      DEFAULT_ADMIN_ZONES.map((zone) => ({ ...zone, deprecated: false })),
+      'the default tiers are served when the catalog is absent',
+    );
+    await runner.query(
+      `UPDATE tenants SET metadata = jsonb_build_object('it_ops', jsonb_build_object('admin_zones', '[]'::jsonb)) WHERE id = $1`,
+      [tenantId],
+    );
+    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones, [], 'an empty stored list stays empty');
+    await runner.query(
+      `UPDATE tenants SET metadata = '{}'::jsonb WHERE id = $1`,
+      [tenantId],
+    );
 
     const saved = await settings.updateSettings(tenantId, { adminZones: [
       { label: 'Tier 0', admin_group: ' Domain admins ', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core' },
       { label: 'Tier 1' },
     ] as any }, opts);
     assert.deepEqual(saved.adminZones, [
-      { code: 'tier_0', label: 'Tier 0', deprecated: false, admin_group: 'Domain admins', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core' },
+      { code: 'tier_0', label: 'Tier 0', deprecated: false, admin_group: 'Domain admins', description: 'Identity core' },
       { code: 'tier_1', label: 'Tier 1', deprecated: false },
     ]);
     assert.deepEqual((await settingsService(runner).getSettings(tenantId, opts)).adminZones, saved.adminZones, 'served as saved');
-    await assert.rejects(() => settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 2', privilege_level: 'x'.repeat(101) }] as any }, opts), BadRequestException);
+    const ordered = await settings.updateSettings(tenantId, { adminZones: [
+      { code: 'tier_2', label: 'Tier 2' },
+      { code: 'tier_0', label: 'Tier 0' },
+      { code: 'tier_1', label: 'Tier 1' },
+    ] as any }, opts);
+    assert.deepEqual(ordered.adminZones.map((zone) => zone.code), ['tier_2', 'tier_0', 'tier_1'], 'the saved list order is the catalog order');
+    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones.map((zone) => zone.code), ['tier_2', 'tier_0', 'tier_1']);
+    assert.equal((saved.adminZones[0] as { privilege_level?: string }).privilege_level, undefined, 'a stored privilege level is ignored');
+    await assert.rejects(() => settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 2', description: 'x'.repeat(2001) }] as any }, opts), BadRequestException);
     await assert.rejects(() => settings.updateSettings(tenantId, { adminZones: [{ label: 'Tier 0' }, { label: 'tier 0' }] as any }, opts), /clashes with/);
+    await runner.query(
+      `UPDATE tenants SET metadata = jsonb_set(coalesce(metadata, '{}'::jsonb), '{it_ops,admin_zones}', $2::jsonb) WHERE id = $1`,
+      [tenantId, JSON.stringify([{ code: 'legacy', label: 'Legacy', admin_group: 'Ops', privilege_level: 'Tier 0', secrets_location: 'Vault A' }])],
+    );
+    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones, [
+      { code: 'legacy', label: 'Legacy', deprecated: false, admin_group: 'Ops' },
+    ], 'a stored privilege level and secrets location are ignored on read');
   });
 }
 
