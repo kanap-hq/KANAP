@@ -132,7 +132,84 @@ assert.equal(netboxAuthorizationHeader('  padded  '), 'Token padded');
     const { objects: vms } = await client.listVirtualMachines(connection);
     assert.equal(vms.length, 1);
     assert.equal(vms[0].type, 'vm');
+    assert.equal(vms[0].cluster, null);
     assert.equal(requests[0].url.pathname, '/api/virtualization/virtual-machines/');
+  }
+
+  {
+    // Two pages of clusters. `next` points at another host and is ignored.
+    // A row with no id cannot be matched, so it is dropped.
+    const total = 250;
+    const { client, connection, requests } = createClient((url) => {
+      const offset = Number(url.searchParams.get('offset'));
+      const limit = Number(url.searchParams.get('limit'));
+      const results = [];
+      for (let index = offset; index < Math.min(offset + limit, total); index += 1) {
+        results.push({
+          id: index === 0 ? null : index + 1,
+          name: index === 0 ? 'nameless' : `Cluster ${index + 1}`,
+          virtualmachine_count: index + 1,
+        });
+      }
+      return { json: { count: total, next: 'http://169.254.169.254/latest/meta-data/', results } };
+    });
+    const clusters = await client.listClusters(connection);
+    assert.equal(clusters.length, total - 1);
+    assert.deepEqual(clusters[0], { id: '2', name: 'Cluster 2', vm_count: 2 });
+    assert.deepEqual(clusters[clusters.length - 1], { id: String(total), name: `Cluster ${total}`, vm_count: total });
+    assert.equal(requests[0].url.pathname, '/api/virtualization/clusters/');
+    assert.deepEqual(requests.map((request) => request.url.searchParams.get('offset')), ['0', '200']);
+    assert.deepEqual(requests.map((request) => request.url.host), [
+      'netbox.example.test',
+      'netbox.example.test',
+    ]);
+  }
+
+  {
+    // The cluster id and name travel with the machine. The site still comes
+    // from the cluster scope when the machine has none of its own. A cluster
+    // object with no id still supplies the site, and is not a cluster match.
+    // A device payload that names a cluster is ignored: hosts stay manual.
+    const { client, connection } = createClient((url) => {
+      if (url.pathname === '/api/virtualization/virtual-machines/') {
+        return {
+          json: {
+            count: 3,
+            next: null,
+            results: [
+              {
+                id: 50,
+                name: 'par-app-01',
+                site: null,
+                cluster: { id: 7, name: 'Paris vSphere', scope: { slug: 'paris', name: 'Paris DC' } },
+              },
+              {
+                id: 51,
+                name: 'par-app-02',
+                site: null,
+                cluster: { name: 'Paris vSphere', site: { slug: 'gouda', name: 'Gouda' } },
+              },
+              { id: 52, name: 'par-app-03', site: { slug: 'parma' }, cluster: null },
+            ],
+          },
+        };
+      }
+      return {
+        json: {
+          count: 1,
+          next: null,
+          results: [{ id: 9, name: 'par-esx-01', cluster: { id: 7, name: 'Paris vSphere' }, site: { slug: 'paris' } }],
+        },
+      };
+    });
+    const { objects: vms } = await client.listVirtualMachines(connection);
+    assert.deepEqual(vms[0].cluster, { id: '7', name: 'Paris vSphere' });
+    assert.equal(vms[0].siteSlug, 'paris');
+    assert.equal(vms[1].cluster, null);
+    assert.equal(vms[1].siteSlug, 'gouda');
+    assert.equal(vms[2].cluster, null);
+    const { objects: devices } = await client.listDevices(connection);
+    assert.equal(devices[0].cluster, null);
   }
 
   {

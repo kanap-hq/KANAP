@@ -350,6 +350,9 @@ export function normalizeNetboxDevice(raw: Record<string, unknown>, baseUrl: str
     primaryIp: nestedText(raw.primary_ip4, 'address') ?? nestedText(raw.primary_ip, 'address'),
     url: netboxObjectUrl(baseUrl, 'device', id),
     locationId: nestedText(raw.location, 'id'),
+    // Host membership is not imported. A device payload may name a cluster;
+    // that name is left unread on purpose.
+    cluster: null,
   };
 }
 
@@ -378,6 +381,7 @@ export function normalizeNetboxVirtualMachine(raw: Record<string, unknown>, base
     ? (isRecord(cluster.scope) ? cluster.scope : (isRecord(cluster.site) ? cluster.site : null))
     : null;
   const site = isRecord(raw.site) ? raw.site : clusterSite;
+  const clusterId = cluster ? textOrNull(cluster.id) : null;
   return {
     type: 'vm',
     id,
@@ -398,6 +402,9 @@ export function normalizeNetboxVirtualMachine(raw: Record<string, unknown>, base
     url: netboxObjectUrl(baseUrl, 'vm', id),
     // A Netbox virtual machine carries no location of its own.
     locationId: null,
+    // A cluster without an id cannot be matched later, so it is dropped even
+    // when its name (or its site) is present.
+    cluster: clusterId ? { id: clusterId, name: textOrNull(cluster?.name) ?? clusterId } : null,
   };
 }
 
