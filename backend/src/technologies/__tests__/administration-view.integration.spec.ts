@@ -523,6 +523,130 @@ async function zoneOf(runner: QueryRunner, id: string): Promise<string | null> {
   return row.admin_zone;
 }
 
+async function testBulk() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-bulk');
+    const make = async (name: string, zone: string | null, status = 'active') => {
+      const id = await asset(runner, a, name);
+      await runner.query(`UPDATE assets SET admin_zone = $3, status = $4 WHERE tenant_id = $1 AND id = $2`, [a, id, zone, status]);
+      return id;
+    };
+    const a1 = await make('a1', null);
+    const a2 = await make('a2', 'tier_1');
+    const a3 = await make('a3', 'tier_0');
+    const a4 = await make('a4', '   ');
+    const retired = await make('retired-box', 'tier_1', 'retired');
+    const b = await seedTenant(runner, 'adm-bulk-b');
+    const other = await asset(runner, b, 'other-box');
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_1' WHERE tenant_id = $1 AND id = $2`, [b, other]);
+    await setTenant(runner, a);
+    const settings = new Map<string, Settings>([
+      [a, { adminZones: ZONES, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
+      [b, { adminZones: ZONES, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }],
+    ]);
+    const svc = service(settings);
+    const userId = randomUUID();
+    const opts = { manager: runner.manager, tenantId: a, userId };
+
+    const chosen = await svc.assignZone({ zone: 'tier_0', ids: [a1, a2, a3], filters: { filters: setFilter('zone', [null]) } }, opts);
+    assert.deepEqual(chosen, { ok: true, rows: 3, changed: 2 }, 'the chosen rows ignore the filters; a zone already stored does not change');
+    assert.equal(await zoneOf(runner, a1), 'tier_0');
+    assert.equal(await zoneOf(runner, a2), 'tier_0');
+    assert.equal(await zoneOf(runner, a3), 'tier_0');
+    const [audits] = await runner.query(
+      `SELECT count(*)::int AS n FROM audit_log WHERE tenant_id = $1 AND table_name = 'assets' AND record_id = ANY($2::uuid[])`,
+      [a, [a1, a2, a3]],
+    );
+    assert.equal(Number(audits.n), 2, 'an asset whose zone stays is not audited');
+    const [a1Audit] = await runner.query(
+      `SELECT action, before_json->>'admin_zone' AS before_zone, after_json->>'admin_zone' AS after_zone, user_id
+         FROM audit_log WHERE tenant_id = $1 AND table_name = 'assets' AND record_id = $2`,
+      [a, a1],
+    );
+    assert.equal(a1Audit.action, 'update');
+    assert.equal(a1Audit.before_zone, null);
+    assert.equal(a1Audit.after_zone, 'tier_0');
+    assert.equal(a1Audit.user_id, userId);
+    const [synced] = await runner.query(
+      `SELECT a.updated_at = si.source_updated_at AS same
+         FROM assets a
+         JOIN search_index si ON si.tenant_id = a.tenant_id AND si.entity_type = 'assets' AND si.entity_id = a.id
+        WHERE a.id = $1`,
+      [a2],
+    );
+    assert.equal(synced.same, true, 'the assets search trigger copied the new updated_at');
+
+    const dry = await svc.assignZone({
+      zone: 'tier_1', all: true, dry_run: true, filters: { filters: setFilter('zone', ['tier_0']) },
+    }, opts);
+    assert.equal('dry_run' in dry && dry.dry_run, true);
+    assert.equal(dry.rows, 3);
+    assert.equal('changes' in dry && dry.changes, 3);
+    assert.equal('as_of' in dry && typeof dry.as_of, 'string');
+    assert.equal(await zoneOf(runner, a1), 'tier_0', 'a dry run writes nothing');
+
+    const written = await svc.assignZone({
+      zone: 'Tier 1', all: true, filters: { filters: setFilter('zone', ['tier_0']) }, as_of: 'as_of' in dry ? dry.as_of : '', expected_rows: dry.rows,
+    }, opts);
+    assert.deepEqual({ ok: written.ok, rows: written.rows, changed: 'changed' in written ? written.changed : null }, { ok: true, rows: 3, changed: 3 });
+    assert.equal(await zoneOf(runner, a1), 'tier_1', 'a label resolves to the catalog code');
+
+    const blank = await svc.assignZone({ zone: null, ids: [a4] }, opts);
+    assert.equal('changed' in blank && blank.changed, 1, 'a blank zone is stored as null');
+    assert.equal(await zoneOf(runner, a4), null);
+
+    const leftOut = await make('left-out', null);
+    const kept = await make('kept', null);
+    const cleared = await make('cleared', 'tier_0');
+    const counted = await svc.assignZone({
+      zone: null, all: true, dry_run: true, filters: { filters: setFilter('zone', [null]) },
+    }, opts);
+    await runner.query(`UPDATE assets SET admin_zone = NULL WHERE tenant_id = $1 AND id = $2`, [a, cleared]);
+    await assert.rejects(
+      svc.assignZone({
+        zone: 'tier_0', all: true, filters: { filters: setFilter('zone', [null]) },
+        as_of: 'as_of' in counted ? counted.as_of : '', expected_rows: counted.rows,
+      }, opts),
+      (error: any) => error instanceof ConflictException && (error.getResponse() as any).code === 'bulk_list_changed',
+    );
+    assert.equal(await zoneOf(runner, leftOut), null, 'the refusal writes nothing');
+    assert.equal(await zoneOf(runner, kept), null);
+
+    const excluded = await svc.assignZone({
+      zone: 'tier_0', all: true, exclude_ids: [kept], filters: { filters: setFilter('zone', [null]) },
+      as_of: new Date().toISOString(), expected_rows: 50,
+    }, opts);
+    assert.equal('changed' in excluded && excluded.changed >= 1, true);
+    assert.equal(await zoneOf(runner, kept), null);
+    assert.equal(await zoneOf(runner, leftOut), 'tier_0');
+    const same = await svc.assignZone({ zone: 'tier_0', ids: [leftOut] }, opts);
+    assert.deepEqual(same, { ok: true, rows: 1, changed: 0 });
+    await svc.assignZone({ zone: 'tier_0', ids: [retired, other] }, opts);
+    assert.equal(await zoneOf(runner, retired), 'tier_1');
+    await setTenant(runner, b);
+    assert.equal(await zoneOf(runner, other), 'tier_1', 'another tenant is out of the scope');
+    await setTenant(runner, a);
+
+    await assert.rejects(svc.assignZone({ ids: [a1] }, opts), (error: any) => error instanceof BadRequestException && /zone is required/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'nope', ids: [a1] }, opts), (error: any) => error instanceof BadRequestException && /Unknown administration zone/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'old', ids: [a1] }, opts), (error: any) => error instanceof BadRequestException && /deprecated/.test(error.message));
+    assert.equal(await zoneOf(runner, a1), 'tier_1', 'a refused zone leaves the asset');
+    await assert.rejects(svc.assignZone({ zone: 1, ids: [a1] }, opts), BadRequestException);
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', ids: [a1], all: true }, opts), (error: any) => /not both/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', exclude_ids: [a1] }, opts), (error: any) => /exclude_ids goes with all/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0' }, opts), (error: any) => /Choose the rows/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, filters: {} }, opts), (error: any) => /as_of is required/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: new Date().toISOString() }, opts), (error: any) => /expected_rows is required/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: new Date().toISOString(), expected_rows: -1 }, opts), BadRequestException);
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: 'yesterday', expected_rows: 0 }, opts), BadRequestException);
+    const tooMany = Array.from({ length: BULK_MAX_ROWS + 1 }, () => randomUUID());
+    await assert.rejects(
+      svc.assignZone({ zone: 'tier_0', ids: tooMany, dry_run: true }, opts),
+      (error: any) => error instanceof BadRequestException && (error.getResponse() as any).code === 'bulk_too_many',
+    );
+  });
+}
+
 async function testRoutes() {
   assert.equal(Reflect.getMetadata(PATH_METADATA, AdministrationViewController), 'technologies/reports/administration');
   const proto = AdministrationViewController.prototype as any;
@@ -541,5 +665,6 @@ void runSpecs('Administration view', [
   ['a zone code the catalog no longer has, an empty catalog', testUnknownZoneAndEmptyCatalog],
   ['each control point, with one case that stays out', testControls],
   ['the asset page: order, filters, caps', testAssetsPage],
+  ['bulk zone assignment', testBulk],
   ['routes: paths and permission', testRoutes],
 ]);
