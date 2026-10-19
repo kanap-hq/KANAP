@@ -1,6 +1,6 @@
 # Administration zones
 
-The Administration zones page shows who administers what. It follows the administration view of the ANSSI [information system mapping guide](https://messervices.cyber.gouv.fr/guides/cartographie-du-systeme-dinformation): your administration zones, the assets in each one, the points to correct, then your directory services and domains. It helps answer the questions of a NIS2 review about privileged access.
+The Administration zones page shows who administers what. It follows the tiered administration model, a recognized practice for administering directories such as Active Directory: your administration zones, the assets in each one, the points to correct, then your directory services and domains. It helps answer the questions of a NIS2 review about privileged access.
 
 Open it from **IT Landscape > Administration zones**, in the **Infrastructure** group. You need `infrastructure:reader` to read it, and `infrastructure:member` to assign zones from it.
 
@@ -15,7 +15,16 @@ The page reads what you record elsewhere:
 
 ## Why the zones matter
 
-In the ANSSI tier model, anything that can act on an element of a sensitive zone belongs to that zone: the hypervisor that runs a domain controller can take control of it, so it is Tier 0 as well. The control points find the assets that break this rule.
+In the tiered administration model, anything that can act on an element of a sensitive zone belongs to that zone: the hypervisor that runs a domain controller can take control of it, so it is Tier 0 as well. The control points find the assets that break this rule.
+
+## Tabs
+
+The page has two tabs, each with its count:
+
+- **Assets**: the zones, the control points and the table of assets. Its count is the number of assets that are not retired.
+- **Directories and domains**: your directory services, then your domains grouped by forest. Its count adds up the directory services and the domains.
+
+The page opens on **Assets**. The page address keeps the open tab and the filters of the table, so a link opens the same view. **Export assets** and **Export domains** stay at the top of the page on both tabs. **Assign to a zone** shows on the **Assets** tab.
 
 ## Zones
 

@@ -12,7 +12,7 @@ import { DEFAULT_ADMIN_ZONES, ItOpsSettingsService } from '../it-ops-settings.se
 
 // The "Administration zones" catalog and the enriched domains (lot A1a), against a real database in
 // transactions rolled back at the end:
-// - the three ANSSI tiers are shipped when the catalog is absent; an empty stored list stays
+// - the three default tiers are shipped when the catalog is absent; an empty stored list stays
 //   empty; a tenant may replace them; zones are written with names only (codes generated) and
 //   their attributes (administrator group, description); a too long attribute is refused; a
 //   stored privilege level or secrets location is ignored;
@@ -33,7 +33,7 @@ async function testZonesCatalog() {
     assert.deepEqual(
       (await settings.getSettings(tenantId, opts)).adminZones,
       DEFAULT_ADMIN_ZONES.map((zone) => ({ ...zone, deprecated: false })),
-      'ANSSI tiers are served when the catalog is absent',
+      'the default tiers are served when the catalog is absent',
     );
     await runner.query(
       `UPDATE tenants SET metadata = jsonb_build_object('it_ops', jsonb_build_object('admin_zones', '[]'::jsonb)) WHERE id = $1`,

@@ -1,6 +1,6 @@
 # Zones d'administration
 
-La page Zones d'administration montre qui administre quoi. Elle suit la vue de l'administration du [guide de cartographie du système d'information](https://messervices.cyber.gouv.fr/guides/cartographie-du-systeme-dinformation) de l'ANSSI : vos zones d'administration, les actifs de chacune, les points à corriger, puis vos services d'annuaire et vos domaines. Elle aide à répondre aux questions d'une revue NIS2 sur les accès à privilèges.
+La page Zones d'administration montre qui administre quoi. Elle suit le modèle d'administration en tiers, une bonne pratique reconnue pour administrer les annuaires comme Active Directory : vos zones d'administration, les actifs de chacune, les points à corriger, puis vos services d'annuaire et vos domaines. Elle aide à répondre aux questions d'une revue NIS2 sur les accès à privilèges.
 
 Ouvrez-la depuis **Cartographie SI > Zones d'administration**, dans le groupe **Infrastructure**. Il faut `infrastructure:reader` pour la lire, et `infrastructure:member` pour y affecter des zones.
 
@@ -15,7 +15,16 @@ La page lit ce que vous saisissez ailleurs :
 
 ## Pourquoi les zones comptent
 
-Dans le modèle en tiers de l'ANSSI, tout ce qui peut agir sur un élément d'une zone sensible appartient à cette zone : l'hyperviseur qui fait tourner un contrôleur de domaine peut en prendre le contrôle, il est donc lui aussi en tier 0. Les points de contrôle trouvent les actifs qui enfreignent cette règle.
+Dans le modèle d'administration en tiers, tout ce qui peut agir sur un élément d'une zone sensible appartient à cette zone : l'hyperviseur qui fait tourner un contrôleur de domaine peut en prendre le contrôle, il est donc lui aussi en tier 0. Les points de contrôle trouvent les actifs qui enfreignent cette règle.
+
+## Onglets
+
+La page a deux onglets, chacun avec son compteur :
+
+- **Actifs** : les zones, les points de contrôle et la table des actifs. Son compteur donne le nombre d'actifs qui ne sont pas retirés.
+- **Annuaires et domaines** : vos services d'annuaire, puis vos domaines groupés par forêt. Son compteur additionne les services d'annuaire et les domaines.
+
+La page s'ouvre sur **Actifs**. L'adresse de la page garde l'onglet ouvert et les filtres de la table : un lien ouvre la même vue. **Exporter les actifs** et **Exporter les domaines** restent en haut de la page sur les deux onglets. **Affecter à une zone** apparaît sur l'onglet **Actifs**.
 
 ## Zones
 

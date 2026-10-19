@@ -1,6 +1,6 @@
 # Administrationszonen
 
-Die Seite Administrationszonen zeigt, wer was verwaltet. Sie folgt der Administrationssicht des [Leitfadens zur Kartografie des Informationssystems](https://messervices.cyber.gouv.fr/guides/cartographie-du-systeme-dinformation) der ANSSI: Ihre Administrationszonen, die Assets jeder Zone, die zu korrigierenden Punkte, dann Ihre Verzeichnisdienste und Domänen. Sie hilft, die Fragen einer NIS2-Prüfung zum privilegierten Zugriff zu beantworten.
+Die Seite Administrationszonen zeigt, wer was verwaltet. Sie folgt dem Tier-Modell der Administration, einer anerkannten Praxis für die Verwaltung von Verzeichnisdiensten wie Active Directory: Ihre Administrationszonen, die Assets jeder Zone, die zu korrigierenden Punkte, dann Ihre Verzeichnisdienste und Domänen. Sie hilft, die Fragen einer NIS2-Prüfung zum privilegierten Zugriff zu beantworten.
 
 Öffnen Sie sie über **IT-Landschaft > Administrationszonen**, in der Gruppe **Infrastruktur**. Zum Lesen benötigen Sie `infrastructure:reader`, zum Zuordnen von Zonen `infrastructure:member`.
 
@@ -15,7 +15,16 @@ Die Seite liest, was Sie an anderer Stelle erfassen:
 
 ## Warum die Zonen zählen
 
-Im Tier-Modell der ANSSI gehört alles, was auf ein Element einer sensiblen Zone einwirken kann, zu dieser Zone: Der Hypervisor, auf dem ein Domänencontroller läuft, kann ihn übernehmen und ist daher ebenfalls Tier 0. Die Kontrollpunkte finden die Assets, die gegen diese Regel verstoßen.
+Im Tier-Modell der Administration gehört alles, was auf ein Element einer sensiblen Zone einwirken kann, zu dieser Zone: Der Hypervisor, auf dem ein Domänencontroller läuft, kann ihn übernehmen und ist daher ebenfalls Tier 0. Die Kontrollpunkte finden die Assets, die gegen diese Regel verstoßen.
+
+## Reiter
+
+Die Seite hat zwei Reiter, jeder mit seiner Anzahl:
+
+- **Assets**: die Zonen, die Kontrollpunkte und die Tabelle der Assets. Die Anzahl ist die der Assets, die nicht ausgemustert sind.
+- **Verzeichnisse und Domänen**: Ihre Verzeichnisdienste, dann Ihre Domänen nach Gesamtstruktur gruppiert. Die Anzahl zählt die Verzeichnisdienste und die Domänen zusammen.
+
+Die Seite öffnet sich auf **Assets**. Die Adresse der Seite behält den offenen Reiter und die Filter der Tabelle, sodass ein Link dieselbe Ansicht öffnet. **Assets exportieren** und **Domänen exportieren** bleiben auf beiden Reitern oben auf der Seite. **Einer Zone zuordnen** erscheint auf dem Reiter **Assets**.
 
 ## Zonen
 

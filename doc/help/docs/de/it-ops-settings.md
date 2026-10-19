@@ -96,7 +96,7 @@ Die Kategorie bestimmt, welche Felder beim Bearbeiten eines Standorts erscheinen
 
 ### Administrationszonen
 
-Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Administrationsmodells der ANSSI mit:
+Die Zonen Ihres Administrationsmodells. KANAP liefert die drei Tiers des Tier-Modells der Administration mit, einer anerkannten Praxis:
 
 - **Tier 0 (Vertrauenskern)**: Verzeichnisdienste wie Active Directory oder Entra ID, PKI, Werkzeuge zur Identitätsverwaltung und die Systeme, auf denen sie laufen.
 - **Tier 1 (Server und Anwendungen)**: Geschäftsserver, Anwendungen, Datenbanken und Middleware.

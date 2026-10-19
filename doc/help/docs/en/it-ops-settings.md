@@ -96,7 +96,7 @@ The category determines which fields appear when editing a Location:
 
 ### Administration zones
 
-The zones of your administration model. KANAP ships the three tiers of the ANSSI administration model:
+The zones of your administration model. KANAP ships the three tiers of the tiered administration model, a recognized practice:
 
 - **Tier 0 (core of trust)**: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.
 - **Tier 1 (servers and applications)**: business servers, applications, databases and middleware.

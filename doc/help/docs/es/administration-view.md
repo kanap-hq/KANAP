@@ -1,6 +1,6 @@
 # Zonas de administración
 
-La página Zonas de administración muestra quién administra qué. Sigue la vista de la administración de la [guía de cartografía del sistema de información](https://messervices.cyber.gouv.fr/guides/cartographie-du-systeme-dinformation) de la ANSSI: sus zonas de administración, los activos de cada una, los puntos que corregir, y después sus servicios de directorio y sus dominios. Ayuda a responder a las preguntas de una revisión NIS2 sobre los accesos privilegiados.
+La página Zonas de administración muestra quién administra qué. Sigue el modelo de administración por tiers, una buena práctica reconocida para administrar directorios como Active Directory: sus zonas de administración, los activos de cada una, los puntos que corregir, y después sus servicios de directorio y sus dominios. Ayuda a responder a las preguntas de una revisión NIS2 sobre los accesos privilegiados.
 
 Ábrala desde **Panorama IT > Zonas de administración**, en el grupo **Infraestructura**. Necesita `infrastructure:reader` para leerla, e `infrastructure:member` para asignar zonas desde ella.
 
@@ -15,7 +15,16 @@ La página lee lo que usted registra en otros lugares:
 
 ## Por qué importan las zonas
 
-En el modelo de tiers de la ANSSI, todo lo que puede actuar sobre un elemento de una zona sensible pertenece a esa zona: el hipervisor que ejecuta un controlador de dominio puede tomar su control, así que también es tier 0. Los puntos de control encuentran los activos que incumplen esta regla.
+En el modelo de administración por tiers, todo lo que puede actuar sobre un elemento de una zona sensible pertenece a esa zona: el hipervisor que ejecuta un controlador de dominio puede tomar su control, así que también es tier 0. Los puntos de control encuentran los activos que incumplen esta regla.
+
+## Pestañas
+
+La página tiene dos pestañas, cada una con su recuento:
+
+- **Activos**: las zonas, los puntos de control y la tabla de activos. Su recuento es el número de activos que no están retirados.
+- **Directorios y dominios**: sus servicios de directorio y, después, sus dominios agrupados por bosque. Su recuento suma los servicios de directorio y los dominios.
+
+La página se abre en **Activos**. La dirección de la página conserva la pestaña abierta y los filtros de la tabla, así que un enlace abre la misma vista. **Exportar activos** y **Exportar los dominios** permanecen en la parte superior de la página en ambas pestañas. **Asignar a una zona** aparece en la pestaña **Activos**.
 
 ## Zonas
 

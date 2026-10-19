@@ -96,7 +96,7 @@ La categoría determina qué campos aparecen al editar una Ubicación:
 
 ### Zonas de administración
 
-Las zonas de su modelo de administración. KANAP incluye los tres tiers del modelo de administración de la ANSSI:
+Las zonas de su modelo de administración. KANAP incluye los tres tiers del modelo de administración por tiers, una buena práctica reconocida:
 
 - **Tier 0 (núcleo de confianza)**: directorios como Active Directory o Entra ID, PKI, herramientas de administración de identidades y los sistemas que los alojan.
 - **Tier 1 (servidores y aplicaciones)**: servidores de negocio, aplicaciones, bases de datos y middleware.

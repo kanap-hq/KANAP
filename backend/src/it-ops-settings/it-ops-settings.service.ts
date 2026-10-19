@@ -102,8 +102,8 @@ export type DomainOption = {
 };
 
 /**
- * An administration zone (ANSSI mapping guide, administration view): the directory group or the
- * team that administers it. Tenants that never customised the list receive the three ANSSI tiers.
+ * An administration zone (the tiered administration model, a recognized practice): the directory
+ * group or the team that administers it. Tenants that never customised the list receive three tiers.
  */
 export type AdminZoneOption = ItOpsEnumOption & {
   admin_group?: string;
@@ -111,8 +111,8 @@ export type AdminZoneOption = ItOpsEnumOption & {
 };
 
 /**
- * Administration zones served to tenants that never customised the list (ANSSI model of Active
- * Directory administration in three tiers). A tenant may rename, retire or replace them; an empty
+ * Administration zones served to tenants that never customised the list (the recognized model of
+ * Active Directory administration in three tiers). A tenant may rename, retire or replace them; an empty
  * stored list stays empty.
  */
 export const DEFAULT_ADMIN_ZONES: AdminZoneOption[] = [

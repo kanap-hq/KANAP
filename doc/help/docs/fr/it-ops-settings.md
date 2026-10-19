@@ -96,7 +96,7 @@ La catégorie détermine quels champs apparaissent lors de la modification d'un 
 
 ### Zones d'administration
 
-Les zones de votre modèle d'administration. KANAP fournit les trois tiers du modèle d'administration de l'ANSSI :
+Les zones de votre modèle d'administration. KANAP fournit les trois tiers du modèle d'administration en tiers, une bonne pratique reconnue :
 
 - **Tier 0 (cœur de confiance)** : les annuaires comme Active Directory ou Entra ID, la PKI, les outils d'administration de l'identité, et les systèmes qui les hébergent.
 - **Tier 1 (serveurs et applications)** : les serveurs métier, les applications, les bases de données et le middleware.

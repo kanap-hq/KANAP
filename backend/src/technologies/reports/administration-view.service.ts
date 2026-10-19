@@ -10,7 +10,7 @@ import { technologyReference, UUID_RE } from '../technology-rows';
 import { inServiceSql } from '../technology-reach.service';
 
 /**
- * The administration view (lot A1e): view 4 of the ANSSI mapping guide. A zone sits on what is
+ * The administration view (lot A1e), after the tiered administration model. A zone sits on what is
  * administered. The first zone of the catalog that is not deprecated is the most sensitive, and a
  * lower index among those zones is more sensitive. The five controls keep the rules reviewed in
  * lot A1d. Each one answers a count here, and the asset list names the assets it concerns.
