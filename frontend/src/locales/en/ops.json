@@ -1008,7 +1008,7 @@
       "missingNone": "Every currency in use has a rate.",
       "missingTitle_one": "{{count}} exchange rate missing",
       "missingTitle_other": "{{count}} exchange rates missing",
-      "missingReason": "No source publishes this rate yet; amounts in this currency are not converted correctly until it has one.",
+      "missingReason": "No source publishes this rate yet; amounts in this currency are left out of totals until it has one.",
       "enterRate": "Enter a rate",
       "enterRateFor": "Enter a rate for {{currency}} in {{year}}",
       "loadMissingError": "Exchange rates in use could not be checked.",

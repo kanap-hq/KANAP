@@ -1008,7 +1008,7 @@
       "missingNone": "Jede verwendete Währung hat einen Kurs.",
       "missingTitle_one": "{{count}} Wechselkurs fehlt",
       "missingTitle_other": "{{count}} Wechselkurse fehlen",
-      "missingReason": "Keine Quelle veröffentlicht diesen Kurs bisher; Beträge in dieser Währung werden erst korrekt umgerechnet, wenn ein Kurs vorliegt.",
+      "missingReason": "Keine Quelle veröffentlicht diesen Kurs bisher; Beträge in dieser Währung bleiben bei den Summen außen vor, bis ein Kurs vorliegt.",
       "enterRate": "Kurs eingeben",
       "enterRateFor": "Kurs für {{currency}} im Jahr {{year}} eingeben",
       "loadMissingError": "Die verwendeten Wechselkurse konnten nicht geprüft werden.",

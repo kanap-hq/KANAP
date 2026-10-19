@@ -1008,7 +1008,7 @@
       "missingNone": "Chaque devise utilisée a un taux.",
       "missingTitle_one": "{{count}} taux de change manquant",
       "missingTitle_other": "{{count}} taux de change manquants",
-      "missingReason": "Aucune source ne publie encore ce taux ; les montants dans cette devise ne sont pas convertis correctement tant qu'elle n'en a pas un.",
+      "missingReason": "Aucune source ne publie encore ce taux ; les montants dans cette devise sont exclus des totaux tant qu'elle n'en a pas un.",
       "enterRate": "Saisir un taux",
       "enterRateFor": "Saisir un taux pour {{currency}} en {{year}}",
       "loadMissingError": "Les taux de change utilisés n'ont pas pu être vérifiés.",

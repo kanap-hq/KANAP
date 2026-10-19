@@ -1008,7 +1008,7 @@
       "missingNone": "Cada moneda en uso tiene un tipo.",
       "missingTitle_one": "Falta {{count}} tipo de cambio",
       "missingTitle_other": "Faltan {{count}} tipos de cambio",
-      "missingReason": "Ninguna fuente publica todavía este tipo; los importes en esta moneda no se convierten correctamente hasta que lo tenga.",
+      "missingReason": "Ninguna fuente publica todavía este tipo; los importes en esta moneda quedan excluidos de los totales hasta que lo tenga.",
       "enterRate": "Introducir un tipo",
       "enterRateFor": "Introducir un tipo para {{currency}} en {{year}}",
       "loadMissingError": "No se pudieron comprobar los tipos de cambio en uso.",
