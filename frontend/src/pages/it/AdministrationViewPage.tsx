@@ -15,11 +15,12 @@ import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import { reportFilterMenuProps } from '../../components/reports/ReportLayout';
 import ServerDataGrid, { type EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
 import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
-import { RelationRef } from '../../components/workspace/RelationsTable';
+import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../components/workspace/RelationsTable';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
 import { getDotColor } from '../../utils/statusColors';
+import type { DomainTrustDirection } from '../../services/itOpsSettings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 
@@ -81,6 +82,26 @@ export type AdministrationAssetRow = {
   findings: ControlKey[];
   trust_peers: { total: number; items: TrustPeer[] };
   application_references: string[];
+};
+
+export type AdministrationDomain = {
+  code: string;
+  label: string;
+  dns_suffix: string;
+  forest: string | null;
+  trusts: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
+  /** Trusts declared on other domains toward this one, read only, seen from this domain. */
+  declared_by: Array<{ domain: string; label: string; direction: DomainTrustDirection }>;
+  account_count: number | null;
+  machine_count: number | null;
+  domain_controllers: Array<{ id: string; name: string; reference: string | null }>;
+  deprecated: boolean;
+};
+
+/** `GET /technologies/reports/administration/directories`. */
+export type AdministrationDirectories = {
+  services: Array<{ id: string; reference: string | null; name: string; zone: string | null; servers: number }>;
+  forests: Array<{ forest: string | null; domains: AdministrationDomain[] }>;
 };
 
 /** The value of the "No zone" choice of the assignment (the server takes `null`). */
@@ -585,6 +606,119 @@ function ControlPills({ summary, selected, onSelect }: {
     </Box>
   );
 }
+/** The unsized column takes the spare width, so the sized ones stay next to each other. */
+function filler<T>(): RelationsColumn<T> {
+  return { key: 'room', header: '\u00a0', render: () => null };
+}
+
+/**
+ * The directory services (technologies of the directory family) with their zone and servers, then
+ * the domains of the catalog grouped by forest. Nothing links a directory service to a forest.
+ */
+function DirectoriesSection({ zoneName }: { zoneName: (code: string | null) => string }) {
+  const { t } = useTranslation(['it', 'common']);
+  const { byField } = useItOpsEnumOptions();
+  const directories = useQuery({
+    queryKey: ['technologies', 'reports', 'administration', 'directories'],
+    queryFn: async () => (await api.get<AdministrationDirectories>(`${ENDPOINT}/directories`)).data,
+  });
+  const domainName = (code: string, fallback: string) => (byField.domain || []).find((option) => option.code === code)?.label || fallback;
+  // An absent value: a grey dash, "Not set" on hover (the convention of an unknown version in the Relations tab).
+  const notSet = <Box component="span" title={t('pages.administrationView.notSet')} sx={quietSx}>{'\u2014'}</Box>;
+  const count = (value: number | null) => (value == null ? notSet : value.toLocaleString());
+  const direction = (value: DomainTrustDirection) => t(`pages.settings.trusts.directions.${value}`);
+  type Service = AdministrationDirectories['services'][number];
+  const serviceColumns: Array<RelationsColumn<Service>> = [
+    {
+      key: 'reference',
+      header: t('pages.administrationView.columns.reference'),
+      width: 96,
+      render: (row) => (
+        <RecordLink to={`/it/technologies/${row.id}`}>{row.reference ? <RelationRef>{row.reference}</RelationRef> : row.name}</RecordLink>
+      ),
+    },
+    { key: 'name', header: t('common.name'), width: 240, render: (row) => row.name },
+    { key: 'zone', header: t('pages.administrationView.columns.zone'), width: 180, render: (row) => (row.zone ? zoneName(row.zone) : <Box component="span" sx={quietSx}>{zoneName(null)}</Box>) },
+    { key: 'servers', header: t('pages.administrationView.columns.servers'), width: 80, align: 'right', render: (row) => row.servers.toLocaleString() },
+    filler(),
+  ];
+  const domainColumns: Array<RelationsColumn<AdministrationDomain>> = [
+    { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${domainName(row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
+    { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
+    {
+      key: 'trusts',
+      header: t('pages.administrationView.columns.trusts'),
+      width: 220,
+      hideOrder: 1,
+      render: (row) => (row.trusts.length || row.declared_by.length
+        ? (
+          <>
+            {row.trusts.map((trust) => `${domainName(trust.domain, trust.label)} (${direction(trust.direction)})`).join(', ')}
+            {row.declared_by.length > 0 && (
+              <Box component="span" sx={quietSx}>
+                {row.trusts.length > 0 && ', '}
+                {row.declared_by.map((trust) => t('pages.administrationView.declaredTrust', { name: domainName(trust.domain, trust.label), direction: direction(trust.direction) })).join(', ')}
+              </Box>
+            )}
+          </>
+        )
+        : <Box component="span" sx={quietSx}>{t('pages.administrationView.none')}</Box>),
+    },
+    { key: 'accounts', header: t('pages.administrationView.columns.accounts'), width: 90, align: 'right', render: (row) => count(row.account_count) },
+    { key: 'computers', header: t('pages.administrationView.columns.computers'), width: 90, align: 'right', render: (row) => count(row.machine_count) },
+    {
+      key: 'controllers',
+      header: t('pages.administrationView.columns.domainControllers'),
+      render: (row) => (row.domain_controllers.length
+        ? (
+          <>
+            <Box component="span" sx={{ mr: 0.75 }}>{row.domain_controllers.length}</Box>
+            {row.domain_controllers.map((server, index) => (
+              <React.Fragment key={server.id}>
+                {index > 0 && ', '}
+                <RecordLink to={`/it/assets/${server.id}`}>{server.name}</RecordLink>
+              </React.Fragment>
+            ))}
+          </>
+        )
+        : <Box component="span" sx={quietSx}>{t('pages.administrationView.noController')}</Box>),
+    },
+  ];
+  if (!directories.data) {
+    return <ReportDataStatus loading={directories.isLoading} error={directories.isError} onRetry={() => void directories.refetch()} />;
+  }
+  const { services, forests } = directories.data;
+  const domainCount = forests.reduce((sum, group) => sum + group.domains.length, 0);
+  return (
+    <Stack spacing={2.5}>
+      <RelationsSection title={t('pages.administrationView.attributes.directoryServices')} count={services.length}>
+        {services.length
+          ? <RelationsTable columns={serviceColumns} rows={services} rowKey={(row) => row.id} rowHref={(row) => `/it/technologies/${row.id}`} ariaLabel={t('pages.administrationView.attributes.directoryServices')} />
+          : <RelationsEmpty>{t('pages.administrationView.noDirectories')}</RelationsEmpty>}
+      </RelationsSection>
+      <RelationsSection title={t('pages.administrationView.domains')} count={domainCount}>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.administrationView.domainsHint')}</Typography>
+        {domainCount === 0 && <RelationsEmpty>{t('pages.administrationView.noDomains')}</RelationsEmpty>}
+        <Stack spacing={1.5}>
+          {forests.filter((group) => group.domains.length > 0).map((group) => (
+            <Box key={group.forest ?? ''}>
+              <Typography component="h3" sx={{ m: 0, mb: 0.75, fontSize: 13, fontWeight: 500, ...(group.forest ? {} : quietSx) }}>
+                {group.forest ?? t('pages.administrationView.noForest')}
+              </Typography>
+              <RelationsTable
+                columns={domainColumns}
+                rows={group.domains}
+                rowKey={(row) => row.code}
+                ariaLabel={group.forest ?? t('pages.administrationView.noForest')}
+              />
+            </Box>
+          ))}
+        </Stack>
+      </RelationsSection>
+    </Stack>
+  );
+}
+
 /**
  * Administration zones (the administration view of the ANSSI mapping guide): the zones in a compact
  * band and the control points, both of which narrow the asset list below them; the assets with their
@@ -832,6 +966,7 @@ export default function AdministrationViewPage() {
               emptyState={<Typography sx={{ fontSize: 13, ...quietSx }} data-testid="administration-empty">{t('pages.administrationView.emptyAssets')}</Typography>}
             />
           </Box>
+          <DirectoriesSection zoneName={zoneName} />
           {canEdit && (
             <AssignZoneDialog
               open={assignOpen}
