@@ -1891,6 +1891,7 @@
         "editor": "Publisher",
         "family": "Family",
         "adminZone": "Administration zone",
+        "adminZoneUnused": "This value is no longer used.",
         "hostingType": "Hosting type",
         "description": "Description",
         "notes": "Notes",

@@ -59,7 +59,7 @@ export type TechnologyDetail = {
   name: string;
   editor: string | null;
   family: string | null;
-  /** Code of the "Administration zones" catalog, null when not placed. */
+  /** Code of the "Administration zones" catalog. The screen offers it for a directory service; the API keeps it on every family. */
   admin_zone?: string | null;
   /** Code of the "Hosting types" catalog (on premises, colocation, cloud, SaaS). */
   hosting_type: string;
@@ -272,25 +272,34 @@ export function TechnologyProperties({ technology, canManage, onPatch, onOwnersC
             ))}
           </Select>
         </PropertyRow>
-        <PropertyRow label={t('workspace.technology.fields.adminZone')}>
-          <Select
-            value={technology.admin_zone || ''}
-            onChange={(event) => onPatch({ admin_zone: String(event.target.value) || null })}
-            variant="standard"
-            disabled={!canManage}
-            displayEmpty
-            SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
-            sx={drawerSelectSx}
-            renderValue={(value) => (value
-              ? zoneOptions.find((option) => option.code === value)?.label ?? String(value)
-              : <Box component="span" sx={(theme) => ({ color: theme.palette.kanap.text.tertiary })}>{t('workspace.technology.placeholders.noAdminZone')}</Box>)}
+        {technology.family === 'directory' ? (
+          <PropertyRow label={t('workspace.technology.fields.adminZone')}>
+            <Select
+              value={technology.admin_zone || ''}
+              onChange={(event) => onPatch({ admin_zone: String(event.target.value) || null })}
+              variant="standard"
+              disabled={!canManage}
+              displayEmpty
+              SelectDisplayProps={{ 'aria-label': t('workspace.technology.fields.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
+              sx={drawerSelectSx}
+              renderValue={(value) => (value
+                ? zoneOptions.find((option) => option.code === value)?.label ?? String(value)
+                : <Box component="span" sx={(theme) => ({ color: theme.palette.kanap.text.tertiary })}>{t('workspace.technology.placeholders.noAdminZone')}</Box>)}
+            >
+              <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.technology.placeholders.noAdminZone')}</MenuItem>
+              {zoneOptions.map((option) => (
+                <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
+              ))}
+            </Select>
+          </PropertyRow>
+        ) : technology.admin_zone ? (
+          <PropertyRow
+            label={t('workspace.technology.fields.adminZone')}
+            helperText={t('workspace.technology.fields.adminZoneUnused')}
           >
-            <MenuItem value="" sx={drawerMenuItemSx}>{t('workspace.technology.placeholders.noAdminZone')}</MenuItem>
-            {zoneOptions.map((option) => (
-              <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.label}</MenuItem>
-            ))}
-          </Select>
-        </PropertyRow>
+            <Box component="span">{zoneOptions.find((option) => option.code === technology.admin_zone)?.label ?? technology.admin_zone}</Box>
+          </PropertyRow>
+        ) : null}
         <PropertyRow label={t('workspace.technology.fields.hostingType')}>
           <Select
             value={technology.hosting_type || ''}
