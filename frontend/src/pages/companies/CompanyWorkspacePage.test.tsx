@@ -449,10 +449,17 @@ describe('CompanyWorkspacePage', () => {
       '/company-metrics/co-1', { headcount: 55, it_users: null, turnover: 12.5 }, { params: { year: Y } });
   });
 
-  it('starts a year without metrics with a zero headcount and empty optional values', async () => {
+  it('starts a year without metrics with every field empty', async () => {
     renderAt(`/master-data/companies/co-1/details?year=${Y + 1}`);
     const headcount = await screen.findByLabelText('companies.fields.headcount');
-    await waitFor(() => expect(headcount).toHaveValue('0'));
+    await waitFor(() => expect(headcount).not.toBeDisabled());
+    expect(headcount).toHaveValue('');
+    expect(screen.getByLabelText('companies.fields.itUsers')).toHaveValue('');
+    // Leaving the empty headcount of an empty year is not an edit: no message, no write.
+    fireEvent.focus(headcount);
+    fireEvent.blur(headcount);
+    expect(screen.queryByText('companies.messages.headcountInvalid')).toBeNull();
+    expect(mocked.patch).not.toHaveBeenCalled();
     const turnover = screen.getByLabelText('companies.fields.turnover EUR');
     expect(turnover).toHaveValue('');
     fireEvent.change(turnover, { target: { value: '3.25' } });
@@ -591,8 +598,8 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.blur(headcount);
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledTimes(1));
     fireEvent.click(screen.getByRole('tab', { name: String(Y + 1) }));
-    await waitFor(() => expect(screen.getByLabelText('companies.fields.headcount')).toHaveValue('0'));
-    expect(screen.getByLabelText('companies.fields.headcount')).not.toBeDisabled();
+    await waitFor(() => expect(screen.getByLabelText('companies.fields.headcount')).not.toBeDisabled());
+    expect(screen.getByLabelText('companies.fields.headcount')).toHaveValue('');
     finish({ data: { headcount: 60, it_users: 10, turnover: '12.5' } });
   });
 
@@ -622,6 +629,14 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('shows a headcount of zero that is actually stored', async () => {
+    metrics[Y + 2] = { headcount: 0, it_users: null, turnover: null };
+    renderAt(`/master-data/companies/co-1/details?year=${Y + 2}`);
+    const headcount = await screen.findByLabelText('companies.fields.headcount');
+    await waitFor(() => expect(headcount).toHaveValue('0'));
+    delete metrics[Y + 2];
   });
 
   it('deletes a company nothing uses, then returns to the list', async () => {

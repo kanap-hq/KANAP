@@ -24,7 +24,8 @@ type Props = {
   onSave?: (pending: Promise<boolean>) => void;
 };
 
-type Metrics = { headcount: number; it_users: number | null; turnover: number | null };
+/** `headcount` is `null` only for a year with nothing stored. */
+type Metrics = { headcount: number | null; it_users: number | null; turnover: number | null };
 type MetricField = keyof Metrics;
 type MetricErrors = Partial<Record<MetricField, string>>;
 
@@ -32,7 +33,7 @@ type RawMetrics = { headcount?: unknown; it_users?: unknown; turnover?: unknown 
 
 function toMetrics(raw: RawMetrics): Metrics {
   return {
-    headcount: raw?.headcount != null ? Number(raw.headcount) : 0,
+    headcount: raw?.headcount != null ? Number(raw.headcount) : null,
     it_users: raw?.it_users != null ? Number(raw.it_users) : null,
     turnover: raw?.turnover != null ? Number(raw.turnover) : null,
   };
@@ -96,7 +97,8 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
     const run = async () => {
       const base = queryClient.getQueryData<Metrics>(key) ?? stored;
       if (!base || base[field] === value) return true;
-      const body: Metrics = { ...base, [field]: value };
+      // A year written for the first time from another field starts with a headcount of zero, as before.
+      const body: Metrics = { ...base, headcount: base.headcount ?? 0, [field]: value };
       try {
         const res = await api.patch<RawMetrics>(`/company-metrics/${companyId}`, body, { params: { year: key[2] } });
         queryClient.setQueryData(key, toMetrics({ ...body, ...(res.data ?? {}) }));
@@ -117,6 +119,8 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
   /** `'invalid'` keeps the message and the caller puts the stored value back. A promise is the save. */
   const commit = (field: MetricField, raw: string): 'invalid' | Promise<boolean> => {
     if (readOnly || frozen || !stored) return Promise.resolve(true);
+    // An empty field of a year with nothing stored was left as it was.
+    if (raw.trim() === '' && stored[field] == null) return Promise.resolve(true);
     const value = parseMetric(field, raw.trim());
     if (value === undefined) {
       setErrors((prev) => ({ ...prev, [field]: t(INVALID_MESSAGE[field]) }));
