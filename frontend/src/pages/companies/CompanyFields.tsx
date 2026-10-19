@@ -1,7 +1,7 @@
 import React from 'react';
 import { useTranslation } from 'react-i18next';
 import { Autocomplete, TextField } from '@mui/material';
-import { currencyLabel, useCurrencyOptions } from '../../i18n/currencies';
+import { currencyLabel, filterCurrencyOptions, useCurrencyOptions } from '../../i18n/currencies';
 import { useCountryOptions } from '../../i18n/countries';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx } from '../../theme/formSx';
 import type { CoaListItem } from '../coa/useCoaList';
@@ -40,6 +40,7 @@ function CodeAutocomplete({
   disabled,
   error,
   optionLabel = codeLabel,
+  filterOptions,
 }: {
   options: CodeOption[];
   value: string;
@@ -50,6 +51,7 @@ function CodeAutocomplete({
   disabled?: boolean;
   error?: string;
   optionLabel?: (option: CodeOption) => string;
+  filterOptions?: (options: CodeOption[], query: string) => CodeOption[];
 }) {
   const code = value.toUpperCase();
   // A stored code missing from the list still shows as itself.
@@ -60,6 +62,7 @@ function CodeAutocomplete({
       value={selected}
       onChange={(_event, option) => onChange(option?.code ?? '')}
       getOptionLabel={optionLabel}
+      filterOptions={filterOptions ? (listed, state) => filterOptions(listed, state.inputValue) : undefined}
       isOptionEqualToValue={(a, b) => a.code === b.code}
       disableClearable={!clearable}
       disabled={disabled}
@@ -108,6 +111,7 @@ export function CurrencyField(props: FieldProps) {
       {...props}
       options={options}
       optionLabel={currencyLabel}
+      filterOptions={filterCurrencyOptions}
       label={t('companies.fields.baseCurrency')}
       placeholder={t('companies.placeholders.baseCurrency')}
     />
