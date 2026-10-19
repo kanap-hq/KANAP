@@ -11,10 +11,20 @@ import {
   refreshCurrencyRates,
   type CurrencyRateRow,
   type MissingRatePair,
+  type RemoveManualRateResult,
 } from '../../services/currency';
-import useCurrencyRates, { invalidateCurrencyRateQueries, useMissingRates } from '../../hooks/useCurrencyRates';
+import useCurrencyRates, {
+  invalidateCurrencyRateQueries,
+  useMissingRates,
+  useRemoveManualRate,
+  useSetManualRate,
+} from '../../hooks/useCurrencyRates';
 import { useAuth } from '../../auth/AuthContext';
+import KanapDialog from '../../components/design/KanapDialog';
 import { PropertyRow } from '../../components/design/PropertyRow';
+import FormattedNumberField from '../../components/inputs/FormattedNumberField';
+import { decimalMark } from '../../i18n/formatters';
+import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 function normalizeList(value: string): string[] | null {
@@ -34,7 +44,7 @@ export default function CurrencySettingsPage() {
   const { data, isLoading, isError } = useCurrencySettings();
   const { data: rateRows, isLoading: ratesLoading, isError: ratesError } = useCurrencyRates();
   const { data: missingPairs, isLoading: missingLoading, isError: missingError } = useMissingRates();
-  const [, setManualTarget] = React.useState<{ currency: string; year: number } | null>(null);
+  const [manualTarget, setManualTarget] = React.useState<{ currency: string; year: number } | null>(null);
   const [reportingCurrency, setReportingCurrency] = React.useState('EUR');
   const [defaultSpendCurrency, setDefaultSpendCurrency] = React.useState('EUR');
   const [defaultCapexCurrency, setDefaultCapexCurrency] = React.useState('EUR');
@@ -210,7 +220,132 @@ export default function CurrencySettingsPage() {
         reportingCurrency={reporting}
         onEdit={setManualTarget}
       />
+      {manualTarget && (
+        <ManualRateDialog
+          key={pairKey(manualTarget.currency, manualTarget.year)}
+          currency={manualTarget.currency}
+          year={manualTarget.year}
+          reportingCurrency={reporting}
+          rows={rateRows}
+          onClose={() => setManualTarget(null)}
+          onRemoved={(result) => {
+            setSuccessMessage(t(`${C}.manualRateRemoved`));
+            // The automatic rate comes back from a background fetch: look again once it has had time.
+            if (result.refreshQueued) {
+              window.setTimeout(() => invalidateCurrencyRateQueries(queryClient), 5000);
+            }
+          }}
+        />
+      )}
     </Box>
+  );
+}
+
+type ManualRateDialogProps = {
+  currency: string;
+  year: number;
+  reportingCurrency: string;
+  rows: CurrencyRateRow[] | undefined;
+  onClose: () => void;
+  onRemoved: (result: RemoveManualRateResult) => void;
+};
+
+/** Enters, changes or removes the manual rate of one currency and year. */
+function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, onRemoved }: ManualRateDialogProps) {
+  const { t } = useTranslation(['ops', 'common']);
+  const C = 'operations.currency';
+  // The application language decides the decimal mark; a typed comma or point is read either way.
+  const separator = decimalMark(useLocale());
+  const set = rows?.find((row) => row.fiscalYear === year);
+  const current = set?.rates?.[currency];
+  const isManual = set?.rateSources?.[currency] === 'manual';
+  // Rates are stored with 6 decimals, as the matrix shows them.
+  const [draft, setDraft] = React.useState(current != null ? String(Number(current.toFixed(6))) : '');
+  const [invalid, setInvalid] = React.useState(false);
+  const save = useSetManualRate();
+  const remove = useRemoveManualRate();
+  const busy = save.isPending || remove.isPending;
+  const apiError = save.error
+    ? getApiErrorMessage(save.error, t, t(`${C}.failedToSaveManualRate`))
+    : remove.error
+      ? getApiErrorMessage(remove.error, t, t(`${C}.failedToRemoveManualRate`))
+      : null;
+
+  const handleSave = async () => {
+    const rate = Number(draft);
+    if (draft === '' || !Number.isFinite(rate) || rate <= 0) {
+      setInvalid(true);
+      return;
+    }
+    remove.reset();
+    try {
+      await save.mutateAsync({ currency, year, rate });
+      onClose();
+    } catch {
+      // Shown in the dialog.
+    }
+  };
+
+  const handleRemove = async () => {
+    save.reset();
+    try {
+      const result = await remove.mutateAsync({ year, currency });
+      onRemoved(result);
+      onClose();
+    } catch {
+      // Shown in the dialog.
+    }
+  };
+
+  return (
+    <KanapDialog
+      open
+      title={t(`${C}.manualDialogTitle`)}
+      subtitle={`${currency} · ${year}`}
+      onClose={onClose}
+      onSave={handleSave}
+      saveDisabled={remove.isPending}
+      saveLoading={save.isPending}
+      footerLeft={isManual ? (
+        <Button variant="action" onClick={handleRemove} disabled={busy}>
+          {t(`${C}.removeManualRate`)}
+        </Button>
+      ) : undefined}
+    >
+      <Stack spacing={1.5}>
+        {apiError && <Alert severity="error">{apiError}</Alert>}
+        <PropertyRow
+          label={t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency })}
+          helperText={t(`${C}.manualRateHint`)}
+          required
+          valueSx={{ maxWidth: 200 }}
+        >
+          <FormattedNumberField
+            variant="standard"
+            value={draft}
+            emit="string"
+            decimals={6}
+            decimalSeparator={separator}
+            error={invalid}
+            placeholder={t(`${C}.manualRatePlaceholder`)}
+            inputProps={{ 'aria-label': t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency }) }}
+            onChange={(event) => {
+              setDraft(String(event.target.value ?? ''));
+              setInvalid(false);
+            }}
+            fullWidth
+          />
+        </PropertyRow>
+        {invalid && (
+          <Typography role="alert" sx={{ fontSize: 12, color: 'error.main' }}>
+            {t(`${C}.manualRateInvalid`)}
+          </Typography>
+        )}
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {t(`${C}.manualRateReplaces`)}
+        </Typography>
+      </Stack>
+    </KanapDialog>
   );
 }
 
