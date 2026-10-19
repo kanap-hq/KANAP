@@ -236,4 +236,15 @@ describe('TechnologyServersTab', () => {
     expect(await screen.findByText(`${S}.empty`)).toBeTruthy();
     expect(screen.queryByRole('table')).toBeNull();
   });
+
+  it('keeps a long version label in the cell title and gives the column room for a common one', async () => {
+    renderTab([
+      row({ link_id: 'l-long', asset_id: 'db1', asset_name: 'PAR-DB-01', asset_reference: 'AST-1', technology_version_id: 'vlong', version_label: '16.99-c2check' }),
+      row({ kind: 'carried', asset_id: 'vm1', asset_name: 'PAR-VM-01', asset_reference: 'AST-4', via_asset_id: 'db1', via_asset_name: 'PAR-DB-01', technology_version_id: 'v2019', version_label: '2019 (1809)' }),
+    ]);
+    const table = await screen.findByRole('table', { name: `${S}.title` });
+    expect(within(table).getByTitle('16.99-c2check').textContent).toBe('16.99-c2check');
+    expect(within(table).getByTitle('2019 (1809)').textContent).toBe('2019 (1809)');
+    expect(table.querySelectorAll('col')[4].style.width).toBe('128px');
+  });
 });
