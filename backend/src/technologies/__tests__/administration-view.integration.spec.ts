@@ -20,8 +20,8 @@ import { application, asset, assign, contains, installed, member, one, technolog
 
 // The administration view (lot A1e), against a real database in transactions rolled back at the end.
 // The five controls keep the rules reviewed in lot A1d. The summary and the asset page report counts
-// and findings. Trust counts pairs. Applications in the most sensitive zone count one row per
-// application and hosting asset. The asset page lists each asset once.
+// and findings. Each control counts distinct assets, the rows of the asset page filtered on it, even
+// when an asset has several pairs or hosts several applications.
 
 type Settings = Record<string, unknown>;
 
@@ -377,8 +377,12 @@ async function testControls() {
     assert.equal(countOf(view, 'assets_without_zone'), 5);
     assert.equal(countOf(view, 'domain_controllers_outside'), 2);
     assert.equal(countOf(view, 'directory_assets_outside'), 2);
-    assert.equal(countOf(view, 'trust_raised'), 3, 'guest depends on host and host-b, and esx1 on vsphere: three pairs');
-    assert.equal(countOf(view, 'applications_on_most_sensitive'), 4, 'Portal on guest and node, Extra on guest, App dc-home on dc-home');
+    assert.equal(countOf(view, 'trust_raised'), 2, 'guest depends on host and host-b, and esx1 on vsphere: two assets, three pairs');
+    assert.equal(countOf(view, 'applications_on_most_sensitive'), 3, 'Portal on guest and node, Extra on guest, App dc-home on dc-home: three assets');
+    for (const control of view.controls) {
+      const filtered = await svc.assets({ filters: setFilter('control', [control.key]), limit: 200 }, opts);
+      assert.equal(filtered.total, control.count, `${control.key}: the count is the rows of the filtered list`);
+    }
 
     const page = await svc.assets({ limit: 200 }, opts);
     assert.equal(page.total, page.items.length);

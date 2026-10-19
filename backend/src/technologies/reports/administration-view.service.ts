@@ -20,13 +20,12 @@ import { inServiceSql } from '../technology-reach.service';
  * raises a finding when its zone is more sensitive than its container. A cluster member raises a
  * finding when its zone is less sensitive than its cluster: the member carries the cluster. A
  * pair is left out when either zone is missing, deprecated or outside the catalog, and a self-link
- * is left out. `trust_raised` counts the pairs. The asset list shows the content or the member
- * once, with every holder it depends on.
+ * is left out. The asset list shows the content or the member once, with every holder it depends on.
  *
  * A domain controller, for the domains section, is an asset of the domain (`assets.domain`), not
  * retired, assigned the server role `domain-controller` on an instance in service, or carrying an
  * installed technology of the `directory` family that is not retired. The control point uses the
- * role only. `applications_on_most_sensitive` counts one row per application and hosting asset.
+ * role only. Each control counts distinct assets: exactly the rows of the asset list filtered on it.
  * Retired assets and retired technologies are left out of every control. A deprecated or unknown
  * zone is shown only while an asset or a directory service still carries it. Every statement
  * carries `tenant_id` and reads the tenant in batches.
@@ -249,7 +248,7 @@ function trustSql(ranks: string): string {
           AND ${ranked('member')} > ${ranked('cluster')}`;
 }
 
-/** Applications in service hosted on assets of the most sensitive zone. One row per application and asset. */
+/** Applications in service hosted on assets of the most sensitive zone. One row per assignment. */
 function hostedFrom(most: string, ids?: string): string {
   const only = ids ? `AND ax.id = ANY(${ids}::uuid[])` : '';
   return `FROM app_asset_assignments aa
@@ -546,8 +545,8 @@ export class AdministrationViewService {
         (SELECT count(*)::int FROM assets a WHERE a.tenant_id = $1 AND a.status <> 'retired' AND ${zoneOf('a')} IS NULL) AS assets_without_zone,
         (SELECT count(*)::int FROM (${controllersSql(m.role, m.most)}) s) AS domain_controllers_outside,
         (SELECT count(*)::int FROM (${directorySql(m.family, m.most)}) s) AS directory_assets_outside,
-        (SELECT count(*)::int FROM (${trustSql(m.ranks)}) s) AS trust_raised,
-        (SELECT count(*)::int FROM (SELECT DISTINCT ap.id, ax.id ${hostedFrom(m.most)}) s) AS applications_on_most_sensitive`;
+        (SELECT count(DISTINCT asset_id)::int FROM (${trustSql(m.ranks)}) s) AS trust_raised,
+        (SELECT count(DISTINCT ax.id)::int ${hostedFrom(m.most)}) AS applications_on_most_sensitive`;
     }
     const [row] = await opts.manager.query(sql, params);
     const count = (key: ControlKey): number | null => (ctx.most || key === 'assets_without_zone' ? Number(row?.[key] ?? 0) : null);
