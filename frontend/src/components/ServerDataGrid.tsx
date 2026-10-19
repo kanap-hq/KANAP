@@ -204,6 +204,27 @@ function parseUrlSort(sortFromUrl: string | null | undefined, fallback: { field:
  * columns the layout does not know yet go right after their nearest predecessor in the default
  * order (at the start when none precedes them), and columns that no longer exist are dropped.
  */
+/** A flex column with no minimum of its own stays wide enough to read its header ("Nom", "Total"). */
+export const FLEX_COLUMN_MIN_WIDTH = 160;
+
+export function columnMinWidth(col: { minWidth?: number | null; flex?: number | null }): number | undefined {
+  if (typeof col.minWidth === 'number') return col.minWidth;
+  if (typeof col.flex === 'number' && col.flex > 0) return FLEX_COLUMN_MIN_WIDTH;
+  return undefined;
+}
+
+/** A stored width below the column's minimum is lifted. Widths without a minimum stay as saved. */
+export function floorSavedColumnWidths(
+  state: ColumnState[],
+  minWidthById: ReadonlyMap<string, number>,
+): ColumnState[] {
+  return state.map((col) => {
+    const min = col.colId ? minWidthById.get(col.colId) : undefined;
+    if (min == null || col.width == null || col.width >= min) return col;
+    return { ...col, width: min };
+  });
+}
+
 export function mergeSavedColumnState(savedState: ColumnState[], defaultState: ColumnState[]): ColumnState[] {
   const defaultById = new Map<string | null | undefined, ColumnState>();
   for (const d of defaultState) defaultById.set(d.colId, d);
@@ -392,7 +413,13 @@ function useColumnState(
         };
       };
 
-      return mergeSavedColumnState(savedState, defaultState).map(applyRequired);
+      const minWidthById = new Map<string, number>();
+      for (const column of columns) {
+        const id = column.field || column.colId || '';
+        const min = columnMinWidth(column);
+        if (id && min != null) minWidthById.set(id, min);
+      }
+      return floorSavedColumnWidths(mergeSavedColumnState(savedState, defaultState).map(applyRequired), minWidthById);
     } catch (e) {
       console.warn('Failed to load column state from localStorage:', e);
       return getDefaultColumnState();
@@ -553,6 +580,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           if (params.node?.rowPinned) return '';
           return typeof origFmt === 'function' ? origFmt(params) : params.value;
         };
+      }
+
+      if (agGridCol.minWidth == null && typeof agGridCol.flex === 'number' && agGridCol.flex > 0) {
+        agGridCol.minWidth = FLEX_COLUMN_MIN_WIDTH;
       }
 
       return {
