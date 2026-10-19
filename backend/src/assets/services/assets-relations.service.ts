@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -140,6 +140,75 @@ export class AssetsRelationsService extends AssetsBaseService {
     );
 
     return this.listRelations(assetId, { ...(opts || {}), tenantId: tenant });
+  }
+
+  /**
+   * Adds one relation and leaves every other relation of the asset as it is. For a writer that
+   * only ever adds, such as the Netbox import attaching a virtual machine to its cluster:
+   * `bulkReplaceRelations` would drop whatever that writer does not know about. Returns false
+   * when the relation was already there, which writes nothing and logs nothing.
+   *
+   * The asset row is locked first, so a person replacing its relations at the same moment either
+   * sees the new one or waits for it, and the audit entry lists the relations as they really are.
+   */
+  async addRelation(
+    assetId: string,
+    relatedAssetId: string,
+    relationType: 'contains' | 'depends_on',
+    tenantId: string,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ): Promise<boolean> {
+    const tenant = this.ensureTenantId(tenantId);
+    const mg = this.getManager(opts);
+    if (relatedAssetId === assetId) {
+      throw new BadRequestException('Asset cannot have a relation to itself');
+    }
+    const locked = await mg.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+      [tenant, assetId],
+    );
+    if (locked.length === 0) throw new NotFoundException('Asset not found');
+    const related = await mg.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [tenant, relatedAssetId],
+    );
+    if (related.length === 0) {
+      throw new BadRequestException('One or more related assets were not found');
+    }
+
+    const existing: Array<{ related_asset_id: string; relation_type: string }> = await mg.query(
+      `SELECT related_asset_id, relation_type FROM asset_relations
+       WHERE tenant_id = $1 AND asset_id = $2
+       ORDER BY created_at, id`,
+      [tenant, assetId],
+    );
+    const added: Array<{ count: number }> = await mg.query(
+      `WITH added AS (
+         INSERT INTO asset_relations (tenant_id, asset_id, related_asset_id, relation_type)
+         VALUES ($1, $2, $3, $4)
+         ON CONFLICT (tenant_id, asset_id, related_asset_id, relation_type) DO NOTHING
+         RETURNING 1
+       )
+       SELECT count(*)::int AS count FROM added`,
+      [tenant, assetId, relatedAssetId, relationType],
+    );
+    if (Number(added[0]?.count ?? 0) === 0) return false;
+
+    const before = existing.map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type }));
+    await this.audit.log(
+      {
+        table: 'asset_relations',
+        recordId: assetId,
+        action: 'update',
+        before: { relations: before },
+        after: { relations: [...before, { related_asset_id: relatedAssetId, relation_type: relationType }] },
+        userId,
+        ...this.auditSource(opts),
+      },
+      { manager: opts?.manager },
+    );
+    return true;
   }
 
   // =========================================================================

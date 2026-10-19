@@ -40,6 +40,9 @@ import { NetboxNotice, netboxNotice, netboxNoticeFromStore, primaryNotice } from
 import {
   ExistingLink,
   ExistingSubLocation,
+  NetboxClusterAsset,
+  NetboxClusterContext,
+  NetboxClusterTarget,
   NetboxDecision,
   NetboxPlan,
   NetboxPlanRow,
@@ -51,6 +54,7 @@ import {
   diffNetboxMapping,
   externalKey,
   isWriteDeferred,
+  planClusterAttachment,
   planNetboxSync,
   resolveSubLocation,
   subLocationUpkeepNotices,
@@ -203,6 +207,11 @@ export type NetboxPreviewResult = {
     available: boolean;
     changes: NetboxSubLocationChange[];
   };
+  /**
+   * Notices about the inventory as a whole, listed once each: a Netbox cluster
+   * whose virtual machines cannot be attached to a KANAP cluster.
+   */
+  notices: NetboxNotice[];
 };
 
 export type NetboxStatus = {
@@ -241,12 +250,14 @@ type LocalContext = {
   roleMap: Record<string, string>;
   siteMap: Record<string, string>;
   osMap: Record<string, string>;
+  clusters: NetboxClusterContext;
 };
 
 type ApplyOutcome =
   | { action: 'create' | 'update' | 'unchanged'; assetId: string }
   | { action: 'error'; notice: NetboxNotice };
 
+// `cluster` is not a field of the asset row: applyRow adds the relation itself.
 const ASSET_FIELD_BY_DIFF_KEY: Record<string, keyof MappedAssetFields> = {
   name: 'name',
   kind: 'kind',
@@ -753,6 +764,7 @@ export class NetboxSyncService {
       [tenantId, NETBOX_LINK_SOURCE],
     );
     const mapping = this.config.getMapping(config);
+    const clusters = await this.loadClusterContext(manager, tenantId, mapping.cluster_map);
 
     return {
       config,
@@ -773,7 +785,48 @@ export class NetboxSyncService {
       roleMap: mapping.role_map,
       siteMap: mapping.site_map,
       osMap: mapping.os_map,
+      clusters,
     };
+  }
+
+  /**
+   * The assets the saved cluster matches name, and the clusters in service
+   * that already contain each asset. Both reads carry this tenant's id: a match
+   * that names an asset of another tenant finds nothing and reads as deleted.
+   */
+  private async loadClusterContext(
+    manager: EntityManager,
+    tenantId: string,
+    clusterMap: Record<string, string>,
+  ): Promise<NetboxClusterContext> {
+    const ids = [...new Set(Object.values(clusterMap))].filter((id) => UUID_PATTERN.test(id));
+    const targets: NetboxClusterAsset[] = ids.length > 0
+      ? await manager.query(
+        `SELECT id, name, is_cluster, status FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [tenantId, ids],
+      )
+      : [];
+    const containers = new Map<string, Array<{ id: string; name: string }>>();
+    if (ids.length > 0) {
+      const rows: Array<{ asset_id: string; id: string; name: string }> = await manager.query(
+        `SELECT r.related_asset_id AS asset_id, c.id, c.name
+         FROM asset_relations r
+         JOIN assets c ON c.tenant_id = $1 AND c.id = r.asset_id
+           AND c.is_cluster = true AND c.status IS DISTINCT FROM 'retired'
+         WHERE r.tenant_id = $1 AND r.relation_type = 'contains'
+         ORDER BY c.name, c.id`,
+        [tenantId],
+      );
+      for (const row of rows) {
+        const list = containers.get(row.asset_id) ?? [];
+        list.push({ id: row.id, name: row.name });
+        containers.set(row.asset_id, list);
+      }
+    }
+    // Ids are matched in lower case, as the database returns them.
+    const map: Record<string, string> = {};
+    for (const [clusterId, assetId] of Object.entries(clusterMap)) map[clusterId] = assetId.toLowerCase();
+    return { map, targets: new Map(targets.map((target) => [String(target.id), target])), containers };
   }
 
   /**
@@ -833,6 +886,7 @@ export class NetboxSyncService {
       subLocations: local.subLocations,
       locationIndex: fetched.locations,
       siteMap: local.siteMap,
+      clusters: local.clusters,
     });
     return { plan, mappings };
   }
@@ -905,6 +959,7 @@ export class NetboxSyncService {
         saved_matches: savedMatches,
         // Nothing was read, so nothing is known about the sub-locations either.
         sub_locations: { available: true, changes: [] },
+        notices: [],
       };
     }
     this.assertDecisionsApply(
@@ -951,6 +1006,7 @@ export class NetboxSyncService {
         available: plan.subLocationsAvailable,
         changes: plan.subLocations,
       },
+      notices: plan.clusterNotices,
     };
   }
 
@@ -1162,6 +1218,10 @@ export class NetboxSyncService {
     if (plan.subLocationsAvailable === false) {
       warnings.push(netboxNotice('locations_unavailable'));
     }
+    // A match that points at an asset unable to take the machines is a setup
+    // to fix, and the hourly run has no preview to say it in. A cluster nobody
+    // matched is only listed in the preview: leaving clusters out is allowed.
+    warnings.push(...plan.clusterNotices.filter((notice) => notice.code === 'cluster_match_invalid'));
 
     // Records whose object Netbox no longer lists are flagged first, so that a
     // device deleted and recreated under a new id finds its asset free and the
@@ -1322,6 +1382,11 @@ export class NetboxSyncService {
           if (action === 'unchanged') action = 'update';
         }
 
+        if (write.cluster) {
+          const added = await this.attachToCluster(manager, tenantId, assetId, write.cluster, warnings, opts);
+          if (added && action === 'unchanged') action = 'update';
+        }
+
         // The "Netbox" link on the asset is written once, when the asset and
         // the Netbox object are first tied together.
         const existing = await manager.query(
@@ -1362,6 +1427,34 @@ export class NetboxSyncService {
       }).catch((linkError) => this.logRecordFailure(row, linkError));
       return { action: 'error', notice };
     }
+  }
+
+  /**
+   * Adds the `contains` relation from the matched KANAP cluster to this
+   * virtual machine, inside the row's transaction, and nothing else: the
+   * cluster's other relations are left as they are. The cluster row is read
+   * again and locked here, so an asset deleted, retired or turned into
+   * something else since the plan writes nothing and says so, and a person
+   * replacing the cluster's relations at the same moment waits for this row.
+   */
+  private async attachToCluster(
+    manager: EntityManager,
+    tenantId: string,
+    assetId: string,
+    cluster: NetboxClusterTarget,
+    warnings: NetboxNotice[],
+    opts: { manager: EntityManager; tenantId: string; source: string; sourceRef: string },
+  ): Promise<boolean> {
+    const rows: Array<{ is_cluster: boolean; status: string | null }> = await manager.query(
+      `SELECT is_cluster, status FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+      [tenantId, cluster.assetId],
+    );
+    const target = rows[0];
+    if (!target || target.is_cluster !== true || target.status === 'retired') {
+      warnings.push(netboxNotice('cluster_match_invalid', { value: cluster.netboxName }));
+      return false;
+    }
+    return this.assets.addRelation(cluster.assetId, assetId, 'contains', tenantId, null, opts);
   }
 
   /**
@@ -1783,6 +1876,8 @@ export class NetboxSyncService {
     const resolution = mapping.subLocation
       ? resolveSubLocation(local.subLocations, mapping.asset.location_id, mapping.subLocation)
       : null;
+    // Linked or created by hand, a virtual machine joins its cluster as a run would put it there.
+    const attachment = planClusterAttachment(object, existingAsset ? existingAsset.id : null, local.clusters);
     const row: NetboxPlanRow = {
       external_type: record.external_type,
       external_id: record.external_id,
@@ -1804,8 +1899,9 @@ export class NetboxSyncService {
         : [],
       skip_reason: null,
       decision: null,
-      warnings: mapping.warnings,
+      warnings: [...mapping.warnings, ...attachment.warnings],
     };
+    if (attachment.diff) row.diffs.push(attachment.diff);
     const outcome = await this.applyRow(
       tenantId,
       row,
@@ -1814,6 +1910,7 @@ export class NetboxSyncService {
         hardware: mapping.hardware,
         assetId,
         subLocation: mapping.subLocation,
+        cluster: attachment.target,
       },
       local.defaultEnvironment,
     );

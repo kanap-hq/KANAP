@@ -34,6 +34,10 @@ export type NetboxNoticeCode =
   // --- values KANAP could not take over (locations) ---
   | 'sub_location_name_taken'
   | 'locations_unavailable'
+  // --- virtual machine clusters ---
+  | 'cluster_not_mapped'
+  | 'cluster_match_invalid'
+  | 'cluster_other_present'
   // --- run-level trouble ---
   | 'fetch_incomplete'
   | 'save_failed'
@@ -92,6 +96,12 @@ const TEXTS: Record<NetboxNoticeCode, (params: Record<string, string>) => string
     `A sub-location named "${p.value}" already exists at this location for another Netbox location, so the sub-location was left unchanged.`,
   locations_unavailable: () =>
     'Netbox did not return its locations, so sub-locations were left unchanged in this run.',
+  cluster_not_mapped: (p) =>
+    `The Netbox cluster "${p.value}" is not matched with a KANAP cluster, so its virtual machines were not attached to one.`,
+  cluster_match_invalid: (p) =>
+    `The Netbox cluster "${p.value}" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines were not attached to it.`,
+  cluster_other_present: (p) =>
+    `KANAP also places the virtual machine "${p.name}" in ${p.value}. That relation was kept: remove it by hand if it is out of date.`,
   fetch_incomplete: () =>
     'Netbox returned more pages than KANAP reads in one run, so the objects beyond them were not looked at.',
   save_failed: () =>
@@ -136,6 +146,9 @@ const NOTICE_PRIORITY: Record<NetboxNoticeCode, 1 | 2 | 3> = {
   no_ip_address_type: 1,
   sub_location_name_taken: 1,
   locations_unavailable: 1,
+  cluster_not_mapped: 1,
+  cluster_match_invalid: 1,
+  cluster_other_present: 1,
   fetch_incomplete: 1,
 };
 
