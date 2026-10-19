@@ -1045,7 +1045,8 @@
         "manufacturer": "Fabricant",
         "model": "Modèle",
         "rack_location": "Emplacement en baie",
-        "rack_unit": "Unité de baie"
+        "rack_unit": "Unité de baie",
+        "cluster": "Cluster"
       },
       "mappings": {
         "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",
@@ -1069,7 +1070,9 @@
           "assetType": "Type d'actif KANAP",
           "netboxPlatform": "Plateforme Netbox",
           "location": "Site KANAP",
-          "operatingSystem": "Technologie"
+          "operatingSystem": "Technologie",
+          "netboxCluster": "Cluster Netbox",
+          "kanapCluster": "Cluster KANAP"
         },
         "counts": {
           "devices_one": "{{count}} équipement",
@@ -1081,7 +1084,14 @@
         "reservedRoles": {
           "virtualMachines": "Machines virtuelles"
         },
-        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui."
+        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui.",
+        "clusters": "Clusters",
+        "clustersHint": "Choisissez le cluster KANAP de chaque cluster Netbox. Ses machines virtuelles sont alors ajoutées à ce cluster, et rien n'est retiré : une machine déjà dans un autre cluster y reste, même après une correspondance modifiée. Une machine que vous retirez de son cluster y revient à l'exécution suivante tant qu'elle est dans ce cluster Netbox. Un cluster laissé sans correspondance ne bloque pas l'import.",
+        "clustersUnavailable": "Netbox n'a pas renvoyé ses clusters, les machines virtuelles ne peuvent donc pas être rattachées à un cluster ici. Vérifiez que le jeton d'API peut lire les clusters.",
+        "noClusters": "Netbox ne liste aucun cluster, il n'y a donc rien à mettre en correspondance ici.",
+        "noCluster": "Aucune correspondance",
+        "clusterUnavailable": "Actif plus disponible",
+        "clusterNotInNetbox": "Plus dans Netbox"
       },
       "retire": {
         "title": "Passer l'actif en retiré",
@@ -1137,7 +1147,10 @@
         "ip_match_candidates": "Un actif utilise déjà l'adresse {{value}}. Indiquez s'il s'agit du même équipement.",
         "similar_name_candidates": "Un actif porte un nom proche. Indiquez s'il s'agit du même équipement.",
         "sub_location_name_taken": "Un sous-site nommé « {{value}} » existe déjà à ce site pour un autre emplacement Netbox. Le sous-site a été laissé inchangé.",
-        "locations_unavailable": "Netbox n'a pas renvoyé ses emplacements. Les sous-sites n'ont pas été modifiés lors de cette exécution."
+        "locations_unavailable": "Netbox n'a pas renvoyé ses emplacements. Les sous-sites n'ont pas été modifiés lors de cette exécution.",
+        "cluster_not_mapped": "Le cluster Netbox « {{value}} » n'a pas de correspondance avec un cluster KANAP, ses machines virtuelles n'ont donc été rattachées à aucun.",
+        "cluster_match_invalid": "Le cluster Netbox « {{value}} » correspond à un actif supprimé, retiré ou qui n'est plus un cluster, ses machines virtuelles n'y ont donc pas été rattachées.",
+        "cluster_other_present": "KANAP place aussi la machine virtuelle « {{name}} » dans {{value}}. Cette relation a été conservée : retirez-la à la main si elle n'est plus à jour."
       },
       "netboxStatus": {
         "active": "Actif",

@@ -180,6 +180,15 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
   assert.equal(parsed.position, '12');
   assert.equal(parsed.primaryIp, '10.10.1.5/24');
   assert.equal(parsed.url, `${BASE_URL}/dcim/devices/1/`);
+  assert.equal(parsed.cluster, null);
+
+  // A device payload that names a cluster is still a device: host membership
+  // is not read from Netbox.
+  const hosted = normalizeNetboxDevice(
+    { id: 2, name: 'par-esx-02', role: { slug: 'server' }, cluster: { id: 7, name: 'Paris vSphere' } },
+    BASE_URL,
+  );
+  assert.equal(hosted.cluster, null);
 
   // Netbox below 3.6 still reports device_role.
   const legacy = normalizeNetboxDevice(
@@ -202,10 +211,12 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
   assert.equal(vm.roleSlug, NETBOX_VIRTUAL_MACHINES_SLUG);
   assert.equal(vm.roleName, NETBOX_VIRTUAL_MACHINES_NAME);
   assert.equal(vm.serial, null);
+  assert.equal(vm.cluster, null);
   assert.equal(vm.url, `${BASE_URL}/virtualization/virtual-machines/50/`);
 
   // A machine with no role at all lands on the same key, and the site often
-  // comes from the cluster instead of the machine.
+  // comes from the cluster instead of the machine. A cluster with no id still
+  // supplies that site, and is not a cluster the import can attach to.
   const bare = normalizeNetboxVirtualMachine({
     id: 51,
     name: 'par-app-02',
@@ -215,6 +226,7 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
   }, BASE_URL);
   assert.equal(bare.roleSlug, NETBOX_VIRTUAL_MACHINES_SLUG);
   assert.equal(bare.siteSlug, 'paris');
+  assert.equal(bare.cluster, null);
 
   // Older payloads carry cluster.site rather than cluster.scope.
   const legacyCluster = normalizeNetboxVirtualMachine(
@@ -222,6 +234,22 @@ function row(result: ReturnType<typeof plan>, externalId: string): NetboxPlanRow
     BASE_URL,
   );
   assert.equal(legacyCluster.siteSlug, 'paris');
+  assert.equal(legacyCluster.cluster, null);
+
+  const attached = normalizeNetboxVirtualMachine({
+    id: 53,
+    name: 'par-app-04',
+    cluster: { id: 7, name: '  Paris vSphere  ' },
+  }, BASE_URL);
+  assert.deepEqual(attached.cluster, { id: '7', name: 'Paris vSphere' });
+
+  // A cluster id with no name is still matchable; the id stands in for the label.
+  const nameless = normalizeNetboxVirtualMachine({
+    id: 54,
+    name: 'par-app-05',
+    cluster: { id: 8 },
+  }, BASE_URL);
+  assert.deepEqual(nameless.cluster, { id: '8', name: '8' });
 }
 
 {

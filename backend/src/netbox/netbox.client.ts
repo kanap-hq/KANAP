@@ -10,6 +10,7 @@ import {
 } from './netbox-mapper';
 import {
   NetboxApiError,
+  NetboxClusterOption,
   NetboxConnection,
   NetboxLocation,
   NetboxObject,
@@ -292,6 +293,26 @@ export class NetboxClient {
   async listPlatforms(connection: NetboxConnection): Promise<NetboxReferenceOption[]> {
     const { rows } = await this.listAll(connection, '/api/dcim/platforms/', {});
     return rows.map((row) => this.toReferenceOption(row));
+  }
+
+  /**
+   * GET /api/virtualization/clusters/ — the clusters virtual machines run on.
+   * Keyed by id: a Netbox cluster has a name, not a slug KANAP can match on.
+   * A row with no id is dropped, because nothing can be saved against it.
+   */
+  async listClusters(connection: NetboxConnection): Promise<NetboxClusterOption[]> {
+    const { rows } = await this.listAll(connection, '/api/virtualization/clusters/', {});
+    const clusters: NetboxClusterOption[] = [];
+    for (const row of rows) {
+      const id = textOrNull(row.id);
+      if (!id) continue;
+      clusters.push({
+        id,
+        name: textOrNull(row.name) ?? id,
+        vm_count: countOrZero(row.virtualmachine_count),
+      });
+    }
+    return clusters;
   }
 
   /**

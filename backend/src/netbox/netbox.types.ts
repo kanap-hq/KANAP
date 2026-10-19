@@ -70,6 +70,24 @@ export type NetboxObject = {
   url: string;
   /** The Location the device sits in, at any depth. Always null for a VM. */
   locationId: string | null;
+  /**
+   * The cluster this virtual machine runs on. Always null for a device: host
+   * membership stays a manual assignment and is not read from Netbox.
+   */
+  cluster: NetboxClusterRef | null;
+};
+
+/** The cluster a virtual machine runs on, as Netbox reports it. */
+export type NetboxClusterRef = {
+  id: string;
+  name: string;
+};
+
+/** One Netbox cluster, for the match table. Keyed by id, not by slug. */
+export type NetboxClusterOption = {
+  id: string;
+  name: string;
+  vm_count: number;
 };
 
 /** One Netbox Location, as the walk up to the top level needs it. */
