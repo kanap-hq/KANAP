@@ -676,7 +676,7 @@ export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({
   return (
     <Stack spacing={2.5} sx={{ pt: 1 }}>
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
-      {fxWarning && <Alert severity="warning">{allocationWarningText(t, fxWarning)}</Alert>}
+      {fxWarning && <Alert severity="warning" sx={{ whiteSpace: 'pre-line' }}>{allocationWarningText(t, fxWarning)}</Alert>}
 
       {/* Someone else saved this allocation while the user was editing it: reload or overwrite. */}
       <EditConflictBanner

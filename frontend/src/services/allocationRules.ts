@@ -23,7 +23,7 @@ export type AllocationRuleResolution = {
   shares: AllocationRuleShare[];
   /** Why the effective selection cannot be computed (missing metric, disabled company…). */
   preview_error: string | null;
-  /** The split is computed, but turnovers without a rate into the reporting currency were counted unconverted. */
+  /** Companies left out of the split: no rate from their currency into the reporting currency. */
   preview_warning?: TurnoverFxMissingWarning | null;
 };
 

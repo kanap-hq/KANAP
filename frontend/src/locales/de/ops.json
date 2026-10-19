@@ -1293,8 +1293,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "Noch keine Wechselkurse von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in diesen Währungen wird ohne Umrechnung gezählt, bis die Kurse verfügbar sind.",
-      "turnoverFxMissing_one": "Noch kein Wechselkurs von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist."
+      "turnoverFxMissing": "{{company}} ist von der Zuordnung ausgeschlossen: kein Wechselkurs von {{currency}} nach {{reportingCurrency}} für {{year}}.",
+      "turnoverFxMissing_one": "{{company}} ist von der Zuordnung ausgeschlossen: kein Wechselkurs von {{currency}} nach {{reportingCurrency}} für {{year}}."
     },
     "fxMissing": {
       "excluding_one": "{{count}} Zeile ohne Wechselkurs ausgeschlossen: {{pairs}}.",

@@ -1293,8 +1293,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "Aún no hay tipos de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en estas monedas se cuenta sin convertir hasta que los tipos estén disponibles.",
-      "turnoverFxMissing_one": "Aún no hay tipo de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible."
+      "turnoverFxMissing": "{{company}} queda excluida de la asignación: no hay tipo de cambio de {{currency}} a {{reportingCurrency}} para {{year}}.",
+      "turnoverFxMissing_one": "{{company}} queda excluida de la asignación: no hay tipo de cambio de {{currency}} a {{reportingCurrency}} para {{year}}."
     },
     "fxMissing": {
       "excluding_one": "Se excluye {{count}} línea sin tipo de cambio: {{pairs}}.",

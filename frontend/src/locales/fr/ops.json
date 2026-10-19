@@ -1294,8 +1294,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans ces devises est compté sans conversion jusqu'à ce que les taux soient disponibles.",
-      "turnoverFxMissing_one": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible."
+      "turnoverFxMissing": "{{company}} est exclue de la répartition : pas de taux de change {{currency}} vers {{reportingCurrency}} pour {{year}}.",
+      "turnoverFxMissing_one": "{{company}} est exclue de la répartition : pas de taux de change {{currency}} vers {{reportingCurrency}} pour {{year}}."
     },
     "fxMissing": {
       "excluding_one": "{{count}} ligne sans taux de change exclue : {{pairs}}.",

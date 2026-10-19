@@ -1,7 +1,7 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { Button, Stack, TextField } from '@mui/material';
+import { Box, Button, Stack, TextField } from '@mui/material';
 import PageHeader from '../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, StatusScope, type ListRequest } from '../components/ServerDataGrid';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
@@ -16,6 +16,22 @@ import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
 import { metricValueFormatter } from '../components/grid/metricValueFormatter';
+import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
+import { companyTurnoverFxMissing, companyTurnoverFxNotice, type CompanyTurnoverFxMissing } from './companies/turnoverFxNotice';
+
+/** The pinned total, with the orange mark when some turnover was left out. */
+function TurnoverTotalCell({ value, missing }: { value: React.ReactNode; missing: CompanyTurnoverFxMissing[] }) {
+  const { t } = useTranslation(['master-data', 'ops']);
+  const mark = missing.length === 1
+    ? <FxMissingMark currency={missing[0].currency} year={missing[0].year} />
+    : <FxMissingMark label={companyTurnoverFxNotice(t, missing)} />;
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'flex-end', width: '100%', fontVariantNumeric: 'tabular-nums' }}>
+      {value}
+      {mark}
+    </Box>
+  );
+}
 
 type CompanyRow = {
   id: string;
@@ -291,28 +307,38 @@ export default function CompaniesPage() {
         const value = metricValueFormatter('decimal')(params);
         const currency = params.node?.rowPinned ? params.data?.turnover_currency : params.data?.base_currency;
         if (params.value == null || !currency) return value;
-        const shown = t('ops:shared.turnoverMillions', { value, currency });
-        const missing: string[] = params.node?.rowPinned ? params.data?.turnover_fx_missing ?? [] : [];
-        return missing.length ? t('companies.turnoverTotalFxMissing', { value: shown, currencies: missing.join(', ') }) : shown;
+        return t('ops:shared.turnoverMillions', { value, currency });
       },
       headerName: t('companies.columns.turnoverYear', { year }),
       width: 170,
       filter: 'agNumberColumnFilter',
       filterParams: { suppressAndOrCondition: true },
-      cellRenderer: (params: any) => (
-        <LinkCellRenderer
-          {...params}
-          linkType="internal"
-          getHref={(row) => getWorkspaceHref(row, 'details')}
-          onNavigate={(href) => navigate(href)}
-          linkSx={{
-            color: 'inherit',
-            textDecoration: 'none',
-            '&:visited': { color: 'inherit' },
-            '&:hover': { color: 'inherit' },
-          }}
-        />
-      ),
+      // ServerDataGrid drops cellRenderer on a pinned row. The selector keeps the mark on the total.
+      cellRendererSelector: (params: any) => {
+        if (params.node?.rowPinned) {
+          const missing = companyTurnoverFxMissing(params.data?.turnover_fx_missing);
+          if (!missing.length) return undefined;
+          return {
+            component: (props: any) => <TurnoverTotalCell value={props.valueFormatted ?? props.value} missing={missing} />,
+          };
+        }
+        return {
+          component: (props: any) => (
+            <LinkCellRenderer
+              {...props}
+              linkType="internal"
+              getHref={(row) => getWorkspaceHref(row, 'details')}
+              onNavigate={(href) => navigate(href)}
+              linkSx={{
+                color: 'inherit',
+                textDecoration: 'none',
+                '&:visited': { color: 'inherit' },
+                '&:hover': { color: 'inherit' },
+              }}
+            />
+          ),
+        };
+      },
     },
     {
       field: 'status',
@@ -376,7 +402,7 @@ export default function CompaniesPage() {
         it_users_year: Number(totals.it_users || 0),
         turnover_year: Number(totals.turnover || 0),
         turnover_currency: totals.turnover_currency ?? null,
-        turnover_fx_missing: Array.isArray(totals.turnover_fx_missing) ? totals.turnover_fx_missing : [],
+        turnover_fx_missing: companyTurnoverFxMissing(totals.turnover_fx_missing),
       } as Partial<CompanyRow>;
       setPinnedTotals([pinned]);
     } catch (err) {
@@ -448,6 +474,8 @@ export default function CompaniesPage() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [year, refreshKey]);
 
+  const turnoverFxMissing = companyTurnoverFxMissing(pinnedTotals[0]?.turnover_fx_missing);
+
   return (
     <>
       <PageHeader title={t('companies.title')} actions={actions} />
@@ -476,6 +504,13 @@ export default function CompaniesPage() {
           updateTotals({ q: state.q || '', filterModel: state.filterModel || {}, statusScope });
         }}
       />
+      {turnoverFxMissing.length > 0 && (
+        <FxMissingNotice
+          message={companyTurnoverFxNotice(t, turnoverFxMissing)}
+          items={turnoverFxMissing.map((item) => ({ currency: item.currency, year: item.year, lines: item.companies }))}
+          sx={{ mt: 1 }}
+        />
+      )}
 
       <CsvExportDialog listRequest={listRequest} entity="companies"
         open={exportOpen}

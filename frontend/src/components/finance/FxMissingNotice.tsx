@@ -18,14 +18,24 @@ export function currencySettingsHref(pair: { currency: string; year: number }): 
 
 /**
  * One line saying which amounts the totals leave out for lack of an exchange rate: the currencies
- * and years in the order received, with their line counts. Users who can open the currency settings
- * get a link to enter a rate for the first pair. Nothing for an empty or absent list.
+ * and years in the order received, with their line counts. `message` replaces that sentence (a
+ * turnover total words companies, not lines) and still links to the first pair. Users who can open
+ * the currency settings get a link to enter a rate. Nothing when there is neither a message nor a pair.
  */
-export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<FxMissing> | null | undefined; sx?: SxProps<Theme> }) {
+export default function FxMissingNotice({
+  items,
+  message,
+  sx,
+}: {
+  items?: ReadonlyArray<FxMissing> | null;
+  message?: string;
+  sx?: SxProps<Theme>;
+}) {
   const { t } = useTranslation('ops');
   const { hasLevel } = useAuth();
-  if (!items?.length) return null;
-  const text = fxMissingText(t, items);
+  const list = items ?? [];
+  if (!message && !list.length) return null;
+  const text = message || fxMissingText(t, list);
   const canEnterRate = canUseOperation('currency', hasLevel);
   return (
     <Box
@@ -39,8 +49,8 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
       <Tooltip title={text} placement="top-start">
         <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</Box>
       </Tooltip>
-      {canEnterRate && (
-        <Link component={RouterLink} to={currencySettingsHref(items[0])} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
+      {canEnterRate && list[0] && (
+        <Link component={RouterLink} to={currencySettingsHref(list[0])} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {t('shared.fxMissing.enterRate')}
         </Link>
       )}

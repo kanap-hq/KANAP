@@ -123,7 +123,9 @@
       "turnoverYear": "Chiffre d'affaires ({{year}})"
     },
     "pinnedTotal": "Total",
-    "turnoverTotalFxMissing": "{{value}} (pas encore de taux pour {{currencies}}, compté sans conversion)",
+    "turnoverFxExcluded": "Chiffre d'affaires sans taux de change exclu du total : {{pairs}}.",
+    "turnoverFxExcludedPair_one": "{{currency}} {{year}} ({{count}} société)",
+    "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} sociétés)",
     "export": "Exporter les sociétés",
     "import": "Importer les sociétés",
     "importHint": "Métriques lues : {{years}}, d'après l'année de la liste. Chaque année est facultative. Valeurs acceptées pour status : enabled ou disabled.",
