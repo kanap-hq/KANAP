@@ -145,8 +145,7 @@ export async function aggregateBudgetSummaryByIds(
     const key = rawKey == null || rawKey === '' ? null : String(rawKey);
     const rawMetric = getSpendSummaryFieldValue(row, metricField.grid);
     const number = rawMetric == null || rawMetric === '' ? null : Number(rawMetric);
-    if (number == null || !Number.isFinite(number)) continue;
-    const cents = toCents(number);
+    if (number != null && !Number.isFinite(number)) continue;
 
     const bucketKey = key ?? '__NULL__';
     const bucket = buckets.get(bucketKey) ?? {
@@ -156,6 +155,10 @@ export async function aggregateBudgetSummaryByIds(
       min: null,
       max: null,
     };
+    buckets.set(bucketKey, bucket);
+    // An amount without a value (no exchange rate): the line keeps its group, out of the measure.
+    if (number == null) continue;
+    const cents = toCents(number);
     bucket.sum += cents;
     bucket.count += 1;
     bucket.min = bucket.min == null || cents < bucket.min ? cents : bucket.min;

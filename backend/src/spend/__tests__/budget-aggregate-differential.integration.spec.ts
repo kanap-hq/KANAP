@@ -143,8 +143,12 @@ function lineValue(row: any, measure: AggregateMeasureSpec): bigint | Decimal | 
     const value = getSummaryFieldValue(row, measure.field);
     return typeof value === 'number' ? Decimal.from(value) : null;
   }
-  let cents = toCents(getSummaryFieldValue(row, measure.field));
-  if (measure.minus) cents -= toCents(getSummaryFieldValue(row, measure.minus));
+  // An amount without a value (no exchange rate) leaves the line out of the measure, a variance too.
+  const value = getSummaryFieldValue(row, measure.field);
+  const minus = measure.minus ? getSummaryFieldValue(row, measure.minus) : 0;
+  if (value == null || minus == null) return null;
+  let cents = toCents(value);
+  if (measure.minus) cents -= toCents(minus);
   if (measure.part === 'positive' && cents < 0n) cents = 0n;
   if (measure.part === 'negative' && cents > 0n) cents = 0n;
   return cents;

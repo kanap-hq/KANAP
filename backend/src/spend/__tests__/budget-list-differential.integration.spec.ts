@@ -476,7 +476,12 @@ async function runCase(env: Engines, c: Case, deps: ReturnType<typeof realSummar
         lean.versions = Object.fromEntries(GRID_SLOTS.map((slot) => {
           const v = row.versions[slot];
           const shown = v?.reporting ?? v?.totals;
-          return [slot, v?.version_id ? { reporting: Object.fromEntries(SUMMARY_COLUMNS.map((col) => [col.key, shown[col.key]])) } : {}];
+          if (!v?.version_id) return [slot, {}];
+          const pick = (source: any) => Object.fromEntries(SUMMARY_COLUMNS.map((col) => [col.key, source[col.key]]));
+          // No rate: null reporting amounts, the line's own under `fx_missing`.
+          return [slot, v.reporting?.fx_source === 'missing'
+            ? { reporting: pick(v.reporting), fx_missing: { currency: v.reporting.currency, amounts: pick(v.totals) } }
+            : { reporting: pick(shown) }];
         }));
         for (const key of fteKeys) if (key in row) lean[key] = row[key];
         return lean;
