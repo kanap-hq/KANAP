@@ -419,6 +419,110 @@ async function testControls() {
   });
 }
 
+async function testAssetsPage() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-page');
+    const names = ['a', 'b', 'c', 'd', 'e'];
+    for (const name of names) {
+      const id = await asset(runner, a, name);
+      if (name === 'a' || name === 'b') await runner.query(`UPDATE assets SET admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, id]);
+      if (name === 'c') await runner.query(`UPDATE assets SET kind = 'physical' WHERE tenant_id = $1 AND id = $2`, [a, id]);
+    }
+    await asset(runner, a, '100%done');
+    await asset(runner, a, '100Xdone');
+    await asset(runner, a, 'a_b');
+    const carrier = await asset(runner, a, 'carrier');
+    for (let n = 1; n <= 12; n += 1) {
+      const tech = await technology(runner, a, n, `Tech ${String(n).padStart(2, '0')}`);
+      await installed(runner, a, carrier, tech);
+      const app = await application(runner, a, `App ${String(n).padStart(2, '0')}`);
+      await assign(runner, a, app, carrier);
+    }
+    await runner.query(`UPDATE assets SET admin_zone = 'tier_0' WHERE tenant_id = $1 AND id = $2`, [a, carrier]);
+    const settings = new Map<string, Settings>([[a, { adminZones: ZONES, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }]]);
+    const svc = service(settings);
+    const opts = { manager: runner.manager, tenantId: a };
+
+    const first = await svc.assets({ page: 1, limit: 2 }, opts);
+    const second = await svc.assets({ page: 2, limit: 2 }, opts);
+    assert.deepEqual(first.items.map((item) => item.name), ['100%done', '100Xdone']);
+    assert.equal(first.total, 9);
+    assert.equal(first.limit, 2);
+    assert.equal(first.offset, 0);
+    assert.equal(first.page, 1);
+    assert.deepEqual(second.items.map((item) => item.name), ['a', 'a_b']);
+    assert.equal(second.offset, 2);
+    assert.equal(second.page, 2);
+    assert.equal(first.items.some((item) => second.items.some((other) => other.id === item.id)), false);
+    const byOffset = await svc.assets({ page: 9, offset: 0, limit: 2 }, opts);
+    assert.deepEqual(byOffset.items.map((item) => item.name), first.items.map((item) => item.name), 'offset wins, including 0');
+    assert.equal(byOffset.page, 1);
+    const tail = await svc.assets({ page: 50, limit: 2 }, opts);
+    assert.deepEqual(tail.items, []);
+    assert.equal(tail.total, 9);
+    const desc = await svc.assets({ sort: 'name:DESC', limit: 2 }, opts);
+    assert.deepEqual(desc.items.map((item) => item.name), ['e', 'd']);
+    const byZone = await svc.assets({ sort: 'zone:ASC', limit: 20 }, opts);
+    assert.equal(byZone.items.at(-1)?.zone, null, 'a missing zone sorts last');
+    assert.equal(byZone.items[0].zone, 'tier_0');
+    await assert.rejects(svc.assets({ sort: 'nope' }, opts), BadRequestException);
+    const widened = await svc.assets({ limit: 0 }, opts);
+    assert.equal(widened.limit, 1);
+    const capped = await svc.assets({ limit: 500 }, opts);
+    assert.equal(capped.limit, 200);
+
+    const tier = await svc.assets({ filters: setFilter('zone', ['tier_0']) }, opts);
+    assert.deepEqual(tier.items.map((item) => item.name), ['a', 'b', 'carrier']);
+    const none = await svc.assets({ filters: setFilter('zone', [null]) }, opts);
+    assert.deepEqual(none.items.map((item) => item.name), ['100%done', '100Xdone', 'a_b', 'c', 'd', 'e']);
+    const both = await svc.assets({ filters: setFilter('zone', [null, 'tier_0']) }, opts);
+    assert.equal(both.total, 9);
+    const physical = await svc.assets({ filters: setFilter('type', ['physical']) }, opts);
+    assert.deepEqual(physical.items.map((item) => item.name), ['c']);
+    const kind = await svc.assets({ filters: setFilter('kind', ['vm']) }, opts);
+    assert.equal(kind.items.some((item) => item.name === 'c'), false);
+    const empty = await svc.assets({ filters: setFilter('zone', []) }, opts);
+    assert.equal(empty.total, 0);
+    const unknown = await svc.assets({ filters: setFilter('control', ['nope']) }, opts);
+    assert.equal(unknown.total, 0);
+    await assert.rejects(
+      svc.assets({ filters: setFilter('zone', ['tier_0']).replace('"values"', '"mode":"exclude","values"') }, opts),
+      BadRequestException,
+    );
+    const text = await svc.assets({ filters: JSON.stringify({ name: { filterType: 'text', type: 'equals', filter: 'carrier' } }) }, opts);
+    assert.deepEqual(text.items.map((item) => item.name), ['carrier']);
+    const ignored = await svc.assets({ filters: '{' }, opts);
+    assert.equal(ignored.total, 9);
+    const byPercent = await svc.assets({ q: '100%' }, opts);
+    assert.deepEqual(byPercent.items.map((item) => item.name), ['100%done']);
+    const byScore = await svc.assets({ q: 'a_b' }, opts);
+    assert.deepEqual(byScore.items.map((item) => item.name), ['a_b']);
+    const reference = (await svc.assets({ q: 'carrier' }, opts)).items[0].reference;
+    const byReference = await svc.assets({ q: reference }, opts);
+    assert.deepEqual(byReference.items.map((item) => item.id), [(await svc.assets({ q: 'carrier' }, opts)).items[0].id]);
+
+    const loaded = named((await svc.assets({ q: 'carrier', limit: 10 }, opts)).items, 'carrier');
+    assert.equal(loaded.technologies.total, 12);
+    assert.equal(loaded.technologies.items.length, 10);
+    assert.deepEqual(loaded.technologies.items.map((item) => item.name), Array.from({ length: 10 }, (_, n) => `Tech ${String(n + 1).padStart(2, '0')}`));
+    assert.equal(loaded.applications.total, 12);
+    assert.equal(loaded.applications.items.length, 10);
+    assert.deepEqual(loaded.applications.items.map((item) => item.name), Array.from({ length: 10 }, (_, n) => `App ${String(n + 1).padStart(2, '0')}`));
+    assert.equal(loaded.zone, 'tier_0');
+    assert.ok(loaded.findings.includes('applications_on_most_sensitive'));
+    assert.equal(loaded.application_references.length, 12, 'the references of the control stay complete when the list is capped');
+
+    const file = await svc.csv({ q: 'carrier', language: 'en' }, opts);
+    assert.ok(file.content.includes('Tech 11') && file.content.includes('Tech 12'), 'the export keeps every link');
+    assert.ok(file.content.includes('App 11') && file.content.includes('App 12'));
+  });
+}
+
+async function zoneOf(runner: QueryRunner, id: string): Promise<string | null> {
+  const [row] = await runner.query(`SELECT admin_zone FROM assets WHERE id = $1`, [id]);
+  return row.admin_zone;
+}
+
 async function testRoutes() {
   assert.equal(Reflect.getMetadata(PATH_METADATA, AdministrationViewController), 'technologies/reports/administration');
   const proto = AdministrationViewController.prototype as any;
@@ -436,5 +540,6 @@ void runSpecs('Administration view', [
   ['summary counts, directories and tenant isolation', testSummary],
   ['a zone code the catalog no longer has, an empty catalog', testUnknownZoneAndEmptyCatalog],
   ['each control point, with one case that stays out', testControls],
+  ['the asset page: order, filters, caps', testAssetsPage],
   ['routes: paths and permission', testRoutes],
 ]);
