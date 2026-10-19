@@ -5,6 +5,7 @@ import { Box } from '@mui/material';
 import { formatAmount } from '../../i18n/formatters';
 import type { FreezeColumn } from '../../services/freeze';
 import type { AmountMeasure } from './roundPeriod';
+import type { SlotFxMissing } from './fxMissing';
 
 type AmountColumnEntry = {
   readonly measure: AmountMeasure;
@@ -50,7 +51,13 @@ export type SummarySlot = {
   year?: number;
   version_id?: string;
   totals?: SlotAmounts;
-  reporting?: SlotAmounts & { currency?: string; reporting_currency?: string };
+  /**
+   * Null amounts when the year has no exchange rate for the line currency (full shape: `fx_source`
+   * is then `missing` and `currency` is the line currency).
+   */
+  reporting?: Partial<Record<AmountColumnKey, number | null>> & { currency?: string; reporting_currency?: string; fx_source?: string | null };
+  /** Grid shape: the year has no exchange rate for the line currency; its amounts in that currency. */
+  fx_missing?: SlotFxMissing;
 };
 export type SummaryVersions = Partial<Record<string, SummarySlot>>;
 
@@ -59,10 +66,33 @@ export const amountFieldKey = (slot: string, column: AmountColumn): string => `$
 export const slotYear = (slot: YearSlot, currentYear: number): number =>
   currentYear + (YEAR_SLOTS.find((s) => s.slot === slot)?.offset ?? 0);
 
-/** Amount in the reporting currency when the server converted it, else in the item currency. */
-export function slotAmount(slot: SummarySlot | undefined, key: AmountColumnKey): number {
+/** True when the slot's year has no exchange rate for the line currency: its amounts are left out of totals. */
+export function slotRateMissing(slot: SummarySlot | undefined): boolean {
+  return !!slot?.fx_missing || slot?.reporting?.fx_source === 'missing';
+}
+
+/**
+ * Amount in the reporting currency when the server converted it, else in the item currency; null
+ * when the year has no exchange rate (the amount is in no total, and is never shown as 0).
+ */
+export function slotAmount(slot: SummarySlot | undefined, key: AmountColumnKey): number | null {
+  if (slotRateMissing(slot)) return null;
   const value = Number(slot?.reporting?.[key] ?? slot?.totals?.[key] ?? 0);
   return Number.isFinite(value) ? value : 0;
+}
+
+/**
+ * The amount of a list cell whose year has no exchange rate, in the line currency, with that
+ * currency and the year; null for any other cell.
+ */
+export function cellFxMissing(data: unknown, colId: string | null | undefined, currentYear: number): { currency: string; year: number; amount: number } | null {
+  const field = parseAmountField(colId);
+  if (!field) return null;
+  const slot = (data as { versions?: SummaryVersions } | undefined)?.versions?.[field.slot];
+  const missing = slot?.fx_missing;
+  if (!missing?.currency) return null;
+  const amount = Number(missing.amounts?.[field.column.key] ?? 0);
+  return { currency: missing.currency, year: slot?.year ?? slotYear(field.slot, currentYear), amount: Number.isFinite(amount) ? amount : 0 };
 }
 
 /** Year slot and column of an amount field key (`yPlus1Forecast`), null for any other column. */
@@ -307,8 +337,14 @@ export function buildAmountColumnDefs<T>({
       colId,
       headerName: amountColumnHeader(t, slot, column.label, currentYear),
       valueGetter: (p) => slotAmount((p.data as { versions?: SummaryVersions } | undefined)?.versions?.[slot], column.key),
-      // The totals row: a placeholder while this column's total is on its way, never a false 0.
-      valueFormatter: (p) => (p.node?.rowPinned && isPendingAmount(p.data, colId) ? PENDING_TOTAL : formatAmount(p.value)),
+      valueFormatter: (p) => {
+        // The totals row: a placeholder while this column's total is on its way, never a false 0.
+        if (p.node?.rowPinned && isPendingAmount(p.data, colId)) return PENDING_TOTAL;
+        // A year without an exchange rate: the amount in the line currency, named, never as a reporting amount.
+        const missing = cellFxMissing(p.data, colId, currentYear);
+        if (missing) return t('ops:shared.fxMissing.localAmount', { amount: formatAmount(missing.amount), currency: missing.currency });
+        return p.value == null ? '' : formatAmount(p.value);
+      },
       type: 'rightAligned',
       width: 180,
       filter: 'agNumberColumnFilter',
