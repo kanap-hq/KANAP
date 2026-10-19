@@ -125,6 +125,7 @@
     "pinnedTotal": "Total",
     "export": "Exportar empresas",
     "import": "Importar empresas",
+    "importHint": "Indicadores leídos: {{years}}, según el año de la lista. Cada año es opcional. Valores aceptados para status: enabled o disabled.",
     "previous": "Empresa anterior",
     "next": "Empresa siguiente",
     "fields": {
