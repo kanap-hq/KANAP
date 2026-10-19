@@ -549,22 +549,27 @@
       "controlsList": {
         "assetsWithoutZone": {
           "title": "Assets without an administration zone",
+          "short": "Without a zone",
           "hint": "Set a zone on each asset that is still in use."
         },
         "domainControllers": {
           "title": "Domain controllers outside the most sensitive zone",
+          "short": "Domain controller outside",
           "hint": "A domain controller belongs in the most sensitive zone."
         },
         "directoryAssets": {
           "title": "Assets carrying a directory service outside the most sensitive zone",
+          "short": "Directory service outside",
           "hint": "An asset that carries a directory service belongs in the most sensitive zone."
         },
         "trustRaised": {
           "title": "What runs an asset is in a less sensitive zone",
+          "short": "Less sensitive host",
           "hint": "What runs an asset should sit in a zone at least as sensitive. An asset without a zone interrupts the check of the chain."
         },
         "applications": {
           "title": "Applications hosted in the most sensitive zone",
+          "short": "Application hosted",
           "hint": "Review each application hosted on an asset of the most sensitive zone."
         }
       },

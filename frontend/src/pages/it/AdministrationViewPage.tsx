@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import ChipToggleBar from '../../components/ChipToggleBar';
 import PageHeader from '../../components/PageHeader';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
@@ -22,6 +23,15 @@ export const CONTROL_KEYS = [
   'applications_on_most_sensitive',
 ] as const;
 export type ControlKey = (typeof CONTROL_KEYS)[number];
+
+/** Each control's locale key (`pages.administrationView.controlsList.<key>`). */
+export const CONTROL_LOCALE: Record<ControlKey, string> = {
+  assets_without_zone: 'assetsWithoutZone',
+  domain_controllers_outside: 'domainControllers',
+  directory_assets_outside: 'directoryAssets',
+  trust_raised: 'trustRaised',
+  applications_on_most_sensitive: 'applications',
+};
 
 /** A zone of the catalog, or a code the catalog no longer has (`unknown`). */
 export type AdministrationZone = {
@@ -198,6 +208,56 @@ function ZoneBand({ summary, selected, onSelect }: {
 }
 
 /**
+ * One toggle per control that applies, with its short name and count; its tooltip explains it. A
+ * toggle narrows the asset list to that control, one at a time, again to clear. Without a catalog
+ * of zones, a line says so in place of the controls that need one.
+ */
+function ControlPills({ summary, selected, onSelect }: {
+  summary: AdministrationSummary;
+  selected: ControlKey | null;
+  onSelect: (key: ControlKey) => void;
+}) {
+  const { t } = useTranslation(['it', 'common']);
+  const zoneName = useZoneName();
+  const most = summary.most_sensitive ? zoneName(summary.most_sensitive, summary.zones) : null;
+  const items = summary.controls.filter((control) => control.count !== null).map((control) => {
+    const base = `pages.administrationView.controlsList.${CONTROL_LOCALE[control.key]}`;
+    const count = control.count ?? 0;
+    const isSelected = selected === control.key;
+    return {
+      id: control.key,
+      ariaLabel: `${t(`${base}.short`)} ${count}`,
+      label: (
+        <>
+          {t(`${base}.short`)}
+          <Box component="span" data-testid={`control-count-${control.key}`} sx={{ ml: 0.75, fontWeight: 400, ...(count === 0 && !isSelected ? quietSx : {}) }}>{count}</Box>
+        </>
+      ),
+      tooltip: (
+        <>
+          <Box sx={{ fontWeight: 500 }}>{t(`${base}.title`)}</Box>
+          <Box>{t(`${base}.hint`)}</Box>
+          {most && control.key !== 'assets_without_zone' && <Box>{t('pages.administrationView.controlsHint', { zone: most })}</Box>}
+        </>
+      ),
+    };
+  });
+  return (
+    <Box>
+      <ChipToggleBar
+        items={items}
+        selectedId={selected}
+        onSelect={(id) => onSelect(id as ControlKey)}
+        ariaLabel={t('pages.administrationView.controls')}
+      />
+      {!summary.most_sensitive && (
+        <Typography sx={{ fontSize: 13, ...quietSx, mt: 0.75 }}>{t('pages.administrationView.controlsNoCatalog')}</Typography>
+      )}
+    </Box>
+  );
+}
+
+/**
  * Administration zones (the administration view of the ANSSI mapping guide): the zones in a compact
  * band, the control points, then the assets with their zone, technologies, applications and findings.
  */
@@ -208,12 +268,15 @@ export default function AdministrationViewPage() {
   const [exporting, setExporting] = React.useState(false);
   // The zone the band narrows the list to: a code, `null` for "No zone", `undefined` for none.
   const [zoneFilter, setZoneFilter] = React.useState<string | null | undefined>(undefined);
+  // The control the toggles narrow the list to, one at a time.
+  const [controlFilter, setControlFilter] = React.useState<ControlKey | null>(null);
   const summary = useQuery({
     queryKey: ['technologies', 'reports', 'administration', 'summary'],
     queryFn: async () => (await api.get<AdministrationSummary>(ENDPOINT)).data,
   });
 
   const selectZone = (code: string | null) => setZoneFilter((current) => (current === code ? undefined : code));
+  const selectControl = (key: ControlKey) => setControlFilter((current) => (current === key ? null : key));
 
   const exportDomains = async () => {
     setExporting(true);
@@ -252,6 +315,7 @@ export default function AdministrationViewPage() {
             </Typography>
           )}
           <ZoneBand summary={data} selected={zoneFilter} onSelect={selectZone} />
+          <Box sx={{ mt: 1.5 }}><ControlPills summary={data} selected={controlFilter} onSelect={selectControl} /></Box>
         </Box>
       )}
     </Box>
