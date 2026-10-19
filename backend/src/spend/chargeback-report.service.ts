@@ -728,6 +728,8 @@ export class ChargebackReportService {
         const verb = shares.length > 0 ? 'Used stored allocation for' : 'Skipped allocations for';
         recordWarning(`${verb} "${itemLabel}" (year ${version.budget_year}): ${allocationInfo.error}`);
       }
+      // Turnovers counted unconverted (no rate yet): one message per year, not per line.
+      if (allocationInfo?.warning) recordWarning(allocationInfo.warning);
       const versionTotalRaw = totalsByVersion.get(version.id) ?? 0;
       if (Math.abs(versionTotalRaw) < 0.0001) continue;
 

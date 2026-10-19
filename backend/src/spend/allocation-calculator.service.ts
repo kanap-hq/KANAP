@@ -12,9 +12,14 @@ import {
 } from './allocation-rule-resolver';
 import {
   AllocationDriver,
-  computeCompanyShares,
+  CompanySharesResult,
+  TurnoverConversion,
+  computeCompanySharesWithFx,
+  convertTurnovers,
   normalizeWeights,
+  turnoverFxMissingWarning,
 } from './allocation-distribution';
+import { FxRateService } from '../currency/fx-rate.service';
 import { Company } from '../companies/company.entity';
 import { CompanyMetric } from '../companies/company-metric.entity';
 import { Department } from '../departments/department.entity';
@@ -35,6 +40,11 @@ export type AllocationComputation = {
   resolvedMethod: 'headcount' | 'it_users' | 'turnover' | 'manual_company' | 'manual_department' | 'manual_pct';
   shares: AllocationShare[];
   error?: string | null;
+  /**
+   * The shares are computed, with a reservation: turnovers in a currency without a rate for
+   * the year were counted unconverted (`convertTurnovers`).
+   */
+  warning?: string | null;
 };
 
 @Injectable()
@@ -45,6 +55,8 @@ export class AllocationCalculatorService {
     @InjectRepository(AllocationRule) private readonly rules: Repository<AllocationRule>,
     @InjectRepository(Company) private readonly companies: Repository<Company>,
     @InjectRepository(CompanyMetric) private readonly metrics: Repository<CompanyMetric>,
+    /** Converts the turnovers into the reporting currency (also read by the save path, `allocation-save.ts`). */
+    readonly fxRates?: FxRateService,
   ) {}
 
   /**
@@ -93,9 +105,12 @@ export class AllocationCalculatorService {
     // A manual company default is identical for every version of one (tenant, fiscal year):
     // compute it once per key instead of once per version (lists and reports run hundreds).
     // The promise is cached so a rejected selection surfaces the same error on each version.
-    const manualDefaultShares = new Map<string, Promise<Map<string, number>>>();
-    // Same for the versions in manual company mode, keyed by year, driver and their companies.
-    const manualCompanyShares = new Map<string, Promise<Map<string, number>>>();
+    // Keyed with the version's rate set too: the turnover driver converts at that set's rates.
+    const manualDefaultShares = new Map<string, Promise<CompanySharesResult>>();
+    // Same for the versions in manual company mode, keyed by year, driver, rate set and their companies.
+    const manualCompanyShares = new Map<string, Promise<CompanySharesResult>>();
+    // The turnovers of the enabled companies in the reporting currency, per rate set and year.
+    const turnoversByRates = new Map<string, Promise<TurnoverConversion>>();
     if (years.length > 0) {
       // Global defaults (no tenant) and this tenant's overrides.
       const scope: any[] = [
@@ -192,13 +207,17 @@ export class AllocationCalculatorService {
             // The shares depend on the year, the driver and the companies only: computed once per call for
             // each combination (a list page holds many versions with the same selection).
             const driver = ((version as any).allocation_driver ?? 'headcount') as AllocationDriver;
-            const sharesKey = `${version.budget_year}:${driver}:${companyIds.join(',')}`;
+            const rateSetId = version.fx_rate_set_id ?? null;
+            const sharesKey = `${version.budget_year}:${driver}:${rateSetId ?? 'live'}:${companyIds.join(',')}`;
             let pendingShares = manualCompanyShares.get(sharesKey);
             if (!pendingShares) {
-              pendingShares = computeCompanyShares({ manager, tenantId, fiscalYear: version.budget_year, companyIds, driver });
+              pendingShares = computeCompanySharesWithFx({
+                manager, tenantId, fiscalYear: version.budget_year, companyIds, driver, fxRates: this.fxRates, rateSetId,
+              });
               manualCompanyShares.set(sharesKey, pendingShares);
             }
-            const distribution = await pendingShares;
+            const computed = await pendingShares;
+            const distribution = computed.shares;
 
             const shares = rows.map((row) => ({
               allocation_id: row.id,
@@ -213,6 +232,7 @@ export class AllocationCalculatorService {
               resolvedMethod: method as any,
               shares,
               error: null,
+              warning: this.fxWarning(computed, version.budget_year),
             });
             continue;
           }
@@ -277,19 +297,23 @@ export class AllocationCalculatorService {
       // an error instead of silently renormalising the chargeback over other companies.
       if (resolvedDefault.kind === 'manual_company') {
         try {
-          const key = defaultMethodKey(tenantId, version.budget_year);
+          const rateSetId = version.fx_rate_set_id ?? null;
+          const key = `${defaultMethodKey(tenantId, version.budget_year)}:${rateSetId ?? 'live'}`;
           let pending = manualDefaultShares.get(key);
           if (!pending) {
-            pending = computeCompanyShares({
+            pending = computeCompanySharesWithFx({
               manager,
               tenantId,
               fiscalYear: version.budget_year,
               companyIds: resolvedDefault.companyIds,
               driver: resolvedDefault.method,
+              fxRates: this.fxRates,
+              rateSetId,
             });
             manualDefaultShares.set(key, pending);
           }
-          const distribution = await pending;
+          const computed = await pending;
+          const distribution = computed.shares;
           const shares = Array.from(distribution.entries())
             .map(([company_id, allocation_pct]) => ({
               company_id,
@@ -303,6 +327,7 @@ export class AllocationCalculatorService {
             resolvedMethod: 'manual_company',
             shares,
             error: null,
+            warning: this.fxWarning(computed, version.budget_year),
           });
         } catch (err) {
           if (suppressErrors && err instanceof BadRequestException) {
@@ -357,17 +382,44 @@ export class AllocationCalculatorService {
 
       const metricsForYear = metricsByYear.get(version.budget_year) ?? new Map<string, CompanyMetric>();
       try {
+        // The turnover driver weighs the turnovers in the reporting currency, at the version's rates.
+        let turnovers: TurnoverConversion | null = null;
+        if (resolvedDefault.method === 'turnover') {
+          const rateSetId = version.fx_rate_set_id ?? null;
+          const key = `${rateSetId ?? 'live'}:${version.budget_year}`;
+          let pending = turnoversByRates.get(key);
+          if (!pending) {
+            pending = convertTurnovers({
+              fxRates: this.fxRates,
+              manager,
+              tenantId,
+              fiscalYear: version.budget_year,
+              rateSetId,
+              entries: companiesForYear.map((company) => ({
+                companyId: company.id,
+                currency: company.base_currency,
+                turnover: metricsForYear.get(company.id)?.turnover ?? null,
+              })),
+            });
+            turnoversByRates.set(key, pending);
+          }
+          turnovers = await pending;
+        }
         const shares = this.computeAutoShares({
           version,
           companies: companiesForYear,
           metricsForYear,
           method: resolvedDefault.method,
+          turnovers: turnovers?.values,
         });
         result.set(version.id, {
           versionId: version.id,
           resolvedMethod: resolvedDefault.method,
           shares,
           error: null,
+          warning: turnovers
+            ? turnoverFxMissingWarning(turnovers.missingCurrencies, version.budget_year, turnovers.reportingCurrency)
+            : null,
         });
       } catch (err) {
         if (suppressErrors && err instanceof BadRequestException) {
@@ -410,13 +462,22 @@ export class AllocationCalculatorService {
     return defaultLookup.get(defaultMethodKey(tenantId, year)) ?? STANDARD_DEFAULT;
   }
 
+  private fxWarning(computed: CompanySharesResult, year: number): string | null {
+    return computed.reportingCurrency ? turnoverFxMissingWarning(computed.fxMissing, year, computed.reportingCurrency) : null;
+  }
+
   private computeAutoShares(args: {
     version: SpendVersion;
     companies: Company[];
     metricsForYear: Map<string, CompanyMetric>;
     method: 'headcount' | 'it_users' | 'turnover';
+    /** For the turnover method: each company's turnover in the reporting currency (`convertTurnovers`). */
+    turnovers?: Map<string, number | null>;
   }): AllocationShare[] {
-    const { companies, metricsForYear, method, version } = args;
+    const { companies, metricsForYear, method, turnovers } = args;
+    if (method === 'turnover' && !turnovers) {
+      throw new InternalServerErrorException('The turnover method needs the turnovers in the reporting currency.');
+    }
     if (!companies || companies.length === 0) {
       throw new BadRequestException('No enabled companies for distribution');
     }
@@ -427,7 +488,7 @@ export class AllocationCalculatorService {
       let raw: number | null = null;
       if (method === 'headcount') raw = metric != null && metric.headcount != null ? Number(metric.headcount) : null;
       else if (method === 'it_users') raw = metric != null && metric.it_users != null ? Number(metric.it_users) : null;
-      else if (method === 'turnover') raw = metric != null && metric.turnover != null ? Number(metric.turnover) : null;
+      else if (method === 'turnover') raw = turnovers?.get(company.id) ?? null;
       if (raw == null || !Number.isFinite(raw) || raw <= 0) {
         continue; // silently exclude companies without usable data
       }

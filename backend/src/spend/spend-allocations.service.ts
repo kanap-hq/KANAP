@@ -84,6 +84,8 @@ export class SpendAllocationsService {
       items,
       total_pct: Math.round(total * 10000) / 10000,
       resolved_method: dist?.resolvedMethod ?? null,
+      // Turnovers counted unconverted for lack of an exchange rate (`AllocationComputation.warning`).
+      warning: dist?.warning ?? null,
       method: state?.method ?? 'default',
       driver: state?.driver ?? 'headcount',
       base_signature: state ? allocationSignature(state) : null,

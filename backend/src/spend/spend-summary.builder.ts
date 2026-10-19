@@ -206,7 +206,7 @@ export const SUMMARY_SCOPES: { [S in BudgetNature]: SummaryScopeConfig<S> } & Re
 assertScopeNatures('SUMMARY_SCOPES', SUMMARY_SCOPES, (scope) => scope.itemTable);
 
 type AllocationShareLike = { company_id: string | null; department_id: string | null; allocation_pct: number };
-type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null };
+type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null; warning?: string | null };
 
 export interface SummaryDeps {
   allocationCalculator: {
@@ -1014,7 +1014,7 @@ export async function buildBudgetSummaryRows(
       allocation_method_label: labelsFromList
         ? labelsFromList.get(item.id) ?? ''
         : formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
-      allocation_warning: allocation?.error ?? null,
+      allocation_warning: allocation?.error ?? allocation?.warning ?? null,
       versions,
       ...fte,
     };

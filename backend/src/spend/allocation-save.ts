@@ -8,7 +8,7 @@ import { EDIT_CONFLICT_CODE, EditConflictAuthor, authorAt, userNames } from '../
 import { Department } from '../departments/department.entity';
 import { DepartmentMetric } from '../departments/department-metric.entity';
 import { AmountScope } from './amounts-write.util';
-import { AllocationDriver, computeCompanyShares, normalizeWeights } from './allocation-distribution';
+import { AllocationDriver, TurnoverFxRates, computeCompanyShares, normalizeWeights } from './allocation-distribution';
 import { sameAllocationRows, storedAllocationPct } from './budget-allocation-operations';
 import { lockVersionWithLine } from './budget-locks';
 import { auditTableOf } from './budget-nature';
@@ -73,6 +73,8 @@ export type AllocationSaveDeps = {
   /** The scope's calculator: the shares of an automatic method. */
   calculator: {
     computeForVersions(versions: any[], opts: { manager: EntityManager; tenantId: string }): Promise<Map<string, { shares: Array<{ allocation_pct: number | string }> }>>;
+    /** Converts the turnovers of a manual company selection into the reporting currency. */
+    readonly fxRates?: TurnoverFxRates;
   };
 };
 
@@ -161,6 +163,7 @@ async function planRows(
   driver: string,
   items: AllocationInput[],
   emptyManual: 'refuse' | 'keep',
+  fxRates: TurnoverFxRates | undefined,
 ): Promise<RowsPlan> {
   const repo = manager.getRepository<AllocationRow>(SCOPES[scope].allocationEntity);
   const isManual = MANUAL_METHODS.has(method);
@@ -227,6 +230,8 @@ async function planRows(
       fiscalYear: (version as any).budget_year,
       companyIds,
       driver: driver as AllocationDriver,
+      fxRates,
+      rateSetId: (version as any).fx_rate_set_id ?? null,
     });
     return { kind: 'manual', rows: companyIds.map((companyId) => row({ company_id: companyId, department_id: null, allocation_pct: distribution.get(companyId) ?? 0 })) };
   }
@@ -333,7 +338,7 @@ export async function bulkUpsertAllocations(
   if (!version) throw new BadRequestException('Invalid version');
   const method = (version.allocation_method as string | null) ?? 'default';
   const driver = (version.allocation_driver as string | null) ?? 'headcount';
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse');
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, items, 'refuse', deps.calculator.fxRates);
   return storeRows(deps, scope, tenantId, version, plan, userId);
 }
 
@@ -477,7 +482,7 @@ export async function putVersionAllocations(
   const method = request.method;
   const driver = driverFor(method, request.driver);
   // Validated and computed before anything is compared or written: a refused row answers 400.
-  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep');
+  const plan = await planRows(manager, scope, tenantId, version, method, driver, request.rows, 'keep', deps.calculator.fxRates);
 
   if (request.baseSignature !== null) {
     const current = allocationSignature(state);
