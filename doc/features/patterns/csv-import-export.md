@@ -97,6 +97,7 @@ Every importer reads through `readMasterDataFile` (`common/csv-sheet/master-data
 - **Analytics values**: `axis_code, name, description, status, disabled_at` (all optional but `name`). `axis_code` empty means the default dimension.
 - **Working-day calendars**: `code, name, description, country, region, status, disabled_at, year, jan…dec`; one row per calendar and year. `disabled_at`, `country` and `region` are optional columns.
 - **Technology links** (`technologies/technology-links-csv.service.ts`), an example of a file of links where one row is one link: `asset_reference, asset_name, technology_reference, technology_name, version, operating_system, notes, source` (servers) and `application_reference, application_name, technology_reference, technology_name, version, notes, source` (applications). No upsert key of its own: a row matches its subjects by reference or name, adds or updates a link through the services of the single links, and never deletes one. An existing link keeps its provenance. `source` is optional and ignored on import.
+  A large file takes time: the import writes link by link, through those services, in one transaction (about 15 seconds for 20,000 new links on a local database, more on a server). Until it commits, it holds the lock of every technology of the file and of every server it marks, so a link edit on those technologies waits and may time out. Prefer several smaller files for a very large load.
 
 ## V2 engine entities
 
