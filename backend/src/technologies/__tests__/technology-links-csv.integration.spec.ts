@@ -36,7 +36,8 @@ function csvService(entries?: AuditEntry[]) {
   const links = new TechnologyLinksService(audit as any, reach, itOps as any);
   const catalog = new TechnologyCatalogService(audit as any, itOps as any);
   const os = new OperatingSystemService(audit as any, itOps as any, catalog);
-  return new TechnologyLinksCsvService(links, os);
+  // `screens`: the links service the screens write through, for the provenance they leave.
+  return Object.assign(new TechnologyLinksCsvService(links, os), { screens: links });
 }
 
 function caller(runner: QueryRunner, tenantId: string): TechnologyLinksCsvContext {
@@ -122,6 +123,7 @@ async function testRoundTrip() {
       [alphaRef, 'alpha', 'TEC-3', 'Windows Server', '', 'yes'],
       [betaRef, 'beta', 'TEC-2', 'SQL Server', '', 'no'],
     ]);
+    assert.deepEqual(body.split('\n').slice(1).map((line) => line.split(',').at(-1)), ['Manual entry', 'Manual entry', 'Manual entry', 'Netbox']);
     const before = await storedLinks(runner, tenantId);
     const loaded = await csv.importAssetLinks({ file: csvFile(exported.content, 'round.csv'), dryRun: false, language: 'en' }, ctx);
     assert.deepEqual(
@@ -133,6 +135,10 @@ async function testRoundTrip() {
     const french = await csv.exportAssetLinks('data', ctx, 'fr');
     const header = textBody(french.content).split('\n')[0];
     assert.equal(header, HEADER.replace(/,/g, ';'));
+    const frenchRows = textBody(french.content).split('\n').slice(1).map((line) => line.split(';'));
+    assert.deepEqual(frenchRows.map((cells) => [cells[5], cells[7]]), [
+      ['non', 'Saisie manuelle'], ['non', 'Saisie manuelle'], ['oui', 'Saisie manuelle'], ['non', 'Netbox'],
+    ], 'yes, no and the source are written in the file language');
     const again = await csv.importAssetLinks({ file: csvFile(french.content), dryRun: false, language: 'fr' }, ctx);
     assert.equal(again.unchanged, 4);
     assert.deepEqual(await storedLinks(runner, tenantId), before);
@@ -244,6 +250,19 @@ async function testCreateProvenance() {
       [tenantId, srv],
     );
     assert.deepEqual(short, { notes: 'from-short', source_ref: 'first.csv' });
+
+    // Multer hands the name over in latin1: the reference reads it back as typed.
+    const accented = await asset(runner, tenantId, 'Accented');
+    const asMulter = (name: string) => Buffer.from(name, 'utf8').toString('latin1');
+    await csv.importAssetLinks({ file: fileOf(['Accented,,SQL Server,,,'], asMulter('inventaire-été.csv')), dryRun: false, language: 'en' }, ctx);
+    const [accentedLink] = await runner.query(`SELECT source_ref FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2`, [tenantId, accented]);
+    assert.equal(accentedLink.source_ref, 'inventaire-été.csv');
+    const emoji = await asset(runner, tenantId, 'Emoji');
+    const emojiName = `${'e'.repeat(SOURCE_REF_MAX - 1)}\u{1F600}.csv`;
+    const emojiLoaded = await csv.importAssetLinks({ file: fileOf(['Emoji,,SQL Server,,,'], asMulter(emojiName)), dryRun: false, language: 'en' }, ctx);
+    assert.equal(emojiLoaded.inserted, 1);
+    const [emojiLink] = await runner.query(`SELECT source_ref FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2`, [tenantId, emoji]);
+    assert.equal(emojiLink.source_ref, 'e'.repeat(SOURCE_REF_MAX - 1), 'the cut never splits a character');
   });
 }
 
@@ -290,6 +309,21 @@ async function testKeepsManualProvenance() {
     assert.equal(edited.updated, 1);
     const [manual] = await runner.query(`SELECT notes, source, source_ref FROM asset_technologies WHERE id = $1`, [link]);
     assert.deepEqual(manual, { notes: 'replaced', source: 'manual', source_ref: 'hand' });
+
+    // A screen that writes a link the import created makes it manual again (no option = the old SQL).
+    const app = await application(runner, tenantId, 'App');
+    await csv.importAssetLinks({ file: fileOf(['Srv,,SQL Server,2019,,']), dryRun: false, language: 'en' }, ctx);
+    await csv.importApplicationLinks({ file: appFileOf([',App,,SQL Server,,,']), dryRun: false, language: 'en' }, ctx, {});
+    const opts = { manager: runner.manager, tenantId, userId: null };
+    await csv.screens.addAssetLink(sql, srv, { version_label: '2019' }, opts);
+    await csv.screens.setApplicationTechnology(app, sql, true, {}, opts);
+    const [assetLink] = await runner.query(
+      `SELECT source, source_ref FROM asset_technologies WHERE tenant_id = $1 AND asset_id = $2 AND technology_version_id IS NOT NULL`,
+      [tenantId, srv],
+    );
+    assert.deepEqual(assetLink, { source: 'manual', source_ref: null });
+    const [appLink] = await runner.query(`SELECT source, source_ref FROM application_technologies WHERE tenant_id = $1 AND application_id = $2`, [tenantId, app]);
+    assert.deepEqual(appLink, { source: 'manual', source_ref: null });
   });
 }
 
@@ -367,6 +401,7 @@ async function testRowErrors() {
         `Srv,,SQL Server,,,${'n'.repeat(2001)},`,
         ',,SQL Server,,,',
         'Srv,,,,,',
+        'Srv,SQL Server,,,,',
       ]),
       dryRun: false,
       language: 'en',
@@ -383,6 +418,7 @@ async function testRowErrors() {
       { row: 10, code: 'CSV_NOTES_TOO_LONG', params: { max: 2000 } },
       { row: 11, code: 'CSV_ASSET_REQUIRED', params: null },
       { row: 12, code: 'CSV_TECHNOLOGY_REQUIRED', params: null },
+      { row: 13, code: 'CSV_TECHNOLOGY_REFERENCE_INVALID', params: { value: 'SQL Server' } },
     ]);
     assert.ok(refused.errors.some((error) => error.message.includes('Adopt it from the catalog first.')));
     assert.deepEqual(await counts(runner, tenantId), before, 'the duplicate file writes nothing, including the version its first row would create');
@@ -545,9 +581,9 @@ async function testOperatingSystemDefault() {
     const file = () => fileOf([
       'Auto,,SQL Server,,,',
       'Auto,,Ubuntu,,,',
-      'Never,,Ubuntu,,no,',
+      'Never,,Ubuntu,,non,',
       'Explicit,,Ubuntu,,,',
-      'Explicit,,Windows Server,,yes,',
+      'Explicit,,Windows Server,,Oui,',
       'Cluster,,Ubuntu,,,',
       'Kept,,Ubuntu,,,',
       'Owned,,Ubuntu,,,',
@@ -724,8 +760,8 @@ async function testApplicationRoundTripAndProvenance() {
     assert.equal(exported.filename, 'applications-technologies.csv');
     assert.deepEqual(textBody(exported.content).split('\n'), [
       APP_HEADER,
-      `${crmRef},CRM,TEC-2,SQL Server,,hand,manual`,
-      `${crmRef},CRM,TEC-2,SQL Server,2019,,agent`,
+      `${crmRef},CRM,TEC-2,SQL Server,,hand,Manual entry`,
+      `${crmRef},CRM,TEC-2,SQL Server,2019,,Agent`,
     ]);
     const before = await appLinks(runner, tenantId);
     const round = await csv.importApplicationLinks({ file: csvFile(exported.content, 'round.csv'), dryRun: false, language: 'en' }, ctx, {});

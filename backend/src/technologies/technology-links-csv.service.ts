@@ -3,6 +3,8 @@ import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import {
   cellOf,
+  formatCsvBoolean,
+  parseCsvBoolean,
   readMasterDataFile,
   rowError,
   rowProblemErrors,
@@ -11,8 +13,8 @@ import {
   type CsvLanguage,
   type ImportReportError,
 } from '../common/csv-sheet';
-import { linkProvenance, SOURCE_REF_MAX, type LinkProvenance } from '../common/link-provenance';
-import { uploadedBytes } from '../common/upload';
+import { linkProvenance, SOURCE_REF_MAX, type LinkProvenance, type LinkSource } from '../common/link-provenance';
+import { fixMulterFilename, uploadedBytes } from '../common/upload';
 import { OperatingSystemService } from './operating-system.service';
 import { TechnologyLinksService, type LinkOpts } from './technology-links.service';
 
@@ -24,13 +26,25 @@ export const APPLICATION_LINK_CSV_HEADERS = [
   'application_reference', 'application_name', 'technology_reference', 'technology_name', 'version', 'notes', 'source',
 ] as const;
 
-/** `source` is written by the export and ignored on import: a file without it still reads. */
+/** `source` is written by the export, in the file's language, and ignored on import: a file without it still reads. */
 const OPTIONAL_COLUMNS = ['source'] as const;
 const VERSION_MAX = 100;
 const NOTES_MAX = 2000;
 const OS_FAMILY = 'operating_system';
 const TEC_REF_RE = /^TEC-(\d+)$/i;
 const APP_REF_RE = /^APP-\d+$/i;
+
+/** Where a link comes from, in the words of each export language. */
+const SOURCE_LABELS: Record<CsvLanguage, Record<LinkSource, string>> = {
+  en: { manual: 'Manual entry', import: 'Import', ai: 'Assistant', agent: 'Agent', netbox: 'Netbox' },
+  fr: { manual: 'Saisie manuelle', import: 'Import', ai: 'Assistant', agent: 'Agent', netbox: 'Netbox' },
+  de: { manual: 'Manuelle Eingabe', import: 'Import', ai: 'Assistent', agent: 'Agent', netbox: 'Netbox' },
+  es: { manual: 'Entrada manual', import: 'Importación', ai: 'Asistente', agent: 'Agente', netbox: 'Netbox' },
+};
+
+function sourceLabel(source: string, language: CsvLanguage): string {
+  return SOURCE_LABELS[language][source as LinkSource] ?? source;
+}
 
 export const ASSET_LINKS_CSV_FILENAME = 'servers-technologies.csv';
 export const ASSET_LINKS_CSV_TEMPLATE = 'servers-technologies-template.csv';
@@ -131,7 +145,7 @@ export class TechnologyLinksCsvService {
       for (const row of stored) {
         rows.push([
           row.asset_reference ?? '', row.asset_name, `TEC-${row.item_number}`, row.technology_name, row.version ?? '',
-          row.is_operating_system ? 'yes' : 'no', row.notes ?? '', row.source,
+          formatCsvBoolean(row.is_operating_system, language), row.notes ?? '', sourceLabel(row.source, language),
         ]);
       }
     }
@@ -216,7 +230,7 @@ export class TechnologyLinksCsvService {
       for (const row of stored) {
         rows.push([
           row.reference ?? '', row.application_name, `TEC-${row.item_number}`, row.technology_name,
-          row.version ?? '', row.notes ?? '', row.source,
+          row.version ?? '', row.notes ?? '', sourceLabel(row.source, language),
         ]);
       }
     }
@@ -280,7 +294,7 @@ export class TechnologyLinksCsvService {
     if (planned.errors.length > 0) return report(planned.errors, planned.warnings);
     const counts = { inserted: 0, updated: 0, unchanged: 0 };
     for (const row of planned.rows) counts[row.outcome] += 1;
-    if (!dryRun) await this.write(spec.side, planned.rows, importProvenance(file.originalname), ctx);
+    if (!dryRun) await this.write(spec.side, planned.rows, importProvenance(fixMulterFilename(file.originalname)), ctx);
     return report([], planned.warnings, counts);
   }
 
@@ -350,13 +364,14 @@ export class TechnologyLinksCsvService {
       let markOperatingSystem = false;
       let autoCandidate = false;
       if (spec.side === 'asset') {
+        // Yes and no in any of the four languages, as the other files read them.
         const raw = cellOf(row, 'operating_system');
-        const os = raw.toLowerCase();
-        if (os !== '' && os !== 'yes' && os !== 'no') {
+        const os = parseCsvBoolean(raw);
+        if (os === undefined) {
           errors.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_VALUE', `"${raw}" is not valid. Use yes or no.`, { value: raw }));
           continue;
         }
-        if (os === 'yes' && !link?.is_operating_system) {
+        if (os === true && !link?.is_operating_system) {
           const refused = refuseOperatingSystem(line, subject, tech, markedSubjects, osClaim, linkKey);
           if (refused.length > 0) {
             errors.push(...refused);
@@ -365,7 +380,7 @@ export class TechnologyLinksCsvService {
           osClaim.set(subject.id, linkKey);
           markOperatingSystem = true;
         } else if (
-          os === '' && !link && tech.family === OS_FAMILY && !subject.is_cluster
+          os === null && !link && tech.family === OS_FAMILY && !subject.is_cluster
           && !markedSubjects.has(subject.id) && !autoMark.has(subject.id)
         ) {
           autoCandidate = true;
@@ -533,7 +548,10 @@ function matchOne(line: number, column: string, name: string, hits: SubjectRow[]
   return { id: hits[0].id, is_cluster: hits[0].is_cluster };
 }
 
-/** By `TEC-n` when the reference is filled, otherwise by name. Unknown: adopt it from the catalog first. */
+/**
+ * By `TEC-n` when the reference is filled, otherwise by name. Unknown: adopt it from the catalog
+ * first. A filled cell that is not a `TEC-n` reference is an error of its own.
+ */
 function resolveTechnology(
   line: number,
   reference: string,
@@ -546,7 +564,14 @@ function resolveTechnology(
   );
   if (reference) {
     const number = technologyItemNumber(reference);
-    const tech = number == null ? undefined : techs.byItem.get(number);
+    if (number == null) {
+      errors.push(rowError(
+        line, 'technology_reference', 'CSV_TECHNOLOGY_REFERENCE_INVALID',
+        `"${reference}" is not a technology reference. Use TEC-n, or leave the cell empty and fill technology_name.`, { value: reference },
+      ));
+      return null;
+    }
+    const tech = techs.byItem.get(number);
     if (!tech) errors.push(notAdopted('technology_reference', reference));
     return tech ?? null;
   }
@@ -575,7 +600,7 @@ function refuseOperatingSystem(
 ): ImportReportError[] {
   const problems: ImportReportError[] = [];
   if (tech.family !== OS_FAMILY) {
-    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_FAMILY', 'Only an operating system can be marked as the operating system.'));
+    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_FAMILY', 'Only a technology of the Operating system family can be marked as the server\'s operating system.'));
   }
   if (subject.is_cluster) {
     problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_CLUSTER', 'A cluster has no operating system.'));
@@ -585,14 +610,21 @@ function refuseOperatingSystem(
   const markedElsewhere = markedSubjects.has(subject.id);
   const claimedElsewhere = osClaim.has(subject.id) && osClaim.get(subject.id) !== linkKey;
   if (markedElsewhere || claimedElsewhere) {
-    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_TAKEN', 'This server already has an operating system.'));
+    problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_TAKEN', 'This server already has another operating system. Remove it or unmark it in the Technologies section of the server page, or leave the cell empty.'));
   }
   return problems;
 }
 
-/** The file name, trimmed and cut to the provenance limit (`linkProvenance` refuses a longer one). */
+/**
+ * The file name (already decoded from multer's latin1), trimmed and cut to the provenance limit
+ * (`linkProvenance` refuses a longer one), whole code points only so a surrogate pair is never split.
+ */
 function importProvenance(originalName: string | undefined): LinkProvenance {
-  const trimmed = (originalName ?? '').trim().slice(0, SOURCE_REF_MAX);
+  let trimmed = '';
+  for (const char of (originalName ?? '').trim()) {
+    if (trimmed.length + char.length > SOURCE_REF_MAX) break;
+    trimmed += char;
+  }
   return linkProvenance('import', trimmed || null);
 }
 

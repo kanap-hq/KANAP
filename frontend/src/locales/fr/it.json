@@ -164,8 +164,8 @@
       "title": "Technologies",
       "newTechnology": "Nouvelle technologie",
       "empty": "Aucune technologie pour l'instant.",
-      "importCsv": "Importer CSV",
-      "exportCsv": "Exporter CSV",
+      "importCsv": "Importer les liens",
+      "exportCsv": "Exporter les liens",
       "linkFiles": {
         "asset": "Serveurs et technologies",
         "application": "Applications et technologies",
@@ -178,7 +178,7 @@
           "application": "Exporter les applications et technologies"
         },
         "importHint": {
-          "asset": "Chaque ligne ajoute ou met à jour un lien. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue. Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom. operating_system : « yes » marque le lien comme système d'exploitation du serveur, « no » ne le marque jamais. Une cellule vide marque un nouveau lien de la famille Système d'exploitation quand le serveur n'en a pas encore, comme sur la fiche du serveur. L'import ne retire jamais un marquage.",
+          "asset": "Chaque ligne ajoute ou met à jour un lien. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue. Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom. operating_system : « oui » marque le lien comme système d'exploitation du serveur, « non » ne le marque jamais. L'export écrit ces mots dans la langue du fichier ; l'import les lit en anglais, français, allemand ou espagnol. Une cellule vide marque un nouveau lien de la famille Système d'exploitation quand le serveur n'en a pas encore, comme sur la fiche du serveur. L'import ne retire jamais un marquage.",
           "application": "Chaque ligne ajoute ou met à jour un lien déclaré. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue."
         },
         "exportNoteApplication": "Le fichier contient les liens déclarés. Les liens déduits des serveurs n'y figurent pas."
