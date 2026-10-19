@@ -19,9 +19,10 @@ export class CurrencyRateSet {
 
   /**
    * Source of each currency's value in `rates` (`world-bank-annual`,
-   * `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity`).
-   * Null on a set captured before provenance was stored: those values take
-   * the set's `source`.
+   * `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity`,
+   * `manual`). Null on a set captured before provenance was stored: those
+   * values take the set's `source`. A `manual` value wins over every fetch
+   * while it is present.
    */
   @Column('jsonb', { nullable: true })
   rate_sources!: Record<string, string> | null;

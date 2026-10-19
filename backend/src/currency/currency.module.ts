@@ -5,6 +5,7 @@ import { CurrencySettingsService } from './currency-settings.service';
 import { FxRateService } from './fx-rate.service';
 import { Tenant } from '../tenants/tenant.entity';
 import { FxIngestionService } from './fx-ingestion.service';
+import { ManualRatesService } from './manual-rates.service';
 import { WorldBankClient } from './world-bank-client';
 import { CurrencyController } from './currency.controller';
 import { PermissionsModule } from '../permissions/permissions.module';
@@ -19,7 +20,7 @@ import { AuditModule } from '../audit/audit.module';
     AuditModule,
   ],
   controllers: [CurrencyController],
-  providers: [CurrencySettingsService, FxRateService, WorldBankClient, FxIngestionService],
+  providers: [CurrencySettingsService, FxRateService, WorldBankClient, FxIngestionService, ManualRatesService],
   exports: [CurrencySettingsService, FxRateService, FxIngestionService],
 })
 export class CurrencyModule {}
