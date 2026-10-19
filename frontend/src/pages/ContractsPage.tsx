@@ -500,18 +500,24 @@ export default function ContractsPage() {
     const data = totals.data;
     if (!data || totals.isError) return [];
     const budget = data.budget;
-    const label = [
-      t('contracts.list.total', { count: data.count }),
-      ...data.excluded.map((entry) => t('contracts.list.totalExcluded', { count: entry.count, currency: entry.currency })),
-      ...(budget?.excluded ?? []).map((entry) => t('contracts.list.committedExcluded', { count: entry.count, currency: entry.currency, year: budget!.year })),
-    ].join(' · ');
     return [{
       id: TOTALS_ROW_ID,
-      name: label,
+      name: t('contracts.list.total', { count: data.count }),
       yearly_amount_at_signature: data.yearly_amount,
       currency: data.reporting_currency,
       ...(budget ? { budget_committed: budget.committed, budget_linked: budget.linked, budget_gap: budget.gap } : {}),
     }];
+  }, [totals.data, totals.isError, t]);
+
+  // The long notes leave the name cell: that column is the narrow one, and it cut them off.
+  const exclusionNotes = useMemo(() => {
+    const data = totals.data;
+    if (!data || totals.isError) return [];
+    const budget = data.budget;
+    return [
+      ...data.excluded.map((entry) => t('contracts.list.totalExcluded', { count: entry.count, currency: entry.currency })),
+      ...(budget?.excluded ?? []).map((entry) => t('contracts.list.committedExcluded', { count: entry.count, currency: entry.currency, year: budget.year })),
+    ];
   }, [totals.data, totals.isError, t]);
 
   const currentModel = safeParse(listQuery?.filters ?? '');
@@ -652,8 +658,17 @@ export default function ContractsPage() {
         extraParams={budgetParams}
         toolbarExtras={quickFilter}
         pinnedBottomRowData={pinnedTotals}
-        // The linked lines the budget sums leave out for lack of a rate, under the totals row.
-        footer={budgetTotals?.linked_fx_missing?.length ? <FxMissingNotice items={budgetTotals.linked_fx_missing} /> : undefined}
+        // Currencies without a rate, on their own rows under the totals, so the name cell stays short.
+        footer={(exclusionNotes.length || budgetTotals?.linked_fx_missing?.length) ? (
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.25, minWidth: 0, maxWidth: '100%' }}>
+            {exclusionNotes.length > 0 && (
+              <Box sx={{ fontSize: 12, lineHeight: '20px', color: 'kanap.text.secondary', whiteSpace: 'normal', overflowWrap: 'anywhere' }}>
+                {exclusionNotes.join(' · ')}
+              </Box>
+            )}
+            {budgetTotals?.linked_fx_missing?.length ? <FxMissingNotice items={budgetTotals.linked_fx_missing} wrap /> : null}
+          </Box>
+        ) : undefined}
         onGridApiReady={(api) => { gridApiRef.current = api; }}
         enableRowSelection={canAdmin}
         onSelectionChanged={setSelectedRows}

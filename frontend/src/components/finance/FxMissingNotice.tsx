@@ -25,10 +25,13 @@ export function currencySettingsHref(pair: { currency: string; year: number }): 
 export default function FxMissingNotice({
   items,
   message,
+  wrap = false,
   sx,
 }: {
   items?: ReadonlyArray<FxMissing> | null;
   message?: string;
+  /** Lets a long notice wrap under a grid instead of ending in an ellipsis. */
+  wrap?: boolean;
   sx?: SxProps<Theme>;
 }) {
   const { t } = useTranslation('ops');
@@ -41,13 +44,27 @@ export default function FxMissingNotice({
     <Box
       role="status"
       sx={[
-        { display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, fontSize: 12, lineHeight: '20px', color: 'warning.main' },
+        {
+          display: 'flex',
+          alignItems: wrap ? 'flex-start' : 'center',
+          gap: 0.75,
+          minWidth: 0,
+          maxWidth: '100%',
+          fontSize: 12,
+          lineHeight: '20px',
+          color: 'warning.main',
+        },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
       <Box component="span" sx={attentionDotSx} />
       <Tooltip title={text} placement="top-start">
-        <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</Box>
+        <Box
+          component="span"
+          sx={wrap
+            ? { minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere' }
+            : { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >{text}</Box>
       </Tooltip>
       {canEnterRate && list[0] && (
         <Link component={RouterLink} to={currencySettingsHref(list[0])} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>

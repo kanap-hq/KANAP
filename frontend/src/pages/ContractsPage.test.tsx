@@ -233,10 +233,14 @@ describe('ContractsPage', () => {
       filters: JSON.stringify({ name: { filterType: 'text', type: 'contains', filter: 'sap' } }),
     });
     const [row] = grid.props!.pinnedBottomRowData;
-    expect(row.name).toBe(
-      'contracts.list.total {"count":18} · contracts.list.totalExcluded {"count":1,"currency":"GBP"}'
-      + ` · contracts.list.committedExcluded {"count":1,"currency":"USD","year":${NEXT_YEAR}}`,
-    );
+    expect(row.name).toBe('contracts.list.total {"count":18}');
+    const { container: notes } = render(<>{grid.props!.footer}</>);
+    expect(notes).toHaveTextContent('contracts.list.totalExcluded {"count":1,"currency":"GBP"}');
+    expect(notes).toHaveTextContent(`contracts.list.committedExcluded {"count":1,"currency":"USD","year":${NEXT_YEAR}}`);
+    expect(within(notes).getByText(/contracts\.list\.committedExcluded/)).toHaveStyle({
+      whiteSpace: 'normal',
+      overflowWrap: 'anywhere',
+    });
     const amount = column('yearly_amount_at_signature');
     expect(amount.valueFormatter?.({ value: row.yearly_amount_at_signature, data: row, node: { rowPinned: 'bottom' } })).toBe('3 833 400 EUR');
     expect(amount.valueFormatter?.({ value: 120000, data: { currency: 'USD' }, node: {} })).toBe('120 000');
@@ -313,7 +317,9 @@ describe('ContractsPage', () => {
     renderPage();
     report();
     await waitFor(() => expect(grid.props?.pinnedBottomRowData).toHaveLength(1));
-    expect(grid.props!.footer).toBeUndefined();
+    expect(grid.props!.pinnedBottomRowData[0].name).toBe('contracts.list.total {"count":18}');
+    render(<>{grid.props!.footer}</>);
+    expect(screen.queryByRole('status')).not.toBeInTheDocument();
 
     const Linked = column('budget_linked').cellRenderer as unknown as React.ComponentType<any>;
     const markName = `contracts.budget.linkedFxMissing {"year":${NEXT_YEAR}}`;
@@ -327,13 +333,21 @@ describe('ContractsPage', () => {
 
     api.get.mockResolvedValue({ data: { ...TOTALS, budget: { ...TOTALS.budget, linked_fx_missing: [{ currency: 'GBP', year: NEXT_YEAR, lines: 1 }] } } });
     report({ name: { filterType: 'text', type: 'contains', filter: 'SAP' } });
-    await waitFor(() => expect(grid.props?.footer).toBeTruthy());
+    await waitFor(() => {
+      const children = React.Children.toArray(grid.props?.footer?.props?.children);
+      expect(children).toHaveLength(2);
+    });
     render(<MemoryRouter>{grid.props!.footer}</MemoryRouter>);
     const notice = screen.getByRole('status');
     expect(notice).toHaveTextContent('ops:shared.fxMissing.excluding');
     expect(notice).toHaveTextContent('GBP');
-    // The text about the contracts' own currencies stays in the totals row.
-    expect(grid.props!.pinnedBottomRowData[0].name).toContain('contracts.list.committedExcluded');
+    expect(notice).toHaveStyle({ maxWidth: '100%' });
+    expect(within(notice).getByText(/ops:shared.fxMissing.excluding/)).toHaveStyle({
+      whiteSpace: 'normal',
+      overflowWrap: 'anywhere',
+    });
+    expect(grid.props!.pinnedBottomRowData[0].name).not.toContain('committedExcluded');
+    expect(screen.getAllByText(/contracts\.list\.committedExcluded/).length).toBeGreaterThan(0);
   });
 
   it('sums the budget columns in the totals row', async () => {
