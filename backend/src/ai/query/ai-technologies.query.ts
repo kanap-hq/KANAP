@@ -77,11 +77,17 @@ export async function resolveAiApplicationsReach(
   policy?: { canReadEntityType(context: AiExecutionContextWithManager, entityType: AiSearchEntityType | AiContextEntityType, manager: EntityManager): Promise<boolean> },
 ): Promise<AiApplicationsReach> {
   const host = context as AiExecutionContextWithManager & { __aiApplicationsReach?: Promise<AiApplicationsReach> };
-  host.__aiApplicationsReach ??= (async () => {
+  if (host.__aiApplicationsReach) return host.__aiApplicationsReach;
+  const pending = (async () => {
     if (!policy || !(await policy.canReadEntityType(context, 'applications', context.manager))) return null;
     return { scope: await resolveAiParticipationAccessScope(context, 'applications') };
   })();
-  return host.__aiApplicationsReach;
+  host.__aiApplicationsReach = pending;
+  // A failure is not kept: the next call of the same context asks again.
+  pending.catch(() => {
+    if (host.__aiApplicationsReach === pending) host.__aiApplicationsReach = undefined;
+  });
+  return pending;
 }
 
 /** Set columns (registry `grid`), compared without case where `ci`. */

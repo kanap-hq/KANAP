@@ -24,7 +24,7 @@ import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql
 import { budgetLineReference } from '../spend/budget-nature';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
 import { TechnologyLinksService } from '../technologies/technology-links.service';
-import { assetInServiceSql, TechnologyReachService } from '../technologies/technology-reach.service';
+import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
 import { entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
@@ -44,13 +44,15 @@ const ASSET_OS_LABEL = operatingSystemLabelSql('a');
  */
 export const AI_CONTEXT_GROUP_ITEM_LIMIT = 25;
 
-function boundedGroup(relation: string, label: string, items: AiEntitySummaryDto[]): AiEntityRelationshipGroupDto {
+/** `total`: the records the group stands for, when `items` holds only the first page of them. */
+function boundedGroup(relation: string, label: string, items: AiEntitySummaryDto[], total = items.length): AiEntityRelationshipGroupDto {
+  const shown = items.slice(0, AI_CONTEXT_GROUP_ITEM_LIMIT);
   return {
     relation,
     label,
-    items: items.slice(0, AI_CONTEXT_GROUP_ITEM_LIMIT),
-    total: items.length,
-    truncated: items.length > AI_CONTEXT_GROUP_ITEM_LIMIT,
+    items: shown,
+    total,
+    truncated: total > shown.length,
   };
 }
 
@@ -493,7 +495,11 @@ export class AiEntityService {
     /** The technology sections of the contexts (lot C2b); absent, they are left out. */
     @Optional() private readonly technologyLinks?: TechnologyLinksService,
     @Optional() private readonly technologyReach?: TechnologyReachService,
-  ) {}
+  ) {
+    // Absent, the technology sections are left out: say so once, at start.
+    if (!technologyLinks) this.logger.warn('TechnologyLinksService is not injected: the asset and application contexts carry no technology section.');
+    if (!technologyReach) this.logger.warn('TechnologyReachService is not injected: the technology context lists no application.');
+  }
 
   private parseNumericRef(query: string): number | null {
     const numericPrefix = this.parseNumericPrefix(query);
@@ -3071,7 +3077,7 @@ export class AiEntityService {
    * A technology with the servers it is installed on (in service, with the version and whether it
    * is the server's operating system), and, for a caller who reads applications (a Business
    * Contributor's own only), the applications that declare it and those deduced from the servers
-   * that carry it (`TechnologyReachService`). Each group is bounded and names its total.
+   * that carry it (`TechnologyReachService`). Each group reads its first records in SQL and names its total.
    */
   private async buildTechnologyContext(context: AiExecutionContextWithManager, technologyId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
     const { tenantId } = context;
@@ -3084,39 +3090,65 @@ export class AiEntityService {
     );
     if (!technology) throw new NotFoundException('Technology not found.');
 
-    const serverRows = await manager.query<Array<SearchRow & { version: string | null; is_operating_system: boolean }>>(
+    // The first servers only, with their total: a technology can sit on thousands of them.
+    const serverRows = await manager.query<Array<SearchRow & { version: string | null; is_operating_system: boolean; total: string }>>(
       `SELECT a.id, a.asset_reference AS item_ref, a.name AS label, COALESCE(a.fqdn, a.hostname) AS summary, a.status, a.updated_at,
-              v.label AS version, at.is_operating_system
+              v.label AS version, at.is_operating_system, count(*) OVER () AS total
        FROM asset_technologies at
        JOIN assets a ON a.id = at.asset_id AND a.tenant_id = at.tenant_id AND ${assetInServiceSql('a')}
        LEFT JOIN technology_versions v ON v.id = at.technology_version_id AND v.tenant_id = at.tenant_id
        WHERE at.technology_id = $1
          AND at.tenant_id = $2
-       ORDER BY lower(a.name), a.id, v.label`,
-      [technologyId, tenantId],
+       ORDER BY lower(a.name), a.id, v.label
+       LIMIT $3`,
+      [technologyId, tenantId, AI_CONTEXT_GROUP_ITEM_LIMIT],
     );
-    const servers = serverRows.map(({ version, is_operating_system, ...row }) => toSummary('assets', {
+    const servers = serverRows.map(({ version, is_operating_system, total: _total, ...row }) => toSummary('assets', {
       ...row,
       metadata: { version: version ?? null, operating_system: is_operating_system === true },
     }));
 
-    const related: AiEntityRelationshipGroupDto[] = [boundedGroup('servers', 'Servers', servers)];
+    const related: AiEntityRelationshipGroupDto[] = [boundedGroup('servers', 'Servers', servers, Number(serverRows[0]?.total ?? 0))];
     const applications = this.technologyReach ? await resolveAiApplicationsReach(context, this.policy) : null;
     if (applications && this.technologyReach) {
       const reached = await this.technologyReach.applicationsOfTechnologies(manager, tenantId, [technologyId]);
-      const params: unknown[] = [tenantId, Array.from(new Set(reached.map((row) => row.application_id)))];
-      const scopeSql = appendParticipationScopeSql('applications', 'a', params, applications.scope);
-      const appRows = await manager.query<SearchRow[]>(
-        `SELECT a.id, a.sequential_id AS item_ref, a.name AS label, a.description AS summary, a.status, a.updated_at
-         FROM applications a
-         WHERE a.tenant_id = $1
-           AND a.id = ANY($2::uuid[])
-           ${scopeSql}
-         ORDER BY lower(a.name), a.id`,
-        params,
-      );
-      const versionIds = Array.from(new Set(reached.map((row) => row.technology_version_id).filter((id): id is string => !!id)));
-      const assetIds = Array.from(new Set(reached.flatMap((row) => [row.asset_id, row.via_asset_id]).filter((id): id is string => !!id)));
+      // The reach rows of each application, by kind, built once.
+      const byApplication = new Map<string, Record<ReachedApplication['kind'], ReachedApplication[]>>();
+      for (const row of reached) {
+        const entry = byApplication.get(row.application_id) ?? { declared: [], hosted: [] };
+        entry[row.kind].push(row);
+        byApplication.set(row.application_id, entry);
+      }
+      // The first applications of a kind within the caller's scope, with their total.
+      const firstApplications = async (kind: ReachedApplication['kind']) => {
+        const ids = Array.from(byApplication).filter(([, rows]) => rows[kind].length > 0).map(([id]) => id);
+        if (!ids.length) return { rows: [] as SearchRow[], total: 0 };
+        const params: unknown[] = [tenantId, ids];
+        const scopeSql = appendParticipationScopeSql('applications', 'a', params, applications.scope);
+        params.push(AI_CONTEXT_GROUP_ITEM_LIMIT);
+        const rows = await manager.query<Array<SearchRow & { total: string }>>(
+          `SELECT a.id, a.sequential_id AS item_ref, a.name AS label, a.description AS summary, a.status, a.updated_at,
+                  count(*) OVER () AS total
+           FROM applications a
+           WHERE a.tenant_id = $1
+             AND a.id = ANY($2::uuid[])
+             ${scopeSql}
+           ORDER BY lower(a.name), a.id
+           LIMIT $${params.length}`,
+          params,
+        );
+        return { rows: rows.map(({ total: _total, ...row }) => row as SearchRow), total: Number(rows[0]?.total ?? 0) };
+      };
+      const declaredApps = await firstApplications('declared');
+      const hostedApps = await firstApplications('hosted');
+
+      // Version labels and server names for the rows of the listed applications only.
+      const listedRows = [
+        ...declaredApps.rows.flatMap((app) => byApplication.get(app.id)?.declared ?? []),
+        ...hostedApps.rows.flatMap((app) => byApplication.get(app.id)?.hosted ?? []),
+      ];
+      const versionIds = Array.from(new Set(listedRows.map((row) => row.technology_version_id).filter((id): id is string => !!id)));
+      const assetIds = Array.from(new Set(listedRows.flatMap((row) => [row.asset_id, row.via_asset_id]).filter((id): id is string => !!id)));
       const versionLabels = new Map((versionIds.length
         ? await manager.query<Array<{ id: string; label: string }>>(
           `SELECT id, label FROM technology_versions WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
@@ -3129,11 +3161,10 @@ export class AiEntityService {
           [tenantId, assetIds],
         )
         : []).map((row) => [row.id, row.name]));
-      const ofKind = (kind: 'declared' | 'hosted') => appRows.flatMap((app) => {
-        const rows = reached.filter((row) => row.kind === kind && row.application_id === app.id);
-        if (!rows.length) return [];
+      const summaries = (kind: ReachedApplication['kind'], apps: SearchRow[]) => apps.map((app) => {
+        const rows = byApplication.get(app.id)?.[kind] ?? [];
         const versions = joinedDistinct(rows.map((row) => (row.technology_version_id ? versionLabels.get(row.technology_version_id) : null)));
-        return [toSummary('applications', {
+        return toSummary('applications', {
           ...app,
           metadata: kind === 'declared'
             ? { version: versions }
@@ -3143,11 +3174,11 @@ export class AiEntityService {
               servers: joinedDistinct(rows.map((row) => (row.asset_id ? assetNames.get(row.asset_id) : null))),
               installed_on: joinedDistinct(rows.map((row) => (row.via_asset_id ? assetNames.get(row.via_asset_id) : null))),
             },
-        })];
+        });
       });
       related.push(
-        boundedGroup('declared_applications', 'Applications declaring it', ofKind('declared')),
-        boundedGroup('deduced_applications', 'Applications deduced from the servers', ofKind('hosted')),
+        boundedGroup('declared_applications', 'Applications declaring it', summaries('declared', declaredApps.rows), declaredApps.total),
+        boundedGroup('deduced_applications', 'Applications deduced from the servers', summaries('hosted', hostedApps.rows), hostedApps.total),
       );
     }
 

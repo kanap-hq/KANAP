@@ -145,7 +145,12 @@ export const technologiesRegistry: AiEntityFilterRegistry = {
     alias: 't',
     groupFields: {
       family: { expression: 't.family' },
-      publisher: { expression: 't.editor' },
+      // Grouped without case, as the publisher filter compares: one group per publisher, named by
+      // its first spelling in binary order (capitals first).
+      publisher: {
+        expression: `(SELECT min(pt.editor COLLATE "C") FROM technologies pt
+                       WHERE pt.tenant_id = t.tenant_id AND lower(pt.editor) = lower(t.editor))`,
+      },
       hosting_type: { expression: 't.hosting_type' },
       lifecycle: { expression: 't.lifecycle' },
       admin_zone: { expression: 't.admin_zone' },

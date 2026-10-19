@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -413,7 +413,12 @@ export class AiQueryExecutor {
     /** Whether the caller reads applications, for the application figures of the technologies. */
     @Optional() private readonly policy?: AiPolicyService,
     @Optional() private readonly technologies?: TechnologiesService,
-  ) {}
+  ) {
+    // Absent, the technology figures close (no application count, no detail): say so once, at start.
+    const logger = new Logger(AiQueryExecutor.name);
+    if (!policy) logger.warn('AiPolicyService is not injected: technologies show no application or contract figure.');
+    if (!technologies) logger.warn('TechnologiesService is not injected: the technology detail is unavailable.');
+  }
 
   private async normalizePersonFilters(
     context: AiExecutionContextWithManager,

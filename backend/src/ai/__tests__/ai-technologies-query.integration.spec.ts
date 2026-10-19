@@ -330,6 +330,10 @@ async function testAggregatesAndFilterValues(harness: Harness, runner: QueryRunn
   assert.deepEqual(byLifecycle.groups, [{ key: 'active', count: 3 }], 'filters apply to the aggregates');
   const servers = await aggregate({ group_by: 'publisher', metric: 'server_count', function: 'sum' });
   assert.equal(servers.groups.find((g: any) => g.key === 'Microsoft').value, 2);
+  await runner.query(`UPDATE technologies SET editor = 'microsoft' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.tech.entra]);
+  const mixedCase = await aggregate({ group_by: 'publisher' });
+  assert.deepEqual(mixedCase.groups[0], { key: 'Microsoft', count: 2 }, 'publishers group without case, as they filter');
+  await runner.query(`UPDATE technologies SET editor = 'Microsoft' WHERE tenant_id = $1 AND id = $2`, [s.tenantId, s.tech.entra]);
   const earliest = await aggregate({ group_by: 'lifecycle', metric: 'end_of_support', function: 'min' });
   assert.equal(earliest.groups.find((g: any) => g.key === 'active').value, '2024-01-09');
   await rejects(runner, () => aggregate({ group_by: 'family', metric: 'application_count', function: 'sum' }), /Unsupported metric field/,
@@ -344,6 +348,23 @@ async function testAggregatesAndFilterValues(harness: Harness, runner: QueryRunn
   assert.deepEqual(values.values.publisher, ['Microsoft', 'PostgreSQL Global Development Group', 'VMware'], 'this tenant\'s publishers only');
   assert.deepEqual(values.values.admin_zone, ['Tier 0', null]);
   assert.deepEqual(values.fields_ignored, ['server_count'], 'a number has no value list');
+}
+
+async function testApplicationsReachCache(runner: QueryRunner, s: Seed) {
+  const { resolveAiApplicationsReach } = require('../query/ai-technologies.query');
+  let calls = 0;
+  const policy = {
+    async canReadEntityType() {
+      calls += 1;
+      if (calls === 1) throw new Error('database unavailable');
+      return false;
+    },
+  };
+  const context = ctx(runner, s, 'full');
+  await assert.rejects(resolveAiApplicationsReach(context, policy), /database unavailable/);
+  assert.equal(await resolveAiApplicationsReach(context, policy), null, 'a failure is not kept for the next call');
+  assert.equal(await resolveAiApplicationsReach(context, policy), null);
+  assert.equal(calls, 2, 'a success is kept');
 }
 
 async function testDetail(harness: Harness, runner: QueryRunner, s: Seed) {
@@ -536,6 +557,31 @@ async function testMcpToolsCall(harness: Harness, runner: QueryRunner, s: Seed) 
   assert.deepEqual(businessWrites, [], 'no business table is written');
 }
 
+/** Last: adds 26 servers and 26 applications to TEC-4. */
+async function testContextBounds(harness: Harness, runner: QueryRunner, s: Seed) {
+  for (let i = 0; i < 26; i += 1) {
+    const assetId = await insertId(runner,
+      `INSERT INTO assets (tenant_id, name, kind, environment, status) VALUES ($1, $2, 'server', 'prod', 'active')`, [s.tenantId, `bulk-${String(i).padStart(2, '0')}`]);
+    await runner.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id) VALUES ($1, $2, $3)`, [s.tenantId, assetId, s.tech.vsphere]);
+    const applicationId = await insertId(runner,
+      `INSERT INTO applications (tenant_id, name, sequential_id, status) VALUES ($1, $2, $3, 'enabled')`, [s.tenantId, `Bulk ${String(i).padStart(2, '0')}`, `APP-${100 + i}`]);
+    await runner.query(`INSERT INTO application_technologies (tenant_id, application_id, technology_id) VALUES ($1, $2, $3)`, [s.tenantId, applicationId, s.tech.vsphere]);
+  }
+  const context = await harness.entities.getEntityContext(ctx(runner, s, 'full'), { entity_type: 'technologies', entity_id: 'TEC-4' });
+  const group = (relation: string) => context.related.find((g: any) => g.relation === relation);
+  assert.equal(group('servers').items.length, 25);
+  assert.equal(group('servers').total, 27, 'host-h and the 26 new servers');
+  assert.equal(group('servers').truncated, true);
+  assert.equal(group('servers').items[0].label, 'bulk-00', 'the first servers by name');
+  assert.equal(group('declared_applications').items.length, 25);
+  assert.equal(group('declared_applications').total, 26);
+  assert.equal(group('declared_applications').truncated, true);
+  assert.equal(context.truncated, true);
+  assert.equal(context.complete, false);
+  const bc = await harness.entities.getEntityContext(ctx(runner, s, 'bc'), { entity_type: 'technologies', entity_id: 'TEC-4' });
+  assert.equal(bc.related.find((g: any) => g.relation === 'declared_applications'), undefined, 'the totals count only the applications in scope');
+}
+
 async function run() {
   const harness = await createHarness();
   try {
@@ -555,6 +601,8 @@ async function run() {
       await testContexts(harness, runner, s);
       await testMcpReadOnly(harness, runner, s);
       await testMcpToolsCall(harness, runner, s);
+      await testApplicationsReachCache(runner, s);
+      await testContextBounds(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();
