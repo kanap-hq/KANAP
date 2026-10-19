@@ -21,9 +21,15 @@ export type RelatedBudgetLine = {
   nature: BudgetNature;
   product_name: string;
   supplier_name: string | null;
+  /** In `currency`, the reporting currency; null without a version that year, or without an exchange rate (`fx_missing`). */
   amount: number | null;
   currency: string;
   status: string;
+  /**
+   * Only when the line's version has amounts in a currency without a rate to the reporting
+   * currency that year: the amount in the line's own currency, never counted as the reporting one.
+   */
+  fx_missing?: { currency: string; amount: number };
 };
 export type RelatedContract = {
   id: string;
@@ -79,7 +85,9 @@ export async function listRelatedBudgetLines(
   return rows.map((row) => {
     const version = totals.versionsByItemYear.get(row.id)?.get(year);
     const reporting = version ? totals.reporting.get(version.id) : undefined;
-    const amount = !version ? null : reporting ? Number(reporting.cents[key]) / 100 : 0;
+    const local = version ? totals.cents.get(version.id) : undefined;
+    const amount = !version ? null : reporting ? (reporting.cents ? Number(reporting.cents[key]) / 100 : null) : 0;
+    const fxMissing = reporting && !reporting.cents && local ? { currency: reporting.currency, amount: Number(local[key]) / 100 } : null;
     return {
       id: row.id,
       item_number: row.item_number ?? null,
@@ -89,6 +97,7 @@ export async function listRelatedBudgetLines(
       amount,
       currency: reporting?.reporting_currency ?? totals.reportingCurrency,
       status: row.status,
+      ...(fxMissing ? { fx_missing: fxMissing } : {}),
     };
   });
 }

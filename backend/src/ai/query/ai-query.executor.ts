@@ -142,6 +142,8 @@ function budgetSlot(row: any, slot: FixedSlot, anchorYear: number): any {
 
 function budgetSlotValue(slot: any, metric: SlotMetric): number | null {
   if (!slot || typeof slot !== 'object') return null;
+  // No rate for the line's currency that year: no value in the reporting currency (never the line's own).
+  if (slot.reporting?.fx_source === 'missing') return null;
   const reportingValue = numericScalar(slot.reporting?.[metric]);
   if (reportingValue != null) return reportingValue;
   return numericScalar(slot.totals?.[metric]);
@@ -161,7 +163,7 @@ function budgetFteValue(row: any, slot: FixedSlot, column: (typeof SUMMARY_COLUM
 
 /**
  * The fixed years whose amounts were not converted: no rate for the line's currency that year,
- * so the reporting values are the line's own at a rate of 1 (`fx-rate.service.ts`, `missing`).
+ * so the reporting values are null (`fx-rate.service.ts`, `missing`; `loadVersionTotals`).
  */
 export function budgetFxMissingYears(row: any, anchorYear: number): number[] {
   const years: number[] = [];
