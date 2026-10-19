@@ -58,6 +58,8 @@ type TechnologyInput = Partial<{
 type VersionInput = Partial<{
   label: unknown; cpe_version: unknown; build_prefixes: unknown; standard_support_end: unknown; extended_support_end: unknown;
   notes: unknown;
+  /** true or false: an exception. null: follow the technology. */
+  vulnerability_alerts: unknown;
 }>;
 
 const LINK_URL_MAX = 2000;
@@ -333,6 +335,64 @@ export class TechnologiesService {
     return this.get(before.id, opts);
   }
 
+  /**
+   * Sets whether the technology raises vulnerability alerts, and clears every version exception
+   * in the same transaction (the technology row is locked first, then the versions that have
+   * their own setting). A version created later follows the technology again.
+   * `dryRun` writes nothing and returns only how many exceptions would be cleared.
+   */
+  async setVulnerabilityAlerts(idOrRef: string, enabled: unknown, opts: Opts, dryRun = false) {
+    if (enabled !== true && enabled !== false) throw new BadRequestException('enabled must be true or false.');
+    const { manager: mg, tenantId } = opts;
+    if (dryRun) {
+      const tech = await readTechnology(mg, tenantId, idOrRef);
+      const [{ versions_reset }] = await mg.query(
+        `SELECT count(*)::int AS versions_reset FROM technology_versions
+          WHERE tenant_id = $1 AND technology_id = $2 AND vulnerability_alerts IS NOT NULL`,
+        [tenantId, tech.id],
+      );
+      return { versions_reset: Number(versions_reset) };
+    }
+    const before = await readTechnology(mg, tenantId, idOrRef, true);
+    const exceptions: Array<{ id: string; vulnerability_alerts: boolean }> = await mg.query(
+      `SELECT id, vulnerability_alerts FROM technology_versions
+        WHERE tenant_id = $1 AND technology_id = $2 AND vulnerability_alerts IS NOT NULL
+        ORDER BY id
+        FOR UPDATE`,
+      [tenantId, before.id],
+    );
+    if (before.vulnerability_alerts !== enabled) {
+      await mg.query(
+        `UPDATE technologies SET vulnerability_alerts = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+        [tenantId, before.id, enabled],
+      );
+      const after = await readTechnology(mg, tenantId, before.id);
+      await this.audit.log(
+        { table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null },
+        { manager: mg },
+      );
+    }
+    if (exceptions.length) {
+      await mg.query(
+        `UPDATE technology_versions SET vulnerability_alerts = NULL, updated_at = now()
+          WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
+        [tenantId, before.id, exceptions.map((row) => row.id)],
+      );
+      await this.audit.log(
+        {
+          table: 'technology_versions',
+          recordId: before.id,
+          action: 'update',
+          before: exceptions.map((row) => ({ id: row.id, vulnerability_alerts: row.vulnerability_alerts })),
+          after: exceptions.map((row) => ({ id: row.id, vulnerability_alerts: null })),
+          userId: opts.userId ?? null,
+        },
+        { manager: mg },
+      );
+    }
+    return { enabled, versions_reset: exceptions.length };
+  }
+
   /** The columns a create or PATCH writes, checked against the tenant's catalogs. */
   private async validate(body: TechnologyInput, current: TechnologyRow | null, opts: Opts): Promise<Record<string, unknown>> {
     const { manager: mg, tenantId } = opts;
@@ -472,6 +532,7 @@ export class TechnologiesService {
               (SELECT count(*)::int FROM asset_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS servers,
               (SELECT count(*)::int FROM application_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS applications
          FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
         WHERE v.tenant_id = $1 AND v.technology_id = $2
         ORDER BY v.id`,
       [tenantId, technologyId],
@@ -573,7 +634,9 @@ export class TechnologiesService {
     const id = String(versionId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new NotFoundException('Version not found');
     const rows: TechnologyVersionRow[] = await mg.query(
-      `SELECT ${VERSION_COLUMNS} FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = $3`,
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = $3`,
       [tenantId, technologyId, id],
     );
     if (!rows[0]) throw new NotFoundException('Version not found');
@@ -589,6 +652,13 @@ export class TechnologiesService {
     if (has('standard_support_end')) out.standard_support_end = optionalDay(body.standard_support_end, 'Standard support end');
     if (has('extended_support_end')) out.extended_support_end = optionalDay(body.extended_support_end, 'Extended support end');
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
+    if (has('vulnerability_alerts')) {
+      const value = body.vulnerability_alerts;
+      if (value !== true && value !== false && value !== null) {
+        throw new BadRequestException('vulnerability_alerts must be true, false or null.');
+      }
+      out.vulnerability_alerts = value;
+    }
     const s = out.standard_support_end as string | null | undefined;
     const e = out.extended_support_end as string | null | undefined;
     if (s && e && e < s) throw new BadRequestException('The extended support cannot end before the standard support.');
