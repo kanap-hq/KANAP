@@ -125,7 +125,7 @@ Si su moneda de reporte es EUR:
 
 Encima de la tabla, un bloque enumera cada moneda y año en uso sin tasa, bajo un título como **Faltan 2 tipos de cambio**. Cada línea explica que ninguna fuente publica todavía esta tasa, por lo que los importes en esta moneda quedan excluidos de los totales hasta que la tenga. Cuando no falta nada, el bloque indica **Cada moneda en uso tiene un tipo.**
 
-Un par se considera en uso cuando lo necesita una línea presupuestaria, las cifras de una empresa o un contrato. Al abrir la página también se vuelve a consultar a las fuentes para los años de la lista.
+Un par se considera en uso cuando lo necesita una línea presupuestaria, las cifras de una empresa o un contrato. Para un contrato, es cada año que muestra la página de contratos: el año en curso, los dos siguientes y el año anterior cuando el presupuesto tiene líneas para él. Al abrir la página también se vuelve a consultar a las fuentes para los años de la lista.
 
 ### Tasas manuales
 

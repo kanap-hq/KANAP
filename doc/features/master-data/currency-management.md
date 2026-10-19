@@ -104,7 +104,7 @@ One query per source:
 
 - Budget lines, both natures: `UPPER(TRIM(spend_items.currency))` with `spend_versions.budget_year`. The tenant is named on both tables.
 - Companies: `UPPER(TRIM(companies.base_currency))` with each `company_metrics.fiscal_year` whose `turnover` is non-null.
-- Contracts: `UPPER(TRIM(contracts.currency))` with every year that has a budget version, plus the current calendar year.
+- Contracts: `UPPER(TRIM(contracts.currency))` with every year that has a budget version, the current calendar year, and the years the contract pages read (`contractBudgetYears`: the current year, the two after it, and the previous year when a budget version exists for it). A contract currency is then missing for a year that has no budget version.
 
 A rate of 0, a null, or a year with no set leaves the pair in the list. Storing a manual rate for the pair takes it out. After the list is built, the years of those pairs go to `FxRateService.reportMissingYears`, so opening the list also tries the sources.
 

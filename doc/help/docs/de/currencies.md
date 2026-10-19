@@ -125,7 +125,7 @@ Wenn Ihre Berichtswährung EUR ist:
 
 Über der Tabelle listet ein Block jede verwendete Kombination aus Währung und Jahr ohne Kurs auf, unter einem Titel wie **2 Wechselkurse fehlen**. Jede Zeile erklärt, dass noch keine Quelle diesen Kurs veröffentlicht und Beträge in dieser Währung bei den Summen außen vor bleiben, bis ein Kurs vorliegt. Fehlt nichts, zeigt der Block **Jede verwendete Währung hat einen Kurs.**
 
-Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Kennzahlen eines Unternehmens oder ein Vertrag es benötigen. Beim Öffnen der Seite werden die Quellen für die Jahre der Liste außerdem erneut abgefragt.
+Ein Paar gilt als verwendet, wenn eine Budgetzeile, die Kennzahlen eines Unternehmens oder ein Vertrag es benötigen. Bei einem Vertrag ist das jedes Jahr, das die Vertragsseite anzeigt: das laufende Jahr, die beiden folgenden und das Vorjahr, wenn das Budget dafür Zeilen hat. Beim Öffnen der Seite werden die Quellen für die Jahre der Liste außerdem erneut abgefragt.
 
 ### Manuelle Kurse
 

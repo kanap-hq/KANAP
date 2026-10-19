@@ -125,7 +125,7 @@ If your reporting currency is EUR:
 
 Above the table, a block lists every currency and year in use that has no rate, under a title such as **2 exchange rates missing**. Each line explains that no source publishes this rate yet, so amounts in this currency are left out of totals until it has one. When nothing is missing, the block reads **Every currency in use has a rate.**
 
-A pair counts as in use when a budget line, a company's figures or a contract needs it. Opening the page also asks the sources again for the years in the list.
+A pair counts as in use when a budget line, a company's figures or a contract needs it. For a contract, that is every year the contracts page shows: the current year, the two that follow, and the previous year when the budget has lines for it. Opening the page also asks the sources again for the years in the list.
 
 ### Manual rates
 

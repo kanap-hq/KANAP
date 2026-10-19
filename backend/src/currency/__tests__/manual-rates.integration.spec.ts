@@ -209,7 +209,10 @@ async function main() {
     };
     const manual = new ManualRatesService(settings, fxRates, ingestion as any, audit);
 
-    const contractYears = Array.from(new Set([2022, 2023, 2024, CURRENT_YEAR])).sort((a, b) => a - b);
+    // The contract pages also read the two years after the current one, with or without a version.
+    const contractYears = Array.from(new Set([
+      2022, 2023, 2024, CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2,
+    ])).sort((a, b) => a - b);
     const expected = sortPairs([
       { currency: 'CHF', year: 2020 },
       { currency: 'CHF', year: 2021 },
@@ -219,6 +222,12 @@ async function main() {
     ]);
     const missing = await manual.listMissingPairs(tenantA, runner.manager);
     assert.deepEqual(missing, expected);
+    const [{ versions }] = await runner.query(
+      `SELECT count(*)::int AS versions FROM spend_versions WHERE tenant_id = $1 AND budget_year = $2`,
+      [tenantA, CURRENT_YEAR + 2],
+    );
+    assert.equal(versions, 0, 'the later contract year has no budget version');
+    assert.ok(missing.some((pair) => pair.currency === 'SEK' && pair.year === CURRENT_YEAR + 2));
     assert.ok(!missing.some((pair) => pair.currency === 'EUR'), 'the reporting currency is excluded');
     assert.ok(!missing.some((pair) => pair.currency === 'USD'), 'a usable stored rate is not missing');
     assert.ok(!missing.some((pair) => pair.currency === 'JPY' || pair.currency === 'NOK'), 'another tenant is excluded');

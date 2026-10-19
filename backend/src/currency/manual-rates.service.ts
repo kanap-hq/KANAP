@@ -506,6 +506,11 @@ export class ManualRatesService {
           AND m.turnover IS NOT NULL`,
       [tenantId],
     );
+    // Version years stay, and the years the contract pages read are added
+    // (`contractBudgetYears`: current, the two after, and the previous one when
+    // the budget holds lines for it). A contract then has a pair for a year
+    // that has no budget version.
+    const contractYears = await contractBudgetYears(manager, tenantId, currentYear);
     const contractRows = await manager.query(
       `SELECT DISTINCT UPPER(TRIM(c.currency)) AS currency, y.year
          FROM contracts c
@@ -516,10 +521,12 @@ export class ManualRatesService {
               AND v.budget_year IS NOT NULL
            UNION
            SELECT $2::int AS year
+           UNION
+           SELECT unnest($3::int[]) AS year
          ) y
         WHERE c.tenant_id = $1
           AND c.currency IS NOT NULL`,
-      [tenantId, currentYear],
+      [tenantId, currentYear, contractYears],
     );
 
     const seen = new Set<string>();

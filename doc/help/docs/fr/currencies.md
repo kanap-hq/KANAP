@@ -125,7 +125,7 @@ Si votre devise de reporting est EUR :
 
 Au-dessus du tableau, un bloc liste chaque devise et année utilisée qui n'a pas de taux, sous un titre comme **2 taux de change manquants**. Chaque ligne indique qu'aucune source ne publie encore ce taux : les montants dans cette devise sont exclus des totaux tant qu'elle n'en a pas un. Quand rien ne manque, le bloc affiche **Chaque devise utilisée a un taux.**
 
-Une paire est considérée comme utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. L'ouverture de la page interroge aussi de nouveau les sources pour les années de la liste.
+Une paire est considérée comme utilisée quand une ligne budgétaire, les chiffres d'une société ou un contrat en ont besoin. Pour un contrat, il s'agit de chaque année affichée sur la page des contrats : l'année en cours, les deux suivantes, et l'année précédente quand le budget a des lignes pour elle. L'ouverture de la page interroge aussi de nouveau les sources pour les années de la liste.
 
 ### Taux manuels
 
