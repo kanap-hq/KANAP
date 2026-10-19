@@ -499,8 +499,6 @@
       }
     },
     "administrationView": {
-      "loading": "Wird geladen…",
-      "loadFailed": "Die Administrationssicht konnte nicht geladen werden.",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
       "zones": "Administrationszonen",
@@ -508,7 +506,6 @@
       "openSettings": "In den IT-Einstellungen definieren",
       "noZone": "Keine Zone",
       "unknownZone": "Unbekannte Zone ({{code}})",
-      "scope": "Umfang",
       "kindCount": "{{kind}}: {{count}}",
       "scopeEmpty": "Kein Asset in dieser Zone.",
       "hostedApplications_one": "{{count}} Anwendung",
@@ -521,21 +518,11 @@
         "reference": "Ref.",
         "type": "Typ",
         "zone": "Zone",
-        "relation": "Beziehung",
-        "contained": "Enthaltenes Asset",
-        "dependsOn": "Hängt ab von",
-        "asset": "Asset",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
-        "forest": "Gesamtstruktur",
         "trusts": "Vertrauensstellungen",
         "accounts": "Konten",
-        "machines": "Computer",
         "domainControllers": "Domänencontroller"
-      },
-      "relation": {
-        "contains": "Läuft auf",
-        "cluster": "Mitglied des Clusters"
       },
       "controls": "Kontrollpunkte",
       "controlsHint": "Die sensibelste Zone ist {{zone}}.",

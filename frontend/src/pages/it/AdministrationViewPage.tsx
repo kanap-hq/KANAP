@@ -341,13 +341,13 @@ function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: 
   onDone: () => void;
 }) {
   const { t } = useTranslation('it');
-  const [zone, setZone] = useState<string>(NO_ZONE);
+  // Each opening starts on the most sensitive zone: set while closed, so the first count is the right one.
+  const firstZone = zones[0]?.code ?? NO_ZONE;
+  const [zone, setZone] = useState<string>(firstZone);
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
-  // Each opening starts on the most sensitive zone.
-  const firstZone = zones[0]?.code ?? NO_ZONE;
   useEffect(() => {
-    if (!open) return;
+    if (open) return;
     setZone(firstZone);
     setError(null);
   }, [open, firstZone]);

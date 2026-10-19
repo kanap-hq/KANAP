@@ -1,204 +1,440 @@
-import React from 'react';
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import '../../i18n';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
-import AdministrationViewPage, { type AdministrationView } from './AdministrationViewPage';
+import AdministrationViewPage, {
+  type AdministrationAssetRow,
+  type AdministrationDirectories,
+  type AdministrationSummary,
+} from './AdministrationViewPage';
 
-const get = vi.hoisted(() => vi.fn());
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' }));
+const RANK: Record<string, number> = { none: 0, reader: 1, member: 2, admin: 3 };
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ hasLevel: (resource: string, level: string) => resource !== 'settings' && RANK[auth.level] >= RANK[level] }),
+}));
 const download = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ settings: true }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => resource !== 'settings' || auth.settings }) }));
-const stableT = (key: string, options?: Record<string, unknown>) => (options && Object.keys(options).length ? `${key}:${JSON.stringify(options)}` : key);
-vi.mock('react-i18next', () => ({
-  initReactI18next: { type: '3rdParty', init: () => undefined },
-  useTranslation: () => ({ t: stableT, i18n: { language: 'fr', resolvedLanguage: 'fr' } }),
-}));
-vi.mock('../../api', () => ({ default: { get } }));
-vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: download, extractFilenameFromDisposition: () => 'administration_view_zones.csv' }));
-vi.mock('../../hooks/useItOpsEnumOptions', () => ({
+vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: download, extractFilenameFromDisposition: () => null }));
+const KINDS = vi.hoisted(() => [{ code: 'vm', label: 'Virtual machine' }, { code: 'physical', label: 'Physical server' }]);
+vi.mock('../../hooks/useItOpsEnumOptions', () => {
   // The tenant translated a zone and a domain: the page shows the translated names.
-  default: () => ({ settings: null, byField: { adminZone: [{ code: 'tier_0', label: 'Niveau 0' }], domain: [{ code: 'lab', label: 'Labo' }] }, labelFor: (_field: string, code: string) => code }),
+  const byField = { adminZone: [{ code: 'tier_0', label: 'Niveau 0' }], domain: [{ code: 'lab', label: 'Labo' }], serverKind: KINDS };
+  const labelFor = (_field: string, code: string) => KINDS.find((kind) => kind.code === code)?.label ?? code;
+  const value = { settings: null, byField, labelFor };
+  return { default: () => value };
+});
+// The grid: its props, and the cells of `grid.rows` drawn inside the page, as AG Grid draws them
+// (the selection header too).
+const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, rows: [] as any[] }));
+vi.mock('../../components/ServerDataGrid', () => ({
+  default: (props: Record<string, any>) => {
+    grid.props = props;
+    const columns = props.columns as any[];
+    const select = columns.find((col) => col.colId === 'select');
+    const Header = select?.headerComponent;
+    return (
+      <div data-testid="grid">
+        {Header && <Header />}
+        {grid.rows.map((row) => columns.filter((col) => col.cellRenderer).map((col) => {
+          const Cell = col.cellRenderer;
+          return <div key={`${row.id}:${col.colId ?? col.field}`} data-testid={`cell-${col.colId ?? col.field}-${row.id}`}><Cell data={row} /></div>;
+        }))}
+      </div>
+    );
+  },
 }));
 
-const EMPTY_CONTROLS: AdministrationView['controls'] = {
-  most_sensitive_zone: null,
-  assets_without_zone: [],
-  domain_controllers_outside: null,
-  directory_assets_outside: null,
-  trust_raised: null,
-  applications_on_most_sensitive: null,
-};
+const getMock = vi.mocked(api.get);
+const postMock = vi.mocked(api.post);
+const ENDPOINT = '/technologies/reports/administration';
 
-const VIEW: AdministrationView = {
+const SUMMARY: AdministrationSummary = {
+  most_sensitive: 'tier_0',
   zones: [
     {
-      code: 'tier_0', label: 'Tier 0', admin_group: 'Domain admins', description: 'Identity core',
-      deprecated: false, unknown: false,
-      assets: [{ id: 'asset-fw1', name: 'fw1', reference: 'AST-4', kind: 'firewall' }],
-      asset_counts: [{ kind: 'firewall', count: 1 }],
-      hosted_application_count: 2,
+      code: 'tier_0', label: 'Tier 0', description: 'Identity core', admin_group: 'Domain admins', deprecated: false, unknown: false,
+      asset_counts: [{ kind: 'vm', count: 3 }, { kind: 'physical', count: 1 }], hosted_application_count: 2,
       directory_services: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory' }],
     },
     {
-      code: 'tier_1', label: 'Tier 1', admin_group: null, description: null,
-      deprecated: true, unknown: false,
-      assets: [], asset_counts: [], hosted_application_count: 0, directory_services: [],
+      code: 'tier_1', label: 'Tier 1', description: null, admin_group: null, deprecated: false, unknown: false,
+      asset_counts: [], hosted_application_count: 0, directory_services: [],
+    },
+    {
+      code: 'legacy', label: 'Legacy', description: null, admin_group: null, deprecated: true, unknown: false,
+      asset_counts: [{ kind: 'vm', count: 1 }], hosted_application_count: 0, directory_services: [],
     },
   ],
-  domains: [
-    { code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared_by: [], account_count: 1200, machine_count: 300, domain_controllers: [{ id: 'asset-dc1', name: 'dc1', reference: null }], deprecated: false },
-    { code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com', forest: null, trusts: [], declared_by: [{ domain: 'corp', label: 'Corp', direction: 'two_way' }], account_count: null, machine_count: null, domain_controllers: [], deprecated: false },
+  without_zone: { asset_count: 5 },
+  controls: [
+    { key: 'assets_without_zone', count: 5 },
+    { key: 'domain_controllers_outside', count: 0 },
+    { key: 'directory_assets_outside', count: 1 },
+    { key: 'trust_raised', count: 2 },
+    { key: 'applications_on_most_sensitive', count: 3 },
   ],
-  controls: {
-    most_sensitive_zone: 'tier_0',
-    assets_without_zone: [{ id: 'asset-bare', name: 'bare', reference: 'AST-9', kind: 'vm' }],
-    domain_controllers_outside: [{ id: 'asset-dc2', name: 'dc2', reference: 'AST-2', kind: 'vm' }],
-    directory_assets_outside: [],
-    trust_raised: [
-      {
-        asset: { id: 'asset-guest', name: 'guest', reference: 'AST-7', kind: 'vm' },
-        asset_zone: 'tier_0',
-        holder: { id: 'asset-host', name: 'host1', reference: 'AST-6', kind: 'vm' },
-        holder_zone: 'tier_1',
-        holder_kind: 'contains',
-      },
-      {
-        asset: { id: 'asset-esx', name: 'esx1', reference: 'AST-8', kind: 'vm' },
-        asset_zone: 'tier_1',
-        holder: { id: 'asset-cluster', name: 'vsphere', reference: 'AST-5', kind: 'vm' },
-        holder_zone: 'tier_0',
-        holder_kind: 'cluster',
-      },
+};
+
+const ROW: AdministrationAssetRow = {
+  id: 'asset-host', reference: 'AST-6', name: 'host1', kind: 'physical', zone: 'tier_1',
+  technologies: {
+    total: 4,
+    items: [
+      { reference: 'TEC-2', name: 'vSphere', version: '8.0' },
+      { reference: 'TEC-3', name: 'Windows Server', version: null },
+      { reference: 'TEC-4', name: 'Veeam', version: null },
+      { reference: 'TEC-5', name: 'SQL Server', version: '2019' },
     ],
-    applications_on_most_sensitive: [{
-      id: 'app-1', name: 'Portal', reference: 'APP-3',
-      asset: { id: 'asset-fw1', name: 'fw1', reference: 'AST-4', kind: 'firewall' },
-    }],
   },
+  applications: { total: 1, items: [{ reference: 'APP-3', name: 'Portal' }] },
+  findings: ['trust_raised'],
+  trust_peers: { total: 2, items: [
+    { relation: 'contains', reference: 'AST-7', name: 'dc1', zone: 'tier_0' },
+    { relation: 'cluster', reference: 'AST-5', name: 'vsphere', zone: 'tier_0' },
+  ] },
+  application_references: [],
+};
+const ROW_BARE: AdministrationAssetRow = {
+  ...ROW, id: 'asset-bare', reference: 'AST-9', name: 'bare', kind: 'vm', zone: null,
+  technologies: { total: 0, items: [] }, applications: { total: 0, items: [] }, findings: ['assets_without_zone'], trust_peers: { total: 0, items: [] },
+};
+
+const DIRECTORIES: AdministrationDirectories = {
+  services: [{ id: 'tech-ad', reference: 'TEC-1', name: 'Active Directory', zone: 'tier_0', servers: 2 }],
+  forests: [
+    {
+      forest: 'corp.example.com',
+      domains: [{
+        code: 'corp', label: 'Corp', dns_suffix: 'corp.example.com', forest: 'corp.example.com',
+        trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared_by: [],
+        account_count: 1200, machine_count: 300, domain_controllers: [{ id: 'asset-dc1', name: 'dc1', reference: 'AST-7' }], deprecated: false,
+      }],
+    },
+    {
+      forest: null,
+      domains: [{
+        code: 'lab', label: 'Lab', dns_suffix: 'lab.example.com', forest: null, trusts: [],
+        declared_by: [{ domain: 'corp', label: 'Corp', direction: 'two_way' }],
+        account_count: null, machine_count: null, domain_controllers: [], deprecated: false,
+      }],
+    },
+  ],
 };
 
 function renderPage() {
-  render(
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  return render(
     <ThemeProvider theme={createAppTheme('light')}>
-      <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <QueryClientProvider client={client}>
         <MemoryRouter><AdministrationViewPage /></MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   );
 }
 
+/** A stand-in for AG Grid's API: the filter model it holds, reported back as the grid does. */
+function gridApi() {
+  let model: Record<string, unknown> = {};
+  const api = {
+    getFilterModel: vi.fn(() => model),
+    setFilterModel: vi.fn((next: Record<string, unknown>) => {
+      model = next ?? {};
+      act(() => grid.props!.onQueryStateChange({ sort: 'name:ASC', filterModel: model, q: '' }));
+    }),
+  };
+  act(() => grid.props!.onGridApiReady(api));
+  return api;
+}
+
+const column = (key: string) => (grid.props!.columns as any[]).find((col) => (col.colId ?? col.field) === key);
+const cell = (key: string, data: AdministrationAssetRow) => screen.getByTestId(`cell-${key}-${data.id}`);
+const FILTERS = JSON.stringify({ control: { filterType: 'set', values: ['trust_raised'] } });
+const listed = (total: number, filters: string | undefined = FILTERS, q?: string) => act(() => grid.props!.onListRequestChange({
+  params: { page: 1, limit: 50, sort: 'name:ASC', ...(filters ? { filters } : {}), ...(q ? { q } : {}) }, total,
+}));
+const box = (name: string) => screen.getByRole('checkbox', { name }) as HTMLInputElement;
+const zoneRow = (name: string) => within(screen.getByRole('group', { name: 'Administration zones' })).getByRole('button', { name: new RegExp(`^${name}`) });
+
 describe('AdministrationViewPage', () => {
   beforeEach(() => {
-    get.mockReset();
-    auth.settings = true;
+    grid.props = null;
+    grid.rows = [ROW, ROW_BARE];
+    getMock.mockReset();
+    postMock.mockReset();
     download.mockReset();
-    get.mockImplementation(async (url: string) => (url.endsWith('/export') ? { data: new Blob(['x']), headers: {} } : { data: VIEW }));
+    auth.level = 'member';
+    getMock.mockImplementation(async (url: string) => {
+      if (url === ENDPOINT) return { data: SUMMARY } as any;
+      if (url === `${ENDPOINT}/directories`) return { data: DIRECTORIES } as any;
+      if (url === `${ENDPOINT}/export`) return { data: new Blob(['x']), headers: {} } as any;
+      throw new Error(`unexpected ${url}`);
+    });
   });
 
-  it('lists each zone with its assets, hosted applications and directory services', async () => {
+  it('is named after the ANSSI guide\'s view', async () => {
     renderPage();
-    const tier0 = await screen.findByRole('region', { name: 'Niveau 0' });
-    expect(within(tier0).getByText('Domain admins')).toBeInTheDocument();
-    expect(within(tier0).getByText('Identity core')).toBeInTheDocument();
-    expect(within(tier0).getByText('pages.administrationView.kindCount:{"kind":"firewall","count":1}')).toBeInTheDocument();
-    expect(within(tier0).getByText('pages.administrationView.hostedApplications:{"count":2}')).toBeInTheDocument();
-    const scope = within(tier0).getByRole('table', { name: 'pages.administrationView.scope' });
-    expect(within(scope).getByRole('link', { name: 'AST-4' })).toHaveAttribute('href', '/it/assets/asset-fw1');
-    expect(within(scope).getByText('fw1')).toBeInTheDocument();
-    expect(within(scope).getByText('firewall')).toBeInTheDocument();
-    const cols = scope.querySelectorAll('col');
-    expect(cols).toHaveLength(4);
-    expect(cols[0]).toHaveStyle({ width: '96px' });
-    expect(cols[1]).toHaveStyle({ width: '240px' });
-    expect(cols[2]).toHaveStyle({ width: '160px' });
-    expect(cols[3].getAttribute('style')).toBeNull();
-    const directory = within(tier0).getByRole('table', { name: 'pages.administrationView.attributes.directoryServices' });
-    expect(within(directory).getByRole('link', { name: 'TEC-1' })).toHaveAttribute('href', '/it/technologies/tech-ad');
-    expect(within(directory).getByText('Active Directory')).toBeInTheDocument();
-    expect(within(tier0).queryByText('asset-fw1')).toBeNull();
-    expect(within(screen.getByRole('region', { name: 'Tier 1 (common:enumEditor.retiredSuffix)' })).getByText('pages.administrationView.scopeEmpty')).toBeInTheDocument();
-    expect(get).toHaveBeenCalledWith('/technologies/reports/administration');
+    expect(screen.getByRole('heading', { name: 'Administration zones' })).toBeTruthy();
+    expect(screen.getByText('The administration view of the ANSSI information system mapping guide.')).toBeTruthy();
+    await screen.findByRole('group', { name: 'Administration zones' });
   });
 
-  it('lists each control point with a link to the record to correct', async () => {
+  it('shows one compact row per zone, its description under its name, then No zone', async () => {
     renderPage();
-    expect(await screen.findByText('pages.administrationView.controlsHint:{"zone":"Niveau 0"}')).toBeInTheDocument();
-    const bare = screen.getByRole('region', { name: 'pages.administrationView.controlsList.assetsWithoutZone.title' });
-    expect(within(bare).getByRole('link', { name: 'AST-9' })).toHaveAttribute('href', '/it/assets/asset-bare');
-    expect(within(bare).queryByText('asset-bare')).toBeNull();
-    const dc = screen.getByRole('region', { name: 'pages.administrationView.controlsList.domainControllers.title' });
-    expect(within(dc).getByRole('link', { name: 'AST-2' })).toHaveAttribute('href', '/it/assets/asset-dc2');
-    expect(within(dc).getByText('pages.administrationView.noZone')).toBeInTheDocument();
-    const directory = screen.getByRole('region', { name: 'pages.administrationView.controlsList.directoryAssets.title' });
-    expect(within(directory).getByText('pages.administrationView.none')).toBeInTheDocument();
-    const trust = screen.getByRole('region', { name: 'pages.administrationView.controlsList.trustRaised.title' });
-    expect(within(trust).getAllByRole('columnheader', { name: 'pages.administrationView.columns.zone' })).toHaveLength(2);
-    expect(within(trust).getByRole('columnheader', { name: 'pages.administrationView.columns.dependsOn' })).toBeInTheDocument();
-    expect(within(trust).queryByRole('columnheader', { name: 'pages.administrationView.columns.contained' })).toBeNull();
-    const guestRow = within(trust).getByText('guest').closest('tr');
-    expect(guestRow).toHaveAttribute('data-href', '/it/assets/asset-host');
-    expect(within(guestRow as HTMLElement).getByRole('link', { name: 'AST-7' })).toHaveAttribute('href', '/it/assets/asset-guest');
-    expect(within(guestRow as HTMLElement).getByRole('link', { name: 'AST-6' })).toHaveAttribute('href', '/it/assets/asset-host');
-    expect(within(guestRow as HTMLElement).getByText('host1')).toBeInTheDocument();
-    expect(within(guestRow as HTMLElement).getByText('pages.administrationView.relation.contains')).toBeInTheDocument();
-    expect(within(guestRow as HTMLElement).getByText('Niveau 0')).toBeInTheDocument();
-    const memberRow = within(trust).getByText('esx1').closest('tr');
-    expect(memberRow).toHaveAttribute('data-href', '/it/assets/asset-esx');
-    expect(within(memberRow as HTMLElement).getByRole('link', { name: 'AST-8' })).toHaveAttribute('href', '/it/assets/asset-esx');
-    expect(within(memberRow as HTMLElement).getByRole('link', { name: 'AST-5' })).toHaveAttribute('href', '/it/assets/asset-cluster');
-    expect(within(memberRow as HTMLElement).getByText('vsphere')).toBeInTheDocument();
-    expect(within(memberRow as HTMLElement).getByText('pages.administrationView.relation.cluster')).toBeInTheDocument();
-    expect(within(trust).queryByText('asset-host')).toBeNull();
-    const apps = screen.getByRole('region', { name: 'pages.administrationView.controlsList.applications.title' });
-    expect(within(apps).getByRole('link', { name: 'APP-3' })).toHaveAttribute('href', '/it/applications/app-1');
-    expect(within(apps).getByText('AST-4')).toBeInTheDocument();
-    expect(within(apps).queryByText('app-1')).toBeNull();
+    const band = await screen.findByRole('group', { name: 'Administration zones' });
+    const rows = within(band).getAllByRole('button');
+    expect(rows.map((row) => row.textContent)).toEqual([
+      'Niveau 0Identity coreAdministrator groupDomain adminsVirtual machine: 3, Physical server: 1·2 applications·1 directory service',
+      'Tier 1No asset in this zone.',
+      'Legacy (no longer offered)Virtual machine: 1·0 applications',
+      'No zone5 assets',
+    ]);
+    // The description sits under the name, in the zone's first cell, in tertiary text.
+    const description = within(rows[0]).getByTestId('zone-description');
+    expect(description.previousElementSibling?.textContent).toBe('Niveau 0');
+    expect(getComputedStyle(description).fontSize).toBe('12px');
   });
 
-  it('lists the domains with forest, trusts, counts and deduced controllers', async () => {
+  it('narrows the asset list to the zone selected, and clears it on a second click', async () => {
     renderPage();
-    const domains = await screen.findByRole('table', { name: 'pages.administrationView.domains' });
-    const rows = within(domains).getAllByRole('row');
-    expect(rows[1]).toHaveTextContent('Corp');
-    expect(rows[1]).toHaveTextContent('Labo (pages.settings.trusts.directions.two_way)');
-    expect(rows[1]).toHaveTextContent('1,200');
-    expect(within(rows[1]).getByRole('link', { name: 'dc1' })).toBeInTheDocument();
-    expect(rows[2]).toHaveTextContent('Labo');
-    // The trust declared on Corp shows on Lab, read only.
-    expect(rows[2]).toHaveTextContent('pages.administrationView.declaredTrust:{"name":"Corp","direction":"pages.settings.trusts.directions.two_way"}');
-    expect(rows[2]).toHaveTextContent('pages.administrationView.noController');
-    // Absent forest and counts: a dash each, "Not set" on hover.
-    const dashes = within(rows[2]).getAllByTitle('pages.administrationView.notSet');
-    expect(dashes).toHaveLength(3);
-    for (const dash of dashes) expect(dash).toHaveTextContent('—');
-    expect(rows[2]).not.toHaveTextContent('pages.administrationView.notSet');
+    await screen.findByRole('group', { name: 'Administration zones' });
+    const api = gridApi();
+    fireEvent.click(zoneRow('Niveau 0'));
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ zone: { filterType: 'set', values: ['tier_0'] } });
+    expect(zoneRow('Niveau 0').getAttribute('aria-pressed')).toBe('true');
+    // Another zone replaces it; No zone filters on an empty zone.
+    fireEvent.click(zoneRow('No zone'));
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ zone: { filterType: 'set', values: [null] } });
+    expect(zoneRow('Niveau 0').getAttribute('aria-pressed')).toBe('false');
+    expect(zoneRow('No zone').getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(zoneRow('No zone'));
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({});
+    expect(zoneRow('No zone').getAttribute('aria-pressed')).toBe('false');
   });
 
-  it('exports the zones as a CSV file in the user language', async () => {
+  it('shows one toggle per control with its count; one filters the list at a time, again to clear', async () => {
     renderPage();
-    await screen.findByRole('region', { name: 'Niveau 0' });
-    fireEvent.click(screen.getByRole('button', { name: 'pages.administrationView.exportZones' }));
-    await waitFor(() => expect(download).toHaveBeenCalledWith(expect.any(Blob), 'administration_view_zones.csv'));
-    expect(get).toHaveBeenCalledWith('/technologies/reports/administration/export', { params: { list: 'zones', language: 'fr' }, responseType: 'blob' });
+    const toggles = await screen.findByRole('group', { name: 'Control points' });
+    expect(within(toggles).getAllByRole('button').map((button) => button.textContent)).toEqual([
+      'Without a zone5', 'Domain controller outside0', 'Directory service outside1', 'Less sensitive host2', 'Application hosted3',
+    ]);
+    // A zero count is quiet.
+    expect(getComputedStyle(screen.getByTestId('control-count-domain_controllers_outside')).color)
+      .not.toBe(getComputedStyle(screen.getByTestId('control-count-trust_raised')).color);
+    // The tooltip names the button while it shows: take it before.
+    const trust = within(toggles).getByRole('button', { name: 'Less sensitive host 2' });
+    fireEvent.mouseOver(trust);
+    const tooltip = await screen.findByRole('tooltip');
+    expect(tooltip.textContent).toContain('What runs an asset is in a less sensitive zone');
+    expect(tooltip.textContent).toContain('The most sensitive zone is Niveau 0.');
+    const api = gridApi();
+    fireEvent.click(trust);
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ control: { filterType: 'set', values: ['trust_raised'] } });
+    expect(trust.getAttribute('aria-pressed')).toBe('true');
+    fireEvent.click(within(toggles).getByRole('button', { name: 'Without a zone 5' }));
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({ control: { filterType: 'set', values: ['assets_without_zone'] } });
+    fireEvent.click(within(toggles).getByRole('button', { name: 'Without a zone 5' }));
+    expect(api.setFilterModel).toHaveBeenLastCalledWith({});
   });
 
-  it('points to the settings when no zone is defined', async () => {
-    get.mockResolvedValue({ data: { zones: [], domains: [], controls: EMPTY_CONTROLS } });
+  it('says that the other controls need a catalog of zones when there is none', async () => {
+    getMock.mockImplementation(async (url: string) => {
+      if (url === ENDPOINT) {
+        return { data: { most_sensitive: null, zones: [], without_zone: { asset_count: 2 }, controls: SUMMARY.controls.map((c) => ({ ...c, count: c.key === 'assets_without_zone' ? 2 : null })) } } as any;
+      }
+      return { data: { services: [], forests: [] } } as any;
+    });
     renderPage();
-    expect(await screen.findByRole('link', { name: 'pages.administrationView.openSettings' })).toHaveAttribute('href', '/it/settings');
-    expect(screen.getByText('pages.administrationView.noDomains')).toBeInTheDocument();
-    expect(screen.getByText('pages.administrationView.controlsNoCatalog')).toBeInTheDocument();
-    expect(screen.queryByRole('region', { name: 'pages.administrationView.controlsList.domainControllers.title' })).toBeNull();
+    const toggles = await screen.findByRole('group', { name: 'Control points' });
+    expect(within(toggles).getAllByRole('button').map((button) => button.textContent)).toEqual(['Without a zone2']);
+    expect(screen.getByText('Add an administration zone in the IT settings to run the other checks.')).toBeTruthy();
+    expect(screen.getByText('No administration zones defined yet.')).toBeTruthy();
   });
 
-  it('does not link to the settings without the right to read them', async () => {
-    auth.settings = false;
-    get.mockResolvedValue({ data: { zones: [], domains: [], controls: EMPTY_CONTROLS } });
+  it('lists the assets on the server grid with filters on zone, type and control', async () => {
     renderPage();
-    expect(await screen.findByText('pages.administrationView.noZones')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: 'pages.administrationView.openSettings' })).toBeNull();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    expect(grid.props!.endpoint).toBe(`${ENDPOINT}/assets`);
+    expect(grid.props!.enableSearch).toBe(true);
+    expect(grid.props!.defaultSort).toEqual({ field: 'name', direction: 'ASC' });
+    expect((grid.props!.columns as any[]).map((col) => col.colId ?? col.field)).toEqual([
+      'select', 'reference', 'name', 'kind', 'zone', 'technologies', 'applications', 'control',
+    ]);
+    expect(column('control').field).toBe('findings');
+    for (const key of ['technologies', 'applications', 'control']) expect(column(key).sortable).toBe(false);
+    for (const key of ['technologies', 'applications']) expect(column(key).filter).toBe(false);
+    expect(column('kind').valueFormatter({ value: 'vm' })).toBe('Virtual machine');
+    expect(await column('kind').filterParams.getValues({})).toEqual([{ value: 'vm', label: 'Virtual machine' }, { value: 'physical', label: 'Physical server' }]);
+    expect(await column('zone').filterParams.getValues({})).toEqual([
+      { value: 'tier_0', label: 'Niveau 0' }, { value: 'tier_1', label: 'Tier 1' }, { value: 'legacy', label: 'Legacy (no longer offered)' }, { value: null, label: 'No zone' },
+    ]);
+    expect((await column('control').filterParams.getValues({})).map((v: any) => v.value)).toEqual([
+      'assets_without_zone', 'domain_controllers_outside', 'directory_assets_outside', 'trust_raised', 'applications_on_most_sensitive',
+    ]);
+  });
+
+  it('draws the cells: reference link, zone, names with +n and their list, controls with the trust explained', async () => {
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    expect(within(cell('reference', ROW)).getByRole('link', { name: 'AST-6' }).getAttribute('href')).toBe('/it/assets/asset-host');
+    // The zone cells read the zones of the summary: no zone in quiet text.
+    expect(cell('zone', ROW).textContent).toBe('Tier 1');
+    expect(cell('zone', ROW_BARE).textContent).toBe('No zone');
+    expect(cell('technologies', ROW).textContent).toBe('vSphere, Windows Server+2');
+    expect(cell('technologies', ROW_BARE).textContent).toBe('');
+    fireEvent.mouseOver(cell('technologies', ROW).firstElementChild!);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('TEC-2 vSphere 8.0TEC-3 Windows ServerTEC-4 VeeamTEC-5 SQL Server 2019');
+    fireEvent.mouseLeave(cell('technologies', ROW).firstElementChild!);
+    await waitFor(() => expect(screen.queryByRole('tooltip')).toBeNull());
+    expect(within(cell('applications', ROW)).getByRole('link', { name: 'Portal' }).getAttribute('href')).toBe('/it/applications/APP-3');
+    expect(cell('control', ROW).textContent).toBe('Less sensitive host');
+    expect(cell('control', ROW_BARE).textContent).toBe('Without a zone');
+    fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 (Niveau 0)Member of cluster AST-5 (Niveau 0)');
+  });
+
+  it('assigns a zone to the ticked assets after a dry-run count, then reloads the band, the toggles and the grid', async () => {
+    postMock.mockImplementation(async (_url: string, body: any) => ({
+      data: body.dry_run ? { ok: true, dry_run: true, rows: 2, changes: 1, as_of: '2026-10-19T10:00:00.000Z' } : { ok: true, rows: 2, changed: 1 },
+    }) as any);
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    listed(40);
+    expect((screen.getByRole('button', { name: 'Assign to a zone' }) as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(box('Select AST-6 host1'));
+    fireEvent.click(box('Select AST-9 bare'));
+    expect(screen.getByTestId('administration-selection').textContent).toBe('2 assets selected');
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (2)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('The 2 selected assets.');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the zone of 1 asset of 2.'));
+    expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { zone: 'tier_0', ids: ['asset-host', 'asset-bare'], dry_run: true });
+    // The zones offered: those of the catalog still offered, then No zone.
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
+    const options = (await screen.findAllByRole('option')).map((option) => option.textContent);
+    expect(options).toEqual(['Niveau 0', 'Tier 1', 'No zone']);
+    fireEvent.click(screen.getByRole('option', { name: 'Tier 1' }));
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { zone: 'tier_1', ids: ['asset-host', 'asset-bare'], dry_run: true }));
+    const assign = within(dialog).getByRole('button', { name: 'Assign' }) as HTMLButtonElement;
+    await waitFor(() => expect(assign.disabled).toBe(false));
+    const summaryReads = getMock.mock.calls.filter(([url]) => url === ENDPOINT).length;
+    fireEvent.click(assign);
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, {
+      zone: 'tier_1', ids: ['asset-host', 'asset-bare'], as_of: '2026-10-19T10:00:00.000Z', expected_rows: 2,
+    }));
+    await waitFor(() => expect(grid.props!.refreshKey).toBe(1));
+    await waitFor(() => expect(getMock.mock.calls.filter(([url]) => url === ENDPOINT).length).toBeGreaterThan(summaryReads));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.queryByTestId('administration-selection')).toBeNull();
+  });
+
+  it('assigns No zone to every asset of the filter but the unticked ones, with the list request as scope', async () => {
+    postMock.mockImplementation(async (_url: string, body: any) => ({
+      data: body.dry_run ? { ok: true, dry_run: true, rows: 39, changes: 39, as_of: '2026-10-19T10:00:01.000Z' } : { ok: true, rows: 39, changed: 39 },
+    }) as any);
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    listed(40, FILTERS, 'srv');
+    fireEvent.click(box('Select every asset of the filter'));
+    fireEvent.click(box('Select AST-6 host1'));
+    expect(screen.getByTestId('administration-selection').textContent).toBe('39 assets selected, whole filter');
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (39)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog.textContent).toContain('Every asset of the current filter but 1.');
+    fireEvent.mouseDown(within(dialog).getByRole('combobox', { name: 'Zone' }));
+    fireEvent.click(await screen.findByRole('option', { name: 'No zone' }));
+    // The list request: its search and grid filters only, no paging or sort.
+    const scope = { zone: null, all: true, filters: { q: 'srv', filters: FILTERS }, exclude_ids: ['asset-host'] };
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { ...scope, dry_run: true }));
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('This changes the zone of 39 assets of 39.'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Assign' }));
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith(`${ENDPOINT}/assets/zone`, { ...scope, as_of: '2026-10-19T10:00:01.000Z', expected_rows: 39 }));
+    // A filter change clears the selection.
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    fireEvent.click(box('Select AST-9 bare'));
+    listed(12, undefined);
+    expect(screen.queryByTestId('administration-selection')).toBeNull();
+  });
+
+  it('refuses an assignment over the cap with a line that says to narrow the filters', async () => {
+    postMock.mockRejectedValue(Object.assign(new Error('400'), { response: { status: 400, data: { code: 'bulk_too_many', message: 'These filters reach 9000 rows' } } }));
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    listed(9000);
+    fireEvent.click(box('Select every asset of the filter'));
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (9000)' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toBe('More than 5,000 assets: narrow the filters.'));
+    expect((within(dialog).getByRole('button', { name: 'Assign' }) as HTMLButtonElement).disabled).toBe(true);
+  });
+
+  it('counts again when the list changed between the count and the assignment (409)', async () => {
+    let counts = 0;
+    postMock.mockImplementation(async (_url: string, body: any) => {
+      if (body.dry_run) {
+        counts += 1;
+        return { data: { ok: true, dry_run: true, rows: 40 + counts - 1, changes: 40 + counts - 1, as_of: `2026-10-19T10:00:0${counts}.000Z` } } as any;
+      }
+      if (body.expected_rows === 40) throw Object.assign(new Error('409'), { response: { status: 409, data: { code: 'bulk_list_changed' } } });
+      return { data: { ok: true, rows: 41, changed: 41 } } as any;
+    });
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    listed(40);
+    fireEvent.click(box('Select every asset of the filter'));
+    fireEvent.click(screen.getByRole('button', { name: 'Assign to a zone (40)' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('40 assets of 40'));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Assign' }));
+    expect((await within(dialog).findByRole('alert')).textContent).toBe('The list changed since the count. Check the new count, then confirm again.');
+    await waitFor(() => expect(within(dialog).getByRole('status').textContent).toContain('41 assets of 41'));
+  });
+
+  it('gives a reader neither selection nor assignment', async () => {
+    auth.level = 'reader';
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    expect(column('select')).toBeUndefined();
+    expect(screen.queryByRole('checkbox')).toBeNull();
+    expect(screen.queryByRole('button', { name: /Assign to a zone/ })).toBeNull();
+  });
+
+  it('lists the directory services, then the domains grouped by forest', async () => {
+    renderPage();
+    const services = await screen.findByRole('table', { name: 'Directory services' });
+    expect(within(services).getByRole('link', { name: 'TEC-1' }).getAttribute('href')).toBe('/it/technologies/tech-ad');
+    const serviceRow = within(services).getAllByRole('row')[1];
+    expect(serviceRow.textContent).toContain('Active Directory');
+    expect(serviceRow.textContent).toContain('Niveau 0');
+    expect(serviceRow.textContent).toContain('2');
+    expect(screen.getByRole('heading', { name: 'corp.example.com' })).toBeTruthy();
+    expect(screen.getByRole('heading', { name: 'No forest' })).toBeTruthy();
+    const corp = screen.getByRole('table', { name: 'corp.example.com' });
+    const headers = within(corp).getAllByRole('columnheader').map((th) => th.textContent);
+    expect(headers).toEqual(expect.arrayContaining(['Domain', 'DNS suffix', 'Trusts', 'Accounts', 'Computers', 'Domain controllers']));
+    const corpRow = within(corp).getAllByRole('row')[1].textContent;
+    expect(corpRow).toContain('Labo (two-way)');
+    expect(corpRow).toContain('1,200');
+    expect(corpRow).toContain('300');
+    expect(within(corp).getByRole('link', { name: 'dc1' }).getAttribute('href')).toBe('/it/assets/asset-dc1');
+    const lab = screen.getByRole('table', { name: 'No forest' });
+    expect(within(lab).getAllByRole('row')[1].textContent).toContain('Corp (two-way, declared on that domain)');
+  });
+
+  it('exports the assets with the filters on screen, and the domains', async () => {
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    listed(40, FILTERS, 'srv');
+    fireEvent.click(screen.getByRole('button', { name: 'Export assets' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith(`${ENDPOINT}/export`, expect.objectContaining({
+      params: { sort: 'name:ASC', filters: FILTERS, q: 'srv', list: 'assets', language: 'en' }, responseType: 'blob',
+    })));
+    await waitFor(() => expect(download).toHaveBeenCalledWith(expect.any(Blob), 'administration_view_assets.csv'));
+    fireEvent.click(screen.getByRole('button', { name: 'Export domains' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith(`${ENDPOINT}/export`, expect.objectContaining({ params: { list: 'domains', language: 'en' } })));
   });
 });

@@ -499,8 +499,6 @@
       }
     },
     "administrationView": {
-      "loading": "Cargando…",
-      "loadFailed": "No se pudo cargar la vista de la administración.",
       "exportDomains": "Exportar los dominios",
       "exportFailed": "La exportación ha fallado.",
       "zones": "Zonas de administración",
@@ -508,7 +506,6 @@
       "openSettings": "Definirlas en los ajustes de TI",
       "noZone": "Sin zona",
       "unknownZone": "Zona desconocida ({{code}})",
-      "scope": "Alcance",
       "kindCount": "{{kind}}: {{count}}",
       "scopeEmpty": "Ningún activo en esta zona.",
       "hostedApplications_one": "{{count}} aplicación",
@@ -521,21 +518,11 @@
         "reference": "Ref.",
         "type": "Tipo",
         "zone": "Zona",
-        "relation": "Relación",
-        "contained": "Activo contenido",
-        "dependsOn": "Depende de",
-        "asset": "Activo",
         "domain": "Dominio",
         "dnsSuffix": "Sufijo DNS",
-        "forest": "Bosque",
         "trusts": "Confianzas",
         "accounts": "Cuentas",
-        "machines": "Equipos",
         "domainControllers": "Controladores de dominio"
-      },
-      "relation": {
-        "contains": "Se ejecuta en",
-        "cluster": "Miembro del clúster"
       },
       "controls": "Puntos de control",
       "controlsHint": "La zona más sensible es {{zone}}.",
