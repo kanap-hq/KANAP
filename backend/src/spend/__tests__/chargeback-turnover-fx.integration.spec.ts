@@ -141,6 +141,8 @@ async function testMissingRateIsLeftOutWithAWarning() {
     const company = await svc.generateCompany(YEAR, 'budget', seeded.newYork, seeded.tenantId, { manager: runner.manager });
     assert.equal(company.company.turnover, null);
     assert.equal(company.globalKpi.turnover, 70000, 'the global turnover leaves out the company without a rate');
+    assert.equal(company.globalKpi.amount, 1200, 'the global cost keeps every company');
+    assert.equal(company.globalKpi.costVsTurnoverPct, 0.86, 'the ratio sets Paris cost (600) against Paris turnover (70,000) alone');
     assert.equal(company.warnings.filter((warning) => typeof warning !== 'string' && warning.code === 'turnover_fx_missing').length, 1);
   });
 }

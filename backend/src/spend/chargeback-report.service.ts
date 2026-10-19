@@ -532,22 +532,30 @@ export class ChargebackReportService {
     let globalHeadcount = 0;
     let globalItUsers = 0;
     // The global turnover adds the turnovers in the reporting currency; the raw one their base-currency values.
+    // The cost/turnover ratio sets the cost of the companies whose turnover converted against that
+    // turnover alone: a company without a rate (named in the `turnover_fx_missing` warning) is left
+    // out of both sides.
     let globalTurnover = 0;
     let globalTurnoverRaw = 0;
+    let globalCostWithTurnover = 0;
     for (const metricRow of ctx.companyMetrics.values()) {
       globalHeadcount += Number(metricRow.headcount ?? 0);
       if (metricRow.it_users != null) {
         globalItUsers += Number(metricRow.it_users);
       }
       if (metricRow.turnover != null) {
-        globalTurnover += (ctx.turnovers.get(metricRow.company_id) ?? 0) * 1_000_000;
         globalTurnoverRaw += Number(metricRow.turnover) * 1_000_000;
+        const converted = ctx.turnovers.get(metricRow.company_id);
+        if (converted != null) {
+          globalTurnover += converted * 1_000_000;
+          globalCostWithTurnover += ctx.companyTotals.get(metricRow.company_id) ?? 0;
+        }
       }
     }
 
     const globalCostPerUser = globalHeadcount > 0 ? ctx.total / globalHeadcount : null;
     const globalCostPerItUser = globalItUsers > 0 ? ctx.total / globalItUsers : null;
-    const globalCostVsTurnoverPctRaw = globalTurnover > 0 ? (ctx.total / globalTurnover) * 100 : null;
+    const globalCostVsTurnoverPctRaw = globalTurnover > 0 ? (globalCostWithTurnover / globalTurnover) * 100 : null;
 
     const globalKpi = {
       amount: toCurrency(ctx.total),
