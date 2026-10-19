@@ -3,6 +3,11 @@ import { act, render, cleanup, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { ThemeProvider } from '@mui/material/styles';
+import { createAppTheme } from '../config/ThemeContext';
+
+/** The screens read the KANAP palette (`theme.palette.kanap`), as in the app. */
+const appTheme = createAppTheme('light');
 
 // The list filter contract, frontend side: every column a list screen lets the user filter, read
 // from the column definitions each page hands to ServerDataGrid, with the kind of filter model the
@@ -159,7 +164,7 @@ describe('list filter contract', () => {
       try {
         render(
           <QueryClientProvider client={client}>
-            <KanapDialogProvider><MemoryRouter><Component /></MemoryRouter></KanapDialogProvider>
+            <ThemeProvider theme={appTheme}><KanapDialogProvider><MemoryRouter><Component /></MemoryRouter></KanapDialogProvider></ThemeProvider>
           </QueryClientProvider>,
         );
       } catch (error) {
