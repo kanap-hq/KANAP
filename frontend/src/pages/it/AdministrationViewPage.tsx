@@ -839,12 +839,12 @@ export default function AdministrationViewPage() {
         return true;
       },
     }] : []),
-    { headerName: t('pages.administrationView.columns.reference'), field: 'reference', width: 100, cellRenderer: ReferenceCell, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
-    { headerName: t('common.name'), field: 'name', width: 200, tooltipField: 'name' },
+    { headerName: t('pages.administrationView.columns.reference'), field: 'reference', width: 90, cellRenderer: ReferenceCell, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
+    { headerName: t('common.name'), field: 'name', flex: 1, minWidth: 160, tooltipField: 'name' },
     {
       headerName: t('pages.administrationView.columns.type'),
       field: 'kind',
-      width: 140,
+      width: 120,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: kindValues, searchable: false },
@@ -853,19 +853,19 @@ export default function AdministrationViewPage() {
     {
       headerName: t('pages.administrationView.columns.zone'),
       field: 'zone',
-      width: 150,
+      width: 130,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: zoneValues, searchable: false, emptyLabel: t('pages.administrationView.noZone') },
       cellRenderer: ZoneCell,
     },
-    { headerName: t('pages.administrationView.columns.technologies'), field: 'technologies', minWidth: 160, flex: 1, sortable: false, filter: false, cellRenderer: TechnologiesCell },
-    { headerName: t('pages.administrationView.columns.applications'), field: 'applications', width: 180, sortable: false, filter: false, cellRenderer: ApplicationsCell },
+    { headerName: t('pages.administrationView.columns.technologies'), field: 'technologies', minWidth: 140, flex: 1, sortable: false, filter: false, cellRenderer: TechnologiesCell },
+    { headerName: t('pages.administrationView.columns.applications'), field: 'applications', minWidth: 140, flex: 1, sortable: false, filter: false, cellRenderer: ApplicationsCell },
     {
       headerName: t('pages.administrationView.columns.controls'),
       colId: 'control',
       field: 'findings',
-      width: 240,
+      width: 220,
       sortable: false,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
@@ -896,8 +896,15 @@ export default function AdministrationViewPage() {
   // The zones an assignment may choose: in the catalog and offered.
   const assignable = zones.filter((zone) => !zone.deprecated && !zone.unknown).map((zone) => ({ code: zone.code, name: zoneName(zone.code) }));
 
+  // The actions wrap on their own lines and leave the title its room (the title row lets them overflow it otherwise).
   const actions = (
-    <Stack direction="row" spacing={1} alignItems="center">
+    <Stack
+      direction="row"
+      useFlexGap
+      alignItems="center"
+      justifyContent="flex-end"
+      sx={{ flexWrap: 'wrap', gap: 1, ml: 'auto', maxWidth: { xs: '100%', sm: 'calc(100% - 300px)' } }}
+    >
       {canEdit && selectedCount > 0 && (
         <>
           <Typography data-testid="administration-selection" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
