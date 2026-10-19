@@ -556,7 +556,7 @@
         },
         "trustRaised": {
           "title": "Assets in a more sensitive zone than what contains them",
-          "hint": "The asset that contains another one should sit in a zone at least as sensitive."
+          "hint": "What runs an asset should sit in a zone at least as sensitive. An asset without a zone interrupts the check of the chain."
         },
         "applications": {
           "title": "Applications hosted in the most sensitive zone",
