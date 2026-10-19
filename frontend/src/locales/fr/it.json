@@ -501,7 +501,6 @@
     "administrationView": {
       "loading": "Chargement…",
       "loadFailed": "La vue de l'administration n'a pas pu être chargée.",
-      "exportZones": "Exporter les zones",
       "exportDomains": "Exporter les domaines",
       "exportFailed": "L'export a échoué.",
       "zones": "Zones d'administration",

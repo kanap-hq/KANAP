@@ -19,6 +19,7 @@ import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type Rel
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { getWithListContext } from '../../lib/listContext';
 import { getDotColor } from '../../utils/statusColors';
 import type { DomainTrustDirection } from '../../services/itOpsSettings';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -863,13 +864,17 @@ export default function AdministrationViewPage() {
     },
   ], [canEdit, controlValues, kindValues, labelFor, t, toggleAll, toggleRow, zoneValues]);
 
-  const exportDomains = async () => {
+  /** The assets with the grid's filters and sort, or the domains; long filters go as a saved list context. */
+  const exportList = async (list: 'assets' | 'domains') => {
     setExporting(true);
     setExportError(null);
     try {
       const language = (i18n.resolvedLanguage || i18n.language || 'en').slice(0, 2);
-      const res = await api.get(`${ENDPOINT}/export`, { params: { list: 'domains', language }, responseType: 'blob' });
-      downloadBlob(res.data as Blob, extractFilenameFromDisposition(res.headers?.['content-disposition']) || 'administration_view_domains.csv');
+      const params = list === 'assets' ? { ...exportParams(requestRef.current), list, language } : { list, language };
+      const res = await getWithListContext<Blob>(`${ENDPOINT}/export`, params, { responseType: 'blob' });
+      const headers = (res.headers ?? {}) as Record<string, unknown>;
+      const disposition = (headers['content-disposition'] ?? headers['Content-Disposition']) as string | undefined;
+      downloadBlob(new Blob([res.data], { type: 'text/csv;charset=utf-8' }), extractFilenameFromDisposition(disposition) || `administration_view_${list}.csv`);
     } catch (err) {
       setExportError(getApiErrorMessage(err, t, t('pages.administrationView.exportFailed')));
     } finally {
@@ -900,7 +905,8 @@ export default function AdministrationViewPage() {
             : t('pages.administrationView.actions.assign')}
         </Button>
       )}
-      <Button variant="action" disabled={exporting} onClick={() => void exportDomains()}>{t('pages.administrationView.exportDomains')}</Button>
+      <Button variant="action" disabled={exporting} onClick={() => void exportList('assets')}>{t('pages.administrationView.exportAssets')}</Button>
+      <Button variant="action" disabled={exporting} onClick={() => void exportList('domains')}>{t('pages.administrationView.exportDomains')}</Button>
     </Stack>
   );
 

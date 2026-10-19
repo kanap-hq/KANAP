@@ -502,7 +502,7 @@
       "subtitle": "The administration view of the ANSSI information system mapping guide.",
       "loading": "Loading…",
       "loadFailed": "The administration view could not be loaded.",
-      "exportZones": "Export zones",
+      "exportAssets": "Export assets",
       "exportDomains": "Export domains",
       "exportFailed": "The export failed.",
       "zones": "Administration zones",
