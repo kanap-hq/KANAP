@@ -189,6 +189,44 @@ function readModel(raw: unknown): Record<string, any> {
   }
 }
 
+/** Grid columns the asset list filters on, by filter type. A bulk scope may name these only. */
+const TEXT_COLUMNS = ['name', 'reference'];
+const SET_COLUMNS = ['zone', 'kind', 'type', 'control'];
+const BULK_FILTERS_SHAPE = 'filters must be the asset list request, { q?, filters? }, with filters the grid model as JSON text or an object.';
+
+/**
+ * The scope of an assignment to every asset of the filter: the asset list request, `{ q?, filters? }`.
+ * Any other key, a flat grid model, a model that does not parse or an entry the list does not apply
+ * is a `400` `bulk_filters_invalid`: ignored, it would widen the scope to more assets.
+ */
+function bulkFilters(raw: unknown): AdministrationAssetQuery {
+  const refuse = (message: string): never => {
+    throw new BadRequestException({ code: 'bulk_filters_invalid', message });
+  };
+  if (!raw || typeof raw !== 'object' || Array.isArray(raw)) return refuse(`${BULK_FILTERS_SHAPE} Send {} for every asset.`);
+  const scope = raw as Record<string, unknown>;
+  const extra = Object.keys(scope).filter((key) => key !== 'q' && key !== 'filters');
+  if (extra.length) return refuse(`Unexpected ${extra.map((key) => `"${key}"`).join(', ')} in filters. ${BULK_FILTERS_SHAPE}`);
+  if (scope.q !== undefined && scope.q !== null && typeof scope.q !== 'string') return refuse('filters.q must be text.');
+  let model: unknown = scope.filters;
+  if (model === undefined || model === null || model === '') return { q: scope.q };
+  if (typeof model === 'string') {
+    try {
+      model = JSON.parse(model);
+    } catch {
+      return refuse(`filters.filters is not valid JSON. ${BULK_FILTERS_SHAPE}`);
+    }
+  }
+  if (!model || typeof model !== 'object' || Array.isArray(model)) return refuse(`filters.filters must be a grid model object. ${BULK_FILTERS_SHAPE}`);
+  for (const [column, entry] of Object.entries(model as Record<string, any>)) {
+    const text = TEXT_COLUMNS.includes(column) && entry?.filterType === 'text' && !('conditions' in entry)
+      && (entry.type === undefined || typeof entry.type === 'string');
+    const set = SET_COLUMNS.includes(column) && entry?.filterType === 'set' && Array.isArray(entry.values);
+    if (!text && !set) return refuse(`The asset list does not apply the filter on "${column}". ${BULK_FILTERS_SHAPE}`);
+  }
+  return { q: scope.q, filters: scope.filters };
+}
+
 function setFilter(model: Record<string, any>, column: string): { values: string[]; blank: boolean } | null {
   const entry = model[column];
   if (!entry || entry.filterType !== 'set' || !Array.isArray(entry.values)) return null;
@@ -366,8 +404,8 @@ export class AdministrationViewService {
 
   /**
    * Sets the administration zone of many assets: the chosen ones (`ids`), or every asset the list's
-   * filters reach (`all: true`), less the ones the user unticked (`exclude_ids`). The chosen assets
-   * are taken as they are. `dry_run` counts without writing and returns `as_of`. The write that
+   * filters reach (`all: true`, with `filters` the list request, see `bulkFilters`), less the ones
+   * the user unticked (`exclude_ids`). The chosen assets are taken as they are. `dry_run` counts without writing and returns `as_of`. The write that
    * sends it back changes only the assets created by then, and refuses when the locked rows are
    * more than `expected_rows` (`409` `bulk_list_changed`). More than `BULK_MAX_ROWS` is a `400`
    * `bulk_too_many`. Each changed asset is audited on `assets`. The UPDATE leaves the `search_index`
@@ -396,12 +434,10 @@ export class AdministrationViewService {
     if (all && ids.length > 0) throw new BadRequestException('Send the chosen rows (ids) or every row of the filter (all: true), not both.');
     if (!all && excluded.length > 0) throw new BadRequestException('exclude_ids goes with all: true.');
     if (!all && ids.length === 0) throw new BadRequestException('Choose the rows (ids), or every row of the filter (all: true).');
-    const filters = (body.filters && typeof body.filters === 'object' ? body.filters : {}) as AdministrationAssetQuery;
-
     const params: unknown[] = [tenantId];
     let where: string;
     if (all) {
-      where = this.whereOf({ ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, ctx, params);
+      where = this.whereOf(bulkFilters(body.filters), ctx, params);
       if (excluded.length > 0) {
         params.push(excluded);
         where += ` AND a.id <> ALL($${params.length}::uuid[])`;

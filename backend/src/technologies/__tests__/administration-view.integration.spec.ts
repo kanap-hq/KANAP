@@ -691,7 +691,34 @@ async function testBulk() {
     await assert.rejects(svc.assignZone({ zone: 'tier_0', exclude_ids: [a1] }, opts), (error: any) => /exclude_ids goes with all/.test(error.message));
     await assert.rejects(svc.assignZone({ zone: 'tier_0' }, opts), (error: any) => /Choose the rows/.test(error.message));
     await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, filters: {} }, opts), (error: any) => /as_of is required/.test(error.message));
-    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: new Date().toISOString() }, opts), (error: any) => /expected_rows is required/.test(error.message));
+    await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, filters: {}, as_of: new Date().toISOString() }, opts), (error: any) => /expected_rows is required/.test(error.message));
+
+    // With all: true, filters is the list request { q?, filters? } and nothing else: a shape the
+    // list would ignore must not widen the scope to every asset.
+    const refusedScope = (error: any) => error instanceof BadRequestException && (error.getResponse() as any).code === 'bulk_filters_invalid';
+    const flat = { zone: { filterType: 'set', values: [null] } };
+    for (const [label, filters] of [
+      ['missing', undefined],
+      ['text', setFilter('zone', [null])],
+      ['a list', [flat]],
+      ['the flat grid model', flat],
+      ['a key of the list beside q and filters', { q: 'a', sort: 'name:ASC' }],
+      ['a model that does not parse', { filters: '{' }],
+      ['a model that is not an object', { filters: '[1]' }],
+      ['a column the list does not filter', { filters: { technologies: { filterType: 'set', values: ['x'] } } }],
+      ['a set filter on a text column', { filters: { name: { filterType: 'set', values: ['a1'] } } }],
+      ['a combined text filter', { filters: { name: { filterType: 'text', operator: 'OR', conditions: [{ type: 'equals', filter: 'a1' }] } } }],
+      ['a q that is not text', { q: 5 }],
+    ] as Array<[string, unknown]>) {
+      await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters }, opts), refusedScope, label);
+    }
+    const asObject = await svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters: { filters: flat } }, opts);
+    const asText = await svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters: { filters: JSON.stringify(flat) } }, opts);
+    const everything = await svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters: {} }, opts);
+    assert.equal(asObject.rows, asText.rows, 'the model as an object or as JSON text');
+    assert.ok(asObject.rows < everything.rows, 'the zone filter narrows the scope');
+    const searched = await svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters: { q: 'left', filters: { name: { filterType: 'text', type: 'contains', filter: 'out' } } } }, opts);
+    assert.equal(searched.rows, 1, 'q and a text filter narrow the scope');
     await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: new Date().toISOString(), expected_rows: -1 }, opts), BadRequestException);
     await assert.rejects(svc.assignZone({ zone: 'tier_0', all: true, as_of: 'yesterday', expected_rows: 0 }, opts), BadRequestException);
     const tooMany = Array.from({ length: BULK_MAX_ROWS + 1 }, () => randomUUID());
@@ -805,7 +832,7 @@ async function testScale() {
       [a],
     );
     await assert.rejects(
-      svc.assignZone({ zone: 'tier_0', all: true, dry_run: true }, opts),
+      svc.assignZone({ zone: 'tier_0', all: true, dry_run: true, filters: {} }, opts),
       (error: any) => error instanceof BadRequestException && (error.getResponse() as any).code === 'bulk_too_many' && /5001/.test(error.message),
     );
     await runner.query(
