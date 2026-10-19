@@ -8,6 +8,7 @@ import { Tenant } from '../tenants/tenant.entity';
 import { WorldBankClient } from './world-bank-client';
 import { withTenantExecution } from '../common/tenant-runner';
 import { trackBackgroundWork } from '../common/background-work';
+import { lockRateSetWrite } from './rate-set-lock';
 
 type RateSnapshot = Record<string, number | null>;
 
@@ -846,6 +847,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     snapshot: YearlySnapshot,
     manager: EntityManager,
   ): Promise<CurrencyRateSet | null> {
+    await lockRateSetWrite(manager, context.tenantId, snapshot.year);
     const repo = manager.getRepository(CurrencyRateSet);
     const existing = await repo.findOne({
       where: {
