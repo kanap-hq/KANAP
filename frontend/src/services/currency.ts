@@ -13,9 +13,10 @@ export type MissingRatePair = {
   year: number;
 };
 
-/** `POST /currency/rates/refresh` once the fetch has finished, and the same block on a reporting-currency save. */
+/** `POST /currency/rates/refresh` once the fetch has finished. `failed` means the source answered nothing. */
 export type RateSyncCompleted = {
   completed: true;
+  failed?: boolean;
   years: number[];
   fetched: number;
   stillMissing: MissingRatePair[];
@@ -31,20 +32,10 @@ export type RateSyncOutcome = RateSyncCompleted | RateSyncPending;
 
 export type RefreshCurrencyRatesResponse = RateSyncOutcome & { ok: true };
 
-/** A settings save carries the same block when the reporting currency changed, and only then. */
+/** A settings save. `refreshYears` is the years whose rates the page then fetches. */
 export type CurrencySettingsUpdate = CurrencySettings & {
-  completed?: boolean;
-  years?: number[];
-  fetched?: number;
-  stillMissing?: MissingRatePair[];
+  refreshYears?: number[];
 };
-
-export function isRateSyncOutcome(value: object): value is RateSyncOutcome {
-  const record = value as { completed?: unknown; years?: unknown; fetched?: unknown; stillMissing?: unknown };
-  if (!Array.isArray(record.years)) return false;
-  if (record.completed === false) return true;
-  return record.completed === true && typeof record.fetched === 'number' && Array.isArray(record.stillMissing);
-}
 
 /** `GET /currency/reporting-change-impact`. What a new reporting currency does to manual rates, frozen versions and the allowed list. */
 export type ReportingChangeImpact = {

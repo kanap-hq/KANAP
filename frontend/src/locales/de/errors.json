@@ -167,5 +167,6 @@
   "KNOWLEDGE_LIBRARY_SYSTEM": "Diese Bibliothek ist in KANAP enthalten und kann nicht gelöscht werden.",
   "KNOWLEDGE_LIBRARY_LAST": "Dies ist die letzte Bibliothek, die Sie nutzen können. Erstellen Sie eine weitere Bibliothek, bevor Sie sie löschen.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie ihn zuerst.",
-  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst."
+  "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst.",
+  "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium."
 }

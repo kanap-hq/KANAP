@@ -10,7 +10,6 @@ import {
   updateCurrencySettings,
   refreshCurrencyRates,
   fetchReportingChangeImpact,
-  isRateSyncOutcome,
   type CurrencyRateRow,
   type CurrencySettings,
   type CurrencySettingsUpdate,
@@ -113,7 +112,7 @@ function apiErrorCode(error: unknown): string {
 }
 
 type SyncNotice =
-  | { completed: true; fetched: number; stillMissing: MissingRatePair[] }
+  | { completed: true; failed: boolean; fetched: number; stillMissing: MissingRatePair[] }
   | { completed: false };
 
 /**
@@ -128,7 +127,13 @@ function SyncResult({ notice }: { notice: SyncNotice | null }) {
     : '';
   return (
     <Box data-testid="sync-result" aria-live="polite" sx={{ minHeight: 96 }}>
-      {notice?.completed === true && (
+      {notice?.completed === true && notice.failed && (
+        <Alert severity="warning">
+          <Box>{t(`${C}.syncSourceUnreachable`)}</Box>
+          {notice.stillMissing.length > 0 && <Box>{t(`${C}.syncStillMissing`, { pairs })}</Box>}
+        </Alert>
+      )}
+      {notice?.completed === true && !notice.failed && (
         <Alert severity="success">
           <Box>{t(`${C}.syncFetched`, { count: notice.fetched })}</Box>
           <Box>
@@ -235,6 +240,16 @@ export default function CurrencySettingsPage() {
     return () => window.clearTimeout(timer);
   }, [highlightKey]);
 
+  const syncMutation = useMutation({
+    mutationFn: (years?: number[]) => refreshCurrencyRates(years?.length ? { years } : {}),
+    onSuccess: (result) => {
+      setSyncNotice(result.completed
+        ? { completed: true, failed: result.failed === true, fetched: result.fetched, stillMissing: result.stillMissing ?? [] }
+        : { completed: false });
+      followRateSync(result.completed);
+    },
+  });
+
   const mutation = useMutation({
     mutationFn: updateCurrencySettings,
     onSuccess: (next: CurrencySettingsUpdate) => {
@@ -244,26 +259,15 @@ export default function CurrencySettingsPage() {
       setDefaultSpendCurrency(next.defaultSpendCurrency);
       setDefaultCapexCurrency(next.defaultCapexCurrency);
       setAllowedCurrencies((next.allowedCurrencies ?? []).join(', '));
-      if (isRateSyncOutcome(next)) {
+      const years = Array.isArray(next.refreshYears) ? next.refreshYears.filter((year) => Number.isInteger(year)) : [];
+      if (years.length > 0) {
         setSuccessMessage('');
-        setSyncNotice(next.completed
-          ? { completed: true, fetched: next.fetched, stillMissing: next.stillMissing }
-          : { completed: false });
-        followRateSync(next.completed);
+        setSyncNotice(null);
+        syncMutation.mutate(years);
         return;
       }
       invalidateCurrencyRateQueries(queryClient);
       setSuccessMessage(t('operations.currency.saveSuccess'));
-    },
-  });
-
-  const syncMutation = useMutation({
-    mutationFn: () => refreshCurrencyRates(),
-    onSuccess: (result) => {
-      setSyncNotice(result.completed
-        ? { completed: true, fetched: result.fetched, stillMissing: result.stillMissing ?? [] }
-        : { completed: false });
-      followRateSync(result.completed);
     },
   });
 

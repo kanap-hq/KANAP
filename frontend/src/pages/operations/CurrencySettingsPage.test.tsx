@@ -503,6 +503,29 @@ describe('CurrencySettingsPage', () => {
     expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates/missing').length).toBeGreaterThan(1);
   });
 
+  it('says the rate source did not respond, and names the pairs still missing', async () => {
+    const user = userEvent.setup();
+    mocked.post.mockResolvedValue({
+      data: {
+        ok: true,
+        completed: true,
+        failed: true,
+        years: [2026],
+        fetched: 0,
+        stillMissing: [{ currency: 'ZAR', year: 2028 }],
+      },
+    });
+    renderPage();
+    await waitForSettings();
+    await user.click(screen.getByRole('button', { name: 'Force FX rates sync' }));
+    const slot = screen.getByTestId('sync-result');
+    const alert = await within(slot).findByRole('alert');
+    expect(alert).toHaveTextContent('The exchange rate source did not respond. Try again later, or enter the missing rates.');
+    expect(alert).toHaveTextContent('Still missing: ZAR 2028.');
+    expect(alert.className).toMatch(/Warning/);
+    expect(alert).not.toHaveTextContent('fetched');
+  });
+
   it('says every used currency has a rate when the sync finishes with nothing missing', async () => {
     const user = userEvent.setup();
     mocked.post.mockResolvedValue({
@@ -590,10 +613,24 @@ describe('CurrencySettingsPage', () => {
     await user.click(confirm);
     await waitFor(() => expect(confirm).toBeDisabled());
     expect(within(confirm).getByRole('progressbar')).toBeInTheDocument();
+    let resolvePost: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementation(() => new Promise((resolve) => { resolvePost = resolve; }));
     resolvePatch({
       data: {
         ...SETTINGS,
         reportingCurrency: 'USD',
+        refreshYears: [2025],
+      },
+    });
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/currency/rates/refresh', { years: [2025] }));
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(screen.queryByText('Currency settings updated successfully')).not.toBeInTheDocument();
+    const syncButton = screen.getByRole('button', { name: 'Force FX rates sync' });
+    expect(syncButton).toHaveAttribute('aria-busy', 'true');
+    expect(within(syncButton).getByRole('progressbar')).toBeInTheDocument();
+    resolvePost({
+      data: {
+        ok: true,
         completed: true,
         years: [2025],
         fetched: 1,
@@ -603,7 +640,6 @@ describe('CurrencySettingsPage', () => {
     const slot = screen.getByTestId('sync-result');
     expect(await within(slot).findByText('1 rate fetched.')).toBeInTheDocument();
     expect(within(slot).getByText('Still missing: ZAR 2028.')).toBeInTheDocument();
-    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(mocked.patch).toHaveBeenCalledWith('/currency/settings', {
       reportingCurrency: 'USD',
       defaultSpendCurrency: 'EUR',
@@ -638,9 +674,12 @@ describe('CurrencySettingsPage', () => {
     expect(reportingField()).toHaveValue('USD');
   });
 
-  it('saves another currency field without asking about the reporting currency', async () => {
+  it('saves another currency field without asking about the reporting currency, then refreshes the named years', async () => {
     const user = userEvent.setup();
-    mocked.patch.mockResolvedValue({ data: { ...SETTINGS, defaultSpendCurrency: 'GBP' } });
+    mocked.patch.mockResolvedValue({ data: { ...SETTINGS, defaultSpendCurrency: 'GBP', refreshYears: [2026] } });
+    mocked.post.mockResolvedValue({
+      data: { ok: true, completed: true, years: [2026], fetched: 1, stillMissing: [] },
+    });
     renderPage();
     await waitForSettings();
     const opex = screen.getByRole('textbox', { name: 'Default OPEX currency' });
@@ -655,6 +694,21 @@ describe('CurrencySettingsPage', () => {
     }));
     expect(mocked.get.mock.calls.some(([url]) => url === '/currency/reporting-change-impact')).toBe(false);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/currency/rates/refresh', { years: [2026] }));
+    expect(await screen.findByText('1 rate fetched.')).toBeInTheDocument();
+    expect(screen.queryByText('Currency settings updated successfully')).not.toBeInTheDocument();
+  });
+
+  it('keeps the save confirmation when the settings answer names no years to refresh', async () => {
+    const user = userEvent.setup();
+    mocked.patch.mockResolvedValue({ data: { ...SETTINGS, defaultSpendCurrency: 'GBP', refreshYears: [] } });
+    renderPage();
+    await waitForSettings();
+    const opex = screen.getByRole('textbox', { name: 'Default OPEX currency' });
+    await user.clear(opex);
+    await user.type(opex, 'GBP');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
     expect(await screen.findByText('Currency settings updated successfully')).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
   });
 });
