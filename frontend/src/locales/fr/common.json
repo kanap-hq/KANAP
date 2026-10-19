@@ -355,7 +355,7 @@
     "quickLogTime": {
       "logTime": "Saisir du temps",
       "logOn": "Saisir sur",
-      "hoursPlaceholder": "ex. 2,5",
+      "hoursPlaceholder": "ex. 2",
       "notesOptional": "Notes (facultatif)",
       "whatDidYouWorkOn": "Sur quoi avez-vous travaillé ?",
       "it": "IT",

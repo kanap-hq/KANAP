@@ -355,7 +355,7 @@
     "quickLogTime": {
       "logTime": "Log time",
       "logOn": "Log on",
-      "hoursPlaceholder": "e.g., 2.5",
+      "hoursPlaceholder": "e.g., 2",
       "notesOptional": "Notes (optional)",
       "whatDidYouWorkOn": "What did you work on?",
       "it": "IT",
