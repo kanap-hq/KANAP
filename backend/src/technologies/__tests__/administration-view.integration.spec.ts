@@ -17,8 +17,9 @@ import { application, asset, assign, contains, installed, member, one, technolog
 //   controllers deduced from the server role `domain-controller` on an instance in service, or
 //   from an installed directory technology, each server once;
 // - the control points: assets without a zone; domain controllers (the role only) and assets that
-//   carry a directory technology outside the most sensitive zone; a contained asset or a cluster
-//   member whose zone is more sensitive than its holder; applications hosted in that zone;
+//   carry a directory technology outside the most sensitive zone; a contained asset whose zone is
+//   more sensitive than its container, or a cluster member whose zone is less sensitive than its
+//   cluster; a deprecated or unknown zone does not rank; applications hosted in that zone;
 //   each point has one case that must stay out;
 // - another tenant's assets, technologies and controllers never appear;
 // - both routes require `infrastructure:reader`, the export path ends with /export, and the CSV
@@ -245,6 +246,20 @@ async function testControls() {
     const node = await place('node', 'tier_0');
     const rack = await place('rack', 'tier_1');
     await member(runner, a, rack, node);
+    // A Tier 1 host that is a member of a Tier 0 cluster carries that cluster in a less sensitive zone.
+    const vsphere = await place('vsphere', 'tier_0');
+    const esx1 = await place('esx1', 'tier_1');
+    await member(runner, a, vsphere, esx1);
+    const core = await place('core', 'tier_0');
+    const esx0 = await place('esx0', 'tier_0');
+    await member(runner, a, core, esx0);
+    // A deprecated zone at the head of the catalog does not rank, in either direction.
+    const t0Holder = await place('t0-holder', 'tier_0');
+    const legacyVm = await place('legacy-vm', 'retired_first');
+    await contains(runner, a, t0Holder, legacyVm);
+    const domCluster = await place('dom-cluster', 'tier_0');
+    const legacyHost = await place('legacy-host', 'retired_first');
+    await member(runner, a, domCluster, legacyHost);
     const twin = await place('twin', 'tier_0');
     const peer = await place('peer', 'tier_0');
     await contains(runner, a, peer, twin);
@@ -291,9 +306,10 @@ async function testControls() {
     const view = await service(settings).view({ manager: runner.manager, tenantId: a });
 
     assert.equal(view.controls.most_sensitive_zone, 'tier_0', 'the first zone is deprecated, so the next one is the most sensitive');
-    assert.deepEqual(view.zones.map((zone) => zone.code), ['tier_0', 'tier_1', 'old', 'ghost', 'gone']);
-    assert.equal(view.zones.some((zone) => zone.code === 'retired_first' || zone.code === 'leftover'), false);
-    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.assets.map((item) => item.name), ['dc-home', 'dir-home', 'guest', 'guest2', 'node', 'parent', 'peer', 'spare', 'twin']);
+    assert.deepEqual(view.zones.map((zone) => zone.code), ['retired_first', 'tier_0', 'tier_1', 'old', 'ghost', 'gone']);
+    assert.equal(view.zones.some((zone) => zone.code === 'leftover'), false, 'a technology of another family does not open a zone');
+    assert.deepEqual(view.zones.find((zone) => zone.code === 'retired_first')?.assets.map((item) => item.name), ['legacy-host', 'legacy-vm']);
+    assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.assets.map((item) => item.name), ['core', 'dc-home', 'dir-home', 'dom-cluster', 'esx0', 'guest', 'guest2', 'node', 'parent', 'peer', 'spare', 't0-holder', 'twin', 'vsphere']);
     assert.deepEqual(view.zones.find((zone) => zone.code === 'tier_0')?.directory_services.map((item) => item.name), ['Active Directory']);
     assert.equal(view.zones.find((zone) => zone.code === 'tier_0')?.hosted_application_count, 2);
     assert.equal(view.zones.find((zone) => zone.code === 'tier_1')?.hosted_application_count, 2);
@@ -306,7 +322,7 @@ async function testControls() {
     assert.deepEqual(view.controls.directory_assets_outside?.map((item) => item.name), ['dir-away', 'dir-blank']);
     assert.deepEqual(view.controls.trust_raised?.map((item) => [item.holder.name, item.holder_kind, item.asset.name, item.asset_zone, item.holder_zone]), [
       ['host', 'contains', 'guest', 'tier_0', 'tier_1'],
-      ['rack', 'cluster', 'node', 'tier_0', 'tier_1'],
+      ['vsphere', 'cluster', 'esx1', 'tier_1', 'tier_0'],
     ]);
     assert.deepEqual(view.controls.applications_on_most_sensitive?.map((item) => [item.name, item.asset.name, item.reference?.startsWith('APP-')]), [
       ['App dc-home', 'dc-home', true],

@@ -14,10 +14,17 @@ import { inServiceSql } from '../technology-reach.service';
  * directory-carrying assets outside the most sensitive zone, dependencies that raise trust, and
  * applications hosted in the most sensitive zone.
  *
+ * What runs an asset must sit in a zone at least as sensitive. A contained asset
+ * (`asset_relations` of type `contains`: the asset is the content, the holder is the container)
+ * raises a finding when its zone is more sensitive than its container. A cluster member raises a
+ * finding when its zone is less sensitive than its cluster: the member carries the cluster. A
+ * pair is left out when either zone is missing, deprecated or outside the catalog.
+ *
  * The most sensitive zone is the first non-deprecated zone of the catalog. Without one, the
  * controls that depend on it are absent. A deprecated zone is shown only when it still carries
  * an asset or a directory service. A zone code the catalog no longer has is shown when an asset
- * or a directory service still carries it.
+ * or a directory service still carries it. Sensitivity ranks only the zones of the catalog that
+ * are not deprecated: a lower index is more sensitive.
  *
  * A domain controller, in the domains section, is an asset of the domain (`assets.domain`), not
  * retired, assigned with the server role `domain-controller` on an instance in service
@@ -134,7 +141,7 @@ export class AdministrationViewService {
     const settings = await this.itOps.getSettings(tenantId, { manager: mg });
     const catalog = settings.adminZones ?? [];
     const known = new Set(catalog.map((option) => option.code));
-    const rank = new Map(catalog.map((option, index) => [option.code, index]));
+    const rank = new Map(catalog.filter((option) => !option.deprecated).map((option, index) => [option.code, index]));
     const most = catalog.find((option) => !option.deprecated)?.code ?? null;
 
     const assetRows: AssetRow[] = await mg.query(
@@ -295,7 +302,11 @@ export class AdministrationViewService {
     for (const row of pairs as Array<PairRow & { holder_link: 'contains' | 'cluster' }>) {
       const assetRank = row.asset_zone == null ? undefined : rank.get(row.asset_zone);
       const holderRank = row.holder_zone == null ? undefined : rank.get(row.holder_zone);
-      if (assetRank === undefined || holderRank === undefined || assetRank >= holderRank) continue;
+      if (assetRank === undefined || holderRank === undefined) continue;
+      // A lower rank is more sensitive. Content more sensitive than its container, or a member
+      // less sensitive than the cluster it carries, is a finding.
+      const raised = row.holder_link === 'cluster' ? assetRank > holderRank : assetRank < holderRank;
+      if (!raised) continue;
       trust.push({
         asset: { id: row.asset_id, name: row.asset_name, reference: row.asset_reference, kind: row.asset_kind },
         asset_zone: row.asset_zone!,
