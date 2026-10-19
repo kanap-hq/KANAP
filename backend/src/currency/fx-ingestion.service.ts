@@ -561,7 +561,18 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
 
       const code = this.worldBank.resolveCode(upper);
       if (!code) {
+        // No World Bank series: past years have no source, but the live feed may still
+        // quote the currency for the current year, which also stands in for later years.
+        const spot = years.some((year) => year >= currentYear) ? await this.worldBank.fetchSpotRate(upper) : null;
         years.forEach((year) => {
+          if (spot != null && year === currentYear) {
+            put(year, spot, 'exchangerateapi-spot');
+            return;
+          }
+          if (spot != null && year > currentYear) {
+            put(year, spot, 'world-bank-forward');
+            return;
+          }
           recordMissing(year);
           put(year, null, null);
         });

@@ -470,6 +470,27 @@ async function testStaleDatasetReloadsOnceWhenAPastYearIsMissing() {
   assert.equal(kept.quoteSources.GBP, 'estimate');
 }
 
+/** A currency with no World Bank series still takes the live rate for the current and later years. */
+async function testNoWorldBankSeriesUsesTheLiveRate() {
+  const currentYear = new Date().getFullYear();
+  const client = annualClient({ EUR: { [currentYear - 1]: 0.9 } }, { EUR: 0.9, GGP: 0.75 });
+  const fx = new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {} as any,
+    { getLatestRateSet: async () => null } as any,
+    { ...client, resolveCode: (c: string) => (c.toUpperCase() === 'GGP' ? null : client.resolveCode(c)) } as any,
+  );
+  const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GGP'] };
+  const [past, current, next] = await (fx as any).buildYearlySnapshots(ctx, [currentYear - 1, currentYear, currentYear + 1]);
+  assert.equal(past.quotes.GGP, null, 'no source for a past year');
+  assert.ok(past.missingCurrencies.includes('GGP'));
+  assert.equal(current.quotes.GGP, 0.75);
+  assert.equal(current.quoteSources.GGP, 'exchangerateapi-spot');
+  assert.equal(next.quotes.GGP, 0.75);
+  assert.equal(next.quoteSources.GGP, 'world-bank-forward');
+}
+
 (async () => {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
@@ -481,6 +502,7 @@ async function testStaleDatasetReloadsOnceWhenAPastYearIsMissing() {
   await testEstimatedBaseStillStoresTheYear();
   await testCurrentYearAloneFallsBackToLatestPublished();
   await testStaleDatasetReloadsOnceWhenAPastYearIsMissing();
+  await testNoWorldBankSeriesUsesTheLiveRate();
   console.log('FX refresh keeps a known rate.');
 })().catch((err) => {
   console.error(err);
