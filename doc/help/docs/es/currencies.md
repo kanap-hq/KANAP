@@ -141,7 +141,7 @@ Conviene saber:
   - Solo los usuarios de la administración presupuestaria con nivel de administrador pueden introducir, cambiar o retirar una tasa manual.
   - Cada introducción, cambio y retirada queda registrada en el registro de auditoría.
   - Un año congelado conserva las tasas capturadas al congelarlo, incluidas las manuales y las estimaciones (vea [Años congelados](#anos-congelados)).
-  - Una tasa manual se introduce respecto a la moneda de reporte actual. Tras un cambio de moneda de reporte, las tasas manuales introducidas para la anterior dejan de aplicarse.
+  - Una tasa manual se introduce respecto a la moneda de reporte actual. Tras un cambio de moneda de reporte, las tasas manuales introducidas para la anterior dejan de aplicarse. Vuelven a aplicarse si regresa a esa moneda de reporte.
   - La moneda de reporte siempre tiene una tasa de 1 y no admite tasa manual.
 
 ## Importación y exportación CSV

@@ -36,6 +36,7 @@ function run() {
 
   for (const [name, handler] of [
     ['updateSettings', proto.updateSettings],
+    ['reportingChangeImpact', proto.reportingChangeImpact],
     ['refreshRates', proto.refreshRates],
     ['setManualRate', proto.setManualRate],
     ['removeManualRate', proto.removeManualRate],
@@ -50,6 +51,7 @@ function run() {
     proto.listRates,
     proto.listMissingRates,
     proto.updateSettings,
+    proto.reportingChangeImpact,
     proto.refreshRates,
     proto.setManualRate,
     proto.removeManualRate,

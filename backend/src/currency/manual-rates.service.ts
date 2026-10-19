@@ -14,6 +14,13 @@ export type ManualRateTarget = { currency: string; year: number };
 export type ManualRateRemoval = { ok: true; refreshQueued: boolean };
 export type MissingRatePair = { currency: string; year: number };
 
+/** `GET /currency/reporting-change-impact`. Manual rates of the current base, frozen versions, and whether `to` joins the allowed list. */
+export type ReportingChangeImpact = {
+  manualRates: Array<{ currency: string; year: number; rate: number }>;
+  frozenVersions: Array<{ year: number; count: number }>;
+  allowedAdded: boolean;
+};
+
 /** One year of the rate matrix: the latest set whose base is the reporting currency. */
 export type CurrencyRateYear = {
   fiscalYear: number;
@@ -436,6 +443,65 @@ export class ManualRatesService {
       currencies: sortMatrixCurrencies(use.reporting, [...use.currencies, ...manual]),
       rates,
     };
+  }
+
+  /**
+   * What changes for the tenant if the reporting currency becomes `to`.
+   * Manual rates are those of the current base: they stop applying, and they
+   * apply again if the tenant switches back. `allowedAdded` is true when an
+   * allowed list exists and does not yet name `to` (an empty restriction, stored
+   * as no list, adds nothing). `to` must be an ISO currency code.
+   */
+  async reportingChangeImpact(tenantId: string, toRaw: unknown, manager: EntityManager): Promise<ReportingChangeImpact> {
+    const to = parseCurrency(toRaw);
+    await this.setTenant(manager, tenantId);
+    const settings = await this.settings.getSettings(tenantId, { manager });
+    const reporting = settings.reportingCurrency.toUpperCase();
+    const allowed = settings.allowedCurrencies;
+    const allowedAdded = Array.isArray(allowed)
+      && !allowed.some((code) => typeof code === 'string' && code.trim().toUpperCase() === to);
+
+    const rateRows: Array<{ fiscal_year: unknown; rates: unknown; rate_sources: unknown }> = await manager.query(
+      `SELECT DISTINCT ON (fiscal_year) fiscal_year, rates, rate_sources
+         FROM currency_rate_sets
+        WHERE tenant_id = $1
+          AND UPPER(TRIM(base_currency)) = $2
+        ORDER BY fiscal_year, captured_at DESC`,
+      [tenantId, reporting],
+    );
+    const manualRates: ReportingChangeImpact['manualRates'] = [];
+    for (const row of rateRows) {
+      const year = typeof row.fiscal_year === 'number' ? row.fiscal_year : Number(row.fiscal_year);
+      if (!Number.isInteger(year)) continue;
+      const sources = asRecord(row.rate_sources);
+      for (const [key, source] of Object.entries(sources)) {
+        if (source !== 'manual') continue;
+        const currency = key.toUpperCase();
+        const found = fieldFor(asRecord(row.rates), currency);
+        if (!isUsableRate(found?.value)) continue;
+        manualRates.push({ currency, year, rate: found.value });
+      }
+    }
+    manualRates.sort((a, b) => a.year - b.year || (a.currency < b.currency ? -1 : a.currency > b.currency ? 1 : 0));
+
+    const frozenRows: Array<{ year: unknown; count: unknown }> = await manager.query(
+      `SELECT budget_year AS year, COUNT(*)::int AS count
+         FROM spend_versions
+        WHERE tenant_id = $1
+          AND fx_rate_set_id IS NOT NULL
+          AND budget_year IS NOT NULL
+        GROUP BY budget_year
+        ORDER BY budget_year`,
+      [tenantId],
+    );
+    const frozenVersions: ReportingChangeImpact['frozenVersions'] = [];
+    for (const row of frozenRows) {
+      const year = typeof row.year === 'number' ? row.year : Number(row.year);
+      const count = typeof row.count === 'number' ? row.count : Number(row.count);
+      if (!Number.isInteger(year) || !Number.isInteger(count) || count <= 0) continue;
+      frozenVersions.push({ year, count });
+    }
+    return { manualRates, frozenVersions, allowedAdded };
   }
 
   /**

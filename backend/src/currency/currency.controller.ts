@@ -1,10 +1,10 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { Body, Controller, Delete, Get, Param, Patch, Post, Put, Query, Req, UseGuards } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel, RequireAnyLevelMeta } from '../auth/require-level.decorator';
 import { CurrencySettings, CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
-import { ManualRatesService, MissingRatePair } from './manual-rates.service';
+import { ManualRatesService, MissingRatePair, ReportingChangeImpact } from './manual-rates.service';
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
@@ -102,6 +102,17 @@ export class CurrencyController {
     for (const pair of afterPairs) if (!beforePairs.has(pair)) fetched += 1;
     const stillMissing = await this.manualRates.listMissingPairs(tenantId, readManager, { report: false });
     return { ...next, completed: true, years, fetched, stillMissing };
+  }
+
+  /** What a change of reporting currency does to manual rates, frozen versions and the allowed list. */
+  @Get('reporting-change-impact')
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget_ops', 'admin')
+  async reportingChangeImpact(@Query('to') to: string | undefined, @Req() req: any): Promise<ReportingChangeImpact> {
+    const tenantId = this.requireTenantId(req);
+    const manager = req?.queryRunner?.manager ?? this.rateSets.manager;
+    await this.ensureTenantContext(manager, tenantId);
+    return this.manualRates.reportingChangeImpact(tenantId, to, manager);
   }
 
   @Get('rates')

@@ -141,7 +141,7 @@ Gut zu wissen:
   - Nur Benutzer der Budgetadministration auf Administratorebene können einen manuellen Kurs eingeben, ändern oder entfernen.
   - Jede Eingabe, Änderung und Entfernung wird im Audit-Protokoll erfasst.
   - Ein eingefrorenes Jahr behält die beim Einfrieren erfassten Kurse, manuelle Kurse und Schätzungen eingeschlossen (siehe [Eingefrorene Jahre](#eingefrorene-jahre)).
-  - Ein manueller Kurs gilt für die aktuelle Berichtswährung. Nach einem Wechsel der Berichtswährung gelten die für die alte Währung eingegebenen manuellen Kurse nicht mehr.
+  - Ein manueller Kurs gilt für die aktuelle Berichtswährung. Nach einem Wechsel der Berichtswährung gelten die für die alte Währung eingegebenen manuellen Kurse nicht mehr. Sie gelten wieder, wenn Sie zu dieser Berichtswährung zurückwechseln.
   - Die Berichtswährung hat immer den Kurs 1 und nimmt keinen manuellen Kurs an.
 
 ## CSV-Import und -Export

@@ -141,7 +141,7 @@ Good to know:
   - Only Budget administration users at admin level can enter, change or remove a manual rate.
   - Each entry, change and removal is recorded in the audit log.
   - A frozen year keeps the rates captured when it was frozen, manual and estimated ones included (see [Frozen years](#frozen-years)).
-  - A manual rate is entered against the current reporting currency. After a change of reporting currency, manual rates entered for the old one no longer apply.
+  - A manual rate is entered against the current reporting currency. After a change of reporting currency, manual rates entered for the old one no longer apply. They apply again if you change the reporting currency back to that one.
   - The reporting currency always has a rate of 1 and takes no manual rate.
 
 ## CSV import and export

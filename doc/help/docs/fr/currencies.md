@@ -141,7 +141,7 @@ Bon à savoir :
   - Seuls les utilisateurs de l'administration budgétaire au niveau administrateur peuvent saisir, modifier ou retirer un taux manuel.
   - Chaque saisie, modification et suppression est enregistrée dans le journal d'audit.
   - Une année gelée conserve les taux capturés lors du gel, taux manuels et estimations compris (voir [Années gelées](#annees-gelees)).
-  - Un taux manuel est saisi par rapport à la devise de reporting actuelle. Après un changement de devise de reporting, les taux manuels saisis pour l'ancienne ne s'appliquent plus.
+  - Un taux manuel est saisi par rapport à la devise de reporting actuelle. Après un changement de devise de reporting, les taux manuels saisis pour l'ancienne ne s'appliquent plus. Ils s'appliquent de nouveau si vous revenez à cette devise de reporting.
   - La devise de reporting a toujours un taux de 1 et ne prend pas de taux manuel.
 
 ## Import et export CSV
