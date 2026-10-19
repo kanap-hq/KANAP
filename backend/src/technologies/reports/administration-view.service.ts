@@ -938,7 +938,7 @@ export class AdministrationViewService {
     const ctx = await this.context(opts);
     const domains = await this.domains(opts, ctx.domains);
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, query.language);
-    const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Accounts', 'Machines', 'Domain controllers', 'Domain controller servers'];
+    const headers = ['Domain', 'DNS suffix', 'Forest', 'Trusts', 'Trusts declared by other domains', 'Number of accounts', 'Number of computers', 'Domain controllers', 'Domain controller servers'];
     const direction: Record<DomainTrustDirection, string> = { two_way: 'two-way', outgoing: 'outgoing', incoming: 'incoming' };
     const rows = domains.map((domain) => [
       domain.label,

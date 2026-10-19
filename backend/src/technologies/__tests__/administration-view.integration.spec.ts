@@ -857,7 +857,7 @@ async function testExport() {
     const domains = await service(s.settings).csv({ list: 'domains', language: 'en' }, { manager: runner.manager, tenantId: s.a });
     assert.equal(domains.filename, 'administration_view_domains.csv');
     const domainLines = domains.content.replace(/^\uFEFF/, '').trim().split(/\r?\n/);
-    assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Accounts,Machines,Domain controllers,Domain controller servers');
+    assert.equal(domainLines[0], 'Domain,DNS suffix,Forest,Trusts,Trusts declared by other domains,Number of accounts,Number of computers,Domain controllers,Domain controller servers');
     assert.equal(domainLines[1], 'Corp,corp.example.com,corp.example.com,Lab (two-way),,1200,300,2,"dc1, dc2"');
     assert.equal(domainLines[2], 'Lab,lab.example.com,,,"Corp (two-way), Partner (incoming)",,,0,');
   });
