@@ -15,7 +15,7 @@ import { useLocale } from '../i18n/useLocale';
 import { formatShortDateTime } from '../lib/dateFormat';
 import ForbiddenPage from './ForbiddenPage';
 import { statusColumnProps } from '../components/grid/statusColumn';
-import { countValueFormatter } from '../components/grid/countValueFormatter';
+import { metricValueFormatter } from '../components/grid/metricValueFormatter';
 
 type CompanyRow = {
   id: string;
@@ -240,7 +240,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'headcount_year',
-      valueFormatter: countValueFormatter,
+      valueFormatter: metricValueFormatter('count'),
       headerName: t('companies.columns.headcountYear', { year }),
       width: 150,
       filter: 'agNumberColumnFilter',
@@ -262,7 +262,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'it_users_year',
-      valueFormatter: countValueFormatter,
+      valueFormatter: metricValueFormatter('count'),
       headerName: t('companies.columns.itUsersYear', { year }),
       width: 150,
       filter: 'agNumberColumnFilter',
@@ -284,6 +284,7 @@ export default function CompaniesPage() {
     },
     {
       field: 'turnover_year',
+      valueFormatter: metricValueFormatter('decimal'),
       headerName: t('companies.columns.turnoverYear', { year }),
       width: 170,
       filter: 'agNumberColumnFilter',
