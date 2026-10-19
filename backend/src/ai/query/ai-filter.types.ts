@@ -143,6 +143,11 @@ export type AiAggregateResult = {
   status?: 'ok' | 'invalid_filter';
   amounts_currency?: string | null;
   amounts_currency_note?: string;
+  /**
+   * Budget lines, with a measure: the line currencies and years without an exchange rate whose
+   * amounts the values leave out, with the number of lines (`[]` when none).
+   */
+  amounts_fx_missing?: Array<{ currency: string; year: number; lines: number }>;
   group_by: string;
   metric?: string | null;
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';

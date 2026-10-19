@@ -344,7 +344,7 @@ export class AiToolRegistry {
         {
           name: 'aggregate_entities',
           category: 'authoritative',
-          description: 'Groups the records of one entity family by a field and returns exact server-side counts, or the sum, average, minimum or maximum of a numeric or date field for each group. `filters_ignored` lists the filters the server could not apply: the figures then cover more records than requested. A sum or average of amounts names its currency in `amounts_currency` and `amounts_currency_note`: budget lines are in the reporting currency; contracts keep each contract\'s own currency, so a total across currencies needs a group or filter by currency.',
+          description: 'Groups the records of one entity family by a field and returns exact server-side counts, or the sum, average, minimum or maximum of a numeric or date field for each group. `filters_ignored` lists the filters the server could not apply: the figures then cover more records than requested. A sum or average of amounts names its currency in `amounts_currency` and `amounts_currency_note`: budget lines are in the reporting currency; contracts keep each contract\'s own currency, so a total across currencies needs a group or filter by currency. On budget lines, `amounts_fx_missing` names the line currencies and years without an exchange rate whose amounts the values leave out: say so in the answer.',
           inputSchema: AggregateEntitiesInputSchema,
           inputSummary: fieldDescriptions(AggregateEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
