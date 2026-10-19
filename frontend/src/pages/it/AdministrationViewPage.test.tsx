@@ -19,6 +19,8 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => resource !== 'settings' && RANK[auth.level] >= RANK[level] }),
 }));
 const download = vi.hoisted(() => vi.fn());
+const navigate = vi.hoisted(() => vi.fn());
+vi.mock('react-router-dom', async (importOriginal) => ({ ...(await importOriginal<typeof import('react-router-dom')>()), useNavigate: () => navigate }));
 vi.mock('../../utils/downloadBlob', () => ({ downloadBlob: download, extractFilenameFromDisposition: () => null }));
 const KINDS = vi.hoisted(() => [{ code: 'vm', label: 'Virtual machine' }, { code: 'physical', label: 'Physical server' }]);
 vi.mock('../../hooks/useItOpsEnumOptions', () => {
@@ -167,6 +169,7 @@ describe('AdministrationViewPage', () => {
     getMock.mockReset();
     postMock.mockReset();
     download.mockReset();
+    navigate.mockReset();
     auth.level = 'member';
     getMock.mockImplementation(async (url: string) => {
       if (url === ENDPOINT) return { data: SUMMARY } as any;
@@ -295,6 +298,18 @@ describe('AdministrationViewPage', () => {
     expect(cell('control', ROW_BARE).textContent).toBe('Without a zone');
     fireEvent.mouseOver(within(cell('control', ROW)).getByText('Less sensitive host'));
     expect((await screen.findByRole('tooltip')).textContent).toBe('Runs AST-7 (Niveau 0)Member of cluster AST-5 (Niveau 0)');
+  });
+
+  it('opens the asset on a click in its row, and leaves a link in a cell to open its own page', async () => {
+    renderPage();
+    await screen.findByRole('group', { name: 'Administration zones' });
+    const click = (colId: string, target: Element) => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => colId }, event: { target } });
+    const app = within(cell('applications', ROW)).getByRole('link', { name: 'Portal' });
+    click('applications', app);
+    click('reference', within(cell('reference', ROW)).getByRole('link', { name: 'AST-6' }));
+    expect(navigate).not.toHaveBeenCalled();
+    click('applications', cell('applications', ROW));
+    expect(navigate).toHaveBeenCalledWith('/it/assets/asset-host');
   });
 
   it('assigns a zone to the ticked assets after a dry-run count, then reloads the band, the toggles and the grid', async () => {

@@ -954,12 +954,14 @@ export default function AdministrationViewPage() {
               onQueryStateChange={(state) => setGridFilters(state.filterModel ?? {})}
               onCellClicked={(event: any) => {
                 if (!event?.data?.id) return;
+                const target = event.event?.target as HTMLElement | undefined;
+                // A link in a cell (the reference, an application) opens its own page.
+                if (target?.closest?.('a')) return;
                 if (event.column?.getColId?.() !== SELECTION_COLUMN) {
                   navigate(`/it/assets/${event.data.id}`);
                   return;
                 }
                 // A click in the selection cell beside the box ticks it too; the box ticks itself.
-                const target = event.event?.target as HTMLElement | undefined;
                 if (!target?.closest?.('input')) toggleRow(event.data.id);
               }}
               onListRequestChange={(next) => {
