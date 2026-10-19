@@ -138,7 +138,7 @@ async function main() {
          ('JPY', 'Japanese Yen'),
          ('MXN', 'Mexican Peso'),
          ('NOK', 'Norwegian Krone'),
-         ('XTS', 'XTS')
+         ('XPF', 'CFP Franc')
        ON CONFLICT (code) DO NOTHING`,
     );
 
@@ -238,18 +238,18 @@ async function main() {
     );
     console.log('ok - the reporting currency is rejected');
 
-    const [{ xtsBefore }] = await runner.query(`SELECT count(*)::int AS "xtsBefore" FROM currencies WHERE TRIM(code) = 'XTS'`);
-    const created = await manual.setManualRate(tenantA, { currency: 'xts', year: 2050, rate: 1.5 }, userId, runner.manager);
+    const [{ xpfBefore }] = await runner.query(`SELECT count(*)::int AS "xpfBefore" FROM currencies WHERE TRIM(code) = 'XPF'`);
+    const created = await manual.setManualRate(tenantA, { currency: 'xpf', year: 2050, rate: 1.5 }, userId, runner.manager);
     const createdRow = await latestSet(runner, tenantA, 2050);
     assert.equal(createdRow.id, created.id);
     assert.equal(createdRow.base_currency, 'EUR');
-    assert.deepEqual(createdRow.rates, { EUR: 1, XTS: 1.5 });
-    assert.deepEqual(createdRow.rate_sources, { EUR: 'identity', XTS: 'manual' });
+    assert.deepEqual(createdRow.rates, { EUR: 1, XPF: 1.5 });
+    assert.deepEqual(createdRow.rate_sources, { EUR: 'identity', XPF: 'manual' });
     assert.equal(createdRow.source, 'manual');
     assert.equal(createdRow.rate_basis, 'manual');
-    const [{ xtsAfter }] = await runner.query(`SELECT count(*)::int AS "xtsAfter" FROM currencies WHERE TRIM(code) = 'XTS'`);
-    assert.equal(xtsAfter, 1);
-    assert.ok(xtsAfter >= xtsBefore);
+    const [{ xpfAfter }] = await runner.query(`SELECT count(*)::int AS "xpfAfter" FROM currencies WHERE TRIM(code) = 'XPF'`);
+    assert.equal(xpfAfter, 1);
+    assert.ok(xpfAfter >= xpfBefore);
     console.log('ok - a year with no set stores a manual set');
 
     const [sets2022Before] = await runner.query(
@@ -329,8 +329,8 @@ async function main() {
         { action: 'delete', record_id: usdRow.id },
       ],
     );
-    assert.deepEqual(audits[0].before_json, { fiscal_year: 2050, currency: 'XTS', rate: null, source: null });
-    assert.deepEqual(audits[0].after_json, { fiscal_year: 2050, currency: 'XTS', rate: 1.5, source: 'manual' });
+    assert.deepEqual(audits[0].before_json, { fiscal_year: 2050, currency: 'XPF', rate: null, source: null });
+    assert.deepEqual(audits[0].after_json, { fiscal_year: 2050, currency: 'XPF', rate: 1.5, source: 'manual' });
     assert.deepEqual(audits[1].before_json, { fiscal_year: 2022, currency: 'USD', rate: 0.92, source: 'world-bank-annual' });
     assert.deepEqual(audits[1].after_json, { fiscal_year: 2022, currency: 'USD', rate: 1.1, source: 'manual' });
     assert.deepEqual(audits[3].before_json, { fiscal_year: 2023, currency: 'GBP', rate: 1.234568, source: 'manual' });

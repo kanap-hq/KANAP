@@ -5,6 +5,7 @@ import { CurrencyRateSet } from './currency-rate-set.entity';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
 import { FxRateService } from './fx-rate.service';
+import { ISO_CURRENCIES } from './iso-currencies';
 import { lockRateSetWrite } from './rate-set-lock';
 
 export type ManualRateInput = { currency: string; year: number; rate: number };
@@ -16,7 +17,7 @@ const YEAR_MIN = 1990;
 const YEAR_MAX = 2100;
 const RATE_MAX = 1e9;
 
-export const MANUAL_RATE_CURRENCY_MESSAGE = 'Currency must be a 3-letter code.';
+export const MANUAL_RATE_CURRENCY_MESSAGE = 'Currency must be a 3-letter ISO code.';
 export const MANUAL_RATE_REPORTING_MESSAGE = 'A manual rate cannot be set for the reporting currency.';
 export const MANUAL_RATE_YEAR_MESSAGE = 'Year must be an integer between 1990 and 2100.';
 export const MANUAL_RATE_RATE_MESSAGE = 'Rate must be a finite number greater than 0 and at most 1000000000.';
@@ -108,6 +109,10 @@ function parseCurrency(input: unknown): string {
   if (typeof input !== 'string') codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
   const code = input.trim().toUpperCase();
   if (!/^[A-Z]{3}$/.test(code)) codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
+  // Same list the currency settings use. Checked before any lock or tenant write.
+  if (!Object.prototype.hasOwnProperty.call(ISO_CURRENCIES, code)) {
+    codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
+  }
   return code;
 }
 

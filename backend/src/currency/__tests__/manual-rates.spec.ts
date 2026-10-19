@@ -167,6 +167,8 @@ async function testValidationWritesNothing() {
     [{ currency: 'GBPP', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
     [{ currency: 'G1P', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
     [{ currency: 12, year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'ZZZ', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'XTS', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
     [{ currency: 'GBP', year: 1989, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
     [{ currency: 'GBP', year: 2101, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
     [{ currency: 'GBP', year: 2024.5, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
