@@ -8,6 +8,7 @@
 - **Entry defaults** – separate defaults for new OPEX and CAPEX items. Editors preload this value but users can pick any authorised currency.
 - **Allowed currencies** – optional whitelist restricting the selectors shown in OPEX/CAPEX editors and CSV imports. The reporting + default currencies are always allowed even if you leave the list empty.
 - **Annual FX rate sets** – one JSON snapshot per tenant, per fiscal year. Rates come from the World Bank series `PA.NUS.FCRF` (domestic currency per USD) and a live spot quote for the current year. Each currency in the snapshot records the source of its value in `rate_sources`. The chain is described under "How FX rates are stored".
+- **Manual rate** – one currency and one year, stored on that year's rate set with source `manual`. It outranks every automatic source while it is stored. See [Manual rates](#manual-rates).
 - **Freeze integration** – when you freeze the OPEX/CAPEX budget column for a year we capture the current rate set and pin it to the approved versions. Draft years continue to look up the latest live average until they are frozen.
 
 ## Currency Settings (UI)
@@ -47,14 +48,76 @@ The panel also contains two actions:
    - The current year uses the live spot quote, source `exchangerateapi-spot`. When the spot feed has no quote, the World Bank annual of the current year is used (`world-bank-annual`). When that is not published either, the latest published annual of the currency is used (`world-bank-forward`). A refresh that asked for past years reuses the series it already loaded. A refresh of the current year alone reads `currentYear - 10` through `currentYear - 1`.
    - A future year reuses the current-year value, or that latest published annual, with source `world-bank-forward`. A future year requested on its own reads the same window.
    - The reporting currency follows the same chain. An estimate for it still lets the year be stored.
-3. The cross rates are stored in `currency_rate_sets.rates` (units of the reporting currency for 1 unit of the currency). `rate_sources` maps each currency code to the source of its value: `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, or `identity` (the reporting currency, and USD when USD is the reporting currency). The set-level `source` remains the source computed for the year as a whole. Readers take the latest set of the year (`captured_at` descending). A set captured before `rate_sources` existed lends its set-level `source` to each of its values.
-4. A refresh merges with that latest set before inserting. For each currency the order is: fresh real value, then the stored real value, then a fresh estimate, then the stored estimate. Every source other than `estimate` is real. A currency this fetch does not rate, including one that is no longer in the fetch list, keeps its stored value and source. The "unchanged, skip insert" check runs on the merged rates. A published World Bank value replaces an estimate and a rate captured earlier for that year. Conversion multiplies amounts by the rate and rounds to 2 decimals.
+3. The cross rates are stored in `currency_rate_sets.rates` (units of the reporting currency for 1 unit of the currency). `rate_sources` maps each currency code to the source of its value: `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity` (the reporting currency, and USD when USD is the reporting currency), or `manual` (see [Manual rates](#manual-rates)). The set-level `source` remains the source computed for the year as a whole. Readers take the latest set of the year (`captured_at` descending). A set captured before `rate_sources` existed lends its set-level `source` to each of its values.
+4. A refresh merges with that latest set before inserting. For each currency the order is: a stored `manual` value, then a fresh real value, then the stored real value, then a fresh estimate, then the stored estimate. A fetch writes the automatic sources (`world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity`). Among those, every source other than `estimate` is real, including a value whose source was not recorded. A currency this fetch does not rate, including one that is no longer in the fetch list, keeps its stored value and source. The "unchanged, skip insert" check runs on the merged rates. A published World Bank value replaces an estimate and a rate captured earlier for that year. A stored `manual` value stays. Conversion multiplies amounts by the rate and rounds to 2 decimals.
 
 Snapshot rules:
 
 - Freeze OPEX or CAPEX `budget` column → freeze service grabs/creates a rate set for that year and references it from the affected spend or capex versions.
 - Unfreeze → clears the `fx_rate_set_id` so draft calculations fall back to the latest live average.
 - A currency no source and no previous set can rate is stored as `null` and logged. Conversions fall back to `1.0` in the app so the UI remains usable while you adjust allowed currencies or wait for data to publish.
+
+## Manual rates
+
+A manual rate is a value on the year's rate set, with `rate_sources[currency] = 'manual'`. Lists, reports, chargeback and contracts read the latest set of the year, so they use that value on the same path as a fetched rate. A freeze pins the set, and the manual value with it.
+
+The rate is units of the reporting currency of that set for 1 unit of the currency, rounded to 6 decimals (`Number(rate.toFixed(6))`, the same rounding as a fetched cross rate). The currency is three letters, stored uppercased, and distinct from the reporting currency. The year is an integer from 1990 to 2100. The rate is finite, greater than 0, and at most 1000000000 after rounding. A code absent from `currencies` is inserted there (`CurrencySettingsService.ensureCurrencyRecords`: the ISO name, or the code when the ISO list has none).
+
+Writing a rate inserts a new row in `currency_rate_sets`. The previous rows stay.
+
+- When the year already has a set whose base is the reporting currency, the new row copies its `rates`, `rate_sources`, `source` and `rate_basis`, then sets `rates[currency]` to the rate and `rate_sources[currency]` to `manual`.
+- When the year has no such set, the new row stores `{ [reporting]: 1, [currency]: rate }`, sources `{ [reporting]: 'identity', [currency]: 'manual' }`, `source: 'manual'` and `rate_basis: 'manual'`.
+
+`captured_at` is then set to `clock_timestamp()`. `now()` is the start of the transaction, so two inserts in one transaction would otherwise tie, and readers that order by `captured_at` descending would not see a stable latest set.
+
+Removing a rate inserts another new row: a copy of the latest set in which that currency's rate is `null` and its entry is dropped from `rate_sources`. The set-level `source` and `rate_basis` stay as they were. The removal then calls `FxIngestionService.queueManualRefresh(tenantId, [year], { label: 'manual-rate-removed' })`, so the automatic chain can fill the pair again. When that queue returns `skipped` (a refresh for the tenant is already running), the year goes to `FxRateService.reportMissingYears`, which waits for the running job and then refreshes the year. The response is `{ ok: true, refreshQueued }`, and `refreshQueued` is true when this call queued the job.
+
+Removing a currency whose latest value is missing, unusable, or recorded under another source answers 404: `No manual rate is stored for GBP in 2024.`
+
+### Precedence
+
+`ratePrecedence` ranks a stored `manual` value at 5. Below it: a fresh real value (4), a stored real value (3), a fresh estimate (2), a stored estimate (1). A fetch writes `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate` or `identity`. While the manual value is on the latest set, a refresh keeps that value and the `manual` source. After a removal, the next refresh applies the automatic chain.
+
+### Lock
+
+`saveRateSet` and both manual writes call `lockRateSetWrite` before they read the latest set. The statement is `SELECT pg_advisory_xact_lock(hashtext($1))` with key `fx-rate-set:<tenantId>:<year>`. The lock is held until the transaction commits. The second writer of the same tenant and year reads the set the first writer has committed.
+
+Both callers already run inside a transaction. A refresh with no request manager uses `withTenantExecution(..., { transaction: true })`. A refresh started from the API uses the request transaction. A manual write uses that same request transaction: `TenantInitGuard` opens it and `TenantInterceptor` commits it after the handler returns. The refresh queued by a removal opens its own transaction. It takes the same lock, waits until the removal commits, and then reads the set in which the currency is null. The request returns before that job finishes. Waiting for it while the request still holds the lock deadlocks.
+
+### Audit
+
+Each entry, change and removal is written to `audit_log` in the same transaction (`AuditService.log`, `table: 'currency_rate_sets'`, `recordId` the new set id, `userId` from `req.user.sub`).
+
+| Action | When | `before` | `after` |
+|--------|------|----------|---------|
+| `create` | the year had no set | `{ fiscal_year, currency, rate: null, source: null }` | `{ fiscal_year, currency, rate, source: 'manual' }` |
+| `update` | the year had a set | the previous usable rate and its source, or nulls when the previous value is missing or unusable | `{ fiscal_year, currency, rate, source: 'manual' }` |
+| `delete` | removal | `{ fiscal_year, currency, rate, source: 'manual' }` | `null` |
+
+On an update, the previous source is the per-currency `rate_sources` entry. A set captured before `rate_sources` existed lends its set-level `source`.
+
+### Missing pairs
+
+`GET /currency/rates/missing` lists the pairs in use that the latest set of the year, for the current reporting currency, does not rate with a finite value above 0. The reporting currency is rated at 1 and is left out. Pairs are deduped and sorted by year, then currency. The body is `{ items: [{ currency, year }, ...] }`.
+
+One query per source:
+
+- Budget lines, both natures: `UPPER(TRIM(spend_items.currency))` with `spend_versions.budget_year`. The tenant is named on both tables.
+- Companies: `UPPER(TRIM(companies.base_currency))` with each `company_metrics.fiscal_year` whose `turnover` is non-null.
+- Contracts: `UPPER(TRIM(contracts.currency))` with every year that has a budget version, plus the current calendar year.
+
+A rate of 0, a null, or a year with no set leaves the pair in the list. Storing a manual rate for the pair takes it out. After the list is built, the years of those pairs go to `FxRateService.reportMissingYears`, so opening the list also tries the sources.
+
+A manual rate belongs to the reporting currency of the set it was written on. After the reporting currency changes, new sets use the new base. The old manual value stays on the sets of the previous base, and the pair shows as missing until a rate is stored for the new base. That is intended.
+
+### API
+
+Readers are `budget_ops:reader` or `budget:reader` (`CURRENCY_READERS`). Writers are `budget_ops:admin`.
+
+- `GET /currency/rates` returns the latest set of each fiscal year (one row per year). Each object is `{ fiscalYear, baseCurrency, rates, rateSources, capturedAt, source }`. `rateSources` is `rate_sources`, or `{}` when the column is null. `baseCurrency` is the stored code.
+- `GET /currency/rates/missing` returns `{ items: Array<{ currency: string, year: number }> }`. Declared before the parameterised delete route.
+- `PUT /currency/rates/manual` with `{ currency: string, year: number, rate: number }` returns the new set as `{ fiscalYear, baseCurrency, rates, rateSources, capturedAt, source }`. `baseCurrency` is trimmed. Invalid input answers 400 with one of: `Currency must be a 3-letter code.`, `A manual rate cannot be set for the reporting currency.`, `Year must be an integer between 1990 and 2100.`, `Rate must be a finite number greater than 0 and at most 1000000000.`
+- `DELETE /currency/rates/manual/:year/:currency` returns `{ ok: true, refreshQueued: boolean }`.
 
 ## Editors and Validation
 
@@ -74,6 +137,9 @@ Snapshot rules:
 |------|------------|
 | Change reporting/default currencies | Budget management → Administration → Currencies → Save |
 | Force refresh FX rates | Budget Management → Currency Settings → Force FX rates sync <br> *(backend: `POST /currency/rates/refresh` with optional `{ "years": [2026, 2027] }`)* |
+| Set a manual rate | `PUT /currency/rates/manual` with `{ "currency": "GBP", "year": 2024, "rate": 1.17 }` (`budget_ops:admin`) |
+| Remove a manual rate | `DELETE /currency/rates/manual/2024/GBP` |
+| List pairs with no rate | `GET /currency/rates/missing` |
 | Verify rate sets | `SET LOCAL app.current_tenant = '<tenant_id>'; SELECT fiscal_year, base_currency, rates, rate_sources FROM currency_rate_sets ORDER BY captured_at DESC;` *(Basis of the table shown on the Currency Settings page)* |
 | Freeze workflow | 1. Force sync (optional). <br> 2. Freeze year via Budget Management → Freeze Data or API. <br> 3. Confirm `spend_versions.fx_rate_set_id` (or `capex_versions`) is populated for the frozen year. |
 | Monitor ingestion | Logs tagged with `FxIngestionService` and `FxRateService`. Look for WARN messages indicating missing currencies. |
@@ -88,7 +154,7 @@ Snapshot rules:
 ## Frequently Asked Questions
 
 **What happens if the World Bank feed does not publish a code I use?**  
-A past year takes the nearest published year of that currency and records the source `estimate`. A rate already stored for that year (for example the spot captured while the year was current) is kept until the World Bank publishes the year, which then replaces it. A currency with no published year and no stored rate is captured as `null` and logged. Conversions default to `1.0` until a rate is stored. Custom/manual overrides are not supported yet.
+A past year takes the nearest published year of that currency and records the source `estimate`. A rate already stored for that year (for example the spot captured while the year was current) is kept until the World Bank publishes the year, which then replaces it. A currency with no published year and no stored rate is captured as `null` and logged. Conversions default to `1.0` until a rate is stored. A budget administrator can store a manual rate for that currency and year (see [Manual rates](#manual-rates)). While that value is on the latest set, it is the rate the year uses, ahead of every automatic source.
 
 **Do I have to re-freeze a year after changing reporting currency?**  
 Yes. Existing frozen versions keep their original snapshot. If you change the reporting currency, force an FX rates sync, unfreeze, and then re-freeze to capture the updated rate set.

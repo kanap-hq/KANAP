@@ -4,7 +4,7 @@ import { FxIngestionService } from '../fx-ingestion.service';
 /**
  * A refresh keeps a rate it already knows when this fetch does not return one,
  * and the source that produced it. A fresh real value wins over a stored one;
- * an estimate does not.
+ * an estimate does not. A stored manual value wins over a fresh real one.
  */
 
 function service(): FxIngestionService {
@@ -29,8 +29,13 @@ function snapshot(overrides: Record<string, unknown> = {}) {
 
 function harness(existing: Record<string, unknown> | null) {
   const saved: Array<Record<string, any>> = [];
+  let reads = 0;
+  const queries: Array<{ sql: string; params: unknown[] }> = [];
   const repo = {
-    findOne: async () => existing,
+    findOne: async () => {
+      reads += 1;
+      return existing;
+    },
     create: (row: Record<string, unknown>) => ({ ...row }),
     save: async (row: Record<string, any>) => {
       const stored = { id: `set-${saved.length + 1}`, captured_at: new Date('2026-10-19T00:00:00Z'), ...row };
@@ -38,8 +43,15 @@ function harness(existing: Record<string, unknown> | null) {
       return stored;
     },
   };
-  const manager = { getRepository: () => repo };
-  return { saved, manager };
+  const manager = {
+    getRepository: () => repo,
+    query: async (sql: string, params?: unknown[]) => {
+      queries.push({ sql, params: params ?? [] });
+      if (sql.includes('pg_advisory_xact_lock')) assert.equal(reads, 0, 'the tenant-year lock is taken before the latest set is read');
+      return [];
+    },
+  };
+  return { saved, manager, queries };
 }
 
 const context = {
@@ -121,6 +133,34 @@ async function testFreshRealReplacesStoredEstimate() {
   assert.equal(saved.length, 1);
   assert.equal(set.rates.GBP, Number((0.9 / 0.75).toFixed(6)));
   assert.equal(set.rate_sources.GBP, 'world-bank-annual', 'a published value replaces the estimate');
+}
+
+async function testManualRateBeatsAFreshRealValue() {
+  const existing = {
+    id: 'old',
+    tenant_id: 'tenant-1',
+    fiscal_year: 2024,
+    base_currency: 'EUR',
+    rates: { EUR: 1, GBP: 1.2, USD: 0.92 },
+    rate_sources: { EUR: 'identity', GBP: 'manual', USD: 'world-bank-annual' },
+    source: 'world-bank-annual',
+  };
+  const { saved, manager, queries } = harness(existing);
+  const fresh = snapshot({
+    quotes: { EUR: 0.9, GBP: 0.8, USD: 1 },
+    quoteSources: { EUR: 'world-bank-annual', GBP: 'world-bank-annual', USD: 'identity' },
+    missingCurrencies: [],
+  });
+  const set = await (service() as any).saveRateSet(context, fresh, manager);
+  assert.equal(saved.length, 1);
+  assert.equal(set.rates.GBP, 1.2, 'a stored manual rate beats a fresh real value');
+  assert.equal(set.rate_sources.GBP, 'manual');
+  const lock = queries.find((query) => query.sql.includes('pg_advisory_xact_lock'));
+  assert.ok(lock, 'the refresh locks the tenant year');
+  assert.deepEqual(lock?.params, ['fx-rate-set:tenant-1:2024']);
+  const usd = Number((0.9 / 1).toFixed(6));
+  assert.equal(set.rates.USD, usd, 'another currency still takes the fresh real value');
+  assert.equal(set.rate_sources.USD, 'world-bank-annual');
 }
 
 async function testUnchangedMergedSetIsNotInserted() {
@@ -211,7 +251,7 @@ async function testPastYearEstimateChain() {
       return stored;
     },
   };
-  const manager = { getRepository: () => repo };
+  const manager = { getRepository: () => repo, query: async () => [] };
   const snap = async () => ((await (fx as any).buildYearlySnapshots(ctx, [2020])) as Array<Record<string, any>>)[0];
 
   const first = await snap();
@@ -326,11 +366,14 @@ async function testCurrentYearAloneFallsBackToLatestPublished() {
     rate_sources: { EUR: 'identity', GBP: 'exchangerateapi-spot', USD: 'exchangerateapi-spot' },
     source: 'exchangerateapi-spot',
   }];
-  const manager = { getRepository: () => ({
-    findOne: async () => sets[sets.length - 1],
-    create: (row: Record<string, unknown>) => ({ ...row }),
-    save: async (row: Record<string, any>) => { sets.push(row); return row; },
-  }) };
+  const manager = {
+    query: async () => [],
+    getRepository: () => ({
+      findOne: async () => sets[sets.length - 1],
+      create: (row: Record<string, unknown>) => ({ ...row }),
+      save: async (row: Record<string, any>) => { sets.push(row); return row; },
+    }),
+  };
   const kept = await (fx as any).saveRateSet({ ...ctx, currencies: ['EUR', 'GBP', 'USD'] }, current, manager);
   assert.equal(kept.rates.GBP, 1.2, 'the captured spot is not replaced by the estimate');
   assert.equal(kept.rate_sources.GBP, 'exchangerateapi-spot');
@@ -427,16 +470,39 @@ async function testStaleDatasetReloadsOnceWhenAPastYearIsMissing() {
   assert.equal(kept.quoteSources.GBP, 'estimate');
 }
 
+/** A currency with no World Bank series still takes the live rate for the current and later years. */
+async function testNoWorldBankSeriesUsesTheLiveRate() {
+  const currentYear = new Date().getFullYear();
+  const client = annualClient({ EUR: { [currentYear - 1]: 0.9 } }, { EUR: 0.9, GGP: 0.75 });
+  const fx = new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {} as any,
+    { getLatestRateSet: async () => null } as any,
+    { ...client, resolveCode: (c: string) => (c.toUpperCase() === 'GGP' ? null : client.resolveCode(c)) } as any,
+  );
+  const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GGP'] };
+  const [past, current, next] = await (fx as any).buildYearlySnapshots(ctx, [currentYear - 1, currentYear, currentYear + 1]);
+  assert.equal(past.quotes.GGP, null, 'no source for a past year');
+  assert.ok(past.missingCurrencies.includes('GGP'));
+  assert.equal(current.quotes.GGP, 0.75);
+  assert.equal(current.quoteSources.GGP, 'exchangerateapi-spot');
+  assert.equal(next.quotes.GGP, 0.75);
+  assert.equal(next.quoteSources.GGP, 'world-bank-forward');
+}
+
 (async () => {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
   await testFreshRealReplacesStoredEstimate();
+  await testManualRateBeatsAFreshRealValue();
   await testUnchangedMergedSetIsNotInserted();
   await testOldSetWithoutProvenanceLendsItsSource();
   await testPastYearEstimateChain();
   await testEstimatedBaseStillStoresTheYear();
   await testCurrentYearAloneFallsBackToLatestPublished();
   await testStaleDatasetReloadsOnceWhenAPastYearIsMissing();
+  await testNoWorldBankSeriesUsesTheLiveRate();
   console.log('FX refresh keeps a known rate.');
 })().catch((err) => {
   console.error(err);

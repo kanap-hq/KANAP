@@ -8,6 +8,7 @@ import { Tenant } from '../tenants/tenant.entity';
 import { WorldBankClient } from './world-bank-client';
 import { withTenantExecution } from '../common/tenant-runner';
 import { trackBackgroundWork } from '../common/background-work';
+import { lockRateSetWrite } from './rate-set-lock';
 
 type RateSnapshot = Record<string, number | null>;
 
@@ -23,11 +24,14 @@ function isUsableRate(value: unknown): value is number {
 }
 
 /**
- * Precedence of one currency's rate. A fresh real value wins, then the value
- * already stored, then a fresh estimate, then a stored estimate. Every source
- * other than `estimate` is real, including a value whose source was not recorded.
+ * Precedence of one currency's rate. A stored manual value outranks every
+ * automatic source (a fetch never produces `manual`). Then a fresh real value,
+ * the value already stored, a fresh estimate, and a stored estimate. Every
+ * source other than `estimate` is real, including a value whose source was not
+ * recorded.
  */
 function ratePrecedence(source: string | null, fresh: boolean): number {
+  if (!fresh && source === 'manual') return 5;
   if (source === 'estimate') return fresh ? 2 : 1;
   return fresh ? 4 : 3;
 }
@@ -557,7 +561,18 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
 
       const code = this.worldBank.resolveCode(upper);
       if (!code) {
+        // No World Bank series: past years have no source, but the live feed may still
+        // quote the currency for the current year, which also stands in for later years.
+        const spot = years.some((year) => year >= currentYear) ? await this.worldBank.fetchSpotRate(upper) : null;
         years.forEach((year) => {
+          if (spot != null && year === currentYear) {
+            put(year, spot, 'exchangerateapi-spot');
+            return;
+          }
+          if (spot != null && year > currentYear) {
+            put(year, spot, 'world-bank-forward');
+            return;
+          }
           recordMissing(year);
           put(year, null, null);
         });
@@ -768,7 +783,8 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
   /**
    * Merges this fetch with the latest set of the same tenant, year and base.
    * A currency the sources miss this time (or that is no longer in the fetch
-   * list) keeps its stored value and the source that produced it.
+   * list) keeps its stored value and the source that produced it. A stored
+   * manual value is kept even when this fetch has a real quote for it.
    */
   private mergeWithLatest(
     freshRates: RateSnapshot,
@@ -842,6 +858,7 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     snapshot: YearlySnapshot,
     manager: EntityManager,
   ): Promise<CurrencyRateSet | null> {
+    await lockRateSetWrite(manager, context.tenantId, snapshot.year);
     const repo = manager.getRepository(CurrencyRateSet);
     const existing = await repo.findOne({
       where: {
