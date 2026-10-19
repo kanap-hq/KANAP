@@ -90,6 +90,9 @@ const stripLocalIds = <T extends { localId?: string }>(list: T[]): Omit<T, 'loca
 const sortEnum = (list: ItOpsEnumOption[]) =>
   [...list].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { sensitivity: 'base' }));
 
+/** Administration zones stay in the order the user chose: the first zone is the most sensitive. Other lists are alphabetical. */
+const orderOf = (id: EnumListId, list: ItOpsEnumOption[]) => (id === 'adminZones' ? [...list] : sortEnum(list));
+
 const sortConnectionTypes = (list: ConnectionTypeOption[]) =>
   [...list].sort((a, b) => {
     const catA = (a.category || '').toLowerCase();
@@ -836,7 +839,7 @@ function hydrateFromSettings(settings: ItOpsSettings) {
   const enums = { ...emptyEnums };
   enumListIds.forEach((id) => {
     const list = ((settings as any)[id] as ItOpsEnumOption[] | undefined) || [];
-    enums[id] = withLocalIds(sortEnum(list), id);
+    enums[id] = withLocalIds(orderOf(id, list), id);
   });
   return {
     enums,
@@ -876,7 +879,7 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
     }
     case 'resetEnum': {
       if (!state.baseline) return state;
-      const baselineList = withLocalIds(sortEnum((state.baseline as any)[action.id] || []), action.id);
+      const baselineList = withLocalIds(orderOf(action.id, (state.baseline as any)[action.id] || []), action.id);
       return { ...state, enums: { ...state.enums, [action.id]: baselineList }, dirty: { ...state.dirty, [action.id]: false } };
     }
     case 'resetConnectionTypes': {
@@ -975,10 +978,10 @@ export default function ItOperationsSettingsPage() {
 
   const handleSaveEnum = (id: EnumListId) => {
     const current = state.enums[id] || [];
-    const sorted = withLocalIds(sortEnum(current), id);
-    dispatch({ type: 'setEnum', id, items: sorted });
+    const ordered = withLocalIds(orderOf(id, current), id);
+    dispatch({ type: 'setEnum', id, items: ordered });
     dispatch({ type: 'setPending', id });
-    mutation.mutate({ id, rows: stripLocalIds(sorted) });
+    mutation.mutate({ id, rows: stripLocalIds(ordered) });
   };
 
   const handleSaveConnections = () => {
