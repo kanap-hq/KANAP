@@ -3,9 +3,16 @@ import { CurrencyController } from '../currency.controller';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { FxRateService } from '../fx-rate.service';
 import {
+  MANUAL_RATE_CURRENCY_CODE,
   MANUAL_RATE_CURRENCY_MESSAGE,
+  MANUAL_RATE_NOT_FOUND_CODE,
+  MANUAL_RATE_RATE_CODE,
   MANUAL_RATE_RATE_MESSAGE,
+  MANUAL_RATE_REPORTING_CODE,
   MANUAL_RATE_REPORTING_MESSAGE,
+  MANUAL_RATE_TOO_SMALL_CODE,
+  MANUAL_RATE_TOO_SMALL_MESSAGE,
+  MANUAL_RATE_YEAR_CODE,
   MANUAL_RATE_YEAR_MESSAGE,
   ManualRatesService,
 } from '../manual-rates.service';
@@ -142,45 +149,51 @@ function harness(reporting = 'EUR') {
   };
 }
 
-async function rejects(run: () => Promise<unknown>, message: string, status: number) {
+async function rejects(run: () => Promise<unknown>, message: string, status: number, code: string) {
   await assert.rejects(run, (error: any) => {
     assert.equal(error.message, message);
     assert.equal(typeof error.getStatus === 'function' ? error.getStatus() : error.status, status);
+    const response = typeof error.getResponse === 'function' ? error.getResponse() : {};
+    assert.equal(response.code, code);
+    assert.equal(response.message, message);
     return true;
   });
 }
 
 async function testValidationWritesNothing() {
   const { service, manager, rows, locks } = harness();
-  const cases: Array<[Record<string, unknown>, string]> = [
-    [{ currency: 'GB', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'GBPP', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'G1P', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 12, year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'GBP', year: 1989, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2101, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2024.5, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: '2024', rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 0 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: -1 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 1e9 + 1 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: Number.NaN }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: Number.POSITIVE_INFINITY }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: '1.2' }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 0.0000004 }, MANUAL_RATE_RATE_MESSAGE],
+  const cases: Array<[Record<string, unknown>, string, string]> = [
+    [{ currency: 'GB', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'GBPP', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'G1P', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 12, year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'GBP', year: 1989, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2101, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2024.5, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: '2024', rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: -1 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 1e9 + 1 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: Number.NaN }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: Number.POSITIVE_INFINITY }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: '1.2' }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0.0000004 }, MANUAL_RATE_TOO_SMALL_MESSAGE, MANUAL_RATE_TOO_SMALL_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0.0000001 }, MANUAL_RATE_TOO_SMALL_MESSAGE, MANUAL_RATE_TOO_SMALL_CODE],
   ];
-  for (const [input, message] of cases) {
-    await rejects(() => service.setManualRate('tenant-1', input as any, 'user-1', manager as any), message, 400);
+  for (const [input, message, code] of cases) {
+    await rejects(() => service.setManualRate('tenant-1', input as any, 'user-1', manager as any), message, 400, code);
   }
   await rejects(
     () => service.setManualRate('tenant-1', { currency: 'eur', year: 2024, rate: 1 }, 'user-1', manager as any),
     MANUAL_RATE_REPORTING_MESSAGE,
     400,
+    MANUAL_RATE_REPORTING_CODE,
   );
   await rejects(
     () => service.removeManualRate('tenant-1', { currency: 'GB', year: 2024 }, 'user-1', manager as any),
     MANUAL_RATE_CURRENCY_MESSAGE,
     400,
+    MANUAL_RATE_CURRENCY_CODE,
   );
   assert.equal(rows.length, 0, 'invalid input inserts no set');
   assert.equal(locks.length, 0, 'invalid input takes no lock');
@@ -247,11 +260,13 @@ async function testRemoveRequiresAManualValue() {
     () => service.removeManualRate('tenant-1', { currency: 'GBP', year: 2023 }, 'user-1', manager as any),
     'No manual rate is stored for GBP in 2023.',
     404,
+    MANUAL_RATE_NOT_FOUND_CODE,
   );
   await rejects(
     () => service.removeManualRate('tenant-1', { currency: 'CHF', year: 2050 }, 'user-1', manager as any),
     'No manual rate is stored for CHF in 2050.',
     404,
+    MANUAL_RATE_NOT_FOUND_CODE,
   );
   assert.equal(rows.length, 1, 'a missing manual value inserts nothing');
   assert.equal(queued.length, 0);
@@ -418,11 +433,13 @@ async function testApiContract() {
     () => controller.setManualRate({ currency: 'EU', year: 2024, rate: 1 }, req),
     MANUAL_RATE_CURRENCY_MESSAGE,
     400,
+    MANUAL_RATE_CURRENCY_CODE,
   );
   await rejects(
     () => controller.removeManualRate('nope', 'GBP', req),
     MANUAL_RATE_YEAR_MESSAGE,
     400,
+    MANUAL_RATE_YEAR_CODE,
   );
   console.log('ok - the currency API returns the manual-rate contract');
 }

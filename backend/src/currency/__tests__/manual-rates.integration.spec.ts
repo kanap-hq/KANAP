@@ -8,7 +8,12 @@ import { Tenant } from '../../tenants/tenant.entity';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { CurrencySettingsService } from '../currency-settings.service';
 import { FxRateService } from '../fx-rate.service';
-import { MANUAL_RATE_REPORTING_MESSAGE, ManualRatesService } from '../manual-rates.service';
+import {
+  MANUAL_RATE_NOT_FOUND_CODE,
+  MANUAL_RATE_REPORTING_CODE,
+  MANUAL_RATE_REPORTING_MESSAGE,
+  ManualRatesService,
+} from '../manual-rates.service';
 
 // @database-spec: seeds its own tenants, sets app.current_tenant, and rolls the transaction back.
 // It runs on a CI database lane (or the throwaway appdb_fx), never on the dev appdb.
@@ -81,11 +86,14 @@ async function insertMetric(runner: QueryRunner, tenantId: string, companyId: st
   );
 }
 
-function httpError(error: unknown): { status?: number; message: string } {
-  const candidate = error as { getStatus?: () => number; message?: string };
+function httpError(error: unknown): { status?: number; message: string; code?: string } {
+  const candidate = error as { getStatus?: () => number; getResponse?: () => unknown; message?: string };
+  const response = typeof candidate.getResponse === 'function' ? candidate.getResponse() : undefined;
+  const body = response && typeof response === 'object' ? (response as { code?: string }) : {};
   return {
     status: typeof candidate.getStatus === 'function' ? candidate.getStatus() : undefined,
     message: candidate.message ?? '',
+    code: body.code,
   };
 }
 
@@ -224,6 +232,7 @@ async function main() {
         const http = httpError(error);
         assert.equal(http.status, 400);
         assert.equal(http.message, MANUAL_RATE_REPORTING_MESSAGE);
+        assert.equal(http.code, MANUAL_RATE_REPORTING_CODE);
         return true;
       },
     );
@@ -288,6 +297,7 @@ async function main() {
         const http = httpError(error);
         assert.equal(http.status, 404);
         assert.equal(http.message, 'No manual rate is stored for CHF in 2021.');
+        assert.equal(http.code, MANUAL_RATE_NOT_FOUND_CODE);
         return true;
       },
     );

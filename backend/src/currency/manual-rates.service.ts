@@ -20,6 +20,21 @@ export const MANUAL_RATE_CURRENCY_MESSAGE = 'Currency must be a 3-letter code.';
 export const MANUAL_RATE_REPORTING_MESSAGE = 'A manual rate cannot be set for the reporting currency.';
 export const MANUAL_RATE_YEAR_MESSAGE = 'Year must be an integer between 1990 and 2100.';
 export const MANUAL_RATE_RATE_MESSAGE = 'Rate must be a finite number greater than 0 and at most 1000000000.';
+export const MANUAL_RATE_TOO_SMALL_MESSAGE = 'Rate rounds to 0 at 6 decimal places and cannot be stored.';
+
+export const MANUAL_RATE_CURRENCY_CODE = 'currency_invalid';
+export const MANUAL_RATE_REPORTING_CODE = 'currency_reporting';
+export const MANUAL_RATE_YEAR_CODE = 'year_out_of_range';
+export const MANUAL_RATE_RATE_CODE = 'rate_out_of_range';
+export const MANUAL_RATE_TOO_SMALL_CODE = 'rate_too_small';
+export const MANUAL_RATE_NOT_FOUND_CODE = 'manual_rate_not_found';
+
+/** A 400 or 404 whose `code` the client maps. The English `message` stays for API clients. */
+function codedError(status: 400 | 404, code: string, message: string): never {
+  const body = { code, message };
+  if (status === 404) throw new NotFoundException(body);
+  throw new BadRequestException(body);
+}
 
 /** A usable cross rate: finite and strictly positive. Same rule as the ingestion. */
 function isUsableRate(value: unknown): value is number {
@@ -90,25 +105,27 @@ function yearHasUsableRate(rates: Record<string, unknown> | undefined, currency:
 }
 
 function parseCurrency(input: unknown): string {
-  if (typeof input !== 'string') throw new BadRequestException(MANUAL_RATE_CURRENCY_MESSAGE);
+  if (typeof input !== 'string') codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
   const code = input.trim().toUpperCase();
-  if (!/^[A-Z]{3}$/.test(code)) throw new BadRequestException(MANUAL_RATE_CURRENCY_MESSAGE);
+  if (!/^[A-Z]{3}$/.test(code)) codedError(400, MANUAL_RATE_CURRENCY_CODE, MANUAL_RATE_CURRENCY_MESSAGE);
   return code;
 }
 
 function parseYear(input: unknown): number {
   if (typeof input !== 'number' || !Number.isInteger(input) || input < YEAR_MIN || input > YEAR_MAX) {
-    throw new BadRequestException(MANUAL_RATE_YEAR_MESSAGE);
+    codedError(400, MANUAL_RATE_YEAR_CODE, MANUAL_RATE_YEAR_MESSAGE);
   }
   return input;
 }
 
 function parseRate(input: unknown): number {
   if (typeof input !== 'number' || !Number.isFinite(input) || input <= 0 || input > RATE_MAX) {
-    throw new BadRequestException(MANUAL_RATE_RATE_MESSAGE);
+    codedError(400, MANUAL_RATE_RATE_CODE, MANUAL_RATE_RATE_MESSAGE);
   }
   const rounded = roundRate(input);
-  if (!(rounded > 0) || rounded > RATE_MAX) throw new BadRequestException(MANUAL_RATE_RATE_MESSAGE);
+  if (rounded > RATE_MAX) codedError(400, MANUAL_RATE_RATE_CODE, MANUAL_RATE_RATE_MESSAGE);
+  // Finite and strictly positive, but gone once stored at 6 decimals (seen: 0.0000001).
+  if (!(rounded > 0)) codedError(400, MANUAL_RATE_TOO_SMALL_CODE, MANUAL_RATE_TOO_SMALL_MESSAGE);
   return rounded;
 }
 
@@ -138,7 +155,7 @@ export class ManualRatesService {
     const rate = parseRate(input?.rate);
     await this.setTenant(manager, tenantId);
     const reporting = (await this.settings.getSettings(tenantId, { manager })).reportingCurrency.toUpperCase();
-    if (currency === reporting) throw new BadRequestException(MANUAL_RATE_REPORTING_MESSAGE);
+    if (currency === reporting) codedError(400, MANUAL_RATE_REPORTING_CODE, MANUAL_RATE_REPORTING_MESSAGE);
     await this.settings.ensureCurrencyRecords([reporting, currency], { manager });
 
     await lockRateSetWrite(manager, tenantId, year);
@@ -198,7 +215,7 @@ export class ManualRatesService {
     const existing = await this.fxRates.getLatestRateSet(tenantId, year, reporting, { manager });
     const manualRate = manualStoredRate(existing, currency);
     if (manualRate == null || !existing) {
-      throw new NotFoundException(`No manual rate is stored for ${currency} in ${year}.`);
+      codedError(404, MANUAL_RATE_NOT_FOUND_CODE, `No manual rate is stored for ${currency} in ${year}.`);
     }
     const rates = withoutCurrency(existing.rates, currency);
     rates[currency] = null;
