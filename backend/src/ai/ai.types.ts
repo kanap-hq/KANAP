@@ -62,20 +62,12 @@ export const AI_QUERY_ENTITY_TYPES = [
   'spend_items',
   'suppliers',
   'tasks',
+  'technologies',
   'users',
 ] as const;
 
-/**
- * Types the search index covers but the query/aggregate registries do not: they
- * surface in search_all and the entity picker, and are not listable or
- * aggregatable from the chat.
- */
-export const AI_SEARCH_ONLY_ENTITY_TYPES = ['technologies'] as const;
-
-export const AI_SEARCH_ENTITY_TYPES = [
-  ...AI_QUERY_ENTITY_TYPES,
-  ...AI_SEARCH_ONLY_ENTITY_TYPES,
-] as const;
+/** Every family the search index covers is also listable and aggregatable. */
+export const AI_SEARCH_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES;
 
 export const AI_CONTEXT_ENTITY_TYPES = [
   'applications',
@@ -83,6 +75,7 @@ export const AI_CONTEXT_ENTITY_TYPES = [
   'projects',
   'requests',
   'tasks',
+  'technologies',
 ] as const;
 
 export const AiSearchEntityTypeSchema = z.enum(AI_SEARCH_ENTITY_TYPES);
@@ -141,6 +134,9 @@ export type AiEntityRelationshipGroupDto = {
   relation: string;
   label: string;
   items: AiEntitySummaryDto[];
+  /** Bounded groups (`AI_CONTEXT_GROUP_ITEM_LIMIT`): every linked record, and whether `items` holds fewer. */
+  total?: number;
+  truncated?: boolean;
 };
 
 export type AiKnowledgeContextSourceDto = {

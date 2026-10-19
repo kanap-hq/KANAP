@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
 import { AnalyticsCategoriesService } from '../../analytics/analytics-categories.service';
@@ -27,6 +27,7 @@ import { AllocationCalculatorService } from '../../spend/allocation-calculator.s
 import { describeAllocationWarning } from '../../spend/allocation-distribution';
 import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
+import { TechnologiesService } from '../../technologies/technologies.service';
 import { UsersService } from '../../users/users.service';
 import {
   AiEntityMetadata,
@@ -60,6 +61,14 @@ import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
 import { entityNotFound, resolveAiEntityReference } from '../ai-entity-reference.util';
+import { AiPolicyService } from '../ai-policy.service';
+import {
+  AiTechnologyRow,
+  listAiTechnologies,
+  resolveAiApplicationsReach,
+  technologyContractCount,
+  technologyVersionFigures,
+} from './ai-technologies.query';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -78,6 +87,7 @@ function buildRef(
   if (entityType === 'tasks') return `T-${itemNumber}`;
   if (entityType === 'documents') return `DOC-${itemNumber}`;
   if (entityType === 'incidents') return `INC-${itemNumber}`;
+  if (entityType === 'technologies') return `TEC-${itemNumber}`;
   if (entityType === 'spend_items' || entityType === 'capex_items') return `BL-${itemNumber}`;
   return null;
 }
@@ -335,6 +345,8 @@ export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number
   spend_items: 15,
   capex_items: 15,
   applications: 30,
+  // A technology lists up to 10 versions in use (`versions_in_use`): about 1,500 characters a row.
+  technologies: 30,
 };
 
 export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
@@ -400,7 +412,15 @@ export class AiQueryExecutor {
     private readonly incidentRecords: IncidentRecordService,
     /** Each version's allocation as the Allocations tab computes it (`loadFinancialVersions`). */
     private readonly allocationCalculator: AllocationCalculatorService,
-  ) {}
+    /** Whether the caller reads applications, for the application figures of the technologies. */
+    @Optional() private readonly policy?: AiPolicyService,
+    @Optional() private readonly technologies?: TechnologiesService,
+  ) {
+    // Absent, the technology figures close (no application count, no detail): say so once, at start.
+    const logger = new Logger(AiQueryExecutor.name);
+    if (!policy) logger.warn('AiPolicyService is not injected: technologies show no application or contract figure.');
+    if (!technologies) logger.warn('TechnologiesService is not injected: the technology detail is unavailable.');
+  }
 
   private async normalizePersonFilters(
     context: AiExecutionContextWithManager,
@@ -984,6 +1004,33 @@ export class AiQueryExecutor {
         assignments_count: numericScalar(row.assignments_count),
         go_live_date: scalar(row.go_live_date),
         end_of_life_date: scalar(row.end_of_life_date),
+      },
+    });
+  }
+
+  /** A technology as listed: business references and names only. */
+  private mapTechnology(row: AiTechnologyRow): AiEntitySummaryDto {
+    return toEntitySummary('technologies', {
+      id: row.id,
+      reference: row.reference,
+      label: row.name,
+      status: row.lifecycle ?? null,
+      summary: row.description ?? null,
+      created_at: row.created_at ?? null,
+      updated_at: row.updated_at ?? null,
+      metadata: {
+        family: scalar(row.family),
+        publisher: scalar(row.editor),
+        hosting_type: scalar(row.hosting_type),
+        lifecycle: scalar(row.lifecycle),
+        admin_zone: scalar(row.admin_zone),
+        server_count: numericScalar(row.server_count),
+        application_count: numericScalar(row.application_count),
+        support_status: scalar(row.support_status),
+        end_of_standard_support: scalar(row.end_of_standard_support),
+        end_of_support: scalar(row.end_of_support),
+        versions_in_use: scalar(row.versions_in_use),
+        open_vulnerabilities: numericScalar(row.open_vulnerabilities),
       },
     });
   }
@@ -1639,6 +1686,25 @@ export class AiQueryExecutor {
         returned,
         truncated,
         complete: isCompleteQueryResult(resultPage, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
+    if (input.entity_type === 'technologies') {
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologies(context.manager, context.tenantId, scoped.query, applications);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => this.mapTechnology(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
         filters_applied: filtersApplied,
         filters_ignored: filtersIgnored,
         scope: null,
@@ -2348,6 +2414,10 @@ export class AiQueryExecutor {
       return this.toDetailResult(this.mapLocation(row), row);
     }
 
+    if (entityType === 'technologies') {
+      return this.technologyDetail(context, entityId);
+    }
+
     if (entityType === 'interfaces') {
       const row = await this.interfaces.get(
         entityId,
@@ -2402,6 +2472,70 @@ export class AiQueryExecutor {
     }
 
     throw new BadRequestException('Unsupported entity type.');
+  }
+
+  /**
+   * A technology with its figures (`listAiTechnologies`), versions (support state and date, use,
+   * servers in service per version), owners (names only) and number of contracts (null without the contracts read right).
+   * References and names only: no id of another record.
+   */
+  private async technologyDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    if (!this.technologies) throw new BadRequestException('Unsupported entity type.');
+    const opts = { manager: context.manager, tenantId: context.tenantId };
+    const record = await this.technologies.get(entityId, opts);
+    const applications = await resolveAiApplicationsReach(context, this.policy);
+    const { items: [row] } = await listAiTechnologies(context.manager, context.tenantId, {}, applications, { ids: [record.id] });
+    if (!row) throw new NotFoundException('Technology not found.');
+    const figures = await technologyVersionFigures(context.manager, context.tenantId, record.id);
+    const owners = (type: 'business' | 'it') => record.owners
+      .filter((owner) => owner.owner_type === type)
+      .map((owner) => owner.full_name)
+      .filter((name): name is string => !!name);
+    return this.toDetailResult(this.mapTechnology(row), {
+      reference: row.reference,
+      name: record.name,
+      family: record.family,
+      publisher: record.editor,
+      hosting_type: record.hosting_type,
+      lifecycle: record.lifecycle,
+      admin_zone: record.admin_zone,
+      description: record.description,
+      notes: record.notes,
+      support_notes: record.support_notes,
+      cpe_products: record.cpe_products,
+      cyber_criticality: record.cyber_criticality,
+      recovery_wave: record.recovery_wave,
+      rto_minutes: record.rto_minutes,
+      rpo_minutes: record.rpo_minutes,
+      replaced_by: record.replaced_by ? { reference: record.replaced_by.reference, name: record.replaced_by.name } : null,
+      server_count: row.server_count,
+      application_count: row.application_count,
+      support_status: row.support_status,
+      end_of_standard_support: row.end_of_standard_support,
+      end_of_support: row.end_of_support,
+      versions_in_use: row.versions_in_use,
+      open_vulnerabilities: row.open_vulnerabilities,
+      // Each version with its state on the End of support report rule: out_of_support since
+      // support_date, extended_support until support_date, supported until support_date (its
+      // standard end), unknown without a date. in_use: on a server or an application in service.
+      versions: record.versions.map((version: any) => ({
+        label: version.label,
+        standard_support_end: version.standard_support_end ?? null,
+        extended_support_end: version.extended_support_end ?? null,
+        support_status: figures.get(version.id)?.support_status ?? 'unknown',
+        support_date: figures.get(version.id)?.support_date ?? null,
+        in_use: figures.get(version.id)?.in_use ?? false,
+        server_count: figures.get(version.id)?.servers ?? 0,
+      })),
+      business_owners: owners('business'),
+      it_owners: owners('it'),
+      // As the technology page: no number of contracts without the contracts read right.
+      contract_count: (await this.policy?.canReadEntityType(context, 'contracts', context.manager))
+        ? await technologyContractCount(context.manager, context.tenantId, record.id)
+        : null,
+      created_at: record.created_at,
+      updated_at: record.updated_at,
+    });
   }
 
   private async loadRegistryFilterValues(
