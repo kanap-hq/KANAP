@@ -21,11 +21,9 @@ import { ShareRateLimit } from '../notifications/share-rate-limit';
 import type { BudgetColumn } from './amounts-write.util';
 import {
   CreateSpendItemInput,
-  CreateSpendItemSchema,
   UpdateSpendItemInput,
   ListSpendQueryInput,
 } from './dto';
-import { refuseSchema } from './dto/effective-start';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { AuditService } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
@@ -562,8 +560,6 @@ export class SpendItemsController {
     @Body() body: CreateSpendItemInput,
     @Tenant() ctx: TenantRequest,
   ) {
-    // The type is a zod alias, so the global pipe skips it. Keep the original body.
-    refuseSchema(CreateSpendItemSchema, body);
     return this.svc.create(body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
   }
 
