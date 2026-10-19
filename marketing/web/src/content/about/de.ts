@@ -46,7 +46,7 @@ const content: AboutContent = {
     {
       title: 'Ein unabhängiges Projekt',
       paragraphs: [
-        'KANAP wird von der Gesellschaft KANAP herausgegeben, einer französischen Einpersonengesellschaft (EURL) mit Sitz in Obernai im Elsass. Das Projekt wird vollständig aus meiner Tätigkeit als Interim-CIO finanziert. Das macht es unabhängig, frei von äußerem Druck und Einfluss.',
+        'KANAP wird von der Gesellschaft KANAP herausgegeben, einer französischen Einpersonengesellschaft (EURL) mit Sitz in Obernai im Elsass. Das Projekt wird aus eigenen Mitteln entwickelt, parallel zu meiner Tätigkeit als CIO. So bleibt es vollständig unabhängig und an den Bedürfnissen seiner Nutzer ausgerichtet.',
         'Als Open-Source-Software ist KANAP vollständig kostenlos. Die kostenpflichtigen Leistungen sind optional und sollen Ihnen Zeit sparen, den Einsatz absichern oder die Anwendung anpassen: Support, Hosting, Begleitung und individuelle Entwicklung. Diese Begleitung übernehme ich selbst, mit dem Blick eines CIO. <a href="/de/offer">Zum Angebot</a>',
         'In jedem Fall führt Sie die vollständige <a href="https://doc.kanap.net/de/">Online-Hilfe</a> in vier Sprachen von den ersten Schritten bis zur Expertise.',
       ],

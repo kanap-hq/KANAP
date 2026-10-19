@@ -46,7 +46,7 @@ const content: AboutContent = {
     {
       title: 'Un projet indépendant',
       paragraphs: [
-        "KANAP est édité par la société KANAP, une EURL créée à Obernai, en Alsace. Le projet est entièrement financé par mon activité de DSI de transition. Cela le rend indépendant, sans pression ni influence extérieure.",
+        "KANAP est édité par la société KANAP, une EURL créée à Obernai, en Alsace. Le projet est développé sur mes propres fonds, en parallèle de mon activité de DSI. Il reste ainsi entièrement indépendant et tourné vers les besoins de ses utilisateurs.",
         "Open source, le logiciel est entièrement gratuit. Les services payants sont optionnels et visent à vous faire gagner du temps, sécuriser l'utilisation ou adapter l'application : support, hébergement, accompagnement et développement spécifique. Cet accompagnement, je le délivre avec mon regard de DSI. <a href=\"/fr/offer\">Voir l'offre</a>",
         "Dans tous les cas, l'<a href=\"https://doc.kanap.net/fr/\">aide en ligne</a> complète, en quatre langues, vous guide, des premiers pas jusqu'à l'expertise.",
       ],
