@@ -17,7 +17,9 @@ import { divRoundHalfAway, ICU_COLLATION, jsCents, sqlLiteral, sumJsCents } from
  *   converted to the cent on its own (the list's FX rule); `sum` adds the
  *   cents exactly, `avg` divides that sum by the group's line count, rounded
  *   once half away from zero to the cent, `min` and `max` pick a line. A
- *   money value is never blank: every line of the group counts. `minus`
+ *   money value is blank only when the line's currency has no exchange rate
+ *   that year: that line is left out of the measure (the sum, the mean's
+ *   count, the lowest and highest), still counted in `count`. `minus`
  *   subtracts another money field line by line (a variance between two
  *   columns or years, in cents); `part` keeps the positive or the negative
  *   part of each line's value (`max(x, 0)`, `min(x, 0)`: the gross increases
@@ -251,8 +253,9 @@ function compileMeasure(stmt: SqlStatement, config: ListConfig, spec: AggregateM
     fields.push(other);
     cents = `(${cents} - ${jsCents(other.sql)})`;
   }
-  if (spec.part === 'positive') cents = `greatest(${cents}, 0)`;
-  else if (spec.part === 'negative') cents = `least(${cents}, 0)`;
+  // `greatest` and `least` skip a null: an amount without a value stays without one.
+  if (spec.part === 'positive') cents = `(CASE WHEN ${cents} IS NOT NULL THEN greatest(${cents}, 0) END)`;
+  else if (spec.part === 'negative') cents = `(CASE WHEN ${cents} IS NOT NULL THEN least(${cents}, 0) END)`;
   return { spec, unit: 'cents', line: cents, fields };
 }
 

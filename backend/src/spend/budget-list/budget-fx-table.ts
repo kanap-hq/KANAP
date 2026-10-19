@@ -21,10 +21,15 @@ export interface FxTable {
    * One row per rate set key (a set id or `live`), year and stored currency
    * (`currency::text`, the join key: the normalised code, `lineCurrencySql`,
    * is computed once per distinct value here, not once per line). The rate
-   * is the multiplier: the resolved rate, or 0 where `convertValue` gives 0
-   * (a rate that is not finite or not positive).
+   * is the multiplier: the resolved rate, or null when the FX service has no
+   * rate for the key (`missing`; the service never resolves a rate that is
+   * not finite or not positive). A null rate makes every converted amount of
+   * the versions it applies to null: they are left out of the sums, sort
+   * last and match no amount filter. A key absent from the table (none
+   * expected: it covers every currency of the lines, every set and every
+   * year the statement reads) joins no row and reads the same way.
    */
-  rows: Array<{ setKey: string; year: number; currency: string; rate: number }>;
+  rows: Array<{ setKey: string; year: number; currency: string; rate: number | null }>;
   /** Rate sets of the tenant; a version on any other set reads `live`, as the FX service falls back. */
   knownSets: string[];
   reportingCurrency: string;
@@ -48,7 +53,7 @@ export function fxKeyCurrency(alias: string): string {
 export function fxTableSql(stmt: SqlStatement, fx: FxTable, alias = 'fx'): string {
   const rows = stmt.once('fx_rows', () => {
     const r = fx.rows;
-    return `unnest(${stmt.bind(r.map((row) => row.setKey), 'text[]')}, ${stmt.bind(r.map((row) => row.year), 'int[]')}, ${stmt.bind(r.map((row) => row.currency), 'text[]')}, ${stmt.bind(r.map((row) => String(row.rate)), 'float8[]')})`;
+    return `unnest(${stmt.bind(r.map((row) => row.setKey), 'text[]')}, ${stmt.bind(r.map((row) => row.year), 'int[]')}, ${stmt.bind(r.map((row) => row.currency), 'text[]')}, ${stmt.bind(r.map((row) => (row.rate == null ? null : String(row.rate))), 'float8[]')})`;
   });
   return `${rows} AS ${alias}(set_key, yr, cur, rate)`;
 }
@@ -146,8 +151,9 @@ export async function buildFxTable(
   }
   const fx = await fxRates.resolveRates(tenantId, entries.map((entry) => entry.lookup), { manager, quiet: true });
   const rows = entries.map(({ setKey, year, raw, lookup }) => {
-    const rate = fx.map.get(rateKey(setKey, year, lookup.sourceCurrency))?.rate ?? 1;
-    return { setKey, year, currency: raw, rate: Number.isFinite(rate) && rate > 0 ? rate : 0 };
+    const resolved = fx.map.get(rateKey(setKey, year, lookup.sourceCurrency));
+    const rate = resolved && resolved.source !== 'missing' && Number.isFinite(resolved.rate) && resolved.rate > 0 ? resolved.rate : null;
+    return { setKey, year, currency: raw, rate };
   });
   return { rows, knownSets, reportingCurrency: fx.settings?.reportingCurrency ?? 'EUR' };
 }

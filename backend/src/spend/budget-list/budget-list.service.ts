@@ -443,7 +443,8 @@ export async function budgetListTotals(
   const validity = `(c.disabled_at IS NULL OR v.budget_year <= extract(year FROM c.disabled_at AT TIME ZONE 'UTC'))`;
   // Each version converted once (the builder's chain, `Math.round(Number(formatCents(local)) * rate * 100)`),
   // the products computed once per row (OFFSET 0 keeps the subquery from being flattened into the sums).
-  const products = columns.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * coalesce(fx.rate, 1::float8) * 100 AS ${column.measure}`).join(',\n          ');
+  // A version without a rate (null) converts to null, which the sums skip.
+  const products = columns.map((column) => `${decimal2ToFloat(`t.${column.measure}`)} * fx.rate * 100 AS ${column.measure}`).join(',\n          ');
   const rounded = columns.map((column) => `${jsRound(`p.${column.measure}`)} AS ${column.measure}`).join(', ');
   const sums = columns.map((column) => `${sumJsCents(`x.${column.measure}`)}::text AS ${column.measure}`).join(',\n        ');
   const amounts = columns.length === 0 ? null : `SELECT x.yr,
@@ -599,9 +600,11 @@ export async function budgetListAggregateRequest(
  * statement, so the numbers are the list's (converted to the reporting
  * currency with the list's rates, nothing after the line's end of validity).
  * No lifecycle scope: a line the list would hide by its status still gives the
- * amount its row would show. Cents per line and key; lines of another tenant
- * or of no budget nature are left out, and keys that name no amount ignored.
- * The contracts' budget columns read their lines' amounts here (lot CB).
+ * amount its row would show. Cents per line and key, null when the line's
+ * currency has no rate that year (the amount is left out, as in the list's
+ * totals); lines of another tenant or of no budget nature are left out, and
+ * keys that name no amount ignored. The contracts' budget columns read their
+ * lines' amounts here (lot CB): a null counts as nothing there.
  */
 export async function budgetListAmountsByIds(
   scope: SummaryReadScopeConfig,
@@ -609,10 +612,10 @@ export async function budgetListAmountsByIds(
   manager: EntityManager,
   ids: string[],
   keys: string[],
-): Promise<Map<string, Record<string, bigint>>> {
+): Promise<Map<string, Record<string, bigint | null>>> {
   const amountKeys = Array.from(new Set(keys.filter((key) => resolveAmountField(key) != null)));
   const lineIds = Array.from(new Set(ids.filter(Boolean)));
-  const result = new Map<string, Record<string, bigint>>();
+  const result = new Map<string, Record<string, bigint | null>>();
   if (!amountKeys.length || !lineIds.length) return result;
   const tenantId = await summaryTenantId(manager);
   await assertListEngineSupport(manager);
@@ -629,7 +632,7 @@ ${core.from}
 ${core.where}
   AND (${config.alias}.id = ANY(${stmt.bind(lineIds, 'uuid[]')}))`);
   for (const row of rows) {
-    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, BigInt(row[`a${i}`])])));
+    result.set(row.id, Object.fromEntries(amountKeys.map((key, i) => [key, row[`a${i}`] == null ? null : BigInt(row[`a${i}`])])));
   }
   return result;
 }
