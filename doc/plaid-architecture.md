@@ -119,7 +119,10 @@ Plaid can currently read these entity families:
 `business_processes`, `capex_items`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`, `spend_items`,
-`suppliers`, `tasks`, and `users`.
+`suppliers`, `tasks`, `technologies`, and `users`.
+
+`get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
+`tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
 
 The core read tools are:
 
@@ -200,6 +203,37 @@ count) stays out of the registry and only appears in the items' metadata.
 
 Each item carries `created_at` and `updated_at`. Its `summary` is clipped to 300
 characters; `get_entity_detail` has the full text.
+
+### Technologies
+
+Technologies (right `infrastructure`) are read through their own statement,
+`listAiTechnologies` (`backend/src/ai/query/ai-technologies.query.ts`), because
+four of their fields are computed at read time and still filter, sort and
+aggregate:
+
+- `server_count`: servers the technology is installed on directly, retired
+  assets left out;
+- `application_count`: applications in service that declare it directly, within
+  the user's application read scope (a Business Contributor's own); null for a
+  user who cannot read applications. It filters and sorts but is no aggregate
+  metric, since an aggregate expression cannot carry that scope;
+- `end_of_support`: the earliest end of support among the versions in use (on
+  a server in service or declared by an application in service), each version
+  dated as the End of support report dates it;
+- `open_vulnerabilities`: CVE still to review, null while the vulnerability
+  feed is off.
+
+The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
+`hosting_type`, `lifecycle` and `admin_zone`. `get_entity_detail` adds the
+versions (end dates, servers in service per version), the owners by name and
+the number of contracts. `get_entity_context` lists the servers the technology
+is installed on (version, operating system or not), and, for a user who reads
+applications, the applications that declare it and those deduced from the
+servers that carry it (`TechnologyReachService`). The context of an asset lists
+its technologies (installed or carried); the context of an application lists
+its declared and deduced technologies, for a user who reads technologies. These
+groups list at most 25 records (`AI_CONTEXT_GROUP_ITEM_LIMIT`) and carry `total`
+and `truncated`.
 
 Page size: 25 items by default, at most 50, 30 for `applications`, 15 for
 `spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
