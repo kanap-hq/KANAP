@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
 import {
   cellOf,
   readMasterDataFile,
@@ -19,15 +20,22 @@ export const ASSET_LINK_CSV_HEADERS = [
   'asset_name', 'technology_reference', 'technology_name', 'version', 'operating_system', 'notes', 'source',
 ] as const;
 
+export const APPLICATION_LINK_CSV_HEADERS = [
+  'application_reference', 'application_name', 'technology_reference', 'technology_name', 'version', 'notes', 'source',
+] as const;
+
 /** `source` is written by the export and ignored on import: a file without it still reads. */
 const OPTIONAL_COLUMNS = ['source'] as const;
 const VERSION_MAX = 100;
 const NOTES_MAX = 2000;
 const OS_FAMILY = 'operating_system';
 const TEC_REF_RE = /^TEC-(\d+)$/i;
+const APP_REF_RE = /^APP-\d+$/i;
 
 export const ASSET_LINKS_CSV_FILENAME = 'servers-technologies.csv';
 export const ASSET_LINKS_CSV_TEMPLATE = 'servers-technologies-template.csv';
+export const APPLICATION_LINKS_CSV_FILENAME = 'applications-technologies.csv';
+export const APPLICATION_LINKS_CSV_TEMPLATE = 'applications-technologies-template.csv';
 
 export interface TechnologyLinksImportResult {
   ok: boolean;
@@ -43,6 +51,9 @@ export interface TechnologyLinksImportResult {
 }
 
 export type TechnologyLinksCsvContext = { manager: EntityManager; tenantId: string; userId?: string | null };
+
+/** The applications the caller reads: all of them, or a Business Contributor's own (`scope`). */
+export type ApplicationsScope = { scope?: ParticipationAccessScope };
 
 type ImportRequest = { file: Express.Multer.File; dryRun: boolean; language: CsvLanguage };
 type LinkSide = 'asset' | 'application';
@@ -142,6 +153,84 @@ export class TechnologyLinksCsvService {
           const name = cellOf(row, 'asset_name');
           if (!name) return rowError(row.line, 'asset_name', 'CSV_VALUE_REQUIRED', 'A value is required.');
           return matchOne(row.line, 'asset_name', name, assets.byName.get(name.toLowerCase()) ?? []);
+        };
+      },
+    });
+  }
+
+  // ==================== APPLICATIONS ====================
+
+  /** Every declared application link the caller reads, by application, technology, version. */
+  async exportApplicationLinks(
+    scope: 'data' | 'template',
+    ctx: TechnologyLinksCsvContext,
+    applications: ApplicationsScope,
+    language: CsvLanguage = 'en',
+  ): Promise<{ filename: string; content: string }> {
+    const rows: string[][] = [];
+    if (scope === 'data') {
+      const params: unknown[] = [ctx.tenantId];
+      const scopeSql = applications.scope
+        ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('a', `$${params.length}`)}`)
+        : '';
+      const stored: Array<{
+        reference: string | null; application_name: string; item_number: number; technology_name: string;
+        version: string | null; notes: string | null; source: string;
+      }> = await ctx.manager.query(
+        `SELECT a.sequential_id AS reference, a.name AS application_name, t.item_number, t.name AS technology_name,
+                v.label AS version, l.notes, l.source
+           FROM application_technologies l
+           JOIN applications a ON a.tenant_id = l.tenant_id AND a.id = l.application_id
+           JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
+           LEFT JOIN technology_versions v ON v.tenant_id = l.tenant_id AND v.id = l.technology_version_id
+          WHERE l.tenant_id = $1 ${scopeSql}
+          ORDER BY lower(a.name), a.id, lower(t.name), t.id, lower(v.label) NULLS FIRST, l.id`,
+        params,
+      );
+      for (const row of stored) {
+        rows.push([
+          row.reference ?? '', row.application_name, `TEC-${row.item_number}`, row.technology_name,
+          row.version ?? '', row.notes ?? '', row.source,
+        ]);
+      }
+    }
+    return {
+      filename: scope === 'template' ? APPLICATION_LINKS_CSV_TEMPLATE : APPLICATION_LINKS_CSV_FILENAME,
+      content: writeCsv({ language, headers: [...APPLICATION_LINK_CSV_HEADERS], rows }),
+    };
+  }
+
+  /**
+   * Add or update application declarations. The application matches by `APP-n` when the reference
+   * is filled, otherwise by name. One the caller does not read is unknown, as one that does not
+   * exist.
+   */
+  async importApplicationLinks(
+    request: ImportRequest,
+    ctx: TechnologyLinksCsvContext,
+    applications: ApplicationsScope,
+  ): Promise<TechnologyLinksImportResult> {
+    return this.importLinks(request, ctx, {
+      side: 'application',
+      headers: APPLICATION_LINK_CSV_HEADERS,
+      resolve: async (rows) => {
+        const apps = await this.applicationsByKey(
+          ctx,
+          applications,
+          rows.map((row) => cellOf(row, 'application_reference')).filter((ref) => APP_REF_RE.test(ref)).map((ref) => ref.toUpperCase()),
+          rows.filter((row) => !cellOf(row, 'application_reference')).map((row) => cellOf(row, 'application_name').toLowerCase()),
+        );
+        return (row) => {
+          const reference = cellOf(row, 'application_reference');
+          if (reference) {
+            const hit = APP_REF_RE.test(reference) ? apps.byReference.get(reference.toUpperCase()) : undefined;
+            return hit ?? notFound(row.line, 'application_reference', reference);
+          }
+          const name = cellOf(row, 'application_name');
+          if (!name) {
+            return rowError(row.line, 'application_reference', 'CSV_APPLICATION_REQUIRED', 'Name the application by its reference (APP-n) or its name.');
+          }
+          return matchOne(row.line, 'application_name', name, apps.byName.get(name.toLowerCase()) ?? []);
         };
       },
     });
@@ -274,6 +363,12 @@ export class TechnologyLinksCsvService {
         ...(row.versionLabel ? { version_label: row.versionLabel } : {}),
         ...(row.notes !== '' ? { notes: row.notes } : {}),
       };
+      if (side === 'application') {
+        if (row.writeLink) {
+          await this.links.setApplicationTechnology(row.subjectId, row.technologyId, true, body, opts, provenance, { keepExistingProvenance: true });
+        }
+        continue;
+      }
       // A mark alone: the call finds the existing link and leaves it as stored.
       const written = await this.links.addAssetLink(row.technologyId, row.subjectId, body, opts, provenance, { keepExistingProvenance: true });
       if (row.markOperatingSystem && written.link_id) {
@@ -294,6 +389,30 @@ export class TechnologyLinksCsvService {
         [ctx.tenantId, wanted],
       )
       : [];
+    return indexSubjects(rows);
+  }
+
+  private async applicationsByKey(
+    ctx: TechnologyLinksCsvContext,
+    applications: ApplicationsScope,
+    references: string[],
+    names: string[],
+  ): Promise<Subjects> {
+    const refs = unique(references);
+    const wanted = unique(names);
+    if (refs.length === 0 && wanted.length === 0) return indexSubjects([]);
+    const params: unknown[] = [ctx.tenantId, refs, wanted];
+    const scopeSql = applications.scope
+      ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('a', `$${params.length}`)}`)
+      : '';
+    const rows: SubjectRow[] = await ctx.manager.query(
+      `SELECT a.id::text AS id, lower(btrim(a.name)) AS name_key, upper(a.sequential_id) AS reference_key, false AS is_cluster
+         FROM applications a
+        WHERE a.tenant_id = $1
+          AND (upper(a.sequential_id) = ANY($2::text[]) OR lower(btrim(a.name)) = ANY($3::text[]))
+          ${scopeSql}`,
+      params,
+    );
     return indexSubjects(rows);
   }
 

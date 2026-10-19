@@ -191,6 +191,7 @@ const KNOWN_EXPORT_ROUTES = [
   'GET /suppliers/export',
   'GET /tasks/export',
   'GET /technologies/:id/applications/export',
+  'GET /technologies/application-links/export',
   'GET /technologies/asset-links/export',
   'GET /technologies/reports/administration/export',
   'GET /technologies/reports/end-of-support/export',

@@ -238,6 +238,39 @@ export class TechnologiesController {
     return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importAssetLinks({ file: uploaded, dryRun, language }, this.opts(ctx)));
   }
 
+  /**
+   * Every declared application ↔ technology link the caller reads, or the header row alone. The
+   * applications rights of the single links (`requireApplications`): 403 without them.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get('application-links/export')
+  async exportApplicationLinks(
+    @Query('scope') scopeRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const applications = await this.requireApplications(ctx);
+    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, (scope, language) => this.linkFiles.exportApplicationLinks(scope, this.opts(ctx), applications, language));
+  }
+
+  /** Add or update application declarations. `dryRun` defaults to true and writes nothing. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('application-links/import')
+  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
+  async importApplicationLinks(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('dryRun') dryRunRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const applications = await this.requireApplications(ctx);
+    return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importApplicationLinks({ file: uploaded, dryRun, language }, this.opts(ctx), applications));
+  }
+
   // ==================== RECORD ====================
 
   @UseGuards(PermissionGuard)

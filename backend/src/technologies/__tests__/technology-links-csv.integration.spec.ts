@@ -13,7 +13,7 @@ import { TechnologiesController } from '../technologies.controller';
 import { TechnologyLinksCsvService, type TechnologyLinksCsvContext, type TechnologyLinksImportResult } from '../technology-links-csv.service';
 import { TechnologyLinksService } from '../technology-links.service';
 import { TechnologyReachService } from '../technology-reach.service';
-import { asset, installed, technology, version, type AuditEntry } from './technologies.fixtures';
+import { application, asset, installed, one, technology, version, type AuditEntry } from './technologies.fixtures';
 
 // The two link files of the technologies list: servers and technologies (asset_technologies),
 // applications and technologies (application_technologies, declared links).
@@ -556,6 +556,183 @@ async function testRoutes() {
   });
 }
 
+const APP_HEADER = 'application_reference,application_name,technology_reference,technology_name,version,notes,source';
+
+function appFileOf(lines: string[], name = 'applications.csv') {
+  return csvFile([APP_HEADER, ...lines].join('\n'), name);
+}
+
+async function appLinks(runner: QueryRunner, tenantId: string) {
+  return runner.query(
+    `SELECT a.name AS application, t.name AS technology, v.label AS version, l.notes, l.source, l.source_ref
+       FROM application_technologies l
+       JOIN applications a ON a.tenant_id = l.tenant_id AND a.id = l.application_id
+       JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
+       LEFT JOIN technology_versions v ON v.tenant_id = l.tenant_id AND v.id = l.technology_version_id
+      WHERE l.tenant_id = $1
+      ORDER BY lower(a.name), lower(t.name), lower(v.label) NULLS FIRST`,
+    [tenantId],
+  ) as Promise<Array<{ application: string; technology: string; version: string | null; notes: string | null; source: string; source_ref: string | null }>>;
+}
+
+async function reference(runner: QueryRunner, appId: string): Promise<string> {
+  const [row] = await runner.query(`SELECT sequential_id FROM applications WHERE id = $1`, [appId]);
+  return row.sequential_id as string;
+}
+
+async function testApplicationRoundTripAndProvenance() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'app-links');
+    const crm = await application(runner, tenantId, 'CRM');
+    await application(runner, tenantId, 'ERP');
+    await application(runner, tenantId, 'Payroll');
+    const sql = await technology(runner, tenantId, 2, 'SQL Server', 'database');
+    const sql2019 = await version(runner, tenantId, sql, '2019');
+    await technology(runner, tenantId, 3, 'Tomcat');
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id, technology_version_id, notes, source, source_ref)
+       VALUES ($1, $2, $3, NULL, 'hand', 'manual', NULL), ($1, $2, $3, $4, NULL, 'agent', 'run-1')`,
+      [tenantId, crm, sql, sql2019],
+    );
+    const ctx = caller(runner, tenantId);
+    const entries: AuditEntry[] = [];
+    const csv = csvService(entries);
+    const crmRef = await reference(runner, crm);
+
+    const exported = await csv.exportApplicationLinks('data', ctx, {}, 'en');
+    assert.equal(exported.filename, 'applications-technologies.csv');
+    assert.deepEqual(textBody(exported.content).split('\n'), [
+      APP_HEADER,
+      `${crmRef},CRM,TEC-2,SQL Server,,hand,manual`,
+      `${crmRef},CRM,TEC-2,SQL Server,2019,,agent`,
+    ]);
+    const before = await appLinks(runner, tenantId);
+    const round = await csv.importApplicationLinks({ file: csvFile(exported.content, 'round.csv'), dryRun: false, language: 'en' }, ctx, {});
+    assert.deepEqual({ ok: round.ok, unchanged: round.unchanged, inserted: round.inserted, updated: round.updated }, { ok: true, unchanged: 2, inserted: 0, updated: 0 });
+    assert.deepEqual(await appLinks(runner, tenantId), before);
+    assert.equal(entries.length, 0, 'an unchanged file writes no audit entry');
+    const template = await csv.exportApplicationLinks('template', ctx, {}, 'en');
+    assert.equal(template.filename, 'applications-technologies-template.csv');
+    assert.equal(textBody(template.content), APP_HEADER);
+
+    const file = appFileOf([
+      `${crmRef.toLowerCase()},ignored,tec-2,,,new notes,`,
+      ',erp,,sql server,2022,,',
+      ',ERP,TEC-3,,,,',
+    ], 'apps.csv');
+    const preview = await csv.importApplicationLinks({ file, dryRun: true, language: 'en' }, ctx, {});
+    assert.deepEqual(
+      { ok: preview.ok, inserted: preview.inserted, updated: preview.updated, unchanged: preview.unchanged },
+      { ok: true, inserted: 2, updated: 1, unchanged: 0 },
+    );
+    assert.deepEqual(preview.warnings.map((w) => [w.row, w.code, w.params]), [[3, 'CSV_TECHNOLOGY_VERSION_CREATED', { value: '2022' }]]);
+    assert.deepEqual(await appLinks(runner, tenantId), before, 'a dry run writes nothing');
+
+    const loaded = await csv.importApplicationLinks({ file, dryRun: false, language: 'en' }, ctx, {});
+    assert.equal(loaded.ok, true);
+    assert.deepEqual((await appLinks(runner, tenantId)).map((r) => [r.application, r.technology, r.version, r.notes, r.source, r.source_ref]), [
+      ['CRM', 'SQL Server', null, 'new notes', 'manual', null],
+      ['CRM', 'SQL Server', '2019', null, 'agent', 'run-1'],
+      ['ERP', 'SQL Server', '2022', null, 'import', 'apps.csv'],
+      ['ERP', 'Tomcat', null, null, 'import', 'apps.csv'],
+    ]);
+    assert.ok(entries.some((e) => e.table === 'application_technologies' && e.action === 'create'));
+    assert.ok(entries.some((e) => e.table === 'application_technologies' && e.action === 'update'));
+  });
+}
+
+async function testApplicationErrorsAndScope() {
+  await inRolledBackTransaction(async (runner) => {
+    const other = await seedTenant(runner, 'app-links-other');
+    await application(runner, other, 'Elsewhere');
+    await technology(runner, other, 9, 'Elsewhere tech');
+    const tenantId = await seedTenant(runner, 'app-links-errors');
+    const mine = await application(runner, tenantId, 'Mine');
+    const hidden = await application(runner, tenantId, 'Hidden');
+    await application(runner, tenantId, 'Twin');
+    await application(runner, tenantId, 'Twin');
+    const sql = await technology(runner, tenantId, 2, 'SQL Server');
+    await runner.query(
+      `INSERT INTO application_technologies (tenant_id, application_id, technology_id) VALUES ($1, $2, $4), ($1, $3, $4)`,
+      [tenantId, mine, hidden, sql],
+    );
+    const role = await one(runner, `INSERT INTO roles (tenant_id, role_name) VALUES ($1, 'Contributor c2a') RETURNING id`, [tenantId]);
+    const user = await one(
+      runner,
+      `INSERT INTO users (tenant_id, role_id, first_name, last_name, email, status) VALUES ($1, $2, 'Bea', 'Contributor', 'bea.c2a@example.invalid', 'enabled') RETURNING id`,
+      [tenantId, role],
+    );
+    await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [tenantId, mine, user]);
+    const ctx = caller(runner, tenantId);
+    const csv = csvService();
+    const scoped = { scope: { userId: user } };
+    const hiddenRef = await reference(runner, hidden);
+    const before = await appLinks(runner, tenantId);
+
+    const exported = textBody((await csv.exportApplicationLinks('data', ctx, scoped, 'en')).content).split('\n');
+    assert.equal(exported.length, 2, 'the scoped export holds the contributor\'s application only');
+    assert.ok(exported[1].includes(',Mine,'));
+
+    const refused = await csv.importApplicationLinks({
+      file: appFileOf([
+        ',Mine,,SQL Server,2030,,',
+        ',Hidden,,SQL Server,,,',
+        `${hiddenRef},,,SQL Server,,,`,
+        ',Twin,,SQL Server,,,',
+        ',Elsewhere,,SQL Server,,,',
+        ',Mine,,Elsewhere tech,,,',
+        ',,,SQL Server,,,',
+        'APP-999999,Mine,,SQL Server,,,',
+        ',mine,,sql server,2030,,',
+      ]),
+      dryRun: false,
+      language: 'en',
+    }, ctx, scoped);
+    assert.equal(refused.ok, false);
+    assert.deepEqual(codes(refused), [
+      { row: 3, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Hidden' } },
+      { row: 4, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: hiddenRef } },
+      { row: 5, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Twin' } },
+      { row: 6, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'Elsewhere' } },
+      { row: 7, code: 'CSV_TECHNOLOGY_NOT_ADOPTED', params: { value: 'Elsewhere tech' } },
+      { row: 8, code: 'CSV_APPLICATION_REQUIRED', params: null },
+      { row: 9, code: 'CSV_REFERENCE_NOT_FOUND', params: { value: 'APP-999999' } },
+      { row: 10, code: 'CSV_LINK_DUPLICATE', params: { firstRow: 2 } },
+    ]);
+    assert.deepEqual(await appLinks(runner, tenantId), before, 'a file with errors writes nothing, not even the version of row 2');
+    const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM technology_versions WHERE tenant_id = $1`, [tenantId]);
+    assert.equal(n, 0);
+
+    const twins = await csv.importApplicationLinks({ file: appFileOf([',Twin,,SQL Server,,,']), dryRun: true, language: 'en' }, ctx, {});
+    assert.deepEqual(codes(twins), [{ row: 2, code: 'CSV_NAME_AMBIGUOUS', params: { value: 'Twin' } }]);
+    const unscoped = await csv.importApplicationLinks({ file: appFileOf([',Hidden,,SQL Server,,,']), dryRun: true, language: 'en' }, ctx, {});
+    assert.deepEqual({ ok: unscoped.ok, unchanged: unscoped.unchanged }, { ok: true, unchanged: 1 }, 'without a scope every application is read');
+  });
+}
+
+async function testApplicationRoutes() {
+  const proto = TechnologiesController.prototype;
+  const names = Object.getOwnPropertyNames(proto);
+  assert.ok(names.indexOf('exportApplicationLinks') < names.indexOf('get'), 'declared before :id');
+  assert.ok(names.indexOf('importApplicationLinks') < names.indexOf('get'));
+  assert.equal(Reflect.getMetadata(PATH_METADATA, proto.exportApplicationLinks), 'application-links/export');
+  assert.equal(Reflect.getMetadata(METHOD_METADATA, proto.exportApplicationLinks), RequestMethod.GET);
+  assert.equal(Reflect.getMetadata(PATH_METADATA, proto.importApplicationLinks), 'application-links/import');
+  assert.equal(Reflect.getMetadata(METHOD_METADATA, proto.importApplicationLinks), RequestMethod.POST);
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.exportApplicationLinks), { resource: 'infrastructure', level: 'reader' });
+  assert.deepEqual(Reflect.getMetadata(REQUIRE_LEVEL_KEY, proto.importApplicationLinks), { resource: 'infrastructure', level: 'member' });
+
+  let called = false;
+  const spy = new Proxy({}, { get: () => () => { called = true; } }) as any;
+  const controller = new TechnologiesController(
+    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, spy,
+  );
+  const noApplications = { tenantId: 'x', permissions: { infrastructure: 'member' }, manager: {} } as any;
+  await assert.rejects(() => controller.exportApplicationLinks('data', 'en', {} as any, noApplications), /cannot read applications/);
+  await assert.rejects(() => controller.importApplicationLinks(csvFile(APP_HEADER), 'false', 'en', noApplications), /cannot read applications/);
+  assert.equal(called, false, 'nothing is read or written without the applications right');
+}
+
 runSpecs('technology-links-csv.integration.spec', [
   ['round trip', testRoundTrip],
   ['create and provenance', testCreateProvenance],
@@ -564,6 +741,9 @@ runSpecs('technology-links-csv.integration.spec', [
   ['operating system', testOperatingSystem],
   ['tenant isolation', testTenantIsolation],
   ['routes', testRoutes],
+  ['applications: round trip and provenance', testApplicationRoundTripAndProvenance],
+  ['applications: errors and scope', testApplicationErrorsAndScope],
+  ['applications: routes and rights', testApplicationRoutes],
 ]).catch((err) => {
   console.error(err);
   process.exit(1);

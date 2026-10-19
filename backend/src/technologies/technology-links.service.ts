@@ -392,7 +392,7 @@ export class TechnologyLinksService {
    * Declare (`add`) or withdraw a technology for an application, from the application's side. A
    * declaration names a version or none; withdrawing removes every declaration of the technology
    * by the application. Locks the technology's row like every other write of these links. The
-   * application's visibility is the caller's check.
+   * application's visibility is the caller's check. `write` as for `addAssetLink`.
    */
   async setApplicationTechnology(
     applicationId: string,
@@ -401,6 +401,7 @@ export class TechnologyLinksService {
     body: LinkInput,
     opts: LinkOpts,
     provenance: LinkProvenance = MANUAL_PROVENANCE,
+    write: LinkWriteOptions = {},
   ): Promise<{ ok: true; changed: boolean; link_id?: string | null }> {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
@@ -416,7 +417,7 @@ export class TechnologyLinksService {
       return { ok: true, changed: removed.length > 0 };
     }
     const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
-    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts);
+    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
     return { ok: true, changed: res.changed, link_id: res.link_id };
   }
 
