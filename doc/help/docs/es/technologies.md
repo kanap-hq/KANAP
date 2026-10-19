@@ -96,6 +96,7 @@ Cuando se siguen las vulnerabilidades, la columna **Editor** también abre la p�
 **Acciones**:
 
 - **Nueva tecnología** (`infrastructure:member`).
+- **Importar vínculos** (`infrastructure:member`) y **Exportar vínculos**: cargue o descargue en un archivo CSV los vínculos entre las tecnologías y los servidores o las aplicaciones. Consulte [Importar y exportar vínculos](#importar-y-exportar-vinculos).
 - **Eliminar** las filas seleccionadas (`infrastructure:admin`). La confirmación cuenta lo que se va con ellas: vínculos con servidores y aplicaciones, contratos, líneas presupuestarias, proyectos, incidentes y documentos.
 
 ---
@@ -248,6 +249,56 @@ Puede registrar que un servidor lleva una tecnología desde cualquiera de los do
 - Desde el servidor: pestaña **Técnico** del activo, sección **Tecnologías**, **Añadir**, y elija la tecnología y la versión. Consulte [Activos](assets.md#tecnico).
 
 Registre la tecnología en el servidor donde está instalada: el host para un hipervisor, cada controlador de dominio para Active Directory, el servidor de base de datos para SQL Server. Los servidores que se ejecutan dentro de él, o los miembros de su clúster, la muestran entonces sin más trabajo. Una tecnología en la nube, como Entra ID, no se ejecuta en ninguno de sus servidores: declárela en las aplicaciones.
+
+---
+
+## Importar y exportar vínculos
+
+La lista de tecnologías carga y descarga vínculos en bloque, un vínculo por fila de un archivo CSV. Existen dos archivos:
+
+- **Servidores y tecnologías**: las tecnologías instaladas en cada servidor.
+- **Aplicaciones y tecnologías**: las tecnologías que declara cada aplicación. Las aplicaciones alojadas en un servidor que lleva una tecnología se deducen de los servidores, así que el archivo las deja fuera.
+
+Haga clic en **Importar vínculos** o **Exportar vínculos** en la barra de herramientas y elija el archivo. La exportación ofrece los datos o una plantilla vacía. Se aplican las reglas generales de los archivos CSV: codificación, separador, sí y no en cuatro idiomas, 20.000 filas como máximo. Consulte [Archivos CSV](csv-files.md).
+
+**Permisos**:
+
+- Exportar el archivo de servidores: `infrastructure:reader`.
+- Importar el archivo de servidores: `infrastructure:member`.
+- El archivo de aplicaciones requiere además el derecho de leer las aplicaciones. Un Business Contributor solo exporta e importa los vínculos de sus propias aplicaciones.
+
+### Columnas
+
+| Columna | Significado |
+|---|---|
+| `asset_reference`, `asset_name` | El servidor (archivo de servidores). La referencia (`AST-12`) se lee primero. Sin ella, el nombre encuentra el servidor, y un nombre que llevan dos servidores es un error. Una referencia y un nombre que apuntan a dos servidores distintos también son un error |
+| `application_reference`, `application_name` | La aplicación (archivo de aplicaciones), primero por su referencia (`APP-4`), luego por su nombre |
+| `technology_reference`, `technology_name` | La tecnología, primero por su referencia (`TEC-3`), luego por su nombre |
+| `version` | La etiqueta de la versión. Una celda vacía significa que la versión es desconocida |
+| `operating_system` | Solo en el archivo de servidores. Indica si la tecnología es el sistema operativo del servidor: vea más abajo |
+| `notes` | Texto libre sobre el vínculo |
+| `source` | De dónde viene el vínculo: entrada manual, importación, asistente, agente o Netbox. La exportación la escribe; la importación la ignora |
+
+La columna `operating_system` admite tres valores:
+
+- **sí**: el vínculo pasa a ser el sistema operativo del servidor. La importación rechaza la fila cuando la tecnología no es de la familia **Sistema operativo**, cuando el servidor es un clúster o cuando el servidor ya tiene otro sistema operativo.
+- **no**: el vínculo nunca se marca.
+- **Vacía**: un vínculo nuevo sigue la regla de la ficha del servidor. Una tecnología de la familia **Sistema operativo** pasa a ser el sistema operativo del servidor cuando este aún no tiene ninguno y no es un clúster. La vista previa lo indica en la fila.
+
+La importación nunca quita la marca de sistema operativo de un vínculo.
+
+### Qué hace una importación
+
+**Verificación previa** lee el archivo y lista lo que haría la carga, con los errores por fila si los hay. Un archivo con un error no carga nada.
+
+- Un vínculo es un servidor o una aplicación, una tecnología y una versión: una fila con otra versión añade un segundo vínculo. El mismo vínculo dos veces en un archivo es un error.
+- Cada fila añade un vínculo o actualiza uno existente. Los vínculos que faltan en el archivo se quedan como están: la importación nunca elimina un vínculo.
+- Un vínculo existente conserva su origen. Sus notas cambian cuando la celda `notes` contiene un texto distinto, y una celda vacía las deja como están.
+- Un vínculo nuevo se marca como procedente de una importación, con el nombre del archivo.
+- La tecnología debe figurar ya en su lista. Adóptela desde el catálogo o créela primero.
+- Una versión que aún no sigue se crea en la tecnología. La vista previa la nombra.
+
+Un archivo grande tarda en cargarse y retiene los vínculos de sus tecnologías hasta que termina. Varios archivos más pequeños molestan menos a las personas que trabajan al mismo tiempo.
 
 ---
 

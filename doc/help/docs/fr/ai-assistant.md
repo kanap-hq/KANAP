@@ -1,6 +1,6 @@
 # Plaid
 
-Plaid est l'assistant conversationnel intégré de KANAP. Il est connecté aux mêmes données que celles que vous manipulez déjà (applications, actifs, incidents, projets, demandes, tâches, contrats, documents de la base de connaissances et master data), afin que vous puissiez poser des questions en langage naturel au lieu de naviguer entre plusieurs écrans pour trouver une réponse.
+Plaid est l'assistant conversationnel intégré de KANAP. Il est connecté aux mêmes données que celles que vous manipulez déjà (applications, actifs, technologies, incidents, projets, demandes, tâches, contrats, documents de la base de connaissances et master data), afin que vous puissiez poser des questions en langage naturel au lieu de naviguer entre plusieurs écrans pour trouver une réponse.
 
 Plaid ne remplace pas le reste de l'application. C'est un moyen plus rapide de synthétiser le contexte, de localiser des enregistrements, de rédiger du texte ou de préparer des modifications. Les opérations sensibles sont toujours présentées sous forme d'aperçus que vous devez approuver avant que quoi que ce soit ne soit écrit dans KANAP.
 
@@ -111,6 +111,8 @@ Lorsque la diffusion se termine, le focus revient automatiquement sur le compose
 Plaid utilise un petit ensemble d'outils internes pour répondre aux questions : `Search all`, `Search knowledge`, `Get document`, `Get entity context` et quelques autres. Chaque appel d'outil apparaît sous forme de ligne compacte sous le message (« a utilisé Search all · 8 résultats »). Vous n'avez généralement pas besoin de lire les détails de l'outil, mais ils sont là si vous voulez voir exactement sur quels enregistrements la réponse s'est appuyée.
 
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne.
+
+Plaid liste et lit les technologies pour les utilisateurs qui peuvent lire l'infrastructure. Il peut les filtrer par famille, éditeur, fin de support ou nombre de serveurs, et lire les versions, les serveurs et les applications d'une technologie. Interrogé sur un serveur, une application ou une technologie par son nom, sans sa référence, il lit aussi les enregistrements liés. Il ne peut pas modifier une technologie. Les assistants connectés via MCP obtiennent les mêmes réponses.
 
 Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
 

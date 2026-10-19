@@ -96,6 +96,7 @@ Wenn Schwachstellen verfolgt werden, öffnet die Spalte **Hersteller** auch die 
 **Aktionen**:
 
 - **Neue Technologie** (`infrastructure:member`).
+- **Verknüpfungen importieren** (`infrastructure:member`) und **Verknüpfungen exportieren**: Laden Sie die Verknüpfungen zwischen Technologien und Servern oder Anwendungen als CSV-Datei hoch oder herunter. Siehe [Verknüpfungen importieren und exportieren](#verknupfungen-importieren-und-exportieren).
 - **Löschen** der ausgewählten Zeilen (`infrastructure:admin`). Die Bestätigung zählt, was mitgelöscht wird: Verknüpfungen zu Servern und Anwendungen, Verträge, Budgetzeilen, Projekte, Vorfälle und Dokumente.
 
 ---
@@ -248,6 +249,56 @@ Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 - Vom Server aus: Reiter **Technisch** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#technisch).
 
 Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
+
+---
+
+## Verknüpfungen importieren und exportieren
+
+Die Technologieliste lädt Verknüpfungen in großer Zahl hoch und herunter, eine Verknüpfung pro Zeile einer CSV-Datei. Es gibt zwei Dateien:
+
+- **Server und Technologien**: die auf jedem Server installierten Technologien.
+- **Anwendungen und Technologien**: die Technologien, die jede Anwendung deklariert. Anwendungen, die auf einem Server laufen, der eine Technologie trägt, werden aus den Servern abgeleitet; die Datei lässt sie weg.
+
+Klicken Sie in der Symbolleiste auf **Verknüpfungen importieren** oder **Verknüpfungen exportieren** und wählen Sie dann die Datei. Der Export bietet die Daten oder eine leere Vorlage an. Es gelten die allgemeinen Regeln für CSV-Dateien: Kodierung, Trennzeichen, Ja und Nein in vier Sprachen, höchstens 20.000 Zeilen. Siehe [CSV-Dateien](csv-files.md).
+
+**Berechtigungen**:
+
+- Serverdatei exportieren: `infrastructure:reader`.
+- Serverdatei importieren: `infrastructure:member`.
+- Die Anwendungsdatei erfordert zusätzlich das Recht, Anwendungen zu lesen. Ein Business Contributor exportiert und importiert nur die Verknüpfungen seiner eigenen Anwendungen.
+
+### Spalten
+
+| Spalte | Bedeutung |
+|---|---|
+| `asset_reference`, `asset_name` | Der Server (Serverdatei). Die Referenz (`AST-12`) wird zuerst gelesen. Ohne sie findet der Name den Server, und ein Name, den zwei Server tragen, ist ein Fehler. Eine Referenz und ein Name, die auf zwei verschiedene Server zeigen, sind ebenfalls ein Fehler |
+| `application_reference`, `application_name` | Die Anwendung (Anwendungsdatei), zuerst über ihre Referenz (`APP-4`), dann über ihren Namen |
+| `technology_reference`, `technology_name` | Die Technologie, zuerst über ihre Referenz (`TEC-3`), dann über ihren Namen |
+| `version` | Die Bezeichnung der Version. Eine leere Zelle bedeutet, dass die Version unbekannt ist |
+| `operating_system` | Nur Serverdatei. Ob die Technologie das Betriebssystem des Servers ist: siehe unten |
+| `notes` | Freitext zur Verknüpfung |
+| `source` | Woher die Verknüpfung stammt: manuelle Eingabe, Import, Assistent, Agent oder Netbox. Der Export schreibt sie; der Import ignoriert sie |
+
+Die Spalte `operating_system` kennt drei Werte:
+
+- **Ja**: Die Verknüpfung wird zum Betriebssystem des Servers. Der Import lehnt die Zeile ab, wenn die Technologie nicht zur Familie **Betriebssystem** gehört, wenn der Server ein Cluster ist oder wenn der Server bereits ein anderes Betriebssystem hat.
+- **Nein**: Die Verknüpfung wird nie markiert.
+- **Leer**: Eine neue Verknüpfung folgt der Regel der Serverseite. Eine Technologie der Familie **Betriebssystem** wird zum Betriebssystem des Servers, wenn dieser noch keines hat und kein Cluster ist. Die Vorschau zeigt es in der Zeile an.
+
+Der Import entfernt die Betriebssystem-Markierung nie von einer Verknüpfung.
+
+### Was ein Import tut
+
+**Vorabprüfung** liest die Datei und listet auf, was das Laden tun würde, mit etwaigen Fehlern pro Zeile. Eine Datei mit einem Fehler lädt nichts.
+
+- Eine Verknüpfung besteht aus einem Server oder einer Anwendung, einer Technologie und einer Version: Eine Zeile mit einer anderen Version fügt eine zweite Verknüpfung hinzu. Dieselbe Verknüpfung zweimal in einer Datei ist ein Fehler.
+- Jede Zeile fügt eine Verknüpfung hinzu oder aktualisiert eine vorhandene. Verknüpfungen, die in der Datei fehlen, bleiben, wie sie sind: Der Import löscht nie eine Verknüpfung.
+- Eine vorhandene Verknüpfung behält ihre Herkunft. Ihre Notizen ändern sich, wenn die Zelle `notes` einen anderen Text enthält; eine leere Zelle lässt sie unverändert.
+- Eine neue Verknüpfung wird als aus einem Import stammend gekennzeichnet, mit dem Dateinamen.
+- Die Technologie muss bereits in Ihrer Liste stehen. Übernehmen Sie sie zuerst aus dem Katalog oder legen Sie sie an.
+- Eine Version, die Sie noch nicht führen, wird bei der Technologie angelegt. Die Vorschau nennt sie.
+
+Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Technologien bis zum Ende fest. Mehrere kleinere Dateien behindern die Personen, die zur selben Zeit arbeiten, weniger.
 
 ---
 

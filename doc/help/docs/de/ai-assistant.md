@@ -1,6 +1,6 @@
 # Plaid
 
-Plaid ist der integrierte Chat-Assistent von KANAP. Er ist mit denselben Daten verbunden, mit denen Sie ohnehin arbeiten (Anwendungen, Assets, Vorfälle, Projekte, Anfragen, Aufgaben, Verträge, Wissensdokumente und Stammdaten), sodass Sie Fragen in natürlicher Sprache stellen können, anstatt sich durch mehrere Bildschirme zu klicken, um eine Antwort zu finden.
+Plaid ist der integrierte Chat-Assistent von KANAP. Er ist mit denselben Daten verbunden, mit denen Sie ohnehin arbeiten (Anwendungen, Assets, Technologien, Vorfälle, Projekte, Anfragen, Aufgaben, Verträge, Wissensdokumente und Stammdaten), sodass Sie Fragen in natürlicher Sprache stellen können, anstatt sich durch mehrere Bildschirme zu klicken, um eine Antwort zu finden.
 
 Plaid ersetzt nicht den Rest der Anwendung. Es ist ein schnellerer Weg, um Kontext zusammenzufassen, Datensätze zu finden, Text zu entwerfen oder Änderungen vorzubereiten. Sensible Vorgänge werden immer als Vorschauen angezeigt, die Sie genehmigen müssen, bevor etwas in KANAP zurückgeschrieben wird.
 
@@ -111,6 +111,8 @@ Wenn der Stream endet, springt der Fokus zurück zum Eingabefeld, sodass Sie die
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile.
+
+Plaid listet und liest Technologien für Benutzer, die die Infrastruktur lesen dürfen. Es kann sie nach Familie, Hersteller, Supportende oder Anzahl der Server filtern und die Versionen, Server und Anwendungen einer Technologie lesen. Wird es zu einem Server, einer Anwendung oder einer Technologie über den Namen ohne Referenz gefragt, liest es auch die verknüpften Datensätze. Eine Technologie kann es nicht ändern. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
 
