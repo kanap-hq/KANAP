@@ -126,7 +126,7 @@ Cet onglet contrôle la classification des risques et les paramètres de protect
   - **Dérivé** : Les valeurs sont agrégées depuis les bindings d'interfaces liées : l'onglet affiche les valeurs effectives et liste une fois chaque interface qui contribue, avec les environnements où elle est liée
 
 **Champs** :
-  - **Criticité** : Critique métier, Haute, Moyenne ou Basse
+  - **Criticité** : un niveau de criticité métier issu du catalogue de votre organisation, dans [Classifications et continuité](it-ops-settings.md#classifications-et-continuite). Les niveaux par défaut sont Critique, Élevée, Modérée et Faible
   - **Classe de données** : Tirée des paramètres de classification de données de votre organisation
   - **Contient des PII** : Si des données personnelles transitent par la connexion
 

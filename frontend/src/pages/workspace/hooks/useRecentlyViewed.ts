@@ -19,7 +19,8 @@ export type RecentEntityType =
   | 'capex_item'
   | 'incident'
   | 'location'
-  | 'document';
+  | 'document'
+  | 'company';
 
 export interface RecentItem {
   type: RecentEntityType;
@@ -186,5 +187,11 @@ export const ENTITY_TYPE_CONFIG: Record<
     resource: 'knowledge',
     icon: 'Article',
     labelKey: 'dashboard.tiles.entityTypes.document',
+  },
+  company: {
+    route: (id) => `/master-data/companies/${id}`,
+    resource: 'companies',
+    icon: 'Business',
+    labelKey: 'dashboard.tiles.entityTypes.company',
   },
 };

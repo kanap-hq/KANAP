@@ -77,7 +77,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
     { key: 'cve', header: t('pages.vulnerabilities.columns.cve'), width: 150, render: (row) => <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 12 }}>{row.cve_id}</Box> },
     { key: 'severity', header: t('pages.vulnerabilities.columns.severity'), width: 130, render: (row) => <SeverityCell severity={row.severity} score={row.cvss_score} /> },
     { key: 'version', header: t('pages.vulnerabilities.columns.version'), render: (row) => versionText(row, t) },
-    { key: 'state', header: t('pages.vulnerabilities.columns.state'), width: 130, render: (row) => <VulnerabilityStateCell state={row.state} /> },
+    { key: 'state', header: t('pages.vulnerabilities.columns.state'), width: 130, hideOrder: 1, render: (row) => <VulnerabilityStateCell state={row.state} /> },
   ];
 
   if (!enabled) return null;

@@ -39,7 +39,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 | **Entorno** | Prod, Pre-prod, QA, Test, Dev, Sandbox, con un punto de color |
 | **Ubicación** | Dónde se aloja el activo |
 | **Alojamiento** | Tipo de alojamiento (derivado de la ubicación) |
-| **OS** | Sistema operativo |
+| **OS** | Sistema operativo: la tecnología marcada como sistema operativo del servidor, con su versión |
 | **Zona de red** | Segmento de red (derivado de la subred) |
 | **Ciclo de vida** | Estado actual del ciclo de vida |
 | **Asignaciones** | Número de asignaciones de aplicaciones |
@@ -165,15 +165,29 @@ La pestaña Técnico organiza el clúster, la identidad de red, las tecnologías
 - **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
 - **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
 - **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
-- **Sistema operativo**: Tipo y versión del SO (p. ej., Windows Server 2022, Ubuntu 24.04 LTS). Deshabilitado para clústeres: el SO se define por miembro. Cuando se selecciona, muestra debajo las fechas de fin de soporte estándar y extendido.
+**Tecnologías**: lo que lleva el servidor, por ejemplo Windows Server, SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
 
-**Tecnologías**: lo que lleva el servidor, por ejemplo SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
-
+- **Sistema operativo**: el sistema operativo del servidor es una de sus tecnologías, de la familia **Sistema operativo**. Aparece primero en la lista, con la mención «Sistema operativo» tras su nombre. Consulte [Sistema operativo](#sistema-operativo) más abajo.
+- **Versión**: en naranja cuando el soporte termina en los próximos 12 meses o solo queda el soporte extendido, y en rojo cuando todas las fechas de fin han pasado. Pase el ratón por encima para ver el fin del soporte estándar y del extendido.
 - Una tecnología instalada en este servidor se quita con la cruz al final de su fila.
 - Una tecnología instalada en el servidor o clúster en el que se ejecuta este muestra ese servidor en **Vía**. Sigue a la instalación y se quita allí.
 - **Añadir** (`infrastructure:member`) abre una búsqueda de tecnología y luego el selector de versión: elija una versión, **Versión desconocida**, o escriba una etiqueta nueva y elija **Añadir la versión «…»** para crearla. Cada cambio se guarda de inmediato.
+- **Cambiar una versión** (`infrastructure:member`): haga clic en la versión de una tecnología instalada, o en el lápiz al final de su fila. Se abre el mismo selector de versión.
 
-La versión y las notas de una instalación se cambian desde la pestaña **Servidores** de la tecnología. Consulte [Tecnologías](technologies.md#vincular-una-tecnologia-a-un-servidor).
+Las notas de una instalación se cambian desde la pestaña **Servidores** de la tecnología. Consulte [Tecnologías](technologies.md#servidores).
+
+#### Sistema operativo
+
+Un servidor tiene un sistema operativo: una tecnología de la familia **Sistema operativo**, con su versión.
+
+- **Añádalo** como cualquier tecnología. Si el servidor aún no tiene sistema operativo, la primera tecnología de esa familia que añada pasa a serlo.
+- **Quítelo** con su cruz. Si queda otra tecnología de la familia en el servidor, esa pasa a ser el sistema operativo.
+- **Cambie la versión** haciendo clic en ella, como en cualquier tecnología.
+- Un **clúster** no tiene sistema operativo propio: cada miembro tiene el suyo.
+
+Para que VMware ESXi o FortiOS sea el sistema operativo de un host, ponga esa tecnología en la familia **Sistema operativo** (su campo **Familia**, en la tecnología).
+
+El sistema operativo aparece en la columna **OS** de la lista, en la tabla de miembros de un clúster y en el [Mapa de conexiones](connection-map.md). Sus versiones y fechas de fin de soporte vienen de la tecnología: consulte [Tecnologías](technologies.md).
 
 **Direcciones IP**:
 
@@ -226,12 +240,11 @@ Hace seguimiento de información de soporte y contactos del proveedor.
 
 La pestaña Relaciones conecta este activo a otros registros en KANAP. La insignia de la pestaña cuenta todos los elementos vinculados. La mayoría de los campos se guardan automáticamente.
 
-**Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres, tecnologías y procesos de negocio afectados, y después una tabla por tipo:
+**Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres y procesos de negocio afectados, y después una tabla por tipo:
 
 - **Aplicaciones**: las que tienen un despliegue en servicio en un activo caído, con sus entornos, su criticidad y los activos en los que se ejecutan (**Vía**).
 - **Activos**: los activos que contiene, hasta tres niveles, y los activos que dependen de él. **Vía** muestra el camino.
 - **Clústeres**: los clústeres con un miembro caído. **Caído** cuando no queda ningún miembro en pie, si no **Degradado** con el número de miembros caídos. Las aplicaciones de un clúster caído caen con él.
-- **Tecnologías**: las instaladas en un activo caído, con sus versiones.
 - **Procesos de negocio**: los procesos de las aplicaciones afectadas.
 
 Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza al guardar las relaciones del activo, más abajo.
@@ -250,7 +263,7 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 
 **Sitios web relevantes**: Añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
+**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `infrastructure:member`.
 
 ---
 
@@ -310,7 +323,7 @@ Desde la lista de Activos:
 | `domain` | Dominio DNS | No | Acepta código o etiqueta de Configuración |
 | `admin_zone` | Zona de administración | No | Acepta código o etiqueta de Configuración |
 | `aliases` | Alias DNS | No | Lista separada por comas |
-| `operating_system` | Tipo de SO | No | Acepta código o etiqueta de Configuración |
+| `operating_system` | Sistema operativo | No | El nombre de la tecnología, seguido de su versión (`Windows Server 2019`). Vea más abajo |
 | `cluster` | Pertenencia a clúster | No | Nombre del clúster padre |
 | `notes` | Notas de texto libre | No | |
 
@@ -333,12 +346,13 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 |-------|---------------------|----------------------|
 | Tipo de activo (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Ciclo de vida (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
-| Sistema operativo | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Dominio | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
 | Zona de administración (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (núcleo de confianza)`, `Tier 1 (servidores y aplicaciones)` |
 | Tipo de dirección IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 El sistema normaliza automáticamente los valores durante la importación, por lo que `Virtual Machine`, `virtual machine` y `vm` se resuelven al mismo tipo de activo. Un valor que coincide con varias entradas se rechaza en lugar de adivinarse. La exportación CSV escribe nombres en estas columnas, de modo que un archivo exportado se puede volver a importar tal cual.
+
+**Sistema operativo**: la columna `operating_system` contiene el nombre de la tecnología seguido de su versión, tal como lo escribe la exportación (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Al importar, KANAP busca la tecnología entre las suyas y después en el catálogo, y registra la versión. Una tecnología o una versión que no encuentra se crea: revise antes la ortografía. El valor pasa a ser el sistema operativo del servidor.
 
 ### Coincidencia y actualizaciones
 

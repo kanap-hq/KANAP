@@ -13,7 +13,7 @@ Navegue a **Datos maestros > Procesos de negocio** para abrir la lista.
 **Permisos**:
 
 - Ver: `business_processes:reader`
-- Crear / editar: `business_processes:manager`
+- Crear / editar: `business_processes:member`
 - Eliminar, importar/exportar CSV: `business_processes:admin`
 
 Si la página no aparece o los campos son de solo lectura, solicite a su administrador del espacio de trabajo que ajuste sus permisos de rol.
@@ -43,8 +43,8 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 
 **Acciones** (barra de herramientas superior derecha):
 
-- **Nuevo** (Manager+): crear un nuevo proceso de negocio.
-- **Gestionar categorías** (Manager+): abrir el diálogo de gestión de categorías.
+- **Nuevo** (`business_processes:member`): crear un nuevo proceso de negocio.
+- **Gestionar categorías** (`business_processes:member`): abrir el diálogo de gestión de categorías.
 - **Importar CSV** (Admin): importación masiva de procesos desde un archivo CSV.
 - **Exportar CSV** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a CSV.
 - **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Las interfaces y solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.

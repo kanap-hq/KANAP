@@ -126,7 +126,7 @@ Esta pestaña controla la clasificación de riesgo y la configuración de protec
   - **Derivado**: Los valores se agregan desde los enlaces de interfaz vinculados: la pestaña muestra los valores efectivos y enumera una vez cada interfaz que contribuye, con los entornos en los que está enlazada
 
 **Campos**:
-  - **Criticidad**: Crítica para el negocio, Alta, Media o Baja
+  - **Criticidad**: un nivel de criticidad de negocio del catálogo de su organización, en [Clasificaciones y continuidad](it-ops-settings.md#clasificaciones-y-continuidad). Los niveles por defecto son Crítica, Alta, Moderada y Baja
   - **Clase de datos**: Tomada de la configuración de clasificación de datos de su organización
   - **Contiene PII**: Si datos personales atraviesan la conexión
 

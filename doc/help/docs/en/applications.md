@@ -65,7 +65,7 @@ Once you save, the workspace unlocks all tabs for detailed documentation.
 
 **Permissions**:
 - View: `applications:reader`
-- Create / edit: `applications:manager` (also called `member`)
+- Create / edit: `applications:member`
 - Import / Export / Delete: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ The Applications grid provides a comprehensive view of your application portfoli
 - Retired applications are hidden by default; use the **Lifecycle** filter to include Retired.
 
 **Actions**:
-- **New App / Service**: Create a new entry (`applications:manager`)
+- **New App / Service**: Create a new entry (`applications:member`)
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
 - **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
-- **Copy item**: Duplicate a selected application with all its core relations (`applications:manager`). See [Copying applications](#copying-applications) for what is and is not copied.
+- **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
 - **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
 ---
@@ -221,7 +221,14 @@ Each row shows the interface name, the counterpart application, and a **Via midd
 
 ### Operations
 
-The Operations tab captures how users access the application and who supports it.
+The Operations tab captures the technologies the application depends on, how users access it and who supports it.
+
+**Technologies** (top of the tab) lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
+
+- **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
+- **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
+
+A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`. To add or remove a declared technology, you need `applications:member` and `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
 
 **Technical**:
 - **Access methods** (multi-select): how users access this application. Options are configurable in [IT Landscape Settings](it-ops-settings.md). Defaults include Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk.
@@ -280,7 +287,7 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks, incidents, technologies and business processes, each in its own table. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks, incidents and business processes, each in its own table. The technologies are on the [Operations](#operations) tab. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
@@ -294,15 +301,7 @@ The Relations tab shows what this application is linked to: its budget lines, co
 | **Requests** | Reference (`REQ-23`), name, status, desired delivery |
 | **Tasks** | Reference (`T-118`), title, status, assignee, due date. Only the tasks linked to this application itself appear, not the tasks of its projects |
 | **Incidents** | Reference (`INC-14`), title, severity, status, detection date |
-| **Technologies** | Reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support |
 | **Business processes** | Name, business owner |
-
-**Technologies** lists what the application depends on, from two sources shown in the **Link** column:
-
-- **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
-- **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
-
-A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`. To add or remove a declared technology, you also need `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
 
 **Business processes** lists the processes the application supports. The process shows the same link in its own **Applications** section. A disabled process stays listed, greyed out. Linking needs `business_processes:member` as well.
 
@@ -310,7 +309,7 @@ Dates in orange need attention: a contract whose renewal decision is due within 
 
 From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency. Contracts get one total per currency, without the disabled ones.
 
-**Adding and removing links** (`applications:manager`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
+**Adding and removing links** (`applications:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
 
 **Related**: suggestions of records you may want to link, each with the reason it is suggested:
 
@@ -324,7 +323,7 @@ Click **Link** to add the suggestion to its section. The section is absent when 
 
 **Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
+**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `applications:member`.
 
 ---
 

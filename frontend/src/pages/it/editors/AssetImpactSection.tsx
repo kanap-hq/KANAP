@@ -114,15 +114,15 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
   const applicationColumns: Array<RelationsColumn<ImpactApplication>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
-    { key: 'environment', header: t(k('columns.environment')), width: 130, render: (row) => row.environments.map(environment).join(', ') },
+    { key: 'environment', header: t(k('columns.environment')), width: 130, hideOrder: 2, render: (row) => row.environments.map(environment).join(', ') },
     { key: 'criticality', header: t(k('columns.criticality')), width: 130, render: (row) => criticality(row.criticality) },
-    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, render: (row) => <span title={viaNames(row)}>{viaNames(row, 'on')}</span> },
   ];
   const assetColumns: Array<RelationsColumn<ImpactAsset>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },
     { key: 'type', header: t(k('columns.type')), width: 130, render: (row) => labelFor('serverKind', row.kind) || row.kind },
-    { key: 'via', header: t(k('columns.via')), width: 240, render: (row) => <span title={path(row)}>{assetVia(row)}</span> },
+    { key: 'via', header: t(k('columns.via')), width: 240, hideOrder: 1, render: (row) => <span title={path(row)}>{assetVia(row)}</span> },
   ];
   const clusterColumns: Array<RelationsColumn<ImpactCluster>> = [
     { key: 'ref', header: t(k('columns.reference')), width: 72, render: (row) => <RelationRef>{row.reference}</RelationRef> },
@@ -136,7 +136,7 @@ export default function AssetImpactSection({ assetId, version = 0 }: Props) {
         </Box>
       ),
     },
-    { key: 'via', header: t(k('columns.via')), width: 200, render: (row) => viaNames(row) },
+    { key: 'via', header: t(k('columns.via')), width: 200, hideOrder: 1, render: (row) => viaNames(row) },
   ];
   const processColumns: Array<RelationsColumn<ImpactProcess>> = [
     { key: 'name', header: t(k('columns.name')), render: (row) => row.name },

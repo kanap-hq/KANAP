@@ -65,7 +65,7 @@ Une fois enregistré, l'espace de travail déverrouille tous les onglets pour un
 
 **Autorisations** :
 - Consultation : `applications:reader`
-- Création / modification : `applications:manager` (aussi appelé `member`)
+- Création / modification : `applications:member`
 - Import / Export / Suppression : `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - Les applications retirées sont masquées par défaut ; utilisez le filtre **Cycle de vie** pour inclure les applications retirées.
 
 **Actions** :
-- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:manager`)
+- **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
 - **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
-- **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:manager`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
+- **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
 - **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
 ---
@@ -221,7 +221,14 @@ Chaque ligne affiche le nom de l'interface, l'application contrepartie et un ind
 
 ### Exploitation
 
-L'onglet Exploitation capture comment les utilisateurs accèdent à l'application et qui la supporte.
+L'onglet Exploitation capture les technologies dont l'application dépend, comment les utilisateurs y accèdent et qui la supporte.
+
+**Technologies** (en haut de l'onglet) liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien**. Colonnes : référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard.
+
+- **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
+- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
+
+Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut `applications:member` et `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
 **Technique** :
 - **Méthodes d'accès** (multi-sélection) : comment les utilisateurs accèdent à cette application. Les options sont configurables dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Les options par défaut incluent Web, Application installée localement, Application mobile, IHM propriétaire (interface industrielle), Terminal / CLI, VDI / Bureau distant, Borne.
@@ -280,7 +287,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents, technologies et processus métier, chacun dans son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents et processus métier, chacun dans son propre tableau. Les technologies sont dans l'onglet [Exploitation](#exploitation). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
@@ -294,15 +301,7 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 | **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |
 | **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
-| **Technologies** | Référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard |
 | **Processus métier** | Nom, responsable métier |
-
-**Technologies** liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien** :
-
-- **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
-- **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
-
-Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut aussi `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
 **Processus métier** liste les processus que l'application soutient. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Le lien demande aussi `business_processes:member`.
 
@@ -310,7 +309,7 @@ Les dates en orange demandent votre attention : un contrat dont la décision de 
 
 À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting. Les contrats ont un total par devise, sans les contrats désactivés.
 
-**Ajouter et retirer des liens** (`applications:manager`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
+**Ajouter et retirer des liens** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
 
 **Apparentés** : des suggestions d'enregistrements que vous pourriez lier, chacune avec la raison de la suggestion :
 
@@ -324,7 +323,7 @@ Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est ab
 
 **Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
 
-**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression est disponible pour les managers.
+**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression nécessite `applications:member`.
 
 ---
 

@@ -77,11 +77,36 @@ async function testFrozenForecastIsRefusedWithAReadableMessage() {
   assert.equal(await service.isFrozen({ scope: 'opex', column: 'budget', year: 2026 }, opts), false);
   await assert.rejects(
     () => service.assertNotFrozen({ scope: 'opex', column: 'forecast', year: 2026 }, opts),
-    (err: any) => err instanceof ForbiddenException && err.message === 'OPEX Forecast for 2026 is frozen',
+    (err: any) => {
+      const body = typeof err.getResponse === 'function' ? err.getResponse() : {};
+      return err instanceof ForbiddenException
+        && err.message === 'OPEX Forecast for 2026 is frozen'
+        && body.code === 'DATA_FROZEN'
+        && body.variant === 'opex'
+        && body.params?.column === 'Forecast'
+        && body.params?.year === 2026;
+    },
   );
   await assert.rejects(
     () => service.assertNotFrozen({ scope: 'opex', column: 'forecast', year: 2026, action: 'Copy' }, opts),
-    (err: any) => err.message === 'Copy not allowed: OPEX Forecast for 2026 is frozen',
+    (err: any) => {
+      const body = typeof err.getResponse === 'function' ? err.getResponse() : {};
+      return err.message === 'Copy not allowed: OPEX Forecast for 2026 is frozen'
+        && body.code === 'DATA_FROZEN_ACTION'
+        && body.variant === 'opex'
+        && body.params?.action === 'Copy';
+    },
+  );
+  await service.freeze(2028, [{ scope: 'companies' }], 'user-1', opts);
+  await assert.rejects(
+    () => service.assertNotFrozen({ scope: 'companies', year: 2028 }, opts),
+    (err: any) => {
+      const body = typeof err.getResponse === 'function' ? err.getResponse() : {};
+      return err.message === 'COMPANIES data for 2028 is frozen'
+        && body.code === 'DATA_FROZEN'
+        && body.variant === 'companies'
+        && body.params?.year === 2028;
+    },
   );
   await service.assertNotFrozen({ scope: 'opex', column: 'forecast', year: 2027 }, opts);
 }

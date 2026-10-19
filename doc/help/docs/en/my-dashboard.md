@@ -32,6 +32,8 @@ The **Log Time** action opens a focused dialog so you can record hours without l
 - Pick a **Category**: **IT** or **Business**.
 - Add **Notes** if you want context on what you worked on.
 
+Saving checks the permission of the target: a project entry or a project task entry needs `portfolio_projects:contributor`, a standalone task entry needs `tasks:member`.
+
 After save, the dashboard time-summary tile refreshes automatically.
 
 ## Sample data line

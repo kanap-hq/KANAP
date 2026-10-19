@@ -65,7 +65,7 @@ Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para do
 
 **Permisos**:
 - Ver: `applications:reader`
-- Crear / editar: `applications:manager` (también llamado `member`)
+- Crear / editar: `applications:member`
 - Importar / Exportar / Eliminar: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - Las aplicaciones retiradas están ocultas por defecto; use el filtro de **Ciclo de vida** para incluir Retiradas.
 
 **Acciones**:
-- **Nueva App / Servicio**: Crear una nueva entrada (`applications:manager`)
+- **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
-- **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:manager`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
+- **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
 - **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
 
 ---
@@ -221,7 +221,14 @@ Cada fila muestra el nombre de la interfaz, la aplicación contraparte y un indi
 
 ### Operaciones
 
-La pestaña Operaciones captura cómo acceden los usuarios a la aplicación y quién la soporta.
+La pestaña Operaciones captura las tecnologías de las que depende la aplicación, cómo acceden a ella los usuarios y quién la soporta.
+
+**Tecnologías** (arriba en la pestaña) lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**. Columnas: referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar.
+
+- **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
+- **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
+
+Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`. Para añadir o quitar una tecnología declarada, necesita `applications:member` e `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
 
 **Técnico**:
 - **Métodos de acceso** (selección múltiple): cómo acceden los usuarios a esta aplicación. Las opciones son configurables en [Configuración del Panorama IT](it-ops-settings.md). Los valores predeterminados incluyen Web, Aplicación instalada localmente, Aplicación móvil, HMI propietario (interfaz industrial), Terminal / CLI, VDI / Escritorio remoto, Kiosk.
@@ -280,7 +287,7 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas, incidentes, tecnologías y procesos de negocio, cada uno en su propia tabla. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas, incidentes y procesos de negocio, cada uno en su propia tabla. Las tecnologías están en la pestaña [Operaciones](#operaciones). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
@@ -294,15 +301,7 @@ La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus l�
 | **Solicitudes** | Referencia (`REQ-23`), nombre, estado, entrega deseada |
 | **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Solo aparecen las tareas vinculadas a esta aplicación, no las tareas de sus proyectos |
 | **Incidentes** | Referencia (`INC-14`), título, severidad, estado, fecha de detección |
-| **Tecnologías** | Referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar |
 | **Procesos de negocio** | Nombre, responsable de negocio |
-
-**Tecnologías** lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**:
-
-- **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
-- **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
-
-Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`. Para añadir o quitar una tecnología declarada, necesita además `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
 
 **Procesos de negocio** lista los procesos que la aplicación respalda. El proceso muestra el mismo vínculo en su propia sección **Aplicaciones**. Un proceso desactivado sigue en la lista, atenuado. Vincular requiere también `business_processes:member`.
 
@@ -310,7 +309,7 @@ Las fechas en naranja requieren atención: un contrato cuya decisión de renovac
 
 A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte. Los contratos tienen un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`applications:manager`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
+**Añadir y quitar vínculos** (`applications:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
 
 **Relacionados**: sugerencias de registros que podría vincular, cada una con el motivo de la sugerencia:
 
@@ -324,7 +323,7 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 
 **Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación está disponible para los gestores.
+**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `applications:member`.
 
 ---
 

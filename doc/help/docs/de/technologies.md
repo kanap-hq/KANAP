@@ -22,6 +22,7 @@ Einige Beispiele:
 - **Active Directory**: eine **On-Premise**-Technologie derselben Familie, getragen von Ihren Domänencontrollern. Die Anwendungen, die sie nutzen, deklarieren sie.
 - **vSphere**: eine **On-Premise**-Technologie, getragen von der vCenter-VM und von den Hosts.
 - **SQL Server**: eine Technologie mit einer Zeile pro Version im Einsatz (2016, 2019, 2022). Jeder Server trägt seine eigene Version, sodass der Supportende-Bericht die Server nennen kann, die noch auf einer alten laufen.
+- **Windows Server**: eine Technologie der Familie **Betriebssystem**. Jeder Server erfasst seine Version, und diese Technologie ist das Betriebssystem des Servers. Siehe [Betriebssysteme](#betriebssysteme).
 - **Eine SaaS-Anwendung**: keine Technologie zu erfassen. Der Anbieter pflegt, worauf sie läuft.
 
 Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle SQL Server, die Sie betreiben; die Versionen tragen die Details.
@@ -46,6 +47,26 @@ Für ein Produkt, das der Katalog nicht kennt, klicken Sie auf **Eine Technologi
 - Anzeigen: `infrastructure:reader`
 - Anlegen und bearbeiten: `infrastructure:member`
 - Löschen: `infrastructure:admin`
+
+## Betriebssysteme
+
+Das Betriebssystem eines Servers ist eine Technologie der Familie **Betriebssystem**. Fügen Sie sie dem Server wie jede andere Technologie hinzu, mit ihrer Version: Hat der Server noch keines, wird sie zu seinem Betriebssystem. Die Serverseite zeigt sie an erster Stelle ihres Abschnitts **Technologien**, mit dem Vermerk „Betriebssystem“. Siehe [Assets](assets.md#betriebssystem).
+
+Der Katalog bietet Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux und CentOS. Er führt die Versionen, deren Support 2010 oder später endete, und für Windows Server nur die Versionen mit langem Support.
+
+Was die beiden Supportdaten bedeuten, hängt vom Hersteller ab:
+
+| Betriebssystem | Ende des Standardsupports | Ende des erweiterten Supports |
+|---|---|---|
+| **Ubuntu**, **Red Hat Enterprise Linux**, **SUSE Linux Enterprise Server** | Ende der Sicherheitsupdates | Ende der kostenpflichtigen Verlängerung |
+| **Windows Server** | Ende des grundlegenden Supports | Ende des erweiterten Supports |
+| **Debian** | Ende des regulären Supports | Ende von Debian LTS |
+
+Jede Technologie kann ein Betriebssystem sein: Ordnen Sie VMware ESXi oder FortiOS der Familie **Betriebssystem** zu, dann kann sie das Betriebssystem eines Hosts oder einer Firewall sein.
+
+Die Betriebssysteme des Katalogs haben noch keine CPE-Produktkennungen, daher gleicht KANAP sie nicht mit Schwachstellen ab.
+
+Installationen, die von einer früheren Version aktualisiert wurden, behalten ihre Daten: Die von den Servern genutzten Betriebssysteme und die Einträge, die der früheren Betriebssystemliste der Einstellungen hinzugefügt wurden, sind zu Technologien geworden, mit ihren Versionen und Daten.
 
 ---
 
@@ -131,7 +152,7 @@ Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine
 
 Die Prüfung fügt die neuen Versionen und CPE-Produktkennungen des Produkts hinzu und aktualisiert die Supportende-Daten und Kennungen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version oder Kennung wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Katalogeinträge bringen ihre Kennungen mit.
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Katalogeinträge bringen ihre Kennungen mit, außer den Betriebssystemen.
 
 **Notizen**: Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
 
@@ -232,10 +253,10 @@ Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Ho
 
 ## Wo Technologien erscheinen
 
-- **Anwendungen**: Der Abschnitt **Technologien** im Reiter Beziehungen listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#verknupfungen).
-- **Assets**: Der Abschnitt **Technologien** im Reiter Technisch eines Assets listet, was der Server trägt; der Abschnitt **Wenn dieser Server ausfällt** in seinem Reiter Beziehungen listet die Technologien, die mit ihm ausfallen. Siehe [Assets](assets.md#technisch).
+- **Anwendungen**: Der Abschnitt **Technologien** oben im Reiter Betrieb listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#betrieb).
+- **Assets**: Der Abschnitt **Technologien** im Reiter Technisch eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#technisch).
 - **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
-- Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
+- Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, Betriebssysteme eingeschlossen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).
 - **Administrationssicht**: die Verzeichnisdienste jeder Administrationszone und die Server, die eine Verzeichnistechnologie außerhalb der sensibelsten Zone tragen. Siehe [Administrationssicht](administration-view.md).
 - **Kontakte**: Der Abschnitt **Verwendet in** eines Kontakts listet die Technologien, die er betreut. Siehe [Kontakte](contacts.md#wo-kontakte-verwendet-werden).

@@ -206,7 +206,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         refColumn<BudgetLineRow>('budget'),
         { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: BudgetLineRow) => row.product_name },
         { key: 'nature', header: t('workspace.application.relations.columns.nature'), width: 72, render: (row: BudgetLineRow) => t(`ops:budget.${row.nature}`) },
-        { key: 'supplier', header: t('workspace.application.relations.columns.supplier'), width: 140, render: (row: BudgetLineRow) => row.supplier_name ?? dash },
+        { key: 'supplier', header: t('workspace.application.relations.columns.supplier'), width: 140, hideOrder: 1, render: (row: BudgetLineRow) => row.supplier_name ?? dash },
         {
           key: 'amount', align: 'right', width: 130,
           header: lineCurrency ? `${columnLabel} ${year} (${lineCurrency})` : `${columnLabel} ${year}`,
@@ -238,7 +238,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       muted: (row: ContractRow) => row.status === 'disabled',
       columns: [
         { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: ContractRow) => row.name },
-        { key: 'supplier', header: t('workspace.application.relations.columns.supplier'), width: 140, render: (row: ContractRow) => row.supplier_name ?? dash },
+        { key: 'supplier', header: t('workspace.application.relations.columns.supplier'), width: 140, hideOrder: 2, render: (row: ContractRow) => row.supplier_name ?? dash },
         {
           key: 'end', header: t('workspace.application.relations.columns.end'), width: 110,
           render: (row: ContractRow) => (
@@ -252,7 +252,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
           render: (row: ContractRow) => (row.yearly_amount == null ? dash : `${formatAmount(row.yearly_amount)}${row.currency ? ` ${row.currency}` : ''}`),
         },
         {
-          key: 'renewal', header: t('workspace.application.relations.columns.renewal'), width: 110,
+          key: 'renewal', header: t('workspace.application.relations.columns.renewal'), width: 110, hideOrder: 1,
           render: (row: ContractRow) => t(row.auto_renewal ? 'workspace.application.relations.renewal.tacit' : 'workspace.application.relations.renewal.manual'),
         },
       ],
@@ -290,7 +290,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         refColumn<ProjectRow>('project'),
         { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: ProjectRow) => row.name },
         { key: 'status', header: t('workspace.application.relations.columns.status'), width: 120, render: (row: ProjectRow) => statusText('project', row.status) },
-        { key: 'end', header: t('workspace.application.relations.columns.plannedEnd'), width: 120, render: (row: ProjectRow) => date(row.planned_end) },
+        { key: 'end', header: t('workspace.application.relations.columns.plannedEnd'), width: 120, hideOrder: 1, render: (row: ProjectRow) => date(row.planned_end) },
       ],
       search: searchList('/portfolio/projects', 'project', (row) => row.name),
     },
@@ -306,7 +306,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         refColumn<RequestRow>('request'),
         { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: RequestRow) => row.name },
         { key: 'status', header: t('workspace.application.relations.columns.status'), width: 120, render: (row: RequestRow) => statusText('request', row.status) },
-        { key: 'delivery', header: t('workspace.application.relations.columns.targetDelivery'), width: 140, render: (row: RequestRow) => date(row.target_delivery_date) },
+        { key: 'delivery', header: t('workspace.application.relations.columns.targetDelivery'), width: 140, hideOrder: 1, render: (row: RequestRow) => date(row.target_delivery_date) },
       ],
       search: searchList('/portfolio/requests', 'request', (row) => row.name),
     },
@@ -322,9 +322,9 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         refColumn<TaskRow>('task'),
         { key: 'title', header: t('workspace.application.relations.columns.title'), render: (row: TaskRow) => row.title },
         { key: 'status', header: t('workspace.application.relations.columns.status'), width: 100, render: (row: TaskRow) => statusText('task', row.status) },
-        { key: 'assignee', header: t('workspace.application.relations.columns.assignee'), width: 140, render: (row: TaskRow) => row.assignee_name ?? dash },
+        { key: 'assignee', header: t('workspace.application.relations.columns.assignee'), width: 140, hideOrder: 1, render: (row: TaskRow) => row.assignee_name ?? dash },
         {
-          key: 'due', header: t('workspace.application.relations.columns.due'), width: 110,
+          key: 'due', header: t('workspace.application.relations.columns.due'), width: 110, hideOrder: 2,
           render: (row: TaskRow) => {
             const late = !!row.due_date && row.due_date < today && !DONE_TASK.has(row.status ?? '');
             return <Box component="span" sx={late ? { color: 'kanap.orange' } : undefined}>{date(row.due_date)}</Box>;
@@ -348,7 +348,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       editable: hasLevel('business_processes', 'manager'),
       columns: [
         { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: ProcessRow) => row.name },
-        { key: 'owner', header: t('workspace.application.relations.columns.businessOwner'), width: 180, render: (row: ProcessRow) => row.owner_name ?? dash },
+        { key: 'owner', header: t('workspace.application.relations.columns.businessOwner'), width: 180, hideOrder: 1, render: (row: ProcessRow) => row.owner_name ?? dash },
       ],
       search: async (q, signal) => {
         const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/business-processes/lookup', { params: { limit: PAGE, ...(q ? { q } : {}) }, signal });
@@ -367,7 +367,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
       },
     },
     {
-      key: 'via', header: t('workspace.application.relations.columns.via'), width: 200,
+      key: 'via', header: t('workspace.application.relations.columns.via'), width: 200, hideOrder: 1,
       render: (row) => (
         <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
           {t(`workspace.application.relations.via.${row.via.kind}`, { label: row.via.label ?? '' })}

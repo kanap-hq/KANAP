@@ -203,11 +203,11 @@ function DomainsSection({ domains }: { domains: AdministrationDomain[] }) {
   const columns: Array<RelationsColumn<AdministrationDomain>> = [
     { key: 'name', header: t('pages.administrationView.columns.domain'), width: 180, render: (row) => `${nameOf('domain', row.code, row.label)}${row.deprecated ? ` (${t('common:enumEditor.retiredSuffix')})` : ''}` },
     { key: 'dns', header: t('pages.administrationView.columns.dnsSuffix'), width: 180, render: (row) => row.dns_suffix },
-    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, render: (row) => row.forest ?? notSet },
+    { key: 'forest', header: t('pages.administrationView.columns.forest'), width: 180, hideOrder: 2, render: (row) => row.forest ?? notSet },
     {
       key: 'trusts',
       header: t('pages.administrationView.columns.trusts'),
-      width: 220,
+      width: 220, hideOrder: 1,
       render: (row) => (row.trusts.length || row.declared_by.length
         ? (
           <>

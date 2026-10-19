@@ -39,7 +39,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 | **Umgebung** | Prod, Pre-prod, QA, Test, Dev, Sandbox, mit einem farbigen Punkt |
 | **Standort** | Wo das Asset gehostet wird |
 | **Hosting** | Hosting-Typ (vom Standort abgeleitet) |
-| **OS** | Betriebssystem |
+| **OS** | Betriebssystem: die als Betriebssystem des Servers markierte Technologie, mit ihrer Version |
 | **Netzwerkzone** | Netzwerksegment (vom Subnetz abgeleitet) |
 | **Lebenszyklus** | Aktueller Lebenszyklus-Status |
 | **Zuweisungen** | Anzahl der Anwendungszuweisungen |
@@ -165,15 +165,29 @@ Der Reiter Technisch organisiert Cluster, Netzwerkidentität, die vom Server get
 - **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
 - **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
 - **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
-- **Betriebssystem**: OS-Typ und -Version (z. B. Windows Server 2022, Ubuntu 24.04 LTS). Für Cluster deaktiviert: OS wird pro Mitglied definiert. Bei Auswahl werden Standard- und erweiterte Support-Endtermine darunter angezeigt.
+**Technologien**: was der Server trägt, zum Beispiel Windows Server, SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
 
-**Technologien**: was der Server trägt, zum Beispiel SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
-
+- **Betriebssystem**: Das Betriebssystem des Servers ist eine seiner Technologien, aus der Familie **Betriebssystem**. Es steht an erster Stelle der Liste, mit dem Vermerk „Betriebssystem“ nach seinem Namen. Siehe [Betriebssystem](#betriebssystem) weiter unten.
+- **Version**: orange, wenn der Support innerhalb von 12 Monaten endet oder nur noch der erweiterte Support läuft, und rot, sobald alle Enddaten verstrichen sind. Fahren Sie mit der Maus darüber, um das Ende des Standardsupports und des erweiterten Supports zu sehen.
 - Eine auf diesem Server installierte Technologie entfernen Sie mit dem Kreuz am Ende ihrer Zeile.
 - Eine Technologie, die auf dem Server oder Cluster installiert ist, in dem dieser läuft, nennt jenen Server unter **Über**. Sie folgt der Installation und wird dort entfernt.
 - **Hinzufügen** (`infrastructure:member`) öffnet eine Technologiesuche, dann die Versionsauswahl: Wählen Sie eine Version, **Version unbekannt**, oder geben Sie eine neue Bezeichnung ein und wählen Sie **Version „…“ hinzufügen**, um sie anzulegen. Jede Änderung wird sofort gespeichert.
+- **Version ändern** (`infrastructure:member`): Klicken Sie auf die Version einer installierten Technologie oder auf den Stift am Ende ihrer Zeile. Dieselbe Versionsauswahl öffnet sich.
 
-Version und Notizen einer Installation ändern Sie im Reiter **Server** der Technologie. Siehe [Technologien](technologies.md#eine-technologie-mit-einem-server-verknupfen).
+Die Notizen einer Installation ändern Sie im Reiter **Server** der Technologie. Siehe [Technologien](technologies.md#server).
+
+#### Betriebssystem
+
+Ein Server hat ein Betriebssystem: eine Technologie der Familie **Betriebssystem**, mit ihrer Version.
+
+- **Fügen Sie es hinzu** wie jede Technologie. Hat der Server noch kein Betriebssystem, wird die erste Technologie dieser Familie, die Sie hinzufügen, zu seinem Betriebssystem.
+- **Entfernen Sie es** mit seinem Kreuz. Bleibt eine andere Technologie der Familie auf dem Server, wird diese zum Betriebssystem.
+- **Ändern Sie die Version** per Klick darauf, wie bei jeder Technologie.
+- Ein **Cluster** hat kein eigenes Betriebssystem: Jedes Mitglied hat sein eigenes.
+
+Damit VMware ESXi oder FortiOS das Betriebssystem eines Hosts ist, ordnen Sie diese Technologie der Familie **Betriebssystem** zu (ihr Feld **Familie**, an der Technologie).
+
+Das Betriebssystem erscheint in der Spalte **OS** der Liste, in der Mitgliedertabelle eines Clusters und in der [Verbindungskarte](connection-map.md). Seine Versionen und Support-Enddaten kommen von der Technologie: siehe [Technologien](technologies.md).
 
 **IP-Adressen**:
 
@@ -226,12 +240,11 @@ Verfolgt Lieferantensupport und Kontaktinformationen.
 
 Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KANAP. Das Reiter-Badge zählt alle verknüpften Elemente. Die meisten Felder werden automatisch gespeichert.
 
-**Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster, Technologien und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
+**Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
 
 - **Anwendungen**: solche mit einer Bereitstellung in Betrieb auf einem ausgefallenen Asset, mit ihren Umgebungen, ihrer Kritikalität und den Assets, auf denen sie laufen (**Über**).
 - **Assets**: die Assets, die es enthält, bis zu drei Ebenen tief, und die Assets, die von ihm abhängen. **Über** zeigt den Pfad.
 - **Cluster**: Cluster mit einem ausgefallenen Mitglied. **Ausgefallen**, wenn kein Mitglied mehr steht, sonst **Beeinträchtigt** mit der Zahl der ausgefallenen Mitglieder. Die Anwendungen eines ausgefallenen Clusters fallen mit ihm aus.
-- **Technologien**: die auf einem ausgefallenen Asset installierten, mit ihren Versionen.
 - **Geschäftsprozesse**: die Prozesse der betroffenen Anwendungen.
 
 Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie die Asset-Beziehungen weiter unten speichern.
@@ -250,7 +263,7 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
+**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `infrastructure:member`.
 
 ---
 
@@ -310,7 +323,7 @@ Aus der Asset-Liste:
 | `domain` | DNS-Domäne | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `admin_zone` | Administrationszone | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `aliases` | DNS-Aliase | Nein | Komma-getrennte Liste |
-| `operating_system` | OS-Typ | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
+| `operating_system` | Betriebssystem | Nein | Der Name der Technologie, gefolgt von ihrer Version (`Windows Server 2019`). Siehe unten |
 | `cluster` | Cluster-Mitgliedschaft | Nein | Name des übergeordneten Clusters |
 | `notes` | Freitext-Notizen | Nein | |
 
@@ -333,12 +346,13 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 |-------|---------------|----------------|
 | Asset-Typ (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Lebenszyklus (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
-| Betriebssystem | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Domäne | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
 | Administrationszone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (Vertrauenskern)`, `Tier 1 (Server und Anwendungen)` |
 | IP-Adresstyp | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, sodass eine exportierte Datei unverändert wieder importiert werden kann.
+
+**Betriebssystem**: Die Spalte `operating_system` enthält den Namen der Technologie, gefolgt von ihrer Version, so wie der Export sie schreibt (`Windows Server 2019`, `Ubuntu 24.04 LTS`). Beim Import sucht KANAP die Technologie unter Ihren Technologien, dann im Katalog, und erfasst die Version. Eine Technologie oder Version, die es nicht findet, wird angelegt: Prüfen Sie also vorher die Schreibweise. Der Wert wird zum Betriebssystem des Servers.
 
 ### Abgleich und Updates
 

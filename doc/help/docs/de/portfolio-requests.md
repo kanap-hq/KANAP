@@ -12,9 +12,10 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 | Berechtigung | Was sie erlaubt |
 | --- | --- |
 | `portfolio_requests:reader` | Die Anfragenliste öffnen und Anfragen-Arbeitsbereiche anzeigen |
-| `portfolio_requests:member` | Die im Arbeitsbereich eingebetteten verwalteten Anfragendokumente bearbeiten, auch ohne breitere Anfragen-Verwaltungsrechte |
-| `portfolio_requests:manager` | Anfragen erstellen, Anfragendaten aktualisieren, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
-| `portfolio_requests:admin` | Anfragen löschen und CSV-Import/-Export verwenden |
+| `portfolio_requests:member` | Anfragen erstellen, Anfragendaten aktualisieren, die verwalteten Dokumente (Zweck, Risiken & Mitigationen) bearbeiten, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
+| `portfolio_requests:admin` | Anfragen löschen, CSV-Import/-Export verwenden und Prioritäts-Überschreibungen speichern |
+
+Die Umwandlung einer Anfrage in ein Projekt erfordert zusätzlich `portfolio_projects:member`.
 
 Der Reiter **Wissensdatenbank** folgt den Wissens-Berechtigungen für Erstellungs- und Verknüpfungsaktionen. Ein Benutzer kann erlaubt sein, an Anfrageninhalten zu arbeiten, ohne erlaubt zu sein, eigenständige Wissensdokumente zu erstellen oder erneut zu verknüpfen.
 
@@ -62,7 +63,7 @@ Das Standardraster hebt die Felder hervor, die während der Erfassung und Überp
 
 ### Listenaktionen
 
-- **Neue Anfrage** ist für Anfragenmanager verfügbar.
+- **Neue Anfrage** ist mit `portfolio_requests:member` verfügbar.
 - **CSV importieren** und **CSV exportieren** sind für Anfragenadministratoren verfügbar.
 
 ## Der Anfragen-Arbeitsbereich
@@ -139,10 +140,8 @@ Der Bereich **Zweck** ist ein verwaltetes Markdown-Dokument, das direkt in die A
 
 - es gibt Prüfern eine stabile Absichtserklärung
 - es ist während der Konvertierung von Anfrage zu Projekt verfügbar
-- es kann von Benutzern mit `portfolio_requests:member` bearbeitet werden, auch wenn sie den Rest der Anfrage nicht verwalten
+- es kann von Benutzern mit `portfolio_requests:member` bearbeitet werden
 - es unterstützt **DOCX-Import**, sodass Sie vorhandene Word-Dokumente direkt einbringen können, und **Export**, um den aktuellen Inhalt als PDF, DOCX oder ODT herunterzuladen
-
-Diese Aufteilung ist absichtlich. Sie erlaubt fachkundigen Mitwirkenden, die Anfragen-Erzählung zu verbessern, ohne die volle Kontrolle über Status, Bewertung und Portfolio-Struktur zu öffnen.
 
 ### Aktivität
 
@@ -328,5 +327,4 @@ Verwenden Sie den Export, wenn Sie Portfolio-Berichterstattung oder Offline-Anre
 - **Verwenden Sie DOCX-Import für vorhandenen Inhalt**: Wenn Sie bereits eine Zweck-Erklärung oder ein Risikoregister in einem Word-Dokument haben, verwenden Sie die Schaltfläche **Importieren** im Editor Zweck oder Risiken & Mitigationen, anstatt zu kopieren und einzufügen. Der Import konvertiert das Dokument in Markdown und warnt Sie, wenn Inhalte nicht übertragen werden konnten.
 - **Bereichsfilter bleiben**: Die Liste öffnet sich mit **Alle Anfragen**. KANAP merkt sich Ihre letzte Bereichswahl, sodass Sie sie nicht in jeder Sitzung neu auswählen müssen.
 - **Konvertierte Anfragen sind standardmäßig ausgeblendet**: Wenn Sie nach einer Anfrage suchen, die bereits in ein Projekt konvertiert wurde, fügen Sie **Konvertiert** zum Status-Filter in der Liste hinzu.
-- **Member-Berechtigung für Mitwirkende**: Geben Sie Fachexperten `portfolio_requests:member`, damit sie Zweck und Risiken & Mitigationen bearbeiten können, ohne Status, Bewertung oder Portfolio-Struktur ändern zu können.
 - **Von Aufgabe zu Anfrage**: Wenn eine Aufgabe eine größere Initiative offenbart, verwenden Sie **In Anfrage umwandeln** aus dem Aufgaben-Arbeitsbereich. Die neue Anfrage erbt den Titel, die Beschreibung (als Zweck), die Klassifizierung und die Anhänge der Aufgabe und zeigt die **Quell-Aufgabe** in ihrer Kopfzeile.

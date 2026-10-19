@@ -42,7 +42,7 @@ La grille des départements vous offre une vue d'ensemble de tous les départeme
 **Liens profonds** : Chaque cellule de la grille est un lien cliquable. Nom et Société ouvrent l'onglet Vue d'ensemble ; Effectif ouvre l'onglet Détails. Lorsque vous naviguez vers un espace de travail puis revenez, votre ordre de tri, requête de recherche et filtres sont préservés.
 
 **Actions** :
-- **Nouveau** : Créer un nouveau département (nécessite `departments:manager`)
+- **Nouveau** : Créer un nouveau département (nécessite `departments:member`)
 - **Importer CSV** : Import en masse de départements (nécessite `departments:admin`)
 - **Exporter CSV** : Exporter en CSV (nécessite `departments:admin`)
 - **Supprimer la sélection** : Supprimer les départements sélectionnés (nécessite `departments:admin`). Un département utilisé dans les ventilations de lignes budgétaires ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les départements conservés, avec la raison

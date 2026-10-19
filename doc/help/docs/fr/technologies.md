@@ -22,6 +22,7 @@ Quelques exemples :
 - **Active Directory** : une technologie **Sur site** de la même famille, portée par vos contrôleurs de domaine. Les applications qui l'utilisent la déclarent.
 - **vSphere** : une technologie **Sur site**, portée par la machine virtuelle vCenter et par les hôtes.
 - **SQL Server** : une technologie avec une ligne par version en service (2016, 2019, 2022). Chaque serveur porte sa propre version, et le rapport des fins de support peut nommer les serveurs restés sur une ancienne.
+- **Windows Server** : une technologie de la famille **Système d'exploitation**. Chaque serveur enregistre sa version, et cette technologie est le système d'exploitation du serveur. Voir [Systèmes d'exploitation](#systemes-dexploitation).
 - **Une application SaaS** : aucune technologie à saisir. L'éditeur maintient ce sur quoi elle tourne.
 
 Une technologie couvre un produit dans son ensemble. « SQL Server » désigne tous les SQL Server que vous faites tourner ; les versions portent le détail.
@@ -46,6 +47,26 @@ Pour un produit que le catalogue ne connaît pas, cliquez sur **Saisir une techn
 - Consulter : `infrastructure:reader`
 - Créer et modifier : `infrastructure:member`
 - Supprimer : `infrastructure:admin`
+
+## Systèmes d'exploitation
+
+Le système d'exploitation d'un serveur est une technologie de la famille **Système d'exploitation**. Ajoutez-la au serveur comme toute autre technologie, avec sa version : quand le serveur n'en a pas encore, elle devient son système d'exploitation. La fiche du serveur l'affiche en tête de sa section **Technologies**, avec la mention « Système d'exploitation ». Voir [Actifs](assets.md#systeme-dexploitation).
+
+Le catalogue propose Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux et CentOS. Il liste les versions dont le support a pris fin en 2010 ou après, et pour Windows Server les seules versions à support long.
+
+Le sens des deux dates de support dépend de l'éditeur :
+
+| Système d'exploitation | Fin du support standard | Fin du support étendu |
+|---|---|---|
+| **Ubuntu**, **Red Hat Enterprise Linux**, **SUSE Linux Enterprise Server** | Fin des correctifs de sécurité | Fin de l'extension payante |
+| **Windows Server** | Fin du support principal | Fin du support étendu |
+| **Debian** | Fin du support régulier | Fin de Debian LTS |
+
+Toute technologie peut être un système d'exploitation : placez VMware ESXi ou FortiOS dans la famille **Système d'exploitation** et elle peut devenir le système d'exploitation d'un hôte ou d'un pare-feu.
+
+Les systèmes d'exploitation du catalogue n'ont pas encore d'identifiants CPE produit : KANAP ne les rapproche donc pas des vulnérabilités.
+
+Les installations mises à jour depuis une version antérieure gardent leurs données : les systèmes d'exploitation utilisés par les serveurs, et les entrées ajoutées à l'ancienne liste des systèmes d'exploitation des paramètres, sont devenus des technologies, avec leurs versions et leurs dates.
 
 ---
 
@@ -131,7 +152,7 @@ Une version issue du catalogue affiche **Catalogue** à côté de son libellé, 
 
 La consultation ajoute les nouvelles versions et les nouveaux identifiants CPE produit du produit, et met à jour les dates de fin de support et les identifiants que le catalogue a changés. Elle n'écrase jamais une valeur que vous avez changée, et ne recrée jamais une version ou un identifiant que vous avez supprimé. Une version saisie avant que le catalogue ne la connaisse lui est rattachée quand les libellés correspondent, et ses dates vides sont remplies.
 
-**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées : une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. Les entrées du catalogue arrivent avec leurs identifiants.
+**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées : une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. Les entrées du catalogue arrivent avec leurs identifiants, sauf les systèmes d'exploitation.
 
 **Notes** : texte libre, comme les conditions de licence ou les dates de renouvellement.
 
@@ -232,10 +253,10 @@ Saisissez la technologie sur le serveur où elle est installée : l'hôte pour u
 
 ## Où apparaissent les technologies
 
-- **Applications** : la section **Technologies** de l'onglet Relations liste ce dont une application dépend. Voir [Applications](applications.md#relations).
-- **Actifs** : la section **Technologies** de l'onglet Technique d'un actif liste ce que porte le serveur ; la section **Si ce serveur tombe** de son onglet Relations liste les technologies qui s'arrêtent avec lui. Voir [Actifs](assets.md#technique).
+- **Applications** : la section **Technologies**, en haut de l'onglet Exploitation, liste ce dont une application dépend. Voir [Applications](applications.md#exploitation).
+- **Actifs** : la section **Technologies** de l'onglet Technique d'un actif liste ce que porte le serveur, son système d'exploitation en tête. Voir [Actifs](assets.md#technique).
 - **Contrats**, **lignes budgétaires** et **incidents** : un champ **Technologies** dans leur onglet Relations, pour les utilisateurs qui peuvent lire l'infrastructure.
-- Rapport **Fins de support** : les versions qui atteignent leur fin de support, et ce qu'elles touchent. Voir [Fins de support](end-of-support.md).
+- Rapport **Fins de support** : les versions qui atteignent leur fin de support, systèmes d'exploitation compris, et ce qu'elles touchent. Voir [Fins de support](end-of-support.md).
 - **Vulnérabilités** : les vulnérabilités connues des versions en service, et les serveurs et applications qu'elles atteignent. Voir [Vulnérabilités](vulnerabilities.md).
 - **Vue de l'administration** : les services d'annuaire de chaque zone d'administration, et les serveurs qui portent une technologie d'annuaire hors de la zone la plus sensible. Voir [Vue de l'administration](administration-view.md).
 - **Contacts** : la section **Lié à** d'un contact liste les technologies qu'il supporte. Voir [Contacts](contacts.md#ou-les-contacts-sont-utilises).

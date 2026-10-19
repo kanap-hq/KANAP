@@ -13,7 +13,7 @@ Naviguez vers **Données de référence > Processus métier** pour ouvrir la lis
 **Autorisations** :
 
 - Consultation : `business_processes:reader`
-- Création / modification : `business_processes:manager`
+- Création / modification : `business_processes:member`
 - Suppression, import/export CSV : `business_processes:admin`
 
 Si la page est manquante ou les champs sont en lecture seule, demandez à votre administrateur d'ajuster vos autorisations de rôle.
@@ -43,8 +43,8 @@ La liste affiche tous les processus métier de votre tenant.
 
 **Actions** (barre d'outils en haut à droite) :
 
-- **Nouveau** (Manager+) : créer un nouveau processus métier.
-- **Gérer les catégories** (Manager+) : ouvrir le dialogue de gestion des catégories.
+- **Nouveau** (`business_processes:member`) : créer un nouveau processus métier.
+- **Gérer les catégories** (`business_processes:member`) : ouvrir le dialogue de gestion des catégories.
 - **Importer CSV** (Admin) : import en masse de processus depuis un fichier CSV.
 - **Exporter CSV** (Admin) : exporter les processus que la liste affiche, ou tous les processus, en CSV.
 - **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.

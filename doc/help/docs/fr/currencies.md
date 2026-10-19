@@ -143,11 +143,13 @@ Currency "CHF" is not allowed. Allowed currencies: EUR, USD, GBP
 ## Statut et données historiques
 
 Lorsque vous changez les paramètres :
-  - **Devise de reporting** : Affecte l'affichage immédiatement ; les données historiques restent intactes et sont converties en utilisant les taux qui étaient actifs lors de la saisie des données
+  - **Devise de reporting** : Affecte l'affichage immédiatement ; les montants enregistrés ne changent pas, et chaque année est convertie dans la nouvelle devise avec les taux décrits dans [Mécanismes de conversion](#mecanismes-de-conversion-reference-rapide)
   - **Devises par défaut** : N'affectent que les nouvelles lignes ; les lignes existantes conservent leurs devises
   - **Devises autorisées** : Les lignes existantes ne sont pas validées rétroactivement : les restrictions s'appliquent uniquement aux lignes nouvelles ou modifiées
 
 ## Mécanismes de conversion (référence rapide)
+
+Les montants sont enregistrés dans leur propre devise et convertis à l'affichage. Chaque année utilise les derniers taux capturés pour cette année, quelle que soit la date de saisie des montants. Quand une synchronisation capture de nouveaux taux pour une année, les montants de cette année sont désormais convertis avec eux, sauf si l'année est gelée (voir [Années gelées](#annees-gelees)).
 
 ### Années passées
 Les taux moyens annuels de la Banque Mondiale sont utilisés. Ils sont stables et ne changent pas une fois publiés.
@@ -158,7 +160,10 @@ Le taux spot en temps réel d'ExchangeRate-API est utilisé (repli sur le dernie
 ### Années futures
 Réutilise le taux de l'année en cours comme estimation prospective. Cela fournit des indications pour la planification budgétaire mais devrait être revu à mesure que ces années approchent.
 
-**Repli** : Si aucun taux n'est trouvé pour une devise, le système utilise **1,00** jusqu'à ce que des données deviennent disponibles. Cela prévient les erreurs mais peut produire des conversions inexactes : lancez la synchronisation des taux pour remplir les taux manquants.
+### Années gelées
+Geler la colonne budgétaire par défaut d'une année fige les taux de cette année pour le type gelé (OPEX ou CAPEX) : KANAP rafraîchit les taux de l'année, puis conserve ce jeu pour tous les montants de l'année, même quand de nouveaux taux arrivent. Dégeler la colonne par défaut les libère. Voir [Geler la colonne par défaut fige les taux de change](budget-operations.md#geler-la-colonne-par-defaut-fige-les-taux-de-change).
+
+**Taux manquant** : Quand une année n'a pas de taux pour une devise utilisée, les montants dans cette devise sont comptés à **1,00**, comme s'ils étaient déjà dans la devise de reporting. Le serveur journalise un avertissement et récupère les taux de cette année en arrière-plan (au plus une fois toutes les six heures par année) : l'affichage suivant utilise le nouveau taux dès que la source le publie. Pour le repérer, vérifiez les valeurs `—` du tableau des snapshots de taux, et lancez la synchronisation des taux pour les récupérer tout de suite.
 
 ## Conseils
 

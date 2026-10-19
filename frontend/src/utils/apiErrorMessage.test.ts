@@ -65,6 +65,81 @@ describe('getApiErrorMessage', () => {
     expect(getApiErrorMessage(frozen, i18n.getFixedT('fr'), 'fallback')).toMatch(/^Cette ligne a des montants dans Budget 2026/);
   });
 
+  it('translates a refused company metric', () => {
+    const refused = {
+      response: {
+        status: 400,
+        data: { code: 'COMPANY_METRIC_HEADCOUNT_INVALID', message: 'headcount is required and must be a non-negative integer' },
+      },
+    };
+    expect(getApiErrorMessage(refused, t, 'fallback')).toBe('Headcount is required and must be a whole number, 0 or more.');
+    expect(getApiErrorMessage(refused, i18n.getFixedT('fr'), 'fallback')).toBe(
+      "L'effectif est obligatoire et doit être un nombre entier, 0 ou plus.",
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('de'), 'fallback')).toBe(
+      'Die Mitarbeiterzahl ist erforderlich und muss eine ganze Zahl ab 0 sein.',
+    );
+    expect(getApiErrorMessage(refused, i18n.getFixedT('es'), 'fallback')).toBe(
+      'La plantilla es obligatoria y debe ser un número entero, 0 o más.',
+    );
+  });
+
+  it('translates a frozen year for each scope, and a refused action', () => {
+    const companies = {
+      response: {
+        status: 403,
+        data: {
+          code: 'DATA_FROZEN',
+          message: 'COMPANIES data for 2028 is frozen',
+          variant: 'companies',
+          params: { year: 2028, column: 'data', scope: 'COMPANIES' },
+        },
+      },
+    };
+    expect(getApiErrorMessage(companies, t, 'fallback')).toBe(
+      'Company metrics for 2028 are frozen. A budget administrator can unfreeze them.',
+    );
+    expect(getApiErrorMessage(companies, i18n.getFixedT('fr'), 'fallback')).toBe(
+      'Les indicateurs des sociétés pour 2028 sont gelés. Un administrateur budgétaire peut les dégeler.',
+    );
+    expect(getApiErrorMessage(companies, i18n.getFixedT('de'), 'fallback')).toBe(
+      'Die Kennzahlen der Unternehmen für 2028 sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.',
+    );
+    expect(getApiErrorMessage(companies, i18n.getFixedT('es'), 'fallback')).toBe(
+      'Los indicadores de las empresas de 2028 están congelados. Un administrador de presupuesto puede descongelarlos.',
+    );
+
+    const opex = {
+      response: {
+        status: 403,
+        data: {
+          code: 'DATA_FROZEN',
+          message: 'OPEX Forecast for 2026 is frozen',
+          variant: 'opex',
+          params: { year: 2026, column: 'Forecast', scope: 'OPEX' },
+        },
+      },
+    };
+    expect(getApiErrorMessage(opex, t, 'fallback')).toBe(
+      'OPEX Forecast for 2026 is frozen. A budget administrator can unfreeze it.',
+    );
+
+    const copy = {
+      response: {
+        status: 403,
+        data: {
+          code: 'DATA_FROZEN_ACTION',
+          message: 'Copy not allowed: OPEX Forecast for 2026 is frozen',
+          variant: 'opex',
+          params: { year: 2026, column: 'Forecast', scope: 'OPEX', action: 'Copy' },
+        },
+      },
+    };
+    expect(getApiErrorMessage(copy, i18n.getFixedT('fr'), 'fallback')).toBe(
+      "Copy n'est pas autorisé. La colonne Forecast (OPEX) pour 2026 est gelée. Un administrateur budgétaire peut la dégeler.",
+    );
+  });
+
   it('words a settings save that removes a value records still use', () => {
     const inUse = {
       response: {

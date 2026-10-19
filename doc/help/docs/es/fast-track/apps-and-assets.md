@@ -200,7 +200,8 @@ Vaya a la pestaña **Técnico** para añadir:
 | Sección | Campos | Detalles |
 |---------|--------|---------|
 | **Gestión del clúster** | Interruptor Clúster | Actívelo si este activo es un clúster y luego añada sus servidores miembros |
-| **Identidad** | Nombre de host, Dominio, FQDN, Alias, Sistema operativo | El FQDN se calcula automáticamente a partir del nombre de host y el dominio |
+| **Identidad** | Nombre de host, Dominio, FQDN, Alias | El FQDN se calcula automáticamente a partir del nombre de host y el dominio |
+| **Tecnologías** | Sistema operativo y otras tecnologías, con sus versiones | Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor |
 | **Direcciones IP** | Tipo, Dirección IP, Subred | La zona de red y la VLAN se derivan de la subred |
 
 !!! info "Varias direcciones IP"

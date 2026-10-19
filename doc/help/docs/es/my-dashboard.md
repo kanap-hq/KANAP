@@ -32,6 +32,8 @@ La acción **Registrar tiempo** abre un diálogo enfocado para que pueda registr
 - Elija una **Categoría**: **IT** o **Negocio**.
 - Añada **Notas** si desea contexto sobre en qué trabajó.
 
+Al guardar se comprueba el permiso sobre el destino: una entrada en un proyecto o en una tarea de proyecto requiere `portfolio_projects:contributor`, una entrada en una tarea independiente requiere `tasks:member`.
+
 Después de guardar, el mosaico de resumen de tiempo del panel se actualiza automáticamente.
 
 ## Línea de datos de ejemplo

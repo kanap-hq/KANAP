@@ -12,9 +12,10 @@ Portfolio Requests are the intake layer for proposed work. A request lets you ca
 | Permission | What it allows |
 | --- | --- |
 | `portfolio_requests:reader` | Open the requests list and view request workspaces |
-| `portfolio_requests:member` | Edit the managed request documents embedded in the workspace, even without broader request-management rights |
-| `portfolio_requests:manager` | Create requests, update request data, maintain team and relations, add comments and decisions, change status, submit analysis recommendations, and edit scoring |
-| `portfolio_requests:admin` | Delete requests and use CSV import/export |
+| `portfolio_requests:member` | Create requests, update request data, edit the managed documents (Purpose, Risks & Mitigations), maintain team and relations, add comments and decisions, change status, submit analysis recommendations, and edit scoring |
+| `portfolio_requests:admin` | Delete requests, use CSV import/export and save priority overrides |
+
+Converting a request into a project also needs `portfolio_projects:member`.
 
 The **Knowledge** tab follows Knowledge permissions for creation and linking actions. A user can be allowed to work on request content without being allowed to create or relink standalone knowledge documents.
 
@@ -62,7 +63,7 @@ The standard grid highlights the fields that matter during intake and review:
 
 ### List actions
 
-- **New Request** is available to request managers.
+- **New Request** is available with `portfolio_requests:member`.
 - **Import CSV** and **Export CSV** are available to request administrators.
 
 ## The Request workspace
@@ -139,10 +140,8 @@ The **Purpose** section is a managed markdown document embedded directly in the 
 
 - it gives reviewers a stable statement of intent
 - it is available during request-to-project conversion
-- it can be edited by users with `portfolio_requests:member`, even if they do not manage the rest of the request
+- it can be edited by users with `portfolio_requests:member`
 - it supports **DOCX import** so you can bring in existing Word documents directly, and **export** to download the current content as PDF, DOCX, or ODT
-
-That split is deliberate. It allows subject-matter contributors to improve the request narrative without opening full control over status, scoring, and portfolio structure.
 
 ### Activity
 
@@ -328,5 +327,4 @@ Use export when you need portfolio reporting or offline enrichment. Use import w
 - **Use DOCX import for existing content**: If you already have a purpose statement or risk register in a Word document, use the **Import** button on the Purpose or Risks & Mitigations editor instead of copying and pasting. The import converts the document to markdown and warns you if any content could not be carried over.
 - **Scope filters stick**: The list opens on **All requests**. KANAP remembers your last scope choice, so you do not need to re-select it every session.
 - **Converted requests are hidden by default**: If you are looking for a request that was already converted to a project, add **Converted** to the Status filter on the list.
-- **Member permission for contributors**: Give subject-matter experts `portfolio_requests:member` so they can edit Purpose and Risks & Mitigations without being able to change status, scoring, or portfolio structure.
 - **From task to request**: When a task reveals a larger initiative, use **Convert to Request** from the task workspace. The new request inherits the task's title, description (as Purpose), classification, and attachments, and shows the **Source Task** in its header.

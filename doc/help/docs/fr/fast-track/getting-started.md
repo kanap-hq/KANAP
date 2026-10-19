@@ -24,11 +24,11 @@ KANAP est organisé autour d'une structure simple. La barre supérieure affiche 
 |------|---------------------|
 | **Tableau de bord** | Votre hub personnel : cliquez sur le logo KANAP ou naviguez vers `/` |
 | **Portefeuille** | Tâches, Demandes, Projets, Planification, Rapports, Contributeurs |
-| **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Connexions, Carte des connexions, Sites |
+| **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Technologies, Connexions, Carte des connexions, Sites, Netbox, Incidents, Fins de support, Vulnérabilités |
 | **Base de connaissances** | Documents et modèles avec workflows de revue |
 | **Gestion budgétaire** | OPEX, CAPEX, Contrats, Rapports, Administration (devises, colonnes budgétaires, opérations de gel et de copie) |
 | **Données de référence** | Sociétés, Départements, Centres de coûts, Fournisseurs, Contacts, Plans comptables, Calendriers de jours ouvrés, Dimensions analytiques, Processus métier |
-| **Administration** | Utilisateurs, Rôles, Journal d'audit, Facturation, Authentification, Personnalisation (admin uniquement) |
+| **Administration** | Utilisateurs, Rôles, Journal d'audit, Facturation, Authentification, Personnalisation, Intégrations (admin uniquement) |
 
 Vous n'avez pas besoin d'accéder à tout. Votre rôle détermine quelles sections et actions sont disponibles. Si quelque chose manque dans votre menu, demandez à votre administrateur.
 
@@ -277,6 +277,9 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 |-----------------------------|-------------|
 | Applications, serveurs, infrastructure | [Fast Track Cartographie SI](apps-and-assets.md) |
 | Demandes, projets, planification de portefeuille | [Fast Track Portefeuille](index.md) |
+| Versions logicielles, dates de support, avis de sécurité | Pages [Technologies](../technologies.md), [Fins de support](../end-of-support.md) et [Vulnérabilités](../vulnerabilities.md) |
+| Pannes et leur impact | Page [Incidents](../incidents.md) |
+| Inventaire Netbox, outil de support et autres outils connectés | Pages [Synchronisation Netbox](../netbox.md) et [Intégrations](../integrations.md) |
 
 ---
 

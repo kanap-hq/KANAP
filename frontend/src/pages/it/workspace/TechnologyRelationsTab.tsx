@@ -179,7 +179,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
         { key: 'ref', header: columnsT('ref'), width: 72, render: (row: BudgetLineRow) => <RelationRef>{refOf('budget', row.item_number) ?? dash}</RelationRef> },
         { key: 'name', header: columnsT('name'), render: (row: BudgetLineRow) => row.product_name },
         { key: 'nature', header: columnsT('nature'), width: 72, render: (row: BudgetLineRow) => t(`ops:budget.${row.nature}`) },
-        { key: 'supplier', header: columnsT('supplier'), width: 140, render: (row: BudgetLineRow) => row.supplier_name ?? dash },
+        { key: 'supplier', header: columnsT('supplier'), width: 140, hideOrder: 1, render: (row: BudgetLineRow) => row.supplier_name ?? dash },
         {
           key: 'amount', align: 'right', width: 130,
           header: lineCurrency ? `${columnLabel} ${year} (${lineCurrency})` : `${columnLabel} ${year}`,
@@ -211,7 +211,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
       muted: (row: ContractRow) => row.status === 'disabled',
       columns: [
         { key: 'name', header: columnsT('name'), render: (row: ContractRow) => row.name },
-        { key: 'supplier', header: columnsT('supplier'), width: 140, render: (row: ContractRow) => row.supplier_name ?? dash },
+        { key: 'supplier', header: columnsT('supplier'), width: 140, hideOrder: 2, render: (row: ContractRow) => row.supplier_name ?? dash },
         {
           key: 'end', header: columnsT('end'), width: 110,
           render: (row: ContractRow) => (
@@ -225,7 +225,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
           render: (row: ContractRow) => (row.yearly_amount == null ? dash : `${formatAmount(row.yearly_amount)}${row.currency ? ` ${row.currency}` : ''}`),
         },
         {
-          key: 'renewal', header: columnsT('renewal'), width: 110,
+          key: 'renewal', header: columnsT('renewal'), width: 110, hideOrder: 1,
           render: (row: ContractRow) => t(row.auto_renewal ? 'workspace.application.relations.renewal.tacit' : 'workspace.application.relations.renewal.manual'),
         },
       ],
@@ -258,7 +258,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
         { key: 'ref', header: columnsT('ref'), width: 72, render: (row: ProjectRow) => <RelationRef>{refOf('project', row.item_number) ?? dash}</RelationRef> },
         { key: 'name', header: columnsT('name'), render: (row: ProjectRow) => row.name },
         { key: 'status', header: columnsT('status'), width: 120, render: (row: ProjectRow) => (row.status ? t(`portfolio:statuses.project.${row.status}`, { defaultValue: row.status }) : dash) },
-        { key: 'end', header: columnsT('plannedEnd'), width: 120, render: (row: ProjectRow) => date(row.planned_end) },
+        { key: 'end', header: columnsT('plannedEnd'), width: 120, hideOrder: 1, render: (row: ProjectRow) => date(row.planned_end) },
       ],
       search: async (q, signal) => {
         const res = await api.get<{ items: Array<{ id: string; name: string; item_number: number | null }> }>('/portfolio/projects', { params: { page: 1, limit: PAGE, sort: 'updated_at:DESC', ...(q ? { q } : {}) }, signal });
@@ -280,7 +280,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
         { key: 'ref', header: t('components.incidentRelations.columns.reference'), width: 72, render: (row: IncidentLinkRow) => <RelationRef>{formatItemRef('incident', row.item_number)}</RelationRef> },
         { key: 'title', header: t('components.incidentRelations.columns.title'), render: (row: IncidentLinkRow) => row.title ?? dash },
         {
-          key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100,
+          key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100, hideOrder: 2,
           render: (row: IncidentLinkRow) => (
             <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
               <StatusDot color={getDotColor(INCIDENT_SEVERITY_COLORS[row.severity] || 'default', theme.palette.mode)} />
@@ -289,7 +289,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
           ),
         },
         { key: 'status', header: t('components.incidentRelations.columns.status'), width: 100, render: (row: IncidentLinkRow) => t(`enums.incidentStatus.${row.status}`, { defaultValue: row.status }) },
-        { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, render: (row: IncidentLinkRow) => date(row.detected_at) },
+        { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, hideOrder: 1, render: (row: IncidentLinkRow) => date(row.detected_at) },
       ],
       search: async (q, signal) => {
         const res = await api.get<{ items: IncidentRow[] }>('/incidents', { params: { page: 1, limit: PAGE, sort: 'detected_at:DESC', ...(q ? { q } : {}) }, signal });
@@ -400,7 +400,7 @@ export default function TechnologyRelationsTab({ id }: { id: string }) {
       ),
     },
     { key: 'size', header: t('workspace.technology.relations.columns.size'), width: 90, align: 'right', render: (row) => formatSize(row.size, lang) },
-    { key: 'added', header: t('workspace.technology.relations.columns.added'), width: 110, render: (row) => date(row.uploaded_at) },
+    { key: 'added', header: t('workspace.technology.relations.columns.added'), width: 110, hideOrder: 1, render: (row) => date(row.uploaded_at) },
   ];
   const linkColumns: Array<RelationsColumn<WebLinkRow>> = [
     {

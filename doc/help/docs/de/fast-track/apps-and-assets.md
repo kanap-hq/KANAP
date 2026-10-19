@@ -200,7 +200,8 @@ Gehen Sie zum Tab **Technik**, um Folgendes hinzuzufügen:
 | Abschnitt | Felder | Details |
 |---------|--------|---------|
 | **Cluster-Verwaltung** | Cluster-Schalter | Schalten Sie ihn ein, wenn dieses Asset ein Cluster ist, und fügen Sie dann seine Mitgliedsserver hinzu |
-| **Identität** | Hostname, Domäne, FQDN, Aliase, Betriebssystem | Der FQDN wird automatisch aus Hostname und Domäne berechnet |
+| **Identität** | Hostname, Domäne, FQDN, Aliase | Der FQDN wird automatisch aus Hostname und Domäne berechnet |
+| **Technologien** | Betriebssystem und weitere Technologien, mit ihren Versionen | Fügen Sie Windows Server, Ubuntu oder eine andere Technologie der Familie **Betriebssystem** hinzu: Sie wird zum Betriebssystem des Servers |
 | **IP-Adressen** | Typ, IP-Adresse, Subnetz | Netzwerkzone und VLAN werden aus dem Subnetz abgeleitet |
 
 !!! info "Mehrere IP-Adressen"
@@ -275,7 +276,7 @@ Sobald Assets dokumentiert sind, können Sie **Verbindungen** (Server-zu-Server 
 
 ### Schnittstellen & Schnittstellenkarte
 
-Gehen Sie einen Schritt weiter: Dokumentieren Sie **Schnittstellen** zwischen Anwendungen, um Datenflüsse, Integrationspunkte und Geschäftskontext zu erfassen. Jede Schnittstelle hat fünf Tabs für gründliche Dokumentation: Übersicht, Fluss, Umgebungen, Datenmapping und Beziehungen.
+Gehen Sie einen Schritt weiter: Dokumentieren Sie **Schnittstellen** zwischen Anwendungen, um Datenflüsse, Integrationspunkte und Geschäftskontext zu erfassen. Jede Schnittstelle hat fünf Tabs für gründliche Dokumentation: Übersicht, Fluss, Umgebungen, Datenzuordnung und Beziehungen.
 
 Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollständigen Anwendungsfluss zu visualisieren. In der Standard-Geschäftsansicht sehen Sie saubere Quelle-zu-Ziel-Beziehungen. Wechseln Sie zur technischen Ansicht, um Middleware-Plattformen als rautenförmige Knoten anzuzeigen, die den tatsächlichen Datenpfad zeigen. Der Tiefenfilter zählt nur primäre Anwendungsknoten: Middleware ist transparent, sodass die Auswahl einer App mit Tiefe 2 Ihnen zwei echte Sprünge zeigt, unabhängig davon, wie viele Middleware-Plattformen dazwischenliegen.
 

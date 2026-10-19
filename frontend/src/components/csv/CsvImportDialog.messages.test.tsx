@@ -90,6 +90,27 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByText('Ligne 6, commercial_contact : « not-an-email » n\'est pas une adresse e-mail valide.')).toBeInTheDocument();
   });
 
+  it('translates a company name that the file already used', async () => {
+    check([{
+      row: 3,
+      column: 'name',
+      message: "'qa-faute' is already on row 2. Keep one row per company.",
+      code: 'CSV_COMPANY_NAME_DUPLICATE',
+      params: { name: 'qa-faute', firstRow: 2 },
+    }]);
+    expect(await screen.findByText('Ligne 3, name : « qa-faute » figure déjà à la ligne 2. Gardez une seule ligne par société.')).toBeInTheDocument();
+  });
+
+  it('translates a company row whose metrics fall in a frozen year', async () => {
+    check([{
+      row: 2,
+      message: 'Metrics for 2027 are frozen. A budget administrator can unfreeze them.',
+      code: 'CSV_COMPANY_METRICS_FROZEN',
+      params: { year: 2027 },
+    }]);
+    expect(await screen.findByText('Ligne 2 : Les indicateurs pour 2027 sont gelés. Un administrateur budgétaire peut les dégeler.')).toBeInTheDocument();
+  });
+
   it('says which stored record a row matched when the case of its name differs', async () => {
     check([], {
       ok: true,
@@ -115,6 +136,12 @@ describe('CsvImportDialog messages', () => {
     );
     expect(await screen.findByText('En-tête : Colonnes inconnues : x.')).toBeInTheDocument();
     expect(screen.queryByText(/Colonnes ignorées/)).not.toBeInTheDocument();
+  });
+
+  it('counts created, updated and unchanged rows after the load', async () => {
+    check([], { ok: true, dryRun: false, total: 3, processed: 3, inserted: 1, updated: 1, unchanged: 1 });
+    expect(await screen.findByText('1 créée, 1 mise à jour, 1 inchangée')).toBeInTheDocument();
+    expect(screen.queryByText(/Chargé avec succès/)).not.toBeInTheDocument();
   });
 
   it('counts one row in the singular, and zero too in French', async () => {

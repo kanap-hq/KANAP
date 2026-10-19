@@ -42,7 +42,7 @@ The Contacts grid provides a searchable directory of all external contacts. Ever
 **Default sort**: By last name, alphabetical.
 
 **Actions**:
-- **New**: Create a new contact (requires `contacts:manager`)
+- **New**: Create a new contact (requires `contacts:member`)
 - **Import CSV**: Bulk import contacts (requires `contacts:admin`)
 - **Export CSV**: Export to CSV (requires `contacts:admin`)
 - **Delete Selected**: Remove selected contacts (requires `contacts:admin`). They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them; these records stay

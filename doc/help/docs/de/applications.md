@@ -65,7 +65,7 @@ Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte
 
 **Berechtigungen**:
 - Anzeigen: `applications:reader`
-- Erstellen / Bearbeiten: `applications:manager` (auch `member` genannt)
+- Erstellen / Bearbeiten: `applications:member`
 - Importieren / Exportieren / Löschen: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - Außer Betrieb genommene Anwendungen sind standardmäßig ausgeblendet; verwenden Sie den **Lebenszyklus**-Filter, um Außer Betrieb einzuschließen.
 
 **Aktionen**:
-- **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:manager`)
+- **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
 - **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
 - **CSV exportieren**: Liste als CSV exportieren (`applications:admin`). Katalogbasierte Spalten (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) werden mit ihren Namen exportiert; der Import akzeptiert einen Namen oder den internen Code.
-- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:manager`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
+- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
 - **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
 ---
@@ -221,7 +221,14 @@ Jede Zeile zeigt den Schnittstellennamen, die Gegenanwendung und einen Indikator
 
 ### Betrieb
 
-Der Reiter Betrieb erfasst, wie Benutzer auf die Anwendung zugreifen und wer sie unterstützt.
+Der Reiter Betrieb erfasst die Technologien, von denen die Anwendung abhängt, wie Benutzer auf sie zugreifen und wer sie unterstützt.
+
+**Technologien** (oben im Reiter) listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
+
+- **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
+- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
+
+Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
 **Technisch**:
 - **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.
@@ -280,7 +287,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle, Technologien und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Die Technologien stehen im Reiter [Betrieb](#betrieb). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -294,15 +301,7 @@ Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budg
 | **Anfragen** | Referenz (`REQ-23`), Name, Status, gewünschte Lieferung |
 | **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Es erscheinen nur die Aufgaben, die mit dieser Anwendung selbst verknüpft sind, nicht die Aufgaben ihrer Projekte |
 | **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
-| **Technologien** | Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports |
 | **Geschäftsprozesse** | Name, Fachverantwortlicher |
-
-**Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt:
-
-- **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
-- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
-
-Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie zusätzlich `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
 **Geschäftsprozesse** listet die Prozesse, die die Anwendung unterstützt. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Verknüpfen erfordert zusätzlich `business_processes:member`.
 
@@ -310,7 +309,7 @@ Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentsche
 
 Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung. Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
 
-**Verknüpfungen hinzufügen und entfernen** (`applications:manager`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
+**Verknüpfungen hinzufügen und entfernen** (`applications:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
 
 **Verwandt**: Vorschläge von Datensätzen, die Sie verknüpfen könnten, jeweils mit dem Grund des Vorschlags:
 
@@ -324,7 +323,7 @@ Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen
 
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
+**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `applications:member`.
 
 ---
 

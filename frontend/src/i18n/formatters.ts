@@ -47,3 +47,8 @@ export function numberSeparators(locale: string): { thousand: string; decimal: s
     decimal: parts.find((part) => part.type === 'decimal')?.value ?? '.',
   };
 }
+
+/** The decimal mark of the application language: a comma in French, German and Spanish, a point in English. */
+export function decimalMark(locale: string): '.' | ',' {
+  return numberSeparators(locale).decimal === ',' ? ',' : '.';
+}

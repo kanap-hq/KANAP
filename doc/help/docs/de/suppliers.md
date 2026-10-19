@@ -39,7 +39,7 @@ Jede Zelle in einer Zeile ist anklickbar und öffnet die Seite dieses Lieferante
 - Statusbereich: Verwenden Sie den Umschalter **Anzeigen: Alle / Aktiv / Deaktiviert** über dem Grid, um nach Status zu filtern. Standardmäßig zeigt die Liste aktivierte Lieferanten
 
 **Aktionen**:
-- **Neu**: Neuen Lieferanten erstellen (erfordert `suppliers:manager`)
+- **Neu**: Neuen Lieferanten erstellen (erfordert `suppliers:member`)
 - **CSV importieren**: Massenimport von Lieferanten (erfordert `suppliers:admin`)
 - **CSV exportieren**: Liste als CSV exportieren (erfordert `suppliers:admin`)
 - **Ausgewählte löschen**: Ausgewählte Lieferanten entfernen (erfordert `suppliers:admin`)
@@ -67,7 +67,7 @@ Die Seite hat zwei Reiter: **Übersicht** und **Kontakte**.
 
 **Notizen**: Freie Notizen zum Lieferanten, im Reiter **Übersicht**. Sie werden kurz nach dem Ende der Eingabe gespeichert und wenn Sie das Feld verlassen.
 
-Zum Bearbeiten ist die Berechtigung `suppliers:manager` erforderlich. Benutzer mit Lesezugriff sehen dieselbe Seite, können aber nichts ändern.
+Zum Bearbeiten ist die Berechtigung `suppliers:member` erforderlich. Benutzer mit Lesezugriff sehen dieselbe Seite, können aber nichts ändern.
 
 Drücken Sie **Escape** oder klicken Sie auf die Schaltfläche zum Schließen, um zur Liste zurückzukehren.
 

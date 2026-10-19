@@ -200,7 +200,8 @@ Allez dans l'onglet **Technique** pour ajouter :
 | Section | Champs | Détails |
 |---------|--------|---------|
 | **Gestion du cluster** | Interrupteur Cluster | Activez-le si cet actif est un cluster, puis ajoutez ses serveurs membres |
-| **Identité** | Nom d'hôte, Domaine, FQDN, Alias, Système d'exploitation | Le FQDN est calculé automatiquement à partir du nom d'hôte et du domaine |
+| **Identité** | Nom d'hôte, Domaine, FQDN, Alias | Le FQDN est calculé automatiquement à partir du nom d'hôte et du domaine |
+| **Technologies** | Système d'exploitation et autres technologies, avec leurs versions | Ajoutez Windows Server, Ubuntu ou une autre technologie de la famille **Système d'exploitation** : elle devient le système d'exploitation du serveur |
 | **Adresses IP** | Type, Adresse IP, Sous-réseau | La zone réseau et le VLAN sont dérivés du sous-réseau |
 
 !!! info "Plusieurs adresses IP"
@@ -275,7 +276,7 @@ Une fois les actifs documentés, vous pouvez créer des **Connexions** (Serveur 
 
 ### Interfaces et carte des interfaces
 
-Allez encore plus loin : documentez les **Interfaces** entre applications pour capturer les flux de données, les points d'intégration et le contexte métier. Chaque interface a cinq onglets pour une documentation complète : Vue d'ensemble, Flux, Environnements, Mapping des données et Relations.
+Allez encore plus loin : documentez les **Interfaces** entre applications pour capturer les flux de données, les points d'intégration et le contexte métier. Chaque interface a cinq onglets pour une documentation complète : Vue d'ensemble, Flux, Environnements, Mappage des données et Relations.
 
 Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le flux applicatif complet. Dans la vue Métier par défaut, vous voyez des relations source-cible épurées. Basculez en vue Technique pour révéler les plateformes middleware sous forme de noeuds en losange, montrant le chemin réel des données. Le filtrage de profondeur ne compte que les noeuds d'application principaux : le middleware est transparent, donc sélectionner une app avec une profondeur de 2 vous montre deux sauts réels quel que soit le nombre de plateformes middleware entre les deux.
 

@@ -39,7 +39,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox, with a coloured dot |
 | **Location** | Where the asset is hosted |
 | **Hosting** | Hosting type (derived from location) |
-| **OS** | Operating system |
+| **OS** | Operating system: the technology marked as the server's operating system, with its version |
 | **Network Zone** | Network segment (derived from subnet) |
 | **Lifecycle** | Current lifecycle status |
 | **Assignments** | Number of application assignments |
@@ -165,15 +165,29 @@ The Technical tab organizes cluster, network identity, the technologies the serv
 - **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
 - **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
 - **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
-- **Operating system**: OS type and version (e.g., Windows Server 2022, Ubuntu 24.04 LTS). Disabled for clusters: OS is defined per member. When selected, shows standard and extended support end dates underneath.
+**Technologies**: what the server carries, for example Windows Server, SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and, when the server carries a technology through another one, **Via**.
 
-**Technologies**: what the server carries, for example SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and, when the server carries a technology through another one, **Via**.
-
+- **Operating system**: the server's operating system is one of its technologies, of the **Operating system** family. It comes first in the list, with "Operating system" after its name. See [Operating system](#operating-system) below.
+- **Version**: shown in orange when support ends within 12 months or only extended support remains, and in red once every end date has passed. Hover it to see the end of standard and extended support.
 - A technology installed on this server can be removed with the cross at the end of its row.
 - A technology installed on the server or cluster this one runs in shows that server under **Via**. It follows the installation and is removed there.
 - **Add** (`infrastructure:member`) opens a search for a technology, then the version picker: choose a version, **Version unknown**, or type a new label and pick **Add version "…"** to create it. Each change saves at once.
+- **Change a version** (`infrastructure:member`): click the version of an installed technology, or the pencil at the end of its row. The same version picker opens.
 
-The version and the notes of an installation are changed from the technology's **Servers** tab. See [Technologies](technologies.md#linking-a-technology-to-a-server).
+The notes of an installation are changed from the technology's **Servers** tab. See [Technologies](technologies.md#servers).
+
+#### Operating system
+
+A server has one operating system: a technology of the **Operating system** family, with its version.
+
+- **Add** it like any technology. When the server has no operating system yet, the first technology of that family you add becomes it.
+- **Remove** it with its cross. If another technology of the family stays on the server, that one becomes the operating system.
+- **Change the version** by clicking it, as for any technology.
+- A **cluster** has no operating system of its own: each member has its own.
+
+To make VMware ESXi or FortiOS the operating system of a host, put that technology in the **Operating system** family (its **Family** field, on the technology).
+
+The operating system shows in the **OS** column of the list, in the cluster members table and on the [Connection Map](connection-map.md). Its versions and end of support dates come from the technology: see [Technologies](technologies.md).
 
 **IP addresses**:
 
@@ -226,12 +240,11 @@ Tracks vendor support and contact information.
 
 The Relations tab connects this asset to other records across KANAP. The tab badge counts all linked items. Most fields save automatically.
 
-**If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters, technologies and business processes affected, then one table per kind:
+**If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters and business processes affected, then one table per kind:
 
 - **Applications**: those with a deployment in service on a fallen asset, with their environments, criticality and the assets they run on (**Via**).
 - **Assets**: the assets it contains, down to three levels, and the assets that depend on it. **Via** shows the path.
 - **Clusters**: clusters with a fallen member. **Down** when no member stands, otherwise **Degraded** with the number of members down. The applications of a cluster that is down fall with it.
-- **Technologies**: those installed on a fallen asset, with their versions.
 - **Business processes**: the processes of the affected applications.
 
 Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates once you save the asset relations below.
@@ -250,7 +263,7 @@ Retired assets stop the chain: nothing falls through them. Each table shows its 
 
 **Relevant websites**: Add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete is available to managers.
+**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `infrastructure:member`.
 
 ---
 
@@ -310,7 +323,7 @@ From the Assets list:
 | `domain` | DNS domain | No | Accepts code or label from Settings |
 | `admin_zone` | Administration zone | No | Accepts code or label from Settings |
 | `aliases` | DNS aliases | No | Comma-separated list |
-| `operating_system` | OS type | No | Accepts code or label from Settings |
+| `operating_system` | Operating system | No | The technology name, with its version (`Windows Server 2019`). See below |
 | `cluster` | Cluster membership | No | Name of parent cluster |
 | `notes` | Free-form notes | No | |
 
@@ -333,12 +346,13 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 |-------|---------------|----------------|
 | Asset Type (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Lifecycle (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
-| Operating System | `windows_2022`, `ubuntu_24` | `Windows Server 2022`, `Ubuntu 24.04 LTS` |
 | Domain | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
 | Administration zone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (core of trust)`, `Tier 1 (servers and applications)` |
 | IP Address Type | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The CSV export writes names for these columns, so an exported file can be imported back as is.
+
+**Operating system**: the `operating_system` column holds the technology name followed by its version, as the export writes it (`Windows Server 2019`, `Ubuntu 24.04 LTS`). On import, KANAP looks for the technology among yours, then in the catalog, and records the version. A technology or a version it does not find is created, so check the spelling first. The value becomes the server's operating system.
 
 ### Matching and updates
 

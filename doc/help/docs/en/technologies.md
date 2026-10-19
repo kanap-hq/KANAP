@@ -22,6 +22,7 @@ A few examples:
 - **Active Directory**: an **On-prem** technology of the same family, carried by your domain controllers. The applications that use it declare it.
 - **vSphere**: an **On-prem** technology carried by the vCenter virtual machine and by the hosts.
 - **SQL Server**: one technology with one line per version in use (2016, 2019, 2022). Each server carries its own version, so the end of support report can name the servers still on an old one.
+- **Windows Server**: a technology of the **Operating system** family. Each server records its version, and that technology is the server's operating system. See [Operating systems](#operating-systems).
 - **A SaaS application**: no technology to record. The publisher maintains what it runs on.
 
 One technology covers a product as a whole. "SQL Server" stands for every SQL Server you run; the versions carry the detail.
@@ -46,6 +47,26 @@ For a product the catalog does not know, click **Enter a technology missing from
 - View: `infrastructure:reader`
 - Create and edit: `infrastructure:member`
 - Delete: `infrastructure:admin`
+
+## Operating systems
+
+The operating system of a server is a technology of the **Operating system** family. Add it to the server like any other technology, with its version: when the server has none yet, it becomes the server's operating system. The server page shows it first in its **Technologies** section, marked "Operating system". See [Assets](assets.md#operating-system).
+
+The catalog offers Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux and CentOS. It lists the versions whose support ended in 2010 or later, and for Windows Server the long-term releases only.
+
+What the two support dates mean depends on the publisher:
+
+| Operating system | End of standard support | End of extended support |
+|---|---|---|
+| **Ubuntu**, **Red Hat Enterprise Linux**, **SUSE Linux Enterprise Server** | End of security updates | End of the paid extension |
+| **Windows Server** | End of mainstream support | End of extended support |
+| **Debian** | End of regular support | End of Debian LTS |
+
+Any technology can be an operating system: put VMware ESXi or FortiOS in the **Operating system** family and it can be the operating system of a host or a firewall.
+
+The catalog's operating systems have no CPE product identifiers yet, so KANAP does not match them with vulnerabilities.
+
+Installations upgraded from an earlier version keep their data: the operating systems the servers used, and the entries added to the former operating systems list of the settings, became technologies with their versions and dates.
 
 ---
 
@@ -131,7 +152,7 @@ A version that comes from the catalog shows **Catalog** next to its label, and a
 
 The check adds the new versions and CPE product identifiers of the product, and updates the end of support dates and identifiers the catalog changed. It never overwrites a value you changed, and never brings back a version or an identifier you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Catalog entries come with their identifiers.
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Catalog entries come with their identifiers, except the operating systems.
 
 **Notes**: free text, such as licensing terms or renewal dates.
 
@@ -232,10 +253,10 @@ Record the technology on the server where it is installed: the host for a hyperv
 
 ## Where technologies appear
 
-- **Applications**: the **Technologies** section of the Relations tab lists what an application depends on. See [Applications](applications.md#relations).
-- **Assets**: the **Technologies** section of an asset's Technical tab lists what the server carries; the **If this server goes down** section of its Relations tab lists the technologies that stop with it. See [Assets](assets.md#technical).
+- **Applications**: the **Technologies** section at the top of the Operations tab lists what an application depends on. See [Applications](applications.md#operations).
+- **Assets**: the **Technologies** section of an asset's Technical tab lists what the server carries, its operating system first. See [Assets](assets.md#technical).
 - **Contracts**, **budget lines** and **incidents**: a **Technologies** field in their Relations tab, for users who can read the infrastructure.
-- **End of support** report: the versions that reach their end of support, and what they touch. See [End of support](end-of-support.md).
+- **End of support** report: the versions that reach their end of support, operating systems included, and what they touch. See [End of support](end-of-support.md).
 - **Vulnerabilities**: the known vulnerabilities of the versions in use, and the servers and applications they reach. See [Vulnerabilities](vulnerabilities.md).
 - **Administration view**: the directory services of each administration zone, and the servers that carry a directory technology outside the most sensitive zone. See [Administration view](administration-view.md).
 - **Contacts**: the **Used by** section of a contact lists the technologies it supports. See [Contacts](contacts.md#where-contacts-are-used).

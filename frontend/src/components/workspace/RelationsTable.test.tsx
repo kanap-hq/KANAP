@@ -1,0 +1,162 @@
+import React from 'react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
+import { ThemeProvider } from '@mui/material/styles';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { createAppTheme } from '../../config/ThemeContext';
+import { RelationsTable, fitColumnWidths, fitColumns, type RelationsColumn } from './RelationsTable';
+
+type Row = { id: string; name: string; family: string };
+
+// The columns of an application's technologies (T3): 614px of fixed columns besides the name.
+const COLUMNS: Array<RelationsColumn<Row>> = [
+  { key: 'ref', header: 'Ref', width: 72, render: (row) => row.id },
+  { key: 'name', header: 'Name', render: (row) => row.name },
+  { key: 'family', header: 'Family', width: 110, hideOrder: 3, render: (row) => row.family },
+  { key: 'version', header: 'Version', width: 72, render: () => '1' },
+  { key: 'link', header: 'Link', width: 120, hideOrder: 2, render: () => 'Uses' },
+  { key: 'via', header: 'Via', width: 140, hideOrder: 1, render: () => 'SRV-1' },
+  { key: 'supportEnd', header: 'Support end', width: 100, render: () => 'Dec 2027' },
+];
+const ROWS: Row[] = [{ id: 'TEC-1', name: 'PostgreSQL', family: 'Database' }];
+
+let frameWidth = 0;
+let resize: (() => void) | null = null;
+
+beforeEach(() => {
+  frameWidth = 0;
+  resize = null;
+  vi.spyOn(HTMLElement.prototype, 'clientWidth', 'get').mockImplementation(function (this: HTMLElement) {
+    return this.tagName === 'DIV' ? frameWidth : 0;
+  });
+  vi.stubGlobal('ResizeObserver', class {
+    constructor(callback: () => void) { resize = callback; }
+    observe() {}
+    disconnect() {}
+  });
+});
+
+afterEach(() => {
+  vi.restoreAllMocks();
+  vi.unstubAllGlobals();
+});
+
+function renderTable(props: Partial<React.ComponentProps<typeof RelationsTable<Row>>> = {}) {
+  return render(
+    <ThemeProvider theme={createAppTheme('light')}>
+      <MemoryRouter>
+        <RelationsTable columns={COLUMNS} rows={ROWS} rowKey={(row) => row.id} ariaLabel="Technologies" {...props} />
+      </MemoryRouter>
+    </ThemeProvider>,
+  );
+}
+
+const colWidths = (container: HTMLElement) =>
+  Array.from(container.querySelectorAll('col')).map((col) => (col.style.width ? parseInt(col.style.width, 10) : undefined));
+
+describe('fitColumnWidths', () => {
+  const widths = COLUMNS.map((column) => column.width);
+
+  it('keeps the declared widths when they fit with the name', () => {
+    expect(fitColumnWidths(COLUMNS, 900)).toEqual({ widths });
+  });
+
+  it('shrinks the other columns so that the name keeps 120px', () => {
+    const fitted = fitColumnWidths(COLUMNS, 700);
+    expect(fitted.minWidth).toBeUndefined();
+    const fixed = fitted.widths.filter((width): width is number => width != null);
+    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(700 - 120);
+    expect(fitted.widths[1]).toBeUndefined();
+    // The wider columns give up more room; the reference, at 72px, keeps its width.
+    expect(widths[5]! - fitted.widths[5]!).toBeGreaterThan(widths[2]! - fitted.widths[2]!);
+    expect(fitted.widths[0]).toBe(72);
+  });
+
+  it('never shrinks a column below 96px, nor one narrower than that', () => {
+    expect(fitColumnWidths([{ width: 32 }, {}, { width: 200 }], 300).widths).toEqual([32, undefined, 148]);
+    expect(fitColumnWidths([{}, { width: 140 }, { width: 130 }], 280)).toEqual({ widths: [undefined, 96, 96], minWidth: 96 + 96 + 120 });
+  });
+
+  it('asks for a minimum width once the columns are at their least', () => {
+    expect(fitColumnWidths(COLUMNS, 300)).toEqual({ widths: [72, undefined, 96, 72, 96, 96, 96], minWidth: 528 + 120 });
+  });
+});
+
+describe('fitColumns', () => {
+  const keys = (available: number) => fitColumns(COLUMNS, available).columns.map((column) => column.key);
+  const all = COLUMNS.map((column) => column.key);
+
+  it('shows every column while they lose at most a fifth of their width and keep 96px', () => {
+    expect(keys(765)).toEqual(all);
+    expect(keys(120 + 528)).toEqual(all);
+    expect(keys(120 + 527)).toEqual(['ref', 'name', 'family', 'version', 'link', 'supportEnd']);
+  });
+
+  it('hides the columns by their order, then fits the others', () => {
+    expect(keys(600)).toEqual(['ref', 'name', 'family', 'version', 'link', 'supportEnd']);
+    // 1,000px with the properties panel open: a 405px frame, 40px of it for the unlink icon.
+    const fitted = fitColumns(COLUMNS, 365);
+    expect(fitted.columns.map((column) => column.key)).toEqual(['ref', 'name', 'version', 'supportEnd']);
+    expect(fitted.minWidth).toBeUndefined();
+    expect(fitted.widths.reduce<number>((sum, width) => sum + (width ?? 0), 0)).toBeLessThanOrEqual(365 - 120);
+  });
+
+  it('never hides a column without an order', () => {
+    expect(keys(100)).toEqual(['ref', 'name', 'version', 'supportEnd']);
+    expect(fitColumns(COLUMNS, 100).minWidth).toBe(72 + 72 + 96 + 120);
+  });
+});
+
+describe('RelationsTable at narrow width', () => {
+  it('keeps the declared widths until the frame is measured', () => {
+    const { container } = renderTable();
+    expect(colWidths(container)).toEqual(COLUMNS.map((column) => column.width));
+  });
+
+  it('fits the columns to the frame and follows its resizes', () => {
+    frameWidth = 1200;
+    const { container } = renderTable({ onRemove: () => {} });
+    expect(colWidths(container)).toEqual([...COLUMNS.map((column) => column.width), 40]);
+
+    frameWidth = 405;
+    act(() => resize?.());
+    expect(screen.getAllByRole('columnheader').map((th) => th.textContent)).toEqual(['Ref', 'Name', 'Version', 'Support end']);
+    expect(screen.queryByText('SRV-1')).toBeNull();
+    const widths = colWidths(container);
+    expect(widths).toHaveLength(5);
+    const fixed = widths.slice(0, -1).filter((width): width is number => width != null);
+    expect(fixed.reduce((sum, width) => sum + width, 0)).toBeLessThanOrEqual(405 - 40 - 120);
+    expect(widths[1]).toBeUndefined();
+    expect(widths[widths.length - 1]).toBe(40);
+    expect(screen.getByRole('table').style.minWidth).toBe('');
+  });
+
+  it('scrolls inside its frame, never the page, when the columns cannot fit', () => {
+    frameWidth = 300;
+    renderTable({ columns: COLUMNS.map(({ hideOrder: _hideOrder, ...column }) => column) });
+    const table = screen.getByRole('table');
+    expect(getComputedStyle(table).minWidth).toBe(`${528 + 120}px`);
+    expect(getComputedStyle(table.parentElement!).overflowX).toBe('auto');
+  });
+
+  it('shows a cut text whole on hover, and only while it is cut', () => {
+    renderTable();
+    const cell = screen.getByText('PostgreSQL');
+    const scroll = vi.spyOn(cell, 'scrollWidth', 'get').mockReturnValue(200);
+    vi.spyOn(cell, 'clientWidth', 'get').mockReturnValue(80);
+    fireEvent.mouseOver(cell);
+    expect(cell).toHaveAttribute('title', 'PostgreSQL');
+
+    scroll.mockReturnValue(80);
+    fireEvent.mouseOver(cell);
+    expect(cell).not.toHaveAttribute('title');
+  });
+
+  it('leaves the title of a cell content alone', () => {
+    renderTable({ columns: [{ key: 'name', header: 'Name', render: (row) => <span title={`${row.name} 16`}>{row.name}</span> }] });
+    const cell = screen.getByText('PostgreSQL').closest('td')!;
+    vi.spyOn(cell, 'scrollWidth', 'get').mockReturnValue(200);
+    fireEvent.mouseOver(screen.getByText('PostgreSQL'));
+    expect(cell).not.toHaveAttribute('title');
+  });
+});

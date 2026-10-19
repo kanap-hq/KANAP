@@ -130,16 +130,19 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
   const columns: Array<RelationsColumn<AssetTechnologyRow>> = [
     { key: 'ref', header: t('workspace.asset.technologies.columns.ref'), width: 64, render: (row) => <RelationRef>{row.technology_reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.asset.technologies.columns.name'), render: (row) => (
-      <Box component="span" sx={{ display: 'inline-flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
-        <span title={row.technology_name ?? undefined}>{row.technology_name ?? dash}</span>
+      <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 0.75, minWidth: 0 }}>
+        <Box component="span" title={row.technology_name ?? undefined} sx={{ flexShrink: 0, maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+          {row.technology_name ?? dash}
+        </Box>
         {row.is_operating_system && (
-          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, flex: 'none' }}>
+          // In a narrow table the mark gives way before the name.
+          <Box component="span" sx={{ color: 'kanap.text.tertiary', fontSize: 12, minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis' }}>
             {t('workspace.asset.technologies.operatingSystem')}
           </Box>
         )}
       </Box>
     ) },
-    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180,
+    { key: 'family', header: t('workspace.asset.technologies.columns.family'), width: 180, hideOrder: 2,
       render: (row) => {
         const family = row.family ? labelFor('technologyFamily', row.family) || row.family : dash;
         return <span title={family}>{family}</span>;
@@ -189,7 +192,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       },
     },
     {
-      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140,
+      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140, hideOrder: 1,
       render: (row) => (row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null),
     },
   ];

@@ -460,7 +460,8 @@
         "capexItem": "CAPEX-Zeile",
         "incident": "Vorfall",
         "location": "Standort",
-        "document": "Dokument"
+        "document": "Dokument",
+        "company": "Unternehmen"
       },
       "myTimeTitle": "Meine Zeit",
       "newRequestsTitle": "Neue Anfragen",
@@ -509,6 +510,12 @@
     "preflightOk_other": "Vorabprüfung OK: {{count}} Zeilen. Einfügungen: {{inserted}}, Aktualisierungen: {{updated}}. Sie können jetzt laden.",
     "loadedSuccessfully_one": "Erfolgreich geladen: {{count}} Zeile verarbeitet.",
     "loadedSuccessfully_other": "Erfolgreich geladen: {{count}} Zeilen verarbeitet.",
+    "loadedCreated_one": "{{count}} erstellt",
+    "loadedCreated_other": "{{count}} erstellt",
+    "loadedUpdated_one": "{{count}} aktualisiert",
+    "loadedUpdated_other": "{{count}} aktualisiert",
+    "loadedUnchanged_one": "{{count}} unverändert",
+    "loadedUnchanged_other": "{{count}} unverändert",
     "uploadCompleted": "Upload erfolgreich abgeschlossen.",
     "fileNotFormatted": "Die bereitgestellte Datei ist nicht korrekt formatiert",
     "rowError": "Zeile {{row}}: {{message}}",
