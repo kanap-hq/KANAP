@@ -31,18 +31,46 @@ export type RateSyncOutcome = RateSyncCompleted | RateSyncPending;
 
 export type RefreshCurrencyRatesResponse = RateSyncOutcome & { ok: true };
 
+/** A settings save carries the same block when the reporting currency changed, and only then. */
+export type CurrencySettingsUpdate = CurrencySettings & {
+  completed?: boolean;
+  years?: number[];
+  fetched?: number;
+  stillMissing?: MissingRatePair[];
+};
+
 export function isRateSyncOutcome(value: object): value is RateSyncOutcome {
-  return typeof (value as { completed?: unknown }).completed === 'boolean';
+  const record = value as { completed?: unknown; years?: unknown; fetched?: unknown; stillMissing?: unknown };
+  if (!Array.isArray(record.years)) return false;
+  if (record.completed === false) return true;
+  return record.completed === true && typeof record.fetched === 'number' && Array.isArray(record.stillMissing);
 }
+
+/** `GET /currency/reporting-change-impact`. What a new reporting currency does to manual rates, frozen versions and the allowed list. */
+export type ReportingChangeImpact = {
+  manualRates: Array<{ currency: string; year: number; rate: number }>;
+  frozenVersions: Array<{ year: number; count: number }>;
+  allowedAdded: boolean;
+};
 
 export async function fetchCurrencySettings(): Promise<CurrencySettings> {
   const res = await api.get('/currency/settings');
   return res.data as CurrencySettings;
 }
 
-export async function updateCurrencySettings(payload: Partial<CurrencySettings>): Promise<CurrencySettings> {
+export async function updateCurrencySettings(payload: Partial<CurrencySettings>): Promise<CurrencySettingsUpdate> {
   const res = await api.patch('/currency/settings', payload);
-  return res.data as CurrencySettings;
+  return res.data as CurrencySettingsUpdate;
+}
+
+export async function fetchReportingChangeImpact(to: string): Promise<ReportingChangeImpact> {
+  const res = await api.get<ReportingChangeImpact>('/currency/reporting-change-impact', { params: { to } });
+  const data = res.data;
+  return {
+    manualRates: Array.isArray(data?.manualRates) ? data.manualRates : [],
+    frozenVersions: Array.isArray(data?.frozenVersions) ? data.frozenVersions : [],
+    allowedAdded: Boolean(data?.allowedAdded),
+  };
 }
 
 export async function refreshCurrencyRates(payload?: { years?: number[]; year?: number }): Promise<RefreshCurrencyRatesResponse> {

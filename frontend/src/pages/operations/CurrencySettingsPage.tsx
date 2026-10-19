@@ -8,10 +8,14 @@ import { useTranslation } from 'react-i18next';
 import useCurrencySettings from '../../hooks/useCurrencySettings';
 import {
   updateCurrencySettings,
-  CurrencySettings,
   refreshCurrencyRates,
+  fetchReportingChangeImpact,
+  isRateSyncOutcome,
   type CurrencyRateRow,
+  type CurrencySettings,
+  type CurrencySettingsUpdate,
   type MissingRatePair,
+  type ReportingChangeImpact,
 } from '../../services/currency';
 import useCurrencyRates, {
   invalidateCurrencyRateQueries,
@@ -165,6 +169,14 @@ export default function CurrencySettingsPage() {
   const [successMessage, setSuccessMessage] = React.useState('');
   const [frozenNotice, setFrozenNotice] = React.useState('');
   const [syncNotice, setSyncNotice] = React.useState<SyncNotice | null>(null);
+  const [impactPending, setImpactPending] = React.useState(false);
+  const [impactError, setImpactError] = React.useState('');
+  const [reportingChange, setReportingChange] = React.useState<{
+    to: string;
+    previous: string;
+    payload: Partial<CurrencySettings>;
+    impact: ReportingChangeImpact;
+  } | null>(null);
   const [highlightKey, setHighlightKey] = React.useState<string | null>(null);
   const followRateSync = useRateSyncFollowUp();
   const [searchParams, setSearchParams] = useSearchParams();
@@ -225,14 +237,23 @@ export default function CurrencySettingsPage() {
 
   const mutation = useMutation({
     mutationFn: updateCurrencySettings,
-    onSuccess: (next: CurrencySettings) => {
+    onSuccess: (next: CurrencySettingsUpdate) => {
       queryClient.invalidateQueries({ queryKey: ['currency-settings'] });
-      invalidateCurrencyRateQueries(queryClient);
-      setSuccessMessage(t('operations.currency.saveSuccess'));
+      setReportingChange(null);
       setReportingCurrency(next.reportingCurrency);
       setDefaultSpendCurrency(next.defaultSpendCurrency);
       setDefaultCapexCurrency(next.defaultCapexCurrency);
       setAllowedCurrencies((next.allowedCurrencies ?? []).join(', '));
+      if (isRateSyncOutcome(next)) {
+        setSuccessMessage('');
+        setSyncNotice(next.completed
+          ? { completed: true, fetched: next.fetched, stillMissing: next.stillMissing }
+          : { completed: false });
+        followRateSync(next.completed);
+        return;
+      }
+      invalidateCurrencyRateQueries(queryClient);
+      setSuccessMessage(t('operations.currency.saveSuccess'));
     },
   });
 
@@ -247,22 +268,43 @@ export default function CurrencySettingsPage() {
   });
 
   const submitting = mutation.isPending;
-  const errorMessage = mutation.error ? getApiErrorMessage(mutation.error, t, t('operations.currency.failedToUpdate')) : null;
+  const saving = submitting || impactPending;
+  const errorMessage = impactError
+    || (mutation.error ? getApiErrorMessage(mutation.error, t, t('operations.currency.failedToUpdate')) : '');
   const syncError = syncMutation.error ? getApiErrorMessage(syncMutation.error, t, t('operations.currency.failedToRefreshFx')) : null;
 
-  const handleSubmit = (event: React.FormEvent<HTMLFormElement>) => {
+  const settingsPayload = (): Partial<CurrencySettings> => ({
+    reportingCurrency: reportingCurrency.trim().toUpperCase(),
+    defaultSpendCurrency: defaultSpendCurrency.trim().toUpperCase(),
+    defaultCapexCurrency: defaultCapexCurrency.trim().toUpperCase(),
+    allowedCurrencies: normalizeList(allowedCurrencies),
+  });
+
+  const handleSubmit = async (event: React.FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    if (!canEdit) return;
+    if (!canEdit || saving) return;
     setSuccessMessage('');
-    mutation.mutate({
-      reportingCurrency: reportingCurrency.trim().toUpperCase(),
-      defaultSpendCurrency: defaultSpendCurrency.trim().toUpperCase(),
-      defaultCapexCurrency: defaultCapexCurrency.trim().toUpperCase(),
-      allowedCurrencies: normalizeList(allowedCurrencies),
-    });
+    setImpactError('');
+    const payload = settingsPayload();
+    const nextReporting = payload.reportingCurrency ?? '';
+    const currentReporting = (data?.reportingCurrency ?? '').trim().toUpperCase();
+    if (data && nextReporting !== currentReporting && /^[A-Z]{3}$/.test(nextReporting)) {
+      setImpactPending(true);
+      try {
+        const impact = await fetchReportingChangeImpact(nextReporting);
+        setReportingChange({ to: nextReporting, previous: currentReporting, payload, impact });
+      } catch (error) {
+        setImpactError(getApiErrorMessage(error, t, t('operations.currency.failedToUpdate')));
+      } finally {
+        setImpactPending(false);
+      }
+      return;
+    }
+    setSyncNotice(null);
+    mutation.mutate(payload);
   };
 
-  const fieldDisabled = isLoading || submitting;
+  const fieldDisabled = isLoading || saving;
   const reporting = (data?.reportingCurrency || rateRows?.[0]?.baseCurrency || '').trim().toUpperCase();
   const C = 'operations.currency';
 
@@ -276,7 +318,7 @@ export default function CurrencySettingsPage() {
       {isError && <Alert severity="error">{t(`${C}.loadError`)}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
       {frozenNotice && <Alert severity="info">{frozenNotice}</Alert>}
-      {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
+      {errorMessage && !reportingChange && <Alert severity="error">{errorMessage}</Alert>}
       {syncError && <Alert severity="error">{syncError}</Alert>}
       <Paper variant="outlined" component="form" onSubmit={handleSubmit} noValidate sx={{ p: 2, maxWidth: 640 }}>
         <Stack spacing={1}>
@@ -334,7 +376,13 @@ export default function CurrencySettingsPage() {
         </Stack>
         {canEdit && (
           <Stack direction="row" spacing={1} sx={{ mt: 2 }}>
-            <Button type="submit" variant="contained" disabled={isLoading || submitting || syncMutation.isPending}>
+            <Button
+              type="submit"
+              variant="contained"
+              disabled={isLoading || saving || syncMutation.isPending || reportingChange != null}
+              aria-busy={saving || undefined}
+              startIcon={saving ? <CircularProgress size={14} color="inherit" /> : undefined}
+            >
               {t('common:buttons.save')}
             </Button>
             <Button
@@ -382,6 +430,24 @@ export default function CurrencySettingsPage() {
         highlightKey={highlightKey}
         onEdit={setManualTarget}
       />
+      {reportingChange && (
+        <ReportingChangeDialog
+          previous={reportingChange.previous}
+          to={reportingChange.to}
+          impact={reportingChange.impact}
+          saving={submitting}
+          error={mutation.error ? errorMessage : ''}
+          onClose={() => {
+            if (submitting) return;
+            setReportingChange(null);
+          }}
+          onConfirm={() => {
+            setSuccessMessage('');
+            setSyncNotice(null);
+            mutation.mutate(reportingChange.payload);
+          }}
+        />
+      )}
       {manualTarget && (
         <ManualRateDialog
           key={pairKey(manualTarget.currency, manualTarget.year)}
@@ -408,6 +474,75 @@ export default function CurrencySettingsPage() {
         />
       )}
     </Box>
+  );
+}
+
+type ReportingChangeDialogProps = {
+  previous: string;
+  to: string;
+  impact: ReportingChangeImpact;
+  saving: boolean;
+  error: string;
+  onClose: () => void;
+  onConfirm: () => void;
+};
+
+/** Confirms a new reporting currency: what is converted, which manual rates pause, which frozen versions stay. */
+function ReportingChangeDialog({ previous, to, impact, saving, error, onClose, onConfirm }: ReportingChangeDialogProps) {
+  const { t } = useTranslation(['ops', 'common']);
+  const locale = useLocale();
+  const C = 'operations.currency';
+  return (
+    <KanapDialog
+      open
+      title={t(`${C}.changeReportingTitle`, { currency: to })}
+      onClose={onClose}
+      onSave={onConfirm}
+      saveLabel={t(`${C}.changeReportingConfirm`)}
+      saveDisabled={saving}
+      saveLoading={saving}
+    >
+      <Stack spacing={1.5}>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {t(`${C}.changeReportingEffect`, { currency: to })}
+        </Typography>
+        {impact.manualRates.length > 0 && (
+          <Box>
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+              {t(`${C}.changeReportingManual`, { previous })}
+            </Typography>
+            <Box component="ul" sx={{ m: 0, mt: 0.5, pl: 2.5 }}>
+              {impact.manualRates.map((item) => (
+                <Box
+                  component="li"
+                  key={`${item.currency}-${item.year}`}
+                  sx={{ fontSize: 13, fontFamily: 'monospace', color: 'kanap.text.primary' }}
+                >
+                  {t(`${C}.changeReportingManualItem`, {
+                    currency: item.currency,
+                    year: item.year,
+                    rate: formatRate(item.rate, locale),
+                  })}
+                </Box>
+              ))}
+            </Box>
+          </Box>
+        )}
+        {impact.frozenVersions.map((item) => (
+          <Typography key={item.year} sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t(`${C}.changeReportingFrozen`, { count: item.count, year: item.year, currency: to })}
+          </Typography>
+        ))}
+        {impact.allowedAdded && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {t(`${C}.changeReportingAllowed`, { currency: to })}
+          </Typography>
+        )}
+        {error && (
+          <Typography role="alert" sx={{ fontSize: 12, color: 'error.main' }}>{error}</Typography>
+        )}
+      </Stack>
+    </KanapDialog>
   );
 }
 

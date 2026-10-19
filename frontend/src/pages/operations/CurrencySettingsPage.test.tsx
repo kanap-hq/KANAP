@@ -546,4 +546,115 @@ describe('CurrencySettingsPage', () => {
       spy.mockRestore();
     }
   });
+
+  it('confirms a reporting currency change with the rates, frozen versions and allowed list', async () => {
+    const user = userEvent.setup();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/currency/settings') return { data: SETTINGS };
+      if (url === '/currency/rates') return { data: matrix };
+      if (url === '/currency/rates/missing') return { data: { items: missing } };
+      if (url === '/currency/reporting-change-impact') {
+        return {
+          data: {
+            manualRates: [{ currency: 'EUR', year: 2025, rate: 0.0858 }],
+            frozenVersions: [{ year: 2025, count: 3 }, { year: 2024, count: 1 }],
+            allowedAdded: true,
+          },
+        };
+      }
+      throw new Error(`unexpected GET ${url}`);
+    });
+    let resolvePatch: (value: unknown) => void = () => undefined;
+    mocked.patch.mockImplementation(() => new Promise((resolve) => { resolvePatch = resolve; }));
+    renderPage();
+    await waitForSettings();
+
+    const reporting = reportingField();
+    await user.clear(reporting);
+    await user.type(reporting, 'USD');
+    const save = screen.getByRole('button', { name: 'Save' });
+    await user.click(save);
+
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Change the reporting currency to USD?' })).toBeInTheDocument();
+    expect(within(dialog).getByText("Every amount is converted to USD at that year's rate. Rates are fetched for the years in use.")).toBeInTheDocument();
+    expect(within(dialog).getByText('These manually entered rates no longer apply. They apply again if you choose CHF again.')).toBeInTheDocument();
+    expect(within(dialog).getByText('EUR 2025: 0.0858')).toBeInTheDocument();
+    expect(within(dialog).getByText("The frozen versions of 2025 (3) keep the rates from when they were frozen, converted to USD at that year's rate.")).toBeInTheDocument();
+    expect(within(dialog).getByText("The frozen version of 2024 keeps the rates from when it was frozen, converted to USD at that year's rate.")).toBeInTheDocument();
+    expect(within(dialog).getByText('USD will be added to the allowed currencies.')).toBeInTheDocument();
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(mocked.get).toHaveBeenCalledWith('/currency/reporting-change-impact', { params: { to: 'USD' } });
+
+    const confirm = within(dialog).getByRole('button', { name: 'Change the currency' });
+    await user.click(confirm);
+    await waitFor(() => expect(confirm).toBeDisabled());
+    expect(within(confirm).getByRole('progressbar')).toBeInTheDocument();
+    resolvePatch({
+      data: {
+        ...SETTINGS,
+        reportingCurrency: 'USD',
+        completed: true,
+        years: [2025],
+        fetched: 1,
+        stillMissing: [{ currency: 'ZAR', year: 2028 }],
+      },
+    });
+    const slot = screen.getByTestId('sync-result');
+    expect(await within(slot).findByText('1 rate fetched.')).toBeInTheDocument();
+    expect(within(slot).getByText('Still missing: ZAR 2028.')).toBeInTheDocument();
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(mocked.patch).toHaveBeenCalledWith('/currency/settings', {
+      reportingCurrency: 'USD',
+      defaultSpendCurrency: 'EUR',
+      defaultCapexCurrency: 'USD',
+      allowedCurrencies: ['GBP'],
+    });
+  });
+
+  it('leaves the reporting currency unchanged when the confirmation is cancelled', async () => {
+    const user = userEvent.setup();
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/currency/settings') return { data: SETTINGS };
+      if (url === '/currency/rates') return { data: matrix };
+      if (url === '/currency/rates/missing') return { data: { items: missing } };
+      if (url === '/currency/reporting-change-impact') {
+        return { data: { manualRates: [], frozenVersions: [], allowedAdded: false } };
+      }
+      throw new Error(`unexpected GET ${url}`);
+    });
+    renderPage();
+    await waitForSettings();
+    const reporting = reportingField();
+    await user.clear(reporting);
+    await user.type(reporting, 'USD');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).queryByText(/no longer apply/)).not.toBeInTheDocument();
+    expect(within(dialog).queryByText(/will be added/)).not.toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.patch).not.toHaveBeenCalled();
+    expect(reportingField()).toHaveValue('USD');
+  });
+
+  it('saves another currency field without asking about the reporting currency', async () => {
+    const user = userEvent.setup();
+    mocked.patch.mockResolvedValue({ data: { ...SETTINGS, defaultSpendCurrency: 'GBP' } });
+    renderPage();
+    await waitForSettings();
+    const opex = screen.getByRole('textbox', { name: 'Default OPEX currency' });
+    await user.clear(opex);
+    await user.type(opex, 'GBP');
+    await user.click(screen.getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/currency/settings', {
+      reportingCurrency: 'CHF',
+      defaultSpendCurrency: 'GBP',
+      defaultCapexCurrency: 'USD',
+      allowedCurrencies: ['GBP'],
+    }));
+    expect(mocked.get.mock.calls.some(([url]) => url === '/currency/reporting-change-impact')).toBe(false);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(await screen.findByText('Currency settings updated successfully')).toBeInTheDocument();
+  });
 });
