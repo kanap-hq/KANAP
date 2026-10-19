@@ -499,6 +499,8 @@
       }
     },
     "administrationView": {
+      "subtitle": "Die Administrationssicht des ANSSI-Leitfadens zur Kartografie des Informationssystems.",
+      "exportAssets": "Assets exportieren",
       "exportDomains": "Domänen exportieren",
       "exportFailed": "Der Export ist fehlgeschlagen.",
       "zones": "Administrationszonen",
@@ -507,9 +509,13 @@
       "noZone": "Keine Zone",
       "unknownZone": "Unbekannte Zone ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} Asset",
+      "assetCount_other": "{{count}} Assets",
       "scopeEmpty": "Kein Asset in dieser Zone.",
       "hostedApplications_one": "{{count}} Anwendung",
       "hostedApplications_other": "{{count}} Anwendungen",
+      "directoryServiceCount_one": "{{count}} Verzeichnisdienst",
+      "directoryServiceCount_other": "{{count}} Verzeichnisdienste",
       "attributes": {
         "adminGroup": "Administratorgruppe",
         "directoryServices": "Verzeichnisdienste"
@@ -518,10 +524,15 @@
         "reference": "Ref.",
         "type": "Typ",
         "zone": "Zone",
+        "technologies": "Technologien",
+        "applications": "Anwendungen",
+        "controls": "Kontrollen",
+        "servers": "Server",
         "domain": "Domäne",
         "dnsSuffix": "DNS-Suffix",
         "trusts": "Vertrauensstellungen",
         "accounts": "Konten",
+        "computers": "Computer",
         "domainControllers": "Domänencontroller"
       },
       "controls": "Kontrollpunkte",
@@ -530,28 +541,72 @@
       "controlsList": {
         "assetsWithoutZone": {
           "title": "Assets ohne Administrationszone",
+          "short": "Ohne Zone",
           "hint": "Legen Sie für jedes noch genutzte Asset eine Zone fest."
         },
         "domainControllers": {
           "title": "Domänencontroller außerhalb der sensibelsten Zone",
+          "short": "Domänencontroller außerhalb",
           "hint": "Ein Domänencontroller gehört in die sensibelste Zone."
         },
         "directoryAssets": {
           "title": "Assets mit einem Verzeichnisdienst außerhalb der sensibelsten Zone",
+          "short": "Verzeichnisdienst außerhalb",
           "hint": "Ein Asset, das einen Verzeichnisdienst trägt, gehört in die sensibelste Zone."
         },
         "trustRaised": {
           "title": "Was ein Asset betreibt, liegt in einer weniger sensiblen Zone",
+          "short": "Weniger sensibler Host",
           "hint": "Was ein Asset betreibt, sollte in einer mindestens ebenso sensiblen Zone liegen. Ein Asset ohne Zone unterbricht die Prüfung der Kette."
         },
         "applications": {
           "title": "In der sensibelsten Zone gehostete Anwendungen",
+          "short": "Gehostete Anwendung",
           "hint": "Prüfen Sie jede Anwendung, die auf einem Asset der sensibelsten Zone gehostet wird."
         }
+      },
+      "emptyAssets": "Noch kein Asset in Betrieb.",
+      "more": "+{{count}}",
+      "moreItems": "Und {{count}} weitere",
+      "trustPeer": {
+        "contains": "Betreibt {{asset}} ({{zone}})",
+        "cluster": "Mitglied des Clusters {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "{{name}} auswählen",
+        "all": "Alle Assets des Filters auswählen",
+        "some_one": "{{count}} Asset ausgewählt",
+        "some_other": "{{count}} Assets ausgewählt",
+        "whole_one": "{{count}} Asset ausgewählt, gesamter Filter",
+        "whole_other": "{{count}} Assets ausgewählt, gesamter Filter",
+        "clear": "Auswahl aufheben"
+      },
+      "actions": {
+        "assign": "Einer Zone zuordnen",
+        "assignSelected": "Einer Zone zuordnen ({{count}})"
+      },
+      "bulk": {
+        "title": "Einer Zone zuordnen",
+        "zone": "Zone",
+        "save": "Zuordnen",
+        "scopeSelected_one": "Das ausgewählte Asset.",
+        "scopeSelected_other": "Die {{count}} ausgewählten Assets.",
+        "scopeAll": "Alle Assets des aktuellen Filters.",
+        "scopeAllBut_one": "Alle Assets des aktuellen Filters außer {{count}}.",
+        "scopeAllBut_other": "Alle Assets des aktuellen Filters außer {{count}}.",
+        "count_one": "Dies ändert die Zone von {{count}} Asset von {{rows}}.",
+        "count_other": "Dies ändert die Zone von {{count}} Assets von {{rows}}.",
+        "counting": "Wird gezählt…",
+        "countFailed": "Die Assets konnten nicht gezählt werden. Versuchen Sie es erneut.",
+        "tooMany": "Mehr als 5.000 Assets: Grenzen Sie die Filter ein.",
+        "changed": "Die Liste hat sich seit der Zählung geändert. Prüfen Sie die neue Anzahl und bestätigen Sie erneut.",
+        "failed": "Die Zone konnte nicht zugeordnet werden."
       },
       "domains": "Domänen",
       "domainsHint": "Domänencontroller sind die Server der Domäne, die eine Verzeichnistechnologie tragen oder einer aktiven Anwendung mit der Serverrolle „Domänencontroller“ zugeordnet sind.",
       "noDomains": "Keine Domänen definiert.",
+      "noDirectories": "Kein Verzeichnisdienst. Eine Technologie der Familie Verzeichnis und Identität erscheint hier.",
+      "noForest": "Keine Gesamtstruktur",
       "noController": "Keiner gefunden",
       "notSet": "Nicht festgelegt",
       "none": "Keine",
@@ -738,6 +793,8 @@
         "description": "Beschreibung",
         "dnsSuffix": "DNS-Suffix",
         "forest": "Gesamtstruktur",
+        "accountCount": "Anzahl der Konten",
+        "computerCount": "Anzahl der Computer",
         "trusts": "Vertrauensstellungen",
         "adminGroup": "Administratorgruppe"
       },
@@ -772,6 +829,11 @@
         "accessMethodName": "z. B. Web",
         "incidentCategoryName": "z. B. Infrastruktur",
         "select": "Auswählen…"
+      },
+      "hints": {
+        "forest": "Active Directory-Domänen und -Vertrauensstellungen.",
+        "accountCount": "Active Directory-Benutzer und -Computer, oder eine Zählung der Benutzerobjekte der Domäne.",
+        "computerCount": "Active Directory-Benutzer und -Computer, oder eine Zählung der Computerobjekte der Domäne."
       },
       "empty": {
         "adminZones": "Keine Administrationszonen definiert.",

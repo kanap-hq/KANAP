@@ -499,6 +499,8 @@
       }
     },
     "administrationView": {
+      "subtitle": "La vista de la administración de la guía de cartografía del sistema de información de la ANSSI.",
+      "exportAssets": "Exportar activos",
       "exportDomains": "Exportar los dominios",
       "exportFailed": "La exportación ha fallado.",
       "zones": "Zonas de administración",
@@ -507,9 +509,13 @@
       "noZone": "Sin zona",
       "unknownZone": "Zona desconocida ({{code}})",
       "kindCount": "{{kind}}: {{count}}",
+      "assetCount_one": "{{count}} activo",
+      "assetCount_other": "{{count}} activos",
       "scopeEmpty": "Ningún activo en esta zona.",
       "hostedApplications_one": "{{count}} aplicación",
       "hostedApplications_other": "{{count}} aplicaciones",
+      "directoryServiceCount_one": "{{count}} servicio de directorio",
+      "directoryServiceCount_other": "{{count}} servicios de directorio",
       "attributes": {
         "adminGroup": "Grupo de administradores",
         "directoryServices": "Servicios de directorio"
@@ -518,10 +524,15 @@
         "reference": "Ref.",
         "type": "Tipo",
         "zone": "Zona",
+        "technologies": "Tecnologías",
+        "applications": "Aplicaciones",
+        "controls": "Controles",
+        "servers": "Servidores",
         "domain": "Dominio",
         "dnsSuffix": "Sufijo DNS",
         "trusts": "Confianzas",
         "accounts": "Cuentas",
+        "computers": "Equipos",
         "domainControllers": "Controladores de dominio"
       },
       "controls": "Puntos de control",
@@ -530,28 +541,72 @@
       "controlsList": {
         "assetsWithoutZone": {
           "title": "Activos sin zona de administración",
+          "short": "Sin zona asignada",
           "hint": "Indique una zona en cada activo que siga en uso."
         },
         "domainControllers": {
           "title": "Controladores de dominio fuera de la zona más sensible",
+          "short": "Controlador de dominio fuera",
           "hint": "Un controlador de dominio debe estar en la zona más sensible."
         },
         "directoryAssets": {
           "title": "Activos que llevan un servicio de directorio fuera de la zona más sensible",
+          "short": "Servicio de directorio fuera",
           "hint": "Un activo que lleva un servicio de directorio debe estar en la zona más sensible."
         },
         "trustRaised": {
           "title": "Lo que ejecuta un activo está en una zona menos sensible",
+          "short": "Host menos sensible",
           "hint": "Lo que ejecuta un activo debería estar en una zona al menos igual de sensible. Un activo sin zona interrumpe la comprobación de la cadena."
         },
         "applications": {
           "title": "Aplicaciones alojadas en la zona más sensible",
+          "short": "Aplicación alojada",
           "hint": "Revise cada aplicación alojada en un activo de la zona más sensible."
         }
+      },
+      "emptyAssets": "Todavía no hay ningún activo en servicio.",
+      "more": "+{{count}}",
+      "moreItems": "Y {{count}} más",
+      "trustPeer": {
+        "contains": "Ejecuta {{asset}} ({{zone}})",
+        "cluster": "Miembro del clúster {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "Seleccionar {{name}}",
+        "all": "Seleccionar todos los activos del filtro",
+        "some_one": "{{count}} activo seleccionado",
+        "some_other": "{{count}} activos seleccionados",
+        "whole_one": "{{count}} activo seleccionado, todo el filtro",
+        "whole_other": "{{count}} activos seleccionados, todo el filtro",
+        "clear": "Borrar la selección"
+      },
+      "actions": {
+        "assign": "Asignar a una zona",
+        "assignSelected": "Asignar a una zona ({{count}})"
+      },
+      "bulk": {
+        "title": "Asignar a una zona",
+        "zone": "Zona",
+        "save": "Asignar",
+        "scopeSelected_one": "El activo seleccionado.",
+        "scopeSelected_other": "Los {{count}} activos seleccionados.",
+        "scopeAll": "Todos los activos del filtro actual.",
+        "scopeAllBut_one": "Todos los activos del filtro actual excepto {{count}}.",
+        "scopeAllBut_other": "Todos los activos del filtro actual excepto {{count}}.",
+        "count_one": "Esto cambia la zona de {{count}} activo de {{rows}}.",
+        "count_other": "Esto cambia la zona de {{count}} activos de {{rows}}.",
+        "counting": "Contando…",
+        "countFailed": "No se pudieron contar los activos. Inténtelo de nuevo.",
+        "tooMany": "Más de 5.000 activos: acote los filtros.",
+        "changed": "La lista cambió desde el recuento. Compruebe el nuevo recuento y confirme de nuevo.",
+        "failed": "No se pudo asignar la zona."
       },
       "domains": "Dominios",
       "domainsHint": "Los controladores de dominio son los servidores del dominio que llevan una tecnología de directorio, o que están asignados con el rol de servidor «Controlador de dominio» en una aplicación en servicio.",
       "noDomains": "No hay dominios definidos.",
+      "noDirectories": "Ningún servicio de directorio. Aquí aparece una tecnología de la familia Directorio e identidad.",
+      "noForest": "Sin bosque",
       "noController": "Ninguno encontrado",
       "notSet": "Sin indicar",
       "none": "Ninguna",
@@ -738,6 +793,8 @@
         "description": "Descripción",
         "dnsSuffix": "Sufijo DNS",
         "forest": "Bosque",
+        "accountCount": "Número de cuentas",
+        "computerCount": "Número de equipos",
         "trusts": "Confianzas",
         "adminGroup": "Grupo de administradores"
       },
@@ -772,6 +829,11 @@
         "accessMethodName": "p. ej., Web",
         "incidentCategoryName": "p. ej., Infraestructura",
         "select": "Seleccionar…"
+      },
+      "hints": {
+        "forest": "Dominios y confianzas de Active Directory.",
+        "accountCount": "Usuarios y equipos de Active Directory, o un recuento de los objetos de usuario del dominio.",
+        "computerCount": "Usuarios y equipos de Active Directory, o un recuento de los objetos de equipo del dominio."
       },
       "empty": {
         "adminZones": "No hay zonas de administración definidas.",
