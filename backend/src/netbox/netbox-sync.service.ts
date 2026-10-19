@@ -1436,6 +1436,12 @@ export class NetboxSyncService {
    * again and locked here, so an asset deleted, retired or turned into
    * something else since the plan writes nothing and says so, and a person
    * replacing the cluster's relations at the same moment waits for this row.
+   *
+   * Lock order, no deadlock: the row has already locked the virtual machine
+   * (its update), then locks the cluster (`FOR NO KEY UPDATE`, the lock
+   * `bulkReplaceRelations` takes on its asset). A replacement of the cluster's
+   * relations holds the cluster and only needs a key share lock on the
+   * virtual machine, which that update lock allows.
    */
   private async attachToCluster(
     manager: EntityManager,
@@ -1446,7 +1452,7 @@ export class NetboxSyncService {
     opts: { manager: EntityManager; tenantId: string; source: string; sourceRef: string },
   ): Promise<boolean> {
     const rows: Array<{ is_cluster: boolean; status: string | null }> = await manager.query(
-      `SELECT is_cluster, status FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
+      `SELECT is_cluster, status FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
       [tenantId, cluster.assetId],
     );
     const target = rows[0];

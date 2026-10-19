@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { linkedLineOf } from '../../spend/budget-nature';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
 import { AssetRelation } from '../asset-relation.entity';
 import { AssetSpendItemLink } from '../asset-spend-item.entity';
@@ -85,6 +85,10 @@ export class AssetsRelationsService extends AssetsBaseService {
     const asset = await this.ensureAsset(assetId, opts?.manager, tenant);
     const repo = opts?.manager ? opts.manager.getRepository(AssetRelation) : this.relationsRepo;
     const mg = this.getManager(opts);
+    // Same lock as `addRelation`, taken before reading: a relation added at the
+    // same moment is either committed and listed in `before`, or waits for this
+    // replacement to commit.
+    await this.lockSourceAsset(mg, asset.tenant_id, assetId);
 
     const existing = await repo.find({ where: { asset_id: assetId, tenant_id: asset.tenant_id } as any });
     const before = existing.map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type }));
@@ -148,8 +152,10 @@ export class AssetsRelationsService extends AssetsBaseService {
    * `bulkReplaceRelations` would drop whatever that writer does not know about. Returns false
    * when the relation was already there, which writes nothing and logs nothing.
    *
-   * The asset row is locked first, so a person replacing its relations at the same moment either
-   * sees the new one or waits for it, and the audit entry lists the relations as they really are.
+   * The asset row is locked first with the lock `bulkReplaceRelations` takes, so the two run one
+   * after the other: a replacement that started first commits before this reads the relations, and
+   * one that starts later lists the added relation in its `before`. The insert then never meets an
+   * uncommitted row, and the audit entry lists the relations as they really are.
    */
   async addRelation(
     assetId: string,
@@ -164,11 +170,7 @@ export class AssetsRelationsService extends AssetsBaseService {
     if (relatedAssetId === assetId) {
       throw new BadRequestException('Asset cannot have a relation to itself');
     }
-    const locked = await mg.query(
-      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR UPDATE`,
-      [tenant, assetId],
-    );
-    if (locked.length === 0) throw new NotFoundException('Asset not found');
+    await this.lockSourceAsset(mg, tenant, assetId);
     const related = await mg.query(
       `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`,
       [tenant, relatedAssetId],
@@ -209,6 +211,19 @@ export class AssetsRelationsService extends AssetsBaseService {
       { manager: opts?.manager },
     );
     return true;
+  }
+
+  /**
+   * Locks the asset whose relations are about to change, for the rest of the transaction.
+   * `FOR NO KEY UPDATE` is enough to stop a delete or a change of the row, and it still lets
+   * other transactions insert rows that reference the asset (their key share lock).
+   */
+  private async lockSourceAsset(mg: EntityManager, tenantId: string, assetId: string): Promise<void> {
+    const locked = await mg.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [tenantId, assetId],
+    );
+    if (locked.length === 0) throw new NotFoundException('Asset not found');
   }
 
   // =========================================================================
