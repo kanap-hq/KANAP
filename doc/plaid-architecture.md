@@ -227,9 +227,10 @@ aggregate:
   feed is off.
 
 The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
-`hosting_type`, `lifecycle` and `admin_zone`. `get_entity_detail` adds the
-versions (end dates, servers in service per version), the owners by name and
-the number of contracts. `get_entity_context` lists the servers the technology
+`hosting_type`, `lifecycle` and `admin_zone`. `publisher` filters and groups
+without case. `get_entity_detail` adds the versions (end dates, servers in
+service per version), the owners by name and the number of contracts (null for
+a user who cannot read contracts, as on the technology page). `get_entity_context` lists the servers the technology
 is installed on (version, operating system or not), and, for a user who reads
 applications, the applications that declare it and those deduced from the
 servers that carry it (`TechnologyReachService`). The context of an asset lists

@@ -351,7 +351,11 @@ async function testDetail(harness: Harness, runner: QueryRunner, s: Seed) {
   assert.equal(detail.entity.ref, 'TEC-1');
   assert.equal(detail.data.server_count, 1);
   assert.equal(detail.data.application_count, 2);
-  assert.equal(detail.data.contract_count, 1);
+  assert.equal(detail.data.contract_count, null, 'no number of contracts without the contracts read right, as on the technology page');
+  const infraDetail = await harness.executor.executeDetail(ctx(runner, s, 'infraOnly'), { entity_type: 'technologies', entity_id: 'TEC-1' });
+  assert.equal(infraDetail.data.contract_count, null, 'infrastructure alone: no number of contracts');
+  const adminDetail = await harness.executor.executeDetail(ctx(runner, s, 'admin'), { entity_type: 'technologies', entity_id: 'TEC-1' });
+  assert.equal(adminDetail.data.contract_count, 1, 'a contracts reader sees the number of contracts');
   assert.deepEqual(detail.data.it_owners, ['Full Tester'], 'owners by name');
   assert.deepEqual(detail.data.business_owners, []);
   assert.deepEqual(

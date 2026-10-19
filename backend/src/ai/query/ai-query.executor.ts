@@ -2466,8 +2466,8 @@ export class AiQueryExecutor {
 
   /**
    * A technology with its figures (`listAiTechnologies`), versions (servers in service per
-   * version), owners (names only) and number of contracts. References and names only: no id of
-   * another record.
+   * version), owners (names only) and number of contracts (null without the contracts read right).
+   * References and names only: no id of another record.
    */
   private async technologyDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
     if (!this.technologies) throw new BadRequestException('Unsupported entity type.');
@@ -2510,7 +2510,10 @@ export class AiQueryExecutor {
       })),
       business_owners: owners('business'),
       it_owners: owners('it'),
-      contract_count: await technologyContractCount(context.manager, context.tenantId, record.id),
+      // As the technology page: no number of contracts without the contracts read right.
+      contract_count: (await this.policy?.canReadEntityType(context, 'contracts', context.manager))
+        ? await technologyContractCount(context.manager, context.tenantId, record.id)
+        : null,
       created_at: record.created_at,
       updated_at: record.updated_at,
     });
