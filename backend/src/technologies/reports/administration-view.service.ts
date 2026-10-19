@@ -127,8 +127,8 @@ export type AdministrationAssetRow = {
    * it contains (`contains`) and the more sensitive clusters it is a member of (`cluster`).
    */
   trust_peers: { total: number; items: TrustPeer[] };
-  /** References of the applications that place the asset in `applications_on_most_sensitive`. */
-  application_references: string[];
+  /** References of the applications that place the asset in `applications_on_most_sensitive`, capped like `applications`. */
+  application_references: { total: number; items: string[] };
 };
 
 export type TrustPeer = { relation: 'contains' | 'cluster'; reference: string | null; name: string; zone: string | null };
@@ -866,7 +866,7 @@ export class AdministrationViewService {
         applications: take(apps.map((link) => ({ reference: link.reference, name: link.name }))),
         findings,
         trust_peers: take(trust.map((link) => ({ relation: link.relation, reference: link.reference, name: link.name, zone: link.zone }))),
-        application_references: onMost ? apps.map((link) => link.reference).filter((reference): reference is string => !!reference) : [],
+        application_references: take(onMost ? apps.map((link) => link.reference).filter((reference): reference is string => !!reference) : []),
       };
     });
   }

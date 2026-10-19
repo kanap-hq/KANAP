@@ -442,7 +442,8 @@ async function testControls() {
     ]);
     assert.equal(row('host').trust_peers.total, 2);
     assert.deepEqual(row('host-b').trust_peers.items.map((item) => [item.relation, item.name]), [['contains', 'guest']]);
-    assert.deepEqual(row('guest').application_references, row('guest').applications.items.map((item) => item.reference));
+    assert.deepEqual(row('guest').application_references, { total: 2, items: row('guest').applications.items.map((item) => item.reference) });
+    assert.deepEqual(row('plain').application_references, { total: 0, items: [] }, 'outside the most sensitive zone, no reference');
     assert.deepEqual(row('guest').applications.items.map((item) => item.name), ['Extra', 'Portal']);
     assert.deepEqual(row('host').findings, ['trust_raised'], 'the container is the asset to raise');
     assert.deepEqual(row('host-b').findings, ['trust_raised']);
@@ -592,7 +593,8 @@ async function testAssetsPage() {
     assert.deepEqual(loaded.applications.items.map((item) => item.name), Array.from({ length: 10 }, (_, n) => `App ${String(n + 1).padStart(2, '0')}`));
     assert.equal(loaded.zone, 'tier_0');
     assert.ok(loaded.findings.includes('applications_on_most_sensitive'));
-    assert.equal(loaded.application_references.length, 12, 'the references of the control stay complete when the list is capped');
+    assert.equal(loaded.application_references.total, 12, 'the total of the control stays complete when the list is capped');
+    assert.deepEqual(loaded.application_references.items, loaded.applications.items.map((item) => item.reference), 'capped at 10, in the order of the applications');
 
     const file = await svc.csv({ q: 'carrier', language: 'en' }, opts);
     assert.ok(file.content.includes('Tech 11') && file.content.includes('Tech 12'), 'the export keeps every link');
