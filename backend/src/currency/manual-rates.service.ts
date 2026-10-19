@@ -330,6 +330,24 @@ export class ManualRatesService {
   }
 
   /**
+   * Versions of this budget year that keep a pinned rate set. A manual rate
+   * writes a new live set and does not reach them.
+   */
+  async countFrozenVersions(tenantId: string, year: number, manager: EntityManager): Promise<number> {
+    const rows = await manager.query(
+      `SELECT COUNT(*)::int AS n
+         FROM spend_versions
+        WHERE tenant_id = $1
+          AND budget_year = $2
+          AND fx_rate_set_id IS NOT NULL`,
+      [tenantId, year],
+    );
+    const raw = Array.isArray(rows) ? (rows[0] as { n?: unknown } | undefined)?.n : undefined;
+    const count = typeof raw === 'number' ? raw : Number(raw);
+    return Number.isInteger(count) && count > 0 ? count : 0;
+  }
+
+  /**
    * Pairs in use that the latest set of the year, in the reporting currency,
    * does not rate with a finite value above 0. One query per source
    * (`currenciesInUse`). The years found are reported so the page that lists

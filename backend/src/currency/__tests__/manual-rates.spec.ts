@@ -426,11 +426,12 @@ async function testApiContract() {
     rateSources: { EUR: 'identity', GBP: 'manual' },
     capturedAt: saved.capturedAt,
     source: 'manual',
+    frozenVersions: 0,
   });
   assert.ok(saved.capturedAt instanceof Date);
 
   const removed = await controller.removeManualRate('2024', 'GBP', req);
-  assert.deepEqual(removed, { ok: true, refreshQueued: true });
+  assert.deepEqual(removed, { ok: true, refreshQueued: true, frozenVersions: 0 });
 
   await rejects(
     () => controller.setManualRate({ currency: 'EU', year: 2024, rate: 1 }, req),
@@ -447,6 +448,46 @@ async function testApiContract() {
   console.log('ok - the currency API returns the manual-rate contract');
 }
 
+/**
+ * The harness query returns no rows, which counts as zero frozen versions.
+ * A query that answers `n` is the number of pinned versions of that year.
+ */
+async function testFrozenVersions() {
+  const { service, manager } = harness();
+  const seen: unknown[][] = [];
+  const wrapped = {
+    query: async (sql: string, params?: unknown[]) => {
+      if (sql.includes('fx_rate_set_id IS NOT NULL')) {
+        seen.push(params ?? []);
+        assert.match(sql, /tenant_id = \$1/);
+        assert.match(sql, /budget_year = \$2/);
+        const year = Number(params?.[1]);
+        if (year === 2024) return [{ n: 2 }];
+        return [];
+      }
+      return manager.query(sql, params);
+    },
+    getRepository: () => manager.getRepository(),
+  };
+  const controller = new CurrencyController({} as any, {} as any, service, { manager: wrapped } as any);
+  const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, queryRunner: { manager: wrapped } };
+
+  const saved = await controller.setManualRate({ currency: 'GBP', year: 2024, rate: 1.25 }, req);
+  assert.equal(saved.frozenVersions, 2);
+  assert.deepEqual(seen[0], ['tenant-1', 2024]);
+
+  const removed = await controller.removeManualRate('2024', 'GBP', req);
+  assert.equal(removed.frozenVersions, 2);
+  assert.equal(removed.ok, true);
+  assert.equal(removed.refreshQueued, true);
+  assert.deepEqual(seen[1], ['tenant-1', 2024]);
+
+  const otherYear = await controller.setManualRate({ currency: 'USD', year: 2025, rate: 1.1 }, req);
+  assert.equal(otherYear.frozenVersions, 0);
+  assert.deepEqual(seen[2], ['tenant-1', 2025]);
+  console.log('ok - a manual rate reports the frozen versions of its year');
+}
+
 (async () => {
   await testValidationWritesNothing();
   await testNoSetForTheYear();
@@ -456,6 +497,7 @@ async function testApiContract() {
   await testSkippedRefreshReportsTheYear();
   await testLatestSetWins();
   await testApiContract();
+  await testFrozenVersions();
   console.log('manual-rates.spec: ok');
 })().catch((error) => {
   console.error(error);

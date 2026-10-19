@@ -101,7 +101,8 @@ export class CurrencyController {
       req.user?.sub ?? null,
       manager,
     );
-    return this.presentSet(set);
+    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, set.fiscal_year, manager);
+    return { ...this.presentSet(set), frozenVersions };
   }
 
   @Delete('rates/manual/:year/:currency')
@@ -111,12 +112,15 @@ export class CurrencyController {
     const tenantId = this.requireTenantId(req);
     const manager = req?.queryRunner?.manager ?? this.rateSets.manager;
     await this.ensureTenantContext(manager, tenantId);
-    return this.manualRates.removeManualRate(
+    const year = Number(yearRaw);
+    const removed = await this.manualRates.removeManualRate(
       tenantId,
-      { currency, year: Number(yearRaw) },
+      { currency, year },
       req.user?.sub ?? null,
       manager,
     );
+    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, year, manager);
+    return { ...removed, frozenVersions };
   }
 
   @Post('rates/refresh')
