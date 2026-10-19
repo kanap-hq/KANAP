@@ -92,7 +92,8 @@ export default function WorkspaceDashboardPage() {
 
   // Quick actions visibility
   const canCreateTask = hasLevel('tasks', 'member');
-  const canLogTime = hasLevel('portfolio_projects', 'member') || hasLevel('tasks', 'member');
+  // Same rules as the server for time entries (see QuickLogTimeModal)
+  const canLogTime = hasLevel('portfolio_projects', 'contributor') || hasLevel('tasks', 'member');
   const canCreateRequest = hasLevel('portfolio_requests', 'member');
   const canCreateAsset = hasLevel('infrastructure', 'member');
   const canCreateApp = hasLevel('applications', 'member');

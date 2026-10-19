@@ -13,7 +13,7 @@ El Panel de control es su página de inicio personal en KANAP. Le ofrece una vis
 La franja del encabezado en la parte superior del panel proporciona botones de atajo para el trabajo cotidiano común. Cada botón solo se muestra si tiene el permiso correspondiente.
 
 - **Crear tarea**: abre el flujo de creación de tarea independiente. Requiere `tasks:member` o superior.
-- **Registrar tiempo**: abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:member` o `tasks:member`.
+- **Registrar tiempo**: abre el diálogo **Registro rápido de tiempo** (vea más abajo). Requiere `portfolio_projects:contributor` o `tasks:member`.
 - **Nueva solicitud**: abre el flujo de creación de solicitud. Requiere `portfolio_requests:member` o superior.
 - **Nueva aplicación**: abre el flujo de creación de aplicación. Requiere `applications:member` o superior.
 - **Nuevo activo**: abre el flujo de creación de activo. Requiere `infrastructure:member` o superior.
@@ -24,11 +24,11 @@ La franja del encabezado en la parte superior del panel proporciona botones de a
 
 La acción **Registrar tiempo** abre un diálogo enfocado para que pueda registrar horas sin salir del panel.
 
-- Elija el destino: **Proyecto** o **Tarea**.
-  - Las entradas de proyecto registran tiempo directamente contra un proyecto del portafolio.
-  - Las entradas de tarea registran tiempo contra una de sus tareas activas (tareas de proyecto o tareas independientes). Las tareas OPEX, CAPEX y de contrato están intencionalmente excluidas del selector.
+- Elija el destino: **Proyecto** o **Tarea**. Esta elección solo aparece si puede registrar tiempo en ambos.
+  - Las entradas de proyecto registran tiempo directamente contra un proyecto del portafolio. La lista solo contiene los proyectos en los que puede registrar tiempo.
+  - Las entradas de tarea registran tiempo contra una de sus tareas activas: las tareas de esos proyectos, y las tareas independientes si tiene `tasks:member`. Las tareas OPEX, CAPEX y de contrato están excluidas del selector.
 - Elija el proyecto o tarea del desplegable.
-- Introduzca las **Horas** (en incrementos de 0,25).
+- Introduzca las **Horas** (horas enteras).
 - Elija una **Categoría**: **IT** o **Negocio**.
 - Añada **Notas** si desea contexto sobre en qué trabajó.
 

@@ -49,8 +49,14 @@ export default function QuickLogTimeModal({
 }: QuickLogTimeModalProps) {
   const queryClient = useQueryClient();
   const { t } = useTranslation('common');
-  const { profile } = useAuth();
-  const [target, setTarget] = useState<LogTarget>('project');
+  const { profile, hasLevel } = useAuth();
+  // Same rules as the server: project time and project task time need portfolio_projects:contributor
+  // on that project, standalone task time needs tasks:member.
+  const canLogProject = hasLevel('portfolio_projects', 'contributor');
+  const canLogStandaloneTask = hasLevel('tasks', 'member');
+  const canLogTask = hasLevel('tasks', 'reader') && (canLogProject || canLogStandaloneTask);
+  const defaultTarget: LogTarget = canLogProject ? 'project' : 'task';
+  const [target, setTarget] = useState<LogTarget>(defaultTarget);
   const [projectId, setProjectId] = useState('');
   const [taskId, setTaskId] = useState('');
   const [hours, setHours] = useState('');
@@ -59,16 +65,29 @@ export default function QuickLogTimeModal({
   const [error, setError] = useState<string | null>(null);
   const [snackOpen, setSnackOpen] = useState(false);
 
-  // Fetch projects for dropdown
+  // Projects the user may log time on
   const { data: projectsData } = useQuery({
-    queryKey: ['portfolio', 'projects', 'list-simple'],
+    queryKey: ['portfolio', 'projects', 'list-simple', 'contributor'],
     queryFn: async () => {
       const res = await api.get('/portfolio/projects', {
-        params: { limit: 100, sort: 'name:ASC', status: 'all' },
+        params: { limit: 100, sort: 'name:ASC', status: 'all', access: 'contributor' },
       });
       return res.data.items as Project[];
     },
-    enabled: open && target === 'project',
+    enabled: open && canLogProject && target === 'project',
+    staleTime: 5 * 60 * 1000,
+  });
+
+  // Ids of those projects, to keep only the project tasks the user may log time on
+  const { data: writableProjectIds } = useQuery({
+    queryKey: ['portfolio', 'projects', 'ids', 'contributor'],
+    queryFn: async () => {
+      const res = await api.get('/portfolio/projects/ids', {
+        params: { status: 'all', access: 'contributor' },
+      });
+      return new Set<string>(res.data.ids as string[]);
+    },
+    enabled: open && canLogProject && target === 'task',
     staleTime: 5 * 60 * 1000,
   });
 
@@ -84,19 +103,24 @@ export default function QuickLogTimeModal({
           filters: JSON.stringify({ status: { filterType: 'set', values: ACTIVE_TASK_STATUSES } }),
         },
       });
-      const items = res.data.items as Task[];
-      // Only show project and standalone tasks (exclude OPEX, CAPEX, Contract tasks)
-      return items.filter((t) => !t.related_object_type || t.related_object_type === 'project');
+      return res.data.items as Task[];
     },
-    enabled: open && target === 'task' && !!profile?.id,
+    enabled: open && canLogTask && target === 'task' && !!profile?.id,
     staleTime: 5 * 60 * 1000,
   });
 
-  const selectedTask = tasksData?.find((t) => t.id === taskId);
+  // Only project and standalone tasks (not OPEX, CAPEX or contract tasks), where the user may log time
+  const loggableTasks = (tasksData ?? []).filter((task) => {
+    if (!task.related_object_type) return canLogStandaloneTask;
+    if (task.related_object_type !== 'project') return false;
+    return canLogProject && !!task.related_object_id && !!writableProjectIds?.has(task.related_object_id);
+  });
+
+  const selectedTask = loggableTasks.find((t) => t.id === taskId);
 
   const logTimeMutation = useMutation({
     mutationFn: async () => {
-      const hoursNum = parseFloat(hours);
+      const hoursNum = Number(hours);
       if (target === 'project') {
         await api.post(`/portfolio/projects/${projectId}/time-entries`, {
           category,
@@ -134,7 +158,7 @@ export default function QuickLogTimeModal({
   });
 
   const handleClose = () => {
-    setTarget('project');
+    setTarget(defaultTarget);
     setProjectId('');
     setTaskId('');
     setHours('');
@@ -153,8 +177,8 @@ export default function QuickLogTimeModal({
       setError(t('messages.taskRequired'));
       return;
     }
-    const hoursNum = parseFloat(hours);
-    if (isNaN(hoursNum) || hoursNum <= 0) {
+    const hoursNum = Number(hours);
+    if (!Number.isInteger(hoursNum) || hoursNum <= 0) {
       setError(t('messages.validHoursRequired'));
       return;
     }
@@ -185,28 +209,30 @@ export default function QuickLogTimeModal({
             </Alert>
           )}
 
-          <Box>
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-              {t('dashboard.quickLogTime.logOn')}
-            </Typography>
-            <ToggleButtonGroup
-              value={target}
-              exclusive
-              onChange={(_, val) => {
-                if (val) {
-                  setTarget(val);
-                  setProjectId('');
-                  setTaskId('');
-                  setError(null);
-                }
-              }}
-              size="small"
-              fullWidth
-            >
-              <ToggleButton value="project">{t('labels.project')}</ToggleButton>
-              <ToggleButton value="task">{t('labels.task')}</ToggleButton>
-            </ToggleButtonGroup>
-          </Box>
+          {canLogProject && canLogTask && (
+            <Box>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {t('dashboard.quickLogTime.logOn')}
+              </Typography>
+              <ToggleButtonGroup
+                value={target}
+                exclusive
+                onChange={(_, val) => {
+                  if (val) {
+                    setTarget(val);
+                    setProjectId('');
+                    setTaskId('');
+                    setError(null);
+                  }
+                }}
+                size="small"
+                fullWidth
+              >
+                <ToggleButton value="project">{t('labels.project')}</ToggleButton>
+                <ToggleButton value="task">{t('labels.task')}</ToggleButton>
+              </ToggleButtonGroup>
+            </Box>
+          )}
 
           {target === 'project' ? (
             <FormControl fullWidth required>
@@ -231,7 +257,7 @@ export default function QuickLogTimeModal({
                 onChange={(e) => setTaskId(e.target.value)}
                 label={t('labels.task')}
               >
-                {tasksData?.map((task) => (
+                {loggableTasks.map((task) => (
                   <MenuItem key={task.id} value={task.id}>
                     {formatTaskLabel(task)}
                   </MenuItem>
@@ -247,7 +273,7 @@ export default function QuickLogTimeModal({
             onChange={(e) => setHours(e.target.value)}
             fullWidth
             required
-            inputProps={{ min: 0.25, step: 0.25 }}
+            inputProps={{ min: 1, step: 1 }}
             placeholder={t('dashboard.quickLogTime.hoursPlaceholder')}
           />
 
