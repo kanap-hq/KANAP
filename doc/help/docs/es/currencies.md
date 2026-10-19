@@ -102,7 +102,7 @@ Debajo del formulario de configuración, la tabla **Últimas instantáneas de ta
       - **Promedio trimestral**: Promedio trimestral del Banco Mundial (si está disponible)
       - **Tasa al contado**: Tasa al contado actual de ExchangeRate-API (año actual)
       - **Estimación futura**: Tasa del año actual reutilizada para años futuros
-  - **Marcas en las celdas**: **manual** junto a una tasa introducida a mano, **estimación** junto a una tasa tomada del año publicado más cercano (pase el cursor sobre la marca para ver el motivo)
+  - **Marcas en las celdas**: un asterisco (*) tras una tasa introducida a mano, explicado por la nota **Tipo introducido manualmente** bajo la tabla (solo aparece cuando la tabla contiene una tasa así); **estimación** junto a una tasa tomada del año publicado más cercano (pase el cursor sobre la marca para ver el motivo)
   - **Tasa faltante**: un par sin tasa muestra `—` en el color de advertencia
 
 **Ejemplo**:
@@ -133,7 +133,7 @@ Cuando ninguna fuente publica una tasa, o cuando su equipo de finanzas usa sus p
 
   1. Haga clic en la celda de la moneda y el año en la tabla, o haga clic en **Introducir un tipo** junto a una línea del bloque de tasas faltantes.
   2. En el cuadro de diálogo **Tipo de cambio manual**, introduzca la tasa en su moneda de reporte para 1 unidad de la moneda elegida (por ejemplo **Tipo en EUR para 1 USD**). Use el separador decimal de su idioma. Una buena fuente es el tipo medio del año publicado por su banco central o su tesorería.
-  3. Haga clic en **Guardar**. La celda muestra entonces la tasa con la marca **manual**.
+  3. Haga clic en **Guardar**. La celda muestra entonces la tasa seguida de un asterisco (*).
 
 Una tasa manual sustituye a la tasa automática de este año hasta que la retire. Las actualizaciones posteriores no la sobrescriben. Para volver a la tasa automática, abra la celda y haga clic en **Retirar el tipo manual**: la tasa automática se volverá a obtener.
 

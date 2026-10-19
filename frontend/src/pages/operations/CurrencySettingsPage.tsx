@@ -371,6 +371,7 @@ const SOURCE_LABEL_KEYS: Record<string, string> = {
 const headSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'bottom' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
 const markSx = { ml: 0.75, fontSize: 11, color: 'kanap.text.tertiary', fontVariantNumeric: 'normal' } as const;
+const manualStarSx = { ml: 0.25, fontSize: 11, color: 'kanap.text.tertiary', lineHeight: 0 } as const;
 const editableCellSx = {
   display: 'inline-block',
   mx: -0.5,
@@ -384,7 +385,10 @@ const editableCellSx = {
 
 const pairKey = (currency: string, year: number) => `${currency}:${year}`;
 
-/** One cell of the matrix: the rate, a small mark for a manual or estimated one, an orange dash when it is missing. */
+/**
+ * One cell of the matrix: the rate, an asterisk for a manual one (explained under the table),
+ * a small mark for an estimated one, an orange dash when it is missing.
+ */
 function RateValue({ value, source, missing }: { value: number | null; source: string | undefined; missing: boolean }) {
   const { t } = useTranslation(['ops']);
   const C = 'operations.currency';
@@ -398,7 +402,9 @@ function RateValue({ value, source, missing }: { value: number | null; source: s
   return (
     <>
       <Box component="span">{value.toFixed(6)}</Box>
-      {source === 'manual' && <Box component="span" sx={markSx}>{t(`${C}.manualMark`)}</Box>}
+      {source === 'manual' && (
+        <Box component="sup" aria-label={t(`${C}.manualFootnote`)} sx={manualStarSx}>*</Box>
+      )}
       {source === 'estimate' && (
         <Tooltip title={t(`${C}.estimateTooltip`)}>
           <Box component="span" sx={markSx}>{t(`${C}.estimateMark`)}</Box>
@@ -445,6 +451,7 @@ function CurrencyRatesTable({
   const currencies = Array.from(currencySet).sort();
   const missingKeys = new Set(missingPairs.map((pair) => pairKey(pair.currency, pair.year)));
   const setByYear = new Map(rateRows.map((row) => [row.fiscalYear, row]));
+  const hasManual = rateRows.some((row) => Object.values(row.rateSources ?? {}).includes('manual'));
 
   return (
     <>
@@ -524,6 +531,11 @@ function CurrencyRatesTable({
             </Box>
           </Box>
         </Box>
+        {hasManual && (
+          <Typography sx={{ mt: 1, fontSize: 12, color: 'kanap.text.tertiary' }}>
+            * {t(`${C}.manualFootnote`)}
+          </Typography>
+        )}
       </Paper>
     </>
   );

@@ -1012,7 +1012,7 @@
       "enterRate": "Enter a rate",
       "enterRateFor": "Enter a rate for {{currency}} in {{year}}",
       "loadMissingError": "Exchange rates in use could not be checked.",
-      "manualMark": "manual",
+      "manualFootnote": "Rate entered manually",
       "estimateMark": "estimate",
       "estimateTooltip": "The source has not published this year yet; the nearest published year is used until it does.",
       "editRate": "Edit the rate for {{currency}} in {{year}}",

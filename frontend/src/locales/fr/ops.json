@@ -1012,7 +1012,7 @@
       "enterRate": "Saisir un taux",
       "enterRateFor": "Saisir un taux pour {{currency}} en {{year}}",
       "loadMissingError": "Les taux de change utilisés n'ont pas pu être vérifiés.",
-      "manualMark": "manuel",
+      "manualFootnote": "Taux saisi manuellement",
       "estimateMark": "estimation",
       "estimateTooltip": "La source n'a pas encore publié cette année ; l'année publiée la plus proche est utilisée jusqu'à ce qu'elle le fasse.",
       "editRate": "Modifier le taux pour {{currency}} en {{year}}",

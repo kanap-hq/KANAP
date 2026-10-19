@@ -102,7 +102,7 @@ Sous le formulaire de paramètres, le tableau **Derniers instantanés de taux de
       - **Moy. trimestrielle** : Moyenne trimestrielle Banque Mondiale (si disponible)
       - **Spot en temps réel** : Taux spot actuel d'ExchangeRate-API (année en cours)
       - **Estimation prospective** : Taux de l'année en cours réutilisé pour les années futures
-  - **Marques dans les cellules** : **manuel** à côté d'un taux saisi à la main, **estimation** à côté d'un taux pris sur l'année publiée la plus proche (survolez la marque pour en voir la raison)
+  - **Marques dans les cellules** : un astérisque (*) après un taux saisi à la main, expliqué par la note **Taux saisi manuellement** sous le tableau (affichée seulement quand le tableau contient un tel taux) ; **estimation** à côté d'un taux pris sur l'année publiée la plus proche (survolez la marque pour en voir la raison)
   - **Taux manquant** : une paire sans taux affiche `—` dans la couleur d'avertissement
 
 **Exemple** :
@@ -133,7 +133,7 @@ Quand aucune source ne publie un taux, ou quand votre équipe finance utilise se
 
   1. Cliquez sur la cellule de la devise et de l'année dans le tableau, ou cliquez sur **Saisir un taux** à côté d'une ligne du bloc des taux manquants.
   2. Dans la boîte de dialogue **Taux de change manuel**, saisissez le taux dans votre devise de reporting pour 1 unité de la devise choisie (par exemple **Taux en EUR pour 1 USD**). Utilisez le séparateur décimal de votre langue. Une bonne source est le taux moyen de l'année publié par votre banque centrale ou votre trésorerie.
-  3. Cliquez sur **Enregistrer**. La cellule affiche alors le taux avec la marque **manuel**.
+  3. Cliquez sur **Enregistrer**. La cellule affiche alors le taux suivi d'un astérisque (*).
 
 Un taux manuel remplace le taux automatique pour cette année jusqu'à ce que vous le retiriez. Les rafraîchissements suivants ne l'écrasent pas. Pour revenir au taux automatique, ouvrez la cellule et cliquez sur **Retirer le taux manuel** : le taux automatique sera de nouveau récupéré.
 

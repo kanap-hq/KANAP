@@ -1012,7 +1012,7 @@
       "enterRate": "Introducir un tipo",
       "enterRateFor": "Introducir un tipo para {{currency}} en {{year}}",
       "loadMissingError": "No se pudieron comprobar los tipos de cambio en uso.",
-      "manualMark": "manual",
+      "manualFootnote": "Tipo introducido manualmente",
       "estimateMark": "estimación",
       "estimateTooltip": "La fuente aún no ha publicado este año; se usa el año publicado más cercano hasta que lo haga.",
       "editRate": "Editar el tipo de {{currency}} en {{year}}",

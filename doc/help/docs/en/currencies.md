@@ -102,7 +102,7 @@ Below the settings form, the **Latest FX Rate Snapshots** table shows the most r
       - **Quarterly avg**: World Bank quarterly average (if available)
       - **Live spot**: Current spot rate from ExchangeRate-API (current year)
       - **Forward estimate**: Current year's rate reused for future years
-  - **Marks in the cells**: **manual** next to a rate entered by hand, **estimate** next to a rate taken from the nearest published year (hover the mark for the reason)
+  - **Marks in the cells**: an asterisk (*) after a rate entered by hand, explained by the note **Rate entered manually** under the table (shown only when the table has such a rate); **estimate** next to a rate taken from the nearest published year (hover the mark for the reason)
   - **Missing rate**: a pair with no rate shows `—` in the warning colour
 
 **Example**:
@@ -133,7 +133,7 @@ When no source publishes a rate, or when your finance team uses its own rates, y
 
   1. Click the cell of the currency and year in the table, or click **Enter a rate** next to a line of the missing rates block.
   2. In the **Manual exchange rate** dialog, enter the rate in your reporting currency for 1 unit of the selected currency (for example **Rate in EUR for 1 USD**). Use the decimal mark of your language. A good source is the average rate of the year published by your central bank or your treasury.
-  3. Click **Save**. The cell then shows the rate with the **manual** mark.
+  3. Click **Save**. The cell then shows the rate followed by an asterisk (*).
 
 A manual rate replaces the automatic rate for this year until you remove it. Later refreshes do not overwrite it. To go back to the automatic rate, open the cell and click **Remove manual rate**: the automatic rate will be fetched again.
 

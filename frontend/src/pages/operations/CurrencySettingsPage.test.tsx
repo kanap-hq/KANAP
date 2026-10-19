@@ -149,6 +149,15 @@ describe('CurrencySettingsPage', () => {
     expect(screen.queryByText(/exchange rates? missing/)).not.toBeInTheDocument();
   });
 
+  it('shows no manual footnote when no rate was entered by hand', async () => {
+    rates = [{ ...RATES_2025, rateSources: { CHF: 'identity', EUR: 'world-bank-annual', USD: 'estimate' } }];
+    renderPage();
+
+    expect(await screen.findByText('0.930000')).toBeInTheDocument();
+    expect(screen.queryByText('* Rate entered manually')).not.toBeInTheDocument();
+    expect(screen.queryByLabelText('Rate entered manually')).not.toBeInTheDocument();
+  });
+
   it('lists the missing pairs and marks manual and estimated rates', async () => {
     rates = [RATES_2025];
     missing = [NOK_2025];
@@ -165,7 +174,9 @@ describe('CurrencySettingsPage', () => {
     expect(within(table).getByText('NOK')).toBeInTheDocument();
     expect(within(table).getByText('—')).toBeInTheDocument();
     expect(within(table).getByText('0.930000')).toBeInTheDocument();
-    expect(within(table).getByText('manual')).toBeInTheDocument();
+    // A manual rate carries an asterisk, explained once under the table.
+    expect(within(table).getByLabelText('Rate entered manually')).toHaveTextContent('*');
+    expect(screen.getByText('* Rate entered manually')).toBeInTheDocument();
     // The tooltip text is the mark's accessible name.
     expect(within(table).getByLabelText(
       'The source has not published this year yet; the nearest published year is used until it does.',

@@ -102,7 +102,7 @@ Unterhalb des Einstellungsformulars zeigt die Tabelle **Neueste FX-Kurs-Snapshot
       - **Quartalsdurchschnitt**: Weltbank-Quartalsdurchschnitt (falls verfügbar)
       - **Live-Kassakurs**: Aktueller Kassakurs von ExchangeRate-API (aktuelles Jahr)
       - **Forward-Schätzung**: Kurs des aktuellen Jahres wird für zukünftige Jahre wiederverwendet
-  - **Kennzeichen in den Zellen**: **manuell** neben einem von Hand eingegebenen Kurs, **Schätzung** neben einem Kurs aus dem nächstgelegenen veröffentlichten Jahr (zeigen Sie mit der Maus auf das Kennzeichen, um den Grund zu sehen)
+  - **Kennzeichen in den Zellen**: ein Sternchen (*) nach einem von Hand eingegebenen Kurs, erklärt durch den Hinweis **Manuell erfasster Kurs** unter der Tabelle (nur sichtbar, wenn die Tabelle einen solchen Kurs enthält); **Schätzung** neben einem Kurs aus dem nächstgelegenen veröffentlichten Jahr (zeigen Sie mit der Maus auf das Kennzeichen, um den Grund zu sehen)
   - **Fehlender Kurs**: Ein Paar ohne Kurs zeigt `—` in der Warnfarbe
 
 **Beispiel**:
@@ -133,7 +133,7 @@ Wenn keine Quelle einen Kurs veröffentlicht oder Ihr Finanzteam eigene Kurse ve
 
   1. Klicken Sie in der Tabelle auf die Zelle der Währung und des Jahres, oder klicken Sie auf **Kurs eingeben** neben einer Zeile des Blocks der fehlenden Kurse.
   2. Geben Sie im Dialog **Manueller Wechselkurs** den Kurs in Ihrer Berichtswährung für 1 Einheit der gewählten Währung ein (zum Beispiel **Kurs in EUR für 1 USD**). Verwenden Sie das Dezimaltrennzeichen Ihrer Sprache. Eine gute Quelle ist der Jahresdurchschnitt, den Ihre Zentralbank oder Ihre Treasury veröffentlicht.
-  3. Klicken Sie auf **Speichern**. Die Zelle zeigt den Kurs dann mit dem Kennzeichen **manuell**.
+  3. Klicken Sie auf **Speichern**. Die Zelle zeigt den Kurs dann mit einem Sternchen (*).
 
 Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn entfernen. Spätere Aktualisierungen überschreiben ihn nicht. Um zum automatischen Kurs zurückzukehren, öffnen Sie die Zelle und klicken Sie auf **Manuellen Kurs entfernen**: Der automatische Kurs wird erneut abgerufen.
 

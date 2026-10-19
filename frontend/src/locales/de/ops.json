@@ -1012,7 +1012,7 @@
       "enterRate": "Kurs eingeben",
       "enterRateFor": "Kurs für {{currency}} im Jahr {{year}} eingeben",
       "loadMissingError": "Die verwendeten Wechselkurse konnten nicht geprüft werden.",
-      "manualMark": "manuell",
+      "manualFootnote": "Manuell erfasster Kurs",
       "estimateMark": "Schätzung",
       "estimateTooltip": "Die Quelle hat dieses Jahr noch nicht veröffentlicht; bis dahin wird das nächstgelegene veröffentlichte Jahr verwendet.",
       "editRate": "Kurs für {{currency}} im Jahr {{year}} bearbeiten",
