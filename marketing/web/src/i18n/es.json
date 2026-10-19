@@ -31,6 +31,8 @@
   "locale.suggest.link": "Ver en español",
   "locale.suggest.close": "Cerrar",
 
+  "a11y.skipToContent": "Ir al contenido",
+
   "footer.tagline": "La plataforma open source de gobernanza de TI: presupuesto, sistemas, proyectos y documentación en un solo repositorio. Autoalójela gratis o déjenos gestionarla.",
   "footer.product": "Producto",
   "footer.resources": "Recursos",

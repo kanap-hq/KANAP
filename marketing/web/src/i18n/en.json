@@ -31,6 +31,8 @@
   "locale.suggest.link": "View in English",
   "locale.suggest.close": "Close",
 
+  "a11y.skipToContent": "Skip to content",
+
   "footer.tagline": "The open source IT governance platform: IT budget, landscape, projects and documentation in one record. Self-host it free, or let us run it.",
   "footer.product": "Product",
   "footer.resources": "Resources",
