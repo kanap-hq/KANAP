@@ -415,7 +415,9 @@ export class AdministrationViewService {
     { ok: true; rows: number; changed: number } | { ok: true; dry_run: true; rows: number; changes: number; as_of: string }
   > {
     const { manager: mg, tenantId } = opts;
-    const ctx = await this.context(opts);
+    // A write locks the catalog as the change of one asset does: a settings save that retires the
+    // zone waits for the assignment, or the assignment sees the saved catalog.
+    const ctx = await this.context(opts, body.dry_run !== true);
     const zone = this.resolveZone(body, ctx.catalog);
     const all = body.all === true;
     const rowIds = (name: 'ids' | 'exclude_ids'): string[] => {
@@ -557,8 +559,10 @@ export class AdministrationViewService {
     return this.assetsCsv(query, opts);
   }
 
-  private async context(opts: AdministrationOpts): Promise<RankCtx> {
-    const settings = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
+  private async context(opts: AdministrationOpts, forWrite = false): Promise<RankCtx> {
+    const settings = forWrite
+      ? await this.itOps.getSettingsForWrite(opts.tenantId, opts.manager)
+      : await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const catalog = settings.adminZones ?? [];
     const ranks = catalog.filter((option) => !option.deprecated).map((option) => option.code);
     return {

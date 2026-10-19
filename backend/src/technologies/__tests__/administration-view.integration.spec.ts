@@ -25,10 +25,18 @@ import { application, asset, assign, contains, installed, member, one, technolog
 
 type Settings = Record<string, unknown>;
 
+/** Tenants whose catalog was read with the write lock, in order. */
+const lockedReads: string[] = [];
+
 function service(settingsByTenant: Map<string, Settings>) {
   const itOps = {
     getSettings: async (tenantId: string) => settingsByTenant.get(tenantId) ?? {
       adminZones: [], domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES, serverKinds: [],
+    },
+    getSettingsForWrite: async (tenantId: string, manager?: unknown) => {
+      assert.ok(manager, 'the lock is taken in the request transaction');
+      lockedReads.push(tenantId);
+      return itOps.getSettings(tenantId);
     },
   };
   return new AdministrationViewService(itOps as any, new AuditService({} as any));
@@ -603,7 +611,11 @@ async function testBulk() {
     const userId = randomUUID();
     const opts = { manager: runner.manager, tenantId: a, userId };
 
+    lockedReads.length = 0;
+    await svc.assignZone({ zone: 'tier_0', ids: [a1], dry_run: true }, opts);
+    assert.deepEqual(lockedReads, [], 'a dry run reads the catalog without the lock');
     const chosen = await svc.assignZone({ zone: 'tier_0', ids: [a1, a2, a3], filters: { filters: setFilter('zone', [null]) } }, opts);
+    assert.deepEqual(lockedReads, [a], 'a write reads the catalog with the lock, as the change of one asset does');
     assert.deepEqual(chosen, { ok: true, rows: 3, changed: 2 }, 'the chosen rows ignore the filters; a zone already stored does not change');
     assert.equal(await zoneOf(runner, a1), 'tier_0');
     assert.equal(await zoneOf(runner, a2), 'tier_0');
