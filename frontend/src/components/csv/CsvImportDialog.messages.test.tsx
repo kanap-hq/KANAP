@@ -90,6 +90,16 @@ describe('CsvImportDialog messages', () => {
     expect(screen.getByText('Ligne 6, commercial_contact : « not-an-email » n\'est pas une adresse e-mail valide.')).toBeInTheDocument();
   });
 
+  it('translates a company row whose metrics fall in a frozen year', async () => {
+    check([{
+      row: 2,
+      message: 'Metrics for 2027 are frozen. A budget administrator can unfreeze them.',
+      code: 'CSV_COMPANY_METRICS_FROZEN',
+      params: { year: 2027 },
+    }]);
+    expect(await screen.findByText('Ligne 2 : Les indicateurs pour 2027 sont gelés. Un administrateur budgétaire peut les dégeler.')).toBeInTheDocument();
+  });
+
   it('says which stored record a row matched when the case of its name differs', async () => {
     check([], {
       ok: true,

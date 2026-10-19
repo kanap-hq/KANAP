@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Company } from './company.entity';
@@ -874,13 +874,25 @@ export class CompaniesService {
       dateOrder,
       decimalMark,
     });
-    const errors: { row: number; message: string }[] = [];
+    const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
         errors: [read.headerError],
         ignoredColumns: read.ignoredColumns, notices: read.notices,
       };
+    }
+    // Years frozen for company metrics: a row that sets one is refused here, not at the load.
+    const frozenYears = new Set<number>();
+    if (typeof this.companyMetrics?.assertYearOpen === 'function') {
+      for (const fy of metricYears) {
+        try {
+          await this.companyMetrics.assertYearOpen(fy, opts);
+        } catch (err) {
+          if (err instanceof ForbiddenException) frozenYears.add(fy);
+          else throw err;
+        }
+      }
     }
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
@@ -941,6 +953,15 @@ export class CompaniesService {
         const turnoverRaw = cellOf(row, turnoverKey);
         const hasAny = headcountRaw !== '' || itUsersRaw !== '' || turnoverRaw !== '';
         if (!hasAny) continue;
+        if (frozenYears.has(fy)) {
+          errors.push({
+            row: line,
+            message: `Metrics for ${fy} are frozen. A budget administrator can unfreeze them.`,
+            code: 'CSV_COMPANY_METRICS_FROZEN',
+            params: { year: fy },
+          });
+          continue;
+        }
         if (headcountRaw === '') {
           errors.push(rowError(line, headcountKey, 'CSV_VALUE_REQUIRED', `${headcountKey} is required when providing metrics`));
           continue;

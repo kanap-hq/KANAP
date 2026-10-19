@@ -104,6 +104,59 @@ async function testBlankCityRefused() {
   });
 }
 
+/** Metrics for a frozen year are refused at the check; a row that does not set them still loads. */
+async function testFrozenYearRefusedAtCheck() {
+  await withCompanies('frozen', async (runner, tenantId, svc) => {
+    const frozenYear = YEAR + 1;
+    await runner.query(
+      `INSERT INTO freeze_states (tenant_id, budget_year, scope, column_key, is_frozen) VALUES ($1, $2, 'companies', '__all__', true)`,
+      [tenantId, frozenYear],
+    );
+    await setTenant(runner, tenantId);
+    const run = importer(runner, svc);
+    const frozenRow = company({
+      name: 'Frozen metrics',
+      [`headcount_${frozenYear}`]: '12',
+      [`it_users_${frozenYear}`]: '4',
+      [`turnover_${frozenYear}`]: '3.5',
+    });
+    for (const dryRun of [true, false]) {
+      const report = await run([frozenRow], dryRun);
+      assert.equal(report.ok, false, `dryRun=${dryRun}: ${JSON.stringify(report.errors ?? report)}`);
+      assert.deepEqual(report.errors, [{
+        row: 2,
+        message: `Metrics for ${frozenYear} are frozen. A budget administrator can unfreeze them.`,
+        code: 'CSV_COMPANY_METRICS_FROZEN',
+        params: { year: frozenYear },
+      }]);
+    }
+    assert.deepEqual(await storedCities(runner, tenantId), [], 'the frozen row is not loaded');
+
+    const openRow = company({
+      name: 'Open year',
+      [`headcount_${YEAR}`]: '8',
+      [`turnover_${YEAR}`]: '1',
+    });
+    const preview = await run([openRow], true);
+    assert.equal(preview.ok, true, JSON.stringify(preview.errors));
+    assert.equal(preview.inserted, 1);
+    const loaded = await run([openRow], false);
+    assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
+    const metrics = await runner.query(
+      `SELECT c.name, m.fiscal_year, m.headcount FROM companies c
+         LEFT JOIN company_metrics m ON m.company_id = c.id
+        WHERE c.tenant_id = $1 ORDER BY c.name, m.fiscal_year`,
+      [tenantId],
+    );
+    assert.deepEqual(metrics, [{ name: 'Open year', fiscal_year: YEAR, headcount: 8 }]);
+
+    const untouched = await run([company({ name: 'No metrics' })], false);
+    assert.equal(untouched.ok, true, JSON.stringify(untouched.errors));
+    assert.equal(untouched.inserted, 1);
+  });
+}
+
 void runSpecs('companies csv import', [
   ['a blank city is refused at the check, like the other required columns', testBlankCityRefused],
+  ['metrics for a frozen year are refused at the check', testFrozenYearRefusedAtCheck],
 ]);

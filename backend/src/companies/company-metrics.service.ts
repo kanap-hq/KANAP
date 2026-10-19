@@ -26,6 +26,11 @@ export class CompanyMetricsService {
     return found || null;
   }
 
+  /** Refuses a write of company metrics for a frozen year (`DATA_FROZEN`). */
+  async assertYearOpen(year: number, opts?: { manager?: EntityManager }) {
+    await this.freeze.assertNotFrozen({ scope: 'companies', year }, opts);
+  }
+
   async upsertForCompany(
     companyId: string,
     year: number,
