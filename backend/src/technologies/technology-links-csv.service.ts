@@ -73,7 +73,10 @@ type PlannedLink = {
   notes: string;
   /** Insert the link, or replace its notes. An operating-system mark alone does not. */
   writeLink: boolean;
-  /** `yes` on a server link that is not the operating system yet. */
+  /**
+   * `yes` on a server link that is not the operating system yet, or an empty cell on a link the
+   * import creates, when the server page would mark it (see `plan`).
+   */
   markOperatingSystem: boolean;
   outcome: 'inserted' | 'updated' | 'unchanged';
 };
@@ -142,7 +145,10 @@ export class TechnologyLinksCsvService {
    * Add or update server links. The server matches by `asset_reference` (`AST-n`) when the cell is
    * filled, otherwise by name (unknown or several: a row error; a retired asset is accepted). A
    * reference and a name that name two different servers are a row error. `operating_system`
-   * `yes` asks for the mark; `no` and empty never clear one.
+   * `yes` asks for the mark, `no` never sets one. An empty cell on a link the import creates
+   * follows the server page: the link is marked when its technology is of family
+   * `operating_system`, the asset is not a cluster and the server has no mark yet. The import
+   * never clears a mark.
    */
   async importAssetLinks(request: ImportRequest, ctx: TechnologyLinksCsvContext): Promise<TechnologyLinksImportResult> {
     return this.importLinks(request, ctx, {
@@ -299,6 +305,9 @@ export class TechnologyLinksCsvService {
 
     const seen = new Map<string, number>();
     const osClaim = new Map<string, string>();
+    const markedSubjects = new Set([...stored.values()].filter((link) => link.is_operating_system).map((link) => link.subject_id));
+    /** The first created OS link with an empty cell, per server: marked unless a `yes` row claims the server. */
+    const autoMark = new Map<string, { index: number; line: number }>();
     const planned: PlannedLink[] = [];
     for (const row of rows) {
       const line = row.line;
@@ -339,6 +348,7 @@ export class TechnologyLinksCsvService {
       const link = versionLabel && !versionId ? null : stored.get(`${subject.id}|${tech.id}|${versionId ?? ''}`) ?? null;
 
       let markOperatingSystem = false;
+      let autoCandidate = false;
       if (spec.side === 'asset') {
         const raw = cellOf(row, 'operating_system');
         const os = raw.toLowerCase();
@@ -347,13 +357,18 @@ export class TechnologyLinksCsvService {
           continue;
         }
         if (os === 'yes' && !link?.is_operating_system) {
-          const refused = refuseOperatingSystem(line, subject, tech, stored, osClaim, linkKey);
+          const refused = refuseOperatingSystem(line, subject, tech, markedSubjects, osClaim, linkKey);
           if (refused.length > 0) {
             errors.push(...refused);
             continue;
           }
           osClaim.set(subject.id, linkKey);
           markOperatingSystem = true;
+        } else if (
+          os === '' && !link && tech.family === OS_FAMILY && !subject.is_cluster
+          && !markedSubjects.has(subject.id) && !autoMark.has(subject.id)
+        ) {
+          autoCandidate = true;
         }
       }
 
@@ -370,8 +385,16 @@ export class TechnologyLinksCsvService {
         markOperatingSystem,
         outcome: !link ? 'inserted' : notesChange || markOperatingSystem ? 'updated' : 'unchanged',
       });
+      if (autoCandidate) autoMark.set(subject.id, { index: planned.length - 1, line });
     }
-    return { rows: planned, errors: errors.sort((a, b) => a.row - b.row), warnings };
+    // As the server page: a new operating system on a server without one becomes its mark. An
+    // explicit `yes` elsewhere in the file for that server wins.
+    for (const [subjectId, { index, line }] of autoMark) {
+      if (osClaim.has(subjectId)) continue;
+      planned[index].markOperatingSystem = true;
+      warnings.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_MARKED', 'Marked as the server\'s operating system: the server has none yet.'));
+    }
+    return { rows: planned, errors: errors.sort((a, b) => a.row - b.row), warnings: warnings.sort((a, b) => a.row - b.row) };
   }
 
   /** Through the screens' services. An existing link keeps its provenance (`keepExistingProvenance`). */
@@ -546,7 +569,7 @@ function refuseOperatingSystem(
   line: number,
   subject: Subject,
   tech: TechRow,
-  stored: Map<string, StoredLink>,
+  markedSubjects: Set<string>,
   osClaim: Map<string, string>,
   linkKey: string,
 ): ImportReportError[] {
@@ -558,7 +581,8 @@ function refuseOperatingSystem(
     problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_CLUSTER', 'A cluster has no operating system.'));
   }
   if (problems.length > 0) return problems;
-  const markedElsewhere = [...stored.values()].some((link) => link.subject_id === subject.id && link.is_operating_system);
+  // The row's own link is not marked (the caller checks), so a stored mark is another link's.
+  const markedElsewhere = markedSubjects.has(subject.id);
   const claimedElsewhere = osClaim.has(subject.id) && osClaim.get(subject.id) !== linkKey;
   if (markedElsewhere || claimedElsewhere) {
     problems.push(rowError(line, 'operating_system', 'CSV_OPERATING_SYSTEM_TAKEN', 'This server already has an operating system.'));

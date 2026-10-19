@@ -526,6 +526,68 @@ async function testOperatingSystem() {
   });
 }
 
+async function testOperatingSystemDefault() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'links-os-default');
+    for (const name of ['Auto', 'Never', 'Explicit']) await asset(runner, tenantId, name);
+    await asset(runner, tenantId, 'Cluster', true);
+    const kept = await asset(runner, tenantId, 'Kept');
+    const owned = await asset(runner, tenantId, 'Owned');
+    const ubuntu = await technology(runner, tenantId, 4, 'Ubuntu', 'operating_system');
+    const win = await technology(runner, tenantId, 3, 'Windows Server', 'operating_system');
+    await technology(runner, tenantId, 2, 'SQL Server', 'database');
+    await installed(runner, tenantId, kept, ubuntu, null, 'manual');
+    const ownedMark = await installed(runner, tenantId, owned, win, null, 'manual');
+    await runner.query(`UPDATE asset_technologies SET is_operating_system = true WHERE id = $1`, [ownedMark]);
+    const ctx = caller(runner, tenantId);
+    const csv = csvService();
+    const before = await counts(runner, tenantId);
+    const file = () => fileOf([
+      'Auto,,SQL Server,,,',
+      'Auto,,Ubuntu,,,',
+      'Never,,Ubuntu,,no,',
+      'Explicit,,Ubuntu,,,',
+      'Explicit,,Windows Server,,yes,',
+      'Cluster,,Ubuntu,,,',
+      'Kept,,Ubuntu,,,',
+      'Owned,,Ubuntu,,,',
+    ]);
+
+    const preview = await csv.importAssetLinks({ file: file(), dryRun: true, language: 'en' }, ctx);
+    assert.equal(preview.ok, true);
+    assert.deepEqual(
+      preview.warnings.map((warning) => [warning.row, warning.code]),
+      [[3, 'CSV_OPERATING_SYSTEM_MARKED']],
+      'the preview names the link an empty cell marks',
+    );
+    assert.deepEqual({ inserted: preview.inserted, unchanged: preview.unchanged }, { inserted: 7, unchanged: 1 });
+    assert.deepEqual(await counts(runner, tenantId), before);
+
+    const loaded = await csv.importAssetLinks({ file: file(), dryRun: false, language: 'en' }, ctx);
+    assert.equal(loaded.ok, true);
+    const marks = await runner.query(
+      `SELECT a.name AS asset, t.name AS technology, at.is_operating_system AS marked
+         FROM asset_technologies at
+         JOIN assets a ON a.id = at.asset_id
+         JOIN technologies t ON t.id = at.technology_id
+        WHERE at.tenant_id = $1
+        ORDER BY a.name, t.name`,
+      [tenantId],
+    );
+    assert.deepEqual(marks.map((row: any) => [row.asset, row.technology, row.marked]), [
+      ['Auto', 'SQL Server', false],
+      ['Auto', 'Ubuntu', true],
+      ['Cluster', 'Ubuntu', false],
+      ['Explicit', 'Ubuntu', false],
+      ['Explicit', 'Windows Server', true],
+      ['Kept', 'Ubuntu', false],
+      ['Never', 'Ubuntu', false],
+      ['Owned', 'Ubuntu', false],
+      ['Owned', 'Windows Server', true],
+    ], 'empty: the server page rule for a created link; no: never; yes: the mark; an existing link keeps its state');
+  });
+}
+
 async function testTenantIsolation() {
   await inRolledBackTransaction(async (runner) => {
     const tenantA = await seedTenant(runner, 'links-iso-a');
@@ -799,6 +861,7 @@ runSpecs('technology-links-csv.integration.spec', [
   ['servers with the same name', testHomonymServers],
   ['row errors write nothing', testRowErrors],
   ['operating system', testOperatingSystem],
+  ['operating system: an empty cell follows the server page', testOperatingSystemDefault],
   ['tenant isolation', testTenantIsolation],
   ['routes', testRoutes],
   ['applications: round trip and provenance', testApplicationRoundTripAndProvenance],

@@ -115,6 +115,7 @@
   "CSV_OPERATING_SYSTEM_FAMILY": "Seul un système d'exploitation peut être marqué comme système d'exploitation.",
   "CSV_OPERATING_SYSTEM_CLUSTER": "Un cluster n'a pas de système d'exploitation.",
   "CSV_OPERATING_SYSTEM_TAKEN": "Ce serveur a déjà un système d'exploitation.",
+  "CSV_OPERATING_SYSTEM_MARKED": "Marqué comme système d'exploitation du serveur : le serveur n'en a pas encore.",
   "CSV_TECHNOLOGY_VERSION_CREATED": "La version « {{value}} » est créée.",
   "CSV_VERSION_TOO_LONG": "La version dépasse {{max}} caractères.",
   "CSV_NOTES_TOO_LONG": "Les notes dépassent {{max}} caractères.",
