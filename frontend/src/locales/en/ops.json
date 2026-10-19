@@ -1242,6 +1242,10 @@
         "opex": "OPEX line",
         "capex": "CAPEX line"
       }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in these currencies is counted unconverted until the rates are available.",
+      "turnoverFxMissing_one": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in this currency is counted unconverted until the rate is available."
     }
   },
   "fields": {

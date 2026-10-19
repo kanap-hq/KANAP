@@ -136,10 +136,27 @@ export async function convertTurnovers(args: {
   return { reportingCurrency, values, missingCurrencies: Array.from(missing).sort() };
 }
 
-/** The message of a split whose turnovers lack a rate (counted unconverted). */
-export function turnoverFxMissingWarning(missingCurrencies: string[], fiscalYear: number, reportingCurrency: string): string | null {
+/**
+ * A split computed with a reservation: the turnovers in `currencies` had no rate into
+ * `reportingCurrency` for `year` and were counted unconverted. Data, not a sentence: each
+ * screen words it in the user's language (`ops:shared.allocationWarnings`).
+ */
+export type TurnoverFxMissingWarning = {
+  code: 'turnover_fx_missing';
+  currencies: string[];
+  year: number;
+  reportingCurrency: string;
+};
+
+/** The warning of a split whose turnovers lack a rate (counted unconverted), or null. */
+export function turnoverFxMissingWarning(missingCurrencies: string[], fiscalYear: number, reportingCurrency: string): TurnoverFxMissingWarning | null {
   if (missingCurrencies.length === 0) return null;
-  return `No ${reportingCurrency} exchange rate for ${missingCurrencies.join(', ')} in ${fiscalYear}: `
+  return { code: 'turnover_fx_missing', currencies: [...missingCurrencies], year: fiscalYear, reportingCurrency };
+}
+
+/** The warning in English, for the API's text fields that are not shown as such (the AI's summary rows). */
+export function describeAllocationWarning(warning: TurnoverFxMissingWarning): string {
+  return `No ${warning.reportingCurrency} exchange rate for ${warning.currencies.join(', ')} in ${warning.year}: `
     + 'the turnover of the companies in that currency is counted unconverted until the rate is available.';
 }
 

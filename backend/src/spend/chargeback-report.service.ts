@@ -13,6 +13,13 @@ import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.
 import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { BudgetNature, naturesAnd } from './budget-nature';
+import { TurnoverFxMissingWarning } from './allocation-distribution';
+
+/**
+ * A warning of the report: a sentence, or a structured warning the screen words in the user's
+ * language (`TurnoverFxMissingWarning`).
+ */
+export type ChargebackWarning = string | TurnoverFxMissingWarning;
 
 /** A chargeback runs on one budget column, named by its API name. */
 export type ChargebackMetricKey = BudgetColumn;
@@ -89,7 +96,7 @@ type ChargebackComputationContext = {
   versionMeta: Map<string, { version: SpendVersion; item?: SpendItem; method: ResolvedAllocationMethod }>;
   reportingCurrency: string;
   fxByVersion: Map<string, FxResolvedRate>;
-  warnings: string[];
+  warnings: ChargebackWarning[];
 };
 
 export type CompanyChargebackDepartmentRow = {
@@ -175,7 +182,7 @@ export type CompanyChargebackReportResponse = {
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
   reportingCurrency: string;
-  warnings: string[];
+  warnings: ChargebackWarning[];
 };
 
 @Injectable()
@@ -684,11 +691,12 @@ export class ChargebackReportService {
     const allocationData = await this.allocationCalculator.computeForVersions(fullVersions, { manager, tenantId, suppressErrors: true });
 
     const warningsSet = new Set<string>();
-    const warnings: string[] = [];
-    const recordWarning = (message: string) => {
+    const warnings: ChargebackWarning[] = [];
+    const recordWarning = (message: ChargebackWarning) => {
       if (!message) return;
-      if (warningsSet.has(message)) return;
-      warningsSet.add(message);
+      const key = typeof message === 'string' ? message : JSON.stringify(message);
+      if (warningsSet.has(key)) return;
+      warningsSet.add(key);
       warnings.push(message);
     };
 

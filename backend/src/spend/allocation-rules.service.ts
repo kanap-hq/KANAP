@@ -11,7 +11,12 @@ import {
   isAllocationRuleMode,
   toDefaultResolution,
 } from './allocation-rule-resolver';
-import { computeCompanyShares, computeCompanySharesWithFx, turnoverFxMissingWarning } from './allocation-distribution';
+import {
+  TurnoverFxMissingWarning,
+  computeCompanyShares,
+  computeCompanySharesWithFx,
+  turnoverFxMissingWarning,
+} from './allocation-distribution';
 import { FxRateService } from '../currency/fx-rate.service';
 
 export type AllocationRuleShare = { company_id: string; allocation_pct: number };
@@ -34,7 +39,7 @@ export type AllocationRuleResolution = {
   /** Why the effective selection cannot be computed (missing metric, disabled company…). */
   preview_error: string | null;
   /** The split is computed, but turnovers lacking an exchange rate for the year were counted unconverted. */
-  preview_warning: string | null;
+  preview_warning: TurnoverFxMissingWarning | null;
 };
 
 export type AllocationRuleInput = {
@@ -82,7 +87,7 @@ export class AllocationRulesService {
     year: number,
     resolution: DefaultResolution,
     manager: EntityManager,
-  ): Promise<{ shares: AllocationRuleShare[]; error: string | null; warning: string | null }> {
+  ): Promise<{ shares: AllocationRuleShare[]; error: string | null; warning: TurnoverFxMissingWarning | null }> {
     if (resolution.kind !== 'manual_company') return { shares: [], error: null, warning: null };
     try {
       const computed = await computeCompanySharesWithFx({

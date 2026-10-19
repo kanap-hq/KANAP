@@ -32,6 +32,7 @@ import { LinkCellRenderer } from '../../components/grid/renderers';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { useLocale } from '../../i18n/useLocale';
 import { useTranslation } from 'react-i18next';
+import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -142,7 +143,7 @@ type CompanyChargebackReportResponse = {
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
   reportingCurrency?: string;
-  warnings?: string[];
+  warnings?: ReportWarning[];
 };
 
 type CompanyChargebackKpiRow = CompanyChargebackReportResponse['kpis'][number];
@@ -518,9 +519,9 @@ export default function CompanyChargebackReport() {
           <Alert severity="warning" sx={{ whiteSpace: 'pre-wrap' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{t("reports.shared.warningsTitle")}</Typography>
             <Box component="ul" sx={{ pl: 3, my: 0 }}>
-              {warnings.map((warning: string, index: number) => (
-                <Typography component="li" variant="body2" key={`${warning}-${index}`}>
-                  {warning}
+              {warnings.map((warning, index) => (
+                <Typography component="li" variant="body2" key={`${allocationWarningKey(warning)}-${index}`}>
+                  {allocationWarningText(t, warning)}
                 </Typography>
               ))}
             </Box>

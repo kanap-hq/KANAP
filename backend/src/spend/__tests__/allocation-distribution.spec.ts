@@ -10,7 +10,9 @@ import {
   computeCompanySharesWithFx,
   convertTurnovers,
   fiscalYearStart,
+  describeAllocationWarning,
   normalizeWeights,
+  turnoverFxMissingWarning,
 } from '../allocation-distribution';
 
 /**
@@ -306,7 +308,19 @@ async function testSingleDisabledCompanyIsStillRejected() {
   );
 }
 
+/**
+ * The warning of turnovers counted unconverted is data, worded by each screen in the user's
+ * language; the API's text fields (the AI's summary rows) get it in English.
+ */
+function testFxMissingWarningIsStructured() {
+  assert.equal(turnoverFxMissingWarning([], 2026, 'EUR'), null);
+  const warning = turnoverFxMissingWarning(['JPY', 'USD'], 2026, 'EUR');
+  assert.deepEqual(warning, { code: 'turnover_fx_missing', currencies: ['JPY', 'USD'], year: 2026, reportingCurrency: 'EUR' });
+  assert.match(describeAllocationWarning(warning!), /No EUR exchange rate for JPY, USD in 2026/);
+}
+
 function run() {
+  testFxMissingWarningIsStructured();
   testEqualWeightsRoundToExactlyOneHundred();
   testLastEntryAbsorbsTheRoundingRemainder();
   testSingleEntryTakesEverything();

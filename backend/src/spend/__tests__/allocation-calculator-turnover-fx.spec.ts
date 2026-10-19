@@ -118,7 +118,8 @@ async function testMissingRateCountsUnconvertedWithAWarning() {
   // As the version amounts: rate 1 (resolveRates has the year fetched), and the user is told.
   assert.deepEqual(pct(v.shares), { paris: 66.6667, newyork: 33.3333 });
   assert.equal(v.error, null);
-  assert.match(String(v.warning), /No EUR exchange rate for USD in 2026/);
+  // Structured, so each screen words it in the user's language.
+  assert.deepEqual(v.warning, { code: 'turnover_fx_missing', currencies: ['USD'], year: 2026, reportingCurrency: 'EUR' });
 }
 
 async function testOtherDriversReadNoRate() {

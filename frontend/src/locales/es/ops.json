@@ -1242,6 +1242,10 @@
         "opex": "línea OPEX",
         "capex": "línea CAPEX"
       }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "Aún no hay tipos de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en estas monedas se cuenta sin convertir hasta que los tipos estén disponibles.",
+      "turnoverFxMissing_one": "Aún no hay tipo de cambio de {{currencies}} a {{reportingCurrency}} para {{year}}: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible."
     }
   },
   "fields": {

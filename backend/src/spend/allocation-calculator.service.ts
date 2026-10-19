@@ -14,6 +14,7 @@ import {
   AllocationDriver,
   CompanySharesResult,
   TurnoverConversion,
+  TurnoverFxMissingWarning,
   computeCompanySharesWithFx,
   convertTurnovers,
   normalizeWeights,
@@ -44,7 +45,7 @@ export type AllocationComputation = {
    * The shares are computed, with a reservation: turnovers in a currency without a rate for
    * the year were counted unconverted (`convertTurnovers`).
    */
-  warning?: string | null;
+  warning?: TurnoverFxMissingWarning | null;
 };
 
 @Injectable()
@@ -462,7 +463,7 @@ export class AllocationCalculatorService {
     return defaultLookup.get(defaultMethodKey(tenantId, year)) ?? STANDARD_DEFAULT;
   }
 
-  private fxWarning(computed: CompanySharesResult, year: number): string | null {
+  private fxWarning(computed: CompanySharesResult, year: number): TurnoverFxMissingWarning | null {
     return computed.reportingCurrency ? turnoverFxMissingWarning(computed.fxMissing, year, computed.reportingCurrency) : null;
   }
 
