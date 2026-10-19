@@ -334,6 +334,84 @@ async function testCurrentYearAloneFallsBackToLatestPublished() {
   );
 }
 
+function ingestion(worldBank: Record<string, unknown>) {
+  return new FxIngestionService(
+    { manager: {} } as any,
+    {} as any,
+    {} as any,
+    { getLatestRateSet: async () => null } as any,
+    worldBank as any,
+  );
+}
+
+/**
+ * A past year absent from the loaded series reloads a stale dataset once and
+ * uses the value the reload published. A series that already has the year does
+ * not reload. A reload that reports nothing new leaves the nearest-year estimate.
+ * A stub with no reload method still estimates, as the earlier tests do.
+ */
+async function testStaleDatasetReloadsOnceWhenAPastYearIsMissing() {
+  const annual: Record<string, Record<number, number>> = {
+    EUR: { 2021: 0.9 },
+    GBP: { 2019: 0.8 },
+    CHF: { 2019: 0.5 },
+  };
+  let reloads = 0;
+  const client = annualClient(annual);
+  (client as any).refreshAnnualDatasetIfOlderThan = async () => {
+    reloads += 1;
+    if (reloads > 1) return false;
+    annual.GBP[2021] = 0.77;
+    annual.CHF[2021] = 0.92;
+    return true;
+  };
+  const ctx = { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP', 'CHF'] };
+  const [snap] = await (ingestion(client) as any).buildYearlySnapshots(ctx, [2021]);
+  assert.equal(reloads, 1, 'one reload covers the currencies fetched after it');
+  assert.equal(snap.quotes.GBP, 0.77);
+  assert.equal(snap.quoteSources.GBP, 'world-bank-annual');
+  assert.equal(snap.quotes.CHF, 0.92);
+  assert.equal(snap.quoteSources.CHF, 'world-bank-annual');
+  assert.equal(snap.quotes.EUR, 0.9);
+
+  const complete = annualClient({ EUR: { 2021: 0.9 }, GBP: { 2021: 0.77 } });
+  let completeCalls = 0;
+  (complete as any).refreshAnnualDatasetIfOlderThan = async () => {
+    completeCalls += 1;
+    return true;
+  };
+  await (ingestion(complete) as any).buildYearlySnapshots(
+    { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP'] },
+    [2021],
+  );
+  assert.equal(completeCalls, 0, 'a year the dataset already has does not reload it');
+
+  const stale = annualClient({ EUR: { 2021: 0.9 }, GBP: { 2019: 0.8 } });
+  let staleCalls = 0;
+  (stale as any).refreshAnnualDatasetIfOlderThan = async () => {
+    staleCalls += 1;
+    return false;
+  };
+  const [estimated] = await (ingestion(stale) as any).buildYearlySnapshots(
+    { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP'] },
+    [2021],
+  );
+  assert.equal(staleCalls, 1, 'a missing year asks once per currency');
+  assert.equal(estimated.quotes.GBP, 0.8);
+  assert.equal(estimated.quoteSources.GBP, 'estimate');
+
+  const throwing = annualClient({ EUR: { 2021: 0.9 }, GBP: { 2019: 0.8 } });
+  (throwing as any).refreshAnnualDatasetIfOlderThan = async () => {
+    throw new Error('reload exploded');
+  };
+  const [kept] = await (ingestion(throwing) as any).buildYearlySnapshots(
+    { tenantId: 't', reportingCurrency: 'EUR', currencies: ['EUR', 'GBP'] },
+    [2021],
+  );
+  assert.equal(kept.quotes.GBP, 0.8, 'a failed reload keeps the series already fetched');
+  assert.equal(kept.quoteSources.GBP, 'estimate');
+}
+
 (async () => {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
@@ -343,6 +421,7 @@ async function testCurrentYearAloneFallsBackToLatestPublished() {
   await testPastYearEstimateChain();
   await testEstimatedBaseStillStoresTheYear();
   await testCurrentYearAloneFallsBackToLatestPublished();
+  await testStaleDatasetReloadsOnceWhenAPastYearIsMissing();
   console.log('FX refresh keeps a known rate.');
 })().catch((err) => {
   console.error(err);

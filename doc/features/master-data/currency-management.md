@@ -41,7 +41,7 @@ The panel also contains two actions:
 
 ## How FX Rates Are Stored
 
-1. We download the World Bank CSV bundle for `PA.NUS.FCRF`, extract it once, and cache the annual averages in memory. The series holds every published year.
+1. We download the World Bank CSV bundle for `PA.NUS.FCRF`, extract it once, and cache the annual averages in memory. The series holds every published year. When a past year is missing from a copy older than 24 hours, that copy is reloaded once, bypassing the memory cache and the CSV file, and the year is looked up again. A process reloads at most once every 24 hours.
 2. Each currency is quoted in USD, then crossed into the reporting currency: `reporting_per_source = (reporting_per_USD) / (source_per_USD)`. The value for one currency and year follows this chain. USD is 1. A currency with no World Bank code stays empty.
    - A past year (up to `currentYear - 1`) uses the published annual average, source `world-bank-annual`. When that year is not in the series, the nearest published year of the same currency is used: the closest earlier year, otherwise the closest later year. That value's source is `estimate`.
    - The current year uses the live spot quote, source `exchangerateapi-spot`. When the spot feed has no quote, the World Bank annual of the current year is used (`world-bank-annual`). When that is not published either, the latest published annual of the currency is used (`world-bank-forward`). A refresh that asked for past years reuses the series it already loaded. A refresh of the current year alone reads `currentYear - 10` through `currentYear - 1`.

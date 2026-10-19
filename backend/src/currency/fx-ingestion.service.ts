@@ -14,6 +14,9 @@ type RateSnapshot = Record<string, number | null>;
 /** First year the World Bank official-exchange-rate series carries. */
 const WORLD_BANK_SERIES_START = 1960;
 
+/** A past year missing from a dataset older than this triggers one reload. */
+const ANNUAL_DATASET_MAX_AGE_MS = 24 * 60 * 60 * 1000;
+
 /** A usable cross rate: finite and strictly positive. */
 function isUsableRate(value: unknown): value is number {
   return typeof value === 'number' && Number.isFinite(value) && value > 0;
@@ -485,6 +488,22 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     }
   }
 
+  /**
+   * One reload of a stale annual dataset. Stubs that do not implement it, and
+   * a reload that fails, leave the series already fetched in place.
+   */
+  private async reloadStaleAnnualDataset(): Promise<boolean> {
+    const refresh = this.worldBank.refreshAnnualDatasetIfOlderThan;
+    if (typeof refresh !== 'function') return false;
+    try {
+      return await this.worldBank.refreshAnnualDatasetIfOlderThan(ANNUAL_DATASET_MAX_AGE_MS);
+    } catch (err) {
+      const reason = err instanceof Error ? err.message : String(err);
+      this.logger.warn(`World Bank annual dataset reload failed: ${reason}`);
+      return false;
+    }
+  }
+
   private determineSource(year: number, currentYear: number): WorldBankRateSource {
     if (year > currentYear) return 'world-bank-forward';
     if (year === currentYear) return 'exchangerateapi-spot';
@@ -549,7 +568,10 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
         // the nearest year it has, including one outside the requested range.
         const end = Math.max(currentYear - 1, ...annualYears);
         try {
-          const annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          let annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          if (annualYears.some((year) => !annualMap.has(year)) && (await this.reloadStaleAnnualDataset())) {
+            annualMap = await this.worldBank.fetchAnnualRates(upper, WORLD_BANK_SERIES_START, end);
+          }
           for (const [publishedYear, publishedValue] of annualMap) {
             if (publishedYear <= currentYear - 1 && publishedYear > latestHistoricalYear && isUsableRate(publishedValue)) {
               latestHistoricalValue = publishedValue;
