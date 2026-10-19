@@ -266,7 +266,8 @@ describe('Administration zone order on the settings page', () => {
     await keyboardMove(handles[2], 'ArrowUp');
     expect(zoneLabels()).toEqual(['Zone B', 'Zone A', 'Zone C']);
     await waitFor(() => expect(patch.mock.calls.filter((call) => Array.isArray(call[1]?.adminZones))).toHaveLength(2));
-    const dragged = patch.mock.calls.map((call) => call[1]).filter((body) => Array.isArray(body?.adminZones)).at(-1);
+    const draggedBodies = patch.mock.calls.map((call) => call[1]).filter((body) => Array.isArray(body?.adminZones));
+    const dragged = draggedBodies[draggedBodies.length - 1];
     expect(dragged.adminZones.map((zone: { label: string }) => zone.label)).toEqual(['Zone B', 'Zone A', 'Zone C']);
     expect(dragged.adminZones[0].description).toBe('Identity core');
   }, 20000);
