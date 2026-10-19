@@ -905,7 +905,7 @@ async function testScale() {
     );
     await assert.rejects(
       svc.csv({ language: 'en' }, opts),
-      (error: any) => error instanceof BadRequestException && /10000/.test(error.message),
+      (error: any) => error instanceof BadRequestException && (error.getResponse() as any).code === 'export_too_many' && /10000/.test(error.message),
     );
   });
 }

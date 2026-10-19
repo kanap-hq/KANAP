@@ -53,7 +53,7 @@ export const CONTROL_KEYS = [
 ] as const;
 export type ControlKey = (typeof CONTROL_KEYS)[number];
 
-/** English titles of the controls, in the Zone column of a control is no longer used: the export names them. */
+/** English titles of the controls, written in the Controls column of the export. The screen translates the keys. */
 export const CONTROL_TITLES: Record<ControlKey, string> = {
   assets_without_zone: 'Assets without an administration zone',
   domain_controllers_outside: 'Domain controllers outside the most sensitive zone',
@@ -905,7 +905,7 @@ export class AdministrationViewService {
     const [counted] = await opts.manager.query(`SELECT count(*)::int AS n FROM assets a WHERE ${where}`, params);
     const total = Number(counted?.n ?? 0);
     if (total > EXPORT_MAX_ROWS) {
-      throw new BadRequestException(`More than ${EXPORT_MAX_ROWS} rows match: narrow the filters to export them.`);
+      throw new BadRequestException({ code: 'export_too_many', message: `More than ${EXPORT_MAX_ROWS} rows match: narrow the filters to export them.` });
     }
     const rows: AssetPageRow[] = total === 0 ? [] : await opts.manager.query(
       `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, ${zoneOf('a')} AS zone
