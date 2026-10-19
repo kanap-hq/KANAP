@@ -90,6 +90,8 @@ How they work:
 
 When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. The warning does not print. See [Manual rates](currencies.md#manual-rates).
 
+The two chargeback reports leave these amounts out of every figure: paid, consumed, departments and intercompany flows. Each report stays balanced on what it counts. The same warning shows above the report.
+
 ### Opening the list from a report
 
 In **Staffing by month**, **Cost per FTE**, **Analytics dimensions** and **Consolidation accounts**, a group name is a link that opens the [budget lines list](budget-lines.md) in a new tab, on the lines the row counts:

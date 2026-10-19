@@ -112,6 +112,8 @@ Plaid uses a small set of internal tools to answer questions: `Search all`, `Sea
 
 `Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line.
 
+When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
+
 ## Artifacts and previews
 
 Some answers come with extra material that does not fit naturally inside the chat thread. KANAP calls these **artifacts**.

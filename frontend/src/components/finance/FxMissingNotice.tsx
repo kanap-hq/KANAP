@@ -4,7 +4,8 @@ import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import { canUseOperation } from '../../pages/operations/operationAccess';
 import { attentionDotSx } from '../../theme/formSx';
-import type { FxMissing } from './fxMissing';
+import { formatAmount } from '../../i18n/formatters';
+import { fxMissingText, type FxMissing } from './fxMissing';
 
 /** The administration page where a rate can be entered by hand. */
 export const CURRENCY_SETTINGS_PATH = '/ops/operations/currency';
@@ -18,16 +19,7 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
   const { t } = useTranslation('ops');
   const { hasLevel } = useAuth();
   if (!items?.length) return null;
-  // Counts are per currency and year: a line missing two years is in both, so several entries give
-  // no total of distinct lines.
-  const text = items.length === 1
-    ? t('shared.fxMissing.excluding', {
-      count: items[0].lines,
-      pairs: t('shared.fxMissing.pair', { currency: items[0].currency, year: items[0].year }),
-    })
-    : t('shared.fxMissing.excludingSeveral', {
-      pairs: items.map((item) => t('shared.fxMissing.pairWithCount', { currency: item.currency, year: item.year, count: item.lines })).join(', '),
-    });
+  const text = fxMissingText(t, items);
   const canEnterRate = canUseOperation('currency', hasLevel);
   return (
     <Box
@@ -52,14 +44,29 @@ export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<Fx
 
 /**
  * The mark beside an amount shown in its own currency because its year has no exchange rate: an
- * attention dot whose tooltip says the amount is left out of the totals.
+ * attention dot whose tooltip says the amount is left out of the totals. `label` words it for a sum
+ * that left such an amount out.
  */
-export function FxMissingMark({ currency, year }: { currency: string; year: number }) {
+export function FxMissingMark(props: { currency: string; year: number } | { label: string }) {
   const { t } = useTranslation('ops');
-  const label = t('shared.fxMissing.lineTooltip', { currency, year });
+  const label = 'label' in props ? props.label : t('shared.fxMissing.lineTooltip', { currency: props.currency, year: props.year });
   return (
     <Tooltip title={label}>
       <Box component="span" role="img" aria-label={label} sx={{ ...attentionDotSx, ml: '2px' }} />
     </Tooltip>
+  );
+}
+
+/**
+ * An amount shown in its own currency because its year has no exchange rate, with the mark: the
+ * cell of a line that the totals leave out.
+ */
+export function FxMissingLocalAmount({ amount, currency, year }: { amount: number; currency: string; year: number }) {
+  const { t } = useTranslation('ops');
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', whiteSpace: 'nowrap' }}>
+      {t('shared.fxMissing.localAmount', { amount: formatAmount(amount), currency })}
+      <FxMissingMark currency={currency} year={year} />
+    </Box>
   );
 }

@@ -7,6 +7,8 @@ import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
 import useBudgetColumns from '../../../hooks/useBudgetColumns';
 import { formatAmount } from '../../../i18n/formatters';
+import FxMissingNotice, { FxMissingLocalAmount } from '../../../components/finance/FxMissingNotice';
+import { fxMissingOfLines } from '../../../components/finance/fxMissing';
 import { formatShortDate } from '../../../lib/dateFormat';
 import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
@@ -16,7 +18,18 @@ import IncidentRelationsSection from '../editors/IncidentRelationsSection';
 
 export type RelationKind = 'budget_lines' | 'contracts' | 'projects' | 'requests' | 'tasks' | 'technologies' | 'processes';
 
-type BudgetLineRow = { id: string; item_number: number | null; nature: 'opex' | 'capex'; product_name: string; supplier_name: string | null; amount: number | null; currency: string; status: string };
+type BudgetLineRow = {
+  id: string;
+  item_number: number | null;
+  nature: 'opex' | 'capex';
+  product_name: string;
+  supplier_name: string | null;
+  amount: number | null;
+  currency: string;
+  status: string;
+  /** No rate for the year: `amount` is null, this is the amount in the line's own currency, left out of the total. */
+  fx_missing?: { currency: string; amount: number };
+};
 type ContractRow = { id: string; name: string; supplier_name: string | null; end_date: string | null; yearly_amount: number | null; currency: string | null; auto_renewal: boolean; in_renewal_window: boolean; status: string };
 type ProjectRow = { id: string; item_number: number | null; name: string; status: string | null; planned_end: string | null };
 type RequestRow = { id: string; item_number: number | null; name: string; status: string | null; target_delivery_date: string | null };
@@ -82,6 +95,8 @@ type SectionSpec<T extends AnyRow> = {
   search: (q: string, signal?: AbortSignal) => Promise<RelationOption[]>;
   /** Total lines under the table, shown from two rows on. */
   totals?: (rows: T[]) => Array<{ key: string; label: React.ReactNode; cells: Record<string, React.ReactNode> }>;
+  /** A line under the table (what its totals leave out). */
+  notice?: (rows: T[]) => React.ReactNode;
 };
 
 /** Totals appear from this many rows on (fried, 2026-10-16). */
@@ -210,7 +225,9 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         {
           key: 'amount', align: 'right', width: 130,
           header: lineCurrency ? `${columnLabel} ${year} (${lineCurrency})` : `${columnLabel} ${year}`,
-          render: (row: BudgetLineRow) => (row.amount == null ? dash : formatAmount(row.amount)),
+          render: (row: BudgetLineRow) => (row.amount != null
+            ? formatAmount(row.amount)
+            : row.fx_missing ? <FxMissingLocalAmount amount={row.fx_missing.amount} currency={row.fx_missing.currency} year={year} /> : dash),
         },
       ],
       search: async (q, signal) => {
@@ -226,6 +243,8 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         if (amounts.length === 0) return [];
         return [{ key: 'total', label: t('workspace.application.relations.total'), cells: { amount: formatAmount(amounts.reduce((sum, value) => sum + value, 0)) } }];
       },
+      // A line without a rate is shown in its own currency and left out of the total: the notice names it.
+      notice: (rows: BudgetLineRow[]) => <FxMissingNotice items={fxMissingOfLines(rows, year)} sx={{ mt: 0.75 }} />,
     },
     {
       kind: 'contracts',
@@ -439,6 +458,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
                 totals={rows.length >= TOTALS_FROM ? section.totals?.(rows) : undefined}
               />
             )}
+            {rows.length > 0 && section.notice?.(rows)}
           </RelationsSection>
         );
       })}

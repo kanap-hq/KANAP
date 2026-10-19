@@ -89,7 +89,9 @@ Avec l'accès en lecture aux lignes budgétaires (`budget:reader`), la droite de
 - **Écart** : budget moins engagement. Un manque s'affiche en orange. **Sans ligne** signifie que rien n'est budgété sur une ligne liée, et **Contrat échu** qu'il reste du budget sur un contrat terminé
 - **Couverture du budget** (masquée par défaut) : l'un des six états de couverture
 
-Un contrat dans une devise sans taux de change pour l'année affiche « Pas de taux USD » à la place d'un montant. Sans le droit budget, ces colonnes, le sélecteur et les deux filtres rapides budgétaires sont masqués.
+Un contrat dans une devise sans taux de change pour l'année affiche « Pas de taux USD » à la place d'un montant.
+
+Quand une ligne budgétaire liée n'a pas de taux de change pour l'année, le montant **Budget** l'exclut et affiche une petite marque orange. **Écart** et **Couverture du budget** restent vides, car la couverture est inconnue. Un avertissement d'une ligne sous la liste indique les lignes exclues, par exemple « 1 ligne sans taux de change exclue : USD 2026. » Voir [Taux manuels](currencies.md#taux-manuels). Sans le droit budget, ces colonnes, le sélecteur et les deux filtres rapides budgétaires sont masqués.
 
 ### Ligne de total
 
@@ -177,6 +179,8 @@ Par exemple, un contrat de 350 000 par an reconduit chaque 1er juillet engage 35
 - **Sous-budgété** : les lignes liées portent moins que l'engagement
 - **Budget supérieur au contrat** : les lignes liées portent plus que l'engagement plus 10 %
 - **Couvert** : tous les autres cas
+
+Quand une ligne liée n'a pas de taux de change pour une année, son montant s'affiche dans sa propre devise avec une petite marque orange, et le total et **Lignes liées** l'excluent. L'état de cette année indique **Inconnu : une ligne liée n'a pas de taux de change**. Un avertissement d'une ligne sous le tableau de couverture indique les lignes exclues, par exemple « 1 ligne sans taux de change exclue : USD 2026. » Voir [Taux manquant](currencies.md#mecanismes-de-conversion-reference-rapide) et [Taux manuels](currencies.md#taux-manuels).
 
 ### Conformité
 
