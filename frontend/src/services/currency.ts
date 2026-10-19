@@ -7,12 +7,33 @@ export type CurrencySettings = {
   allowedCurrencies: string[] | null;
 };
 
-export type RefreshCurrencyRatesResponse = {
-  ok: boolean;
-  queued: boolean;
-  alreadyQueued: boolean;
+/** One currency and year that still has no usable rate after a sync. */
+export type MissingRatePair = {
+  currency: string;
+  year: number;
+};
+
+/** `POST /currency/rates/refresh` once the fetch has finished, and the same block on a reporting-currency save. */
+export type RateSyncCompleted = {
+  completed: true;
+  years: number[];
+  fetched: number;
+  stillMissing: MissingRatePair[];
+};
+
+/** The same endpoints when the fetch is still running. There is no `queued` flag. */
+export type RateSyncPending = {
+  completed: false;
   years: number[];
 };
+
+export type RateSyncOutcome = RateSyncCompleted | RateSyncPending;
+
+export type RefreshCurrencyRatesResponse = RateSyncOutcome & { ok: true };
+
+export function isRateSyncOutcome(value: object): value is RateSyncOutcome {
+  return typeof (value as { completed?: unknown }).completed === 'boolean';
+}
 
 export async function fetchCurrencySettings(): Promise<CurrencySettings> {
   const res = await api.get('/currency/settings');
@@ -47,11 +68,6 @@ export type CurrencyRateRow = {
 export type CurrencyRateMatrix = {
   currencies: string[];
   rates: CurrencyRateRow[];
-};
-
-export type MissingRatePair = {
-  currency: string;
-  year: number;
 };
 
 export type ManualRateInput = {

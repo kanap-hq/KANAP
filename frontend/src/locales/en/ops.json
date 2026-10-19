@@ -1034,6 +1034,10 @@
       "failedToRemoveManualRate": "The manual rate could not be removed.",
       "frozenVersionsKept_one": "The frozen version of {{year}} keeps the rate from when it was frozen.",
       "frozenVersionsKept_other": "The {{count}} frozen versions of {{year}} keep the rate from when they were frozen.",
+      "syncFetched_one": "{{count}} rate fetched.",
+      "syncFetched_other": "{{count}} rates fetched.",
+      "syncStillMissing": "Still missing: {{pairs}}.",
+      "syncContinues": "Synchronisation continues in the background.",
       "errors": {
         "currency_invalid": "The currency must be a three-letter ISO code.",
         "currency_reporting": "A manual rate cannot be entered for the reporting currency.",

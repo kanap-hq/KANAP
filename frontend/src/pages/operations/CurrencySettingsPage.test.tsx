@@ -50,6 +50,7 @@ vi.mock('../../auth/AuthContext', () => ({
 vi.mock('../../components/PageHeader', () => ({ default: ({ title }: { title: string }) => <h1>{title}</h1> }));
 
 import api from '../../api';
+import { RATE_SYNC_FOLLOW_UP_MS } from '../../hooks/useCurrencyRates';
 import CurrencySettingsPage from './CurrencySettingsPage';
 
 type Mock = ReturnType<typeof vi.fn>;
@@ -140,6 +141,7 @@ describe('CurrencySettingsPage', () => {
     expect(screen.queryByRole('button', { name: 'Save' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Reset' })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Force FX rates sync' })).not.toBeInTheDocument();
+    expect(screen.queryByTestId('sync-result')).not.toBeInTheDocument();
     expect(await screen.findByText('No FX rate snapshots captured yet.')).toBeInTheDocument();
     expect(screen.queryByText(/Force FX rates sync/)).not.toBeInTheDocument();
     expect(mocked.patch).not.toHaveBeenCalled();
@@ -428,5 +430,82 @@ describe('CurrencySettingsPage', () => {
     expect(screen.queryByRole('button', { name: /Enter a rate/ })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Edit the rate/ })).not.toBeInTheDocument();
     expect(within(screen.getByRole('table')).queryAllByRole('button')).toHaveLength(0);
+  });
+
+  it('keeps the sync button busy, then lists what was fetched and what is still missing', async () => {
+    const user = userEvent.setup();
+    let resolvePost: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementation(() => new Promise((resolve) => { resolvePost = resolve; }));
+    renderPage();
+    await waitForSettings();
+    const slot = screen.getByTestId('sync-result');
+    expect(slot).toBeEmptyDOMElement();
+
+    const button = screen.getByRole('button', { name: 'Force FX rates sync' });
+    await user.click(button);
+    await waitFor(() => expect(button).toBeDisabled());
+    expect(button).toHaveAttribute('aria-busy', 'true');
+    expect(within(button).getByRole('progressbar')).toBeInTheDocument();
+    expect(slot).toBeEmptyDOMElement();
+
+    resolvePost({
+      data: {
+        ok: true,
+        completed: true,
+        years: [2026, 2028],
+        fetched: 2,
+        stillMissing: [{ currency: 'ZAR', year: 2028 }, { currency: 'XTS', year: 2026 }],
+      },
+    });
+    expect(await within(slot).findByText('2 rates fetched.')).toBeInTheDocument();
+    expect(within(slot).getByText('Still missing: ZAR 2028, XTS 2026.')).toBeInTheDocument();
+    await waitFor(() => expect(button).toBeEnabled());
+    expect(mocked.post).toHaveBeenCalledWith('/currency/rates/refresh', {});
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length).toBeGreaterThan(1));
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates/missing').length).toBeGreaterThan(1);
+  });
+
+  it('says every used currency has a rate when the sync finishes with nothing missing', async () => {
+    const user = userEvent.setup();
+    mocked.post.mockResolvedValue({
+      data: { ok: true, completed: true, years: [2025], fetched: 3, stillMissing: [] },
+    });
+    renderPage();
+    await waitForSettings();
+    await user.click(screen.getByRole('button', { name: 'Force FX rates sync' }));
+    const slot = screen.getByTestId('sync-result');
+    expect(await within(slot).findByText('3 rates fetched.')).toBeInTheDocument();
+    expect(within(slot).getByText('Every currency in use has a rate.')).toBeInTheDocument();
+  });
+
+  it('says a sync continues in the background and looks again once', async () => {
+    const user = userEvent.setup();
+    const realSetTimeout = window.setTimeout.bind(window);
+    const followUps: Array<() => void> = [];
+    const spy = vi.spyOn(window, 'setTimeout').mockImplementation(((fn: TimerHandler, ms?: number, ...args: unknown[]) => {
+      if (ms === RATE_SYNC_FOLLOW_UP_MS) {
+        followUps.push(() => {
+          if (typeof fn === 'function') fn(...args);
+        });
+        return 900_001 as unknown as ReturnType<typeof setTimeout>;
+      }
+      return realSetTimeout(fn, ms as number, ...(args as []));
+    }) as typeof window.setTimeout);
+    try {
+      mocked.post.mockResolvedValue({ data: { ok: true, completed: false, years: [2026] } });
+      renderPage();
+      await waitForSettings();
+      const ratesBefore = mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length;
+      await user.click(screen.getByRole('button', { name: 'Force FX rates sync' }));
+      expect(await screen.findByText('Synchronisation continues in the background.')).toBeInTheDocument();
+      expect(followUps).toHaveLength(1);
+      expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length).toBe(ratesBefore);
+
+      followUps[0]();
+      await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length).toBeGreaterThan(ratesBefore));
+      expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates/missing').length).toBeGreaterThan(1);
+    } finally {
+      spy.mockRestore();
+    }
   });
 });

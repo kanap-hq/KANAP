@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { Alert, Box, Button, CircularProgress, Paper, Stack, TextField, Tooltip, Typography } from '@mui/material';
 import type { Theme } from '@mui/material/styles';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
@@ -15,6 +15,7 @@ import {
 import useCurrencyRates, {
   invalidateCurrencyRateQueries,
   useMissingRates,
+  useRateSyncFollowUp,
   useRemoveManualRate,
   useSetManualRate,
 } from '../../hooks/useCurrencyRates';
@@ -99,6 +100,37 @@ function apiErrorCode(error: unknown): string {
   return typeof code === 'string' ? code : '';
 }
 
+type SyncNotice =
+  | { completed: true; fetched: number; stillMissing: MissingRatePair[] }
+  | { completed: false };
+
+/**
+ * The sync result sits in a reserved slot, so the matrix does not jump when the alert appears.
+ * Editors always have the slot; readers have no sync button and no gap.
+ */
+function SyncResult({ notice }: { notice: SyncNotice | null }) {
+  const { t } = useTranslation(['ops']);
+  const C = 'operations.currency';
+  const pairs = notice?.completed
+    ? notice.stillMissing.map((pair) => `${pair.currency} ${pair.year}`).join(', ')
+    : '';
+  return (
+    <Box data-testid="sync-result" aria-live="polite" sx={{ minHeight: 96 }}>
+      {notice?.completed === true && (
+        <Alert severity="success">
+          <Box>{t(`${C}.syncFetched`, { count: notice.fetched })}</Box>
+          <Box>
+            {notice.stillMissing.length > 0
+              ? t(`${C}.syncStillMissing`, { pairs })
+              : t(`${C}.missingNone`)}
+          </Box>
+        </Alert>
+      )}
+      {notice?.completed === false && <Alert severity="info">{t(`${C}.syncContinues`)}</Alert>}
+    </Box>
+  );
+}
+
 function normalizeList(value: string): string[] | null {
   if (!value) return null;
   const parts = value
@@ -124,6 +156,8 @@ export default function CurrencySettingsPage() {
   const [allowedCurrencies, setAllowedCurrencies] = React.useState('');
   const [successMessage, setSuccessMessage] = React.useState('');
   const [frozenNotice, setFrozenNotice] = React.useState('');
+  const [syncNotice, setSyncNotice] = React.useState<SyncNotice | null>(null);
+  const followRateSync = useRateSyncFollowUp();
 
   React.useEffect(() => {
     if (data) {
@@ -150,17 +184,10 @@ export default function CurrencySettingsPage() {
   const syncMutation = useMutation({
     mutationFn: () => refreshCurrencyRates(),
     onSuccess: (result) => {
-      if (result.alreadyQueued && !result.queued) {
-        setSuccessMessage(t('operations.currency.fxSyncRunning'));
-      } else {
-        setSuccessMessage(t('operations.currency.fxSyncStarted', { years: result.years.join(', ') }));
-      }
-      invalidateCurrencyRateQueries(queryClient);
-      if (!result.alreadyQueued) {
-        window.setTimeout(() => {
-          invalidateCurrencyRateQueries(queryClient);
-        }, 5000);
-      }
+      setSyncNotice(result.completed
+        ? { completed: true, fetched: result.fetched, stillMissing: result.stillMissing ?? [] }
+        : { completed: false });
+      followRateSync(result.completed);
     },
   });
 
@@ -194,7 +221,6 @@ export default function CurrencySettingsPage() {
       {isError && <Alert severity="error">{t(`${C}.loadError`)}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
       {frozenNotice && <Alert severity="info">{frozenNotice}</Alert>}
-      {syncMutation.isPending && <Alert severity="info">{t(`${C}.refreshingFx`)}</Alert>}
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
       {syncError && <Alert severity="error">{syncError}</Alert>}
       <Paper variant="outlined" component="form" onSubmit={handleSubmit} noValidate sx={{ p: 2, maxWidth: 640 }}>
@@ -273,8 +299,11 @@ export default function CurrencySettingsPage() {
             <Button
               variant="action"
               disabled={isLoading || syncMutation.isPending}
+              aria-busy={syncMutation.isPending || undefined}
+              startIcon={syncMutation.isPending ? <CircularProgress size={14} color="inherit" /> : undefined}
               onClick={() => {
                 setSuccessMessage('');
+                setSyncNotice(null);
                 syncMutation.reset();
                 syncMutation.mutate();
               }}
@@ -284,6 +313,7 @@ export default function CurrencySettingsPage() {
           </Stack>
         )}
       </Paper>
+      {canEdit && <SyncResult notice={syncNotice} />}
       <CurrencyRatesTable
         currencies={rateMatrix?.currencies}
         rows={rateRows}

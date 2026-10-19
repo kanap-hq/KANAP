@@ -1034,6 +1034,10 @@
       "failedToRemoveManualRate": "No se pudo retirar el tipo manual.",
       "frozenVersionsKept_one": "La versión congelada de {{year}} conserva el tipo de su congelación.",
       "frozenVersionsKept_other": "Las {{count}} versiones congeladas de {{year}} conservan el tipo de su congelación.",
+      "syncFetched_one": "{{count}} tipo recuperado.",
+      "syncFetched_other": "{{count}} tipos recuperados.",
+      "syncStillMissing": "Siguen faltando: {{pairs}}.",
+      "syncContinues": "La sincronización continúa en segundo plano.",
       "errors": {
         "currency_invalid": "La moneda debe ser un código ISO de tres letras.",
         "currency_reporting": "No se puede introducir un tipo manual para la moneda de reporting.",

@@ -1034,6 +1034,10 @@
       "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden.",
       "frozenVersionsKept_one": "Die eingefrorene Version von {{year}} behält den Kurs ihres Einfrierens.",
       "frozenVersionsKept_other": "Die {{count}} eingefrorenen Versionen von {{year}} behalten den Kurs ihres Einfrierens.",
+      "syncFetched_one": "{{count}} Kurs abgerufen.",
+      "syncFetched_other": "{{count}} Kurse abgerufen.",
+      "syncStillMissing": "Weiterhin fehlend: {{pairs}}.",
+      "syncContinues": "Die Synchronisierung läuft im Hintergrund weiter.",
       "errors": {
         "currency_invalid": "Die Währung muss ein dreistelliger ISO-Code sein.",
         "currency_reporting": "Für die Reporting-Währung kann kein manueller Kurs erfasst werden.",

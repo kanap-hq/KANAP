@@ -1034,6 +1034,10 @@
       "failedToRemoveManualRate": "Le taux manuel n'a pas pu être retiré.",
       "frozenVersionsKept_one": "La version gelée de {{year}} garde le taux de son gel.",
       "frozenVersionsKept_other": "Les {{count}} versions gelées de {{year}} gardent le taux de leur gel.",
+      "syncFetched_one": "{{count}} taux récupéré.",
+      "syncFetched_other": "{{count}} taux récupérés.",
+      "syncStillMissing": "Toujours manquants : {{pairs}}.",
+      "syncContinues": "La synchronisation continue en arrière-plan.",
       "errors": {
         "currency_invalid": "La devise doit être un code ISO à trois lettres.",
         "currency_reporting": "Un taux manuel ne peut pas être saisi pour la devise de reporting.",
