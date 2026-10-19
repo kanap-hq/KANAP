@@ -784,7 +784,7 @@
         },
         "domains": {
           "title": "Domaines",
-          "description": "Domaines Active Directory ou DNS de vos assets. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",
+          "description": "Domaines Active Directory ou DNS de vos actifs. La forêt et les relations d'approbation figurent dans la console Domaines et approbations Active Directory ; les nombres de comptes et de machines dans Utilisateurs et ordinateurs Active Directory. Les entrées intégrées ne sont pas modifiables.",
           "usage": "Actifs / Section identité"
         }
       },
