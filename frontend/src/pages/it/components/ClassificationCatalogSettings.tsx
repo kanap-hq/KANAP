@@ -6,7 +6,7 @@ import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
 import TranslateIcon from '@mui/icons-material/Translate';
 import { Alert, Box, Button, Checkbox, IconButton, Stack, TextField, Typography } from '@mui/material';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { KanapDialog } from '../../../components/design';
+import { KanapDialog, RequiredMark } from '../../../components/design';
 import type { ApplicationClassificationCatalog, BusinessCriticalityLevel, ClassificationLevel, ItOpsSettings, RecoveryWave } from '../../../services/itOpsSettings';
 import { updateItOpsSettings } from '../../../services/itOpsSettings';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
@@ -53,7 +53,7 @@ function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | Re
     <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{help}</Typography>
     <Box sx={{ display: 'grid', gridTemplateColumns: columns(kind), gap: 1, alignItems: 'center' }}>
       <span />
-      <Typography sx={headerSx}>{classificationText('Name')}</Typography>
+      <Typography sx={headerSx}>{classificationText('Name')}<RequiredMark /></Typography>
       <Typography sx={headerSx}>{classificationText('Description')}</Typography>
       {kind === 'business' && <Typography sx={headerSx}>{classificationText('Maximum tolerable downtime (minutes)')}</Typography>}
       <Typography sx={headerSx}>{classificationText('No longer offered')}</Typography>
@@ -65,8 +65,8 @@ function LevelRows<T extends ClassificationLevel | BusinessCriticalityLevel | Re
         <IconButton size="small" aria-label={classificationText('Move down')} disabled={index === rows.length - 1} onClick={() => move(index, 1)} sx={{ p: 0.25, color: 'kanap.text.secondary' }}><KeyboardArrowDownIcon sx={{ fontSize: 18 }} /></IconButton>
       </Box>
       <Box>
-        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder={classificationText('e.g., Tier 1')} size="small" sx={fieldSx} inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
-        {issues.get(index) && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issues.get(index)}`)}</Typography>}
+        <TextField value={row.label} onChange={(e) => patch(index, { label: e.target.value } as Partial<T>)} placeholder={classificationText('e.g., Tier 1')} size="small" sx={fieldSx} required inputProps={{ 'aria-label': classificationText('Name') }} fullWidth />
+        {issues.get(index) && issues.get(index) !== 'nameRequired' && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issues.get(index)}`)}</Typography>}
         {shownAs(row) && <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t('enumEditor.shownAs', { value: shownAs(row) })}</Typography>}
       </Box>
       <TextField value={row.description || ''} onChange={(e) => patch(index, { description: e.target.value } as Partial<T>)} placeholder={classificationText('Shown under the name when choosing a level')} size="small" sx={fieldSx} inputProps={{ 'aria-label': classificationText('Description') }} />

@@ -84,7 +84,9 @@ describe('ClassificationCatalogSettings', () => {
     const downtimes = screen.getAllByRole('spinbutton', { name: 'Maximum tolerable downtime (minutes)' });
     expect(downtimes[2]).toHaveValue(null);
     expect(screen.queryByRole('textbox', { name: 'Code' })).not.toBeInTheDocument();
+    expect(screen.getAllByText((_, node) => node?.textContent === 'Name*').length).toBeGreaterThan(0);
     fireEvent.change(screen.getAllByRole('textbox', { name: 'Name' })[0], { target: { value: ' ' } });
+    expect(screen.queryByText('A name is required')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Save' })).toBeDisabled();
     fireEvent.change(screen.getAllByRole('textbox', { name: 'Name' })[0], { target: { value: 'low' } });
     expect(screen.getAllByText('This name already exists')).toHaveLength(2);

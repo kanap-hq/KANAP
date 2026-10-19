@@ -64,6 +64,13 @@ describe('Administration zones settings', () => {
     expect(limit('pages.settings.columns.description Tier 0')).toBe('2000');
   });
 
+  it('marks Name as required and does not show a helper under an empty name', () => {
+    wrap(<AdminZonesEditor items={[{ code: '', label: '', deprecated: false }]} onChange={vi.fn()} />);
+    expect(screen.getByRole('columnheader', { name: /common:enumEditor.name/ })).toHaveTextContent('*');
+    expect(screen.queryByText('common:enumEditor.nameRequired')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'common:enumEditor.name' })).toBeRequired();
+  });
+
   it('edits a zone in place and says when the list is empty', async () => {
     const onChange = vi.fn();
     const { unmount } = wrap(<AdminZonesEditor items={settings.adminZones} onChange={onChange} />);

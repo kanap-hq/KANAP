@@ -57,6 +57,13 @@ describe('EnumEditor', () => {
     expect(screen.getAllByText('This name already exists')).toHaveLength(2);
   });
 
+  it('marks Name as required and does not show a helper under an empty name', () => {
+    renderEditor({ items: [{ code: '', label: '', deprecated: false }] });
+    expect(screen.getByRole('columnheader', { name: /Name/ })).toHaveTextContent('*');
+    expect(screen.queryByText('A name is required')).not.toBeInTheDocument();
+    expect(screen.getByRole('textbox', { name: 'Name' })).toBeRequired();
+  });
+
   it('removes an unused value directly and offers "no longer offered" for a used one', async () => {
     serviceMocks.fetchCatalogUsage.mockResolvedValueOnce({ total: 0, usage: [] });
     const { onChange } = renderEditor();

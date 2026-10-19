@@ -19,6 +19,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
+import { RequiredMark } from '../../components/design';
 import { SettingsSection, SettingsControls, SettingsGroup } from '../../components/settings';
 import { EnumEditor, HostingTypeEditor, AssetKindEditor, ServerRoleEditor, EntityEditor } from '../../components/settings';
 import type {
@@ -200,7 +201,8 @@ function TranslateButton({ label, onClick }: { label: string; onClick: () => voi
 
 function IssueText({ issue }: { issue?: string }) {
   const { t } = useTranslation('common');
-  return issue ? <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issue}`)}</Typography> : null;
+  if (!issue || issue === 'nameRequired') return null;
+  return <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issue}`)}</Typography>;
 }
 
 interface ConnectionTypesEditorProps {
@@ -277,7 +279,7 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: '22%' }}>{t('common:enumEditor.category')}</TableCell>
-              <TableCell sx={{ width: '28%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '28%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
               <TableCell sx={{ width: '25%' }}>{t('pages.settings.columns.typicalPorts')}</TableCell>
               <TableCell sx={{ width: '12%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
               <TableCell align="right" sx={{ width: '13%' }}>{t('common:labels.actions')}</TableCell>
@@ -297,7 +299,7 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
             {visibleItems.map((item: any) => (
               <TableRow key={item.localId}>
                 <TableCell><TextField value={connectionTypeCategoryLabel(item.category || '', catalogLocale)} onChange={(e) => handleUpdate(item.localId, { category: e.target.value })} size="small" fullWidth placeholder={t('common:enumEditor.category')} /></TableCell>
-                <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.connectionName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
+                <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth required placeholder={t('pages.settings.placeholders.connectionName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                 <TableCell><TextField value={item.typicalPorts || ''} onChange={(e) => handleUpdate(item.localId, { typicalPorts: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.typicalPorts')} /></TableCell>
                 <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
@@ -530,7 +532,7 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
               <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
               <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.forest')}</TableCell>
               <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.accounts')}</TableCell>
@@ -555,7 +557,7 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
               const isSystem = !!item.system;
               return (
                 <TableRow key={item.localId}>
-                  <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
+                  <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth required placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                   <TableCell><TextField value={item.dns_suffix || ''} onChange={(e) => handleUpdate(item.localId, { dns_suffix: e.target.value.toLowerCase() })} size="small" fullWidth placeholder={t('pages.settings.placeholders.dnsSuffix')} disabled={isSystem} InputProps={{ readOnly: isSystem }} /></TableCell>
                   <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ maxLength: 200, 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
                   <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
@@ -649,7 +651,7 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
         <Table size="small">
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
               <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
               <TableCell sx={{ width: '12%' }}>{t('pages.settings.columns.privilegeLevel')}</TableCell>
               <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.secretsLocation')}</TableCell>
@@ -669,7 +671,7 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
             {localItems.map((item: any) => (
               <TableRow key={item.localId}>
                 <TableCell sx={{ verticalAlign: 'top' }}>
-                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
+                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth required placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
                   <IssueText issue={issues.get(localItems.indexOf(item))} />
                 </TableCell>
                 <TableCell>{text(item, 'admin_group', t('pages.settings.placeholders.adminGroup'))}</TableCell>
