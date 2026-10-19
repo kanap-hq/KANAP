@@ -86,37 +86,44 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
     setErrors({});
   }, [scope]);
 
-  const save = (field: MetricField, value: number | null) => {
+  const save = (field: MetricField, value: number | null): Promise<boolean> => {
     const key = metricsKey;
     const target = scope;
     const run = async () => {
       const base = queryClient.getQueryData<Metrics>(key) ?? stored;
-      if (!base || base[field] === value) return;
+      if (!base || base[field] === value) return true;
       const body: Metrics = { ...base, [field]: value };
       try {
         const res = await api.patch<RawMetrics>(`/company-metrics/${companyId}`, body, { params: { year: key[2] } });
         queryClient.setQueryData(key, toMetrics({ ...body, ...(res.data ?? {}) }));
         void queryClient.invalidateQueries({ queryKey: ['companies'], predicate: (q) => q.queryKey[1] !== companyId });
+        return true;
       } catch (e) {
         if (currentScopeRef.current === target) {
           setErrors((prev) => ({ ...prev, [field]: getApiErrorMessage(e, t, t('shared.messages.failedToSaveMetrics')) }));
         }
+        return false;
       }
     };
     const result = chainRef.current.then(run, run);
-    chainRef.current = result.catch(() => undefined);
+    chainRef.current = result.then(() => undefined, () => undefined);
     return result;
   };
 
-  const commit = (field: MetricField, raw: string) => {
-    if (readOnly || frozen || !stored) return;
+  /** `'invalid'` keeps the message and the caller puts the stored value back. A promise is the save. */
+  const commit = (field: MetricField, raw: string): 'invalid' | Promise<boolean> => {
+    if (readOnly || frozen || !stored) return Promise.resolve(true);
     const value = parseMetric(field, raw.trim());
     if (value === undefined) {
       setErrors((prev) => ({ ...prev, [field]: t(INVALID_MESSAGE[field]) }));
-      return;
+      return 'invalid';
     }
     setErrors((prev) => ({ ...prev, [field]: undefined }));
-    void save(field, value);
+    return save(field, value);
+  };
+
+  const clearError = (field: MetricField) => {
+    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
   };
 
   // Not disabled while a save runs (a click on the next year must land); disabled when nothing reliable is loaded.
@@ -156,6 +163,7 @@ export default function CompanyMetricsTab({ companyId, year, onYearChange, readO
             disabled={disabled}
             error={errors[row.field]}
             onCommit={(raw) => commit(row.field, raw)}
+            onEdit={() => clearError(row.field)}
           />
         ))}
       </Box>
@@ -173,6 +181,7 @@ function MetricRow({
   disabled,
   error,
   onCommit,
+  onEdit,
 }: {
   label: string;
   required?: boolean;
@@ -181,11 +190,12 @@ function MetricRow({
   storedText: string;
   disabled: boolean;
   error?: string;
-  onCommit: (raw: string) => void;
+  onCommit: (raw: string) => 'invalid' | Promise<boolean>;
+  onEdit: () => void;
 }) {
   // The field follows the stored value, except while the user is typing in it.
   // Kept wide on purpose: the field must not drop a fourth decimal before the check can refuse it.
-  const { draft, setDraft, onFocus, onBlur } = useFieldDraft(storedText);
+  const { draft, setDraft, onFocus, onBlur, revert } = useFieldDraft(storedText);
   return (
     <PropertyRow label={label} required={required} valueSx={{ maxWidth: 200 }}>
       <FormattedNumberField
@@ -193,11 +203,22 @@ function MetricRow({
         emit="string"
         decimals={12}
         decimalSeparator={decimalSeparator}
-        onChange={(event) => setDraft(String(event.target.value ?? ''))}
+        onChange={(event) => {
+          setDraft(String(event.target.value ?? ''));
+          onEdit();
+        }}
         onFocus={onFocus}
         onBlur={() => {
           onBlur();
-          onCommit(draft);
+          const outcome = onCommit(draft);
+          // The check refused it: the stored value comes back, the message stays until the next input.
+          if (outcome === 'invalid') {
+            setDraft(storedText);
+            return;
+          }
+          void outcome.then((saved) => {
+            if (!saved) revert();
+          });
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();

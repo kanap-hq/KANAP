@@ -181,18 +181,26 @@ export default function CompanyWorkspacePage() {
     [canEdit, data?.id, queryClient, t],
   );
 
-  /** Text fields commit on blur; an empty city is refused here, the column cannot be empty. */
-  const commitText = (field: TextKey, next: string | null) => {
-    if (!data) return;
+  const clearError = (field: CompanyField) => {
+    setErrors((prev) => (prev[field] ? { ...prev, [field]: undefined } : prev));
+  };
+
+  /**
+   * Text fields commit on blur. An empty city is refused here (the column cannot be empty):
+   * `false` tells the field to show the stored city again and keep the message.
+   */
+  const commitText = (field: TextKey, next: string | null): boolean => {
+    if (!data) return true;
     if (field === 'city' && !next) {
       setErrors((prev) => ({ ...prev, city: t('companies.messages.cityRequired') }));
-      return;
+      return false;
     }
     if (next === (data[field] ?? null)) {
       setErrors((prev) => ({ ...prev, [field]: undefined }));
-      return;
+      return true;
     }
     void patch({ [field]: next }, field);
+    return true;
   };
 
   /**
@@ -327,6 +335,7 @@ export default function CompanyWorkspacePage() {
       disabled={disabled}
       error={errors[row.field]}
       onCommit={(next) => commitText(row.field, next)}
+      onEdit={() => clearError(row.field)}
     />
   );
 
@@ -380,6 +389,7 @@ export default function CompanyWorkspacePage() {
               disabled={disabled}
               error={errors.notes}
               onCommit={(notes) => commitText('notes', notes)}
+              onEdit={() => clearError('notes')}
             />
           </Stack>
         )}
@@ -404,6 +414,7 @@ function CompanyTextRow({
   disabled,
   error,
   onCommit,
+  onEdit,
 }: {
   label: string;
   placeholder: string;
@@ -411,18 +422,22 @@ function CompanyTextRow({
   value: string;
   disabled: boolean;
   error?: string;
-  onCommit: (next: string | null) => void;
+  onCommit: (next: string | null) => boolean;
+  onEdit: () => void;
 }) {
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
   return (
     <PropertyRow label={label} required={required}>
       <TextField
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          onEdit();
+        }}
         onFocus={onFocus}
         onBlur={() => {
           onBlur();
-          onCommit(draft.trim() || null);
+          if (!onCommit(draft.trim() || null)) setDraft(value);
         }}
         onKeyDown={(event) => {
           if (event.key === 'Enter') (event.target as HTMLInputElement).blur();
@@ -444,11 +459,13 @@ function NotesField({
   disabled,
   error,
   onCommit,
+  onEdit,
 }: {
   value: string;
   disabled: boolean;
   error?: string;
-  onCommit: (next: string | null) => void;
+  onCommit: (next: string | null) => boolean;
+  onEdit: () => void;
 }) {
   const { t } = useTranslation(['master-data']);
   const { draft, setDraft, onFocus, onBlur } = useFieldDraft(value);
@@ -457,7 +474,10 @@ function NotesField({
       <Typography sx={sectionLabelSx}>{t('companies.fields.notes')}</Typography>
       <TextField
         value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        onChange={(event) => {
+          setDraft(event.target.value);
+          onEdit();
+        }}
         onFocus={onFocus}
         onBlur={() => {
           onBlur();

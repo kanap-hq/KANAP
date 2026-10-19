@@ -201,6 +201,19 @@ describe('CompanyWorkspacePage', () => {
     expect(mocked.patch).not.toHaveBeenCalled();
   });
 
+  it('puts the city back when it is cleared, and keeps the message until the next input', async () => {
+    renderAt('/master-data/companies/co-1/overview');
+    const city = await screen.findByLabelText('companies.fields.city');
+    await waitFor(() => expect(city).toHaveValue('Paris'));
+    fireEvent.change(city, { target: { value: '  ' } });
+    fireEvent.blur(city);
+    expect(await screen.findByText('companies.messages.cityRequired')).toBeInTheDocument();
+    expect(city).toHaveValue('Paris');
+    fireEvent.change(city, { target: { value: 'P' } });
+    expect(screen.queryByText('companies.messages.cityRequired')).toBeNull();
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
   it('shows a refusal under the field the body names', async () => {
     mocked.patch.mockRejectedValueOnce({ response: { data: { message: 'VAT number refused.', field: 'vat_number' } } });
     renderAt('/master-data/companies/co-1/overview');
@@ -393,6 +406,60 @@ describe('CompanyWorkspacePage', () => {
     fireEvent.blur(turnover);
     expect(await screen.findByText('companies.messages.turnoverInvalid')).toBeInTheDocument();
     expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('puts the stored metric back when the typed value is refused, and keeps the message until the next input', async () => {
+    renderAt(`/master-data/companies/co-1/details?year=${Y}`);
+    const headcount = await screen.findByLabelText('companies.fields.headcount');
+    await waitFor(() => expect(headcount).toHaveValue('50'));
+
+    fireEvent.change(headcount, { target: { value: '' } });
+    fireEvent.blur(headcount);
+    expect(await screen.findByText('companies.messages.headcountInvalid')).toBeInTheDocument();
+    expect(headcount).toHaveValue('50');
+
+    fireEvent.change(headcount, { target: { value: '-1' } });
+    expect(screen.queryByText('companies.messages.headcountInvalid')).toBeNull();
+    fireEvent.blur(headcount);
+    expect(await screen.findByText('companies.messages.headcountInvalid')).toBeInTheDocument();
+    expect(headcount).toHaveValue('50');
+
+    fireEvent.change(headcount, { target: { value: '12.5' } });
+    fireEvent.blur(headcount);
+    expect(headcount).toHaveValue('50');
+    expect(screen.getByText('companies.messages.headcountInvalid')).toBeInTheDocument();
+
+    const itUsers = screen.getByLabelText('companies.fields.itUsers');
+    fireEvent.change(itUsers, { target: { value: '3.2' } });
+    fireEvent.blur(itUsers);
+    expect(itUsers).toHaveValue('10');
+    expect(screen.getByText('companies.messages.itUsersInvalid')).toBeInTheDocument();
+
+    const turnover = screen.getByLabelText('companies.fields.turnover');
+    fireEvent.change(turnover, { target: { value: '-4' } });
+    fireEvent.blur(turnover);
+    expect(turnover).toHaveValue('12.5');
+    expect(screen.getByText('companies.messages.turnoverInvalid')).toBeInTheDocument();
+
+    fireEvent.change(turnover, { target: { value: '1.23456' } });
+    expect(screen.queryByText('companies.messages.turnoverInvalid')).toBeNull();
+    fireEvent.blur(turnover);
+    expect(turnover).toHaveValue('12.5');
+    expect(screen.getByText('companies.messages.turnoverInvalid')).toBeInTheDocument();
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('puts the stored metric back when the server refuses it, and keeps that message until the next input', async () => {
+    mocked.patch.mockRejectedValueOnce({ response: { data: { message: 'Metric refused.' } } });
+    renderAt(`/master-data/companies/co-1/details?year=${Y}`);
+    const headcount = await screen.findByLabelText('companies.fields.headcount');
+    await waitFor(() => expect(headcount).toHaveValue('50'));
+    fireEvent.change(headcount, { target: { value: '60' } });
+    fireEvent.blur(headcount);
+    expect(await screen.findByText('Metric refused.')).toBeInTheDocument();
+    expect(headcount).toHaveValue('50');
+    fireEvent.change(headcount, { target: { value: '61' } });
+    expect(screen.queryByText('Metric refused.')).toBeNull();
   });
 
   it('switches year while a metric save is still running', async () => {
