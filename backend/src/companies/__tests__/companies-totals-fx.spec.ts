@@ -3,12 +3,13 @@ import { CompaniesService } from '../companies.service';
 
 /**
  * `GET /companies/totals`: turnovers are entered in millions of each company's base currency;
- * the total is converted into the reporting currency at the live rates of the requested year.
+ * the total is converted into the reporting currency at the rates of the requested year (the
+ * rate set the year is frozen at, else the live rates).
  * Headcount and IT users are plain sums.
  */
 
 /** A query builder that records its calls and answers `rows` (one per base currency). */
-function fakeRepo(rows: any[]) {
+function fakeRepo(rows: any[], frozenSet: string | null = null) {
   const calls: Array<{ method: string; args: any[] }> = [];
   const qb: any = new Proxy({}, {
     get(_target, prop: string) {
@@ -19,7 +20,15 @@ function fakeRepo(rows: any[]) {
       };
     },
   });
-  const repo = { manager: { marker: 'tenant-manager' }, createQueryBuilder: () => qb };
+  const manager = {
+    marker: 'tenant-manager',
+    // The rate set the year's versions are frozen at (`yearRateSetId`).
+    query: async (sql: string, params: unknown[]) => {
+      calls.push({ method: 'query', args: [sql, params] });
+      return /FROM spend_versions/.test(sql) && frozenSet ? [{ id: frozenSet }] : [];
+    },
+  };
+  const repo = { manager, createQueryBuilder: () => qb };
   return { repo, calls };
 }
 
@@ -45,8 +54,8 @@ function fakeFx(reportingCurrency: string, rates: Record<string, number>) {
   };
 }
 
-function service(rows: any[], fx: any) {
-  const { repo, calls } = fakeRepo(rows);
+function service(rows: any[], fx: any, frozenSet: string | null = null) {
+  const { repo, calls } = fakeRepo(rows, frozenSet);
   const svc = new CompaniesService(repo as any, {} as any, {} as any, fx);
   return { svc, calls };
 }
@@ -68,6 +77,21 @@ async function testTurnoverIsConvertedIntoTheReportingCurrency() {
   assert.ok(calls.some((c) => c.method === 'where' && /c\.tenant_id = :tenantId/.test(c.args[0]) && c.args[1].tenantId === 't1'));
   assert.ok(calls.some((c) => c.method === 'leftJoin' && /m\.tenant_id = c\.tenant_id/.test(c.args[2])));
   assert.ok(calls.some((c) => c.method === 'groupBy'));
+}
+
+async function testFrozenYearConvertsAtItsRateSet() {
+  const fx = fakeFx('EUR', { 'live:2026:USD': 0.9, 'set-1:2026:USD': 0.8 });
+  const { svc, calls } = service([
+    { currency: 'EUR', headcount: '300', it_users: '250', turnover: '120.5' },
+    { currency: 'USD', headcount: '80', it_users: '60', turnover: '35' },
+  ], fx, 'set-1');
+  const totals = await svc.totals({ year: '2026' }, { tenantId: 't1' });
+  // The year is frozen: 120.5 + 35 × 0.8 = 148.5, as its versions and their allocations.
+  assert.equal(totals.turnover, 148.5);
+  assert.deepEqual(fx.calls[0].lookups.map((l: any) => l.rateSetId), ['set-1', 'set-1']);
+  const yearSet = calls.find((c) => c.method === 'query');
+  assert.ok(yearSet && /tenant_id = \$1/.test(yearSet.args[0]));
+  assert.deepEqual(yearSet!.args[1], ['t1', 2026]);
 }
 
 async function testSameCurrencyIsNotConverted() {
@@ -108,6 +132,7 @@ async function testTenantIsRequired() {
 
 Promise.resolve()
   .then(testTurnoverIsConvertedIntoTheReportingCurrency)
+  .then(testFrozenYearConvertsAtItsRateSet)
   .then(testSameCurrencyIsNotConverted)
   .then(testMissingRateIsCountedUnconvertedAndNamed)
   .then(testNoCompanyGivesZero)

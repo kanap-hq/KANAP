@@ -16,6 +16,7 @@ import {
   computeCompanyShares,
   computeCompanySharesWithFx,
   turnoverFxMissingWarning,
+  yearRateSetId,
 } from './allocation-distribution';
 import { FxRateService } from '../currency/fx-rate.service';
 
@@ -59,7 +60,7 @@ export class AllocationRulesService {
   constructor(
     @InjectRepository(AllocationRule) private readonly repo: Repository<AllocationRule>,
     private readonly audit: AuditService,
-    /** Converts the turnovers into the reporting currency (live rates of the year). */
+    /** Converts the turnovers into the reporting currency (rates of the year, `yearRateSetId`). */
     private readonly fxRates?: FxRateService,
   ) {}
 
@@ -97,7 +98,8 @@ export class AllocationRulesService {
         companyIds: resolution.companyIds,
         driver: resolution.method,
         fxRates: this.fxRates,
-        rateSetId: null,
+        // The rates of the year's versions: its frozen set, else the live rates.
+        rateSetId: resolution.method === 'turnover' ? await yearRateSetId(manager, tenantId, year) : null,
       });
       const shares = Array.from(computed.shares.entries())
         .map(([company_id, allocation_pct]) => ({ company_id, allocation_pct }))

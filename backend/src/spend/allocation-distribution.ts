@@ -148,6 +148,25 @@ export type TurnoverFxMissingWarning = {
   reportingCurrency: string;
 };
 
+/**
+ * The rate set a budget year is frozen at: the set the freeze pinned on the year's versions
+ * (`FreezeService.attachFxRates`; the one most of them carry, should they differ), or null when
+ * the year is not frozen. Turnovers split for no version in particular (the default method's
+ * preview, the companies' totals) convert at it, as the year's versions and their allocations do.
+ */
+export async function yearRateSetId(manager: EntityManager, tenantId: string, fiscalYear: number): Promise<string | null> {
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT fx_rate_set_id AS id
+     FROM spend_versions
+     WHERE tenant_id = $1 AND budget_year = $2 AND fx_rate_set_id IS NOT NULL
+     GROUP BY fx_rate_set_id
+     ORDER BY COUNT(*) DESC, fx_rate_set_id
+     LIMIT 1`,
+    [tenantId, fiscalYear],
+  );
+  return rows[0]?.id ?? null;
+}
+
 /** The warning of a split whose turnovers lack a rate (counted unconverted), or null. */
 export function turnoverFxMissingWarning(missingCurrencies: string[], fiscalYear: number, reportingCurrency: string): TurnoverFxMissingWarning | null {
   if (missingCurrencies.length === 0) return null;

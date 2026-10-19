@@ -50,7 +50,7 @@ import {
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
 import { FxRateService } from '../currency/fx-rate.service';
-import { convertTurnovers } from '../spend/allocation-distribution';
+import { convertTurnovers, yearRateSetId } from '../spend/allocation-distribution';
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -496,8 +496,9 @@ export class CompaniesService {
   /**
    * The list's totals for the year. Each company enters its turnover in millions of its base
    * currency: the total is converted into the tenant's reporting currency (`turnover_currency`)
-   * at the live rates of the year, as an unfrozen budget version is. A currency without a rate
-   * is counted unconverted, as the version amounts are, and named in `turnover_fx_missing`.
+   * at the rates of the year's budget versions: the set the year is frozen at, else the live
+   * rates (`yearRateSetId`). A currency without a rate is counted unconverted, as the version
+   * amounts are, and named in `turnover_fx_missing`.
    */
   async totals(
     query: any,
@@ -648,7 +649,7 @@ export class CompaniesService {
       manager: repo.manager,
       tenantId,
       fiscalYear: year,
-      rateSetId: null,
+      rateSetId: await yearRateSetId(repo.manager, tenantId, year),
       entries: rows
         .filter((row) => toNum(row.turnover) !== 0)
         // One entry per currency, keyed by its position.
