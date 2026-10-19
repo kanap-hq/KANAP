@@ -10,6 +10,7 @@ import { gridTextClause, gridTextModel } from '../technologies/technologies.serv
 import { TechnologyReachService } from '../technologies/technology-reach.service';
 import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { vulnerabilityAlertsSql } from './vulnerability-alerts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
 export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -30,6 +31,11 @@ export type VulnerabilityFilters = {
   filters?: unknown;
   sort?: unknown;
   page?: unknown;
+  /**
+   * Which rows the list, the export, the filter values and a bulk `all` reach (lot V1).
+   * `included` (default): the rows that alert. `excluded`: the others. `all`: both.
+   */
+  alerts?: unknown;
 };
 
 /** At most this many rows (technology version and CVE) in one change of state in bulk. */
@@ -107,6 +113,8 @@ type Row = {
   technology_item_number: number;
   editor: string | null;
   version_label: string | null;
+  /** Whether this row alerts: the version's exception, or the technology's setting. */
+  alerts: boolean;
 };
 
 /** A row of the list grid: the row, with its CVE. */
@@ -163,6 +171,7 @@ function presentRow(r: Row) {
     state_changed_at: r.state_changed_at,
     state_changed_by_name: r.state_changed_by_name,
     detected_at: r.detected_at,
+    alerts: r.alerts,
   };
 }
 
@@ -252,7 +261,23 @@ export class VulnerabilitiesService {
       where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
     }
     where.push(...this.gridClauses(filters.filters, push));
+    const alerts = this.alertsClause(filters);
+    if (alerts) where.push(alerts);
     return where.length ? `AND ${where.join(' AND ')}` : '';
+  }
+
+  /**
+   * Rows that alert, the others, or both. Empty is `included`. A row alerts when
+   * `COALESCE(version.vulnerability_alerts, technology.vulnerability_alerts)` is true.
+   */
+  private alertsClause(filters: VulnerabilityFilters): string {
+    const raw = String(filters.alerts ?? '').trim().toLowerCase();
+    const mode = raw === '' ? 'included' : raw;
+    const alerts = vulnerabilityAlertsSql('v', 't');
+    if (mode === 'all') return '';
+    if (mode === 'excluded') return `NOT ${alerts}`;
+    if (mode === 'included') return alerts;
+    throw new BadRequestException('alerts must be included, excluded or all.');
   }
 
   /**
@@ -325,7 +350,8 @@ export class VulnerabilitiesService {
   private readonly rowColumns = `tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.match_basis, tv.matching,
     tv.detected_at, tv.state_changed_at,
     NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS state_changed_by_name,
-    t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label`;
+    t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label,
+    ${vulnerabilityAlertsSql('v', 't')} AS alerts`;
 
   private readonly usersJoin = `LEFT JOIN users u ON u.tenant_id = tv.tenant_id AND u.id = tv.state_changed_by`;
 
@@ -479,6 +505,7 @@ export class VulnerabilitiesService {
       state_changed_at: r.state_changed_at,
       state_changed_by_name: r.state_changed_by_name,
       detected_at: r.detected_at,
+      alerts: r.alerts,
       // The servers and applications of this version.
       ...this.counts([r], reach),
     }));
@@ -593,8 +620,17 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
+    const [{ versions_excluded }] = await mg.query(
+      `SELECT count(*)::int AS versions_excluded
+         FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND NOT ${vulnerabilityAlertsSql('v', 't')}`,
+      [tenantId, tech.id],
+    );
     return {
       technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      technology_alerts: tech.vulnerability_alerts,
+      versions_excluded: Number(versions_excluded),
       products: await this.productStates(mg, tech.cpe_products),
       items,
     };
@@ -835,7 +871,7 @@ export class VulnerabilitiesService {
   /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
     const { items } = await this.listRows(filters, opts, applications, false);
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications', 'Alerts'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
@@ -856,6 +892,7 @@ export class VulnerabilitiesService {
       item.note ?? '',
       String(item.servers),
       item.applications == null ? '' : String(item.applications),
+      item.alerts ? 'yes' : 'no',
     ]);
     const content = writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows: lines });
     return { filename: 'vulnerabilities.csv', content };

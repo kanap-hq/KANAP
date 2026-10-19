@@ -402,7 +402,7 @@ The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or t
 | `config/features.ts` | 25 | `VULNERABILITY_FEED_ENABLED` | Env value when set, otherwise `!SINGLE_TENANT` |
 | `vulnerabilities/vulnerabilities.controller.ts` | 19 | `VulnerabilityFeedGuard` on `/vulnerabilities/*` and `/technologies/:id/vulnerabilities/*` | 403 `FEATURE_DISABLED` when off |
 | `vulnerabilities/nvd-feed.service.ts` | 217 | `vulnerability-feed` scheduled task (default every 6 hours, minute 20), and the notifications of each run | Registered only when on: no request leaves for the NVD and no vulnerability email goes out otherwise |
-| `technologies/technologies.service.ts` | 181 | `vulnerabilities_to_review`, `vulnerabilities_severe` in `GET /technologies` | `null` when off |
+| `technologies/technologies.service.ts` | 213 | `vulnerabilities_to_review`, `vulnerabilities_severe` in `GET /technologies` (rows that alert) | `null` when off |
 | `config/config.controller.ts` | 26 | `vulnerabilityFeed` | `Features.VULNERABILITY_FEED_ENABLED` in `GET /config/public` |
 | `frontend/src/config/FeaturesContext.tsx` | 44 | `features.vulnerabilityFeed` | False until `GET /config/public` says otherwise |
 | `frontend/src/App.tsx` | 272 | Route `/it/vulnerabilities` | Not registered when off |

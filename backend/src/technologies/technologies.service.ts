@@ -14,7 +14,7 @@ import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
-import { vulnerabilityAlertsForFamily } from '../vulnerabilities/vulnerability-alerts';
+import { vulnerabilityAlertsForFamily, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -204,14 +204,19 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    // The CVE still to review of each technology, and those critical or high (lot T6b), while the
-    // vulnerability feed is on; null otherwise.
+    // The CVE still to review that alert, and those critical or high (lot T6b, lot V1), while the
+    // vulnerability feed is on; null otherwise. A version follows the technology unless it has its
+    // own setting; a row with no version follows the technology. A CVE matched on both an alerting
+    // row and a silent one still counts.
     // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
     // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
     const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
       ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
-            FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
-           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review') AS vulnerability_counts`
+            FROM technology_vulnerabilities tv
+            JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+            LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review'
+             AND ${vulnerabilityAlertsSql('v', 't')}) AS vulnerability_counts`
       : 'NULL::int[] AS vulnerability_counts';
     const rows: Array<TechnologyRow & {
       total: string;

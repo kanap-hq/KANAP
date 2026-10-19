@@ -240,8 +240,10 @@ aggregate:
   the user's application read scope: a version declared only by an application
   outside that scope still dates the technology. A spec checks that the
   versions out of support and in extended support are the report's;
-- `open_vulnerabilities`: CVE still to review, null while the vulnerability
-  feed is off.
+- `open_vulnerabilities`: CVE still to review that alert. A version follows its
+  technology unless that version has its own setting, and a row with no version
+  follows the technology. Operating systems start excluded. null while the
+  vulnerability feed is off.
 
 The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
 `hosting_type`, `lifecycle` and `admin_zone`. `publisher` filters and groups
