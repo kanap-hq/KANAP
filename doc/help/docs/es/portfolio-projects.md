@@ -14,9 +14,9 @@ Para la secuenciación a nivel de portafolio y el trabajo de hoja de ruta, use [
 ## Permisos
 
 - `portfolio_projects:reader`: abrir la lista y ver los espacios de trabajo de proyecto
-- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito** y mantener entradas de tiempo de gastos generales del proyecto
-- `portfolio_projects:manager`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, progreso, tareas, evaluación, comentarios y decisiones
-- `portfolio_projects:admin`: incluye las capacidades del gestor y también puede importar/exportar CSV y mantener entradas de tiempo de gastos generales de otros usuarios
+- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito** y registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto)
+- `portfolio_projects:member`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, progreso, tareas, evaluación, comentarios y decisiones
+- `portfolio_projects:admin`: incluye las capacidades del nivel miembro y también puede importar/exportar CSV, guardar sobrescrituras de prioridad y mantener entradas de tiempo de gastos generales de otros usuarios
 - La visualización del conocimiento también requiere acceso a Base de conocimiento
 - Crear o vincular conocimiento independiente también requiere un rol de creación en Base de conocimiento
 
@@ -65,7 +65,7 @@ La lista de proyectos está diseñada para responder rápidamente a dos pregunta
 
 **Administración masiva**
 
-- **Nuevo proyecto** está disponible para los gestores
+- **Nuevo proyecto** está disponible con `portfolio_projects:member`
 - **Importar CSV** y **Exportar CSV** están disponibles para los administradores
 
 Abrir un proyecto desde la lista preserva el contexto actual de la lista. El espacio de trabajo del proyecto utiliza el mismo contexto para la navegación **Anterior** y **Siguiente**, de modo que pueda revisar un conjunto filtrado sin perder su lugar.
@@ -187,7 +187,7 @@ Debajo de Propósito, la pestaña Resumen incluye el flujo de actividad del proy
 
 **Historial** enumera los cambios registrados (cambios de estado, ediciones de campos, cambios de equipo y relaciones, ediciones del documento Objetivo) y termina con la entrada de creación: quién creó el proyecto y cuándo.
 
-Los gestores pueden añadir y editar comentarios del proyecto. Los comentarios también pueden registrarse como decisiones formales, con un resultado y un cambio de estado opcional. Use eso cuando la propia discusión cambie el rumbo del proyecto.
+Los usuarios con `portfolio_projects:member` pueden añadir y editar comentarios del proyecto. Los comentarios también pueden registrarse como decisiones formales, con un resultado y un cambio de estado opcional. Use eso cuando la propia discusión cambie el rumbo del proyecto.
 
 Las imágenes pueden incluirse en los comentarios de actividad cuando la evidencia visual sea útil: bocetos de arquitectura, capturas de pantalla o evidencia de revisión.
 
@@ -297,7 +297,7 @@ La pestaña **Evaluación** mantiene la entrega ligada a la priorización.
 
 - para proyectos de origen-solicitud, la solicitud de origen permanece visible como referencia de evaluación
 - para proyectos fast-track y legacy, la evaluación se mantiene directamente en el proyecto
-- los gestores pueden revisar o actualizar la evaluación, incluyendo sobrescrituras de prioridad cuando las reglas del portafolio lo permitan
+- los usuarios con `portfolio_projects:member` pueden revisar o actualizar la evaluación; guardar una sobrescritura de prioridad requiere `portfolio_projects:admin`
 
 La puntuación de prioridad resultante importa fuera de esta pestaña:
 

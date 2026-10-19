@@ -355,7 +355,7 @@
     "quickLogTime": {
       "logTime": "Log time",
       "logOn": "Log on",
-      "hoursPlaceholder": "e.g., 2.5",
+      "hoursPlaceholder": "e.g., 2",
       "notesOptional": "Notes (optional)",
       "whatDidYouWorkOn": "What did you work on?",
       "it": "IT",
@@ -460,7 +460,8 @@
         "capexItem": "CAPEX line",
         "incident": "Incident",
         "location": "Location",
-        "document": "Document"
+        "document": "Document",
+        "company": "Company"
       },
       "myTimeTitle": "My time",
       "newRequestsTitle": "New requests",
@@ -509,6 +510,12 @@
     "preflightOk_other": "Preflight OK: {{count}} rows. Inserts: {{inserted}}, updates: {{updated}}. You can now load.",
     "loadedSuccessfully_one": "Loaded successfully: processed {{count}} row.",
     "loadedSuccessfully_other": "Loaded successfully: processed {{count}} rows.",
+    "loadedCreated_one": "{{count}} created",
+    "loadedCreated_other": "{{count}} created",
+    "loadedUpdated_one": "{{count}} updated",
+    "loadedUpdated_other": "{{count}} updated",
+    "loadedUnchanged_one": "{{count}} unchanged",
+    "loadedUnchanged_other": "{{count}} unchanged",
     "uploadCompleted": "Upload completed successfully.",
     "fileNotFormatted": "The provided file isn't properly formatted",
     "rowError": "Row {{row}}: {{message}}",

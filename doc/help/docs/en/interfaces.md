@@ -14,9 +14,9 @@ To create an interface you need:
 - **Source application** and **Target application**
 - **Data category**: The type of data being transferred
 
-Once these are set you can save the interface; the rest of the workspace (Technical, Environments, Mapping, Relations) becomes available afterwards.
+Once these are set you can save the interface; the rest of the workspace (Flow, Environments, Data mapping, Relations) becomes available afterwards.
 
-**Tip**: Set the **Integration route type** (Direct or Via middleware) early. It controls which legs are generated automatically and what shows up on the Technical tab and the Environments matrix.
+**Tip**: Set the **Integration route type** (Direct or Via middleware) early. It controls which legs are generated automatically and what shows up on the Flow tab and the Environments matrix.
 
 ---
 
@@ -54,8 +54,8 @@ The Interfaces grid shows your integration registry at a glance.
 
 **Actions**:
 
-- **Add interface**: Create a new interface (requires `applications:manager`)
-- **Duplicate interface**: Create a copy of a selected interface (requires `applications:manager`). Select exactly one row to enable this action. A dialog lets you choose whether to copy environment bindings (see [Copying interfaces](#copying-interfaces) below).
+- **Add interface**: Create a new interface (requires `applications:member`)
+- **Duplicate interface**: Create a copy of a selected interface (requires `applications:member`). Select exactly one row to enable this action. A dialog lets you choose whether to copy environment bindings (see [Copying interfaces](#copying-interfaces) below).
 - **Delete selected**: Remove selected interfaces (requires `applications:admin`). Before the confirmation, the window lists the interfaces that have bindings as kept, with their count of bindings. Check **Also delete related bindings** to delete them with their bindings; their connections stay. The message then names the interfaces deleted and those kept, with the reason.
 
 ---
@@ -93,17 +93,17 @@ Field changes in the side panel are saved automatically when you leave the field
 
 ---
 
-### Specification
+### Overview
 
-The Specification tab is a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
+Once the interface is saved, the Overview tab holds the **Specification**, a managed rich-text document where you describe the interface end to end: business context, scope, contract, examples. It is the primary narrative document for the interface.
 
 **Tip**: Use this tab as your single source of truth for prose. Mapping rules and technical legs live in the dedicated tabs below; keep this document focused on intent, scope, and the human-readable summary.
 
 ---
 
-### Technical
+### Flow
 
-The Technical tab defines the shared **legs** that make up the interface. Legs are templates: they describe what each step does in general (the same definition applies across every environment).
+The Flow tab defines the shared **legs** that make up the interface. Legs are templates: they describe what each step does in general (the same definition applies across every environment).
 
 For each leg you can edit:
 
@@ -144,9 +144,9 @@ The Environments tab manages the per-environment bindings that turn the leg temp
 
 ---
 
-### Mapping
+### Data mapping
 
-The Mapping tab is where you describe how source fields turn into target fields. It is organised around two concepts:
+The Data mapping tab is where you describe how source fields turn into target fields. It is organised around two concepts:
 
 - **Mapping rules** describe a single mapping decision: one or more source fields, one or more target fields, an operation (direct copy, transform, lookup, split, merge, filter, default value, or a custom operation), and optional condition / business / middleware notes.
 - **Mapping groups** are folders that organise the rules into themed sections (for example "Header", "Customer block", "Line items", "Footer"). Rules can be assigned to a group or left ungrouped. Two baseline groups, **Head** and **Item**, are always present; you can add more.
@@ -199,7 +199,7 @@ The Relations tab gathers the links from this interface to other things.
 
 - **Interface dependencies**: Upstream and downstream interfaces. Use these to document orderings such as "Order Sync must run before Invoice Sync".
 - **External URLs**: Links to documentation in Confluence, SharePoint, etc. Add a description and a URL; the open-in-new-tab icon takes you straight to the link.
-- **Attachments**: Drag and drop files into the upload area or use **Select files** to attach specification documents directly to the interface. Click an attachment chip to download it; click the trash icon to delete it (requires manager rights).
+- **Attachments**: Drag and drop files into the upload area or use **Select files** to attach specification documents directly to the interface. Click an attachment chip to download it; click the trash icon to delete it (requires `applications:member`).
 
 A Knowledge section is reserved for future cross-entity knowledge linking; it currently shows an informational placeholder.
 
@@ -258,7 +258,7 @@ Use this when upgrading an application to a new version and you need to migrate 
 
 ## Tips
 
-- **Document the "why" first**: Use the Specification tab and the side-panel **Business purpose** field to capture intent before diving into legs and bindings.
+- **Document the "why" first**: Use the **Specification** on the Overview tab and the side-panel **Business purpose** field to capture intent before diving into legs and bindings.
 - **Use the side panel from any tab**: Owners, criticality, route type, PII flag and the rest persist immediately, so you can update them while reviewing rules or bindings.
 - **One interface, many environments**: Don't create separate interfaces for each environment. Use one interface and configure each environment in the Environments tab.
 - **Group your mapping rules**: For interfaces with more than a handful of fields, organise rules into mapping groups (Header, Item lines, Footer, etc.). It makes review and impact analysis far easier.

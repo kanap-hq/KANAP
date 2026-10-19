@@ -126,7 +126,7 @@ This tab controls risk classification and data protection settings.
   - **Derived**: Values are aggregated from linked interface bindings. The tab shows the effective values and lists each contributing interface once, with the environments it is bound in
 
 **Fields**:
-  - **Criticality**: Business critical, High, Medium, or Low
+  - **Criticality**: a business criticality level from your organization's catalog in [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). The default levels are Critical, High, Moderate and Low
   - **Data class**: Drawn from your organization's data classification settings
   - **Contains PII**: Whether personal data traverses the connection
 

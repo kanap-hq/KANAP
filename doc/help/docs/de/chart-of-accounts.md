@@ -37,7 +37,7 @@ OPEX/CAPEX-Zeilen -> Kontoauswahl (gefiltert auf FR-2024-Konten)
 - Pfad: **Stammdaten > Kontenpläne**
 - Berechtigungen:
   - Anzeigen: `accounts:reader`
-  - Konten und Kontenpläne erstellen/bearbeiten: `accounts:manager`
+  - Konten und Kontenpläne erstellen/bearbeiten: `accounts:member`
   - CSV importieren, CSV exportieren, Löschen: `accounts:admin`
 
 ## Mit der Liste arbeiten
@@ -51,7 +51,7 @@ Eine horizontale Reihe von Chips stellt jeden Kontenplan dar. Klicken Sie auf ei
 - Der ausgewählte Chip ist gefüllt, die übrigen sind umrandet.
 - Fahren Sie mit der Maus über einen Chip, um den Namen des Kontenplans, seine Länder, die Anzahl der Konten und seine Rollen zu sehen. Siehe [Rollen der Kontenpläne](#rollen-der-kontenplane).
 
-Mit der Berechtigung `accounts:manager` erscheinen rechts zwei weitere Bedienelemente:
+Mit der Berechtigung `accounts:member` erscheinen rechts zwei weitere Bedienelemente:
 
 - **Neu**: Öffnet den Dialog **Neuer Kontenplan**.
 - **Kontenpläne verwalten**: Öffnet den Dialog [Kontenpläne verwalten](#der-dialog-kontenplane-verwalten).
@@ -76,7 +76,7 @@ Jede Zahl ist ein Link. Klicken Sie darauf, um das Grid auf diese Konten zu filt
 
 Im Grid markiert ein kleiner oranger Punkt neben **Konsol.-Kontonr.** ein Konto, dessen Nummer nicht im Konsolidierungskontenplan steht. Fahren Sie mit der Maus über den Punkt, um den Namen des Konsolidierungskontenplans zu sehen.
 
-Ohne Konsolidierungskontenplan lautet die Zeile „Kein Konsolidierungskontenplan." Manager können auf **Wählen Sie einen unter Kontenpläne verwalten** klicken, um den Dialog zu öffnen.
+Ohne Konsolidierungskontenplan lautet die Zeile „Kein Konsolidierungskontenplan." Benutzer mit `accounts:member` können auf **Wählen Sie einen unter Kontenpläne verwalten** klicken, um den Dialog zu öffnen.
 
 ### Konten-Grid
 
@@ -104,7 +104,7 @@ Das Grid zeigt nur Konten für den ausgewählten Kontenplan.
 **Sortierung**: Standard ist **Kontonr.** aufsteigend.
 
 **Aktionen** (im Seitenheader):
-- **Neues Konto** (`accounts:manager`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
+- **Neues Konto** (`accounts:member`): Öffnet ein neues Kontoformular, in dem der ausgewählte Kontenplan bereits gewählt ist.
 - **CSV importieren** (`accounts:admin`): Konten in den ausgewählten Kontenplan importieren.
 - **CSV exportieren** (`accounts:admin`): Konten aus dem ausgewählten Kontenplan exportieren.
 - **Auswahl löschen** (`accounts:admin`): Ausgewählte Kontenzeilen löschen. Zeilen über die Kontrollkästchen-Spalte auswählen (für Admins sichtbar). Ein Konto, das von Budgetzeilen verwendet wird, kann nicht gelöscht werden: Deaktivieren Sie es stattdessen. Vor dem Löschen nennt die Bestätigung die behaltenen Konten mit dem Grund.
@@ -123,7 +123,7 @@ Klicken Sie auf eine beliebige Zeile im Konten-Grid, um den Konten-Arbeitsbereic
 
 **Änderungen werden automatisch gespeichert.** Jedes Feld wird gespeichert, sobald Sie es verlassen, und es gibt keine Schaltfläche „Speichern". Wird ein Wert abgelehnt, erscheint unter dem Feld eine Meldung. Die **Kontonummer** muss eine ganze Zahl größer als null mit höchstens 15 Ziffern sein.
 
-Zum Bearbeiten benötigen Sie `accounts:manager`. Benutzer mit Leserechten sehen dieselbe Seite mit gesperrten Feldern.
+Zum Bearbeiten benötigen Sie `accounts:member`. Benutzer mit Leserechten sehen dieselbe Seite mit gesperrten Feldern.
 
 ### OPEX- oder CAPEX-Konten
 
@@ -276,13 +276,13 @@ Klicken Sie in der Chip-Leiste auf **Kontenpläne verwalten**, um den Dialog zu 
 - **Gesellschaften**: die Anzahl der dem Kontenplan zugewiesenen Unternehmen
 - **Konten**: die Anzahl der Konten im Kontenplan
 
-Drei kurze Zeilen unter der Tabelle erklären die Rollen. **Neuer Kontenplan** (`accounts:manager`) unten links öffnet den Erstellen-Dialog.
+Drei kurze Zeilen unter der Tabelle erklären die Rollen. **Neuer Kontenplan** (`accounts:member`) unten links öffnet den Erstellen-Dialog.
 
 Jede Zeile hat ein Menü **⋯**, das nur die Aktionen anbietet, die für diesen Kontenplan gelten. Die Beschriftung folgt dem aktuellen Zustand.
 
-- **Als Länderstandard festlegen** / **Nicht mehr Länderstandard** (`accounts:manager`): für Kontenpläne eines Landes.
-- **Als Standard für andere Länder festlegen** / **Nicht mehr Standard für andere Länder** (`accounts:manager`): für Kontenpläne für alle Länder. Wenn Sie ihn zum Standard machen, wird er auch Unternehmen ohne Kontenplan zugewiesen.
-- **Als Konsolidierungskontenplan festlegen** / **Nicht mehr Konsolidierungskontenplan** (`accounts:manager`): für jeden Kontenplan. Siehe [Den Konsolidierungskontenplan wechseln](#den-konsolidierungskontenplan-wechseln).
+- **Als Länderstandard festlegen** / **Nicht mehr Länderstandard** (`accounts:member`): für Kontenpläne eines Landes.
+- **Als Standard für andere Länder festlegen** / **Nicht mehr Standard für andere Länder** (`accounts:member`): für Kontenpläne für alle Länder. Wenn Sie ihn zum Standard machen, wird er auch Unternehmen ohne Kontenplan zugewiesen.
+- **Als Konsolidierungskontenplan festlegen** / **Nicht mehr Konsolidierungskontenplan** (`accounts:member`): für jeden Kontenplan. Siehe [Den Konsolidierungskontenplan wechseln](#den-konsolidierungskontenplan-wechseln).
 - **Löschen** (`accounts:admin`): Löscht den Kontenplan samt seinen Konten. Enthält der Kontenplan Konten, nennt eine Bestätigung, wie viele gelöscht werden. Ist er der Konsolidierungskontenplan, weist die Bestätigung darauf hin, dass das Konzernreporting dann keinen Referenzkontenplan mehr hat. Das Löschen wird abgelehnt, solange Unternehmen den Kontenplan verwenden oder OPEX-/CAPEX-Zeilen seine Konten nutzen. Der Dialog nennt den Grund vor jeder Bestätigung.
 
 Die Rollen ändern sich, sobald Sie eine Aktion wählen. Die Tabelle wird sofort aktualisiert.

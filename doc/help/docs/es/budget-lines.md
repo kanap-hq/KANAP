@@ -497,7 +497,7 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 |---|---|
 | **Plantilla (por defecto)** | Reparte el gasto proporcionalmente según la plantilla de cada empresa para el año seleccionado. No requiere selección manual: los porcentajes se calculan automáticamente a partir de las métricas de las empresas. Es el método estándar. |
 | **Usuarios IT** | Reparte el gasto proporcionalmente según el número de usuarios IT de cada empresa para el año seleccionado. |
-| **Facturación** | Reparte el gasto proporcionalmente según la facturación de cada empresa para el año seleccionado. |
+| **Facturación** | Reparte el gasto proporcionalmente según la facturación de cada empresa para el año seleccionado, convertida a la moneda de reporte. |
 | **Manual por empresa** | Usted selecciona qué empresas reciben este gasto y elige un inductor en **Asignar por** (Plantilla, Usuarios IT o Facturación) para calcular los porcentajes solo entre las empresas seleccionadas. |
 | **Manual por departamento** | Usted selecciona pares empresa/departamento concretos. Los porcentajes se calculan a partir de la plantilla de cada departamento. Útil cuando una línea solo beneficia a ciertos departamentos (p. ej., un CRM usado por Ventas). |
 | **Porcentajes manuales** | Usted elige las empresas y escribe cada porcentaje. El total debe sumar 100 %. |
@@ -515,6 +515,12 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 - En **Manual por empresa** y **Manual por departamento**: usted elige las empresas o departamentos y el sistema calcula los porcentajes según el inductor elegido y las métricas actuales
 - En **Porcentajes manuales**: escribir un porcentaje fija esa fila y las demás filas se reparten el resto. **Repartir equitativamente** da la misma parte a cada fila; **Borrar fijaciones manuales** libera las filas fijadas
 - Los porcentajes reflejan datos en tiempo real. Si actualiza la plantilla de una empresa, las asignaciones se recalculan
+- La columna **Generador** muestra el valor de cada empresa para el generador. Una facturación se muestra con la moneda base de la empresa, por ejemplo **35 M USD**
+
+**Facturación en varias monedas**:
+
+- Cada empresa introduce su facturación en millones de su moneda base. Antes del reparto, KANAP convierte cada facturación a la moneda de reporte, a los tipos de la versión presupuestaria del año: los tipos fijados al congelar su columna por defecto, si no los tipos actuales del año. Consulte [Configuración de monedas](currencies.md)
+- Cuando una moneda aún no tiene tipo, sus facturaciones se cuentan sin convertir y aparece un aviso sobre la tabla, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos, y el reparto se corrige solo
 
 **Cómo usarlo**:
 

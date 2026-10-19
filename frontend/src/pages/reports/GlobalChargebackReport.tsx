@@ -30,7 +30,10 @@ import ItemScopeTabs from '../operations/ItemScopeTabs';
 import { useBudgetColumns } from '../../hooks/useBudgetColumns';
 import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
+import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
+import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
+import { chargebackKpiTotals } from './chargebackKpiTotals';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -38,12 +41,12 @@ function baseFormatNumber(value: number | null | undefined, locale: string): str
   return new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(Math.round(n));
 }
 
-function baseFormatCurrency(value: number | null | undefined, locale: string, withDecimals = false): string {
+function baseFormatCurrency(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
   if (!Number.isFinite(n)) return '—';
   const formatter = new Intl.NumberFormat(locale, {
-    minimumFractionDigits: withDecimals ? 2 : 0,
-    maximumFractionDigits: withDecimals ? 2 : 0,
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 0,
   });
   return formatter.format(n);
 }
@@ -88,6 +91,7 @@ type GlobalChargebackKpiRow = {
   headcount: number | null;
   itUsers: number | null;
   turnover: number | null;
+  /** In the company's base currency; `turnover` is in the reporting currency. */
   turnoverRaw?: number | null;
   costPerUser: number | null;
   costPerItUser: number | null;
@@ -118,7 +122,7 @@ type GlobalChargebackReportResponse = {
     amountRaw?: number;
   }>;
   reportingCurrency?: string;
-  warnings?: string[];
+  warnings?: ReportWarning[];
 };
 
 export default function GlobalChargebackReport() {
@@ -147,7 +151,7 @@ export default function GlobalChargebackReport() {
     [locale],
   );
   const formatCurrency = React.useCallback(
-    (value: number | null | undefined, withDecimals = false) => baseFormatCurrency(value, locale, withDecimals),
+    (value: number | null | undefined) => baseFormatCurrency(value, locale),
     [locale],
   );
   const formatCount = React.useCallback(
@@ -175,6 +179,11 @@ export default function GlobalChargebackReport() {
 
   const totalAmount = data?.total ?? 0;
   const reportingCurrency = (data?.reportingCurrency || 'EUR').toUpperCase();
+  // A turnover reads as money of the reporting currency, in whole units like the costs.
+  const formatTurnover = React.useCallback(
+    (value: number) => formatMoney(value, locale, reportingCurrency, { minimumFractionDigits: 0, maximumFractionDigits: 0 }),
+    [locale, reportingCurrency],
+  );
   const metricLabel = budgetColumns.label(metric);
   const metricFile = metricFileName(budgetColumns, metric);
 
@@ -467,36 +476,7 @@ export default function GlobalChargebackReport() {
     chartRef.current?.download(`global-chargeback-company-${scope}-${year}-${metricFile}`);
   };
 
-  const kpiTotals = useMemo(() => {
-    let amountRawTotal = 0;
-    let amountDisplayTotal = 0;
-    let headcountTotal = 0;
-    let itUsersTotal = 0;
-    let turnoverRawTotal = 0;
-    let turnoverDisplayTotal = 0;
-    for (const row of kpiRows) {
-      amountRawTotal += Number(row.amountRaw ?? row.amount ?? 0);
-      amountDisplayTotal += Number(row.amount ?? 0);
-      headcountTotal += Number(row.headcount ?? 0);
-      itUsersTotal += Number(row.itUsers ?? 0);
-      turnoverRawTotal += Number(row.turnoverRaw ?? row.turnover ?? 0);
-      turnoverDisplayTotal += Number(row.turnover ?? 0);
-    }
-    const costVsTurnover = turnoverRawTotal > 0 ? (amountRawTotal / turnoverRawTotal) * 100 : null;
-    const costPerUser = headcountTotal > 0 ? amountRawTotal / headcountTotal : null;
-    const costPerItUser = itUsersTotal > 0 ? amountRawTotal / itUsersTotal : null;
-    return {
-      amountRawTotal,
-      amountDisplayTotal,
-      headcountTotal,
-      itUsersTotal,
-      turnoverRawTotal,
-      turnoverDisplayTotal,
-      costVsTurnover,
-      costPerUser,
-      costPerItUser,
-    };
-  }, [kpiRows]);
+  const kpiTotals = useMemo(() => chargebackKpiTotals(kpiRows), [kpiRows]);
 
   return (
     <ReportLayout
@@ -589,9 +569,9 @@ export default function GlobalChargebackReport() {
           <Alert severity="warning" sx={{ whiteSpace: 'pre-wrap' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{t("reports.shared.warningsTitle")}</Typography>
             <Box component="ul" sx={{ pl: 3, my: 0 }}>
-              {warnings.map((warning: string, index: number) => (
-                <Typography component="li" variant="body2" key={`${warning}-${index}`}>
-                  {warning}
+              {warnings.map((warning, index) => (
+                <Typography component="li" variant="body2" key={`${allocationWarningKey(warning)}-${index}`}>
+                  {allocationWarningText(t, warning)}
                 </Typography>
               ))}
             </Box>
@@ -700,7 +680,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCurrency(row.amount)}</TableCell>
                       <TableCell align="right">{formatCount(row.headcount)}</TableCell>
                       <TableCell align="right">{formatCount(row.itUsers)}</TableCell>
-                      <TableCell align="right">{row.turnover != null ? formatCurrency(row.turnover, true) : '—'}</TableCell>
+                      <TableCell align="right">{row.turnover != null ? formatTurnover(row.turnover) : '—'}</TableCell>
                       <TableCell align="right">{row.costVsTurnoverPct != null ? formatPercent(row.costVsTurnoverPct, locale) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerUser != null ? formatCount(Math.round(row.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{row.costPerItUser != null ? formatCount(Math.round(row.costPerItUser)) : '—'}</TableCell>
@@ -719,7 +699,7 @@ export default function GlobalChargebackReport() {
                       <TableCell align="right">{formatCurrency(kpiTotals.amountDisplayTotal)}</TableCell>
                       <TableCell align="right">{formatCount(kpiTotals.headcountTotal)}</TableCell>
                       <TableCell align="right">{formatCount(kpiTotals.itUsersTotal)}</TableCell>
-                      <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatCurrency(kpiTotals.turnoverDisplayTotal, true) : '—'}</TableCell>
+                      <TableCell align="right">{kpiTotals.turnoverDisplayTotal > 0 ? formatTurnover(kpiTotals.turnoverDisplayTotal) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costVsTurnover != null ? formatPercent(kpiTotals.costVsTurnover, locale) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerUser != null ? formatCount(Math.round(kpiTotals.costPerUser)) : '—'}</TableCell>
                       <TableCell align="right">{kpiTotals.costPerItUser != null ? formatCount(Math.round(kpiTotals.costPerItUser)) : '—'}</TableCell>

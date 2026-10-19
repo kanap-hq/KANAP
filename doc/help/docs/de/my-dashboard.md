@@ -13,7 +13,7 @@ Das Dashboard ist Ihre persönliche Startseite in KANAP. Es bietet Ihnen einen s
 Der Kopfbereich oben im Dashboard bietet Schnellzugriffsschaltflächen für gewöhnliche tägliche Arbeit. Jede Schaltfläche wird nur angezeigt, wenn Sie die entsprechende Berechtigung haben.
 
 - **Aufgabe erstellen**: öffnet den Erstellungsfluss für eigenständige Aufgaben. Erfordert `tasks:member` oder höher.
-- **Zeit erfassen**: öffnet den Dialog **Schnelle Zeiterfassung** (siehe unten). Erfordert `portfolio_projects:member` oder `tasks:member`.
+- **Zeit erfassen**: öffnet den Dialog **Schnelle Zeiterfassung** (siehe unten). Erfordert `portfolio_projects:contributor` oder `tasks:member`.
 - **Neue Anfrage**: öffnet den Erstellungsfluss für Anfragen. Erfordert `portfolio_requests:member` oder höher.
 - **Neue Anwendung**: öffnet den Erstellungsfluss für Anwendungen. Erfordert `applications:member` oder höher.
 - **Neues Asset**: öffnet den Erstellungsfluss für Assets. Erfordert `infrastructure:member` oder höher.
@@ -24,13 +24,15 @@ Der Kopfbereich oben im Dashboard bietet Schnellzugriffsschaltflächen für gew�
 
 Die Aktion **Zeit erfassen** öffnet einen fokussierten Dialog, sodass Sie Stunden erfassen können, ohne das Dashboard zu verlassen.
 
-- Wählen Sie das Ziel: **Projekt** oder **Aufgabe**.
-  - Projekt-Einträge erfassen Zeit direkt gegen ein Portfolio-Projekt.
-  - Aufgaben-Einträge erfassen Zeit gegen eine Ihrer aktiven Aufgaben (Projektaufgaben oder eigenständige Aufgaben). OPEX-, CAPEX- und Vertragsaufgaben sind absichtlich vom Picker ausgeschlossen.
+- Wählen Sie das Ziel: **Projekt** oder **Aufgabe**. Diese Auswahl erscheint nur, wenn Sie auf beiden Zeit erfassen dürfen.
+  - Projekt-Einträge erfassen Zeit direkt gegen ein Portfolio-Projekt. Die Liste enthält nur die Projekte, auf denen Sie Zeit erfassen dürfen.
+  - Aufgaben-Einträge erfassen Zeit gegen eine Ihrer aktiven Aufgaben: Aufgaben dieser Projekte und eigenständige Aufgaben, wenn Sie `tasks:member` haben. OPEX-, CAPEX- und Vertragsaufgaben sind vom Picker ausgeschlossen.
 - Wählen Sie das Projekt oder die Aufgabe aus dem Dropdown.
-- Geben Sie die **Stunden** ein (in 0,25er-Schritten).
+- Geben Sie die **Stunden** ein (ganze Stunden).
 - Wählen Sie eine **Kategorie**: **IT** oder **Business**.
 - Fügen Sie **Notizen** hinzu, wenn Sie Kontext zu Ihrer Arbeit angeben möchten.
+
+Beim Speichern wird die Berechtigung für das Ziel geprüft: Ein Eintrag auf einem Projekt oder einer Projektaufgabe erfordert `portfolio_projects:contributor`, ein Eintrag auf einer eigenständigen Aufgabe erfordert `tasks:member`.
 
 Nach dem Speichern wird die Zeitzusammenfassungs-Kachel des Dashboards automatisch aktualisiert.
 
@@ -94,7 +96,7 @@ Zeigt bis zu 5 Elemente an.
 
 ### Kürzlich angesehen
 
-Zeigt Elemente an, die Sie in der gesamten Anwendung kürzlich geöffnet haben: Projekte, Anfragen, Anwendungen, Assets, Schnittstellen, Verbindungen, Verträge, Aufgaben, OPEX- und CAPEX-Zeilen sowie Wissensdokumente. Jeder Eintrag zeigt den Elementnamen, seinen Typ und wann Sie ihn zuletzt angesehen haben.
+Zeigt Elemente an, die Sie in der gesamten Anwendung kürzlich geöffnet haben: Projekte, Anfragen, Anwendungen, Assets, Schnittstellen, Verbindungen, Verträge, Aufgaben, OPEX- und CAPEX-Zeilen, Unternehmen sowie Wissensdokumente. Jeder Eintrag zeigt den Elementnamen, seinen Typ und wann Sie ihn zuletzt angesehen haben.
 
 Kürzlich angesehene Elemente werden lokal in Ihrem Browser gespeichert und sind auf den aktuellen Mandanten und Benutzer beschränkt. Klicken Sie auf **Löschen**, um die Liste zurückzusetzen. Elemente, für die Sie keine Zugriffsberechtigung mehr haben, werden automatisch herausgefiltert. Seitdem gelöschte Elemente, allein oder mit einem anderen Element (etwa die Aufgaben eines gelöschten Vertrags), verschwinden aus der Liste.
 

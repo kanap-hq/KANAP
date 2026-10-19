@@ -11,7 +11,14 @@ import {
   isAllocationRuleMode,
   toDefaultResolution,
 } from './allocation-rule-resolver';
-import { computeCompanyShares } from './allocation-distribution';
+import {
+  TurnoverFxMissingWarning,
+  assertCompanySelection,
+  computeCompanySharesWithFx,
+  turnoverFxMissingWarning,
+  yearRateSetId,
+} from './allocation-distribution';
+import { FxRateService } from '../currency/fx-rate.service';
 
 export type AllocationRuleShare = { company_id: string; allocation_pct: number };
 
@@ -32,6 +39,8 @@ export type AllocationRuleResolution = {
   shares: AllocationRuleShare[];
   /** Why the effective selection cannot be computed (missing metric, disabled company…). */
   preview_error: string | null;
+  /** The split is computed, but turnovers lacking an exchange rate for the year were counted unconverted. */
+  preview_warning: TurnoverFxMissingWarning | null;
 };
 
 export type AllocationRuleInput = {
@@ -51,6 +60,8 @@ export class AllocationRulesService {
   constructor(
     @InjectRepository(AllocationRule) private readonly repo: Repository<AllocationRule>,
     private readonly audit: AuditService,
+    /** Converts the turnovers into the reporting currency (rates of the year, `yearRateSetId`). */
+    private readonly fxRates?: FxRateService,
   ) {}
 
   /**
@@ -77,22 +88,28 @@ export class AllocationRulesService {
     year: number,
     resolution: DefaultResolution,
     manager: EntityManager,
-  ): Promise<{ shares: AllocationRuleShare[]; error: string | null }> {
-    if (resolution.kind !== 'manual_company') return { shares: [], error: null };
+  ): Promise<{ shares: AllocationRuleShare[]; error: string | null; warning: TurnoverFxMissingWarning | null }> {
+    if (resolution.kind !== 'manual_company') return { shares: [], error: null, warning: null };
     try {
-      const distribution = await computeCompanyShares({
+      const computed = await computeCompanySharesWithFx({
         manager,
         tenantId,
         fiscalYear: year,
         companyIds: resolution.companyIds,
         driver: resolution.method,
+        fxRates: this.fxRates,
+        // The rates of the year's versions: its frozen set, else the live rates.
+        rateSetId: resolution.method === 'turnover' ? await yearRateSetId(manager, tenantId, year) : null,
       });
-      const shares = Array.from(distribution.entries())
+      const shares = Array.from(computed.shares.entries())
         .map(([company_id, allocation_pct]) => ({ company_id, allocation_pct }))
         .sort((a, b) => b.allocation_pct - a.allocation_pct || a.company_id.localeCompare(b.company_id));
-      return { shares, error: null };
+      const warning = computed.reportingCurrency
+        ? turnoverFxMissingWarning(computed.fxMissing, year, computed.reportingCurrency)
+        : null;
+      return { shares, error: null, warning };
     } catch (err) {
-      return { shares: [], error: err instanceof Error ? err.message : String(err) };
+      return { shares: [], error: err instanceof Error ? err.message : String(err), warning: null };
     }
   }
 
@@ -111,10 +128,10 @@ export class AllocationRulesService {
     const tenant = tenantRow ? toDefaultResolution(tenantRow) : null;
     const effective = tenant ?? standard;
 
-    const { shares, error } =
+    const { shares, error, warning } =
       effective.kind === 'manual_company' && tenantId
         ? await this.computeShares(tenantId, year, effective, manager)
-        : { shares: [], error: null };
+        : { shares: [], error: null, warning: null };
 
     return {
       fiscal_year: year,
@@ -128,6 +145,7 @@ export class AllocationRulesService {
       company_ids: effective.kind === 'manual_company' ? effective.companyIds : null,
       shares,
       preview_error: error,
+      preview_warning: warning,
     };
   }
 
@@ -169,8 +187,8 @@ export class AllocationRulesService {
 
     const manager = opts?.manager ?? this.repo.manager;
     if (companyIds) {
-      // Preflight only: throws when the selection cannot be computed.
-      await computeCompanyShares({
+      // Preflight only: throws when the selection cannot be computed (no rate is read for it).
+      await assertCompanySelection({
         manager,
         tenantId,
         fiscalYear: year,

@@ -12,9 +12,10 @@ Las Solicitudes del portafolio son la capa de recepción para el trabajo propues
 | Permiso | Qué permite |
 | --- | --- |
 | `portfolio_requests:reader` | Abrir la lista de solicitudes y ver los espacios de trabajo de solicitud |
-| `portfolio_requests:member` | Editar los documentos gestionados de solicitud incrustados en el espacio de trabajo, incluso sin derechos más amplios de gestión de solicitudes |
-| `portfolio_requests:manager` | Crear solicitudes, actualizar datos de solicitud, mantener equipo y relaciones, añadir comentarios y decisiones, cambiar el estado, enviar recomendaciones de análisis y editar la evaluación |
-| `portfolio_requests:admin` | Eliminar solicitudes y usar importación/exportación CSV |
+| `portfolio_requests:member` | Crear solicitudes, actualizar datos de solicitud, editar los documentos gestionados (Propósito, Riesgos y mitigaciones), mantener equipo y relaciones, añadir comentarios y decisiones, cambiar el estado, enviar recomendaciones de análisis y editar la evaluación |
+| `portfolio_requests:admin` | Eliminar solicitudes, usar importación/exportación CSV y guardar sobrescrituras de prioridad |
+
+Convertir una solicitud en proyecto también requiere `portfolio_projects:member`.
 
 La pestaña **Conocimiento** sigue los permisos de Base de conocimiento para las acciones de creación y vinculación. A un usuario se le puede permitir trabajar en el contenido de la solicitud sin permitirle crear o revincular documentos de conocimiento independientes.
 
@@ -62,7 +63,7 @@ La cuadrícula estándar resalta los campos que importan durante la recepción y
 
 ### Acciones de la lista
 
-- **Nueva solicitud** está disponible para los gestores de solicitudes.
+- **Nueva solicitud** está disponible con `portfolio_requests:member`.
 - **Importar CSV** y **Exportar CSV** están disponibles para los administradores de solicitudes.
 
 ## El espacio de trabajo de Solicitud
@@ -139,10 +140,8 @@ La sección **Propósito** es un documento markdown gestionado embebido directam
 
 - da a los revisores una declaración estable de intención
 - está disponible durante la conversión de solicitud a proyecto
-- puede ser editado por usuarios con `portfolio_requests:member`, incluso si no gestionan el resto de la solicitud
+- puede ser editado por usuarios con `portfolio_requests:member`
 - admite **importación DOCX** para que pueda traer documentos Word existentes directamente, y **exportación** para descargar el contenido actual como PDF, DOCX u ODT
-
-Esa separación es deliberada. Permite a los colaboradores expertos en la materia mejorar la narrativa de la solicitud sin abrir control completo sobre el estado, la evaluación y la estructura del portafolio.
 
 ### Actividad
 
@@ -328,5 +327,4 @@ Use exportar cuando necesite informes del portafolio o enriquecimiento sin conex
 - **Use la importación DOCX para contenido existente**: Si ya tiene una declaración de propósito o un registro de riesgos en un documento Word, use el botón **Importar** en el editor de Propósito o Riesgos y mitigaciones en lugar de copiar y pegar. La importación convierte el documento a markdown y le advierte si algún contenido no pudo trasladarse.
 - **Los filtros de alcance se mantienen**: La lista se abre en **Todas las solicitudes**. KANAP recuerda su última elección de alcance, de modo que no necesita volver a seleccionarlo cada sesión.
 - **Las solicitudes convertidas están ocultas por defecto**: Si está buscando una solicitud que ya se convirtió en proyecto, añada **Convertida** al filtro de Estado en la lista.
-- **Permiso de miembro para colaboradores**: Dé a los expertos en la materia `portfolio_requests:member` para que puedan editar Propósito y Riesgos y mitigaciones sin poder cambiar el estado, la evaluación o la estructura del portafolio.
 - **De tarea a solicitud**: Cuando una tarea revele una iniciativa más grande, use **Convertir en solicitud** desde el espacio de trabajo de la tarea. La nueva solicitud hereda el título, descripción (como Propósito), clasificación y adjuntos de la tarea, y muestra la **Tarea de origen** en su encabezado.

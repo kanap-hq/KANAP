@@ -39,7 +39,7 @@ Cada celda de una fila es clicable y abre la página de ese proveedor.
 - Alcance de estado: Utilice el selector **Mostrar: Todos / Activos / Desactivados** encima de la cuadrícula para filtrar por estado. La lista muestra por defecto los proveedores activados
 
 **Acciones**:
-- **Nuevo**: Crear un nuevo proveedor (requiere `suppliers:manager`)
+- **Nuevo**: Crear un nuevo proveedor (requiere `suppliers:member`)
 - **Importar CSV**: Importación masiva de proveedores (requiere `suppliers:admin`)
 - **Exportar CSV**: Exportar la lista a CSV (requiere `suppliers:admin`)
 - **Eliminar seleccionados**: Eliminar proveedores seleccionados (requiere `suppliers:admin`)
@@ -67,7 +67,7 @@ La página tiene dos pestañas: **Vista general** y **Contactos**.
 
 **Notas**: notas libres sobre el proveedor, en la pestaña **Vista general**. Se guardan un momento después de dejar de escribir, y al salir del campo.
 
-Editar requiere el permiso `suppliers:manager`. Los usuarios de solo lectura ven la misma página pero no pueden hacer cambios.
+Editar requiere el permiso `suppliers:member`. Los usuarios de solo lectura ven la misma página pero no pueden hacer cambios.
 
 Pulse **Escape** o haga clic en el botón de cierre para volver a la lista.
 

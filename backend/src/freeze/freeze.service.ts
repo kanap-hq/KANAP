@@ -272,12 +272,26 @@ export class FreezeService {
 
   async assertNotFrozen(params: { scope: FreezeScope; column?: FreezeColumn | null; year: number; action?: string }, opts?: { manager?: EntityManager }) {
     const frozen = await this.isFrozen(params, opts);
-    if (frozen) {
-      const column = String(params.column ?? '').toLowerCase();
-      const columnLabel = isColumn(column) ? await this.columnName(column, this.manager(opts)) : 'data';
-      const what = `${params.scope.toUpperCase()} ${columnLabel} for ${params.year} is frozen`;
-      throw new ForbiddenException(params.action ? `${params.action} not allowed: ${what}` : what);
-    }
+    if (!frozen) return;
+    const column = String(params.column ?? '').toLowerCase();
+    const columnLabel = isColumn(column) ? await this.columnName(column, this.manager(opts)) : 'data';
+    const what = `${params.scope.toUpperCase()} ${columnLabel} for ${params.year} is frozen`;
+    const message = params.action ? `${params.action} not allowed: ${what}` : what;
+    // `message` stays the English sentence API clients already match. `code` and `variant`
+    // (the scope) are what the interface translates (`errors:DATA_FROZEN` and `_ACTION`).
+    throw new ForbiddenException({
+      statusCode: 403,
+      error: 'Forbidden',
+      code: params.action ? 'DATA_FROZEN_ACTION' : 'DATA_FROZEN',
+      message,
+      variant: params.scope,
+      params: {
+        scope: params.scope.toUpperCase(),
+        column: columnLabel,
+        year: params.year,
+        ...(params.action ? { action: params.action } : {}),
+      },
+    });
   }
 
   /** The tenant's name for a column. */

@@ -25,5 +25,12 @@ export function useFieldDraft(value: string) {
     focusedRef.current = false;
     dirtyRef.current = false;
   }, []);
-  return { draft, setDraft, onFocus, onBlur };
+  const valueRef = React.useRef(value);
+  valueRef.current = value;
+  // A refused value shows the stored text again, unless the user has typed something since.
+  const revert = React.useCallback(() => {
+    if (focusedRef.current && dirtyRef.current) return;
+    setDraftState(valueRef.current);
+  }, []);
+  return { draft, setDraft, onFocus, onBlur, revert };
 }

@@ -13,6 +13,34 @@ import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.
 import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { BudgetNature, naturesAnd } from './budget-nature';
+import { TurnoverFxMissingWarning, convertTurnovers, turnoverFxMissingWarning } from './allocation-distribution';
+
+/**
+ * A warning of the report: a sentence, or a structured warning the screen words in the user's
+ * language (`TurnoverFxMissingWarning`).
+ */
+export type ChargebackWarning = string | TurnoverFxMissingWarning;
+
+function warningKey(warning: ChargebackWarning): string {
+  return typeof warning === 'string' ? warning : JSON.stringify(warning);
+}
+
+/**
+ * The rate set the report's turnovers convert at: the frozen set its versions carry (the one
+ * most of them carry, should they differ), else null for the live rates of the year. The rule
+ * of the report's amounts, for an indicator that belongs to no version.
+ */
+export function reportRateSetId(versions: Array<{ fx_rate_set_id?: string | null }>): string | null {
+  const counts = new Map<string, number>();
+  for (const version of versions) {
+    if (version.fx_rate_set_id) counts.set(version.fx_rate_set_id, (counts.get(version.fx_rate_set_id) ?? 0) + 1);
+  }
+  let best: string | null = null;
+  for (const [id, count] of counts) {
+    if (best === null || count > counts.get(best)! || (count === counts.get(best)! && id < best)) best = id;
+  }
+  return best;
+}
 
 /** A chargeback runs on one budget column, named by its API name. */
 export type ChargebackMetricKey = BudgetColumn;
@@ -89,7 +117,11 @@ type ChargebackComputationContext = {
   versionMeta: Map<string, { version: SpendVersion; item?: SpendItem; method: ResolvedAllocationMethod }>;
   reportingCurrency: string;
   fxByVersion: Map<string, FxResolvedRate>;
-  warnings: string[];
+  /** The rate set of the turnover indicators (`reportRateSetId`), null for the live rates. */
+  turnoverRateSetId: string | null;
+  /** Company id → its turnover in millions of the reporting currency (`convertTurnovers`). */
+  turnovers: Map<string, number | null>;
+  warnings: ChargebackWarning[];
 };
 
 export type CompanyChargebackDepartmentRow = {
@@ -175,7 +207,7 @@ export type CompanyChargebackReportResponse = {
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
   };
   reportingCurrency: string;
-  warnings: string[];
+  warnings: ChargebackWarning[];
 };
 
 @Injectable()
@@ -282,8 +314,10 @@ export class ChargebackReportService {
       const metricRow = ctx.companyMetrics.get(row.companyId);
       const headcount = metricRow ? Number(metricRow.headcount ?? 0) : 0;
       const itUsers = metricRow && metricRow.it_users != null ? Number(metricRow.it_users) : null;
-      const turnoverMillions = metricRow && metricRow.turnover != null ? Number(metricRow.turnover) : null;
+      // The turnover in the reporting currency, as the amount; the raw one in the company's base currency.
+      const turnoverMillions = ctx.turnovers.get(row.companyId) ?? null;
       const turnoverAbsolute = turnoverMillions != null ? turnoverMillions * 1_000_000 : null;
+      const turnoverRaw = metricRow && metricRow.turnover != null ? Number(metricRow.turnover) * 1_000_000 : null;
       const perUser = headcount > 0 ? amount / headcount : null;
       const perItUser = itUsers && itUsers > 0 ? amount / itUsers : null;
       const vsTurnover = turnoverAbsolute && turnoverAbsolute !== 0 ? (amount / turnoverAbsolute) * 100 : null;
@@ -295,7 +329,7 @@ export class ChargebackReportService {
         headcount: headcount > 0 ? headcount : null,
         itUsers,
         turnover: turnoverAbsolute != null ? toCurrency(turnoverAbsolute) : null,
-        turnoverRaw: turnoverAbsolute,
+        turnoverRaw,
         costPerUser: perUser != null ? toCurrency(perUser) : null,
         costPerItUser: perItUser != null ? toCurrency(perItUser) : null,
         costVsTurnoverPct: vsTurnover != null ? Math.round(vsTurnover * 100) / 100 : null,
@@ -376,10 +410,17 @@ export class ChargebackReportService {
       if (companyMetric) ctx.companyMetrics.set(companyId, companyMetric);
     }
 
+    // A company the report's shares do not name: its turnover is converted here, at the same rates.
+    if (!ctx.turnovers.has(companyId) && company && companyMetric) {
+      await this.convertCompanyTurnovers(ctx, tenantId, manager, [company]);
+    }
+
     const headcount = companyMetric != null && companyMetric.headcount != null ? Number(companyMetric.headcount) : null;
     const itUsers = companyMetric != null && companyMetric.it_users != null ? Number(companyMetric.it_users) : null;
-    const turnoverMillions = companyMetric != null && companyMetric.turnover != null ? Number(companyMetric.turnover) : null;
+    // The turnover in the reporting currency, as the amounts; the raw one in the company's base currency.
+    const turnoverMillions = ctx.turnovers.get(companyId) ?? null;
     const turnoverAbsolute = turnoverMillions != null ? turnoverMillions * 1_000_000 : null;
+    const turnoverRawAbsolute = companyMetric != null && companyMetric.turnover != null ? Number(companyMetric.turnover) * 1_000_000 : null;
 
     const costPerUser = headcount && headcount > 0 ? total / headcount : null;
     const costPerUserRaw = headcount && headcount > 0 ? totalRaw / headcount : null;
@@ -399,7 +440,7 @@ export class ChargebackReportService {
       headcount: headcount && headcount > 0 ? headcount : null,
       itUsers: itUsers && itUsers > 0 ? itUsers : null,
       turnover: turnoverAbsolute != null ? toCurrency(turnoverAbsolute) : null,
-      turnoverRaw: turnoverAbsolute,
+      turnoverRaw: turnoverRawAbsolute,
       costPerUser: costPerUser != null ? toCurrency(costPerUser) : null,
       costPerUserRaw,
       costPerItUser: costPerItUser != null ? toCurrency(costPerItUser) : null,
@@ -481,7 +522,7 @@ export class ChargebackReportService {
         headcount: headcount && headcount > 0 ? headcount : null,
         itUsers: itUsers && itUsers > 0 ? itUsers : null,
         turnover: companySummary.turnover,
-        turnoverRaw: turnoverAbsolute,
+        turnoverRaw: turnoverRawAbsolute,
         costPerUser: costPerUser != null ? toCurrency(costPerUser) : null,
         costPerItUser: costPerItUser != null ? toCurrency(costPerItUser) : null,
         costVsTurnoverPct: costVsTurnoverPctRaw != null ? Math.round(costVsTurnoverPctRaw * 100) / 100 : null,
@@ -490,6 +531,8 @@ export class ChargebackReportService {
 
     let globalHeadcount = 0;
     let globalItUsers = 0;
+    // The global turnover adds the turnovers in the reporting currency; the raw one their base-currency values.
+    let globalTurnover = 0;
     let globalTurnoverRaw = 0;
     for (const metricRow of ctx.companyMetrics.values()) {
       globalHeadcount += Number(metricRow.headcount ?? 0);
@@ -497,20 +540,21 @@ export class ChargebackReportService {
         globalItUsers += Number(metricRow.it_users);
       }
       if (metricRow.turnover != null) {
+        globalTurnover += (ctx.turnovers.get(metricRow.company_id) ?? 0) * 1_000_000;
         globalTurnoverRaw += Number(metricRow.turnover) * 1_000_000;
       }
     }
 
     const globalCostPerUser = globalHeadcount > 0 ? ctx.total / globalHeadcount : null;
     const globalCostPerItUser = globalItUsers > 0 ? ctx.total / globalItUsers : null;
-    const globalCostVsTurnoverPctRaw = globalTurnoverRaw > 0 ? (ctx.total / globalTurnoverRaw) * 100 : null;
+    const globalCostVsTurnoverPctRaw = globalTurnover > 0 ? (ctx.total / globalTurnover) * 100 : null;
 
     const globalKpi = {
       amount: toCurrency(ctx.total),
       amountRaw: ctx.totalRaw,
       headcount: globalHeadcount > 0 ? globalHeadcount : null,
       itUsers: globalItUsers > 0 ? globalItUsers : null,
-      turnover: globalTurnoverRaw > 0 ? toCurrency(globalTurnoverRaw) : null,
+      turnover: globalTurnover > 0 ? toCurrency(globalTurnover) : null,
       turnoverRaw: globalTurnoverRaw > 0 ? globalTurnoverRaw : null,
       costPerUser: globalCostPerUser != null ? toCurrency(globalCostPerUser) : null,
       costPerItUser: globalCostPerItUser != null ? toCurrency(globalCostPerItUser) : null,
@@ -617,6 +661,8 @@ export class ChargebackReportService {
         versionMeta: new Map(),
         reportingCurrency: 'EUR',
         fxByVersion: new Map(),
+        turnoverRateSetId: null,
+        turnovers: new Map(),
         warnings: [],
       };
     }
@@ -684,11 +730,12 @@ export class ChargebackReportService {
     const allocationData = await this.allocationCalculator.computeForVersions(fullVersions, { manager, tenantId, suppressErrors: true });
 
     const warningsSet = new Set<string>();
-    const warnings: string[] = [];
-    const recordWarning = (message: string) => {
+    const warnings: ChargebackWarning[] = [];
+    const recordWarning = (message: ChargebackWarning) => {
       if (!message) return;
-      if (warningsSet.has(message)) return;
-      warningsSet.add(message);
+      const key = warningKey(message);
+      if (warningsSet.has(key)) return;
+      warningsSet.add(key);
       warnings.push(message);
     };
 
@@ -730,6 +777,9 @@ export class ChargebackReportService {
       }
       const versionTotalRaw = totalsByVersion.get(version.id) ?? 0;
       if (Math.abs(versionTotalRaw) < 0.0001) continue;
+      // Turnovers counted unconverted (no rate yet), for a version the report counts: one message
+      // per year, not per line.
+      if (allocationInfo?.warning) recordWarning(allocationInfo.warning);
 
       // Track paid totals for the paying company of the item version
       const payerId = (item as any)?.paying_company_id as string | null | undefined;
@@ -833,7 +883,7 @@ export class ChargebackReportService {
       : [];
     const departmentMetrics = new Map(deptMetrics.map((m) => [m.department_id, m] as const));
 
-    return {
+    const ctx: ChargebackComputationContext = {
       year: yr,
       metric,
       scope,
@@ -856,7 +906,41 @@ export class ChargebackReportService {
       versionMeta,
       reportingCurrency,
       fxByVersion,
+      turnoverRateSetId: reportRateSetId(fullVersions),
+      turnovers: new Map(),
       warnings,
     };
+    await this.convertCompanyTurnovers(ctx, tenantId, manager, companies);
+    return ctx;
+  }
+
+  /**
+   * Converts the turnovers of `companies` (their metrics of the year in `ctx.companyMetrics`)
+   * into the reporting currency, at the report's rate set (`ctx.turnoverRateSetId`), into
+   * `ctx.turnovers`. A currency without a rate is counted unconverted, as the amounts are, and
+   * named in a warning.
+   */
+  private async convertCompanyTurnovers(
+    ctx: ChargebackComputationContext,
+    tenantId: string,
+    manager: EntityManager,
+    companies: Company[],
+  ): Promise<void> {
+    if (companies.length === 0) return;
+    const converted = await convertTurnovers({
+      fxRates: this.fxRates,
+      manager,
+      tenantId,
+      fiscalYear: ctx.year,
+      rateSetId: ctx.turnoverRateSetId,
+      entries: companies.map((company) => ({
+        companyId: company.id,
+        currency: company.base_currency,
+        turnover: ctx.companyMetrics.get(company.id)?.turnover ?? null,
+      })),
+    });
+    converted.values.forEach((value, companyId) => ctx.turnovers.set(companyId, value));
+    const warning = turnoverFxMissingWarning(converted.missingCurrencies, ctx.year, converted.reportingCurrency);
+    if (warning && !ctx.warnings.some((existing) => warningKey(existing) === warningKey(warning))) ctx.warnings.push(warning);
   }
 }

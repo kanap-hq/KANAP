@@ -149,8 +149,8 @@ Zeigen Sie Kostenzuordnungen über alle Unternehmen hinweg mit Zusammenfassungs-
 | Betrag | Summe der ausgewählten Kennzahl |
 | Mitarbeiterzahl | Gesamte Mitarbeiterzahl |
 | IT-Benutzer | Anzahl IT-Benutzer |
-| Umsatz | Jahresumsatz |
-| IT-Kosten vs. Umsatz | Prozentsatz |
+| Umsatz | Jahresumsatz, in Millionen der Berichtswährung |
+| IT-Kosten vs. Umsatz | Prozentsatz, beide Werte in der Berichtswährung |
 | IT-Kosten pro Benutzer | Betrag geteilt durch Mitarbeiterzahl |
 | IT-Kosten pro IT-Benutzer | Betrag geteilt durch IT-Benutzer |
 
@@ -183,6 +183,8 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 ### Was Sie sehen
 
 **Unternehmens-Zusammenfassungskarte**: Unternehmensname, Gesamtbetrag, Berichtswährung, Mitarbeiterzahl, IT-Benutzer, Kosten pro Benutzer, Kosten pro IT-Benutzer und IT-Kosten vs. Umsatz.
+
+**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und der Bericht zeigt eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse.
 
 **Abteilungs-Summen** (wenn aktiviert):
 

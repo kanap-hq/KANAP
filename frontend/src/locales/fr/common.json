@@ -355,7 +355,7 @@
     "quickLogTime": {
       "logTime": "Saisir du temps",
       "logOn": "Saisir sur",
-      "hoursPlaceholder": "ex. 2,5",
+      "hoursPlaceholder": "ex. 2",
       "notesOptional": "Notes (facultatif)",
       "whatDidYouWorkOn": "Sur quoi avez-vous travaillé ?",
       "it": "IT",
@@ -460,7 +460,8 @@
         "capexItem": "Ligne CAPEX",
         "incident": "Incident",
         "location": "Site",
-        "document": "Document"
+        "document": "Document",
+        "company": "Société"
       },
       "myTimeTitle": "Mon temps",
       "newRequestsTitle": "Nouvelles demandes",
@@ -509,6 +510,12 @@
     "preflightOk_other": "Vérification OK : {{count}} lignes. Insertions : {{inserted}}, mises à jour : {{updated}}. Vous pouvez maintenant charger.",
     "loadedSuccessfully_one": "Chargé avec succès : {{count}} ligne traitée.",
     "loadedSuccessfully_other": "Chargé avec succès : {{count}} lignes traitées.",
+    "loadedCreated_one": "{{count}} créée",
+    "loadedCreated_other": "{{count}} créées",
+    "loadedUpdated_one": "{{count}} mise à jour",
+    "loadedUpdated_other": "{{count}} mises à jour",
+    "loadedUnchanged_one": "{{count}} inchangée",
+    "loadedUnchanged_other": "{{count}} inchangées",
     "uploadCompleted": "Téléversement terminé avec succès.",
     "fileNotFormatted": "Le fichier fourni n'est pas correctement formaté",
     "rowError": "Ligne {{row}} : {{message}}",

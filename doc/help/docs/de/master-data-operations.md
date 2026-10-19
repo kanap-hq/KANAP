@@ -28,7 +28,7 @@ Verwenden Sie dieses Werkzeug, um Unternehmens- und Abteilungskennzahlen für ei
 
 Die Seite zeigt eine Statuskarte für jeden Bereich:
 
-- **Eingefroren** (rot): Daten sind für dieses Jahr schreibgeschützt; die Karte zeigt, wer wann eingefroren hat
+- **Eingefroren** (rot): Daten sind für dieses Jahr schreibgeschützt. Die Karte zeigt **Eingefroren von**, dann den Namen der Person, die eingefroren hat, und das Datum
 - **Bearbeitbar**: Daten können noch geändert werden
 
 ### Was das Einfrieren beeinflusst

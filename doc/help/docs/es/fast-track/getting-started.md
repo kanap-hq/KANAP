@@ -24,11 +24,11 @@ KANAP está organizado en torno a una estructura simple. La barra superior muest
 |------|-------------|
 | **Panel de control** | Su centro personal. Haga clic en el logotipo de KANAP o navegue a `/` |
 | **Portafolio** | Tareas, Solicitudes, Proyectos, Planificación, Informes, Colaboradores |
-| **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Conexiones, Mapa de conexiones, Ubicaciones |
+| **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Tecnologías, Conexiones, Mapa de conexiones, Ubicaciones, Netbox, Incidentes, Fin de soporte, Vulnerabilidades |
 | **Base de conocimiento** | Documentos y plantillas con flujos de trabajo de revisión |
 | **Gestión presupuestaria** | OPEX, CAPEX, Contratos, Informes, Administración (monedas, columnas presupuestarias, operaciones de congelación y copia) |
 | **Datos maestros** | Empresas, Departamentos, Centros de coste, Proveedores, Contactos, Planes de cuentas, Calendarios laborales, Dimensiones analíticas, Procesos de negocio |
-| **Administración** | Usuarios, Roles, Registro de auditoría, Facturación, Autenticación, Personalización (solo admin) |
+| **Administración** | Usuarios, Roles, Registro de auditoría, Facturación, Autenticación, Personalización, Integraciones (solo admin) |
 
 No necesita acceso a todo. Su rol determina qué secciones y acciones están disponibles. Si falta algo en su menú, pregunte a su administrador.
 
@@ -277,6 +277,9 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 |-------------------|-----------|
 | Aplicaciones, servidores, infraestructura | [Panorama IT - Inicio Rápido](apps-and-assets.md) |
 | Solicitudes, proyectos, planificación de portafolio | [Portafolio - Inicio Rápido](index.md) |
+| Versiones de software, fechas de soporte, avisos de seguridad | Páginas [Tecnologías](../technologies.md), [Fin de soporte](../end-of-support.md) y [Vulnerabilidades](../vulnerabilities.md) |
+| Caídas de servicio y su impacto | Página [Incidentes](../incidents.md) |
+| Inventario Netbox, mesa de servicio y otras herramientas conectadas | Páginas [Sincronización con Netbox](../netbox.md) e [Integraciones](../integrations.md) |
 
 ---
 

@@ -126,6 +126,7 @@
     "turnoverTotalFxMissing": "{{value}} (noch kein Kurs für {{currencies}}, ohne Umrechnung gezählt)",
     "export": "Unternehmen exportieren",
     "import": "Unternehmen importieren",
+    "importHint": "Gelesene Kennzahlen: {{years}}, nach dem Jahr der Liste. Jedes Jahr ist optional. Zulässige Werte für status: enabled oder disabled.",
     "previous": "Vorheriges Unternehmen",
     "next": "Nächstes Unternehmen",
     "fields": {
@@ -146,7 +147,7 @@
       "year": "Jahr",
       "headcount": "Mitarbeiterzahl",
       "itUsers": "IT-Benutzer",
-      "turnover": "Umsatz (Mio. €)"
+      "turnover": "Umsatz (Mio. {{currency}})"
     },
     "status": {
       "enabled": "Aktiviert",
@@ -170,11 +171,12 @@
       "vatNumber": "z. B. DE123456789",
       "notes": "z. B. Shared-Services-Gesellschaft der Gruppe",
       "itUsers": "z. B. 120",
-      "turnover": "z. B. 12.5"
+      "turnover": "z. B. 12,5"
     },
     "messages": {
       "saveFailed": "Das Unternehmen konnte nicht gespeichert werden.",
       "createFailed": "Das Unternehmen konnte nicht erstellt werden.",
+      "deleteFailed": "Das Unternehmen konnte nicht gelöscht werden.",
       "nameRequired": "Geben Sie einen Namen ein.",
       "nameTaken": "Ein anderes Unternehmen hat bereits diesen Namen.",
       "countryRequired": "Wählen Sie ein Land.",

@@ -115,7 +115,8 @@ async function testChargebackReadsOneTenant() {
       'the default headcount spread uses tenant A\'s companies only (10 and 30)',
     );
     assert.deepEqual(global.kpis.map((row) => row.headcount).sort(), [10, 30]);
-    assert.deepEqual(fxCalls, [a.tenantId], 'the FX rates are those of the tenant given');
+    // The amounts' rates, then the turnovers' (the turnover indicators are in the reporting currency).
+    assert.deepEqual(fxCalls, [a.tenantId, a.tenantId], 'the FX rates are those of the tenant given');
 
     const company = await svc.generateCompany(YEAR, 'budget', a1, a.tenantId, opts);
     assert.equal(company.company.total, 30);

@@ -497,7 +497,7 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 |---|---|
 | **Mitarbeiterzahl (Standard)** | Teilt Ausgaben proportional nach der Mitarbeiterzahl jedes Unternehmens für das ausgewählte Jahr. Keine manuelle Auswahl erforderlich: Die Prozentsätze werden automatisch aus den Unternehmenskennzahlen berechnet. Das ist der Standard. |
 | **IT-Benutzer** | Teilt Ausgaben proportional nach der Anzahl der IT-Benutzer jedes Unternehmens für das ausgewählte Jahr. |
-| **Umsatz** | Teilt Ausgaben proportional nach dem Umsatz jedes Unternehmens für das ausgewählte Jahr. |
+| **Umsatz** | Teilt Ausgaben proportional nach dem Umsatz jedes Unternehmens für das ausgewählte Jahr, umgerechnet in die Berichtswährung. |
 | **Manuell nach Unternehmen** | Sie wählen aus, welche Unternehmen diese Ausgabe erhalten, und wählen unter **Zuordnen nach** einen Treiber (Mitarbeiterzahl, IT-Benutzer oder Umsatz), um die Prozentsätze nur unter den ausgewählten Unternehmen zu berechnen. |
 | **Manuell nach Abteilung** | Sie wählen bestimmte Unternehmen/Abteilungs-Paare aus. Die Prozentsätze werden aus der Mitarbeiterzahl jeder Abteilung berechnet. Nützlich, wenn eine Zeile nur bestimmten Abteilungen zugutekommt (z. B. ein CRM, das vom Vertrieb genutzt wird). |
 | **Manuelle Prozentsätze** | Sie wählen die Unternehmen und geben jeden Prozentsatz selbst ein. Die Summe muss 100 % ergeben. |
@@ -515,6 +515,12 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 - Bei **Manuell nach Unternehmen** und **Manuell nach Abteilung**: Sie wählen die Unternehmen oder Abteilungen, und das System berechnet die Prozentsätze aus dem gewählten Treiber und den aktuellen Kennzahlen
 - Bei **Manuelle Prozentsätze**: Die Eingabe eines Prozentsatzes fixiert diese Zeile, und die übrigen Zeilen teilen sich den Rest. **Gleichmäßig aufteilen** gibt jeder Zeile denselben Anteil; **Manuelle Fixierungen löschen** hebt die Fixierungen auf
 - Die Prozentsätze spiegeln Live-Daten wider. Wenn Sie die Mitarbeiterzahl eines Unternehmens aktualisieren, werden die Zuordnungen neu berechnet
+- Die Spalte **Treiber** zeigt den Wert jedes Unternehmens für den Treiber. Ein Umsatz erscheint mit der Basiswährung des Unternehmens, zum Beispiel **35 Mio. USD**
+
+**Umsatz in mehreren Währungen**:
+
+- Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet KANAP jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
+- Hat eine Währung noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und über der Tabelle erscheint eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse, und die Aufteilung korrigiert sich von selbst
 
 **So verwenden Sie ihn**:
 

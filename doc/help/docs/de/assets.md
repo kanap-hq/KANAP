@@ -260,7 +260,7 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
+**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `infrastructure:member`.
 
 ---
 

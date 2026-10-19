@@ -37,7 +37,7 @@ Líneas OPEX/CAPEX -> Selección de cuenta (filtrada a cuentas de FR-2024 única
 - Ruta: **Datos maestros > Planes de cuentas**
 - Permisos:
   - Ver: `accounts:reader`
-  - Crear/editar cuentas y CoA: `accounts:manager`
+  - Crear/editar cuentas y CoA: `accounts:member`
   - Importar CSV, Exportar CSV, Eliminar: `accounts:admin`
 
 ## Trabajar con la lista
@@ -51,7 +51,7 @@ Una fila horizontal de chips representa cada Plan de cuentas. Haga clic en un ch
 - El chip seleccionado aparece relleno; los demás, con borde.
 - Pase el cursor sobre un chip para ver el nombre del CoA, sus países, su número de cuentas y sus roles. Consulte [Roles de los planes](#roles-de-los-planes).
 
-Si tiene el permiso `accounts:manager`, aparecen dos controles adicionales a la derecha:
+Si tiene el permiso `accounts:member`, aparecen dos controles adicionales a la derecha:
 
 - **Nuevo**: Abre el diálogo **Nuevo plan de cuentas**.
 - **Gestionar planes**: Abre el cuadro [Gestionar planes](#el-cuadro-gestionar-planes).
@@ -76,7 +76,7 @@ Cada número es un enlace. Haga clic en él para filtrar la cuadrícula con esas
 
 En la cuadrícula, un pequeño punto naranja junto a **N.º cuenta consol.** marca una cuenta cuyo número no está en el plan de consolidación. Pase el cursor sobre el punto para ver el nombre del plan de consolidación.
 
-Sin plan de consolidación, la línea dice «No hay plan de consolidación.». Los gestores pueden hacer clic en **Elija uno en Gestionar planes** para abrir el cuadro.
+Sin plan de consolidación, la línea dice «No hay plan de consolidación.». Los usuarios con `accounts:member` pueden hacer clic en **Elija uno en Gestionar planes** para abrir el cuadro.
 
 ### Cuadrícula de cuentas
 
@@ -104,7 +104,7 @@ La cuadrícula muestra cuentas solo del CoA seleccionado.
 **Ordenación**: Predeterminada por **N.º de cuenta** ascendente.
 
 **Acciones** (en el encabezado de la página):
-- **Nueva cuenta** (`accounts:manager`): Abre un nuevo formulario de cuenta con el CoA seleccionado ya elegido.
+- **Nueva cuenta** (`accounts:member`): Abre un nuevo formulario de cuenta con el CoA seleccionado ya elegido.
 - **Importar CSV** (`accounts:admin`): Importar cuentas al CoA seleccionado.
 - **Exportar CSV** (`accounts:admin`): Exportar cuentas del CoA seleccionado.
 - **Eliminar selección** (`accounts:admin`): Eliminar filas de cuentas seleccionadas. Seleccione filas usando la columna de casilla de verificación (visible para administradores). Una cuenta usada por líneas presupuestarias no se puede eliminar: desactívela en su lugar. Antes de eliminar nada, la confirmación enumera las cuentas que se conservan, con el motivo.
@@ -123,7 +123,7 @@ Haga clic en cualquier fila de la cuadrícula de cuentas para abrir el espacio d
 
 **Los cambios se guardan automáticamente.** Cada campo se guarda al salir de él y no hay botón Guardar. Si se rechaza un valor, aparece un mensaje bajo el campo. El **Número de cuenta** debe ser un número entero mayor que cero, de 15 dígitos como máximo.
 
-Necesita `accounts:manager` para editar. Los usuarios de solo lectura ven la misma página con los campos bloqueados.
+Necesita `accounts:member` para editar. Los usuarios de solo lectura ven la misma página con los campos bloqueados.
 
 ### Cuentas OPEX o CAPEX
 
@@ -276,13 +276,13 @@ Haga clic en **Gestionar planes** en la barra de chips para abrir el cuadro. Una
 - **Empresas**: el número de empresas asignadas al plan
 - **Cuentas**: el número de cuentas del plan
 
-Tres líneas breves bajo la tabla explican los roles. **Nuevo plan** (`accounts:manager`), abajo a la izquierda, abre el diálogo de creación.
+Tres líneas breves bajo la tabla explican los roles. **Nuevo plan** (`accounts:member`), abajo a la izquierda, abre el diálogo de creación.
 
 Cada fila tiene un menú **⋯** que solo ofrece las acciones aplicables a ese plan. La etiqueta sigue el estado actual.
 
-- **Hacer plan predeterminado del país** / **Dejar de ser plan predeterminado del país** (`accounts:manager`): para planes de un solo país.
-- **Hacer predeterminado para otros países** / **Dejar de ser predeterminado para otros países** (`accounts:manager`): para planes de todos los países. Al hacerlo predeterminado, también se asigna a las empresas que no tienen plan de cuentas.
-- **Hacer plan de consolidación** / **Dejar de ser plan de consolidación** (`accounts:manager`): para cualquier plan. Consulte [Cambiar el plan de consolidación](#cambiar-el-plan-de-consolidacion).
+- **Hacer plan predeterminado del país** / **Dejar de ser plan predeterminado del país** (`accounts:member`): para planes de un solo país.
+- **Hacer predeterminado para otros países** / **Dejar de ser predeterminado para otros países** (`accounts:member`): para planes de todos los países. Al hacerlo predeterminado, también se asigna a las empresas que no tienen plan de cuentas.
+- **Hacer plan de consolidación** / **Dejar de ser plan de consolidación** (`accounts:member`): para cualquier plan. Consulte [Cambiar el plan de consolidación](#cambiar-el-plan-de-consolidacion).
 - **Eliminar** (`accounts:admin`): Elimina el plan junto con sus cuentas. Si el plan tiene cuentas, una confirmación indica cuántas se eliminan. Si es el plan de consolidación, la confirmación advierte de que el reporting de grupo ya no tendrá un plan de referencia. La eliminación se rechaza mientras haya empresas que usen el plan o líneas OPEX/CAPEX que usen sus cuentas. El cuadro muestra el motivo antes de cualquier confirmación.
 
 Los roles cambian en cuanto elige una acción. La tabla se actualiza al instante.

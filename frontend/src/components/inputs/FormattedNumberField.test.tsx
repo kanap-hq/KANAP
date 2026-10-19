@@ -15,13 +15,24 @@ function lastValue(onChange: ReturnType<typeof vi.fn>): unknown {
 }
 
 /** A controlled parent that stores what the field sends and hands it back, as the screens do. */
-function Host({ decimals, emit, seen }: { decimals?: number; emit?: 'number' | 'string'; seen: unknown[] }) {
+function Host({
+  decimals,
+  emit,
+  seen,
+  decimalSeparator,
+}: {
+  decimals?: number;
+  emit?: 'number' | 'string';
+  seen: unknown[];
+  decimalSeparator?: '.' | ',';
+}) {
   const [value, setValue] = React.useState<number | string>('');
   return (
     <FormattedNumberField
       value={value}
       decimals={decimals}
       emit={emit}
+      decimalSeparator={decimalSeparator}
       onChange={(event) => {
         const next = event.target.value as unknown as number | string;
         seen.push(next);
@@ -33,7 +44,7 @@ function Host({ decimals, emit, seen }: { decimals?: number; emit?: 'number' | '
 }
 
 /** Types one character at a time, each keystroke on top of what the input shows. */
-function typeChars(text: string, props: { decimals?: number; emit?: 'number' | 'string' }) {
+function typeChars(text: string, props: { decimals?: number; emit?: 'number' | 'string'; decimalSeparator?: '.' | ',' }) {
   const seen: unknown[] = [];
   render(<Host {...props} seen={seen} />);
   const input = screen.getByLabelText('typed') as HTMLInputElement;
@@ -113,6 +124,12 @@ describe('FormattedNumberField', () => {
       const { input, last } = typeChars('19,5', { decimals: 6, emit: 'string' });
       expect(input.value).toBe('19.5');
       expect(last).toBe('19.5');
+    });
+
+    it('shows a comma when that is the decimal mark, and still emits a point', () => {
+      const { input, last } = typeChars('12,5', { decimals: 3, emit: 'string', decimalSeparator: ',' });
+      expect(input.value).toBe('12,5');
+      expect(last).toBe('12.5');
     });
 
     it('does not rewrite 400.10 when the parent hands back the same value', () => {

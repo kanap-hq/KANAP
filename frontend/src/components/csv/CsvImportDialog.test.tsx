@@ -45,7 +45,7 @@ const lastParams = () => lastCall()?.[2]?.params;
 describe('CsvImportDialog', () => {
   beforeEach(() => post.mockReset());
 
-  it('shows the unchanged rows after the preflight check and after the load', async () => {
+  it('shows the unchanged rows after the preflight check, and the load counts after the load', async () => {
     post.mockResolvedValueOnce({ data: report({ unchanged: 12 }) });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
@@ -55,8 +55,8 @@ describe('CsvImportDialog', () => {
 
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, unchanged: 12 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
-    expect(screen.getByRole('alert')).toHaveTextContent('csv.rowsUnchanged:12');
+    expect(await screen.findByText('csv.loadedCreated:1, csv.loadedUpdated:1, csv.loadedUnchanged:12')).toBeInTheDocument();
+    expect(screen.getByRole('alert')).not.toHaveTextContent('csv.rowsUnchanged');
   });
 
   it('heads row errors with validation failed: a frozen column refused on a row', async () => {
@@ -100,7 +100,7 @@ describe('CsvImportDialog', () => {
 
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14, warnings }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
+    expect(await screen.findByText('csv.loadedCreated:1, csv.loadedUpdated:1')).toBeInTheDocument();
     expect(screen.queryByTestId('csv-import-warnings')).toBeNull();
   });
 
@@ -211,7 +211,7 @@ describe('CsvImportDialog', () => {
     await screen.findByText('ops:operations.budgetFile.datesDayFirst');
     post.mockResolvedValueOnce({ data: report({ dryRun: false, processed: 14 }) });
     fireEvent.click(screen.getByRole('button', { name: 'csv.load' }));
-    expect(await screen.findByText(/^csv\.loadedSuccessfully:/)).toBeInTheDocument();
+    expect(await screen.findByText('csv.loadedCreated:1, csv.loadedUpdated:1')).toBeInTheDocument();
     expect(lastCall()?.[0]).toBe('/suppliers/import');
     expect(lastParams()).toEqual({ language: 'en', dryRun: false, dateOrder: 'day-first', decimalMark: 'comma' });
   });

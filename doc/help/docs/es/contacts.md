@@ -42,7 +42,7 @@ La cuadrícula de Contactos proporciona un directorio buscable de todos los cont
 **Ordenación predeterminada**: Por apellido, alfabético.
 
 **Acciones**:
-- **Nuevo**: Crear un nuevo contacto (requiere `contacts:manager`)
+- **Nuevo**: Crear un nuevo contacto (requiere `contacts:member`)
 - **Importar CSV**: Importación masiva de contactos (requiere `contacts:admin`)
 - **Exportar CSV**: Exportar a CSV (requiere `contacts:admin`)
 - **Eliminar seleccionados**: Eliminar los contactos seleccionados (requiere `contacts:admin`). Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan; esos elementos se conservan

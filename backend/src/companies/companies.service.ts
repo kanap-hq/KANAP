@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Company } from './company.entity';
@@ -43,6 +43,7 @@ import {
   formatCsvAmount,
   formatCsvEndOfValidity,
   ImportReportError,
+  headerMismatchError,
   nameMatchedWarning,
   readMasterDataFile,
   rowError,
@@ -50,6 +51,11 @@ import {
   writeCsv,
 } from '../common/csv-sheet';
 import { uploadedBytes } from '../common/upload';
+import { FxRateService } from '../currency/fx-rate.service';
+import { convertTurnovers, yearRateSetId } from '../spend/allocation-distribution';
+
+/** A metric column of any year (`headcount_2031`), inside or outside the list's window. */
+const METRIC_COLUMN = /^(headcount|it_users|turnover)_(\d{4})$/i;
 
 type CompanyFilterTarget = FilterTargetConfig & { requiresMetrics?: boolean };
 type CompanyLookupItem = { id: string; name: string };
@@ -60,6 +66,8 @@ export class CompaniesService {
     @InjectRepository(Company) private readonly repo: Repository<Company>,
     private readonly audit: AuditService,
     private readonly companyMetrics: CompanyMetricsService,
+    /** Converts the turnovers of the totals into the reporting currency. */
+    private readonly fxRates?: FxRateService,
   ) {}
 
   private getRepo(manager?: EntityManager) {
@@ -490,8 +498,20 @@ export class CompaniesService {
     return results;
   }
 
-  async totals(query: any, opts?: { manager?: EntityManager }): Promise<{ headcount: number; it_users: number; turnover: number; year: number }> {
+  /**
+   * The list's totals for the year. Each company enters its turnover in millions of its base
+   * currency: the total is converted into the tenant's reporting currency (`turnover_currency`)
+   * at the rates of the year's budget versions: the set the year is frozen at, else the live
+   * rates (`yearRateSetId`). A currency without a rate is counted unconverted, as the version
+   * amounts are, and named in `turnover_fx_missing`.
+   */
+  async totals(
+    query: any,
+    opts: { manager?: EntityManager; tenantId: string },
+  ): Promise<{ headcount: number; it_users: number; turnover: number; turnover_currency: string; turnover_fx_missing: string[]; year: number }> {
     const repo = this.getRepo(opts?.manager);
+    const tenantId = opts?.tenantId;
+    if (!tenantId) throw new BadRequestException('A tenant is required');
     const parsed = parsePagination({ ...query, page: 1, limit: 10000 });
     const { status, q, filters } = parsed;
     const { status: statusFromAg, matchNone, sanitizedFilters } = extractStatusFilterFromAgModel(filters);
@@ -580,11 +600,15 @@ export class CompaniesService {
         )
       : [];
 
+    // One row per base currency: the turnovers are converted per currency below.
     const qb = repo
       .createQueryBuilder('c')
-      .select('SUM(COALESCE(m.headcount, 0))', 'headcount')
+      .select("NULLIF(UPPER(TRIM(c.base_currency)), '')", 'currency')
+      .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
       .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
-      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover');
+      .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover')
+      .where('c.tenant_id = :tenantId', { tenantId })
+      .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
 
     // Apply lifecycle status for the year window
     const period = {
@@ -599,9 +623,9 @@ export class CompaniesService {
 
     // Join metrics for the selected fiscal year
     qb.leftJoin(
-      (sub) => sub.from('company_metrics', 'm').where('m.fiscal_year = :year', { year }),
+      (sub) => sub.from('company_metrics', 'm').where('m.fiscal_year = :year', { year }).andWhere('m.tenant_id = :tenantId', { tenantId }),
       'm',
-      'm.company_id = c.id',
+      'm.company_id = c.id AND m.tenant_id = c.tenant_id',
     );
 
     // Apply search and filters
@@ -617,17 +641,36 @@ export class CompaniesService {
     }
     compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
 
-    const raw = (await qb.getRawOne()) as { headcount?: any; it_users?: any; turnover?: any } | undefined;
+    const rows = (await qb.getRawMany()) as Array<{ currency?: string | null; headcount?: any; it_users?: any; turnover?: any }>;
     const toNum = (v: any) => {
       const n = Number(v ?? 0);
       return Number.isFinite(n) ? n : 0;
     };
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
-    const headcount = Math.round(toNum(raw?.headcount));
-    const it_users = Math.round(toNum(raw?.it_users));
-    const turnover = round3(toNum(raw?.turnover));
+    const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
+    const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
+    const converted = await convertTurnovers({
+      fxRates: this.fxRates,
+      manager: repo.manager,
+      tenantId,
+      fiscalYear: year,
+      rateSetId: await yearRateSetId(repo.manager, tenantId, year),
+      entries: rows
+        .filter((row) => toNum(row.turnover) !== 0)
+        // One entry per currency, keyed by its position.
+        .map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
+    });
+    let turnover = 0;
+    converted.values.forEach((value) => { turnover += value ?? 0; });
 
-    return { headcount, it_users, turnover, year };
+    return {
+      headcount,
+      it_users,
+      turnover: round3(turnover),
+      turnover_currency: converted.reportingCurrency,
+      turnover_fx_missing: converted.missingCurrencies,
+      year,
+    };
   }
 
   /**
@@ -774,12 +817,39 @@ export class CompaniesService {
       'notes',
     ];
     const years = this.metricYears(baseYear);
-    years.forEach((year) => {
-      headers.push(`headcount_${year}`);
-      headers.push(`it_users_${year}`);
-      headers.push(`turnover_${year}`);
-    });
+    years.forEach((year) => headers.push(...this.metricColumns(year)));
     return headers;
+  }
+
+  private metricColumns(year: number): string[] {
+    return [`headcount_${year}`, `it_users_${year}`, `turnover_${year}`];
+  }
+
+  /** Years of the window whose three columns are all in the file. An absent year is left untouched. */
+  private yearsInFile(present: readonly string[], metricYears: readonly number[]): number[] {
+    return metricYears.filter((year) => this.metricColumns(year).every((column) => present.includes(column)));
+  }
+
+  /** A year that has some of its three columns and not the others: the file would otherwise clear the missing ones. */
+  private incompleteYearColumns(present: readonly string[], metricYears: readonly number[]): string[] {
+    const have = new Set(present);
+    const missing: string[] = [];
+    for (const year of metricYears) {
+      const columns = this.metricColumns(year);
+      if (!columns.some((column) => have.has(column))) continue;
+      for (const column of columns) if (!have.has(column)) missing.push(column);
+    }
+    return missing;
+  }
+
+  /** Ignored headers, plus metric columns of a year outside the window (`turnover_2031` is read as an amount). */
+  private reportedIgnored(
+    read: { present: readonly string[]; ignoredColumns: readonly string[] },
+    metricYears: readonly number[],
+  ): string[] {
+    const allowed = new Set(metricYears.flatMap((year) => this.metricColumns(year)));
+    const outside = read.present.filter((id) => METRIC_COLUMN.test(id) && !allowed.has(id));
+    return [...read.ignoredColumns, ...outside];
   }
 
   async exportCsv(
@@ -789,6 +859,7 @@ export class CompaniesService {
     const language = opts?.language ?? 'en';
     const baseYear = this.normalizeYear(opts?.year);
     const headers = this.csvHeaders(baseYear);
+    const years = this.metricYears(baseYear);
     const rows: string[][] = [];
     if (scope === 'data') {
       const repo = this.getRepo(opts?.manager);
@@ -796,7 +867,6 @@ export class CompaniesService {
       const items: Company[] = opts?.listQuery
         ? (await this.list(opts.listQuery, { manager: opts.manager, exportAll: true })).items as Company[]
         : await repo.find({ order: { created_at: 'DESC' as any, id: 'ASC' as any } });
-      const years = this.metricYears(baseYear);
       const metricsByYear = new Map<number, Map<string, { headcount: number; it_users: number | null; turnover: number | string | null }>>();
       for (const year of years) {
         const { items: metrics } = await this.companyMetrics.list(year, opts);
@@ -835,6 +905,13 @@ export class CompaniesService {
         });
         rows.push(row);
       }
+    } else {
+      // One fictional company so the file shows the shape: enabled, metrics for the list year only.
+      const example = ['Example Company', 'FR', '', '', '', 'Paris', '', '', '', 'EUR', 'enabled', '', ''];
+      for (const year of years) {
+        example.push(...(year === baseYear ? ['120', '40', formatCsvAmount('12.5', language)] : ['', '', '']));
+      }
+      rows.push(example);
     }
     const filename = scope === 'template' ? `companies_template_${baseYear}.csv` : `companies_${baseYear}.csv`;
     return { filename, content: writeCsv({ language, headers, rows }) };
@@ -869,23 +946,51 @@ export class CompaniesService {
     const read = await readMasterDataFile({
       file: buf as Buffer,
       fields: expectedHeaders,
+      // Each year of the window may be absent. A year outside it is reported, not refused.
+      optional: metricYears.flatMap((fy) => this.metricColumns(fy)),
       amounts: [{ measure: 'turnover', names: ['turnover'] }],
       dateFields: ['disabled_at'],
       language: readLanguage,
       dateOrder,
       decimalMark,
+      noticeUnknown: (header) => METRIC_COLUMN.test(header.trim()),
     });
-    const errors: { row: number; message: string }[] = [];
+    const ignoredColumns = this.reportedIgnored(read, metricYears);
+    const errors: ImportReportError[] = [];
     if (read.headerError) {
       return {
         ok: false, dryRun, total: 0, inserted: 0, updated: 0,
         errors: [read.headerError],
-        ignoredColumns: read.ignoredColumns, notices: read.notices,
+        ignoredColumns, notices: read.notices,
       };
+    }
+    // One column of a year without the other two would store nulls for the ones the file omits.
+    const incomplete = headerMismatchError(this.incompleteYearColumns(read.present, metricYears), []);
+    if (incomplete) {
+      return {
+        ok: false, dryRun, total: 0, inserted: 0, updated: 0,
+        errors: [incomplete],
+        ignoredColumns, notices: read.notices,
+      };
+    }
+    const yearsInFile = this.yearsInFile(read.present, metricYears);
+    // Years frozen for company metrics: a row that sets one is refused here, not at the load.
+    const frozenYears = new Set<number>();
+    if (typeof this.companyMetrics?.assertYearOpen === 'function') {
+      for (const fy of yearsInFile) {
+        try {
+          await this.companyMetrics.assertYearOpen(fy, opts);
+        } catch (err) {
+          if (err instanceof ForbiddenException) frozenYears.add(fy);
+          else throw err;
+        }
+      }
     }
     // Validate and normalize
     type CsvLifecycle = { status: StatusState | null; disabled_at: string | null };
     const normalized: { line: number; company: CompanyUpsertDto; metrics: Map<number, { headcount: number; it_users: number | null; turnover: string | null }>; lifecycle: CsvLifecycle }[] = [];
+    // The first line of each name, whatever its case: a company takes one row.
+    const firstLineByName = new Map<string, number>();
     read.rows.forEach((row) => {
       const line = row.line;
       const problems = rowProblemErrors(row, ['disabled_at']);
@@ -908,6 +1013,21 @@ export class CompaniesService {
       const disabledAtRaw = cellOf(row, 'disabled_at');
       let disabled_at_iso: string | null = null;
       if (!name) errors.push(rowError(line, 'name', 'CSV_VALUE_REQUIRED', 'name is required'));
+      else {
+        const firstRow = firstLineByName.get(name.toLowerCase());
+        if (firstRow === undefined) firstLineByName.set(name.toLowerCase(), line);
+        else {
+          errors.push(rowError(
+            line,
+            'name',
+            'CSV_COMPANY_NAME_DUPLICATE',
+            `'${name}' is already on row ${firstRow}. Keep one row per company.`,
+            { name, firstRow },
+          ));
+        }
+      }
+      // `city` is NOT NULL, like name: a blank cell is refused for a new company and for an update.
+      if (!city) errors.push(rowError(line, 'city', 'CSV_VALUE_REQUIRED', 'city is required'));
       if (!country_iso) errors.push(rowError(line, 'country_iso', 'CSV_VALUE_REQUIRED', 'country_iso is required and must be 2 letters'));
       else if (country_iso.length !== 2) errors.push(rowError(line, 'country_iso', 'CSV_COUNTRY_INVALID', 'country_iso is required and must be 2 letters', { value: country_iso }));
       const base_currency = cellOf(row, 'base_currency');
@@ -931,7 +1051,7 @@ export class CompaniesService {
         return;
       }
       const metrics = new Map<number, { headcount: number; it_users: number | null; turnover: string | null }>();
-      for (const fy of metricYears) {
+      for (const fy of yearsInFile) {
         const headcountKey = `headcount_${fy}`;
         const itUsersKey = `it_users_${fy}`;
         const turnoverKey = `turnover_${fy}`;
@@ -940,6 +1060,15 @@ export class CompaniesService {
         const turnoverRaw = cellOf(row, turnoverKey);
         const hasAny = headcountRaw !== '' || itUsersRaw !== '' || turnoverRaw !== '';
         if (!hasAny) continue;
+        if (frozenYears.has(fy)) {
+          errors.push({
+            row: line,
+            message: `Metrics for ${fy} are frozen. A budget administrator can unfreeze them.`,
+            code: 'CSV_COMPANY_METRICS_FROZEN',
+            params: { year: fy },
+          });
+          continue;
+        }
         if (headcountRaw === '') {
           errors.push(rowError(line, headcountKey, 'CSV_VALUE_REQUIRED', `${headcountKey} is required when providing metrics`));
           continue;
@@ -998,22 +1127,15 @@ export class CompaniesService {
     });
     const total = read.rows.length;
     if (errors.length > 0) {
-      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: false, dryRun, total, inserted: 0, updated: 0, errors, ignoredColumns, notices: read.notices };
     }
-    // Deduplicate by company name: keep first occurrence
-    const uniqueByName = new Map<string, (typeof normalized)[number]>();
-    for (const item of normalized) {
-      const key = (item.company.name as string).toLowerCase();
-      if (!uniqueByName.has(key)) uniqueByName.set(key, item);
-    }
-    const unique = Array.from(uniqueByName.values());
     // Count inserts, updates and the companies whose every value and yearly metric is already stored.
     const repo = this.getRepo(opts?.manager);
     // A row matches the company of the same name whatever its case ("acme" updates "Acme"). The
     // stored spelling stays, and the report says which company the row matched.
     const existingByName = new Map<string, Company>();
     const warnings: ImportReportError[] = [];
-    for (const item of unique) {
+    for (const item of normalized) {
       const name = item.company.name as string;
       const existing = await repo.createQueryBuilder('c')
         .where('c.tenant_id = app_current_tenant() AND lower(c.name) = lower(:name)', { name })
@@ -1028,9 +1150,9 @@ export class CompaniesService {
     }
     const existingIds = Array.from(existingByName.values()).map((company) => company.id);
     const storedMetrics = new Map<string, CompanyMetric>();
-    if (existingIds.length > 0 && metricYears.length > 0) {
+    if (existingIds.length > 0 && yearsInFile.length > 0) {
       const metricRepo = (opts?.manager ?? repo.manager).getRepository(CompanyMetric);
-      for (const metric of await metricRepo.find({ where: { company_id: In(existingIds), fiscal_year: In(metricYears) } })) {
+      for (const metric of await metricRepo.find({ where: { company_id: In(existingIds), fiscal_year: In(yearsInFile) } })) {
         storedMetrics.set(`${metric.company_id}:${metric.fiscal_year}`, metric);
       }
     }
@@ -1045,8 +1167,8 @@ export class CompaniesService {
     let inserted = 0;
     let updated = 0;
     let unchanged = 0;
-    const toWrite: Array<{ item: (typeof unique)[number]; existing: Company | undefined }> = [];
-    for (const item of unique) {
+    const toWrite: Array<{ item: (typeof normalized)[number]; existing: Company | undefined }> = [];
+    for (const item of normalized) {
       const existing = existingByName.get(item.company.name as string);
       if (!existing) inserted += 1;
       else if (
@@ -1060,7 +1182,7 @@ export class CompaniesService {
       toWrite.push({ item, existing });
     }
     if (dryRun) {
-      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+      return { ok: true, dryRun: true, total, inserted, updated, unchanged, errors: [], warnings, ignoredColumns, notices: read.notices };
     }
     // Commit
     let processed = 0;
@@ -1081,6 +1203,6 @@ export class CompaniesService {
         }
       }
     }
-    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns: read.ignoredColumns, notices: read.notices };
+    return { ok: true, dryRun: false, total, inserted, updated, unchanged, processed, errors: [], warnings, ignoredColumns, notices: read.notices };
   }
 }

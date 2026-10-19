@@ -30,7 +30,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 | **Währung** | Basiswährungscode |
 | **Mitarbeiterzahl (Jahr)** | Mitarbeiterzahl für das ausgewählte Jahr (zum Öffnen des Details-Tabs anklicken) |
 | **IT-Benutzer (Jahr)** | IT-Benutzer für das ausgewählte Jahr (zum Öffnen des Details-Tabs anklicken) |
-| **Umsatz (Jahr)** | Umsatz für das ausgewählte Jahr (zum Öffnen des Details-Tabs anklicken) |
+| **Umsatz (Jahr)** | Umsatz für das ausgewählte Jahr, in Millionen der Basiswährung des Unternehmens, zum Beispiel `35 Mio. USD` (zum Öffnen des Details-Tabs anklicken) |
 | **Status** | Aktiviert oder Deaktiviert |
 
 **Zusätzliche Spalten** (standardmäßig ausgeblendet, über Spaltenauswahl hinzufügbar):
@@ -53,9 +53,16 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 
 **Jahrauswahl**: Verwenden Sie das Feld **Jahr** in der Symbolleiste, um zu wechseln, welche Jahreskennzahlen angezeigt werden. Die untere Zeile zeigt **Summen** für Mitarbeiterzahl, IT-Benutzer und Umsatz über alle sichtbaren (gefilterten) Unternehmen.
 
+**Werte der Kennzahlen**:
+
+- Eine Kennzahl, die für das Jahr nie erfasst wurde, zeigt **—**. Eine erfasste Null zeigt **0**
+- Zahlen folgen der Sprache von KANAP: Dezimalkomma auf Deutsch, Französisch und Spanisch, Dezimalpunkt auf Englisch
+- Der Umsatz jeder Zeile ist in der Basiswährung des Unternehmens. Die Zeile **Gesamt** ist in der Berichtswährung: Jeder Umsatz wird zu den Kursen des Jahres umgerechnet. Ist die Standard-Budgetspalte des Jahres eingefroren, sind das die Kurse, die sie festgeschrieben hat. Sonst sind es die aktuellen Kurse (siehe [Währungseinstellungen](currencies.md))
+- Hat eine Währung noch keinen Kurs, wird ihr Umsatz ohne Umrechnung addiert, und die Summe sagt es, zum Beispiel „1.250 Mio. EUR (noch kein Kurs für BRL, ohne Umrechnung gezählt)“. KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse
+
 **Aktionen**:
 
-- **Neu**: Unternehmen erstellen (erfordert `companies:manager`)
+- **Neu**: Unternehmen erstellen (erfordert `companies:member`)
 - **CSV importieren**: Massenimport von Unternehmen aus einer CSV-Datei (erfordert `companies:admin`)
 - **CSV exportieren**: Unternehmen und ihre Kennzahlen als CSV exportieren (erfordert `companies:admin`)
 - **Ausgewählte löschen**: Ein oder mehrere ausgewählte Unternehmen löschen (erfordert `companies:admin`; nur möglich, wenn nichts das Unternehmen referenziert)
@@ -67,7 +74,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 | Aktion | Erforderliche Stufe |
 |--------|---------------------|
 | Liste und Arbeitsbereiche anzeigen | `companies:reader` |
-| Unternehmen erstellen oder bearbeiten | `companies:manager` |
+| Unternehmen erstellen oder bearbeiten | `companies:member` |
 | Importieren, exportieren oder löschen | `companies:admin` |
 
 ## Der Unternehmens-Arbeitsbereich
@@ -78,7 +85,9 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Untern
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
-**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Wird eine Änderung abgelehnt, erscheint der Grund unter dem Feld, das sie verursacht hat.
+- **Löschen**, oben rechts: sichtbar für Unternehmensadministratoren (`companies:admin`). Siehe [Ein Unternehmen löschen](#ein-unternehmen-loschen)
+
+**Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Oben auf der Seite steht **Wird gespeichert…**, solange gespeichert wird, dann kurz **Gespeichert**. Wird eine Änderung abgelehnt, zeigt das Feld wieder seinen vorherigen Wert und darunter den Grund. Die Meldung bleibt, bis Sie wieder in das Feld tippen.
 
 ---
 
@@ -119,14 +128,15 @@ Der Details-Tab verwaltet die **Jahreskennzahlen**. Wechseln Sie mit den Jahres-
 
 - **Mitarbeiterzahl** (Pflicht): Gesamtzahl der Beschäftigten im Jahr, muss eine ganze Zahl von 0 oder mehr sein
 - **IT-Benutzer** (optional): Anzahl der IT-Benutzer, muss eine ganze Zahl von 0 oder mehr sein
-- **Umsatz (Mio. €)** (optional): Umsatz in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen
+- **Umsatz** (optional): Umsatz in Millionen der Basiswährung des Unternehmens, bis zu 3 Dezimalstellen. Die Beschriftung nennt die Währung, zum Beispiel **Umsatz (Mio. USD)**
 
 **So funktioniert es**:
 
-- Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr."
+- Jeder Wert wird für das ausgewählte Jahr gespeichert, wenn Sie das Feld verlassen (oder die Eingabetaste drücken). Ein ungültiger Wert zeigt unter dem Feld eine Meldung, zum Beispiel „Geben Sie eine ganze Zahl ein, 0 oder mehr." Das Feld zeigt wieder den gespeicherten Wert, und die Meldung bleibt, bis Sie erneut tippen
+- Zahlen folgen der Sprache von KANAP: Geben Sie auf Deutsch, Französisch oder Spanisch `12,5` ein, auf Englisch `12.5`
 - Jedes Jahr wird für sich gespeichert: Beim Jahreswechsel werden die Werte dieses Jahres geladen
 - Sind die Unternehmenszahlen des Jahres **eingefroren**, sind die Felder gesperrt, und ein Hinweis besagt, dass ein Budgetadministrator sie wieder freigeben kann (**Budgetverwaltung > Administration > Stammdaten einfrieren**)
-- Für das Bearbeiten der Kennzahlen benötigen Sie `companies:manager`
+- Für das Bearbeiten der Kennzahlen benötigen Sie `companies:member`
 
 ## Kontenplan
 
@@ -163,6 +173,14 @@ Verwenden Sie das **Ende der Gültigkeit**, um zu steuern, wann ein Unternehmen 
 - **Deaktivieren statt löschen.** Ein Unternehmen, das noch verwendet wird, kann nicht gelöscht werden: von Budgetzeilen (als zahlendes Unternehmen oder in ihren Zuordnungen), Verträgen, Kostenstellen, Abteilungen, Benutzern, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern, deren Standardunternehmen es ist. Die Meldung zählt auf, was es verwendet, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer“. Deaktivieren Sie es stattdessen. Seine Jahreskennzahlen werden mit ihm gelöscht. In der Liste nennt die Bestätigung die so erhaltenen Unternehmen mit dem, was sie verwendet, bevor etwas gelöscht wird.
 - **Um ein Unternehmen dennoch zu löschen**, entfernen Sie zuerst, was es verwendet. Tragen Sie bei seinen Benutzern, Budgetzeilen und deren Zuordnungen, Verträgen, Kostenstellen, den Standorten, die es betreibt, Aufgaben, Anwendungen, Schnittstellen, Portfolio-Projekten und -Anfragen sowie Teammitgliedern ein anderes Unternehmen ein. Verschieben Sie seine Abteilungen in ein anderes Unternehmen, oder löschen Sie sie zuletzt, wenn nichts sie mehr verwendet. Löschen Sie dann das Unternehmen.
 
+## Ein Unternehmen löschen
+
+Ein Unternehmensadministrator (`companies:admin`) kann ein Unternehmen auf seiner Seite mit **Löschen** löschen, oder mehrere in der Liste mit **Ausgewählte löschen**.
+
+- KANAP prüft zuerst. Wird das Unternehmen noch verwendet, sagt der Dialog wofür, zum Beispiel „Dieses Unternehmen wird noch verwendet: 2 Abteilungen und 14 Benutzer. Deaktivieren Sie es, statt es zu löschen.“, und bietet nur **Schließen** an. Deaktivieren Sie das Unternehmen dann (siehe [Status und Lebenszyklus](#status-und-lebenszyklus))
+- Sonst fragt der Dialog nach einer Bestätigung: „Dies kann nicht rückgängig gemacht werden.“ **Löschen** löscht das Unternehmen mit seinen Jahreskennzahlen und kehrt zur Liste zurück
+- Ein gelöschtes Unternehmen verschwindet aus der Kachel **Kürzlich angesehen** von [Mein Dashboard](my-dashboard.md#kurzlich-angesehen)
+
 ## Jahreskennzahlen
 
 Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr:
@@ -173,7 +191,7 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 **Wo es relevant ist**:
 
-- Zuordnungen können Mitarbeiterzahl, IT-Benutzer oder Umsatz verwenden, um Kosten für ein bestimmtes Jahr über Unternehmen zu verteilen.
+- Zuordnungen können Mitarbeiterzahl, IT-Benutzer oder Umsatz verwenden, um Kosten für ein bestimmtes Jahr über Unternehmen zu verteilen. Umsätze in verschiedenen Währungen werden zuerst in die Berichtswährung umgerechnet. Siehe [Zuordnungen](budget-lines.md#zuordnungen).
 - Berichte verwenden diese Kennzahlen für KPIs und Verhältniszahlen.
 - Nur für ein Jahr aktive Unternehmen werden für die Zuordnung und Berichterstattung dieses Jahres berücksichtigt.
 
@@ -184,7 +202,7 @@ Viele Bereiche der App sind jahresbezogen. Unternehmen haben Kennzahlen pro Jahr
 
 ## CSV-Import/Export
 
-**CSV exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei nur mit den Kopfzeilen, bereit zum Ausfüllen.
+**CSV exportieren** lädt die Unternehmen der Liste (oder, auf Wunsch im Dialog, alle Unternehmen) mit ihren Kennzahlen herunter. **CSV importieren** liest eine Datei wieder ein. Der Importdialog bietet außerdem **Vorlage herunterladen**: eine Datei mit den Kopfzeilen und einer Beispielzeile, einem fiktiven Unternehmen mit Kennzahlen für das Jahr der Liste. Ersetzen Sie sie durch Ihre eigenen Zeilen.
 
 Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbolleiste der Liste gewählten Jahr: das Jahr davor, dieses Jahr und das Jahr danach.
 
@@ -193,24 +211,30 @@ Die Spalten in dieser Reihenfolge. Die Kennzahlenspalten folgen dem in der Symbo
 | `name` | Pflicht. Der Name des Unternehmens. Zeilen werden über diesen Namen zugeordnet |
 | `country_iso` | Pflicht. Zwei Buchstaben |
 | `address1`, `address2` | Adresszeilen |
-| `postal_code`, `city`, `state` | Adressangaben |
+| `postal_code`, `state` | Adressangaben |
+| `city` | Pflicht. Die Stadt |
 | `reg_number`, `vat_number` | Handelsregisternummer und Umsatzsteuer-Identifikationsnummer |
 | `base_currency` | Pflicht. Drei Buchstaben |
 | `status` | `enabled` oder `disabled` |
 | `disabled_at` | Das Ende der Gültigkeit: ein Datum (`2026-12-31`) oder ein vollständiges Datum mit Uhrzeit. Der Export schreibt nur das Datum. Erneut importiert, behält dieses Datum das gespeicherte Gültigkeitsende |
 | `notes` | Freier Text |
-| `headcount_<Jahr>` | Pflicht, wenn die Zeile für dieses Jahr eine Kennzahl trägt |
+| `headcount_<Jahr>` | Eine ganze Zahl. Pflicht, wenn die Zeile für dieses Jahr eine Kennzahl trägt |
 | `it_users_<Jahr>` | Eine ganze Zahl |
 | `turnover_<Jahr>` | Bis zu 3 Nachkommastellen, in Millionen der Basiswährung des Unternehmens |
 
 **Import**:
 
-- Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an
-- **Zuordnung**: über den `name` des Unternehmens, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet. Ein Name, der zweimal in der Datei steht, wird einmal behalten, die erste Zeile gewinnt
-- **Pflichtfelder**: `name`, `country_iso` und `base_currency`
+- Beginnen Sie mit der **Vorabprüfung**. Sie prüft die Kopfzeilen, die Kodierung, die Pflichtfelder, die Duplikate und die Kennzahlen. Ist die Prüfung sauber, wendet **Laden** die Einfügungen und Aktualisierungen an. Danach zählt der Dialog die erstellten, aktualisierten und unveränderten Unternehmen, zum Beispiel „2 erstellt, 5 aktualisiert, 30 unverändert“
+- **Zuordnung**: über den `name` des Unternehmens, unabhängig von Groß- und Kleinschreibung. Die gespeicherte Schreibweise bleibt: Eine Zeile `ACME` aktualisiert `Acme`, und die Vorabprüfung meldet „ACME“ wurde „Acme“ zugeordnet
+- **Eine Zeile pro Unternehmen**: Ein Name, der zweimal in der Datei steht, unabhängig von Groß- und Kleinschreibung, wird schon bei der Prüfung abgelehnt: „„Acme“ steht bereits in Zeile 4. Verwenden Sie eine Zeile pro Unternehmen.“
+- **Pflichtfelder**: `name`, `country_iso`, `city` und `base_currency`. Eine leere Stadt wird schon bei der Prüfung abgelehnt, für ein neues Unternehmen wie für eine Aktualisierung
 - **Status und Ende der Gültigkeit**: Der Export schreibt den aus dem Ende der Gültigkeit abgeleiteten Status. Ein neues Unternehmen ist aktiviert, außer die Zeile sagt `disabled`. Bei einer Aktualisierung behalten ein leeres `status` und ein leeres `disabled_at` die gespeicherten Werte. `enabled` mit leerem Datum löscht das Ende der Gültigkeit. `disabled` mit leerem Datum behält ein bereits vergangenes Datum, andernfalls beendet es das Unternehmen heute
 - Eine Zeile, deren Status ihrem Datum widerspricht, wird mit einem Zeilenfehler abgelehnt: „Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again.“ oder „Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed.“
-- **Kennzahlen**: Geben Sie für ein Jahr Kennzahlen an, ist `headcount_<Jahr>` für dieses Jahr Pflicht. `it_users_<Jahr>` und `turnover_<Jahr>` sind optional
+- **Gelesene Jahre**: Der Dialog nennt die Jahre, die er liest, zum Beispiel „Gelesene Kennzahlen: 2025, 2026, 2027, nach dem Jahr der Liste. Jedes Jahr ist optional.“
+- **Jedes Jahr ist optional**: Ein Jahr ist ein Block aus drei Spalten, `headcount_<Jahr>`, `it_users_<Jahr>` und `turnover_<Jahr>`. Lassen Sie den ganzen Block weg, bleiben die gespeicherten Kennzahlen dieses Jahres unverändert. Eine Spalte eines Jahres außerhalb der drei gelesenen Jahre wird ignoriert, und die Prüfung führt sie bei den ignorierten Spalten auf
+- **Ein Jahr kommt vollständig**: Eine Datei mit einer oder zwei Spalten eines Jahres ohne die anderen wird in der Zeile **Kopfzeile** abgelehnt, die die fehlenden Spalten nennt
+- **Kennzahlen**: Trägt eine Zeile eine Kennzahl für ein Jahr, ist `headcount_<Jahr>` für dieses Jahr Pflicht. `it_users_<Jahr>` und `turnover_<Jahr>` dürfen leer bleiben
+- **Eingefrorene Jahre**: Eine Zeile mit Kennzahlen für ein Jahr, dessen Unternehmenskennzahlen eingefroren sind, wird schon bei der Prüfung abgelehnt: „Die Kennzahlen für 2025 sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.“ Lassen Sie die Spalten dieses Jahres weg, oder heben Sie zuerst das Einfrieren des Jahres auf (siehe [Stammdaten einfrieren](master-data-operations.md))
 
 **Hinweise**:
 

@@ -55,6 +55,16 @@ function refusedFileHeading(errors: ImportReport['errors']): 'csv.fileNotFormatt
   return errors.length > 0 && errors.every((e) => e.row >= 2) ? 'csv.validationFailed' : 'csv.fileNotFormatted';
 }
 
+/** Created, updated and unchanged rows after a load. A count of zero is left out. */
+function loadedSummary(report: ImportReport, t: TFunction): string {
+  const parts: string[] = [];
+  if (report.inserted > 0) parts.push(t('csv.loadedCreated', { count: report.inserted }));
+  if (report.updated > 0) parts.push(t('csv.loadedUpdated', { count: report.updated }));
+  if ((report.unchanged ?? 0) > 0) parts.push(t('csv.loadedUnchanged', { count: report.unchanged }));
+  if (parts.length === 0) return t('csv.loadedSuccessfully', { count: report.processed ?? report.total ?? 0 });
+  return parts.join(', ');
+}
+
 export default function CsvImportDialog({
   open,
   onClose,
@@ -302,12 +312,12 @@ export default function CsvImportDialog({
                   (report as any).dryRun ? (
                     <>{t('csv.preflightOk', { count: (report as any).total ?? 0, inserted: (report as any).inserted, updated: (report as any).updated })}</>
                   ) : (
-                    <>{t('csv.loadedSuccessfully', { count: (report as any).processed ?? (report as any).total ?? 0 })}</>
+                    <>{loadedSummary(report, t)}</>
                   )
                 ) : (
                   <>{t('csv.uploadCompleted')}</>
                 )}
-                {typeof report.unchanged === 'number' && (
+                {report.dryRun && typeof report.unchanged === 'number' && (
                   <Box component="span" sx={{ display: 'block' }}>{t('csv.rowsUnchanged', { count: report.unchanged })}</Box>
                 )}
               </Alert>

@@ -126,6 +126,7 @@
     "turnoverTotalFxMissing": "{{value}} (aún sin tipo para {{currencies}}, contado sin conversión)",
     "export": "Exportar empresas",
     "import": "Importar empresas",
+    "importHint": "Indicadores leídos: {{years}}, según el año de la lista. Cada año es opcional. Valores aceptados para status: enabled o disabled.",
     "previous": "Empresa anterior",
     "next": "Empresa siguiente",
     "fields": {
@@ -146,7 +147,7 @@
       "year": "Año",
       "headcount": "Plantilla",
       "itUsers": "Usuarios IT",
-      "turnover": "Facturación (M€)"
+      "turnover": "Facturación (M {{currency}})"
     },
     "status": {
       "enabled": "Activado",
@@ -170,11 +171,12 @@
       "vatNumber": "p. ej., ESB12345678",
       "notes": "p. ej., Entidad de servicios compartidos del grupo",
       "itUsers": "p. ej., 120",
-      "turnover": "p. ej., 12.5"
+      "turnover": "p. ej., 12,5"
     },
     "messages": {
       "saveFailed": "Error al guardar la empresa.",
       "createFailed": "Error al crear la empresa.",
+      "deleteFailed": "Error al eliminar la empresa.",
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otra empresa ya tiene este nombre.",
       "countryRequired": "Elija un país.",

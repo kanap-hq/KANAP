@@ -30,7 +30,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 | **Devise** | Code de devise de base |
 | **Effectif (année)** | Effectif pour l'année sélectionnée (cliquez pour ouvrir l'onglet Détails) |
 | **Utilisateurs IT (année)** | Utilisateurs IT pour l'année sélectionnée (cliquez pour ouvrir l'onglet Détails) |
-| **Chiffre d'affaires (année)** | Chiffre d'affaires pour l'année sélectionnée (cliquez pour ouvrir l'onglet Détails) |
+| **Chiffre d'affaires (année)** | Chiffre d'affaires pour l'année sélectionnée, en millions de la devise de base de la société, par exemple `35 M USD` (cliquez pour ouvrir l'onglet Détails) |
 | **Statut** | Activé ou Désactivé |
 
 **Colonnes supplémentaires** (masquées par défaut, ajoutez-les via le sélecteur de colonnes) :
@@ -53,9 +53,16 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 
 **Sélecteur d'année** : utilisez le champ **Année** dans la barre d'outils pour changer quelle année de métriques est affichée. La ligne du bas affiche les **totaux** pour Effectif, Utilisateurs IT et Chiffre d'affaires pour toutes les sociétés visibles (filtrées).
 
+**Valeurs des métriques** :
+
+- Une métrique jamais saisie pour l'année s'affiche **—**. Un zéro saisi s'affiche **0**
+- Les nombres suivent la langue de KANAP : virgule décimale en français, en allemand et en espagnol, point décimal en anglais
+- Le chiffre d'affaires de chaque ligne est dans la devise de base de la société. La ligne **Total** est dans la devise de reporting : chaque chiffre d'affaires est converti aux taux de l'année. Quand la colonne budgétaire par défaut de l'année est gelée, ce sont les taux qu'elle a figés. Sinon, ce sont les taux courants (voir [Paramètres de devises](currencies.md))
+- Quand une devise n'a pas encore de taux, son chiffre d'affaires est ajouté sans conversion et le total le signale, par exemple « 1 250 M EUR (pas encore de taux pour BRL, compté sans conversion) ». KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux
+
 **Actions** :
 
-- **Nouveau** : créer une société (nécessite `companies:manager`)
+- **Nouveau** : créer une société (nécessite `companies:member`)
 - **Import CSV** : import en masse de sociétés depuis un fichier CSV (nécessite `companies:admin`)
 - **Export CSV** : exporter les sociétés et leurs métriques en CSV (nécessite `companies:admin`)
 - **Supprimer la sélection** : supprimer une ou plusieurs sociétés sélectionnées (nécessite `companies:admin` ; possible uniquement si rien ne référence la société)
@@ -67,7 +74,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 | Action | Niveau requis |
 |--------|---------------|
 | Consulter la liste et les espaces de travail | `companies:reader` |
-| Créer ou modifier des sociétés | `companies:manager` |
+| Créer ou modifier des sociétés | `companies:member` |
 | Importer, exporter ou supprimer | `companies:admin` |
 
 ## L'espace de travail de la société
@@ -78,7 +85,9 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail d
 - **Statut**, sous le nom : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive la société aussitôt : la fin de validité devient l'heure actuelle
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
-**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Lorsqu'une modification est refusée, la raison s'affiche sous le champ concerné.
+- **Supprimer**, en haut à droite : visible des administrateurs des sociétés (`companies:admin`). Voir [Supprimer une société](#supprimer-une-societe)
+
+**Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Le haut de la page affiche **Enregistrement…** pendant l'enregistrement, puis **Enregistré** un court instant. Lorsqu'une modification est refusée, le champ reprend sa valeur précédente et la raison s'affiche dessous. Le message reste jusqu'à ce que vous tapiez de nouveau dans le champ.
 
 ---
 
@@ -119,14 +128,15 @@ L'onglet Détails gère les **métriques annuelles**. Utilisez les onglets d'ann
 
 - **Effectif** (obligatoire) : nombre total d'employés pour l'année, doit être un nombre entier de zéro ou plus
 - **Utilisateurs IT** (optionnel) : nombre d'utilisateurs IT, doit être un nombre entier de zéro ou plus
-- **Chiffre d'affaires (M€)** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales
+- **Chiffre d'affaires** (optionnel) : chiffre d'affaires en millions de la devise de base de la société, jusqu'à 3 décimales. Le libellé nomme la devise, par exemple **Chiffre d'affaires (M USD)**
 
 **Comment ça fonctionne** :
 
-- Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. »
+- Chaque valeur est enregistrée pour l'année sélectionnée quand vous quittez le champ (ou appuyez sur Entrée). Une valeur non valide affiche un message sous le champ, par exemple « Saisissez un nombre entier, 0 ou plus. » Le champ reprend la valeur enregistrée, et le message reste jusqu'à ce que vous tapiez de nouveau
+- Les nombres suivent la langue de KANAP : tapez `12,5` en français, en allemand ou en espagnol, et `12.5` en anglais
 - Chaque année est enregistrée séparément : changer d'année charge les valeurs de cette année
 - Si les chiffres de la société pour l'année sont **gelés**, les champs sont verrouillés et un avis indique qu'un administrateur budgétaire peut les dégeler (**Gestion budgétaire > Administration > Geler les données de référence**)
-- Vous avez besoin de `companies:manager` pour modifier les métriques
+- Vous avez besoin de `companies:member` pour modifier les métriques
 
 ## Plan comptable
 
@@ -163,6 +173,14 @@ Utilisez la **Fin de validité** pour contrôler quand une société cesse d'êt
 - **Préférez la désactivation à la suppression.** Une société encore utilisée ne peut pas être supprimée : lignes budgétaires (comme société payeuse ou dans leurs ventilations), contrats, centres de coûts, départements, utilisateurs, sites qu'elle exploite, tâches, applications, interfaces, projets et demandes du portefeuille, et membres d'équipe dont elle est la société par défaut. Le message compte ce qui l'utilise, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs ». Désactivez-la à la place. Ses métriques annuelles sont supprimées avec elle. Dans la liste, la confirmation nomme les sociétés ainsi conservées, avec ce qui les utilise, avant toute suppression.
 - **Pour supprimer une société malgré tout**, retirez d'abord ce qui l'utilise. Indiquez une autre société sur ses utilisateurs, ses lignes budgétaires et leurs ventilations, ses contrats, ses centres de coûts, les sites qu'elle exploite, ses tâches, applications, interfaces, projets et demandes du portefeuille, et ses membres d'équipe. Déplacez ses départements vers une autre société, ou supprimez-les en dernier, quand plus rien ne les utilise. Supprimez ensuite la société.
 
+## Supprimer une société
+
+Un administrateur des sociétés (`companies:admin`) peut supprimer une société depuis sa fiche avec **Supprimer**, ou plusieurs depuis la liste avec **Supprimer la sélection**.
+
+- KANAP vérifie d'abord. Quand quelque chose utilise la société, le dialogue dit quoi, par exemple « Cette société est utilisée par 2 départements et 14 utilisateurs. Désactivez-la plutôt que de la supprimer. », et propose seulement **Fermer**. Désactivez alors la société (voir [Statut et cycle de vie](#statut-et-cycle-de-vie))
+- Sinon, le dialogue demande confirmation : « Cette action est irréversible. » **Supprimer** supprime la société avec ses métriques annuelles et revient à la liste
+- Une société supprimée quitte la tuile **Consultés récemment** de [Mon tableau de bord](my-dashboard.md#recemment-consultes)
+
 ## Métriques annuelles
 
 De nombreuses parties de l'application sont sensibles à l'année. Les sociétés ont des métriques par année :
@@ -173,7 +191,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 **Où c'est important** :
 
-- Les ventilations peuvent utiliser l'Effectif, les Utilisateurs IT ou le Chiffre d'affaires pour répartir les coûts entre les sociétés pour une année donnée.
+- Les ventilations peuvent utiliser l'Effectif, les Utilisateurs IT ou le Chiffre d'affaires pour répartir les coûts entre les sociétés pour une année donnée. Les chiffres d'affaires en devises différentes sont d'abord convertis dans la devise de reporting. Voir [Ventilations](budget-lines.md#ventilations).
 - Les rapports utilisent ces métriques pour les KPI et les ratios.
 - Seules les sociétés actives pour une année sont prises en compte pour la ventilation et le reporting de cette année.
 
@@ -184,7 +202,7 @@ De nombreuses parties de l'application sont sensibles à l'année. Les société
 
 ## Import/export CSV
 
-**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les seuls en-têtes, prêt à remplir.
+**Exporter CSV** télécharge les sociétés que la liste affiche (ou, sur demande dans la fenêtre, toutes les sociétés) avec leurs métriques. **Importer CSV** relit un fichier. La fenêtre d'import propose aussi **Télécharger le modèle** : un fichier avec les en-têtes et une ligne d'exemple, une société fictive avec des métriques pour l'année de la liste. Remplacez-la par vos propres lignes.
 
 Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélectionnée dans la barre d'outils de la liste : l'année précédente, celle-ci et la suivante.
 
@@ -193,24 +211,30 @@ Les colonnes, dans cet ordre. Les colonnes de métriques suivent l'année sélec
 | `name` | Obligatoire. Le nom de la société. Les lignes sont rapprochées par ce nom |
 | `country_iso` | Obligatoire. Deux lettres |
 | `address1`, `address2` | Lignes d'adresse |
-| `postal_code`, `city`, `state` | Compléments d'adresse |
+| `postal_code`, `state` | Compléments d'adresse |
+| `city` | Obligatoire. La ville |
 | `reg_number`, `vat_number` | Numéro d'immatriculation et numéro de TVA |
 | `base_currency` | Obligatoire. Trois lettres |
 | `status` | `enabled` ou `disabled` |
 | `disabled_at` | La fin de validité : une date (`2026-12-31`) ou une date et une heure complètes. L'export écrit la date seule. Réimportée, cette date conserve la fin de validité enregistrée |
 | `notes` | Texte libre |
-| `headcount_<année>` | Obligatoire lorsque la ligne porte une métrique pour cette année |
+| `headcount_<année>` | Un nombre entier. Obligatoire lorsque la ligne porte une métrique pour cette année |
 | `it_users_<année>` | Un nombre entier |
 | `turnover_<année>` | Jusqu'à 3 décimales, en millions de la devise de base de la société |
 
 **Import** :
 
-- Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour
-- **Correspondance** : par `name` de société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme ». Un nom présent deux fois dans le fichier n'est gardé qu'une fois, la première ligne l'emportant
-- **Champs obligatoires** : `name`, `country_iso` et `base_currency`
+- Commencez par la **Vérification préalable**. Elle valide les en-têtes, l'encodage, les champs obligatoires, les doublons et les métriques. Si la vérification est propre, **Charger** applique les insertions et les mises à jour. Le dialogue compte ensuite les sociétés créées, mises à jour et inchangées, par exemple « 2 créées, 5 mises à jour, 30 inchangées »
+- **Correspondance** : par `name` de société, quelle que soit la casse. Le nom enregistré ne change pas : une ligne `ACME` met à jour `Acme`, et la vérification préalable indique « ACME » a été rapproché de « Acme »
+- **Une ligne par société** : un nom présent deux fois dans le fichier, quelle que soit la casse, est refusé dès la vérification : « « Acme » figure déjà à la ligne 4. Gardez une seule ligne par société. »
+- **Champs obligatoires** : `name`, `country_iso`, `city` et `base_currency`. Une ville vide est refusée dès la vérification, pour une nouvelle société comme pour une mise à jour
 - **Statut et fin de validité** : l'export écrit le statut déduit de la fin de validité. Une nouvelle société est activée sauf si la ligne indique `disabled`. Lors d'une mise à jour, un `status` vide et un `disabled_at` vide conservent les valeurs enregistrées. `enabled` avec une date vide efface la fin de validité. `disabled` avec une date vide conserve une date déjà passée, et sinon termine la société aujourd'hui
 - Une ligne dont le statut contredit sa date est refusée avec une erreur de ligne : « Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again. » ou « Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed. »
-- **Métriques** : si vous fournissez des métriques pour une année, `headcount_<année>` est obligatoire pour cette année. `it_users_<année>` et `turnover_<année>` sont facultatifs
+- **Années lues** : le dialogue nomme les années qu'il lit, par exemple « Métriques lues : 2025, 2026, 2027, d'après l'année de la liste. Chaque année est facultative. »
+- **Chaque année est facultative** : une année est un bloc de trois colonnes, `headcount_<année>`, `it_users_<année>` et `turnover_<année>`. Si vous omettez tout le bloc, les métriques enregistrées de cette année restent telles quelles. Une colonne d'une année hors des trois années lues est ignorée, et la vérification la liste avec les colonnes ignorées
+- **Une année vient entière** : un fichier qui porte une ou deux colonnes d'une année sans les autres est refusé sur la ligne **En-tête**, qui nomme les colonnes manquantes
+- **Métriques** : si une ligne porte une métrique pour une année, `headcount_<année>` est obligatoire pour cette année. `it_users_<année>` et `turnover_<année>` peuvent rester vides
+- **Années gelées** : une ligne qui porte des métriques pour une année dont les métriques des sociétés sont gelées est refusée dès la vérification : « Les indicateurs pour 2025 sont gelés. Un administrateur budgétaire peut les dégeler. » Omettez les colonnes de cette année, ou dégelez d'abord l'année (voir [Geler les données de référence](master-data-operations.md))
 
 **Notes** :
 

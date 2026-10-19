@@ -30,7 +30,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 | **Moneda** | Código de moneda base |
 | **Plantilla (año)** | Plantilla para el año seleccionado (haga clic para abrir la pestaña Detalles) |
 | **Usuarios IT (año)** | Usuarios IT para el año seleccionado (haga clic para abrir la pestaña Detalles) |
-| **Facturación (año)** | Facturación para el año seleccionado (haga clic para abrir la pestaña Detalles) |
+| **Facturación (año)** | Facturación para el año seleccionado, en millones de la moneda base de la empresa, por ejemplo `35 M USD` (haga clic para abrir la pestaña Detalles) |
 | **Estado** | Habilitada o Deshabilitada |
 
 **Columnas adicionales** (ocultas por defecto, añádalas desde el selector de columnas):
@@ -53,9 +53,16 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 
 **Selector de año**: utilice el campo **Año** en la barra de herramientas para cambiar las métricas de qué año se muestran. La fila inferior muestra los **totales** de Plantilla, Usuarios IT y Facturación de todas las empresas visibles (filtradas).
 
+**Valores de las métricas**:
+
+- Una métrica que nunca se introdujo para el año muestra **—**. Un cero introducido muestra **0**
+- Los números siguen el idioma de KANAP: coma decimal en español, francés y alemán, punto decimal en inglés
+- La facturación de cada fila está en la moneda base de la empresa. La fila **Total** está en la moneda de reporte: cada facturación se convierte a los tipos del año. Cuando la columna presupuestaria por defecto del año está congelada, son los tipos que fijó. Si no, son los tipos actuales (consulte [Configuración de monedas](currencies.md))
+- Cuando una moneda aún no tiene tipo, su facturación se suma sin convertir y el total lo indica, por ejemplo «1.250 M EUR (aún sin tipo para BRL, contado sin conversión)». KANAP busca el tipo que falta en la próxima actualización de los tipos
+
 **Acciones**:
 
-- **Nuevo**: crear una empresa (requiere `companies:manager`)
+- **Nuevo**: crear una empresa (requiere `companies:member`)
 - **Importar CSV**: importación masiva de empresas desde un archivo CSV (requiere `companies:admin`)
 - **Exportar CSV**: exportar empresas y sus métricas a CSV (requiere `companies:admin`)
 - **Eliminar seleccionadas**: eliminar una o más empresas seleccionadas (requiere `companies:admin`; solo es posible si nada referencia a la empresa)
@@ -67,7 +74,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 | Acción | Nivel requerido |
 |--------|-----------------|
 | Ver la lista y los espacios de trabajo | `companies:reader` |
-| Crear o editar empresas | `companies:manager` |
+| Crear o editar empresas | `companies:member` |
 | Importar, exportar o eliminar | `companies:admin` |
 
 ## El espacio de trabajo de la empresa
@@ -78,7 +85,9 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la e
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
-**Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. Cuando se rechaza un cambio, el motivo aparece bajo el campo que lo causó.
+- **Eliminar**, arriba a la derecha: visible para los administradores de empresas (`companies:admin`). Consulte [Eliminar una empresa](#eliminar-una-empresa)
+
+**Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. La parte superior de la página muestra **Guardando…** mientras guarda y luego **Guardado** durante un momento. Cuando se rechaza un cambio, el campo vuelve a mostrar su valor anterior y el motivo aparece debajo. El mensaje se mantiene hasta que vuelva a escribir en el campo.
 
 ---
 
@@ -119,14 +128,15 @@ La pestaña Detalles gestiona las **métricas anuales**. Use las pestañas de a�
 
 - **Plantilla** (obligatorio): número total de empleados del año, debe ser un número entero de 0 o más
 - **Usuarios IT** (opcional): número de usuarios IT, debe ser un número entero de 0 o más
-- **Facturación (M€)** (opcional): facturación en millones de la moneda base de la empresa, hasta 3 decimales
+- **Facturación** (opcional): facturación en millones de la moneda base de la empresa, hasta 3 decimales. La etiqueta nombra la moneda, por ejemplo **Facturación (M USD)**
 
 **Cómo funciona**:
 
-- Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.»
+- Cada valor se guarda para el año seleccionado al salir del campo (o al pulsar Intro). Un valor no válido muestra un mensaje bajo el campo, por ejemplo «Introduzca un número entero, 0 o más.» El campo vuelve al valor guardado, y el mensaje se mantiene hasta que vuelva a escribir
+- Los números siguen el idioma de KANAP: escriba `12,5` en español, francés o alemán, y `12.5` en inglés
 - Cada año se guarda por separado: al cambiar de año se cargan los valores de ese año
 - Si las cifras de la empresa para el año están **congeladas**, los campos quedan bloqueados y un aviso indica que un administrador de presupuesto puede descongelarlas (**Gestión presupuestaria > Administración > Congelar datos maestros**)
-- Necesita `companies:manager` para editar las métricas
+- Necesita `companies:member` para editar las métricas
 
 ## Plan de cuentas
 
@@ -163,6 +173,14 @@ Utilice el **Fin de validez** para controlar cuándo una empresa deja de estar a
 - **Prefiera desactivar en lugar de eliminar.** Una empresa que aún se usa no se puede eliminar: líneas presupuestarias (como empresa pagadora o en sus asignaciones), contratos, centros de coste, departamentos, usuarios, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo cuya empresa predeterminada es. El mensaje cuenta lo que la usa, por ejemplo "Esta empresa se usa en 2 departamentos y 14 usuarios". Desactívela en su lugar. Sus métricas anuales se eliminan con ella. En la lista, la confirmación nombra las empresas que se conservan así, con lo que las usa, antes de eliminar nada.
 - **Para eliminar una empresa de todos modos**, quite primero lo que la usa. Indique otra empresa en sus usuarios, líneas presupuestarias y sus asignaciones, contratos, centros de coste, las ubicaciones que opera, tareas, aplicaciones, interfaces, proyectos y solicitudes del portafolio, y miembros del equipo. Mueva sus departamentos a otra empresa, o elimínelos al final, cuando nada los use. Después elimine la empresa.
 
+## Eliminar una empresa
+
+Un administrador de empresas (`companies:admin`) puede eliminar una empresa desde su página con **Eliminar**, o varias desde la lista con **Eliminar seleccionadas**.
+
+- KANAP comprueba primero. Cuando algo usa la empresa, el diálogo dice qué, por ejemplo «Esta empresa se usa en 2 departamentos y 14 usuarios. Desactívela en lugar de eliminarla.», y solo ofrece **Cerrar**. Desactive entonces la empresa (consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida))
+- Si no, el diálogo pide confirmación: «Esta acción no se puede deshacer.» **Eliminar** elimina la empresa con sus métricas anuales y vuelve a la lista
+- Una empresa eliminada sale del mosaico **Vistos recientemente** de [Mi panel de control](my-dashboard.md#vistos-recientemente)
+
 ## Métricas anuales
 
 Muchas partes de la aplicación son conscientes del año. Las empresas tienen métricas por año:
@@ -173,7 +191,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 **Dónde es importante**:
 
-- Las asignaciones pueden usar Plantilla, Usuarios IT o Facturación para distribuir costes entre empresas para un año determinado.
+- Las asignaciones pueden usar Plantilla, Usuarios IT o Facturación para distribuir costes entre empresas para un año determinado. Las facturaciones en monedas distintas se convierten primero a la moneda de reporte. Consulte [Asignaciones](budget-lines.md#asignaciones).
 - Los informes utilizan estas métricas para KPI y ratios.
 - Solo las empresas activas para un año se consideran para la asignación e informes de ese año.
 
@@ -184,7 +202,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 ## Importación/exportación CSV
 
-**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo solo con los encabezados, listo para rellenar.
+**Exportar CSV** descarga las empresas que muestra la lista (o, a petición en el diálogo, todas las empresas) con sus métricas. **Importar CSV** vuelve a leer un archivo. El diálogo de importación incluye también **Descargar plantilla**: un archivo con los encabezados y una fila de ejemplo, una empresa ficticia con métricas para el año de la lista. Sustitúyala por sus propias filas.
 
 Las columnas, en este orden. Las columnas de métricas siguen el año seleccionado en la barra de herramientas de la lista: el año anterior, ese año y el siguiente.
 
@@ -193,24 +211,30 @@ Las columnas, en este orden. Las columnas de métricas siguen el año selecciona
 | `name` | Obligatoria. El nombre de la empresa. Las filas se emparejan por este nombre |
 | `country_iso` | Obligatoria. Dos letras |
 | `address1`, `address2` | Líneas de dirección |
-| `postal_code`, `city`, `state` | Datos de dirección |
+| `postal_code`, `state` | Datos de dirección |
+| `city` | Obligatoria. La ciudad |
 | `reg_number`, `vat_number` | Número de registro y número de IVA |
 | `base_currency` | Obligatoria. Tres letras |
 | `status` | `enabled` o `disabled` |
 | `disabled_at` | El fin de validez: una fecha (`2026-12-31`) o una fecha y una hora completas. La exportación escribe solo la fecha. Importada de nuevo, esa fecha conserva el fin de validez guardado |
 | `notes` | Texto libre |
-| `headcount_<año>` | Obligatoria cuando la fila lleva alguna métrica de ese año |
+| `headcount_<año>` | Un número entero. Obligatoria cuando la fila lleva alguna métrica de ese año |
 | `it_users_<año>` | Un número entero |
 | `turnover_<año>` | Hasta 3 decimales, en millones de la moneda base de la empresa |
 
 **Importación**:
 
-- Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones
-- **Emparejamiento**: por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme». Un nombre que aparece dos veces en el archivo se conserva una vez, gana la primera fila
-- **Campos obligatorios**: `name`, `country_iso` y `base_currency`
+- Empiece por la **Verificación previa**. Valida los encabezados, la codificación, los campos obligatorios, los duplicados y las métricas. Si la comprobación es correcta, **Cargar** aplica las inserciones y las actualizaciones. Después, el diálogo cuenta las empresas creadas, actualizadas y sin cambios, por ejemplo «2 creadas, 5 actualizadas, 30 sin cambios»
+- **Emparejamiento**: por el `name` de la empresa, sin distinguir mayúsculas y minúsculas. La grafía guardada se mantiene: una fila `ACME` actualiza `Acme`, y la verificación previa indica «ACME» se ha asociado a «Acme»
+- **Una fila por empresa**: un nombre que aparece dos veces en el archivo, sin distinguir mayúsculas y minúsculas, se rechaza ya en la verificación: «“Acme” ya figura en la fila 4. Deje una sola fila por empresa.»
+- **Campos obligatorios**: `name`, `country_iso`, `city` y `base_currency`. Una ciudad vacía se rechaza ya en la verificación, tanto para una empresa nueva como para una actualización
 - **Estado y fin de validez**: la exportación escribe el estado deducido del fin de validez. Una empresa nueva se activa salvo que la fila indique `disabled`. En una actualización, un `status` vacío y un `disabled_at` vacío conservan los valores guardados. `enabled` con una fecha vacía borra el fin de validez. `disabled` con una fecha vacía conserva una fecha ya pasada y, si no, finaliza la empresa hoy
 - Una fila cuyo estado contradice su fecha se rechaza con un error de fila: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." o "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
-- **Métricas**: si indica métricas de un año, `headcount_<año>` es obligatoria para ese año. `it_users_<año>` y `turnover_<año>` son opcionales
+- **Años leídos**: el diálogo nombra los años que lee, por ejemplo «Indicadores leídos: 2025, 2026, 2027, según el año de la lista. Cada año es opcional.»
+- **Cada año es opcional**: un año es un bloque de tres columnas, `headcount_<año>`, `it_users_<año>` y `turnover_<año>`. Si omite el bloque entero, las métricas guardadas de ese año no cambian. Una columna de un año fuera de los tres años leídos se ignora, y la verificación la lista con las columnas ignoradas
+- **Un año va completo**: un archivo con una o dos columnas de un año sin las demás se rechaza en la línea **Encabezado**, que nombra las columnas que faltan
+- **Métricas**: si una fila lleva alguna métrica de un año, `headcount_<año>` es obligatoria para ese año. `it_users_<año>` y `turnover_<año>` pueden quedar vacías
+- **Años congelados**: una fila con métricas de un año cuyas métricas de empresas están congeladas se rechaza ya en la verificación: «Los indicadores de 2025 están congelados. Un administrador de presupuesto puede descongelarlos.» Omita las columnas de ese año, o descongele antes el año (consulte [Congelar datos maestros](master-data-operations.md))
 
 **Notas**:
 

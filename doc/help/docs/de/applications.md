@@ -65,7 +65,7 @@ Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte
 
 **Berechtigungen**:
 - Anzeigen: `applications:reader`
-- Erstellen / Bearbeiten: `applications:manager` (auch `member` genannt)
+- Erstellen / Bearbeiten: `applications:member`
 - Importieren / Exportieren / Löschen: `applications:admin`
 
 ---
@@ -114,10 +114,10 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - Außer Betrieb genommene Anwendungen sind standardmäßig ausgeblendet; verwenden Sie den **Lebenszyklus**-Filter, um Außer Betrieb einzuschließen.
 
 **Aktionen**:
-- **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:manager`)
+- **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
 - **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
 - **CSV exportieren**: Liste als CSV exportieren (`applications:admin`). Katalogbasierte Spalten (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) werden mit ihren Namen exportiert; der Import akzeptiert einen Namen oder den internen Code.
-- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:manager`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
+- **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
 - **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
 ---
@@ -309,7 +309,7 @@ Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentsche
 
 Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung. Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
 
-**Verknüpfungen hinzufügen und entfernen** (`applications:manager`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
+**Verknüpfungen hinzufügen und entfernen** (`applications:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
 
 **Verwandt**: Vorschläge von Datensätzen, die Sie verknüpfen könnten, jeweils mit dem Grund des Vorschlags:
 
@@ -323,7 +323,7 @@ Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen
 
 **Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen ist für Manager verfügbar.
+**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `applications:member`.
 
 ---
 

@@ -497,7 +497,7 @@ The Allocations tab distributes the spend of a year across your companies and de
 |---|---|
 | **Headcount (default)** | Splits spend proportionally by each company's headcount for the selected year. No manual selection required: percentages are computed automatically from company metrics. This is the standard default. |
 | **IT users** | Splits spend proportionally by each company's IT user count for the selected year. |
-| **Turnover** | Splits spend proportionally by each company's turnover (revenue) for the selected year. |
+| **Turnover** | Splits spend proportionally by each company's turnover (revenue) for the selected year, converted to the reporting currency. |
 | **Manual by company** | You select which companies receive this spend and choose a driver in **Allocate by** (Headcount, IT users, or Turnover) to calculate percentages among the selected companies only. |
 | **Manual by department** | You select specific company/department pairs. Percentages are calculated from each department's headcount. Useful when a line benefits only certain departments (e.g., a CRM used by Sales). |
 | **Manual percentages** | You pick the companies and type each percentage yourself. The percentages must add up to 100%. |
@@ -515,6 +515,12 @@ The Allocations tab distributes the spend of a year across your companies and de
 - For **Manual by company** and **Manual by department**: you pick the companies or departments, and the system calculates percentages from your chosen driver and the current metrics
 - For **Manual percentages**: typing a percentage pins that row, and the remaining rows share what is left. **Split equally** gives every row the same share; **Clear manual pins** releases the pinned rows
 - Percentages reflect live data. If you update a company's headcount, allocations recalculate
+- The **Driver** column shows each company's value for the driver. A turnover shows with the company's base currency, for example **35 M USD**
+
+**Turnover in several currencies**:
+
+- Each company enters its turnover in millions of its base currency. Before the split, KANAP converts every turnover to the reporting currency, at the rates of the budget version of the year: the rates fixed when its default column was frozen, otherwise the current rates of the year. See [Currency Settings](currencies.md)
+- When a currency has no rate yet, its turnovers are counted without conversion and a warning shows above the table, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is counted unconverted until the rate is available." KANAP fetches the missing rate with the next rate refresh, and the split corrects itself
 
 **How to use it**:
 
