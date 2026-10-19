@@ -151,14 +151,17 @@ async function main() {
     const saved = await controller.setManualRate({ currency: 'GBP', year: 2024, rate: 1.2 }, req);
     assert.equal(saved.fiscalYear, 2024);
     assert.equal(saved.rates.GBP, 1.2);
-    assert.equal(saved.frozenVersions, 2);
+    assert.equal(saved.frozenVersions, 0, 'the pin does not rate GBP: the versions read the live set and its manual rate');
 
     const removed = await controller.removeManualRate('2024', 'GBP', req);
-    assert.deepEqual(removed, { ok: true, refreshQueued: true, frozenVersions: 2 });
+    assert.deepEqual(removed, { ok: true, refreshQueued: true, frozenVersions: 0 });
+
+    const pinnedCurrency = await controller.setManualRate({ currency: 'usd', year: 2024, rate: 1.15 }, req);
+    assert.equal(pinnedCurrency.frozenVersions, 2, 'two 2024 versions keep a pin in the current base that rates USD');
 
     const emptyYear = await controller.setManualRate({ currency: 'USD', year: 2026, rate: 1.05 }, req);
     assert.equal(emptyYear.frozenVersions, 0);
-    console.log(`ok - frozen versions are counted for the budget year on ${current}`);
+    console.log(`ok - only the frozen versions the manual rate does not reach are counted, on ${current}`);
   } finally {
     if (runner.isTransactionActive) await runner.rollbackTransaction();
     await runner.release();

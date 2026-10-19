@@ -149,7 +149,7 @@ export class CurrencyController {
       req.user?.sub ?? null,
       manager,
     );
-    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, set.fiscal_year, manager);
+    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, set.fiscal_year, String(body?.currency ?? ''), manager);
     return { ...this.presentSet(set), frozenVersions };
   }
 
@@ -167,7 +167,7 @@ export class CurrencyController {
       req.user?.sub ?? null,
       manager,
     );
-    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, year, manager);
+    const frozenVersions = await this.manualRates.countFrozenVersions(tenantId, year, currency, manager);
     return { ...removed, frozenVersions };
   }
 

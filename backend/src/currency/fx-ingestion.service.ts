@@ -587,6 +587,19 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
       if (code.length === 3) currencies.add(code);
     });
 
+    // A version pinned to a set of an older base converts through the live rate of that base.
+    const pinnedBases = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(s.base_currency)) AS currency
+         FROM spend_versions v
+         JOIN currency_rate_sets s ON s.tenant_id = v.tenant_id AND s.id = v.fx_rate_set_id
+        WHERE v.tenant_id = $1`,
+      [tenantId],
+    );
+    pinnedBases.forEach((row: any) => {
+      const code = typeof row.currency === 'string' ? row.currency : '';
+      if (code.length === 3) currencies.add(code);
+    });
+
     await this.currencySettings.ensureCurrencyRecords(currencies, { manager });
 
     return {

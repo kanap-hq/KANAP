@@ -5,7 +5,7 @@ import { centsNumber, jsRound } from '../common/list-engine/sql-fragments';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { BUDGET_YEAR_REACH, budgetListAmountsByIds, type FxMissingPair } from '../spend/budget-list/budget-list.service';
 import { LOCAL_AMOUNT_FIELD_PREFIX, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend/spend-summary.builder';
-import { contractCommitmentSql } from './contract-terms';
+import { contractCommitmentSql, contractCurrencySql } from './contract-terms';
 
 /**
  * A contract against its budget lines (lot CB), for a year and a budget column the user picks.
@@ -85,9 +85,7 @@ export function parseContractBudgetSelection(
 export { contractBudgetYears } from './contract-budget-years';
 
 /** The currency a contract converts from: its code in upper case, EUR when blank (as the list's footer). */
-export function contractCurrencySql(alias: string): string {
-  return `COALESCE(NULLIF(UPPER(TRIM(${alias}.currency)), ''), 'EUR')`;
-}
+export { contractCurrencySql };
 
 export type ContractFxRates = {
   reportingCurrency: string;

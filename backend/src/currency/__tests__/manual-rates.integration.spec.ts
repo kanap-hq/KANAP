@@ -8,6 +8,7 @@ import { Tenant } from '../../tenants/tenant.entity';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { CurrencySettingsService } from '../currency-settings.service';
 import { FxRateService } from '../fx-rate.service';
+import { FxIngestionService } from '../fx-ingestion.service';
 import {
   MANUAL_RATE_NOT_FOUND_CODE,
   MANUAL_RATE_REPORTING_CODE,
@@ -177,6 +178,12 @@ async function main() {
               ($1, 'Home licence', $2, $3, '2024-01-01', 'EUR')`,
       [tenantA, eurCompany, supplier.id],
     );
+    // Ended in 2015: no year the contract pages read.
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, auto_renewal, currency)
+       VALUES ($1, 'Ended licence', $2, $3, '2015-01-01', 12, false, 'NOK')`,
+      [tenantA, eurCompany, supplier.id],
+    );
 
     await setTenant(runner, tenantB);
     await insertLine(runner, tenantB, { nature: 'opex', currency: 'JPY', year: 2019, itemNumber: 1 });
@@ -209,10 +216,9 @@ async function main() {
     };
     const manual = new ManualRatesService(settings, fxRates, ingestion as any, audit);
 
-    // The contract pages also read the two years after the current one, with or without a version.
-    const contractYears = Array.from(new Set([
-      2022, 2023, 2024, CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2,
-    ])).sort((a, b) => a - b);
+    // Only the years the contract pages read (the current one and the two after; the year
+    // before has no budget line), and among them only those the contract runs in.
+    const contractYears = [CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2];
     const expected = sortPairs([
       { currency: 'CHF', year: 2020 },
       { currency: 'CHF', year: 2021 },
@@ -233,7 +239,48 @@ async function main() {
     assert.ok(!missing.some((pair) => pair.currency === 'JPY' || pair.currency === 'NOK'), 'another tenant is excluded');
     assert.ok(!missing.some((pair) => pair.currency === 'MXN'), 'a company year without turnover is excluded');
     assert.deepEqual(reported[0], Array.from(new Set(expected.map((pair) => pair.year))).sort((a, b) => a - b));
+    assert.ok(!missing.some((pair) => pair.currency === 'SEK' && pair.year < CURRENT_YEAR), 'a contract has no pair for an older version year');
     console.log('ok - missing pairs come from budget lines, companies and contracts');
+
+    // A blank contract currency converts as EUR: with a USD reporting currency it needs EUR.
+    await runner.query(
+      `UPDATE tenants SET metadata = '{"reporting_currency":"USD"}'::jsonb WHERE id = $1`,
+      [tenantB],
+    );
+    await setTenant(runner, tenantB);
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, currency)
+       VALUES ($1, 'Blank licence', $2, $3, '2024-01-01', '   ')`,
+      [tenantB, otherCompany, otherSupplier.id],
+    );
+    // Its 2019 version stays pinned to a set of an older base (XPF): that base is in use.
+    const [oldBaseSet] = await runner.query(
+      `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates, source, rate_basis)
+       VALUES ($1, 2019, 'XPF', '{"XPF":1,"JPY":1.2}'::jsonb, 'manual', 'manual') RETURNING id`,
+      [tenantB],
+    );
+    await runner.query(
+      `UPDATE spend_versions SET fx_rate_set_id = $2 WHERE tenant_id = $1 AND budget_year = 2019`,
+      [tenantB, oldBaseSet.id],
+    );
+    const missingB = await manual.listMissingPairs(tenantB, runner.manager, { report: false });
+    assert.deepEqual(missingB, sortPairs([
+      { currency: 'JPY', year: 2019 },
+      { currency: 'XPF', year: 2019 },
+      ...contractYears.flatMap((year) => [{ currency: 'EUR', year }, { currency: 'NOK', year }]),
+    ]));
+    const ingestionB = new FxIngestionService(
+      dataSource.getRepository(CurrencyRateSet),
+      dataSource.getRepository(Tenant),
+      settings,
+      fxRates,
+      {} as any,
+    );
+    const contextB = await (ingestionB as any).buildTenantContext(tenantB, runner.manager);
+    assert.ok(contextB.currencies.includes('XPF'), 'the refresh fetches the old base of a pinned set');
+    await setTenant(runner, tenantA);
+    console.log('ok - a contract with a blank currency needs the EUR rate of each year it runs in');
+    console.log('ok - the old base of a pinned set is listed as missing and fetched');
 
     await assert.rejects(
       () => manual.setManualRate(tenantA, { currency: 'EUR', year: 2024, rate: 1.2 }, userId, runner.manager),

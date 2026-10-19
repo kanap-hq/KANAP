@@ -2,6 +2,7 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
 import { contractBudgetYears } from '../contracts/contract-budget-years';
+import { contractCurrencySql, contractRunsInYearSql } from '../contracts/contract-terms';
 import { CurrencyRateSet } from './currency-rate-set.entity';
 import { CurrencySettingsService } from './currency-settings.service';
 import { FxIngestionService } from './fx-ingestion.service';
@@ -338,17 +339,32 @@ export class ManualRatesService {
   }
 
   /**
-   * Versions of this budget year that keep a pinned rate set. A manual rate
-   * writes a new live set and does not reach them.
+   * Versions of this budget year that a manual rate of `currency` does not
+   * reach: their pinned set is in the current reporting currency and rates the
+   * currency itself. A pin in another base reads the live set for its old base,
+   * and a pin without the currency falls back to the live set: both follow the
+   * manual rate.
    */
-  async countFrozenVersions(tenantId: string, year: number, manager: EntityManager): Promise<number> {
+  async countFrozenVersions(tenantId: string, year: number, currency: string, manager: EntityManager): Promise<number> {
+    await this.setTenant(manager, tenantId);
+    const settings = await this.settings.getSettings(tenantId, { manager });
     const rows = await manager.query(
       `SELECT COUNT(*)::int AS n
-         FROM spend_versions
-        WHERE tenant_id = $1
-          AND budget_year = $2
-          AND fx_rate_set_id IS NOT NULL`,
-      [tenantId, year],
+         FROM spend_versions v
+         JOIN currency_rate_sets s
+           ON s.tenant_id = v.tenant_id
+          AND s.id = v.fx_rate_set_id
+        WHERE v.tenant_id = $1
+          AND v.budget_year = $2
+          AND UPPER(TRIM(s.base_currency)) = $3
+          AND EXISTS (
+            SELECT 1
+              FROM jsonb_each(CASE WHEN jsonb_typeof(s.rates) = 'object' THEN s.rates ELSE '{}'::jsonb END) r
+             WHERE UPPER(r.key) = $4
+               AND jsonb_typeof(r.value) = 'number'
+               AND (r.value #>> '{}')::numeric > 0
+          )`,
+      [tenantId, year, settings.reportingCurrency.trim().toUpperCase(), String(currency ?? '').trim().toUpperCase()],
     );
     const raw = Array.isArray(rows) ? (rows[0] as { n?: unknown } | undefined)?.n : undefined;
     const count = typeof raw === 'number' ? raw : Number(raw);
@@ -572,27 +588,29 @@ export class ManualRatesService {
           AND m.turnover IS NOT NULL`,
       [tenantId],
     );
-    // Version years stay, and the years the contract pages read are added
-    // (`contractBudgetYears`: current, the two after, and the previous one when
-    // the budget holds lines for it). A contract then has a pair for a year
-    // that has no budget version.
+    // The years the contract pages read (`contractBudgetYears`), kept to those
+    // each contract runs in. A blank currency converts as EUR (`contractCurrencySql`).
     const contractYears = await contractBudgetYears(manager, tenantId, currentYear);
     const contractRows = await manager.query(
-      `SELECT DISTINCT UPPER(TRIM(c.currency)) AS currency, y.year
+      `SELECT DISTINCT ${contractCurrencySql('c')} AS currency, y.year
          FROM contracts c
-         CROSS JOIN (
-           SELECT DISTINCT v.budget_year AS year
-             FROM spend_versions v
-            WHERE v.tenant_id = $1
-              AND v.budget_year IS NOT NULL
-           UNION
-           SELECT $2::int AS year
-           UNION
-           SELECT unnest($3::int[]) AS year
-         ) y
+         CROSS JOIN unnest($2::int[]) AS y(year)
         WHERE c.tenant_id = $1
-          AND c.currency IS NOT NULL`,
-      [tenantId, currentYear, contractYears],
+          AND ${contractRunsInYearSql('c', 'y.year')}`,
+      [tenantId, contractYears],
+    );
+    // A version pinned to a set of another base converts through the live rate
+    // of that old base: the old base is in use for the version's year.
+    const pinnedBaseRows = await manager.query(
+      `SELECT DISTINCT UPPER(TRIM(s.base_currency)) AS currency, v.budget_year AS year
+         FROM spend_versions v
+         JOIN currency_rate_sets s
+           ON s.tenant_id = v.tenant_id
+          AND s.id = v.fx_rate_set_id
+        WHERE v.tenant_id = $1
+          AND v.budget_year IS NOT NULL
+          AND UPPER(TRIM(s.base_currency)) <> $2`,
+      [tenantId, reporting],
     );
 
     const seen = new Set<string>();
@@ -601,6 +619,7 @@ export class ManualRatesService {
       ...readPairs(budgetRows),
       ...readPairs(companyRows),
       ...readPairs(contractRows),
+      ...readPairs(pinnedBaseRows),
     ]) {
       const key = `${pair.year}:${pair.currency}`;
       if (seen.has(key)) continue;

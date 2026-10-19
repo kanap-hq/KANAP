@@ -472,6 +472,32 @@ export function contractCommitment(input: ContractCommitmentInput, year: number)
 }
 
 /**
+ * The last day of the contract row `alias` as a SQL date, null when it runs on (renewal, or an
+ * end of validity alone): the end of its first term, or its end of validity when earlier. LEAST
+ * and GREATEST skip a null: the terms that run on end at the end of validity, or never.
+ */
+function contractEndSql(a: string): string {
+  return `LEAST((${a}.disabled_at AT TIME ZONE 'UTC')::date,
+                         CASE WHEN COALESCE(${a}.duration_months, 0) > 0 AND (COALESCE(${a}.auto_renewal, false) OR ${a}.disabled_at IS NOT NULL) THEN NULL
+                              ELSE (${a}.start_date + make_interval(months => GREATEST(COALESCE(${a}.duration_months, 0), 0)))::date - 1 END)`;
+}
+
+/**
+ * Whether the contract row `alias` runs on at least one day of the integer SQL expression `year`:
+ * the days `contractCommitmentSql` spreads the yearly amount over. Same trust rules.
+ */
+export function contractRunsInYearSql(alias: string, year: string): string {
+  if (!/^[A-Za-z_][A-Za-z0-9_]*$/.test(alias)) throw new Error(`Invalid table alias: ${alias}`);
+  return `((${alias}.start_date IS NULL OR ${alias}.start_date <= make_date((${year})::int, 12, 31))
+          AND COALESCE(${contractEndSql(alias)} >= make_date((${year})::int, 1, 1), true))`;
+}
+
+/** The currency of the contract row `alias` as its amounts convert: blank counts as EUR. */
+export function contractCurrencySql(alias: string): string {
+  return `COALESCE(NULLIF(UPPER(TRIM(${alias}.currency)), ''), 'EUR')`;
+}
+
+/**
  * `contractCommitmentCents` in SQL, for the contract row `alias` (any row with `start_date`,
  * `duration_months`, `auto_renewal`, `disabled_at` and `yearly_amount_at_signature`) and the
  * integer SQL expression `year`: a scalar subquery giving the cents as an integer `numeric`.
@@ -484,9 +510,7 @@ export function contractCommitmentSql(alias: string, year: string): string {
   // LEAST and GREATEST skip a null: the terms that run on (renewal, or an end of validity) end at the end of validity, or never.
   return `(SELECT ${divRoundHalfAway('round(cm_b.amount * 100) * cm_u.units', String(YEAR_SHARE_UNITS))}
       FROM (SELECT ${a}.start_date AS s,
-                   LEAST((${a}.disabled_at AT TIME ZONE 'UTC')::date,
-                         CASE WHEN COALESCE(${a}.duration_months, 0) > 0 AND (COALESCE(${a}.auto_renewal, false) OR ${a}.disabled_at IS NOT NULL) THEN NULL
-                              ELSE (${a}.start_date + make_interval(months => GREATEST(COALESCE(${a}.duration_months, 0), 0)))::date - 1 END) AS e,
+                   ${contractEndSql(a)} AS e,
                    COALESCE(${a}.yearly_amount_at_signature, 0)::numeric AS amount,
                    (${year})::int AS yr) cm_b
       CROSS JOIN LATERAL (
