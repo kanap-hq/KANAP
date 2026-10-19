@@ -6,15 +6,17 @@ import { capexItemsRegistry } from '../query/registries/capex-items.registry';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
 import { assert, inRolledBackTransaction, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
 import { seedBudgetLines } from '../../spend/__tests__/budget-lines.fixtures';
+import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-deps';
 
 runSpecs('capex-line-description.integration.spec', [['AI CAPEX list, filters, detail and search read the native description', async () => {
   await inRolledBackTransaction(async (runner) => {
     const world = await seedBudgetLines(runner);
     const capex = world.lines[1];
     const service = itemService('capex');
-    const services = Array.from({ length: 23 }, () => ({}));
+    const services = Array.from({ length: 24 }, () => ({}));
     services[17] = service;
     services[6] = { listContractsForCapexItem: async () => ({ items: [] }) };
+    services[23] = realAllocationCalculator();
     const executor = new (AiQueryExecutor as any)(...services) as AiQueryExecutor;
     const context = { tenantId: world.tenantId, userId: randomUUID(), manager: runner.manager, surface: 'chat', isPlatformHost: false, authMethod: 'jwt' } as any;
     assert.equal(capexItemsRegistry.fields.description.grid, 'description');

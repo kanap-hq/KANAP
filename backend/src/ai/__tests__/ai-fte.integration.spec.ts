@@ -20,6 +20,7 @@ import {
   TABLES,
 } from '../../spend/__tests__/round-inputs.fixtures';
 import { itemService } from '../../spend/__tests__/cost-center.fixtures';
+import { realAllocationCalculator } from '../../spend/__tests__/oracle/oracle-deps';
 
 // FTE in the AI layer, on OPEX and CAPEX, against the database:
 // - both registries list 25 FTE fields, `<slot>_<column>_fte`, reading the
@@ -48,11 +49,12 @@ function context(runner: QueryRunner, tenantId: string): AiExecutionContextWithM
 
 const noContracts = { listContractsForSpendItem: async () => ({ items: [] }), listContractsForCapexItem: async () => ({ items: [] }) };
 
-// Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17.
+// Constructor positions (both executors): spendItems 5, contracts 6, capexItems 17; the query executor's allocation calculator 23.
 function queryExecutor(kind: Kind): AiQueryExecutor {
-  const args: any[] = Array.from({ length: 23 }, () => ({}));
+  const args: any[] = Array.from({ length: 24 }, () => ({}));
   args[kind === 'opex' ? 5 : 17] = itemService(kind);
   args[6] = noContracts;
+  args[23] = realAllocationCalculator();
   return new (AiQueryExecutor as any)(...args);
 }
 
