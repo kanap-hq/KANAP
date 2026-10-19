@@ -207,6 +207,25 @@ async function testSummary() {
   });
 }
 
+async function testForests() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-forest');
+    const domains = [
+      { code: 'child', label: 'Child', dns_suffix: 'child.corp.example', forest: 'Corp.Example' },
+      { code: 'corp', label: 'Corp', dns_suffix: 'corp.example', forest: ' corp.example ' },
+      { code: 'other', label: 'Other', dns_suffix: 'other.example', forest: 'other.example' },
+      { code: 'solo', label: 'Solo', dns_suffix: 'solo.example', forest: '  ' },
+    ];
+    const svc = service(new Map([[a, { adminZones: ZONES, domains, technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }]]));
+    const { forests } = await svc.directories({ manager: runner.manager, tenantId: a });
+    assert.deepEqual(
+      forests.map((group) => [group.forest, group.domains.map((domain) => domain.code)]),
+      [['Corp.Example', ['child', 'corp']], ['other.example', ['other']], [null, ['solo']]],
+      'one forest whatever the case, named as its first domain spells it; a blank forest is none',
+    );
+  });
+}
+
 async function testUnknownZoneAndEmptyCatalog() {
   await inRolledBackTransaction(async (runner) => {
     const a = await seedTenant(runner, 'adm-c');
@@ -904,6 +923,7 @@ async function testRoutes() {
 
 void runSpecs('Administration view', [
   ['summary counts, directories and tenant isolation', testSummary],
+  ['forests grouped without case', testForests],
   ['a zone code the catalog no longer has, an empty catalog', testUnknownZoneAndEmptyCatalog],
   ['each control point, with one case that stays out', testControls],
   ['the asset page: order, filters, caps', testAssetsPage],

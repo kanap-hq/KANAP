@@ -528,16 +528,17 @@ export class AdministrationViewService {
     const ctx = await this.context(opts);
     const services = await this.directoryRows(opts);
     const domains = await this.domains(opts, ctx.domains);
-    const groups = new Map<string | null, AdministrationDomain[]>();
+    // A forest is a DNS name: grouped without case, under the spelling of its first domain.
+    const groups = new Map<string | null, AdministrationDirectories['forests'][number]>();
     for (const domain of domains) {
-      const forest = domain.forest && domain.forest.trim() ? domain.forest : null;
-      const list = groups.get(forest) ?? [];
-      list.push(domain);
-      groups.set(forest, list);
+      const forest = domain.forest && domain.forest.trim() ? domain.forest.trim() : null;
+      const key = forest === null ? null : forest.toLowerCase();
+      const group = groups.get(key) ?? { forest, domains: [] };
+      group.domains.push(domain);
+      groups.set(key, group);
     }
-    const forests = [...groups.entries()]
-      .sort((a, b) => (a[0] === null ? 1 : b[0] === null ? -1 : a[0].localeCompare(b[0], undefined, { sensitivity: 'base' })))
-      .map(([forest, items]) => ({ forest, domains: items }));
+    const forests = [...groups.values()]
+      .sort((a, b) => (a.forest === null ? 1 : b.forest === null ? -1 : a.forest.localeCompare(b.forest, undefined, { sensitivity: 'base' })));
     return {
       services: services.map((row) => ({
         id: row.id,
