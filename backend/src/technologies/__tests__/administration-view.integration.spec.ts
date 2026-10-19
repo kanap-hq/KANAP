@@ -155,6 +155,24 @@ async function testSummary() {
     ]);
     assert.equal(countOf(view, 'assets_without_zone'), view.without_zone.asset_count);
 
+    const directories = await svc.directories(opts);
+    assert.deepEqual(directories.services.map((item) => [item.reference, item.name, item.zone, item.servers]), [['TEC-1', 'Active Directory', 'tier_0', 2]]);
+    assert.equal('forest' in directories.services[0], false, 'a directory service has no forest');
+    assert.deepEqual(directories.forests.map((group) => group.forest), ['corp.example.com', null]);
+    const [corp, lab, partner] = [directories.forests[0].domains[0], ...directories.forests[1].domains];
+    assert.deepEqual(directories.forests[1].domains.map((domain) => domain.code), ['lab', 'partner']);
+    assert.deepEqual(
+      { forest: corp.forest, trusts: corp.trusts, declared: corp.declared_by, accounts: corp.account_count, machines: corp.machine_count, dcs: corp.domain_controllers.map((dc) => dc.name) },
+      { forest: 'corp.example.com', trusts: [{ domain: 'lab', label: 'Lab', direction: 'two_way' }], declared: [], accounts: 1200, machines: 300, dcs: ['dc1', 'dc2'] },
+      'role on an instance in service or directory technology, each server once; disabled instance, retired server and other tenant left out',
+    );
+    assert.deepEqual({ forest: lab.forest, accounts: lab.account_count, dcs: lab.domain_controllers }, { forest: null, accounts: null, dcs: [] });
+    assert.deepEqual(lab.declared_by, [
+      { domain: 'corp', label: 'Corp', direction: 'two_way' },
+      { domain: 'partner', label: 'Partner', direction: 'incoming' },
+    ], 'trusts declared on Corp and Partner show on Lab, read only, seen from Lab (Partner trusts Lab: incoming)');
+    assert.equal(partner.code, 'partner');
+
     const listed = await svc.assets({ limit: 50 }, opts);
     assert.deepEqual(listed.items.map((item) => item.name), ['app1', 'dc-disabled', 'dc1', 'dc2', 'fw1', 'host1', 'lab-old', 'vm1']);
     assert.equal(listed.items.some((item) => item.name === 'vm-retired' || item.name === 'fw-old' || item.name === 'dc-old'), false);
@@ -163,15 +181,18 @@ async function testSummary() {
     assert.deepEqual(named(listed.items, 'fw1').findings, []);
     assert.equal(named(listed.items, 'fw1').zone, 'tier_0');
 
-    const ids = JSON.stringify({ view, listed });
+    const ids = JSON.stringify({ view, directories, listed });
     assert.ok(!ids.includes(s.otherDc) && !ids.includes('Other AD'), 'nothing of the other tenant');
 
     await setTenant(runner, s.b);
     const otherOpts = { manager: runner.manager, tenantId: s.b };
     const other = await svc.summary(otherOpts);
+    const otherDirectories = await svc.directories(otherOpts);
     assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.directory_services.map((item) => item.name), ['Other AD']);
     assert.deepEqual(other.zones.find((zone) => zone.code === 'tier_0')?.asset_counts, []);
     assert.equal(other.without_zone.asset_count, 1);
+    assert.deepEqual(otherDirectories.services.map((item) => [item.name, item.servers]), [['Other AD', 1]]);
+    assert.deepEqual(otherDirectories.forests[0].domains[0].domain_controllers.map((dc) => dc.name), ['other-dc']);
     assert.deepEqual(other.controls.map((control) => control.count), [1, 1, 1, 0, 0]);
     assert.equal(JSON.stringify(other).includes('dc1'), false);
     assert.equal(other.zones.some((zone) => zone.unknown), false);
@@ -207,6 +228,9 @@ async function testUnknownZoneAndEmptyCatalog() {
       ['trust_raised', null],
       ['applications_on_most_sensitive', null],
     ]);
+    const directories = await svc.directories(opts);
+    assert.deepEqual(directories.services.map((item) => [item.name, item.zone, item.servers]), [['Stray', 'gone', 0]]);
+    assert.deepEqual(directories.forests, []);
     const outside = await svc.assets({ filters: setFilter('control', ['domain_controllers_outside']) }, opts);
     assert.equal(outside.total, 0, 'a control that does not apply matches nothing');
     const bare = await svc.assets({ filters: setFilter('control', ['assets_without_zone']) }, opts);
