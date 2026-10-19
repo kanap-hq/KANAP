@@ -4,7 +4,7 @@ import { FxIngestionService } from '../fx-ingestion.service';
 /**
  * A refresh keeps a rate it already knows when this fetch does not return one,
  * and the source that produced it. A fresh real value wins over a stored one;
- * an estimate does not.
+ * an estimate does not. A stored manual value wins over a fresh real one.
  */
 
 function service(): FxIngestionService {
@@ -121,6 +121,31 @@ async function testFreshRealReplacesStoredEstimate() {
   assert.equal(saved.length, 1);
   assert.equal(set.rates.GBP, Number((0.9 / 0.75).toFixed(6)));
   assert.equal(set.rate_sources.GBP, 'world-bank-annual', 'a published value replaces the estimate');
+}
+
+async function testManualRateBeatsAFreshRealValue() {
+  const existing = {
+    id: 'old',
+    tenant_id: 'tenant-1',
+    fiscal_year: 2024,
+    base_currency: 'EUR',
+    rates: { EUR: 1, GBP: 1.2, USD: 0.92 },
+    rate_sources: { EUR: 'identity', GBP: 'manual', USD: 'world-bank-annual' },
+    source: 'world-bank-annual',
+  };
+  const { saved, manager } = harness(existing);
+  const fresh = snapshot({
+    quotes: { EUR: 0.9, GBP: 0.8, USD: 1 },
+    quoteSources: { EUR: 'world-bank-annual', GBP: 'world-bank-annual', USD: 'identity' },
+    missingCurrencies: [],
+  });
+  const set = await (service() as any).saveRateSet(context, fresh, manager);
+  assert.equal(saved.length, 1);
+  assert.equal(set.rates.GBP, 1.2, 'a stored manual rate beats a fresh real value');
+  assert.equal(set.rate_sources.GBP, 'manual');
+  const usd = Number((0.9 / 1).toFixed(6));
+  assert.equal(set.rates.USD, usd, 'another currency still takes the fresh real value');
+  assert.equal(set.rate_sources.USD, 'world-bank-annual');
 }
 
 async function testUnchangedMergedSetIsNotInserted() {
@@ -431,6 +456,7 @@ async function testStaleDatasetReloadsOnceWhenAPastYearIsMissing() {
   await testFailedFetchKeepsPreviousValueAndSource();
   await testEstimateDoesNotReplaceARealRate();
   await testFreshRealReplacesStoredEstimate();
+  await testManualRateBeatsAFreshRealValue();
   await testUnchangedMergedSetIsNotInserted();
   await testOldSetWithoutProvenanceLendsItsSource();
   await testPastYearEstimateChain();
