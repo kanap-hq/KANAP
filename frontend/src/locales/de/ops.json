@@ -1242,7 +1242,12 @@
         "opex": "OPEX-Zeile",
         "capex": "CAPEX-Zeile"
       }
-    }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "Noch keine Wechselkurse von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in diesen Währungen wird ohne Umrechnung gezählt, bis die Kurse verfügbar sind.",
+      "turnoverFxMissing_one": "Noch kein Wechselkurs von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist."
+    },
+    "turnoverMillions": "{{value}} Mio. {{currency}}"
   },
   "fields": {
     "description": "Beschreibung",

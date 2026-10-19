@@ -12,6 +12,7 @@ import { ACTIVE_TASK_STATUSES } from '../tasks/task.entity';
 import { centsToNumber, formatCents, toCents } from '../common/amount';
 import { StatusState } from '../common/status';
 import { formatAllocationMethodLabel } from './allocation-utils';
+import { TurnoverFxMissingWarning, describeAllocationWarning } from './allocation-distribution';
 import { costCenterLabel, loadCostCenterTree } from '../cost-centers/cost-center-tree.util';
 import { analyticsFieldKey } from '../analytics/analytics-axes.util';
 import { Decimal } from '../common/decimal';
@@ -206,7 +207,12 @@ export const SUMMARY_SCOPES: { [S in BudgetNature]: SummaryScopeConfig<S> } & Re
 assertScopeNatures('SUMMARY_SCOPES', SUMMARY_SCOPES, (scope) => scope.itemTable);
 
 type AllocationShareLike = { company_id: string | null; department_id: string | null; allocation_pct: number };
-type AllocationLike = { resolvedMethod?: string | null; shares?: AllocationShareLike[]; error?: string | null };
+type AllocationLike = {
+  resolvedMethod?: string | null;
+  shares?: AllocationShareLike[];
+  error?: string | null;
+  warning?: TurnoverFxMissingWarning | null;
+};
 
 export interface SummaryDeps {
   allocationCalculator: {
@@ -1014,7 +1020,8 @@ export async function buildBudgetSummaryRows(
       allocation_method_label: labelsFromList
         ? labelsFromList.get(item.id) ?? ''
         : formatAllocationMethodLabel(allocation?.resolvedMethod ?? current?.allocation_method ?? null),
-      allocation_warning: allocation?.error ?? null,
+      // A text field (read by the AI): the turnover warning in English.
+      allocation_warning: allocation?.error ?? (allocation?.warning ? describeAllocationWarning(allocation.warning) : null),
       versions,
       ...fte,
     };

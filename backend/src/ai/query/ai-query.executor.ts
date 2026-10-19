@@ -23,6 +23,9 @@ import { PortfolioProjectsService } from '../../portfolio/services';
 import { CapexItemsService, SpendItemsService } from '../../spend/spend-items.service';
 import { presentChildren } from '../../spend/budget-line-presentation';
 import { TasksService } from '../../spend/tasks.service';
+import { AllocationCalculatorService } from '../../spend/allocation-calculator.service';
+import { describeAllocationWarning } from '../../spend/allocation-distribution';
+import type { SpendVersion } from '../../spend/spend-version.entity';
 import { SuppliersService } from '../../suppliers/suppliers.service';
 import { UsersService } from '../../users/users.service';
 import {
@@ -393,6 +396,8 @@ export class AiQueryExecutor {
     private readonly connections: ConnectionsService,
     private readonly incidents: IncidentsService,
     private readonly incidentRecords: IncidentRecordService,
+    /** Each version's allocation as the Allocations tab computes it (`loadFinancialVersions`). */
+    private readonly allocationCalculator: AllocationCalculatorService,
   ) {}
 
   private async normalizePersonFilters(
@@ -1846,7 +1851,6 @@ export class AiQueryExecutor {
     params: {
       versionTable: 'spend_versions';
       amountTable: 'spend_amounts';
-      allocationTable: 'spend_allocations';
       itemColumn: 'spend_item_id';
       itemId: string;
     },
@@ -1874,28 +1878,55 @@ export class AiQueryExecutor {
       `,
       [context.tenantId, versionIds],
     );
-    const allocations = await context.manager.query(
-      `
-      SELECT a.*,
-             c.name AS company_name,
-             d.name AS department_name
-      FROM ${params.allocationTable} a
-      LEFT JOIN companies c ON c.id = a.company_id AND c.tenant_id = a.tenant_id
-      LEFT JOIN departments d ON d.id = a.department_id AND d.tenant_id = a.tenant_id
-      WHERE a.tenant_id = $1
-        AND a.version_id = ANY($2::uuid[])
-      ORDER BY c.name ASC NULLS LAST, d.name ASC NULLS LAST, a.created_at ASC
-      `,
-      [context.tenantId, versionIds],
-    );
+    // The allocation as the Allocations tab shows it, not the stored percentages: those of an
+    // automatic split are a copy from their last save (a split by turnover saved before the
+    // turnovers were converted into the reporting currency is stale).
+    const computed = await this.allocationCalculator.computeForVersions(versions as SpendVersion[], {
+      manager: context.manager,
+      tenantId: context.tenantId,
+      suppressErrors: true,
+    });
+    const companyIds = new Set<string>();
+    const departmentIds = new Set<string>();
+    computed.forEach((entry) => entry.shares.forEach((share) => {
+      if (share.company_id) companyIds.add(share.company_id);
+      if (share.department_id) departmentIds.add(share.department_id);
+    }));
+    const names = async (table: 'companies' | 'departments', ids: Set<string>) => {
+      if (ids.size === 0) return new Map<string, string>();
+      const rows: Array<{ id: string; name: string }> = await context.manager.query(
+        `SELECT id, name FROM ${table} WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+        [context.tenantId, Array.from(ids)],
+      );
+      return new Map(rows.map((row) => [row.id, row.name] as const));
+    };
+    const companyNames = await names('companies', companyIds);
+    const departmentNames = await names('departments', departmentIds);
 
     const amountsByVersion = this.groupRowsByKey(amounts, 'version_id');
-    const allocationsByVersion = this.groupRowsByKey(allocations, 'version_id');
-    return versions.map((version: any) => ({
-      ...version,
-      amounts: amountsByVersion[version.id] ?? [],
-      allocations: allocationsByVersion[version.id] ?? [],
-    }));
+    return versions.map((version: any) => {
+      const allocation = computed.get(version.id);
+      const allocations = (allocation?.shares ?? [])
+        .map((share) => ({
+          id: share.allocation_id ?? null,
+          version_id: version.id,
+          company_id: share.company_id,
+          company_name: companyNames.get(share.company_id) ?? null,
+          department_id: share.department_id ?? null,
+          department_name: share.department_id ? departmentNames.get(share.department_id) ?? null : null,
+          allocation_pct: share.allocation_pct,
+          source: share.source,
+        }))
+        .sort((a, b) => String(a.company_name ?? '').localeCompare(String(b.company_name ?? ''))
+          || String(a.department_name ?? '').localeCompare(String(b.department_name ?? '')));
+      return {
+        ...version,
+        amounts: amountsByVersion[version.id] ?? [],
+        resolved_allocation_method: allocation?.resolvedMethod ?? null,
+        allocation_warning: allocation?.error ?? (allocation?.warning ? describeAllocationWarning(allocation.warning) : null),
+        allocations,
+      };
+    });
   }
 
   private async loadLinkedContacts(
@@ -1957,7 +1988,6 @@ export class AiQueryExecutor {
       this.loadFinancialVersions(context, {
         versionTable: 'spend_versions',
         amountTable: 'spend_amounts',
-        allocationTable: 'spend_allocations',
         itemColumn: 'spend_item_id',
         itemId: spendItemId,
       }),
@@ -2008,7 +2038,6 @@ export class AiQueryExecutor {
       this.loadFinancialVersions(context, {
         versionTable: 'spend_versions',
         amountTable: 'spend_amounts',
-        allocationTable: 'spend_allocations',
         itemColumn: 'spend_item_id',
         itemId: capexItemId,
       }),

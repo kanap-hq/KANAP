@@ -1243,7 +1243,12 @@
         "opex": "ligne OPEX",
         "capex": "ligne CAPEX"
       }
-    }
+    },
+    "allocationWarnings": {
+      "turnoverFxMissing": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans ces devises est compté sans conversion jusqu'à ce que les taux soient disponibles.",
+      "turnoverFxMissing_one": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible."
+    },
+    "turnoverMillions": "{{value}} M {{currency}}"
   },
   "fields": {
     "description": "Description",
