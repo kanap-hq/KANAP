@@ -270,6 +270,7 @@ Public config: `GET /config/public` returns `features.sampleData` (`true` in mul
     - `turnover_year: number` (0 if missing)
     - `metrics_frozen: boolean`
     - `metrics_frozen` reflects the `freeze-states` companies scope for that year
+- GET `/companies/totals?year=YYYY` uses the same filters as the list. `headcount` and `it_users` sum every company. `turnover` sums the turnovers converted into the reporting currency (`turnover_currency`) at the year's rates (the rate set the year is frozen at, else the live rates). A currency without a rate is left out of `turnover` and named in `turnover_fx_missing: [{ currency, year, companies }]`, where `companies` is how many companies of that currency had a turnover. Each row of the list stays in the company's own currency.
 - GET `/companies/ids?year=YYYY&sort=headcount_year:DESC&q&filters`
   - Returns `{ ids: string[], total: number }` ordered according to the current list query (supports the Companies workspace prev/next navigation).
 - POST `/companies` → create
@@ -1671,7 +1672,7 @@ Response: `{ success: true }` (202-style fire-and-forget; email failures are sil
   - `metric`: one of `budget`, `revision`, `forecast`, `follow_up`, `landing`; omitted = the tenant's default column (`/budget-columns`); anything else is a 400 listing the five names
   - Requires `reporting:reader`
   - `warnings`: sentences, or structured warnings each screen words in the user's language:
-    - `{ code: 'turnover_fx_missing', currencies, year, reportingCurrency }`: turnovers without a rate, counted unconverted in the turnover indicators
+    - `{ code: 'turnover_fx_missing', items: [{ companyId, companyName, currency, year }], reportingCurrency }`: a company whose turnover has no rate for the year is left out of the turnover indicators (its row stays in its own currency). The other companies' turnovers are converted. Example: `{ "code": "turnover_fx_missing", "items": [{ "companyId": "…", "companyName": "New York", "currency": "USD", "year": 2026 }], "reportingCurrency": "EUR" }`
     - `{ code: 'amount_fx_missing', items: [{ currency, year, lines }], reportingCurrency }`: a budget line whose currency has no rate for its year is left out of every sum of the report (paid, consumed, departments, items, intercompany flows, KPIs, raw amounts included), so the report balances on what it counts. One warning per report lists every pair with its number of distinct lines. Example: `{ "code": "amount_fx_missing", "items": [{ "currency": "JPY", "year": 2026, "lines": 2 }], "reportingCurrency": "EUR" }`
 
 ### Disabled Date Semantics (applies to Reporting endpoints)

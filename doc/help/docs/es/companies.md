@@ -58,7 +58,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 - Una métrica que nunca se introdujo para el año muestra **—**. Un cero introducido muestra **0**
 - Los números siguen el idioma de KANAP: coma decimal en español, francés y alemán, punto decimal en inglés
 - La facturación de cada fila está en la moneda base de la empresa. La fila **Total** está en la moneda de reporte: cada facturación se convierte a los tipos del año. Cuando la columna presupuestaria por defecto del año está congelada, son los tipos que fijó. Si no, son los tipos actuales (consulte [Configuración de monedas](currencies.md))
-- Cuando una moneda aún no tiene tipo, su facturación se suma sin convertir y el total lo indica, por ejemplo «1.250 M EUR (aún sin tipo para BRL, contado sin conversión)». KANAP busca el tipo que falta en la próxima actualización de los tipos
+- Cuando una moneda aún no tiene tipo, su facturación queda fuera del total y el total lo indica, por ejemplo «1.250 M EUR (aún sin tipo para BRL)». KANAP busca el tipo que falta en la próxima actualización de los tipos
 
 **Acciones**:
 

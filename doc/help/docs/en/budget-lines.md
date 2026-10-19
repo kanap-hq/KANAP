@@ -527,7 +527,7 @@ The Allocations tab distributes the spend of a year across your companies and de
 **Turnover in several currencies**:
 
 - Each company enters its turnover in millions of its base currency. Before the split, KANAP converts every turnover to the reporting currency, at the rates of the budget version of the year: the rates fixed when its default column was frozen, otherwise the current rates of the year. See [Currency Settings](currencies.md)
-- When a currency has no rate yet, its turnovers are counted without conversion and a warning shows above the table, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is counted unconverted until the rate is available." KANAP fetches the missing rate with the next rate refresh, and the split corrects itself
+- When a currency has no rate yet, the companies in that currency are left out of the split and a warning shows above the table, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is left out until the rate is available." The other companies share 100 %. KANAP fetches the missing rate with the next rate refresh, and the split corrects itself
 
 **How to use it**:
 

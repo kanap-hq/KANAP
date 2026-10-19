@@ -294,7 +294,7 @@ Defina el método que siguen las líneas de OPEX y las inversiones de CAPEX cuan
 ### Sociedades seleccionadas
 
 - El generador se aplica únicamente a las sociedades seleccionadas: sus porcentajes se calculan a partir de su propia plantilla, sus usuarios IT o su facturación del año
-- La página muestra el reparto resultante, para que pueda comprobar el efecto antes de confiar en él. La columna **Generador** muestra el valor de cada empresa. Una facturación se muestra con la moneda base de la empresa, por ejemplo **35 M USD**, y el reparto la usa convertida a la moneda de reporte, como en la [pestaña Asignaciones](budget-lines.md#asignaciones). Cuando una moneda aún no tiene tipo para el año, un aviso sobre el reparto indica que sus facturaciones se cuentan sin convertir
+- La página muestra el reparto resultante, para que pueda comprobar el efecto antes de confiar en él. La columna **Generador** muestra el valor de cada empresa. Una facturación se muestra con la moneda base de la empresa, por ejemplo **35 M USD**, y el reparto la usa convertida a la moneda de reporte, como en la [pestaña Asignaciones](budget-lines.md#asignaciones). Cuando una moneda aún no tiene tipo para el año, un aviso sobre el reparto indica que las empresas en esa moneda quedan fuera del reparto
 - Una sola sociedad seleccionada siempre asume el **100%**, sin necesidad de un valor del generador
 - A partir de dos sociedades, cada sociedad seleccionada necesita un valor para el generador elegido. Una sociedad sin valor se rechaza al guardar. Corrija primero las métricas de la sociedad en **Datos maestros > Empresas**
 - Una sociedad desactivada para el año no se puede seleccionar: las sociedades desactivadas quedan excluidas de las asignaciones de ese año

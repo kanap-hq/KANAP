@@ -182,7 +182,7 @@ async function testManualQueueDeduplication() {
 /**
  * The refresh covers the base currencies of the tenant's companies: their turnovers are
  * converted at the year's rates (`convertTurnovers`), and a currency no set rates would stay
- * counted unconverted for good.
+ * left out of the totals for good.
  */
 async function testTenantContextCoversCompanyCurrencies() {
   const queries: Array<{ sql: string; params: unknown[] }> = [];

@@ -58,7 +58,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 - A metric that was never entered for the year shows **—**. A zero that was entered shows **0**
 - Numbers follow the language of KANAP: a decimal comma in French, German and Spanish, a decimal point in English
 - The turnover of each row is in the company's base currency. The **Total** row is in the reporting currency: each turnover is converted at the rates of the year. When the default budget column of the year is frozen, those are the rates it fixed. Otherwise they are the current rates (see [Currency Settings](currencies.md))
-- When a currency has no rate yet, its turnover is added without conversion and the total says so, for example "1,250 M EUR (no rate yet for BRL, counted unconverted)". KANAP fetches the missing rate with the next rate refresh
+- When a currency has no rate yet, its turnover is left out of the total and the total says so, for example "1,250 M EUR (no rate yet for BRL)". KANAP fetches the missing rate with the next rate refresh
 
 **Actions**:
 

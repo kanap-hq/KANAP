@@ -190,7 +190,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 **Company summary card**: Company name, total amount, reporting currency, headcount, IT users, cost per user, cost per IT user, and IT costs vs turnover.
 
-**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate yet for the year, its turnovers are counted without conversion and the report lists a warning, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is counted unconverted until the rate is available." KANAP fetches the missing rate with the next rate refresh.
+**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate yet for the year, the turnover of the companies in that currency is left out of the turnover indicators and the report lists a warning, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is left out until the rate is available." KANAP fetches the missing rate with the next rate refresh.
 
 **Department totals** (when enabled):
 

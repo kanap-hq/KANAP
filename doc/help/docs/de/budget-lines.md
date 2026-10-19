@@ -527,7 +527,7 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 **Umsatz in mehreren Währungen**:
 
 - Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet KANAP jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
-- Hat eine Währung noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und über der Tabelle erscheint eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse, und die Aufteilung korrigiert sich von selbst
+- Hat eine Währung noch keinen Kurs, bleiben die Unternehmen in dieser Währung aus der Aufteilung heraus, und über der Tabelle erscheint eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ausgelassen, bis der Kurs verfügbar ist.“ Die übrigen Unternehmen teilen sich 100 %. KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse, und die Aufteilung korrigiert sich von selbst
 
 **So verwenden Sie ihn**:
 

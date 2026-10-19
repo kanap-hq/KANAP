@@ -4,6 +4,7 @@ import { EntityManager } from 'typeorm';
 import { Company } from '../../companies/company.entity';
 import { CompanyMetric } from '../../companies/company-metric.entity';
 import {
+  AllocationSplitError,
   TurnoverFxRates,
   buildCompanyWeights,
   computeCompanyShares,
@@ -214,7 +215,7 @@ async function testTurnoversInOtherCurrenciesAreConvertedAtTheVersionRates() {
   assert.deepEqual(Array.from(frozen.shares.entries()), [['eu', 71.4286], ['us', 28.5714]]);
 }
 
-async function testTurnoverWithoutARateIsCountedUnconvertedAndReported() {
+async function testTurnoverWithoutARateIsLeftOutAndReported() {
   const fx = fakeFx('EUR', {});
   const converted = await convertTurnovers({
     fxRates: fx, manager: {} as EntityManager, tenantId: 't1', fiscalYear: 2027, rateSetId: null,
@@ -225,8 +226,61 @@ async function testTurnoverWithoutARateIsCountedUnconvertedAndReported() {
     ],
   });
   assert.equal(converted.reportingCurrency, 'EUR');
-  assert.deepEqual(Array.from(converted.values.entries()), [['eu', 70], ['us', 35], ['none', null]]);
-  assert.deepEqual(converted.missingCurrencies, ['USD']);
+  assert.deepEqual(Array.from(converted.values.entries()), [['eu', 70], ['none', null]]);
+  assert.deepEqual(converted.missing, [{ companyId: 'us', currency: 'USD' }]);
+  // The missing year is still asked of the rate service, so a refresh can fetch it.
+  assert.equal(fx.calls.length, 1);
+}
+
+/** 70 M EUR and 30 M JPY stay; 35 M USD without a rate is left out, and the two share 100 %. */
+async function testManualSplitLeavesOutTheCompanyWithoutARate() {
+  const manager = fakeManager({
+    companies: [
+      { id: 'eu', name: 'Paris', base_currency: 'EUR' },
+      { id: 'us', name: 'New York', base_currency: 'USD' },
+      { id: 'jp', name: 'Osaka', base_currency: 'JPY' },
+    ],
+    metrics: [
+      { company_id: 'eu', turnover: '70' },
+      { company_id: 'us', turnover: '35' },
+      { company_id: 'jp', turnover: '30' },
+    ],
+  });
+  const computed = await computeCompanySharesWithFx({
+    manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['eu', 'us', 'jp'], driver: 'turnover',
+    fxRates: fakeFx('EUR', { 'live:2026:JPY': 1 }),
+  });
+  assert.deepEqual(Array.from(computed.shares.entries()), [['eu', 70], ['jp', 30]]);
+  assert.equal(Array.from(computed.shares.values()).reduce((sum, pct) => sum + pct, 0), 100);
+  assert.deepEqual(computed.fxMissing, [{
+    companyId: 'us', companyName: 'New York', currency: 'USD', year: 2026,
+  }]);
+}
+
+/** Every selected company lacks a rate: the split has no driver, and the warning stays on the error. */
+async function testManualSplitWithNoRateHasNoDriver() {
+  const manager = fakeManager({
+    companies: [
+      { id: 'us', name: 'New York', base_currency: 'USD' },
+      { id: 'jp', name: 'Osaka', base_currency: 'JPY' },
+    ],
+    metrics: [
+      { company_id: 'us', turnover: '35' },
+      { company_id: 'jp', turnover: '30' },
+    ],
+  });
+  await assert.rejects(
+    () => computeCompanySharesWithFx({
+      manager, tenantId: 't1', fiscalYear: 2026, companyIds: ['us', 'jp'], driver: 'turnover', fxRates: fakeFx('EUR', {}),
+    }),
+    (err: unknown) => {
+      assert.ok(err instanceof AllocationSplitError);
+      assert.match(err.message, /positive amount/);
+      assert.deepEqual(err.warning.items.map((item) => item.companyId), ['jp', 'us']);
+      assert.equal(err.warning.reportingCurrency, 'EUR');
+      return true;
+    },
+  );
 }
 
 async function testSameCurrencyIsNotConverted() {
@@ -243,7 +297,7 @@ async function testSameCurrencyIsNotConverted() {
   assert.equal(Math.round(converted.values.get('eu')! * 1000) / 1000, 11);
   // A company without base currency counts as the reporting currency.
   assert.equal(converted.values.get('blank'), 2);
-  assert.deepEqual(converted.missingCurrencies, []);
+  assert.deepEqual(converted.missing, []);
 }
 
 async function testTurnoverConversionNeedsTheRates() {
@@ -309,14 +363,25 @@ async function testSingleDisabledCompanyIsStillRejected() {
 }
 
 /**
- * The warning of turnovers counted unconverted is data, worded by each screen in the user's
- * language; the API's text fields (the AI's summary rows) get it in English.
+ * The warning of turnovers left out is data, worded by each screen in the user's language;
+ * the API's text fields (the AI's summary rows) get it in English.
  */
 function testFxMissingWarningIsStructured() {
-  assert.equal(turnoverFxMissingWarning([], 2026, 'EUR'), null);
-  const warning = turnoverFxMissingWarning(['JPY', 'USD'], 2026, 'EUR');
-  assert.deepEqual(warning, { code: 'turnover_fx_missing', currencies: ['JPY', 'USD'], year: 2026, reportingCurrency: 'EUR' });
-  assert.match(describeAllocationWarning(warning!), /No EUR exchange rate for JPY, USD in 2026/);
+  assert.equal(turnoverFxMissingWarning([], 'EUR'), null);
+  const warning = turnoverFxMissingWarning([
+    { companyId: 'jp', companyName: 'Osaka', currency: 'JPY', year: 2026 },
+    { companyId: 'us', companyName: 'New York', currency: 'USD', year: 2026 },
+  ], 'EUR');
+  assert.deepEqual(warning, {
+    code: 'turnover_fx_missing',
+    items: [
+      { companyId: 'jp', companyName: 'Osaka', currency: 'JPY', year: 2026 },
+      { companyId: 'us', companyName: 'New York', currency: 'USD', year: 2026 },
+    ],
+    reportingCurrency: 'EUR',
+  });
+  assert.match(describeAllocationWarning(warning!), /No EUR exchange rate for JPY in 2026, USD in 2026/);
+  assert.match(describeAllocationWarning(warning!), /left out of the totals/);
 }
 
 function run() {
@@ -335,7 +400,9 @@ function run() {
     .then(testSharesUseDriverValues)
     .then(testTurnoverColumnIsUsedForTheTurnoverDriver)
     .then(testTurnoversInOtherCurrenciesAreConvertedAtTheVersionRates)
-    .then(testTurnoverWithoutARateIsCountedUnconvertedAndReported)
+    .then(testTurnoverWithoutARateIsLeftOutAndReported)
+    .then(testManualSplitLeavesOutTheCompanyWithoutARate)
+    .then(testManualSplitWithNoRateHasNoDriver)
     .then(testSameCurrencyIsNotConverted)
     .then(testTurnoverConversionNeedsTheRates)
     .then(testCompanyDisabledForTheYearIsRejected)

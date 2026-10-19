@@ -527,7 +527,7 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 **Facturación en varias monedas**:
 
 - Cada empresa introduce su facturación en millones de su moneda base. Antes del reparto, KANAP convierte cada facturación a la moneda de reporte, a los tipos de la versión presupuestaria del año: los tipos fijados al congelar su columna por defecto, si no los tipos actuales del año. Consulte [Configuración de monedas](currencies.md)
-- Cuando una moneda aún no tiene tipo, sus facturaciones se cuentan sin convertir y aparece un aviso sobre la tabla, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos, y el reparto se corrige solo
+- Cuando una moneda aún no tiene tipo, las empresas en esa moneda quedan fuera del reparto y aparece un aviso sobre la tabla, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda queda fuera hasta que el tipo esté disponible.» Las demás empresas se reparten el 100 %. KANAP busca el tipo que falta en la próxima actualización de los tipos, y el reparto se corrige solo
 
 **Cómo usarlo**:
 

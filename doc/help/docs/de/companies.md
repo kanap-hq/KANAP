@@ -58,7 +58,7 @@ Die Liste zeigt alle Unternehmen Ihres Arbeitsbereichs. Verwenden Sie sie, um wi
 - Eine Kennzahl, die für das Jahr nie erfasst wurde, zeigt **—**. Eine erfasste Null zeigt **0**
 - Zahlen folgen der Sprache von KANAP: Dezimalkomma auf Deutsch, Französisch und Spanisch, Dezimalpunkt auf Englisch
 - Der Umsatz jeder Zeile ist in der Basiswährung des Unternehmens. Die Zeile **Gesamt** ist in der Berichtswährung: Jeder Umsatz wird zu den Kursen des Jahres umgerechnet. Ist die Standard-Budgetspalte des Jahres eingefroren, sind das die Kurse, die sie festgeschrieben hat. Sonst sind es die aktuellen Kurse (siehe [Währungseinstellungen](currencies.md))
-- Hat eine Währung noch keinen Kurs, wird ihr Umsatz ohne Umrechnung addiert, und die Summe sagt es, zum Beispiel „1.250 Mio. EUR (noch kein Kurs für BRL, ohne Umrechnung gezählt)“. KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse
+- Hat eine Währung noch keinen Kurs, bleibt ihr Umsatz aus der Summe heraus, und die Summe sagt es, zum Beispiel „1.250 Mio. EUR (noch kein Kurs für BRL)“. KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse
 
 **Aktionen**:
 

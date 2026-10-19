@@ -13,7 +13,7 @@ import { FxRateService, FxLookupKey, FxResolvedRate } from '../currency/fx-rate.
 import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { BudgetNature, naturesAnd } from './budget-nature';
-import { AllocationWarning, amountFxMissingWarning, convertTurnovers, turnoverFxMissingWarning } from './allocation-distribution';
+import { AllocationWarning, amountFxMissingWarning, convertTurnovers, turnoverFxMissingWarning, turnoverMissingItems } from './allocation-distribution';
 
 /**
  * A warning of the report: a sentence, or a structured warning the screen words in the user's
@@ -798,8 +798,7 @@ export class ChargebackReportService {
         entry.lines.add(version.spend_item_id);
         continue;
       }
-      // Turnovers counted unconverted (no rate yet), for a version the report counts: one message
-      // per year, not per line.
+      // Turnovers left out (no rate yet), for a version the report counts: one message per year.
       if (allocationInfo?.warning) recordWarning(allocationInfo.warning);
 
       // Track paid totals for the paying company of the item version
@@ -944,8 +943,8 @@ export class ChargebackReportService {
   /**
    * Converts the turnovers of `companies` (their metrics of the year in `ctx.companyMetrics`)
    * into the reporting currency, at the report's rate set (`ctx.turnoverRateSetId`), into
-   * `ctx.turnovers`. A currency without a rate is counted unconverted and named in a warning
-   * (`turnover_fx_missing`).
+   * `ctx.turnovers`. A company whose currency has no rate is stored as null (left out of the
+   * totals) and named in a warning (`turnover_fx_missing`).
    */
   private async convertCompanyTurnovers(
     ctx: ChargebackComputationContext,
@@ -967,7 +966,12 @@ export class ChargebackReportService {
       })),
     });
     converted.values.forEach((value, companyId) => ctx.turnovers.set(companyId, value));
-    const warning = turnoverFxMissingWarning(converted.missingCurrencies, ctx.year, converted.reportingCurrency);
+    // Present, so a later company view does not convert the same company again.
+    for (const item of converted.missing) ctx.turnovers.set(item.companyId, null);
+    const warning = turnoverFxMissingWarning(
+      turnoverMissingItems(converted.missing, ctx.year, companies),
+      converted.reportingCurrency,
+    );
     if (warning && !ctx.warnings.some((existing) => warningKey(existing) === warningKey(warning))) ctx.warnings.push(warning);
   }
 }

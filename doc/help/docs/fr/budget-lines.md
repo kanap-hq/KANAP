@@ -527,7 +527,7 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 **Chiffre d'affaires en plusieurs devises** :
 
 - Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, KANAP convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
-- Quand une devise n'a pas encore de taux, ses chiffres d'affaires sont comptés sans conversion et un avertissement s'affiche au-dessus du tableau, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible. » KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux, et la répartition se corrige d'elle-même
+- Quand une devise n'a pas encore de taux, les sociétés dans cette devise sont laissées hors de la répartition et un avertissement s'affiche au-dessus du tableau, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est laissé de côté jusqu'à ce que le taux soit disponible. » Les autres sociétés se partagent 100 %. KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux, et la répartition se corrige d'elle-même
 
 **Comment l'utiliser** :
 

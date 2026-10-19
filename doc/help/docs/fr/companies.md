@@ -58,7 +58,7 @@ La liste affiche toutes les sociétés de votre espace de travail. Utilisez-la p
 - Une métrique jamais saisie pour l'année s'affiche **—**. Un zéro saisi s'affiche **0**
 - Les nombres suivent la langue de KANAP : virgule décimale en français, en allemand et en espagnol, point décimal en anglais
 - Le chiffre d'affaires de chaque ligne est dans la devise de base de la société. La ligne **Total** est dans la devise de reporting : chaque chiffre d'affaires est converti aux taux de l'année. Quand la colonne budgétaire par défaut de l'année est gelée, ce sont les taux qu'elle a figés. Sinon, ce sont les taux courants (voir [Paramètres de devises](currencies.md))
-- Quand une devise n'a pas encore de taux, son chiffre d'affaires est ajouté sans conversion et le total le signale, par exemple « 1 250 M EUR (pas encore de taux pour BRL, compté sans conversion) ». KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux
+- Quand une devise n'a pas encore de taux, son chiffre d'affaires est laissé hors du total et le total le signale, par exemple « 1 250 M EUR (pas encore de taux pour BRL) ». KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux
 
 **Actions** :
 

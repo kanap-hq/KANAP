@@ -13,6 +13,7 @@ import {
 import {
   AllocationDriver,
   CompanySharesResult,
+  AllocationSplitError,
   TurnoverConversion,
   TurnoverFxMissingWarning,
   computeCompanySharesWithFx,
@@ -20,6 +21,7 @@ import {
   memoizeTurnoverRates,
   normalizeWeights,
   turnoverFxMissingWarning,
+  turnoverMissingItems,
 } from './allocation-distribution';
 import { FxRateService } from '../currency/fx-rate.service';
 import { Company } from '../companies/company.entity';
@@ -43,8 +45,8 @@ export type AllocationComputation = {
   shares: AllocationShare[];
   error?: string | null;
   /**
-   * The shares are computed, with a reservation: turnovers in a currency without a rate for
-   * the year were counted unconverted (`convertTurnovers`).
+   * Turnovers left out of the split: their currency has no rate for the year
+   * (`convertTurnovers`). The other companies share 100 %.
    */
   warning?: TurnoverFxMissingWarning | null;
 };
@@ -244,7 +246,7 @@ export class AllocationCalculatorService {
               resolvedMethod: method as any,
               shares,
               error: null,
-              warning: this.fxWarning(computed, version.budget_year),
+              warning: this.fxWarning(computed),
             });
             continue;
           }
@@ -295,6 +297,7 @@ export class AllocationCalculatorService {
               resolvedMethod: method as any,
               shares: fallbackShares,
               error: err.message,
+              warning: err instanceof AllocationSplitError ? err.warning : null,
             });
             continue;
           }
@@ -339,7 +342,7 @@ export class AllocationCalculatorService {
             resolvedMethod: 'manual_company',
             shares,
             error: null,
-            warning: this.fxWarning(computed, version.budget_year),
+            warning: this.fxWarning(computed),
           });
         } catch (err) {
           if (suppressErrors && err instanceof BadRequestException) {
@@ -349,6 +352,7 @@ export class AllocationCalculatorService {
               resolvedMethod: 'manual_company',
               shares: [],
               error: err.message,
+              warning: err instanceof AllocationSplitError ? err.warning : null,
             });
           } else {
             throw err;
@@ -430,12 +434,16 @@ export class AllocationCalculatorService {
           shares,
           error: null,
           warning: turnovers
-            ? turnoverFxMissingWarning(turnovers.missingCurrencies, version.budget_year, turnovers.reportingCurrency)
+            ? turnoverFxMissingWarning(
+              turnoverMissingItems(turnovers.missing, version.budget_year, companiesForYear),
+              turnovers.reportingCurrency,
+            )
             : null,
         });
       } catch (err) {
         if (suppressErrors && err instanceof BadRequestException) {
           const fallback = persistedFallback();
+          const warning = err instanceof AllocationSplitError ? err.warning : null;
           if (fallback) {
             this.logger.warn(`Allocation computation warning for version ${version.id}: ${err.message}. Falling back to stored allocations.`);
             result.set(version.id, {
@@ -443,6 +451,7 @@ export class AllocationCalculatorService {
               resolvedMethod: resolvedDefault.method,
               shares: fallback,
               error: `${err.message} (used stored allocation)`,
+              warning,
             });
             continue;
           }
@@ -452,6 +461,7 @@ export class AllocationCalculatorService {
             resolvedMethod: resolvedDefault.method,
             shares: [],
             error: err.message,
+            warning,
           });
           continue;
         }
@@ -474,8 +484,8 @@ export class AllocationCalculatorService {
     return defaultLookup.get(defaultMethodKey(tenantId, year)) ?? STANDARD_DEFAULT;
   }
 
-  private fxWarning(computed: CompanySharesResult, year: number): TurnoverFxMissingWarning | null {
-    return computed.reportingCurrency ? turnoverFxMissingWarning(computed.fxMissing, year, computed.reportingCurrency) : null;
+  private fxWarning(computed: CompanySharesResult): TurnoverFxMissingWarning | null {
+    return computed.reportingCurrency ? turnoverFxMissingWarning(computed.fxMissing, computed.reportingCurrency) : null;
   }
 
   private computeAutoShares(args: {
