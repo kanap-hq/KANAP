@@ -30,7 +30,7 @@ The list shows all companies for your workspace. Use it to review key informatio
 | **Currency** | Base currency code |
 | **Headcount (year)** | Headcount for the selected year (click to open the Details tab) |
 | **IT users (year)** | IT users for the selected year (click to open the Details tab) |
-| **Turnover (year)** | Turnover for the selected year (click to open the Details tab) |
+| **Turnover (year)** | Turnover for the selected year, in millions of the company's base currency, for example `35 M USD` (click to open the Details tab) |
 | **Status** | Enabled or Disabled |
 
 **Additional columns** (hidden by default, add them from the column chooser):
@@ -52,6 +52,13 @@ The list shows all companies for your workspace. Use it to review key informatio
 - **Status scope**: the **Show: All / Enabled / Disabled** toggle above the list controls which companies appear. The list shows enabled companies by default
 
 **Year selector**: use the **Year** field in the toolbar to switch which year's metrics are displayed. The bottom row shows **totals** for Headcount, IT users, and Turnover across all visible (filtered) companies.
+
+**Metric values**:
+
+- A metric that was never entered for the year shows **—**. A zero that was entered shows **0**
+- Numbers follow the language of KANAP: a decimal comma in French, German and Spanish, a decimal point in English
+- The turnover of each row is in the company's base currency. The **Total** row is in the reporting currency: each turnover is converted at the rates of the year. When the default budget column of the year is frozen, those are the rates it fixed. Otherwise they are the current rates (see [Currency Settings](currencies.md))
+- When a currency has no rate yet, its turnover is added without conversion and the total says so, for example "1,250 M EUR (no rate yet for BRL, counted unconverted)". KANAP fetches the missing rate with the next rate refresh
 
 **Actions**:
 
@@ -78,7 +85,9 @@ Click any row in the list to open the company workspace. It has two tabs: **Over
 - **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
-**Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. When a change is refused, the reason shows under the field that caused it.
+- **Delete**, at the top right: shown to company administrators (`companies:admin`). See [Deleting a company](#deleting-a-company)
+
+**Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. The top of the page reads **Saving…** while it saves, then **Saved** for a moment. When a change is refused, the field shows its previous value again and the reason shows under it. The message stays until you type in the field again.
 
 ---
 
@@ -119,11 +128,12 @@ The Details tab manages **yearly metrics**. Use the year tabs at the top to swit
 
 - **Headcount** (required): total employee count for the year, must be a whole number of zero or more
 - **IT users** (optional): number of IT users, must be a whole number of zero or more
-- **Turnover (M€)** (optional): revenue in millions of the company's base currency, up to 3 decimal places
+- **Turnover** (optional): revenue in millions of the company's base currency, up to 3 decimal places. The label names the currency, for example **Turnover (M USD)**
 
 **How it works**:
 
-- Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more."
+- Each value is saved for the selected year when you leave the field (or press Enter). A value that is not valid shows a message under the field, for example "Enter a whole number, 0 or more." The field goes back to the stored value, and the message stays until you type again
+- Numbers follow the language of KANAP: type `12,5` in French, German or Spanish and `12.5` in English
 - Each year is stored on its own: switching years loads that year's values
 - If the company figures for the year are **frozen**, the fields are locked and a notice says that a budget administrator can unfreeze them (**Budget management > Administration > Freeze master data**)
 - You need `companies:member` to edit metrics
@@ -163,6 +173,14 @@ Use the **End of validity** to control when a company stops being active.
 - **Prefer disabling over deleting.** A company that anything still uses cannot be deleted: budget lines (as paying company or in their allocations), contracts, cost centers, departments, users, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and the team members whose default company it is. The message counts what uses it, for example "This company is used by 2 departments and 14 users". Disable it instead. Its yearly metrics are deleted with it. In the list, the confirmation names the companies kept this way, with what uses them, before anything is deleted.
 - **To delete a company anyway**, first remove what uses it. Set another company on its users, budget lines and their allocations, contracts, cost centers, the locations it operates, tasks, applications, interfaces, portfolio projects and requests, and team members. Move its departments to another company, or delete them last, once nothing uses them. Then delete the company.
 
+## Deleting a company
+
+A company administrator (`companies:admin`) can delete a company from its page with **Delete**, or several from the list with **Delete Selected**.
+
+- KANAP checks first. When something uses the company, the dialog says what, for example "This company is used by 2 departments and 14 users. Disable it instead of deleting it.", and offers only **Close**. Disable the company instead (see [Status and lifecycle](#status-and-lifecycle))
+- Otherwise the dialog asks for confirmation: "This cannot be undone." **Delete** deletes the company with its yearly metrics and returns to the list
+- A deleted company leaves the **Recently Viewed** tile of [My Dashboard](my-dashboard.md#recently-viewed)
+
 ## Yearly metrics
 
 Many parts of the app are year-aware. Companies have metrics per year:
@@ -173,7 +191,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 **Where it matters**:
 
-- Allocations can use Headcount, IT users, or Turnover to distribute costs across companies for a given year.
+- Allocations can use Headcount, IT users, or Turnover to distribute costs across companies for a given year. Turnovers in different currencies are converted to the reporting currency first. See [Allocations](budget-lines.md#allocations).
 - Reports use these metrics for KPIs and ratios.
 - Only companies active for a year are considered for that year's allocation and reporting.
 
@@ -184,7 +202,7 @@ Many parts of the app are year-aware. Companies have metrics per year:
 
 ## CSV import/export
 
-**Export CSV** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers only, ready to fill in.
+**Export CSV** downloads the companies the list shows (or, on request in the dialog, every company) with their metrics. **Import CSV** reads a file back. The import dialog also carries **Download template**: a file with the headers and one example row, a fictional company with metrics for the list year. Replace it with your own rows.
 
 The columns, in this order. The metric columns follow the year selected in the list toolbar: the year before, that year, and the year after.
 
@@ -193,24 +211,30 @@ The columns, in this order. The metric columns follow the year selected in the l
 | `name` | Required. The company name. Rows are matched on it |
 | `country_iso` | Required. Two letters |
 | `address1`, `address2` | Address lines |
-| `postal_code`, `city`, `state` | Address details |
+| `postal_code`, `state` | Address details |
+| `city` | Required. The city |
 | `reg_number`, `vat_number` | Registration and VAT numbers |
 | `base_currency` | Required. Three letters |
 | `status` | `enabled` or `disabled` |
 | `disabled_at` | The end of validity: a date (`2026-12-31`) or a full date and time. The export writes the date only. Imported again, that date keeps the stored end of validity |
 | `notes` | Free text |
-| `headcount_<year>` | Required when the row carries any metric for that year |
+| `headcount_<year>` | A whole number. Required when the row carries any metric for that year |
 | `it_users_<year>` | A whole number |
 | `turnover_<year>` | Up to 3 decimals, in millions of the company's base currency |
 
 **Import**:
 
-- Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates
-- **Matching**: by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme". A name that appears twice in the file is kept once, the first row winning
-- **Required fields**: `name`, `country_iso` and `base_currency`
+- Start with **Preflight check**. It validates the headers, the encoding, the required fields, the duplicates and the metrics. If the check is clean, **Load** applies the inserts and the updates. Then the dialog counts the companies created, updated and unchanged, for example "2 created, 5 updated, 30 unchanged"
+- **Matching**: by company `name`, whatever the case. The stored spelling stays: a row `ACME` updates `Acme`, and the preflight check says "ACME" was matched to "Acme"
+- **One row per company**: a name that appears twice in the file, whatever the case, is refused at the check: "\"Acme\" is already on row 4. Keep one row per company."
+- **Required fields**: `name`, `country_iso`, `city` and `base_currency`. An empty city is refused at the check, for a new company and for an update
 - **Status and end of validity**: the export writes the status read from the end of validity. A new company is enabled unless the row says `disabled`. On an update, a blank `status` and a blank `disabled_at` keep the stored values. `enabled` with an empty date clears the end of validity. `disabled` with an empty date keeps a date that has already passed, and otherwise ends the company today
 - A row whose status contradicts its date is refused with a row error: "Status is enabled but the end of validity has passed. Clear the date or set the status to disabled. If the file comes from an older export, export the data again." or "Status is disabled but the end of validity is still to come. Set the status to enabled or set a date that has passed."
-- **Metrics**: if you provide any metrics for a year, `headcount_<year>` is required for that year. `it_users_<year>` and `turnover_<year>` are optional
+- **Years read**: the dialog names the years it reads, for example "Metrics read: 2025, 2026, 2027, from the year of the list. Each year is optional."
+- **Each year is optional**: a year is a block of three columns, `headcount_<year>`, `it_users_<year>` and `turnover_<year>`. Leave a whole block out and the stored metrics of that year stay as they are. A column of a year outside the three years read is ignored, and the check lists it with the ignored columns
+- **A year comes whole**: a file with one or two columns of a year, without the others, is refused on the **Header** line, which names the missing columns
+- **Metrics**: if a row carries any metric for a year, `headcount_<year>` is required for that year. `it_users_<year>` and `turnover_<year>` can be empty
+- **Frozen years**: a row that carries metrics for a year whose company metrics are frozen is refused at the check: "Metrics for 2025 are frozen. A budget administrator can unfreeze them." Leave that year's columns out, or unfreeze the year first (see [Freeze master data](master-data-operations.md))
 
 **Notes**:
 

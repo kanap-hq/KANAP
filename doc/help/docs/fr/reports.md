@@ -149,8 +149,8 @@ Consultez les ventilations de coûts à travers toutes les sociétés avec des K
 | Montant | Total de la métrique sélectionnée |
 | Effectif | Effectif total |
 | Utilisateurs IT | Nombre d'utilisateurs IT |
-| Chiffre d'affaires | Chiffre d'affaires annuel |
-| Coûts IT vs CA | Ratio en pourcentage |
+| Chiffre d'affaires | Chiffre d'affaires annuel, en millions de la devise de reporting |
+| Coûts IT vs CA | Ratio en pourcentage, les deux termes dans la devise de reporting |
 | Coûts IT par utilisateur | Montant divisé par l'effectif |
 | Coûts IT par utilisateur IT | Montant divisé par les utilisateurs IT |
 
@@ -183,6 +183,8 @@ Vue détaillée des ventilations de refacturation d'une société avec départem
 ### Ce que vous verrez
 
 **Carte récapitulative de la société** : Nom de la société, montant total, devise de reporting, effectif, utilisateurs IT, coût par utilisateur, coût par utilisateur IT et coûts IT vs chiffre d'affaires.
+
+**Chiffre d'affaires dans les rapports de refacturation** : chaque société saisit son chiffre d'affaires en millions de sa devise de base. Les deux rapports de refacturation le convertissent dans la devise de reporting, aux taux de la version budgétaire de l'année, comme les montants. Le chiffre d'affaires, le ratio coûts IT vs CA et le chiffre d'affaires global des tableaux de KPI utilisent la valeur convertie. Quand une devise n'a pas encore de taux pour l'année, ses chiffres d'affaires sont comptés sans conversion et le rapport affiche un avertissement, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible. » KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux.
 
 **Totaux par département** (lorsque activé) :
 

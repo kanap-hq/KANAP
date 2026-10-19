@@ -497,7 +497,7 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 |---|---|
 | **Effectif (par défaut)** | Répartit la dépense proportionnellement à l'effectif de chaque société pour l'année sélectionnée. Aucune sélection manuelle requise : les pourcentages sont calculés automatiquement depuis les métriques des sociétés. C'est la méthode standard. |
 | **Utilisateurs IT** | Répartit la dépense proportionnellement au nombre d'utilisateurs IT de chaque société pour l'année sélectionnée. |
-| **Chiffre d'affaires** | Répartit la dépense proportionnellement au chiffre d'affaires de chaque société pour l'année sélectionnée. |
+| **Chiffre d'affaires** | Répartit la dépense proportionnellement au chiffre d'affaires de chaque société pour l'année sélectionnée, converti dans la devise de reporting. |
 | **Manuel par société** | Vous sélectionnez les sociétés qui reçoivent cette dépense et choisissez un inducteur dans **Ventiler par** (Effectif, Utilisateurs IT ou Chiffre d'affaires) pour calculer les pourcentages entre les sociétés sélectionnées uniquement. |
 | **Manuel par département** | Vous sélectionnez des paires société/département. Les pourcentages sont calculés à partir de l'effectif de chaque département. Utile lorsqu'une ligne ne bénéficie qu'à certains départements (ex. : un CRM utilisé par les ventes). |
 | **Pourcentages manuels** | Vous choisissez les sociétés et saisissez vous-même chaque pourcentage. Le total doit faire 100 %. |
@@ -515,6 +515,12 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 - Pour **Manuel par société** et **Manuel par département** : vous choisissez les sociétés ou départements, et le système calcule les pourcentages selon l'inducteur choisi et les métriques actuelles
 - Pour **Pourcentages manuels** : saisir un pourcentage fixe cette rangée, et les autres rangées se partagent le reste. **Répartir équitablement** donne la même part à chaque rangée ; **Réinitialiser les valeurs fixées** libère les rangées fixées
 - Les pourcentages reflètent les données en temps réel. Si vous mettez à jour l'effectif d'une société, les ventilations se recalculent
+- La colonne **Inducteur** affiche la valeur de chaque société pour l'inducteur. Un chiffre d'affaires s'affiche avec la devise de base de la société, par exemple **35 M USD**
+
+**Chiffre d'affaires en plusieurs devises** :
+
+- Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, KANAP convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
+- Quand une devise n'a pas encore de taux, ses chiffres d'affaires sont comptés sans conversion et un avertissement s'affiche au-dessus du tableau, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible. » KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux, et la répartition se corrige d'elle-même
 
 **Comment l'utiliser** :
 

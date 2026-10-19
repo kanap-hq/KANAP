@@ -294,7 +294,7 @@ Set the method that OPEX lines and CAPEX investments follow when they are left o
 ### Selected companies
 
 - The driver is applied to the selected companies only: their percentages are computed from their own headcount, IT users or turnover for the year
-- The page shows the resulting split, so you can check the effect before relying on it
+- The page shows the resulting split, so you can check the effect before relying on it. The **Driver value** column shows each company's value. A turnover shows with the company's base currency, for example **35 M USD**, and the split uses it converted to the reporting currency, as in the [Allocations tab](budget-lines.md#allocations). When a currency has no rate yet for the year, a warning above the split says that its turnovers are counted without conversion
 - A single selected company always takes **100%**, with no driver value required
 - With two companies or more, every selected company needs a value for the chosen driver. A company without one is rejected when you save. Fix the company metrics in **Master Data > Companies** first
 - A company disabled for the year cannot be selected: disabled companies are excluded from that year's allocations
