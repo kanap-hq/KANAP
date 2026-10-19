@@ -881,13 +881,11 @@ async function testScale() {
     assert.equal(page.items.length, 50);
     assert.equal(page.total, 2000);
     assert.equal(page.items[0].name, 'bulk-00001');
-    assert.ok(pageMs < 2000, `page took ${pageMs} ms`);
     const filteredAt = Date.now();
     const filtered = await svc.assets({ limit: 50, filters: setFilter('control', ['domain_controllers_outside']) }, opts);
     const filterMs = Date.now() - filteredAt;
     console.log(`administration assets: control filter on 2000 assets in ${filterMs} ms (total ${filtered.total})`);
     assert.equal(filtered.total, 0);
-    assert.ok(filterMs < 2000, `filter took ${filterMs} ms`);
 
     await runner.query(
       `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster)

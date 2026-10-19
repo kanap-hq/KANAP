@@ -97,7 +97,7 @@ const ROW: AdministrationAssetRow = {
     { relation: 'contains', reference: 'AST-7', name: 'dc1', zone: 'tier_0' },
     { relation: 'cluster', reference: 'AST-5', name: 'vsphere', zone: 'tier_0' },
   ] },
-  application_references: [],
+  application_references: { total: 0, items: [] },
 };
 const ROW_BARE: AdministrationAssetRow = {
   ...ROW, id: 'asset-bare', reference: 'AST-9', name: 'bare', kind: 'vm', zone: null,

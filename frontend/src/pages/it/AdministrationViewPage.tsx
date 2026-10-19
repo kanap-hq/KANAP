@@ -82,7 +82,7 @@ export type AdministrationAssetRow = {
   applications: { total: number; items: Array<{ reference: string | null; name: string }> };
   findings: ControlKey[];
   trust_peers: { total: number; items: TrustPeer[] };
-  application_references: string[];
+  application_references: { total: number; items: string[] };
 };
 
 export type AdministrationDomain = {
