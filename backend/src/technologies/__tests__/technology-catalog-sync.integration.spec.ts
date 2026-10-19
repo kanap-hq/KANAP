@@ -46,7 +46,7 @@ function withoutCpe(product: CatalogProduct, dropped: string[]): CatalogProduct 
 }
 
 /** `shippedProduct` answers `product` for `key` until the returned function puts the real one back. */
-function stubShipped(catalog: { shippedProduct: (key: string) => CatalogProduct | undefined }, key: string, product: CatalogProduct) {
+function stubShipped(catalog: { shippedProduct: (key: string) => CatalogProduct | undefined }, key: string, product: CatalogProduct | undefined) {
   const real = catalog.shippedProduct.bind(catalog);
   catalog.shippedProduct = (asked: string) => (asked === key ? product : real(asked));
   return () => { catalog.shippedProduct = real; };
@@ -115,7 +115,7 @@ async function testSyncOfATenant() {
     const shipped = catalog.shippedProduct('postgresql')!;
     const products = new Map([['postgresql', livingPostgres(shipped, ['a:kanapspec:postgres'])]]);
     const result = await sync.syncTenant(runner.manager, tenantId, products);
-    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, versions_attached: 0, errors: [] });
+    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] });
 
     const after = await versionsOf(runner, technology.id);
     assert.deepEqual(after.get('99'), { label: '99', standard_support_end: '2031-11-13', extended_support_end: null, catalog_key: 'postgresql:99' },
@@ -129,7 +129,7 @@ async function testSyncOfATenant() {
 
     const statements: string[] = [];
     const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
-    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, versions_attached: 0, errors: [] },
+    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] },
       'a second sync changes nothing');
     assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)),
       'nor writes anything: the state read back in another key order is the same');
@@ -448,7 +448,7 @@ async function testCpeRemovalRules() {
     const restoreReplaced = stubShipped(catalog, 'postgresql', replaced);
     try {
       const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', replaced]]));
-      assert.equal(result.cpe_added, 1);
+      assert.deepEqual([result.cpe_added, result.cpe_removed], [1, 1]);
     } finally {
       restoreReplaced();
     }
@@ -666,6 +666,35 @@ async function testEmptyShippedFileWithdrawsNothing() {
 }
 
 /**
+ * A key the shipped file no longer lists is not a withdrawal. The living product does not
+ * stand in for the file: identifiers stay, `shipped_cpe` stays, and versions still follow.
+ */
+async function testMissingShippedProductWithdrawsNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-noship');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const [{ catalog_state: before }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    const living = livingPostgres(shipped);
+    living.cpe_products = [];
+    const restore = stubShipped(catalog, 'postgresql', undefined);
+    try {
+      const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', living]]));
+      assert.equal(result.cpe_removed, 0);
+      const [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.deepEqual(tech.cpe_products, shipped.cpe_products, 'a missing shipped entry withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, before.shipped_cpe, 'shipped_cpe is not taken from the living product');
+      const versions = await versionsOf(runner, technology.id);
+      const moved = living.versions.find((version) => version.key === '18')!;
+      assert.equal(versions.get('18')!.standard_support_end, moved.standard_support_end, 'versions still follow the living product');
+    } finally {
+      restore();
+    }
+  });
+}
+
+/**
  * C5 review P4: a description follows the catalog in the language it was written in.
  * An English adoption on a French tenant stays English the next night. Without
  * `description_language`, the language whose catalog text equals the remembered description
@@ -776,7 +805,8 @@ async function testDescriptionFollows() {
     assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
 
     await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, english]);
-    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    const followed = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(followed.descriptions_updated, 1, 'the summary counts a description the catalog replaced');
     row = await read();
     assert.equal(row.description, next, 'the same text follows the catalog');
     assert.equal(row.catalog_state.description, next);
@@ -970,7 +1000,7 @@ async function testGateOff() {
       requests.length = 0;
       await withTenant(dataSource, tenantId, (mg) => mg.query(`UPDATE technologies SET catalog_state = NULL WHERE tenant_id = $1`, [tenantId]));
       const summary = await sync.run({ ...runtime(), fetch: async () => { throw new Error('no request leaves with the gate off'); } });
-      assert.deepEqual([requests.length, summary.requests, summary.refresh_enabled, summary.tenants_synced], [0, 0, false, 1]);
+      assert.deepEqual([requests.length, summary.requests, summary.refresh_enabled, summary.tenants_synced, summary.cpe_removed, summary.descriptions_updated], [0, 0, false, 1, 0, 0]);
       const [row] = await withTenant(dataSource, tenantId, (mg) => mg.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [ids.postgresql]));
       assert.ok(row.catalog_state?.versions?.['18'], 'the shipped catalog is still synced');
     });
@@ -1121,6 +1151,7 @@ async function main() {
       ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],
       ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],
       ['empty shipped file withdraws nothing', testEmptyShippedFileWithdrawsNothing],
+      ['missing shipped entry withdraws nothing', testMissingShippedProductWithdrawsNothing],
       ['description stays in the language it was written', testDescriptionLanguageStays],
       ['description with a trailing line break stays', testDescriptionNewlineStays],
       ['description follows the catalog', testDescriptionFollows],

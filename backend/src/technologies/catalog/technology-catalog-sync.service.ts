@@ -52,6 +52,10 @@ export type CatalogSyncSummary = {
   versions_updated: number;
   versions_attached: number;
   cpe_added: number;
+  /** CPE identifiers removed because the shipped file dropped them. */
+  cpe_removed: number;
+  /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
+  descriptions_updated: number;
   /** Versions where a catalog date was not applied because it would contradict the other one (logged). */
   dates_kept: string[];
   /** Technologies whose unreadable `catalog_state` was rebuilt (logged). */
@@ -63,6 +67,10 @@ export type TenantSyncResult = {
   versions_added: number;
   versions_updated: number;
   cpe_added: number;
+  /** CPE identifiers removed because the shipped file dropped them. */
+  cpe_removed: number;
+  /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
+  descriptions_updated: number;
   /** Versions typed with a catalog label before the catalog had them, now attached to it. */
   versions_attached: number;
   /** One line per technology whose sync failed: its changes are undone, the others are kept. */
@@ -74,7 +82,7 @@ export type TenantSyncResult = {
 };
 
 const emptyResult = (): TenantSyncResult => ({
-  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
+  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
 });
 
 function addResult(total: TenantSyncResult, one: TenantSyncResult) {
@@ -82,6 +90,8 @@ function addResult(total: TenantSyncResult, one: TenantSyncResult) {
   total.versions_added += one.versions_added;
   total.versions_updated += one.versions_updated;
   total.cpe_added += one.cpe_added;
+  total.cpe_removed += one.cpe_removed;
+  total.descriptions_updated += one.descriptions_updated;
   total.versions_attached += one.versions_attached;
   total.errors.push(...one.errors);
   total.dates_kept.push(...one.dates_kept);
@@ -138,19 +148,21 @@ function spaceBlank(value: string | null | undefined): boolean {
  * their values), all counted as offered. The caller removes nothing from it: this state cannot
  * tell an identifier the shipped catalog withdrew from one the tenant added.
  */
-function startingState(shipped: CatalogProduct, product: CatalogProduct, cpeProducts: string[], rows: VersionRow[]): CatalogState {
+function startingState(shipped: CatalogProduct | undefined, product: CatalogProduct, cpeProducts: string[], rows: VersionRow[]): CatalogState {
   const held = new Set(cpeProducts.map((p) => p.toLowerCase()));
-  const versions: Record<string, CatalogVersionValues> = Object.fromEntries(shipped.versions.map((v) => [v.key, valuesOf(v)]));
+  const versions: Record<string, CatalogVersionValues> = Object.fromEntries((shipped?.versions ?? []).map((v) => [v.key, valuesOf(v)]));
   const prefix = `${product.key}:`;
   for (const row of rows) {
     if (!row.catalog_key?.startsWith(prefix)) continue;
     const key = row.catalog_key.slice(prefix.length);
     if (!versions[key]) versions[key] = rowValues(row);
   }
+  const shippedIds = shipped?.cpe_products ?? [];
   return {
-    cpe_products: Array.from(new Set([...shipped.cpe_products, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
+    cpe_products: Array.from(new Set([...shippedIds, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
     versions,
-    shipped_cpe: lowerSorted(shipped.cpe_products),
+    // No shipped entry: do not record the living product as the file. The next pass withdraws nothing.
+    ...(shipped ? { shipped_cpe: lowerSorted(shipped.cpe_products) } : {}),
   };
 }
 
@@ -348,7 +360,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     const summary: CatalogSyncSummary = {
       refresh_enabled: Features.TECHNOLOGY_CATALOG_SYNC_ENABLED,
       products: 0, requests: 0, refreshed: 0, failed_products: [], rejected_releases: 0, errors: [],
-      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0,
+      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0,
       dates_kept: [], malformed_states: 0,
     };
     if (Features.TECHNOLOGY_CATALOG_SYNC_ENABLED) await this.refresh(runtime, summary);
@@ -361,6 +373,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         summary.versions_added += result.versions_added;
         summary.versions_updated += result.versions_updated;
         summary.cpe_added += result.cpe_added;
+        summary.cpe_removed += result.cpe_removed;
+        summary.descriptions_updated += result.descriptions_updated;
         summary.versions_attached += result.versions_attached;
         summary.dates_kept.push(...result.dates_kept.map((line) => `${tenantId} ${line}`));
         summary.malformed_states += result.malformed_states.length;
@@ -523,7 +537,9 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    * `shipped_cpe` records the shipped file as it is now, so an identifier that file no longer lists
    * is not removed on a later pass either.
    * One audit row per technology changed (`system`, `technology-catalog`), including
-   * `cpe_products_removed` and `description_updated`. A technology whose CPE identifiers changed
+   * `cpe_products_removed` and `description_updated`. The scheduled task summary counts the
+   * identifiers removed (`cpe_removed`) and the descriptions replaced (`descriptions_updated`;
+   * a description filled while empty is not counted). A technology whose CPE identifiers changed
    * is matched again with the vulnerabilities once the transaction commits. A technology whose
    * writes fail is left as it was and named in `errors`; the others are synced.
    */
@@ -612,7 +628,10 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
 
     for (const tech of technologies) {
       const product = products.get(tech.catalog_key)!;
-      const shipped = this.catalog.shippedProduct(tech.catalog_key) ?? product;
+      // The shipped file is the only withdrawal base. A key it no longer lists is not replaced by
+      // the living product (the cache included): nothing is removed, and `shipped_cpe` stays as
+      // recorded. Versions still follow `product`.
+      const shipped = this.catalog.shippedProduct(tech.catalog_key);
       const rows = versions.filter((v) => v.technology_id === tech.id);
       const parsed = readState(tech.catalog_state);
       if (tech.catalog_state !== null && tech.catalog_state !== undefined && !parsed) result.malformed_states.push(tech.catalog_key);
@@ -624,18 +643,19 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
 
       const has = new Set(tech.cpe_products.map((p) => p.toLowerCase()));
       const offeredBefore = new Set(state.cpe_products.map((p) => p.toLowerCase()));
-      const shippedNowList = lowerSorted(shipped.cpe_products);
+      const shippedNowList = shipped ? lowerSorted(shipped.cpe_products) : [];
       const shippedNow = new Set(shippedNowList);
       // Absent `shipped_cpe` (a state from before this field, or none at all): this pass withdraws
       // nothing and records the shipped file. The cache is not a withdrawal base.
       const shippedKnown = Array.isArray(state.shipped_cpe);
       const shippedBefore = new Set((state.shipped_cpe ?? []).map((p) => p.toLowerCase()));
-      const offered = lowerSorted([...shipped.cpe_products, ...product.cpe_products]);
+      const offered = lowerSorted([...(shipped?.cpe_products ?? []), ...product.cpe_products]);
       const cpeAdded = lowerSorted(product.cpe_products).filter((p) => !offeredBefore.has(p) && !has.has(p));
       let cpeRemoved: string[] = [];
       let recordShipped = true;
-      if (bootstrap || !shippedKnown) {
+      if (bootstrap || !shippedKnown || !shipped) {
         cpeRemoved = [];
+        if (!shipped) recordShipped = false;
       } else {
         const gone = Array.from(shippedBefore).filter((p) => !shippedNow.has(p)).sort();
         // A file that lost every identifier without saying `noCpe` is a bad build, not a withdrawal.
@@ -866,6 +886,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         else if (row.description_mode === 'update') changeOf(row.technology_id).descriptionUpdated = true;
       }
       result.cpe_added = written.reduce((sum, tech) => sum + tech.cpe_added.length, 0);
+      result.cpe_removed = written.reduce((sum, tech) => sum + tech.cpe_removed.length, 0);
+      result.descriptions_updated = described.filter((row) => row.description_applied && row.description_mode === 'update').length;
     }
     for (const [technologyId, change] of changes) {
       if (!change.label.length && !change.updated.length && !change.attached.length && !change.cpe.length && !change.removed.length && !change.description && !change.descriptionUpdated) continue;
