@@ -115,7 +115,7 @@ La fiche comporte un en-tête, un panneau de propriétés à droite et six ongle
 ### Panneau de propriétés
 
 - **Éditeur**, **Famille** et **Type d'hébergement**.
-- **Zone d'administration** : la zone de votre modèle d'administration à laquelle appartient la technologie, par exemple le tier 0 pour l'annuaire. Les zones viennent de **Cartographie SI > Paramètres**. Une technologie sans zone figure parmi les données à compléter de la [Vue de l'administration](administration-view.md).
+- **Zone d'administration** : affichée pour les seules technologies de la famille **Annuaire et identité**. Elle place un service d'annuaire dans une zone de votre modèle d'administration, par exemple le tier 0 pour Entra ID, qui ne tourne sur aucun de vos serveurs. Les zones viennent de **Cartographie SI > Paramètres**, et la page [Zones d'administration](administration-view.md) liste les services d'annuaire avec leur zone. Les autres technologies ne prennent pas de zone : placez plutôt les serveurs qui les portent. Une zone posée auparavant sur une technologie d'une autre famille reste affichée, en lecture seule, avec une mention indiquant que la valeur n'est plus utilisée.
 - **Remplacée par** : la technologie qui prend la suite de celle-ci, par exemple un produit plus récent vers lequel vos équipes migrent.
 - **Responsables IT** : les personnes responsables de la technologie.
 
@@ -222,7 +222,7 @@ Les niveaux et les vagues viennent de **Classifications et continuité** dans le
 
 Les fiches liées à la technologie, une section par genre :
 
-- **Lignes budgétaires** : avec le montant de l'année en cours dans la colonne budgétaire de votre espace de travail, et un total.
+- **Lignes budgétaires** : avec le montant de l'année en cours dans la colonne budgétaire de votre espace de travail, et un total. Une ligne dont la devise n'a pas de taux de change pour l'année affiche son montant dans sa propre devise avec une petite marque orange, et le total l'exclut. Un avertissement d'une ligne sous le tableau l'indique. Voir [Taux manuels](currencies.md#taux-manuels).
 - **Contrats** : fournisseur, date de fin et montant annuel, avec un total par devise.
 - **Projets** : statut et fin prévue.
 - **Incidents** : sévérité, statut et date de détection. Lier un incident demande `incidents:contributor`. Un incident clos ou annulé ne peut être ni lié ni délié.
@@ -258,7 +258,7 @@ Saisissez la technologie sur le serveur où elle est installée : l'hôte pour u
 - **Contrats**, **lignes budgétaires** et **incidents** : un champ **Technologies** dans leur onglet Relations, pour les utilisateurs qui peuvent lire l'infrastructure.
 - Rapport **Fins de support** : les versions qui atteignent leur fin de support, systèmes d'exploitation compris, et ce qu'elles touchent. Voir [Fins de support](end-of-support.md).
 - **Vulnérabilités** : les vulnérabilités connues des versions en service, et les serveurs et applications qu'elles atteignent. Voir [Vulnérabilités](vulnerabilities.md).
-- **Vue de l'administration** : les technologies de chaque zone d'administration, avec leurs serveurs. Voir [Vue de l'administration](administration-view.md).
+- **Zones d'administration** : les services d'annuaire avec leur zone, et les serveurs qui portent une technologie d'annuaire hors de la zone la plus sensible. Voir [Zones d'administration](administration-view.md).
 - **Contacts** : la section **Lié à** d'un contact liste les technologies qu'il supporte. Voir [Contacts](contacts.md#ou-les-contacts-sont-utilises).
 - **Recherche** : la recherche globale et les mentions `@` de l'assistant trouvent les technologies par nom et par référence (`@TEC-4`).
 

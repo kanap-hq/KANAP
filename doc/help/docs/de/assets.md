@@ -51,6 +51,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 - **Unter-Standort**: Spezifischer Bereich innerhalb des Standorts (Gebäude, Raum, Rack)
 - **Go-Live**: Datum, an dem das Asset in Produktion ging
 - **End-of-Life**: Geplantes oder tatsächliches Stilllegungsdatum
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört
 
 **Filterung**:
 
@@ -67,6 +68,7 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 | OS | Nach Betriebssystem filtern |
 | Netzwerkzone | Nach Netzwerksegment filtern |
 | Lebenszyklus | Nach Lebenszyklus-Status filtern |
+| Administrationszone | Enthält „(Leer)“ für Assets ohne Zone |
 
 **Tipp**: Kombinieren Sie Filter über Spalten hinweg, um die Ergebnisse einzugrenzen. Filtern Sie zum Beispiel nach Umgebung = „Prod" und Lebenszyklus = „Aktiv", um nur aktive Produktions-Assets zu sehen.
 
@@ -116,6 +118,7 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 
 **Status**:
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
+- **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
 - **Lebenszyklus**: Aktiv, Veraltet, Außer Betrieb usw. (konfigurierbar in den Einstellungen)
 - **Go-Live**: Wann das Asset in Produktion ging
 - **End-of-Life**: Geplantes oder tatsächliches Stilllegungsdatum
@@ -318,6 +321,7 @@ Aus der Asset-Liste:
 | `is_cluster` | Ist dies ein Cluster | Nein | `ja` oder `nein` |
 | `hostname` | Netzwerk-Hostname | Nein | |
 | `domain` | DNS-Domäne | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
+| `admin_zone` | Administrationszone | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `aliases` | DNS-Aliase | Nein | Komma-getrennte Liste |
 | `operating_system` | Betriebssystem | Nein | Der Name der Technologie, gefolgt von ihrer Version (`Windows Server 2019`). Siehe unten |
 | `cluster` | Cluster-Mitgliedschaft | Nein | Name des übergeordneten Clusters |
@@ -343,6 +347,7 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 | Asset-Typ (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Lebenszyklus (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Domäne | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Administrationszone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (Vertrauenskern)`, `Tier 1 (Server und Anwendungen)` |
 | IP-Adresstyp | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`, `virtual machine` und `vm` alle zum gleichen Asset-Typ aufgelöst werden. Ein Wert, der auf mehrere Einträge passt, wird abgelehnt statt erraten. Der CSV-Export schreibt für diese Spalten Namen, sodass eine exportierte Datei unverändert wieder importiert werden kann.

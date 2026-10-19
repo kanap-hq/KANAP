@@ -51,6 +51,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 - **Sub-location**: Specific area within the location (building, room, rack)
 - **Go-live**: Date the asset went into production
 - **End-of-life**: Planned or actual retirement date
+- **Administration zone**: The zone of your administration model the asset belongs to
 
 **Filtering**:
 
@@ -67,6 +68,7 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 | OS | Filter by operating system |
 | Network Zone | Filter by network segment |
 | Lifecycle | Filter by lifecycle status |
+| Administration zone | Includes "(Blank)" for assets without a zone |
 
 **Tip**: Combine filters across columns to narrow results. For example, filter by Environment = "Prod" and Lifecycle = "Active" to see only active production assets.
 
@@ -116,6 +118,7 @@ The drawer shows the asset's identity card on every tab. Edits save automaticall
 
 **Status**:
 - **Environment**: Prod, Pre-prod, QA, Test, Dev, Sandbox
+- **Administration zone**: The zone of your administration model the asset belongs to, for example Tier 0 for a domain controller and the hypervisor that runs it. Choose from the zones configured in **IT Landscape > Settings**. The asset then appears in that zone on the [Administration zones](administration-view.md) page
 - **Lifecycle**: Active, Deprecated, Retired, etc. (configurable in Settings)
 - **Go live**: When the asset entered production
 - **End of life**: Planned or actual retirement date
@@ -318,6 +321,7 @@ From the Assets list:
 | `is_cluster` | Is this a cluster | No | `yes` or `no` |
 | `hostname` | Network hostname | No | |
 | `domain` | DNS domain | No | Accepts code or label from Settings |
+| `admin_zone` | Administration zone | No | Accepts code or label from Settings |
 | `aliases` | DNS aliases | No | Comma-separated list |
 | `operating_system` | Operating system | No | The technology name, with its version (`Windows Server 2019`). See below |
 | `cluster` | Cluster membership | No | Name of parent cluster |
@@ -343,6 +347,7 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 | Asset Type (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Lifecycle (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Domain | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Administration zone (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (core of trust)`, `Tier 1 (servers and applications)` |
 | IP Address Type | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 The system automatically normalizes values during import, so `Virtual Machine`, `virtual machine`, and `vm` all resolve to the same asset type. A value that matches several entries is refused rather than guessed. The CSV export writes names for these columns, so an exported file can be imported back as is.

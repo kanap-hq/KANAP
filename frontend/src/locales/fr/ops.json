@@ -601,6 +601,8 @@
       "total_one": "Total ({{count}} ligne)",
       "total_other": "Total ({{count}} lignes)",
       "noRate": "Pas de taux {{currency}}",
+      "unknownFx": "Inconnu : une ligne liée n'a pas de taux de change",
+      "linkedFxMissing": "Une ligne liée n'a pas de taux de change pour {{year}} : exclue de ce montant.",
       "states": {
         "covered": "Couvert",
         "under": "Sous-budgété",

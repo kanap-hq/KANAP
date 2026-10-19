@@ -3,8 +3,8 @@ import type { EntityManager } from 'typeorm';
 import type { FxRateService } from '../currency/fx-rate.service';
 import { centsNumber, jsRound } from '../common/list-engine/sql-fragments';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
-import { BUDGET_YEAR_REACH, budgetListAmountsByIds } from '../spend/budget-list/budget-list.service';
-import { SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend/spend-summary.builder';
+import { BUDGET_YEAR_REACH, budgetListAmountsByIds, type FxMissingPair } from '../spend/budget-list/budget-list.service';
+import { LOCAL_AMOUNT_FIELD_PREFIX, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../spend/spend-summary.builder';
 import { contractCommitmentSql } from './contract-terms';
 
 /**
@@ -14,11 +14,14 @@ import { contractCommitmentSql } from './contract-terms';
  *   reporting currency with the year's rates (`contractFxRates`, the conversion of the list's
  *   footer). Null when its currency has no rate that year (the totals name those currencies).
  * - Linked: the sum of its budget lines' amounts in that year and column, the very amounts the
- *   budget list shows for them (`budgetListAmountsByIds`), in the reporting currency.
- * - Gap: linked minus committed.
+ *   budget list shows for them (`budgetListAmountsByIds`), in the reporting currency. A line whose
+ *   currency has no rate that year has no amount there: it is left out of the sum and
+ *   `linked_fx_missing` says the sum is incomplete.
+ * - Gap: linked minus committed; null when the linked sum is incomplete.
  * - State (`CONTRACT_BUDGET_STATES`), in this order: `no_commitment` (nothing committed, no line
  *   with an amount), `not_started` (no budget line of the tenant has an amount in that year and
- *   column), `no_line` (no linked line with an amount), `under` (linked below committed), `over`
+ *   column), `no_line` (no linked line with an amount), null when the linked sum is incomplete
+ *   (unknown, as without a rate for the commitment), `under` (linked below committed), `over`
  *   (linked above committed by more than `CONTRACT_BUDGET_OVER_PERCENT`), else `covered`.
  *
  * The five budget columns are equal: nothing here depends on a column's name or rank.
@@ -157,8 +160,13 @@ export type ContractBudgetInputs = {
   reportingCurrency: string;
   /** The contracts the inputs were read for; null for every contract of the tenant. */
   contractIds: string[] | null;
-  /** Per linked line, its amount (cents, reporting currency) in each year. */
-  lineAmounts: Map<string, Map<number, bigint>>;
+  /**
+   * Per linked line, its amount (cents, reporting currency) in each year; null when the line's
+   * currency has no rate that year and the amount is not 0 (`lineFxMissing` holds it).
+   */
+  lineAmounts: Map<string, Map<number, bigint | null>>;
+  /** Per linked line with a null amount: its currency and, per year concerned, the amount (cents) in that currency. */
+  lineFxMissing: Map<string, { currency: string; local: Map<number, bigint> }>;
   /** The years in which some budget line of the tenant has an amount in the column. */
   startedYears: number[];
   /** The rates of the contracts' currencies, per year (null without a rate). */
@@ -186,8 +194,8 @@ export async function loadContractBudgetInputs(
   const uniqueYears = Array.from(new Set(years)).sort((a, b) => a - b);
   const scoped = contractIds !== null;
   const ids = scoped ? Array.from(new Set(contractIds)) : [];
-  const linked: Array<{ id: string }> = await manager.query(
-    `SELECT DISTINCT l.spend_item_id AS id
+  const linked: Array<{ id: string; currency: string | null }> = await manager.query(
+    `SELECT DISTINCT l.spend_item_id AS id, UPPER(i.currency) AS currency
        FROM contract_spend_items l
        JOIN spend_items i ON i.tenant_id = l.tenant_id AND i.id = l.spend_item_id${naturesAnd('i', BUDGET_NATURES)}
       WHERE l.tenant_id = $1${scoped ? ' AND l.contract_id = ANY($2::uuid[])' : ''}`,
@@ -195,9 +203,34 @@ export async function loadContractBudgetInputs(
   );
   const keys = uniqueYears.map((year) => budgetAmountKey(year, column));
   const amounts = await budgetListAmountsByIds(SUMMARY_SCOPES.all, deps, manager, linked.map((row) => row.id), keys);
-  const lineAmounts = new Map<string, Map<number, bigint>>();
+  const lineAmounts = new Map<string, Map<number, bigint | null>>();
   for (const [lineId, byKey] of amounts) {
-    lineAmounts.set(lineId, new Map(uniqueYears.map((year, i) => [year, byKey[keys[i]] ?? 0n])));
+    lineAmounts.set(lineId, new Map(uniqueYears.map((year, i) => [year, byKey[keys[i]] === null ? null : (byKey[keys[i]] ?? 0n)])));
+  }
+  // An amount without a rate: read in the line's currency. Nothing there is a known 0; anything
+  // else stays null (left out of the linked sums, never counted as 0) and is named.
+  const lineFxMissing = new Map<string, { currency: string; local: Map<number, bigint> }>();
+  const unknown = Array.from(lineAmounts).filter(([, byYear]) => Array.from(byYear.values()).some((cents) => cents === null));
+  if (unknown.length) {
+    const localKeys = keys.map((key) => `${LOCAL_AMOUNT_FIELD_PREFIX}${key}`);
+    const locals = await budgetListAmountsByIds(SUMMARY_SCOPES.all, deps, manager, unknown.map(([id]) => id), localKeys);
+    const currencyOf = new Map(linked.map((row) => [row.id, String(row.currency ?? '').trim() || 'EUR']));
+    for (const [lineId, byYear] of unknown) {
+      uniqueYears.forEach((year, i) => {
+        if (byYear.get(year) !== null) return;
+        const local = locals.get(lineId)?.[localKeys[i]] ?? 0n;
+        if (local === 0n) {
+          byYear.set(year, 0n);
+          return;
+        }
+        let entry = lineFxMissing.get(lineId);
+        if (!entry) {
+          entry = { currency: currencyOf.get(lineId) ?? 'EUR', local: new Map() };
+          lineFxMissing.set(lineId, entry);
+        }
+        entry.local.set(year, local);
+      });
+    }
   }
 
   // Validated against the five columns above: safe to name. A version after its line's end of
@@ -227,6 +260,7 @@ export async function loadContractBudgetInputs(
     reportingCurrency: fx.reportingCurrency,
     contractIds: scoped ? ids : null,
     lineAmounts,
+    lineFxMissing,
     startedYears: started.map((row) => Number(row.yr)),
     rates,
   };
@@ -241,7 +275,7 @@ export function contractBudgetParams(inputs: ContractBudgetInputs): Record<strin
     for (const [year, cents] of byYear) {
       lineIds.push(lineId);
       lineYears.push(year);
-      lineCents.push(cents.toString());
+      lineCents.push(cents === null ? (null as unknown as string) : cents.toString());
     }
   }
   return {
@@ -259,10 +293,31 @@ export function contractBudgetParams(inputs: ContractBudgetInputs): Record<strin
 }
 
 /**
+ * The (currency, year) pairs of the amounts without a rate among `lineIds` (each line counted once
+ * per pair), `years` only when given; `[]` when none. The shape of the budget list's `fxMissing`.
+ */
+export function contractLinesFxMissing(inputs: Pick<ContractBudgetInputs, 'lineFxMissing'>, lineIds: Iterable<string>, years?: number[]): FxMissingPair[] {
+  const counts = new Map<string, FxMissingPair>();
+  for (const lineId of new Set(lineIds)) {
+    const entry = inputs.lineFxMissing.get(lineId);
+    if (!entry) continue;
+    for (const year of entry.local.keys()) {
+      if (years && !years.includes(year)) continue;
+      const key = `${entry.currency}:${year}`;
+      const pair = counts.get(key) ?? { currency: entry.currency, year, lines: 0 };
+      pair.lines += 1;
+      counts.set(key, pair);
+    }
+  }
+  return Array.from(counts.values()).sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
+}
+
+/**
  * One row per contract (of the inputs) and year: `contract_id`, `yr`, `committed_local` (cents of
  * the contract's currency), `committed` (cents of the reporting currency, a float8 holding an
- * integer; null without a rate, 0 when nothing is committed), `linked` (cents), `has_amount`,
- * `started`, `gap` (cents, null without a rate) and `state`. With TypeORM's named parameters of
+ * integer; null without a rate, 0 when nothing is committed), `linked` (cents, the lines with an
+ * amount), `has_amount`, `linked_fx_missing` (a linked line has an amount without a rate),
+ * `started`, `gap` (cents, null without a rate or with `linked_fx_missing`) and `state`. With TypeORM's named parameters of
  * `contractBudgetParams`; usable as a CTE or a subquery.
  *
  * The conversion is the list footer's (`convertValue`): `Math.round(amount × rate × 100)` cents.
@@ -272,11 +327,12 @@ export function contractBudgetSql(inputs: Pick<ContractBudgetInputs, 'contractId
                 WHEN fxr.rate IS NULL THEN NULL
                 ELSE ${jsRound(`${centsNumber('cm.local')} * fxr.rate * 100`)} END`;
   return `SELECT b.*,
-         (b.linked - b.committed::numeric) AS gap,
+         CASE WHEN b.linked_fx_missing THEN NULL ELSE (b.linked - b.committed::numeric) END AS gap,
          CASE WHEN b.committed IS NULL THEN NULL
               WHEN b.committed = 0 AND NOT b.has_amount THEN 'no_commitment'
               WHEN NOT b.started THEN 'not_started'
               WHEN NOT b.has_amount THEN 'no_line'
+              WHEN b.linked_fx_missing THEN NULL
               WHEN b.linked < b.committed::numeric THEN 'under'
               WHEN (b.linked - b.committed::numeric) * 100 > b.committed::numeric * ${CONTRACT_BUDGET_OVER_PERCENT} THEN 'over'
               ELSE 'covered' END AS state
@@ -286,6 +342,7 @@ export function contractBudgetSql(inputs: Pick<ContractBudgetInputs, 'contractId
              ${committed} AS committed,
              COALESCE(lk.linked, 0)::numeric AS linked,
              COALESCE(lk.has_amount, false) AS has_amount,
+             COALESCE(lk.fx_missing, false) AS linked_fx_missing,
              (y.yr = ANY(:cbStartedYears::int[])) AS started
         FROM contracts c
         CROSS JOIN unnest(:cbYears::int[]) AS y(yr)
@@ -293,7 +350,8 @@ export function contractBudgetSql(inputs: Pick<ContractBudgetInputs, 'contractId
         LEFT JOIN unnest(:cbFxYears::int[], :cbFxCurrencies::text[], :cbFxRates::float8[]) AS fxr(yr, cur, rate)
           ON fxr.yr = y.yr AND fxr.cur = ${contractCurrencySql('c')}
         LEFT JOIN (
-          SELECT l.contract_id, la.yr, sum(la.cents) AS linked, bool_or(la.cents <> 0) AS has_amount
+          SELECT l.contract_id, la.yr, COALESCE(sum(la.cents), 0) AS linked,
+                 bool_or(la.cents IS NULL OR la.cents <> 0) AS has_amount, bool_or(la.cents IS NULL) AS fx_missing
             FROM contract_spend_items l
             JOIN unnest(:cbLineIds::uuid[], :cbLineYears::int[], :cbLineCents::numeric[]) AS la(id, yr, cents) ON la.id = l.spend_item_id
            WHERE l.tenant_id = :cbTenant
@@ -310,7 +368,10 @@ export type ContractBudgetRow = {
   committed_local: number;
   /** In the reporting currency; null when the contract's currency has no rate that year. */
   committed: number | null;
+  /** The linked lines with an amount in the reporting currency. */
   linked: number;
+  /** A linked line has an amount without a rate that year: `linked` leaves it out, `gap` and `state` are null. */
+  linked_fx_missing: boolean;
   gap: number | null;
   state: ContractBudgetState | null;
 };
@@ -324,6 +385,7 @@ export function presentContractBudgetRow(row: Record<string, any>): ContractBudg
     committed_local: units(row.committed_local) ?? 0,
     committed: units(row.committed),
     linked: units(row.linked) ?? 0,
+    linked_fx_missing: row.linked_fx_missing === true,
     gap: units(row.gap),
     state: (row.state ?? null) as ContractBudgetState | null,
   };

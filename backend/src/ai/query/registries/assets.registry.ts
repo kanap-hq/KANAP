@@ -130,6 +130,16 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: false,
     },
+    admin_zone: {
+      ai: 'admin_zone',
+      grid: 'admin_zone',
+      type: 'set',
+      description: 'Administration zone of the asset.',
+      dynamic: true,
+      discoverable: true,
+      sortable: true,
+      groupable: true,
+    },
     network_segment: {
       ai: 'network_segment',
       grid: 'network_segment',
@@ -185,6 +195,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
     sub_location: 'sub_location_name',
     hostname: 'hostname',
     fqdn: 'fqdn',
+    admin_zone: 'admin_zone',
     cluster: 'cluster',
     is_cluster: 'is_cluster',
     created_at: 'created_at',
@@ -205,6 +216,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       provider: { expression: 'a.provider' },
       region: { expression: 'a.region' },
       zone: { expression: 'a.zone' },
+      admin_zone: { expression: 'a.admin_zone' },
       os: { expression: operatingSystemLabelSql('a') },
       hosting_type: {
         expression: 'l.hosting_type',

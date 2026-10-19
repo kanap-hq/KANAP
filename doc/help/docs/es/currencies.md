@@ -103,12 +103,7 @@ Debajo del formulario de configuración, la tabla **Últimas instantáneas de ta
       - **Tasa al contado**: Tasa al contado actual de ExchangeRate-API (año actual)
       - **Estimación futura**: Tasa del año actual reutilizada para años futuros
   - **Marcas en las celdas**: un asterisco (*) tras una tasa introducida a mano, explicado por la nota **Tipo introducido manualmente** bajo la tabla (solo aparece cuando la tabla contiene una tasa así); **estimación** junto a una tasa tomada del año publicado más cercano (pase el cursor sobre la marca para ver el motivo)
-  - **Tasa faltante**: Cuando un año no tiene tasa para una moneda en uso, los importes de las líneas presupuestarias en esa moneda quedan excluidos de todos los totales en la moneda de reporte de ese año. Esto afecta a la lista de líneas presupuestarias, a la vista general de la gestión presupuestaria y a los informes presupuestarios. La pantalla lo indica donde importa:
-
-- Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general y en la parte superior de cada informe presupuestario. Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre esta página.
-- En la propia línea, el importe aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
-
-KANAP obtiene las tasas de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa la nueva tasa en cuanto la fuente la publica. Para detectar las tasas faltantes, consulte el bloque de tasas faltantes encima de la tabla de instantáneas de tasas FX y ejecute Forzar sincronización FX para obtener las tasas de inmediato. Introducir una [tasa manual](#tasas-manuales) lo corrige al momento.
+  - **Tasa faltante**: un par sin tasa muestra `—` en el color de advertencia
 
 **Ejemplo**:
 Si su moneda de reporte es EUR:
@@ -199,7 +194,12 @@ Se reutiliza la tasa del año actual como estimación futura. Esto proporciona o
 ### Años congelados
 Congelar la columna presupuestaria por defecto de un año fija las tasas de ese año para el tipo congelado (OPEX o CAPEX): KANAP actualiza las tasas del año y conserva ese conjunto para todos los importes del año, aunque lleguen tasas más recientes. Descongelar la columna por defecto las libera. Vea [Congelar la columna por defecto fija los tipos de cambio](budget-operations.md#congelar-la-columna-por-defecto-fija-los-tipos-de-cambio).
 
-**Tasa faltante**: Cuando un año no tiene tasa para una moneda en uso, los importes en esa moneda se cuentan a **1,00**, como si ya estuvieran en la moneda de reporte. El servidor registra una advertencia y obtiene las tasas de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa la nueva tasa en cuanto la fuente la publica. Para detectarlo, consulte el bloque de tasas faltantes encima de la tabla de instantáneas de tasas FX y ejecute Forzar sincronización FX para obtener las tasas de inmediato. Introducir una [tasa manual](#tasas-manuales) lo corrige al momento.
+**Tasa faltante**: Cuando un año no tiene tasa para una moneda en uso, los importes de las líneas presupuestarias en esa moneda quedan excluidos de todos los totales en la moneda de reporte de ese año. Esto afecta a la lista de líneas presupuestarias, a la vista general de la gestión presupuestaria, a los informes presupuestarios y de contracargo, a los contratos y a las pestañas Relaciones de las aplicaciones y las tecnologías. La pantalla lo indica donde importa:
+
+- Un aviso de una línea indica lo que se excluye, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Aparece bajo los totales de la lista de líneas presupuestarias, en los mosaicos de la vista general, en la parte superior de cada informe presupuestario y de contracargo, y bajo las cifras presupuestarias de contratos, aplicaciones y tecnologías. Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre esta página.
+- En la propia línea, el importe aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
+
+KANAP obtiene las tasas de ese año en segundo plano (como máximo una vez cada seis horas por año), de modo que la siguiente visualización usa la nueva tasa en cuanto la fuente la publica. Para detectar las tasas faltantes, consulte el bloque de tasas faltantes encima de la tabla de instantáneas de tasas FX y ejecute Forzar sincronización FX para obtener las tasas de inmediato. Introducir una [tasa manual](#tasas-manuales) lo corrige al momento.
 
 ## Consejos
 

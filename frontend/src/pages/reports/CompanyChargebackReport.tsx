@@ -34,7 +34,7 @@ import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
-import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
+import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
   const n = Number(value ?? 0);
@@ -199,7 +199,10 @@ export default function CompanyChargebackReport() {
   const items = data?.items ?? [];
   const kpiRows = data?.kpis ?? [];
   const globalKpi = data?.globalKpi;
-  const warnings = data?.warnings ?? [];
+  const allWarnings = data?.warnings ?? [];
+  // The lines left out for lack of a rate read as the budget reports' notice, above the report.
+  const amountFxMissing = amountFxMissingOf(allWarnings);
+  const warnings = allWarnings.filter((warning) => !isAmountFxMissingWarning(warning));
   const formatNumber = React.useCallback(
     (value: number | null | undefined) => baseFormatNumber(value, locale),
     [locale],
@@ -411,6 +414,7 @@ export default function CompanyChargebackReport() {
   return (
     <ReportLayout
       title={t("reports.companyChargeback.title")}
+      fxMissing={isReady ? amountFxMissing : undefined}
       subtitle={t("reports.companyChargeback.subtitle")}
       filters={(
         <>

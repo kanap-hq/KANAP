@@ -72,11 +72,9 @@ export type DomainOption = {
   localId?: string;
 };
 
-/** An administration zone: who administers it, at which privilege level, where its secrets are kept. */
+/** An administration zone: the directory group or the team that administers it. */
 export type AdminZoneOption = ItOpsEnumOption & {
   admin_group?: string;
-  privilege_level?: string;
-  secrets_location?: string;
   description?: string;
 };
 

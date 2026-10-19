@@ -744,7 +744,6 @@
     "remove": "Remove",
     "locked": "Built-in",
     "protectedHint": "Built-in value: it can be retired but not removed.",
-    "displayLabel": "e.g., Tier 1",
     "addValue": "Add value",
     "noValues": "No values configured yet.",
     "physical": "Physical",

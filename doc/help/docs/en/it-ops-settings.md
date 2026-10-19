@@ -31,7 +31,7 @@ Within a section, lists are sorted by name. Each list appears as an expandable p
 
 Each list has its own controls at the top:
 
-- **Add item** - Inserts a new row at the top of the list, focused and ready to type.
+- **Add item** - Inserts a new row at the top of the list, focused and ready to type. Its name field shows an example for that list.
 - Edits save automatically about a second and a half after your last change, once every row is valid. A saving indicator shows next to the list.
 
 For long lists (more than 25 rows), the table virtualizes rows, showing about 20 at a time with smooth scrolling and sticky headers.
@@ -42,7 +42,7 @@ You only ever see and type **names**. KANAP generates a stable internal code fro
 
 Because names identify values, a few rules apply within a list:
 
-- every value needs a name, and two values cannot have the same name (case does not matter);
+- every value needs a name (an asterisk marks the **Name** column), and two values cannot have the same name (case does not matter);
 - a name cannot be identical to the internal code of another value in the same list;
 - names of **Access methods** cannot contain a comma or a semicolon, because the CSV export lists them in one comma-separated cell.
 
@@ -96,23 +96,30 @@ The category determines which fields appear when editing a Location:
 
 ### Administration zones
 
-The zones of your administration model, for example Tier 0 for the directory and its controllers, Tier 1 for the servers, Tier 2 for the workstations. Find them in your administration policy or your privileged access model.
+The zones of your administration model. KANAP ships the three tiers of the tiered administration model, a recognized practice:
 
-**Columns**: Name, Administrator group, Privilege level, Secrets location, Description, No longer offered
+- **Tier 0 (core of trust)**: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.
+- **Tier 1 (servers and applications)**: business servers, applications, databases and middleware.
+- **Tier 2 (workstations)**: user workstations and devices.
 
-- **Administrator group**: who administers the zone, for example "Domain admins".
-- **Privilege level**: the level of the zone in your model, for example "Tier 0".
-- **Secrets location**: where the zone's administrator secrets are kept, for example a password vault.
+Rename them, add your own or retire them to match your administration policy or your privileged access model. The three tiers appear as long as the list has never been saved. Once it has been saved, even empty, KANAP no longer adds them: add them yourself if you need them.
+
+The order of the list matters: the first zone is the most sensitive. Drag a row by its handle to move it. A new zone is added at the top, so move it to its place. The [Administration zones](administration-view.md) page shows the zones in this order and checks the assets against the first zone that is not marked **No longer offered**.
+
+**Columns**: Name, Administrator group, Description, No longer offered
+
+- **Administrator group**: the directory group or the team that administers the zone, for example "Domain admins".
 
 **Where used**:
-- Technologies workspace → properties drawer → **Administration zone**
-- **IT Landscape > Administration view**, which lists each zone with its technologies and servers. See [Administration view](administration-view.md).
+- Assets workspace → properties drawer → **Administration zone**
+- Technologies workspace → properties drawer → **Administration zone**, for the technologies of the **Directory and identity** family
+- **IT Landscape > Administration zones**, which counts the assets and directory services of each zone, runs the control points and assigns zones in bulk. See [Administration zones](administration-view.md).
 
-A zone marked **No longer offered** stays on the technologies already placed in it.
+A zone marked **No longer offered** stays on the technologies and assets already placed in it.
 
 ### Technology families
 
-What kind of technology each one is: database, hypervisor, directory and identity, and so on. The technologies list and the reports group technologies by family, and the [Administration view](administration-view.md) finds the directory services through the **Directory and identity** family.
+What kind of technology each one is: database, hypervisor, directory and identity, and so on. The technologies list and the reports group technologies by family, and the [Administration zones](administration-view.md) page finds the directory services through the **Directory and identity** family.
 
 **Columns**: Name, No longer offered
 
@@ -138,16 +145,18 @@ Default categories include: Application, Authentication, Backup, Database, Email
 
 Active Directory or DNS domains for assets. Built-in entries cannot be modified. The DNS suffix is used to compute the fully qualified domain name (FQDN) for each asset.
 
-**Columns**: Name, DNS suffix, Forest, Accounts, Machines, Trusts, No longer offered
+**Columns**: Name, DNS suffix, Forest, Number of accounts, Number of computers, Trusts, No longer offered
 
 - **Forest**: the Active Directory forest of the domain, as shown in Active Directory Domains and Trusts.
-- **Accounts** and **Machines**: the numbers of user accounts and computers in the domain, as counted in Active Directory Users and Computers. Whole numbers only.
+- **Number of accounts** and **Number of computers**: the numbers of user accounts and computers in the domain, as counted in Active Directory Users and Computers or by a count of the user and computer objects of the domain. Whole numbers only.
+
+Hover the **Forest**, **Number of accounts** and **Number of computers** headers to see where to find each value.
 - **Trusts**: the button shows how many trusts the domain has. Click it to list the other domains it has a trust with, as shown in Active Directory Domains and Trusts. **Add a trusted domain** adds one; choose its **Direction**: **outgoing** (this domain trusts the other one, whose accounts can reach its resources), **incoming** (the other domain trusts this one) or **two-way** (both). The dialog also shows, read only, the trusts declared on other domains toward this one. The button appears once the domain is saved, and needs at least one other domain in the list.
 
 **Where used**:
 - Assets workspace → Technical tab → **Domain** selector
 - Assets workspace → Technical tab → **FQDN** (auto-computed from hostname + DNS suffix)
-- **IT Landscape > Administration view**: forest, trusts, counts and domain controllers. See [Administration view](administration-view.md#domains).
+- **IT Landscape > Administration zones**: domains grouped by forest, with their trusts, counts and domain controllers. See [Administration zones](administration-view.md#directory-services-and-domains).
 
 **System entries** (cannot be modified or deleted):
 - **Workgroup** - For standalone assets not joined to a domain
@@ -399,10 +408,10 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 |------|-----------------|
 | **Access methods** | Applications (Technical & Support tab → Access Methods) |
 | **Application categories** | Applications (Category) |
-| **Administration zones** | Technologies (properties drawer → Administration zone), Administration view |
+| **Administration zones** | Assets (properties drawer → Administration zone), Technologies of the Directory and identity family (properties drawer → Administration zone), Administration zones page |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
-| **Domains** | Assets (Technical tab → Domain, FQDN), Administration view |
+| **Domains** | Assets (Technical tab → Domain, FQDN), Administration zones page |
 | **Entities** | Connections (Source/Target Entity), Connection Map (graph tier placement) |
 | **Hosting types** | Locations (Overview), Technologies (Hosting type) |
 | **Integration patterns** | Interface legs (Pattern) |
@@ -418,7 +427,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Subnets** | Assets (Technical tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
 | **Asset types** | Assets (Overview → Type) |
-| **Technology families** | Technologies (Family), Administration view (directory services) |
+| **Technology families** | Technologies (Family), Administration zones page (directory services) |
 
 ---
 

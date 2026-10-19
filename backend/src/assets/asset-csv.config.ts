@@ -36,7 +36,7 @@ function sameOperatingSystem(current: string, wanted: string): boolean {
 }
 
 /**
- * Settings-backed fields (kind, status, domain) accept a code or a name;
+ * Settings-backed fields (kind, status, domain, admin_zone) accept a code or a name;
  * ambiguity is refused. The operating system stays a label for the resolver.
  * IP addresses get their type resolved and their values trimmed.
  */
@@ -44,6 +44,7 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
   if (entity.kind) entity.kind = resolveCatalogCode(entity.kind, settings.serverKinds);
   if (entity.status) entity.status = resolveCatalogCode(entity.status, settings.lifecycleStates);
   if (entity.domain) entity.domain = resolveCatalogCode(entity.domain, settings.domains);
+  if (entity.admin_zone) entity.admin_zone = resolveCatalogCode(entity.admin_zone, settings.adminZones);
   if (!Array.isArray(entity.ip_addresses)) return;
 
   const normalizedIps: Array<{ type: string; ip: string; subnet_cidr: string | null }> = [];
@@ -78,7 +79,7 @@ function resolveAssetCatalogs(entity: any, settings: ItOpsSettings): void {
  *
  * Field order matches AssetWorkspacePage.tsx tabs:
  * - Overview: name, location, kind, is_cluster, status, notes
- * - Technical: environment, hostname, domain, aliases, operating system, cluster, IP addresses
+ * - Technical: environment, hostname, domain, admin_zone, aliases, operating system, cluster, IP addresses
  *
  * Note: fqdn is computed from hostname + domain, so not included in CSV
  */
@@ -208,6 +209,15 @@ export const assetCsvConfig: CsvEntityConfig = {
       required: false,
       defaultExport: true,
       label: 'Domain',
+      group: 'Technical',
+    },
+    {
+      csvColumn: 'admin_zone',
+      entityProperty: 'admin_zone',
+      type: CsvFieldType.STRING,
+      required: false,
+      defaultExport: true,
+      label: 'Administration zone',
       group: 'Technical',
     },
     {
@@ -371,7 +381,7 @@ export const assetCsvConfig: CsvEntityConfig = {
       fields: [
         'id', 'name', 'location_reference', 'kind', 'is_cluster', 'status',
         'go_live_date', 'end_of_life_date', 'notes',
-        'environment', 'hostname', 'domain', 'aliases',
+        'environment', 'hostname', 'domain', 'admin_zone', 'aliases',
         'operating_system', 'cluster',
         'ip_1_type', 'ip_1_address', 'ip_1_subnet_cidr',
         'ip_2_type', 'ip_2_address', 'ip_2_subnet_cidr',
@@ -418,7 +428,7 @@ export const assetCsvConfig: CsvEntityConfig = {
   /**
    * Hook to normalize and validate fields before commit.
    * - Derives Provider from Location (required at DB level but auto-populated in frontend)
-   * - Resolves settings-backed fields (kind, status, domain, ip_address type)
+   * - Resolves settings-backed fields (kind, status, domain, admin_zone, ip_address type)
    *   accepting both codes and labels
    * - Holds the operating-system text aside: it is not a column
    */

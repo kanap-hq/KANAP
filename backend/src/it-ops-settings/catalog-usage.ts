@@ -60,7 +60,7 @@ export const CATALOG_USAGE: Record<string, UsageSource[]> = {
   incidentCategories: [{ record: 'incidents', table: 'incidents', predicates: [{ kind: 'scalar', table: 'incidents', column: 'category' }], listPath: { page: '/it/incidents', field: 'category' } }],
   networkSegments: [{ record: 'subnets', table: 'settings', predicates: [] }],
   technologyFamilies: [technologies('family')],
-  adminZones: [technologies('admin_zone')],
+  adminZones: [technologies('admin_zone'), assets('admin_zone')],
   interfaceProtocols: [],
 };
 

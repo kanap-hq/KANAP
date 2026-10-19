@@ -27,6 +27,7 @@ const itOpsSettings: any = {
   serverKinds: [{ code: 'vm', label: 'Virtual machine' }, { code: 'physical', label: 'Physical server' }],
   lifecycleStates: [{ code: 'active', label: 'Active' }, { code: 'retired', label: 'Retired' }],
   domains: [{ code: 'corp', label: 'Corporate' }],
+  adminZones: [{ code: 'tier_0', label: 'Tier 0' }],
   ipAddressTypes: [{ code: 'mgmt', label: 'Management' }],
   applicationCategories: [{ code: 'erp', label: 'Enterprise planning' }],
   accessMethods: [{ code: 'web', label: 'Web browser' }],
@@ -91,12 +92,12 @@ async function testAssets() {
   const asset = stored(assetCsvConfig, {
     id: 'a1', tenant_id: T, name: 'srv-01', location_id: 'l1', provider: 'ovh', kind: 'vm', is_cluster: false,
     status: 'active', go_live_date: new Date(2024, 0, 15), end_of_life_date: null, notes: null, environment: 'prod',
-    hostname: 'srv-01', domain: 'corp', aliases: ['web'], operating_system: 'linux', cluster: null,
+    hostname: 'srv-01', domain: 'corp', admin_zone: 'tier_0', aliases: ['web'], operating_system: 'linux', cluster: null,
     ip_addresses: [{ type: 'mgmt', ip: '10.0.0.1', subnet_cidr: '10.0.0.0/24' }],
   });
 
-  const header = 'id;name;location_reference;kind;is_cluster;status;go_live_date;end_of_life_date;notes;environment;hostname;domain;aliases;operating_system;cluster;ip_1_type;ip_1_address;ip_1_subnet_cidr';
-  const line = 'a1;srv-01;LOC-1;Virtual machine;false;Active;2024-01-15;;;prod;srv-01;Corporate;web;Linux;;Management;10.0.0.1;10.0.0.0/24';
+  const header = 'id;name;location_reference;kind;is_cluster;status;go_live_date;end_of_life_date;notes;environment;hostname;domain;admin_zone;aliases;operating_system;cluster;ip_1_type;ip_1_address;ip_1_subnet_cidr';
+  const line = 'a1;srv-01;LOC-1;Virtual machine;false;Active;2024-01-15;;;prod;srv-01;Corporate;tier_0;web;Linux;;Management;10.0.0.1;10.0.0.0/24';
   await check('asset', assetCsvConfig, header, line, {
     'another kind name': line.replace('Virtual machine', 'Physical server'),
     'another lifecycle name': line.replace('Active', 'Retired'),

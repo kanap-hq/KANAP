@@ -112,6 +112,8 @@ Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `S
 
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile.
 
+Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
+
 ## Artefakte und Vorschauen
 
 Einige Antworten bringen zusätzliches Material mit, das nicht natürlich in den Chat-Verlauf passt. KANAP nennt diese **Artefakte**.

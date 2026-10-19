@@ -286,7 +286,7 @@ function useMyBudget(scope: BudgetScope, profile: ProfileName, metric: AmountCol
     }
     return [...byId.values()].sort((a, b) => b.value - a.value).slice(0, MY_TOP_LINES);
   }, [query.data]);
-  return { rows, topLines, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
+  return { rows, topLines, fxMissing: query.fxMissing, isLoading: query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 /** This year's default column by cost center, the five largest (lines without one in the ranking too). */
@@ -294,7 +294,7 @@ function useCostCenterTotals(scope: BudgetScope, metric: AmountColumnKey, enable
   const request = useMemo(() => costCenterTotalsRequest(metric, 5), [metric]);
   const query = useBudgetAggregate(scope, request, { enabled });
   const rows = useMemo(() => readCostCenterTotals(query.data), [query.data]);
-  return { rows, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
+  return { rows, fxMissing: query.data?.fxMissing, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 type RecentUpdate = { scope: NatureScope; id: string; ref: string; name: string; at: string | null };
@@ -639,6 +639,7 @@ export default function DashboardPage() {
                       ))}
                     </>
                   )}
+                  <FxMissingNotice items={myBudget.fxMissing} sx={{ pt: 0.5 }} />
                 </Stack>
               )}
             </DashboardTile>
@@ -793,6 +794,7 @@ export default function DashboardPage() {
                 {costCenters.rows.length === 0 && (
                   <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
+                <FxMissingNotice items={costCenters.fxMissing} sx={{ pt: 0.5 }} />
               </Stack>
             </DashboardTile>
           </Box>

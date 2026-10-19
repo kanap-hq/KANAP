@@ -53,6 +53,7 @@ import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
 import { resolveFteField } from '../../spend/spend-summary.builder';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
+import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
 import { trailingDigits } from '../../common/text-scan';
 
 /** Connection fields grouped on their effective values (see aggregateConnectionsByEffectiveRisk). */
@@ -1148,7 +1149,7 @@ export class AiAggregateExecutor {
     filters: Record<string, any>,
     fn: AiAggregateFunction,
     metric: { key: string; def: AiAggregateMetricDef } | null,
-  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number }> {
+  ): Promise<{ groups: Array<{ key: string | null; count: number } | BudgetValueGroup>; total: number; fxMissing: FxMissingPair[] | null }> {
     const groupField = registry.fields[groupBy];
     if (!groupField) {
       throw new BadRequestException('Unsupported group_by field.');
@@ -1177,7 +1178,8 @@ export class AiAggregateExecutor {
       if (!spec.measures.length) return { key, count: group.count };
       return fte ? { key, value: group.values.value, unknown: group.unknown.value } : { key, value: group.values.value };
     });
-    return { groups, total: result.total.count };
+    // The amounts left out of the values for lack of a rate (`[]` when none); null without a measure.
+    return { groups, total: result.total.count, fxMissing: spec.measures.length ? result.fxMissing ?? [] : null };
   }
 
   async execute(
@@ -1198,7 +1200,7 @@ export class AiAggregateExecutor {
     const isAmount = metric !== '' && (
       isBudgetLineEntity(input.entity_type) ? !metric.endsWith('_fte') : metric.startsWith('yearly_amount')
     );
-    const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type) : null;
+    const amounts = isAmount ? await aiAmountsCurrency(context, input.entity_type, 'list', result.amounts_fx_missing) : null;
     return amounts ? { ...result, ...amounts } : result;
   }
 
@@ -1337,7 +1339,7 @@ export class AiAggregateExecutor {
     }
 
     if (input.entity_type === 'spend_items' || input.entity_type === 'capex_items') {
-      const { groups, total } = await this.aggregateBudgetSummary(
+      const { groups, total, fxMissing } = await this.aggregateBudgetSummary(
         context,
         input.entity_type,
         registry,
@@ -1359,6 +1361,7 @@ export class AiAggregateExecutor {
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
         scope: null,
+        ...(fxMissing ? { amounts_fx_missing: fxMissing } : {}),
       };
     }
 

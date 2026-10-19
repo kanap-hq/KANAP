@@ -32,7 +32,7 @@ import { formatPercentPoints, formatSharePercent } from '../../i18n/formatters';
 import { useLocale } from '../../i18n/useLocale';
 import { formatCurrency as formatMoney } from '../../i18n/formatters';
 import { useTranslation } from 'react-i18next';
-import { allocationWarningKey, allocationWarningText, type ReportWarning } from '../../utils/allocationWarnings';
+import { allocationWarningKey, allocationWarningText, amountFxMissingOf, isAmountFxMissingWarning, type ReportWarning } from '../../utils/allocationWarnings';
 import { chargebackKpiTotals } from './chargebackKpiTotals';
 
 function baseFormatNumber(value: number | null | undefined, locale: string): string {
@@ -248,7 +248,10 @@ export default function GlobalChargebackReport() {
   ], [formatCount, formatCurrency, formatNumber, formatShare, metricLabel]);
 
   const kpiRows: GlobalChargebackKpiRow[] = data?.kpis ?? [];
-  const warnings = data?.warnings ?? [];
+  const allWarnings = data?.warnings ?? [];
+  // The lines left out for lack of a rate read as the budget reports' notice, above the report.
+  const amountFxMissing = amountFxMissingOf(allWarnings);
+  const warnings = allWarnings.filter((warning) => !isAmountFxMissingWarning(warning));
 
   const companyTotalsById = useMemo(() => {
     const map = new Map<string, { amount: number; share: number | null; companyName: string }>();
@@ -481,6 +484,7 @@ export default function GlobalChargebackReport() {
   return (
     <ReportLayout
       title={t("reports.globalChargeback.title")}
+      fxMissing={amountFxMissing}
       subtitle={t("reports.globalChargeback.subtitle")}
       filters={(
         <>

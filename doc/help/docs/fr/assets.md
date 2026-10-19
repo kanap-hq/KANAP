@@ -51,6 +51,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 - **Sous-site** : Zone spécifique au sein du site (bâtiment, salle, baie)
 - **Mise en production** : Date à laquelle l'actif est entré en production
 - **Fin de vie** : Date de retrait planifiée ou effective
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif
 
 **Filtrage** :
 
@@ -67,6 +68,7 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 | OS | Filtrer par système d'exploitation |
 | Zone réseau | Filtrer par segment réseau |
 | Cycle de vie | Filtrer par statut de cycle de vie |
+| Zone d'administration | Inclut « (Vide) » pour les actifs sans zone |
 
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
@@ -116,6 +118,7 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 
 **Statut** :
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
+- **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
 - **Cycle de vie** : Actif, Obsolète, Retiré, etc. (configurable dans les Paramètres)
 - **Mise en production** : Quand l'actif est entré en production
 - **Fin de vie** : Date de retrait planifiée ou effective
@@ -318,6 +321,7 @@ Depuis la liste des Actifs :
 | `is_cluster` | Est-ce un cluster | Non | `oui` ou `non` |
 | `hostname` | Nom d'hôte réseau | Non | |
 | `domain` | Domaine DNS | Non | Accepte un code ou un libellé depuis les Paramètres |
+| `admin_zone` | Zone d'administration | Non | Accepte un code ou un libellé depuis les Paramètres |
 | `aliases` | Alias DNS | Non | Liste séparée par virgules |
 | `operating_system` | Système d'exploitation | Non | Le nom de la technologie, suivi de sa version (`Windows Server 2019`). Voir ci-dessous |
 | `cluster` | Appartenance à un cluster | Non | Nom du cluster parent |
@@ -343,6 +347,7 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Type d'actif (`kind`) | `vm`, `physical`, `container` | `Virtual Machine`, `Physical Server`, `Container` |
 | Cycle de vie (`status`) | `active`, `inactive`, `decommissioned` | `Active`, `Inactive`, `Decommissioned` |
 | Domaine | `corp`, `dmz` | `Corporate Domain`, `DMZ` |
+| Zone d'administration (`admin_zone`) | `tier_0`, `tier_1` | `Tier 0 (cœur de confiance)`, `Tier 1 (serveurs et applications)` |
 | Type d'adresse IP | `host`, `ipmi`, `mgmt` | `Host IP`, `IPMI`, `Management` |
 
 Le système normalise automatiquement les valeurs lors de l'import, donc `Virtual Machine`, `virtual machine` et `vm` se résolvent tous vers le même type d'actif. Une valeur qui correspond à plusieurs entrées est refusée plutôt que devinée. L'export CSV écrit les noms pour ces colonnes, si bien qu'un fichier exporté peut être réimporté tel quel.

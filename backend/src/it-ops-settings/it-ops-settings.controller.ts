@@ -32,7 +32,7 @@ const LIST_FIELDS: Record<string, Record<string, FieldReader>> = {
     forest: text('forest'), account_count: (row) => row.account_count, machine_count: (row) => row.machine_count,
     trusts: (row) => Array.isArray(row.trusts) ? row.trusts.map((trust: any) => ({ domain: trust?.domain, direction: trust?.direction })) : row.trusts,
   },
-  adminZones: { ...base, admin_group: text('admin_group'), privilege_level: text('privilege_level'), secrets_location: text('secrets_location'), description: text('description') },
+  adminZones: { ...base, admin_group: text('admin_group'), description: text('description') },
   subnets: {
     location_id: (row) => String(row.location_id ?? '').trim(), cidr: (row) => String(row.cidr ?? '').trim(), vlan_number: (row) => row.vlan_number,
     network_zone: (row) => String(row.network_zone ?? '').trim().toLowerCase(), description: (row) => row.description, deprecated,

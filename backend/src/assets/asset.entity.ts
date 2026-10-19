@@ -37,6 +37,10 @@ export class Asset {
   @Column('text', { nullable: true })
   domain!: string | null;
 
+  /** Code of the tenant's administration zones catalog (`it_ops.admin_zones`), or null. */
+  @Column('text', { nullable: true })
+  admin_zone!: string | null;
+
   @Column('text', { nullable: true })
   fqdn!: string | null;
 

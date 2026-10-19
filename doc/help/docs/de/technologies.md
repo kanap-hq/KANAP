@@ -115,7 +115,7 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 ### Eigenschaftenfeld
 
 - **Hersteller**, **Familie** und **Hosting-Typ**.
-- **Administrationszone**: die Zone Ihres Administrationsmodells, zu der die Technologie gehört, zum Beispiel Tier 0 für den Verzeichnisdienst. Die Zonen stammen aus **IT-Landschaft > Einstellungen**. Eine Technologie ohne Zone erscheint als zu ergänzende Angabe in der [Administrationssicht](administration-view.md).
+- **Administrationszone**: nur für die Technologien der Familie **Verzeichnis und Identität** angezeigt. Sie ordnet einen Verzeichnisdienst einer Zone Ihres Administrationsmodells zu, zum Beispiel Tier 0 für Entra ID, das auf keinem Ihrer Server läuft. Die Zonen stammen aus **IT-Landschaft > Einstellungen**, und die Seite [Administrationszonen](administration-view.md) listet die Verzeichnisdienste mit ihrer Zone. Die übrigen Technologien erhalten keine Zone: Ordnen Sie stattdessen die Server zu, die sie tragen. Eine früher bei einer Technologie einer anderen Familie gesetzte Zone bleibt sichtbar, nur lesend, mit dem Hinweis, dass der Wert nicht mehr verwendet wird.
 - **Ersetzt durch**: die Technologie, die diese ablöst, zum Beispiel ein neueres Produkt, zu dem Ihre Teams wechseln.
 - **IT-Verantwortliche**: die für die Technologie zuständigen Personen.
 
@@ -222,7 +222,7 @@ Die Stufen und Wellen stammen aus **Einstufungen und Kontinuität** in den [IT-L
 
 Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
 
-- **Budgetzeilen**: mit dem Betrag des laufenden Jahres in der Budgetspalte Ihres Arbeitsbereichs und einer Summe.
+- **Budgetzeilen**: mit dem Betrag des laufenden Jahres in der Budgetspalte Ihres Arbeitsbereichs und einer Summe. Eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, zeigt ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung, und die Summe lässt sie aus. Ein einzeiliger Hinweis unter der Tabelle nennt sie. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
 - **Verträge**: Lieferant, Enddatum und Jahresbetrag, mit einer Summe pro Währung.
 - **Projekte**: Status und geplantes Ende.
 - **Vorfälle**: Schweregrad, Status und Erkennungsdatum. Das Verknüpfen eines Vorfalls erfordert `incidents:contributor`. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden.
@@ -258,7 +258,7 @@ Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Ho
 - **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
 - Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, Betriebssysteme eingeschlossen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).
-- **Administrationssicht**: die Technologien jeder Administrationszone mit ihren Servern. Siehe [Administrationssicht](administration-view.md).
+- **Administrationszonen**: die Verzeichnisdienste mit ihrer Zone und die Server, die eine Verzeichnistechnologie außerhalb der sensibelsten Zone tragen. Siehe [Administrationszonen](administration-view.md).
 - **Kontakte**: Der Abschnitt **Verwendet in** eines Kontakts listet die Technologien, die er betreut. Siehe [Kontakte](contacts.md#wo-kontakte-verwendet-werden).
 - **Suche**: Die globale Suche und die `@`-Erwähnungen des Assistenten finden Technologien über Name und Referenz (`@TEC-4`).
 

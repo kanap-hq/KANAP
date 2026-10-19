@@ -15,10 +15,12 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import PageHeader from '../../components/PageHeader';
+import { RequiredMark } from '../../components/design';
 import { SettingsSection, SettingsControls, SettingsGroup } from '../../components/settings';
 import { EnumEditor, HostingTypeEditor, AssetKindEditor, ServerRoleEditor, EntityEditor } from '../../components/settings';
 import type {
@@ -33,6 +35,24 @@ import { useLocationOptions, type LocationOption } from '../../hooks/useLocation
 import { useCatalogRemoval } from '../../components/settings/useCatalogRemoval';
 import { useCatalogTranslations } from '../../components/settings/CatalogTranslationsDialog';
 import TranslateIcon from '@mui/icons-material/Translate';
+import DragIndicatorIcon from '@mui/icons-material/DragIndicator';
+import {
+  DndContext,
+  KeyboardSensor,
+  PointerSensor,
+  closestCenter,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from '@dnd-kit/core';
+import {
+  SortableContext,
+  arrayMove,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from '@dnd-kit/sortable';
+import { CSS } from '@dnd-kit/utilities';
 import { catalogListIssues } from '../../components/settings/catalogValidation';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { connectionTypeCategoryLabel } from '../../utils/itOpsCatalogDefaults';
@@ -71,6 +91,9 @@ const stripLocalIds = <T extends { localId?: string }>(list: T[]): Omit<T, 'loca
 const sortEnum = (list: ItOpsEnumOption[]) =>
   [...list].sort((a, b) => (a.label || '').localeCompare(b.label || '', undefined, { sensitivity: 'base' }));
 
+/** Administration zones stay in the order the user chose: the first zone is the most sensitive. Other lists are alphabetical. */
+const orderOf = (id: EnumListId, list: ItOpsEnumOption[]) => (id === 'adminZones' ? [...list] : sortEnum(list));
+
 const sortConnectionTypes = (list: ConnectionTypeOption[]) =>
   [...list].sort((a, b) => {
     const catA = (a.category || '').toLowerCase();
@@ -106,7 +129,7 @@ const listsEqual = (a: ItOpsEnumOption[], b: ItOpsEnumOption[]): boolean => {
     if (((left as any).typicalPorts || undefined) !== ((right as any).typicalPorts || undefined)) return false;
     if (!!(left as any).is_physical !== !!(right as any).is_physical) return false;
     if (JSON.stringify((left as any).translations ?? null) !== JSON.stringify((right as any).translations ?? null)) return false;
-    for (const key of ['admin_group', 'privilege_level', 'secrets_location', 'description']) {
+    for (const key of ['admin_group', 'description']) {
       if (((left as any)[key] || undefined) !== ((right as any)[key] || undefined)) return false;
     }
   }
@@ -163,6 +186,28 @@ type EnumSectionConfig = {
   kind?: 'enum' | 'hosting' | 'serverKind' | 'serverRole' | 'entity' | 'adminZone';
 };
 
+/** Name-field example for each catalog. Administration zones, connections, domains and subnets have their own. */
+const nameExampleKey: Partial<Record<EnumListId, string>> = {
+  accessMethods: 'accessMethodName',
+  applicationCategories: 'applicationCategoryName',
+  entities: 'entityName',
+  hostingTypes: 'hostingTypeName',
+  incidentCategories: 'incidentCategoryName',
+  interfaceAuthModes: 'interfaceAuthModeName',
+  interfaceDataCategories: 'interfaceDataCategoryName',
+  interfaceFormats: 'interfaceFormatName',
+  interfacePatterns: 'interfacePatternName',
+  interfaceProtocols: 'interfaceProtocolName',
+  interfaceTriggerTypes: 'interfaceTriggerTypeName',
+  ipAddressTypes: 'ipAddressTypeName',
+  lifecycleStates: 'lifecycleStateName',
+  networkSegments: 'networkSegmentName',
+  serverKinds: 'assetKindName',
+  serverProviders: 'serverProviderName',
+  serverRoles: 'serverRoleName',
+  technologyFamilies: 'technologyFamilyName',
+};
+
 const enumSections: EnumSectionConfig[] = [
   { id: 'adminZones', group: 'serversConnections', kind: 'adminZone' },
   { id: 'accessMethods', group: 'appsInterfaces' },
@@ -200,7 +245,8 @@ function TranslateButton({ label, onClick }: { label: string; onClick: () => voi
 
 function IssueText({ issue }: { issue?: string }) {
   const { t } = useTranslation('common');
-  return issue ? <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issue}`)}</Typography> : null;
+  if (!issue || issue === 'nameRequired') return null;
+  return <Typography sx={{ fontSize: 11, color: 'kanap.text.tertiary', mt: 0.25 }}>{t(`enumEditor.${issue}`)}</Typography>;
 }
 
 interface ConnectionTypesEditorProps {
@@ -277,7 +323,7 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
           <TableHead>
             <TableRow>
               <TableCell sx={{ width: '22%' }}>{t('common:enumEditor.category')}</TableCell>
-              <TableCell sx={{ width: '28%' }}>{t('common:enumEditor.name')}</TableCell>
+              <TableCell sx={{ width: '28%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
               <TableCell sx={{ width: '25%' }}>{t('pages.settings.columns.typicalPorts')}</TableCell>
               <TableCell sx={{ width: '12%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
               <TableCell align="right" sx={{ width: '13%' }}>{t('common:labels.actions')}</TableCell>
@@ -297,7 +343,7 @@ const ConnectionTypesEditor = React.memo(function ConnectionTypesEditor({
             {visibleItems.map((item: any) => (
               <TableRow key={item.localId}>
                 <TableCell><TextField value={connectionTypeCategoryLabel(item.category || '', catalogLocale)} onChange={(e) => handleUpdate(item.localId, { category: e.target.value })} size="small" fullWidth placeholder={t('common:enumEditor.category')} /></TableCell>
-                <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.connectionName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
+                <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth required placeholder={t('pages.settings.placeholders.connectionName')} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                 <TableCell><TextField value={item.typicalPorts || ''} onChange={(e) => handleUpdate(item.localId, { typicalPorts: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.typicalPorts')} /></TableCell>
                 <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
@@ -449,12 +495,27 @@ const SubnetsEditor = React.memo(function SubnetsEditor({
   );
 });
 
+/** A number field without the browser's arrows: the count is typed. */
+const countFieldSx = {
+  '& input[type=number]': { appearance: 'textfield', MozAppearance: 'textfield' },
+  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+} as const;
+
+/** A column header that says, on hover, where to find its value. */
+function HintedHeader({ label, hint }: { label: string; hint: string }) {
+  return (
+    <Tooltip title={hint}>
+      <span>{label}</span>
+    </Tooltip>
+  );
+}
+
 interface DomainsEditorProps {
   items: DomainOption[];
   onChange: (items: DomainOption[]) => void;
 }
 
-const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: DomainsEditorProps) {
+export const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: DomainsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'domain'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
   const pendingCommitRef = React.useRef(false);
@@ -530,14 +591,14 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
-              <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.forest')}</TableCell>
-              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.accounts')}</TableCell>
-              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.machines')}</TableCell>
+              <TableCell sx={{ width: '16%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
+              <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
+              <TableCell sx={{ width: '14%' }}><HintedHeader label={t('pages.settings.columns.forest')} hint={t('pages.settings.hints.forest')} /></TableCell>
+              <TableCell sx={{ width: '11%', minWidth: 110 }}><HintedHeader label={t('pages.settings.columns.accountCount')} hint={t('pages.settings.hints.accountCount')} /></TableCell>
+              <TableCell sx={{ width: '11%', minWidth: 110 }}><HintedHeader label={t('pages.settings.columns.computerCount')} hint={t('pages.settings.hints.computerCount')} /></TableCell>
               <TableCell sx={{ width: '10%' }}>{t('pages.settings.columns.trusts')}</TableCell>
               <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '14%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell align="right" sx={{ width: '15%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -555,11 +616,11 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
               const isSystem = !!item.system;
               return (
                 <TableRow key={item.localId}>
-                  <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
+                  <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth required placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                   <TableCell><TextField value={item.dns_suffix || ''} onChange={(e) => handleUpdate(item.localId, { dns_suffix: e.target.value.toLowerCase() })} size="small" fullWidth placeholder={t('pages.settings.placeholders.dnsSuffix')} disabled={isSystem} InputProps={{ readOnly: isSystem }} /></TableCell>
                   <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ maxLength: 200, 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.machineCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.machines')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} sx={countFieldSx} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accountCount')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.machineCount')} sx={countFieldSx} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.computerCount')} ${item.label}` }} />}</TableCell>
                   <TableCell>{!isSystem && item.code && <Button size="small" onClick={() => setTrustsOf(item)} aria-label={`${t('pages.settings.columns.trusts')} ${item.label}`}>{(item.trusts ?? []).length ? t('pages.settings.trusts.count', { count: item.trusts.length }) : t('pages.settings.trusts.none')}</Button>}</TableCell>
                   <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} disabled={isSystem} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
@@ -587,7 +648,7 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
 });
 
 /** The server's limits (`it-ops-settings.service.ts`): a longer value would be refused. */
-const ADMIN_ZONE_LIMITS = { admin_group: 200, privilege_level: 100, secrets_location: 200, description: 2000 } as const;
+const ADMIN_ZONE_LIMITS = { admin_group: 200, description: 2000 } as const;
 const MAX_COUNT = 100_000_000;
 
 interface AdminZonesEditorProps {
@@ -595,7 +656,40 @@ interface AdminZonesEditorProps {
   onChange: (items: AdminZoneOption[]) => void;
 }
 
-/** Administration zones: name, administrator group, privilege level, secrets location and description per zone. */
+/** Move the row `activeId` to the place of `overId`. Same array when nothing moves. */
+export function reorderById<T extends { localId?: string }>(items: T[], activeId: string, overId: string): T[] {
+  if (activeId === overId) return items;
+  const oldIndex = items.findIndex((row) => row.localId === activeId);
+  const newIndex = items.findIndex((row) => row.localId === overId);
+  if (oldIndex < 0 || newIndex < 0) return items;
+  return arrayMove(items, oldIndex, newIndex);
+}
+
+function SortableAdminZoneRow({ id, children }: { id: string; children: React.ReactNode }) {
+  const { t } = useTranslation(['it', 'common']);
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  return (
+    <TableRow
+      ref={setNodeRef}
+      style={{ transform: CSS.Transform.toString(transform), transition, opacity: isDragging ? 0.6 : 1 }}
+    >
+      <TableCell sx={{ width: '4%', verticalAlign: 'top', px: 0.5 }}>
+        <Box
+          component="span"
+          aria-label={t('pages.settings.lists.adminZones.dragToReorder')}
+          sx={{ display: 'inline-flex', cursor: 'grab', touchAction: 'none', color: 'kanap.text.secondary', mt: 0.75 }}
+          {...attributes}
+          {...listeners}
+        >
+          <DragIndicatorIcon sx={{ fontSize: 18 }} />
+        </Box>
+      </TableCell>
+      {children}
+    </TableRow>
+  );
+}
+
+/** Administration zones: name, administrator group and description per zone. */
 export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, onChange }: AdminZonesEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'adminZones'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
@@ -635,56 +729,72 @@ export const AdminZonesEditor = React.memo(function AdminZonesEditor({ items, on
   const removal = useCatalogRemoval('adminZones');
   const translations = useCatalogTranslations();
   const issues = React.useMemo(() => catalogListIssues(localItems), [localItems]);
-  const text = (item: any, key: 'admin_group' | 'privilege_level' | 'secrets_location' | 'description', placeholder: string) => (
-    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : key === 'privilege_level' ? 'privilegeLevel' : key === 'secrets_location' ? 'secretsLocation' : 'description'}`)} ${item.label}` }} />
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 8 } }),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates }),
+  );
+  const handleDragEnd = React.useCallback((event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setLocalItems((prev) => {
+      const next = reorderById(prev, String(active.id), String(over.id));
+      if (next === prev) return prev;
+      commitToParent(next);
+      return next;
+    });
+  }, [commitToParent]);
+  const text = (item: any, key: 'admin_group' | 'description', placeholder: string) => (
+    <TextField value={item[key] || ''} onChange={(e) => handleUpdate(item.localId, { [key]: e.target.value || undefined })} size="small" fullWidth placeholder={placeholder} inputProps={{ maxLength: ADMIN_ZONE_LIMITS[key], 'aria-label': `${t(`pages.settings.columns.${key === 'admin_group' ? 'adminGroup' : 'description'}`)} ${item.label}` }} />
   );
 
   return (
     <Paper variant="outlined" sx={{ p: 2 }}>
       <Stack spacing={0.5} sx={{ mb: 1 }}>
         <Typography variant="subtitle1" sx={{ fontWeight: 500 }}>{t(listTitleKey('adminZones'))}</Typography>
+        <Typography variant="body2" color="text.secondary">{t('pages.settings.lists.adminZones.orderHint')}</Typography>
         <Typography variant="body2" color="text.secondary">{t(listDescriptionKey('adminZones'))}</Typography>
       </Stack>
       <TableContainer>
-        <Table size="small">
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+        <Table size="small" sx={{ tableLayout: 'fixed' }}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}</TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
-              <TableCell sx={{ width: '12%' }}>{t('pages.settings.columns.privilegeLevel')}</TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.secretsLocation')}</TableCell>
-              <TableCell sx={{ width: '18%' }}>{t('pages.settings.columns.description')}</TableCell>
-              <TableCell sx={{ width: '6%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '12%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell sx={{ width: '4%' }} />
+              <TableCell sx={{ width: '22%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
+              <TableCell sx={{ width: '20%' }}>{t('pages.settings.columns.adminGroup')}</TableCell>
+              <TableCell sx={{ width: '28%' }}>{t('pages.settings.columns.description')}</TableCell>
+              <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
+              <TableCell align="right" sx={{ width: '18%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
+            <SortableContext items={localItems.map((item: any) => item.localId)} strategy={verticalListSortingStrategy}>
             {localItems.length === 0 && (
               <TableRow>
-                <TableCell colSpan={7}>
+                <TableCell colSpan={6}>
                   <Typography variant="body2" color="text.secondary">{t('pages.settings.empty.adminZones')}</Typography>
                 </TableCell>
               </TableRow>
             )}
             {localItems.map((item: any) => (
-              <TableRow key={item.localId}>
+              <SortableAdminZoneRow key={item.localId} id={item.localId}>
                 <TableCell sx={{ verticalAlign: 'top' }}>
-                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
+                  <TextField value={item.label} onChange={(e) => handleUpdate(item.localId, { label: e.target.value })} size="small" fullWidth required placeholder={t('pages.settings.placeholders.adminZoneName')} inputProps={{ maxLength: 200, 'aria-label': t('common:enumEditor.name') }} />
                   <IssueText issue={issues.get(localItems.indexOf(item))} />
                 </TableCell>
                 <TableCell>{text(item, 'admin_group', t('pages.settings.placeholders.adminGroup'))}</TableCell>
-                <TableCell>{text(item, 'privilege_level', t('pages.settings.placeholders.privilegeLevel'))}</TableCell>
-                <TableCell>{text(item, 'secrets_location', t('pages.settings.placeholders.secretsLocation'))}</TableCell>
                 <TableCell>{text(item, 'description', t('pages.settings.placeholders.adminZoneDescription'))}</TableCell>
                 <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                 <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>
                   {item.code && <TranslateButton label={item.label} onClick={() => translations.openTranslations({ item, onSave: (next) => handleUpdate(item.localId, { translations: next } as any) })} />}
                   <Button size="small" color="error" onClick={() => void removal.requestRemoval({ name: item.label || item.code, key: item.code ? { code: item.code } : null, onRemove: () => handleRemove(item.localId), onRetire: () => handleUpdate(item.localId, { deprecated: true }) })}>{t('common:enumEditor.remove')}</Button>
                 </TableCell>
-              </TableRow>
+              </SortableAdminZoneRow>
             ))}
+            </SortableContext>
           </TableBody>
         </Table>
+        </DndContext>
       </TableContainer>
       {removal.dialog}
       {translations.dialog}
@@ -745,7 +855,7 @@ function hydrateFromSettings(settings: ItOpsSettings) {
   const enums = { ...emptyEnums };
   enumListIds.forEach((id) => {
     const list = ((settings as any)[id] as ItOpsEnumOption[] | undefined) || [];
-    enums[id] = withLocalIds(sortEnum(list), id);
+    enums[id] = withLocalIds(orderOf(id, list), id);
   });
   return {
     enums,
@@ -785,7 +895,7 @@ export function reducer(state: SettingsState, action: Action): SettingsState {
     }
     case 'resetEnum': {
       if (!state.baseline) return state;
-      const baselineList = withLocalIds(sortEnum((state.baseline as any)[action.id] || []), action.id);
+      const baselineList = withLocalIds(orderOf(action.id, (state.baseline as any)[action.id] || []), action.id);
       return { ...state, enums: { ...state.enums, [action.id]: baselineList }, dirty: { ...state.dirty, [action.id]: false } };
     }
     case 'resetConnectionTypes': {
@@ -884,10 +994,10 @@ export default function ItOperationsSettingsPage() {
 
   const handleSaveEnum = (id: EnumListId) => {
     const current = state.enums[id] || [];
-    const sorted = withLocalIds(sortEnum(current), id);
-    dispatch({ type: 'setEnum', id, items: sorted });
+    const ordered = withLocalIds(orderOf(id, current), id);
+    dispatch({ type: 'setEnum', id, items: ordered });
     dispatch({ type: 'setPending', id });
-    mutation.mutate({ id, rows: stripLocalIds(sorted) });
+    mutation.mutate({ id, rows: stripLocalIds(ordered) });
   };
 
   const handleSaveConnections = () => {
@@ -1022,6 +1132,8 @@ export default function ItOperationsSettingsPage() {
                 const items = state.enums[enumSection.id] || [];
                 const dirty = !!state.dirty[enumSection.id];
                 const saving = state.pending === enumSection.id && submitting;
+                const exampleKey = nameExampleKey[enumSection.id];
+                const namePlaceholder = exampleKey ? t(`pages.settings.placeholders.${exampleKey}`) : undefined;
 
                 return (
                   <SettingsSection key={enumSection.id} title={enumSection.title} description={t(listUsageKey(enumSection.id))}>
@@ -1031,17 +1143,17 @@ export default function ItOperationsSettingsPage() {
                       dirty={dirty}
                     />
                     {enumSection.kind === 'hosting' ? (
-                      <HostingTypeEditor items={items as HostingTypeItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <HostingTypeEditor items={items as HostingTypeItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'serverKind' ? (
-                      <AssetKindEditor items={items as AssetKindItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <AssetKindEditor items={items as AssetKindItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'serverRole' ? (
-                      <ServerRoleEditor items={items as ServerRoleItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <ServerRoleEditor items={items as ServerRoleItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : enumSection.kind === 'adminZone' ? (
                       <AdminZonesEditor items={items as AdminZoneOption[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} />
                     ) : enumSection.kind === 'entity' ? (
-                      <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton {...editorGuards(enumSection.id)} />
+                      <EntityEditor items={items as EntityItem[]} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} {...editorGuards(enumSection.id)} />
                     ) : (
-                      <EnumEditor title={enumSection.title} description={t(listDescriptionKey(enumSection.id))} items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
+                      <EnumEditor title={enumSection.title} description={t(listDescriptionKey(enumSection.id))} items={items} onChange={(next) => dispatch({ type: 'setEnum', id: enumSection.id, items: withLocalIds(next, enumSection.id) })} hideAddButton namePlaceholder={namePlaceholder} forbidComma={enumSection.id === 'accessMethods'} {...editorGuards(enumSection.id)} />
                     )}
                   </SettingsSection>
                 );

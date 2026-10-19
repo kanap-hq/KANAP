@@ -511,6 +511,7 @@
       "hosting_type": "set",
       "operating_system": "set",
       "network_segment": "set",
+      "admin_zone": "set",
       "status": "set",
       "go_live_date": "date",
       "end_of_life_date": "date",
@@ -526,6 +527,7 @@
       "hosting_type",
       "operating_system",
       "network_segment",
+      "admin_zone",
       "status",
       "go_live_date",
       "end_of_life_date",
@@ -584,6 +586,25 @@
       "state",
       "note",
       "published_at"
+    ]
+  },
+  "/technologies/reports/administration/assets": {
+    "params": {},
+    "filters": {
+      "reference": "text",
+      "name": "text",
+      "kind": "set",
+      "zone": "set",
+      "control": "set"
+    },
+    "fields": [
+      "reference",
+      "name",
+      "kind",
+      "zone",
+      "technologies",
+      "applications",
+      "findings"
     ]
   },
   "/budget-lines/summary": {

@@ -4,6 +4,7 @@ import { useTenant } from '../../tenant/TenantContext';
 import useBudgetColumns, { type BudgetColumnView } from '../../hooks/useBudgetColumns';
 import type { AmountMeasure } from '../../components/finance/roundPeriod';
 import { formatAmount } from '../../i18n/formatters';
+import type { FxMissing } from '../../components/finance/fxMissing';
 
 /**
  * A contract against its budget lines (lot CB), as the API computes it
@@ -24,8 +25,17 @@ export type ContractBudgetYear = {
   /** Null when the contract's currency has no rate that year. */
   committed: number | null;
   linked: number;
+  /** A linked line has an amount without a rate that year: `linked` leaves it out, `gap` and `state` are null (unknown). */
+  linked_fx_missing?: boolean;
   gap: number | null;
   state: ContractBudgetState | null;
+};
+
+/** A linked line's amount in the year and column; without a rate, null with the amount in the line's own currency. */
+export type ContractBudgetLineAmount = {
+  id: string;
+  amount: number | null;
+  fx_missing?: { currency: string; amount: number };
 };
 
 export type ContractBudgetCoverage = {
@@ -35,7 +45,9 @@ export type ContractBudgetCoverage = {
   /** The contract's currency. */
   currency: string;
   /** Each linked line's amount in the year and column. */
-  lines: Array<{ id: string; amount: number }>;
+  lines: ContractBudgetLineAmount[];
+  /** The linked lines without a rate, by currency and year, for every year of `years`. */
+  lines_fx_missing?: FxMissing[];
   years: ContractBudgetYear[];
 };
 
