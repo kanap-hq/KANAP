@@ -948,7 +948,8 @@
         "manufacturer": "Manufacturer",
         "model": "Model",
         "rack_location": "Rack location",
-        "rack_unit": "Rack unit"
+        "rack_unit": "Rack unit",
+        "cluster": "Cluster"
       },
       "mappings": {
         "intro": "Only mapped roles and sites are imported. Anything left on \"Do not import\" is skipped.",
@@ -972,7 +973,9 @@
           "assetType": "KANAP asset type",
           "netboxPlatform": "Netbox platform",
           "location": "KANAP location",
-          "operatingSystem": "Technology"
+          "operatingSystem": "Technology",
+          "netboxCluster": "Netbox cluster",
+          "kanapCluster": "KANAP cluster"
         },
         "counts": {
           "devices_one": "{{count}} device",
@@ -984,7 +987,14 @@
         "reservedRoles": {
           "virtualMachines": "Virtual machines"
         },
-        "subLocationsHint": "Inside a mapped site, the top-level Netbox locations become sub-locations here. Equipment placed deeper is attached to the top-level location above it."
+        "subLocationsHint": "Inside a mapped site, the top-level Netbox locations become sub-locations here. Equipment placed deeper is attached to the top-level location above it.",
+        "clusters": "Clusters",
+        "clustersHint": "Choose the KANAP cluster for each Netbox cluster. Its virtual machines are then added to that cluster. A machine already in another cluster stays there, and nothing is removed. A cluster left without a match does not block the import.",
+        "clustersUnavailable": "Netbox did not return its clusters, so virtual machines cannot be attached to a cluster here. Check that the API token can read clusters.",
+        "noClusters": "Netbox lists no cluster, so there is nothing to match here.",
+        "noCluster": "No match",
+        "clusterUnavailable": "Asset no longer available",
+        "clusterNotInNetbox": "No longer in Netbox"
       },
       "retire": {
         "title": "Mark asset as retired",
@@ -1040,7 +1050,10 @@
         "ip_match_candidates": "An asset already uses the address {{value}}. Choose whether it is the same equipment.",
         "similar_name_candidates": "An asset has a similar name. Choose whether it is the same equipment.",
         "sub_location_name_taken": "A sub-location named \"{{value}}\" already exists at this location for another Netbox location. The sub-location was left unchanged.",
-        "locations_unavailable": "Netbox did not return its locations. Sub-locations were left unchanged in this run."
+        "locations_unavailable": "Netbox did not return its locations. Sub-locations were left unchanged in this run.",
+        "cluster_not_mapped": "The Netbox cluster \"{{value}}\" is not matched with a KANAP cluster, so its virtual machines were not attached to one.",
+        "cluster_match_invalid": "The Netbox cluster \"{{value}}\" is matched with an asset that is deleted, retired or no longer a cluster, so its virtual machines were not attached to it.",
+        "cluster_other_present": "KANAP also places the virtual machine \"{{name}}\" in {{value}}. That relation was kept: remove it by hand if it is out of date."
       },
       "netboxStatus": {
         "active": "Active",

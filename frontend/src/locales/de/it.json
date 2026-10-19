@@ -948,7 +948,8 @@
         "manufacturer": "Hersteller",
         "model": "Modell",
         "rack_location": "Rack-Position",
-        "rack_unit": "Höheneinheit"
+        "rack_unit": "Höheneinheit",
+        "cluster": "Cluster"
       },
       "mappings": {
         "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",
@@ -972,7 +973,9 @@
           "assetType": "KANAP-Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
           "location": "KANAP-Standort",
-          "operatingSystem": "Technologie"
+          "operatingSystem": "Technologie",
+          "netboxCluster": "Netbox-Cluster",
+          "kanapCluster": "KANAP-Cluster"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -984,7 +987,14 @@
         "reservedRoles": {
           "virtualMachines": "Virtuelle Maschinen"
         },
-        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet."
+        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet.",
+        "clusters": "Cluster",
+        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt. Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, und nichts wird entfernt. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
+        "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
+        "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
+        "noCluster": "Keine Zuordnung",
+        "clusterUnavailable": "Asset nicht mehr verfügbar",
+        "clusterNotInNetbox": "Nicht mehr in Netbox"
       },
       "retire": {
         "title": "Asset als „Außer Betrieb“ markieren",
@@ -1040,7 +1050,10 @@
         "ip_match_candidates": "Ein Asset nutzt die Adresse {{value}} bereits. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "similar_name_candidates": "Ein Asset hat einen ähnlichen Namen. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wurde unverändert gelassen.",
-        "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert."
+        "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher wurden seine virtuellen Maschinen ihm nicht zugewiesen.",
+        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "netboxStatus": {
         "active": "Aktiv",

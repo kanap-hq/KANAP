@@ -54,7 +54,7 @@ const PAGE_SIZE = 50;
 /** Stable diff keys from the API; anything else falls back to the raw key. */
 const DIFF_FIELD_KEYS: string[] = [
   'name', 'kind', 'location', 'sub_location', 'status', 'hostname', 'domain', 'operating_system',
-  'primary_ip', 'serial_number', 'manufacturer', 'model', 'rack_location', 'rack_unit',
+  'primary_ip', 'serial_number', 'manufacturer', 'model', 'rack_location', 'rack_unit', 'cluster',
 ];
 
 function stateDotColor(state: NetboxRecordState, mode: 'light' | 'dark'): string {
@@ -673,8 +673,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
   const plainSkipped = skipped.filter((row) => !decisionFor(row));
 
   const warnings = Array.from(new Set(
-    rows
-      .flatMap((row) => row.warnings)
+    [...(preview?.notices ?? []), ...rows.flatMap((row) => row.warnings)]
       .filter((warning) => !DECISION_NOTICE_CODES.includes(warning.code))
       .map(noticeText)
       .filter(Boolean),
@@ -971,6 +970,7 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
   const [roleMap, setRoleMap] = React.useState<Record<string, string>>({});
   const [siteMap, setSiteMap] = React.useState<Record<string, string>>({});
   const [osMap, setOsMap] = React.useState<Record<string, string>>({});
+  const [clusterMap, setClusterMap] = React.useState<Record<string, string>>({});
   const [saved, setSaved] = React.useState(false);
   const data = optionsQuery.data;
 
@@ -980,10 +980,20 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
     setRoleMap({ ...data.suggested_role_map, ...data.role_map });
     setSiteMap({ ...data.suggested_site_map, ...data.site_map });
     setOsMap({ ...(data.suggested_os_map ?? {}), ...(data.os_map ?? {}) });
+    setClusterMap({ ...(data.suggested_cluster_map ?? {}), ...(data.cluster_map ?? {}) });
   }, [data]);
 
   const saveMapping = useMutation({
-    mutationFn: () => netboxApi.saveMapping({ role_map: roleMap, site_map: siteMap, os_map: osMap }),
+    mutationFn: () => netboxApi.saveMapping({
+      role_map: roleMap,
+      site_map: siteMap,
+      os_map: osMap,
+      // A server that does not match clusters yet sends no list: leave its matches alone.
+      ...(data?.clusters ? {
+        cluster_map: clusterMap,
+        cluster_names: Object.fromEntries(data.clusters.map((cluster) => [cluster.id, cluster.name])),
+      } : {}),
+    }),
     onSuccess: async () => {
       setSaved(true);
       await queryClient.invalidateQueries({ queryKey: ['netbox-mapping-options'] });
@@ -1009,7 +1019,8 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
   );
   const unsavedCount = unsavedIn(roleMap, data.role_map)
     + unsavedIn(siteMap, data.site_map)
-    + unsavedIn(osMap, data.os_map ?? {});
+    + unsavedIn(osMap, data.os_map ?? {})
+    + unsavedIn(clusterMap, data.cluster_map ?? {});
   const saveButton = (variant: 'contained' | 'action') => (
     <Button
       variant={variant}
@@ -1036,6 +1047,15 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
   // A server that does not match platforms yet sends none: the section then
   // says so in one line rather than drawing an empty table.
   const platforms = data.platforms ?? [];
+  const kanapClusters = data.kanap_clusters ?? [];
+  // A saved match whose Netbox cluster is no longer listed keeps a row, under
+  // the name stored with it, so it can still be cleared.
+  const clusters = [
+    ...(data.clusters ?? []).map((cluster) => ({ ...cluster, listed: true })),
+    ...Object.keys(data.cluster_map ?? {})
+      .filter((id) => !(data.clusters ?? []).some((cluster) => cluster.id === id))
+      .map((id) => ({ id, name: data.cluster_names?.[id] || id, vm_count: 0, listed: false })),
+  ];
 
   const entryLabel = (entry: NetboxMappingEntry): string => {
     const key = RESERVED_ROLE_LABEL_KEYS[entry.slug];
@@ -1221,6 +1241,79 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
           </Box>
         )}
       </Box>
+
+      {data.clusters ? (
+        <Box>
+          <Box className="kanap-subhead">{t('pages.netbox.mappings.clusters')}</Box>
+          <Typography variant="caption" color="text.secondary" component="div" sx={{ mb: 1 }}>
+            {t('pages.netbox.mappings.clustersHint')}
+          </Typography>
+          {data.clusters_unavailable ? (
+            <Box component="span" className="kanap-muted">{t('pages.netbox.mappings.clustersUnavailable')}</Box>
+          ) : clusters.length === 0 ? (
+            <Box component="span" className="kanap-muted">{t('pages.netbox.mappings.noClusters')}</Box>
+          ) : (
+            <Box component="table" className="kanap-table kanap-map-table">
+              <colgroup>
+                <col className="name" />
+                <col className="count" />
+                <col className="target" />
+              </colgroup>
+              <thead>
+                <tr>
+                  <th>{t('pages.netbox.mappings.columns.netboxCluster')}</th>
+                  <th>{t('pages.netbox.mappings.columns.objects')}</th>
+                  <th>{t('pages.netbox.mappings.columns.kanapCluster')}</th>
+                </tr>
+              </thead>
+              <tbody>
+                {clusters.map((cluster) => (
+                  <tr key={cluster.id}>
+                    <td>{cluster.name}</td>
+                    <td>
+                      {cluster.listed
+                        ? (cluster.vm_count > 0
+                          ? t('pages.netbox.mappings.counts.virtualMachines', { count: cluster.vm_count })
+                          : t('pages.netbox.mappings.counts.none'))
+                        : t('pages.netbox.mappings.clusterNotInNetbox')}
+                    </td>
+                    <td>
+                      <Stack direction="row" spacing={1} alignItems="center">
+                        <TextField
+                          select
+                          size="small"
+                          variant="standard"
+                          SelectProps={{ displayEmpty: true }}
+                          inputProps={{ 'aria-label': cluster.name }}
+                          value={clusterMap[cluster.id] || ''}
+                          onChange={(event) => setClusterMap((prev) => ({ ...prev, [cluster.id]: event.target.value }))}
+                          sx={pageSelectSx}
+                        >
+                          <MenuItem value="" sx={drawerMenuItemSx}>{t('pages.netbox.mappings.noCluster')}</MenuItem>
+                          {/* A saved match on an asset that is retired, deleted or no longer a cluster. */}
+                          {(clusterMap[cluster.id] && !kanapClusters.some((option) => option.id === clusterMap[cluster.id])) ? (
+                            <MenuItem value={clusterMap[cluster.id]} sx={drawerMenuItemSx}>
+                              {t('pages.netbox.mappings.clusterUnavailable')}
+                            </MenuItem>
+                          ) : null}
+                          {kanapClusters.map((option) => (
+                            <MenuItem key={option.id} value={option.id} sx={drawerMenuItemSx}>{option.name}</MenuItem>
+                          ))}
+                        </TextField>
+                        {suggestion(cluster.id, clusterMap, data.cluster_map ?? {}) ? (
+                          <Box component="span" className="kanap-muted" sx={{ fontSize: 11 }}>
+                            {t('pages.netbox.mappings.suggested')}
+                          </Box>
+                        ) : null}
+                      </Stack>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </Box>
+          )}
+        </Box>
+      ) : null}
 
       <Box>{saveButton('contained')}</Box>
     </Stack>
