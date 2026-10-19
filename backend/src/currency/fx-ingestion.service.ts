@@ -219,9 +219,13 @@ export class FxIngestionService implements OnModuleInit, OnModuleDestroy {
     if (!due.length) return;
     due.forEach((year) => this.missingRefreshAt.set(keyOf(year), now));
     this.logger.log(`[missing-rate] queuing FX refresh for tenant ${tenantId}: years ${due.join(', ')}`);
-    void this.queueManualRefresh(tenantId, due, { label: 'missing-rate' }).then((status) => {
-      // Another refresh of the tenant was running: the next read asks again.
-      if (status === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
+    const queue = () => this.queueManualRefresh(tenantId, due, { label: 'missing-rate' });
+    void queue().then(async (status) => {
+      if (status !== 'skipped') return;
+      // Another refresh of the tenant is running (often for another year read at the same
+      // time): these years follow it. The running job never rejects.
+      await this.manualJobs.get(tenantId);
+      if ((await queue()) === 'skipped') due.forEach((year) => this.missingRefreshAt.delete(keyOf(year)));
     }).catch(() => undefined);
   }
 
