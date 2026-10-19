@@ -1,4 +1,4 @@
-import { Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -9,12 +9,15 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { contentDisposition } from '../common/content-disposition';
 import { parseLookupRequest, runLookup, type LookupSpec } from '../common/lookup/reference-lookup';
 import { StorageService } from '../common/storage/storage.service';
-import { attachmentMulterOptions } from '../common/upload';
+import { languageOf, type CsvLanguage } from '../common/csv-sheet';
+import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
 import { TechnologiesService, type Opts } from './technologies.service';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService, technologyRelationKindOrThrow, type TechnologyRelationsContext } from './technologies-relations.service';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
+import { TechnologyLinksCsvService } from './technology-links-csv.service';
 import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
 import { requireManager } from './technology-rows';
 
@@ -48,6 +51,7 @@ export class TechnologiesController {
     private readonly deleteSvc: TechnologiesDeleteService,
     private readonly catalog: TechnologyCatalogService,
     private readonly storage: StorageService,
+    private readonly linkFiles: TechnologyLinksCsvService,
   ) {}
 
   private opts(ctx: TenantRequest): Opts {
@@ -62,6 +66,36 @@ export class TechnologiesController {
     if (!hasLevel(ctx, 'applications', 'reader')) return null;
     const scope = await resolveBusinessContributorScopeForUser({ manager: requireManager(ctx.manager), userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin }, 'applications', 'reader');
     return { scope };
+  }
+
+  /** A link file (`scope` `data` or `template`, 400 otherwise), written in `language` (the user's locale without it). */
+  private async sendLinkFile(
+    res: Response,
+    scopeRaw: string | undefined,
+    languageRaw: string | undefined,
+    ctx: TenantRequest,
+    produce: (scope: 'data' | 'template', language: CsvLanguage) => Promise<{ filename: string; content: string }>,
+  ) {
+    const scope = scopeRaw === 'template' ? 'template' : scopeRaw == null || scopeRaw === 'data' ? 'data' : null;
+    if (!scope) throw new BadRequestException("scope must be 'data' or 'template'.");
+    const language = await languageOf(requireManager(ctx.manager), ctx.tenantId, ctx.userId || null, languageRaw);
+    const file = await produce(scope, language);
+    res.setHeader('Content-Type', 'text/csv; charset=utf-8');
+    res.setHeader('Content-Disposition', contentDisposition(file.filename));
+    res.send(file.content);
+  }
+
+  /** A link file import: `dryRun` unless the query says `false`. */
+  private async importLinkFile(
+    file: Express.Multer.File,
+    dryRunRaw: string | undefined,
+    languageRaw: string | undefined,
+    ctx: TenantRequest,
+    run: (file: Express.Multer.File, dryRun: boolean, language: CsvLanguage) => Promise<unknown>,
+  ) {
+    const dryRun = String(dryRunRaw ?? 'true').toLowerCase() !== 'false';
+    const language = await languageOf(requireManager(ctx.manager), ctx.tenantId, ctx.userId || null, languageRaw);
+    return run(file, dryRun, language);
   }
 
   /** As `applicationsReach`, for a route that cannot answer without it: 403. */
@@ -174,6 +208,67 @@ export class TechnologiesController {
   @Post()
   create(@Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
     return this.svc.create(body, this.opts(ctx));
+  }
+
+  /** Every server ↔ technology link of the tenant, or the header row alone (`scope=template`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get('asset-links/export')
+  exportAssetLinks(
+    @Query('scope') scopeRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, (scope, language) => this.linkFiles.exportAssetLinks(scope, this.opts(ctx), language));
+  }
+
+  /** Add or update server ↔ technology links. `dryRun` defaults to true and writes nothing. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('asset-links/import')
+  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
+  importAssetLinks(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('dryRun') dryRunRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importAssetLinks({ file: uploaded, dryRun, language }, this.opts(ctx)));
+  }
+
+  /**
+   * Every declared application ↔ technology link the caller reads, or the header row alone. The
+   * applications rights of the single links (`requireApplications`): 403 without them.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get('application-links/export')
+  async exportApplicationLinks(
+    @Query('scope') scopeRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Res() res: Response,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const applications = await this.requireApplications(ctx);
+    return this.sendLinkFile(res, scopeRaw, languageRaw, ctx, (scope, language) => this.linkFiles.exportApplicationLinks(scope, this.opts(ctx), applications, language));
+  }
+
+  /** Add or update application declarations. `dryRun` defaults to true and writes nothing. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @LongRunningRequest(BULK_WRITE_TIMEOUTS)
+  @Post('application-links/import')
+  @UseInterceptors(FileInterceptor('file', csvImportMulterOptions))
+  async importApplicationLinks(
+    @UploadedFile() file: Express.Multer.File,
+    @Query('dryRun') dryRunRaw: string | undefined,
+    @Query('language') languageRaw: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    const applications = await this.requireApplications(ctx);
+    return this.importLinkFile(file, dryRunRaw, languageRaw, ctx, (uploaded, dryRun, language) => this.linkFiles.importApplicationLinks({ file: uploaded, dryRun, language }, this.opts(ctx), applications));
   }
 
   // ==================== RECORD ====================

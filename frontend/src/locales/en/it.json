@@ -165,6 +165,25 @@
       "title": "Technologies",
       "newTechnology": "New technology",
       "empty": "No technologies yet.",
+      "importCsv": "Import links",
+      "exportCsv": "Export links",
+      "linkFiles": {
+        "asset": "Servers and technologies",
+        "application": "Applications and technologies",
+        "importTitle": {
+          "asset": "Import servers and technologies",
+          "application": "Import applications and technologies"
+        },
+        "exportTitle": {
+          "asset": "Export servers and technologies",
+          "application": "Export applications and technologies"
+        },
+        "importHint": {
+          "asset": "Each row adds or updates one link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first. The server matches by its reference (AST-n) when the cell is filled, otherwise by its name. operating_system: “yes” marks the link as the server's operating system, “no” never marks it. The export writes these words in the file's language; the import reads them in English, French, German or Spanish. An empty cell marks a new link of the Operating system family when the server has none yet, as the server page does. The import never clears a mark.",
+          "application": "Each row adds or updates one declared link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first."
+        },
+        "exportNoteApplication": "The file holds the declared links. Links deduced from the servers are left out."
+      },
       "columns": {
         "reference": "Reference",
         "family": "Family",

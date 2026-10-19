@@ -165,6 +165,25 @@
       "title": "Technologien",
       "newTechnology": "Neue Technologie",
       "empty": "Noch keine Technologien.",
+      "importCsv": "Verknüpfungen importieren",
+      "exportCsv": "Verknüpfungen exportieren",
+      "linkFiles": {
+        "asset": "Server und Technologien",
+        "application": "Anwendungen und Technologien",
+        "importTitle": {
+          "asset": "Server und Technologien importieren",
+          "application": "Anwendungen und Technologien importieren"
+        },
+        "exportTitle": {
+          "asset": "Server und Technologien exportieren",
+          "application": "Anwendungen und Technologien exportieren"
+        },
+        "importHint": {
+          "asset": "Jede Zeile fügt eine Verknüpfung hinzu oder aktualisiert sie. Verknüpfungen, die nicht in der Datei stehen, bleiben unverändert. Die Technologie muss bereits in der Liste stehen: Übernehmen Sie sie zuerst aus dem Katalog. Der Server wird über seine Referenz (AST-n) gefunden, wenn die Zelle gefüllt ist, sonst über seinen Namen. operating_system: „ja“ markiert die Verknüpfung als Betriebssystem des Servers, „nein“ markiert sie nie. Der Export schreibt diese Wörter in der Sprache der Datei; der Import liest sie auf Englisch, Französisch, Deutsch oder Spanisch. Eine leere Zelle markiert eine neue Verknüpfung der Familie Betriebssystem, wenn der Server noch keines hat, wie auf der Serverseite. Der Import entfernt nie eine Markierung.",
+          "application": "Jede Zeile fügt eine deklarierte Verknüpfung hinzu oder aktualisiert sie. Verknüpfungen, die nicht in der Datei stehen, bleiben unverändert. Die Technologie muss bereits in der Liste stehen: Übernehmen Sie sie zuerst aus dem Katalog."
+        },
+        "exportNoteApplication": "Die Datei enthält die deklarierten Verknüpfungen. Über die Server abgeleitete Verknüpfungen sind nicht enthalten."
+      },
       "columns": {
         "reference": "Referenz",
         "family": "Familie",
