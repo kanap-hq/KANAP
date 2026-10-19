@@ -527,6 +527,9 @@
         "reference": "Ref",
         "type": "Type",
         "zone": "Zone",
+        "technologies": "Technologies",
+        "applications": "Applications",
+        "controls": "Controls",
         "relation": "Relation",
         "contained": "Contained asset",
         "dependsOn": "Depends on",
@@ -572,6 +575,43 @@
           "short": "Application hosted",
           "hint": "Review each application hosted on an asset of the most sensitive zone."
         }
+      },
+      "emptyAssets": "No asset in use yet.",
+      "more": "+{{count}}",
+      "moreItems": "And {{count}} more",
+      "trustPeer": {
+        "contains": "Runs {{asset}} ({{zone}})",
+        "cluster": "Member of cluster {{asset}} ({{zone}})"
+      },
+      "selection": {
+        "row": "Select {{name}}",
+        "all": "Select every asset of the filter",
+        "some_one": "{{count}} asset selected",
+        "some_other": "{{count}} assets selected",
+        "whole_one": "{{count}} asset selected, whole filter",
+        "whole_other": "{{count}} assets selected, whole filter",
+        "clear": "Clear selection"
+      },
+      "actions": {
+        "assign": "Assign to a zone",
+        "assignSelected": "Assign to a zone ({{count}})"
+      },
+      "bulk": {
+        "title": "Assign to a zone",
+        "zone": "Zone",
+        "save": "Assign",
+        "scopeSelected_one": "The selected asset.",
+        "scopeSelected_other": "The {{count}} selected assets.",
+        "scopeAll": "Every asset of the current filter.",
+        "scopeAllBut_one": "Every asset of the current filter but {{count}}.",
+        "scopeAllBut_other": "Every asset of the current filter but {{count}}.",
+        "count_one": "This changes the zone of {{count}} asset of {{rows}}.",
+        "count_other": "This changes the zone of {{count}} assets of {{rows}}.",
+        "counting": "Counting…",
+        "countFailed": "The assets could not be counted. Try again.",
+        "tooMany": "More than 5,000 assets: narrow the filters.",
+        "changed": "The list changed since the count. Check the new count, then confirm again.",
+        "failed": "The zone could not be assigned."
       },
       "domains": "Domains",
       "domainsHint": "Domain controllers are the servers of the domain that carry a directory technology, or that are assigned with the \"Domain controller\" server role on an application in service.",

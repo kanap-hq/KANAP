@@ -588,6 +588,25 @@
       "published_at"
     ]
   },
+  "/technologies/reports/administration/assets": {
+    "params": {},
+    "filters": {
+      "reference": "text",
+      "name": "text",
+      "kind": "set",
+      "zone": "set",
+      "control": "set"
+    },
+    "fields": [
+      "reference",
+      "name",
+      "kind",
+      "zone",
+      "technologies",
+      "applications",
+      "findings"
+    ]
+  },
   "/budget-lines/summary": {
     "params": {
       "shape": "grid",

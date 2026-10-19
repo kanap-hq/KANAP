@@ -1,18 +1,30 @@
-import React from 'react';
-import { Alert, Box, Button, Stack, Tooltip, Typography } from '@mui/material';
-import { useQuery } from '@tanstack/react-query';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import { Alert, Box, Button, Checkbox, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import { useTheme } from '@mui/material/styles';
+import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
+import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import ChipToggleBar from '../../components/ChipToggleBar';
 import PageHeader from '../../components/PageHeader';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
+import { reportFilterMenuProps } from '../../components/reports/ReportLayout';
+import ServerDataGrid, { type EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
+import { KanapDialog, PropertyRow, StatusDot } from '../../components/design';
+import { RelationRef } from '../../components/workspace/RelationsTable';
+import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
+import { drawerMenuItemSx, drawerSelectSx } from '../../theme/formSx';
+import { getDotColor } from '../../utils/statusColors';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 
 const ENDPOINT = '/technologies/reports/administration';
+const ASSETS_ENDPOINT = `${ENDPOINT}/assets`;
 
 /** The five control points, in the order the server counts them. */
 export const CONTROL_KEYS = [
@@ -54,6 +66,26 @@ export type AdministrationSummary = {
   controls: Array<{ key: ControlKey; count: number | null }>;
 };
 
+/** An asset whose trust a `trust_raised` row depends on: what it runs (`contains`) or its cluster. */
+export type TrustPeer = { relation: 'contains' | 'cluster'; reference: string | null; name: string; zone: string | null };
+
+/** A row of `GET /technologies/reports/administration/assets`: one asset that is not retired. */
+export type AdministrationAssetRow = {
+  id: string;
+  reference: string | null;
+  name: string;
+  kind: string;
+  zone: string | null;
+  technologies: { total: number; items: Array<{ reference: string | null; name: string; version: string | null }> };
+  applications: { total: number; items: Array<{ reference: string | null; name: string }> };
+  findings: ControlKey[];
+  trust_peers: { total: number; items: TrustPeer[] };
+  application_references: string[];
+};
+
+/** The value of the "No zone" choice of the assignment (the server takes `null`). */
+const NO_ZONE = '__none__';
+
 /** A catalog value's name in the user's language (tenant translation, then the stored name). */
 function useZoneName() {
   const { t } = useTranslation(['it', 'common']);
@@ -82,6 +114,303 @@ function RecordLink({ to, children }: { to: string; children: React.ReactNode })
 }
 
 const quietSx = { color: 'kanap.text.tertiary' } as const;
+const cellLinkSx = { color: 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } } as const;
+
+/** The list's search and filters, without paging or sort: what a change of every row of the filter sends. */
+function listScope(request: ListRequest | null): { q?: unknown; filters?: unknown } {
+  const params = (request?.params ?? {}) as Record<string, unknown>;
+  return {
+    ...(params.q !== undefined && params.q !== '' ? { q: params.q } : {}),
+    ...(params.filters !== undefined ? { filters: params.filters } : {}),
+  };
+}
+
+/** The list's parameters without paging: the export follows the rows on screen, in their order. */
+function exportParams(request: ListRequest | null): Record<string, unknown> {
+  const { page: _page, limit: _limit, ...rest } = (request?.params ?? {}) as Record<string, unknown>;
+  return rest;
+}
+
+/** A set filter of one value, as the grid reads it; `undefined` when the column has none or several. */
+function singleSetValue(model: Record<string, any> | null | undefined, column: string): string | null | undefined {
+  const entry = model?.[column];
+  if (!entry || entry.filterType !== 'set' || !Array.isArray(entry.values) || entry.values.length !== 1) return undefined;
+  return entry.values[0] ?? null;
+}
+
+/**
+ * The rows chosen for an assignment: the ticked rows (`all` false, `ids` the ticked ones), or every
+ * row of the current filter, loaded or not (`all` true, `ids` the rows unticked since).
+ */
+type Selection = { all: boolean; ids: Set<string> };
+const NO_SELECTION: Selection = { all: false, ids: new Set() };
+type SelectionApi = { selection: Selection; count: number; toggleRow: (id: string) => void; toggleAll: () => void };
+/** Read by the selection column's cells and header, which the grid renders inside the page. */
+const SelectionContext = createContext<SelectionApi | null>(null);
+/** The zones of the summary, for the zone cells and the trust tooltips. */
+const ZoneNameContext = createContext<(code: string | null) => string>((code) => code ?? '');
+const isSelected = (selection: Selection, id: string) => (selection.all ? !selection.ids.has(id) : selection.ids.has(id));
+const checkboxSx = { p: 0.25 } as const;
+const SELECTION_COLUMN = 'select';
+/** The box alone, centred: the cell's padding would push it past 44 px and cut it. */
+const SELECT_CELL_STYLE: CellStyle = { padding: 0, display: 'flex', alignItems: 'center', justifyContent: 'center', textOverflow: 'clip' };
+/** Stable: a new function would have AG Grid draw its rows again. */
+const rowId = (row: AdministrationAssetRow) => row.id;
+/** Names shown in a cell before "+n". */
+const NAMES_SHOWN = 2;
+
+function SelectRowCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  const { t } = useTranslation('it');
+  const selection = useContext(SelectionContext);
+  if (!data || !selection) return null;
+  return (
+    <Checkbox
+      size="small"
+      sx={checkboxSx}
+      checked={isSelected(selection.selection, data.id)}
+      onChange={() => selection.toggleRow(data.id)}
+      inputProps={{ 'aria-label': t('pages.administrationView.selection.row', { name: data.reference ? `${data.reference} ${data.name}` : data.name }) }}
+    />
+  );
+}
+
+function SelectAllHeader() {
+  const { t } = useTranslation('it');
+  const selection = useContext(SelectionContext);
+  if (!selection) return null;
+  const whole = selection.selection.all && selection.selection.ids.size === 0;
+  return (
+    <Checkbox
+      size="small"
+      sx={checkboxSx}
+      checked={whole}
+      indeterminate={!whole && selection.count > 0}
+      onChange={selection.toggleAll}
+      inputProps={{ 'aria-label': t('pages.administrationView.selection.all') }}
+    />
+  );
+}
+
+function ReferenceCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  if (!data) return null;
+  return (
+    <MLink component={RouterLink} to={`/it/assets/${data.id}`} underline="hover" onClick={(event: React.MouseEvent) => event.stopPropagation()} sx={cellLinkSx}>
+      <RelationRef>{data.reference ?? data.name}</RelationRef>
+    </MLink>
+  );
+}
+
+function ZoneCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  const zoneName = useContext(ZoneNameContext);
+  if (!data) return null;
+  return data.zone ? <>{zoneName(data.zone)}</> : <Box component="span" sx={quietSx}>{zoneName(null)}</Box>;
+}
+
+/** The first names, "+n" for the rest; the tooltip lists every name the row carries. */
+function NamesCell({ names, total, tooltip, render }: {
+  names: string[];
+  total: number;
+  tooltip: string[];
+  render?: (index: number) => React.ReactNode;
+}) {
+  const { t } = useTranslation('it');
+  if (total === 0) return null;
+  const shown = names.slice(0, NAMES_SHOWN);
+  const rest = total - shown.length;
+  const lines = total > tooltip.length ? [...tooltip, t('pages.administrationView.moreItems', { count: total - tooltip.length })] : tooltip;
+  return (
+    <Tooltip title={<>{lines.map((line, index) => <Box key={index}>{line}</Box>)}</>}>
+      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>
+        {shown.map((name, index) => (
+          <React.Fragment key={index}>
+            {index > 0 && ', '}
+            {render ? render(index) : name}
+          </React.Fragment>
+        ))}
+        {rest > 0 && <Box component="span" sx={{ ...quietSx, ml: 0.5 }}>{t('pages.administrationView.more', { count: rest })}</Box>}
+      </Box>
+    </Tooltip>
+  );
+}
+
+function TechnologiesCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  if (!data) return null;
+  const { items, total } = data.technologies;
+  return (
+    <NamesCell
+      names={items.map((item) => item.name)}
+      total={total}
+      tooltip={items.map((item) => [item.reference, item.name, item.version].filter(Boolean).join(' '))}
+    />
+  );
+}
+
+function ApplicationsCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  if (!data) return null;
+  const { items, total } = data.applications;
+  return (
+    <NamesCell
+      names={items.map((item) => item.name)}
+      total={total}
+      tooltip={items.map((item) => [item.reference, item.name].filter(Boolean).join(' '))}
+      render={(index) => {
+        const app = items[index];
+        if (!app.reference) return app.name;
+        return (
+          <MLink component={RouterLink} to={`/it/applications/${app.reference}`} underline="hover" onClick={(event: React.MouseEvent) => event.stopPropagation()} sx={cellLinkSx}>
+            {app.name}
+          </MLink>
+        );
+      }}
+    />
+  );
+}
+
+/**
+ * The controls an asset raises, short, each a dot and its name. The trust finding's tooltip names
+ * what the asset runs, or its cluster, with that asset's zone.
+ */
+function ControlsCell({ data }: ICellRendererParams<AdministrationAssetRow>) {
+  const { t } = useTranslation('it');
+  const theme = useTheme();
+  const zoneName = useContext(ZoneNameContext);
+  if (!data || !data.findings.length) return null;
+  const color = getDotColor('warning', theme.palette.mode);
+  return (
+    <Box component="span" sx={{ display: 'inline-flex', flexWrap: 'nowrap', gap: 1.25, overflow: 'hidden' }}>
+      {data.findings.map((key) => {
+        const base = `pages.administrationView.controlsList.${CONTROL_LOCALE[key]}`;
+        const peers = key === 'trust_raised' ? data.trust_peers : null;
+        const tooltip = peers && peers.items.length
+          ? (
+            <>
+              {peers.items.map((peer, index) => (
+                <Box key={index}>
+                  {t(`pages.administrationView.trustPeer.${peer.relation}`, { asset: peer.reference ?? peer.name, name: peer.name, zone: zoneName(peer.zone) })}
+                </Box>
+              ))}
+              {peers.total > peers.items.length && <Box>{t('pages.administrationView.moreItems', { count: peers.total - peers.items.length })}</Box>}
+            </>
+          )
+          : t(`${base}.title`);
+        return (
+          <Tooltip key={key} title={tooltip}>
+            <Box component="span" data-finding={key} sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', whiteSpace: 'nowrap' }}>
+              <StatusDot color={color} />
+              {t(`${base}.short`)}
+            </Box>
+          </Tooltip>
+        );
+      })}
+    </Box>
+  );
+}
+
+/**
+ * Assigns a zone (one that is not deprecated, or none) to the ticked assets, or to every asset of
+ * the current filter but the unticked ones; the count comes from a dry run before the change.
+ */
+function AssignZoneDialog({ open, onClose, selection, request, zones, onDone }: {
+  open: boolean;
+  onClose: () => void;
+  selection: Selection;
+  request: ListRequest | null;
+  zones: Array<{ code: string; name: string }>;
+  onDone: () => void;
+}) {
+  const { t } = useTranslation('it');
+  const [zone, setZone] = useState<string>(NO_ZONE);
+  const [error, setError] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
+  // Each opening starts on the most sensitive zone.
+  const firstZone = zones[0]?.code ?? NO_ZONE;
+  useEffect(() => {
+    if (!open) return;
+    setZone(firstZone);
+    setError(null);
+  }, [open, firstZone]);
+  const ids = useMemo(() => Array.from(selection.ids), [selection.ids]);
+  const scope = useMemo(() => ({
+    zone: zone === NO_ZONE ? null : zone,
+    ...(selection.all
+      ? { all: true, filters: listScope(request), ...(ids.length > 0 ? { exclude_ids: ids } : {}) }
+      : { ids }),
+  }), [ids, request, selection.all, zone]);
+  const count = useQuery({
+    queryKey: ['technologies', 'reports', 'administration', 'assign-count', scope],
+    queryFn: async () => (await api.post<{ rows: number; changes: number; as_of: string }>(`${ASSETS_ENDPOINT}/zone`, { ...scope, dry_run: true })).data,
+    enabled: open,
+    retry: false,
+    placeholderData: keepPreviousData,
+  });
+  const countError = count.error as any;
+  const tooMany = count.isError && countError?.response?.data?.code === 'bulk_too_many';
+  const refused = count.isError && !tooMany && countError?.response?.status === 400
+    ? getApiErrorMessage(countError, t, t('pages.administrationView.bulk.countFailed'))
+    : null;
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      // Only the assets of the count: one created after it is left out, and more than counted is refused (409).
+      await api.post(`${ASSETS_ENDPOINT}/zone`, { ...scope, as_of: count.data?.as_of, expected_rows: count.data?.rows });
+      onDone();
+    } catch (failure: any) {
+      if (failure?.response?.status === 409) {
+        setError(t('pages.administrationView.bulk.changed'));
+        void count.refetch();
+      } else {
+        setError(getApiErrorMessage(failure, t, t('pages.administrationView.bulk.failed')));
+      }
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <KanapDialog
+      open={open}
+      title={t('pages.administrationView.bulk.title')}
+      onClose={onClose}
+      onSave={save}
+      saveLabel={t('pages.administrationView.bulk.save')}
+      saveDisabled={!count.data || count.isPlaceholderData || count.isError || count.data.rows === 0 || count.data.changes === 0}
+      saveLoading={saving}
+    >
+      <Stack spacing={1.5}>
+        <PropertyRow label={t('pages.administrationView.bulk.zone')}>
+          <TextField
+            select
+            variant="standard"
+            value={zone}
+            onChange={(event) => setZone(event.target.value)}
+            SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.administrationView.bulk.zone') } }}
+            sx={drawerSelectSx}
+          >
+            {zones.map((option) => <MenuItem key={option.code} value={option.code} sx={drawerMenuItemSx}>{option.name}</MenuItem>)}
+            <MenuItem value={NO_ZONE} sx={drawerMenuItemSx}>{t('pages.administrationView.noZone')}</MenuItem>
+          </TextField>
+        </PropertyRow>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {selection.all
+            ? ids.length > 0 ? t('pages.administrationView.bulk.scopeAllBut', { count: ids.length }) : t('pages.administrationView.bulk.scopeAll')
+            : t('pages.administrationView.bulk.scopeSelected', { count: ids.length })}
+        </Typography>
+        <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+          {tooMany
+            ? t('pages.administrationView.bulk.tooMany')
+            : refused
+              ? refused
+              : count.isError
+                ? t('pages.administrationView.bulk.countFailed')
+                : count.data
+                  ? t('pages.administrationView.bulk.count', { count: count.data.changes, rows: count.data.rows })
+                  : t('pages.administrationView.bulk.counting')}
+        </Typography>
+        {error && <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{error}</Typography>}
+      </Stack>
+    </KanapDialog>
+  );
+}
 const dot = <Box component="span" sx={{ ...quietSx, mx: 0.75 }}>·</Box>;
 
 /**
@@ -256,27 +585,149 @@ function ControlPills({ summary, selected, onSelect }: {
     </Box>
   );
 }
-
 /**
  * Administration zones (the administration view of the ANSSI mapping guide): the zones in a compact
- * band, the control points, then the assets with their zone, technologies, applications and findings.
+ * band and the control points, both of which narrow the asset list below them; the assets with their
+ * zone, technologies, applications and findings, on the list grid (filters, sort, export); a member
+ * assigns a zone to the ticked assets or to every asset of the filter.
  */
 export default function AdministrationViewPage() {
   const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
-  const [exportError, setExportError] = React.useState<string | null>(null);
-  const [exporting, setExporting] = React.useState(false);
-  // The zone the band narrows the list to: a code, `null` for "No zone", `undefined` for none.
-  const [zoneFilter, setZoneFilter] = React.useState<string | null | undefined>(undefined);
-  // The control the toggles narrow the list to, one at a time.
-  const [controlFilter, setControlFilter] = React.useState<ControlKey | null>(null);
+  const navigate = useNavigate();
+  const queryClient = useQueryClient();
+  const { byField, labelFor } = useItOpsEnumOptions();
+  const zoneNameOf = useZoneName();
+  const canEdit = hasLevel('infrastructure', 'member');
+  const [exportError, setExportError] = useState<string | null>(null);
+  const [exporting, setExporting] = useState(false);
+  const [selection, setSelection] = useState<Selection>(NO_SELECTION);
+  const [refreshKey, setRefreshKey] = useState(0);
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [request, setRequest] = useState<ListRequest | null>(null);
+  const requestRef = useRef<ListRequest | null>(null);
+  // The filters (and search) of the rows on screen: a change clears the selection.
+  const scopeKeyRef = useRef<string | null>(null);
+  // The grid's filters: the band and the toggles read and set its zone and control filters.
+  const gridApiRef = useRef<any>(null);
+  const [gridFilters, setGridFilters] = useState<Record<string, any>>({});
   const summary = useQuery({
     queryKey: ['technologies', 'reports', 'administration', 'summary'],
     queryFn: async () => (await api.get<AdministrationSummary>(ENDPOINT)).data,
   });
+  // An answer without zones (a server of another version) reads as no answer.
+  const data = Array.isArray(summary.data?.zones) ? summary.data : undefined;
+  const zones = useMemo(() => data?.zones ?? [], [data]);
+  const zoneName = useCallback((code: string | null) => zoneNameOf(code, zones), [zoneNameOf, zones]);
 
-  const selectZone = (code: string | null) => setZoneFilter((current) => (current === code ? undefined : code));
-  const selectControl = (key: ControlKey) => setControlFilter((current) => (current === key ? null : key));
+  const zoneFilter = singleSetValue(gridFilters, 'zone');
+  const controlValue = singleSetValue(gridFilters, 'control');
+  const controlFilter = controlValue && (CONTROL_KEYS as readonly string[]).includes(controlValue) ? controlValue as ControlKey : null;
+  /** One value on a column of the grid, or none when it is that value already. */
+  const toggleFilter = (column: 'zone' | 'control', value: string | null, current: string | null | undefined) => {
+    const grid = gridApiRef.current;
+    if (!grid) return;
+    const model = { ...(grid.getFilterModel?.() ?? {}) };
+    if (current === value) delete model[column];
+    else model[column] = { filterType: 'set', values: [value] };
+    grid.setFilterModel(model);
+  };
+  const selectZone = (code: string | null) => toggleFilter('zone', code, zoneFilter);
+  const selectControl = (key: ControlKey) => toggleFilter('control', key, controlFilter);
+
+  const selectedCount = selection.all ? Math.max((request?.total ?? 0) - selection.ids.size, 0) : selection.ids.size;
+  const toggleRow = useCallback((id: string) => setSelection((current) => {
+    const ids = new Set(current.ids);
+    if (ids.has(id)) ids.delete(id);
+    else ids.add(id);
+    return { all: current.all, ids };
+  }), []);
+  const toggleAll = useCallback(() => setSelection((current) => (
+    current.all && current.ids.size === 0 ? NO_SELECTION : { all: true, ids: new Set<string>() }
+  )), []);
+  const selectionApi = useMemo<SelectionApi>(
+    () => ({ selection, count: selectedCount, toggleRow, toggleAll }),
+    [selection, selectedCount, toggleRow, toggleAll],
+  );
+
+  const kindValues = useCallback(async () => (byField.serverKind || []).map((option) => ({ value: option.code, label: labelFor('serverKind', option.code) })), [byField, labelFor]);
+  const zonesRef = useRef(zones);
+  zonesRef.current = zones;
+  const zoneValues = useCallback(async () => [
+    ...zonesRef.current.map((zone) => ({ value: zone.code as string | null, label: zoneNameOf(zone.code, zonesRef.current) })),
+    { value: null, label: t('pages.administrationView.noZone') },
+  ], [t, zoneNameOf]);
+  const controlValues = useCallback(async () => CONTROL_KEYS.map((key) => ({ value: key, label: t(`pages.administrationView.controlsList.${CONTROL_LOCALE[key]}.short`) })), [t]);
+
+  const columns: EnhancedColDef<AdministrationAssetRow>[] = useMemo(() => [
+    ...(canEdit ? [{
+      colId: SELECTION_COLUMN,
+      headerName: '',
+      width: 44,
+      minWidth: 44,
+      maxWidth: 44,
+      lockPosition: 'left' as const,
+      suppressColumnsToolPanel: true,
+      suppressMovable: true,
+      resizable: false,
+      sortable: false,
+      filter: false,
+      suppressHeaderMenuButton: true,
+      cellStyle: SELECT_CELL_STYLE,
+      headerComponent: SelectAllHeader,
+      cellRenderer: SelectRowCell,
+      // Space on the focused cell or header ticks, as the box would (AG Grid keeps the focus on the cell).
+      suppressKeyboardEvent: (params: any) => {
+        if (params.editing || params.event.key !== ' ') return false;
+        if (params.event.type === 'keydown' && params.data?.id) {
+          params.event.preventDefault();
+          toggleRow(params.data.id);
+        }
+        return true;
+      },
+      suppressHeaderKeyboardEvent: (params: any) => {
+        if (params.event.key !== ' ') return false;
+        if (params.event.type === 'keydown') {
+          params.event.preventDefault();
+          toggleAll();
+        }
+        return true;
+      },
+    }] : []),
+    { headerName: t('pages.administrationView.columns.reference'), field: 'reference', width: 100, cellRenderer: ReferenceCell, cellStyle: { fontFamily: MONO_FONT_FAMILY, fontSize: '12px' } },
+    { headerName: t('common.name'), field: 'name', width: 200, tooltipField: 'name' },
+    {
+      headerName: t('pages.administrationView.columns.type'),
+      field: 'kind',
+      width: 140,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: kindValues, searchable: false },
+      valueFormatter: (p: any) => labelFor('serverKind', p.value as string),
+    },
+    {
+      headerName: t('pages.administrationView.columns.zone'),
+      field: 'zone',
+      width: 150,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: zoneValues, searchable: false, emptyLabel: t('pages.administrationView.noZone') },
+      cellRenderer: ZoneCell,
+    },
+    { headerName: t('pages.administrationView.columns.technologies'), field: 'technologies', minWidth: 160, flex: 1, sortable: false, filter: false, cellRenderer: TechnologiesCell },
+    { headerName: t('pages.administrationView.columns.applications'), field: 'applications', width: 180, sortable: false, filter: false, cellRenderer: ApplicationsCell },
+    {
+      headerName: t('pages.administrationView.columns.controls'),
+      colId: 'control',
+      field: 'findings',
+      width: 240,
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: controlValues, searchable: false },
+      cellRenderer: ControlsCell,
+    },
+  ], [canEdit, controlValues, kindValues, labelFor, t, toggleAll, toggleRow, zoneValues]);
 
   const exportDomains = async () => {
     setExporting(true);
@@ -292,32 +743,113 @@ export default function AdministrationViewPage() {
     }
   };
 
-  const data = summary.data;
   const catalogEmpty = !!data && data.zones.every((zone) => zone.unknown);
+  // The zones an assignment may choose: in the catalog and offered.
+  const assignable = zones.filter((zone) => !zone.deprecated && !zone.unknown).map((zone) => ({ code: zone.code, name: zoneName(zone.code) }));
+
+  const actions = (
+    <Stack direction="row" spacing={1} alignItems="center">
+      {canEdit && selectedCount > 0 && (
+        <>
+          <Typography data-testid="administration-selection" sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
+            {selection.all
+              ? t('pages.administrationView.selection.whole', { count: selectedCount })
+              : t('pages.administrationView.selection.some', { count: selectedCount })}
+          </Typography>
+          <Button variant="action" onClick={() => setSelection(NO_SELECTION)}>{t('pages.administrationView.selection.clear')}</Button>
+        </>
+      )}
+      {canEdit && (
+        <Button variant="action" onClick={() => setAssignOpen(true)} disabled={selectedCount === 0 || !data}>
+          {selectedCount > 0
+            ? t('pages.administrationView.actions.assignSelected', { count: selectedCount })
+            : t('pages.administrationView.actions.assign')}
+        </Button>
+      )}
+      <Button variant="action" disabled={exporting} onClick={() => void exportDomains()}>{t('pages.administrationView.exportDomains')}</Button>
+    </Stack>
+  );
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box>
-        <PageHeader
-          title={t('pages.administrationView.zones')}
-          actions={<Button variant="action" disabled={exporting} onClick={() => void exportDomains()}>{t('pages.administrationView.exportDomains')}</Button>}
-        />
-        <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
-      </Box>
-      {exportError && <Alert severity="error">{exportError}</Alert>}
-      {!data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
-      {data && (
-        <Box>
-          {catalogEmpty && (
-            <Typography sx={{ fontSize: 13, ...quietSx, mb: 1 }}>
-              {t('pages.administrationView.noZones')}
-              {hasLevel('settings', 'reader') && <>{' '}<RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink></>}
-            </Typography>
+    <SelectionContext.Provider value={selectionApi}>
+      <ZoneNameContext.Provider value={zoneName}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+          <Box>
+            <PageHeader title={t('pages.administrationView.zones')} actions={actions} />
+            <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.administrationView.subtitle')}</Typography>
+          </Box>
+          {exportError && <Alert severity="error">{exportError}</Alert>}
+          {!data && <ReportDataStatus loading={summary.isLoading} error={summary.isError} onRetry={() => void summary.refetch()} />}
+          {data && (
+            <Box>
+              {catalogEmpty && (
+                <Typography sx={{ fontSize: 13, ...quietSx, mb: 1 }}>
+                  {t('pages.administrationView.noZones')}
+                  {hasLevel('settings', 'reader') && <>{' '}<RecordLink to="/it/settings">{t('pages.administrationView.openSettings')}</RecordLink></>}
+                </Typography>
+              )}
+              <ZoneBand summary={data} selected={zoneFilter} onSelect={selectZone} />
+              <Box sx={{ mt: 1.5 }}><ControlPills summary={data} selected={controlFilter} onSelect={selectControl} /></Box>
+            </Box>
           )}
-          <ZoneBand summary={data} selected={zoneFilter} onSelect={selectZone} />
-          <Box sx={{ mt: 1.5 }}><ControlPills summary={data} selected={controlFilter} onSelect={selectControl} /></Box>
+          {/* The header of the box column: the box alone, centred, without the cell's padding. */}
+          <Box sx={{
+            '& .ag-header-cell[col-id="select"]': { px: 0 },
+            '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
+          }}
+          >
+            <ServerDataGrid<AdministrationAssetRow>
+              columns={columns}
+              endpoint={ASSETS_ENDPOINT}
+              queryKey="administration-assets"
+              getRowId={rowId}
+              showRowCount
+              defaultSort={{ field: 'name', direction: 'ASC' }}
+              requiredColumns={['name']}
+              enableColumnChooser
+              columnPreferencesKey="it-administration-assets"
+              refreshKey={refreshKey}
+              enableSearch
+              onGridApiReady={(gridApi) => { gridApiRef.current = gridApi; }}
+              onQueryStateChange={(state) => setGridFilters(state.filterModel ?? {})}
+              onCellClicked={(event: any) => {
+                if (!event?.data?.id) return;
+                if (event.column?.getColId?.() !== SELECTION_COLUMN) {
+                  navigate(`/it/assets/${event.data.id}`);
+                  return;
+                }
+                // A click in the selection cell beside the box ticks it too; the box ticks itself.
+                const target = event.event?.target as HTMLElement | undefined;
+                if (!target?.closest?.('input')) toggleRow(event.data.id);
+              }}
+              onListRequestChange={(next) => {
+                requestRef.current = next;
+                setRequest(next);
+                const key = JSON.stringify(listScope(next));
+                if (scopeKeyRef.current !== null && scopeKeyRef.current !== key) setSelection(NO_SELECTION);
+                scopeKeyRef.current = key;
+              }}
+              emptyState={<Typography sx={{ fontSize: 13, ...quietSx }} data-testid="administration-empty">{t('pages.administrationView.emptyAssets')}</Typography>}
+            />
+          </Box>
+          {canEdit && (
+            <AssignZoneDialog
+              open={assignOpen}
+              onClose={() => setAssignOpen(false)}
+              selection={selection}
+              request={request}
+              zones={assignable}
+              onDone={() => {
+                setAssignOpen(false);
+                setSelection(NO_SELECTION);
+                setRefreshKey((k) => k + 1);
+                // The band and the toggles count again.
+                void queryClient.invalidateQueries({ queryKey: ['technologies', 'reports', 'administration'] });
+              }}
+            />
+          )}
         </Box>
-      )}
-    </Box>
+      </ZoneNameContext.Provider>
+    </SelectionContext.Provider>
   );
 }

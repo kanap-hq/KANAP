@@ -100,6 +100,7 @@ const PAGES: Page[] = [
   { name: 'AssetsPage', load: () => import('./it/AssetsPage') },
   { name: 'TechnologiesPage', load: () => import('./it/TechnologiesPage') },
   { name: 'VulnerabilitiesPage', load: () => import('./it/VulnerabilitiesPage') },
+  { name: 'AdministrationViewPage', load: () => import('./it/AdministrationViewPage') },
   { name: 'BudgetListPage', load: () => import('./budget/BudgetListPage') },
   { name: 'AuditLogsPage', load: () => import('./admin/AuditLogsPage') },
   { name: 'KnowledgePage', load: () => import('./knowledge/KnowledgePage') },
