@@ -15,6 +15,7 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
@@ -494,12 +495,27 @@ const SubnetsEditor = React.memo(function SubnetsEditor({
   );
 });
 
+/** A number field without the browser's arrows: the count is typed. */
+const countFieldSx = {
+  '& input[type=number]': { appearance: 'textfield', MozAppearance: 'textfield' },
+  '& input::-webkit-outer-spin-button, & input::-webkit-inner-spin-button': { WebkitAppearance: 'none', margin: 0 },
+} as const;
+
+/** A column header that says, on hover, where to find its value. */
+function HintedHeader({ label, hint }: { label: string; hint: string }) {
+  return (
+    <Tooltip title={hint}>
+      <span>{label}</span>
+    </Tooltip>
+  );
+}
+
 interface DomainsEditorProps {
   items: DomainOption[];
   onChange: (items: DomainOption[]) => void;
 }
 
-const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: DomainsEditorProps) {
+export const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: DomainsEditorProps) {
   const itemsWithIds = React.useMemo(() => withLocalIds(items, 'domain'), [items]);
   const [localItems, setLocalItems] = React.useState(itemsWithIds);
   const pendingCommitRef = React.useRef(false);
@@ -575,14 +591,14 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
         <Table size="small" stickyHeader={useVirtual}>
           <TableHead>
             <TableRow>
-              <TableCell sx={{ width: '18%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
-              <TableCell sx={{ width: '17%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
-              <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.forest')}</TableCell>
-              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.accounts')}</TableCell>
-              <TableCell sx={{ width: '9%' }}>{t('pages.settings.columns.machines')}</TableCell>
+              <TableCell sx={{ width: '16%' }}>{t('common:enumEditor.name')}<RequiredMark /></TableCell>
+              <TableCell sx={{ width: '15%' }}>{t('pages.settings.columns.dnsSuffix')}</TableCell>
+              <TableCell sx={{ width: '14%' }}><HintedHeader label={t('pages.settings.columns.forest')} hint={t('pages.settings.hints.forest')} /></TableCell>
+              <TableCell sx={{ width: '11%', minWidth: 110 }}><HintedHeader label={t('pages.settings.columns.accountCount')} hint={t('pages.settings.hints.accountCount')} /></TableCell>
+              <TableCell sx={{ width: '11%', minWidth: 110 }}><HintedHeader label={t('pages.settings.columns.computerCount')} hint={t('pages.settings.hints.computerCount')} /></TableCell>
               <TableCell sx={{ width: '10%' }}>{t('pages.settings.columns.trusts')}</TableCell>
               <TableCell sx={{ width: '8%' }}>{t('common:enumEditor.noLongerOffered')}</TableCell>
-              <TableCell align="right" sx={{ width: '14%' }}>{t('common:labels.actions')}</TableCell>
+              <TableCell align="right" sx={{ width: '15%' }}>{t('common:labels.actions')}</TableCell>
             </TableRow>
           </TableHead>
           <TableBody>
@@ -603,8 +619,8 @@ const DomainsEditor = React.memo(function DomainsEditor({ items, onChange }: Dom
                   <TableCell sx={{ verticalAlign: 'top' }}><TextField value={item.label || ''} onChange={(e) => handleLabelChange(item.localId, e.target.value, item.dns_suffix || '', item.label || '')} size="small" fullWidth required placeholder={t('pages.settings.placeholders.domainName')} disabled={isSystem} InputProps={{ readOnly: isSystem }} inputProps={{ 'aria-label': t('common:enumEditor.name') }} /><IssueText issue={issues.get(localItems.indexOf(item))} /></TableCell>
                   <TableCell><TextField value={item.dns_suffix || ''} onChange={(e) => handleUpdate(item.localId, { dns_suffix: e.target.value.toLowerCase() })} size="small" fullWidth placeholder={t('pages.settings.placeholders.dnsSuffix')} disabled={isSystem} InputProps={{ readOnly: isSystem }} /></TableCell>
                   <TableCell>{!isSystem && <TextField value={item.forest || ''} onChange={(e) => handleUpdate(item.localId, { forest: e.target.value || undefined })} size="small" fullWidth placeholder={t('pages.settings.placeholders.forest')} inputProps={{ maxLength: 200, 'aria-label': `${t('pages.settings.columns.forest')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accounts')} ${item.label}` }} />}</TableCell>
-                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.machineCount')} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.machines')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.account_count ?? ''} onChange={(e) => handleUpdate(item.localId, { account_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.accountCount')} sx={countFieldSx} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.accountCount')} ${item.label}` }} />}</TableCell>
+                  <TableCell>{!isSystem && <TextField value={item.machine_count ?? ''} onChange={(e) => handleUpdate(item.localId, { machine_count: countValue(e.target.value) })} size="small" fullWidth type="number" placeholder={t('pages.settings.placeholders.machineCount')} sx={countFieldSx} inputProps={{ min: 0, max: MAX_COUNT, 'aria-label': `${t('pages.settings.columns.computerCount')} ${item.label}` }} />}</TableCell>
                   <TableCell>{!isSystem && item.code && <Button size="small" onClick={() => setTrustsOf(item)} aria-label={`${t('pages.settings.columns.trusts')} ${item.label}`}>{(item.trusts ?? []).length ? t('pages.settings.trusts.count', { count: item.trusts.length }) : t('pages.settings.trusts.none')}</Button>}</TableCell>
                   <TableCell><Checkbox size="small" checked={!!item.deprecated} onChange={(e) => handleUpdate(item.localId, { deprecated: e.target.checked })} disabled={isSystem} inputProps={{ 'aria-label': `${t('common:enumEditor.noLongerOffered')} ${item.label}` }} /></TableCell>
                   <TableCell align="right" sx={{ whiteSpace: 'nowrap' }}>

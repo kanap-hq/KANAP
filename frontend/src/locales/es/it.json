@@ -751,8 +751,6 @@
         "description": "Descripción",
         "dnsSuffix": "Sufijo DNS",
         "forest": "Bosque",
-        "accounts": "Cuentas",
-        "machines": "Equipos",
         "trusts": "Confianzas",
         "adminGroup": "Grupo de administradores"
       },

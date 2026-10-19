@@ -751,8 +751,6 @@
         "description": "Beschreibung",
         "dnsSuffix": "DNS-Suffix",
         "forest": "Gesamtstruktur",
-        "accounts": "Konten",
-        "machines": "Computer",
         "trusts": "Vertrauensstellungen",
         "adminGroup": "Administratorgruppe"
       },

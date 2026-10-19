@@ -806,8 +806,8 @@
         "description": "Description",
         "dnsSuffix": "DNS suffix",
         "forest": "Forest",
-        "accounts": "Accounts",
-        "machines": "Machines",
+        "accountCount": "Number of accounts",
+        "computerCount": "Number of computers",
         "trusts": "Trusts",
         "adminGroup": "Administrator group"
       },
@@ -842,6 +842,11 @@
         "accessMethodName": "e.g., Web",
         "incidentCategoryName": "e.g., Infrastructure",
         "select": "Select…"
+      },
+      "hints": {
+        "forest": "Active Directory Domains and Trusts.",
+        "accountCount": "Active Directory Users and Computers, or a count of user objects in the domain.",
+        "computerCount": "Active Directory Users and Computers, or a count of computer objects in the domain."
       },
       "empty": {
         "adminZones": "No administration zones defined.",
