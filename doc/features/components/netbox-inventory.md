@@ -15,6 +15,7 @@ This is not an AI feature. It has no feature flag and works in both deployment m
 - **Sub-locations.** Only top-level Netbox Locations become `location_sub_items`. A device in a deeper Location gets its top-level ancestor. KANAP does not locate equipment more precisely than site and building.
 - **Host name and domain.** A host name is one or more RFC 1123 labels separated by dots (`backend/src/assets/hostname.util.ts`, mirrored in `frontend/src/utils/hostname.ts`). The Netbox name is split into host name and domain only when it ends with a `dns_suffix` of the tenant's domain catalog (the longest suffix wins). Otherwise the whole name is the host name and the domain stays empty. The domain is managed only together with the host name.
 - **Operating system** has its own mapping table (`os_map`, Netbox platform slug to KANAP operating system). It is not an import filter.
+- **Cluster of a virtual machine** has its own mapping table too (`cluster_map`, Netbox cluster id to KANAP cluster asset). It is not an import filter, and the import only ever adds to it. See "Virtual machine clusters".
 - **A new asset's `provider`** must be a code of the `serverProviders` catalog, not a `hosting_type` value. The mapper takes the location's provider when it is a real provider code, then `other`, then the first catalog entry.
 
 ## Matching
@@ -47,6 +48,17 @@ A manual run writes only what its preview listed.
 - A preview inventory is cached for 2 minutes and reused only when the client sends `reuse_inventory: true`. A run always reads Netbox.
 - A preview needs saved role and site matches. The mapping tab pre-fills suggestions that are not saved until the person saves the mappings.
 - The frontend refuses to apply when a preview carries no `batch` field.
+
+## Virtual machine clusters
+
+The technology deductions (`technologies/technology-reach.service.ts`) cross `contains` relations and cluster members. A virtual machine imported from Netbox is attached to its KANAP cluster so that they reach it: a technology installed on the cluster reaches the machine and the applications hosted on it.
+
+- **Match.** `cluster_map` in `metadata_json` maps a Netbox cluster id to a KANAP asset with `is_cluster`, not retired. `cluster_names` keeps the Netbox name beside each match, for display only. No migration: the map lives in the config like `os_map`. `GET /netbox/mapping-options` lists the Netbox clusters (`listClusters`, `/api/virtualization/clusters/`) and suggests a KANAP cluster only when exactly one has the same name, without case. `PUT /netbox/mapping` refuses an asset of another tenant, an asset that is not a cluster and a retired one. A token that cannot read clusters leaves the rest of the tab working.
+- **Convention.** The cluster contains the virtual machine: `asset_relations` of type `contains`, from the cluster to the machine (as in the fromage fixture). Hosts are cluster members (`asset_cluster_members`); the import does not touch them.
+- **Add only.** When the matched cluster does not contain the machine yet, the planner adds a diff `cluster` (`before`: the clusters that already contain it, or empty; `after`: the matched cluster). `applyRow` inserts that one edge (`AssetsService.addRelation`, `ON CONFLICT DO NOTHING`), in the row's transaction, after locking and re-reading the cluster row. The audit entry is written on the cluster (`asset_relations`, `source = 'system'`, `source_ref = 'netbox'`). `bulkReplaceRelations` and `replaceClusterMembers` replace a whole set and are never called by the import.
+- **Nothing is removed.** A relation from another cluster stays, even when the machine moved or left its cluster in Netbox. The row carries the notice `cluster_other_present` at every run until a person removes it.
+- **Notices.** A Netbox cluster with no match gives one `cluster_not_mapped` notice in the preview (`notices` of the preview), not one per machine, and writes nothing. A match on an asset deleted, retired or no longer a cluster gives `cluster_match_invalid`, in the preview and in the warnings of every run, and writes nothing. The match is read with the tenant's id: an asset id of another tenant reads as deleted.
+- **Runs.** A machine whose only change is its cluster is an update: a manual run writes it once the preview listed it, and the hourly run applies it like any other. A machine created by a run is attached right after its creation. Linking or creating an object from the records list attaches it too.
 
 ## Writes and storage
 
@@ -86,4 +98,4 @@ A Netbox instance with a seeded inventory runs behind the `netbox` compose profi
 
 ## Not built yet
 
-Cluster membership, prefixes to subnets, environment from tags, and a governance view of assets without a Netbox object or without an application.
+Host cluster membership (`asset_cluster_members` stays manual: a Netbox device naming a cluster is not read), removal of a stale virtual machine cluster relation, prefixes to subnets, environment from tags, and a governance view of assets without a Netbox object or without an application.
