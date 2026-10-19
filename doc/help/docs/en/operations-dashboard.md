@@ -89,7 +89,7 @@ Without read access to budget lines (`budget:reader`), the budget tiles are hidd
 
 ### Amounts without an exchange rate
 
-When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget** and **Top increases** tiles then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. In **Top lines**, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
+When a line's currency has no exchange rate for a year, its amount is left out of the totals of that year. The **Budget**, **Top increases**, **My budget** and **By cost center** tiles then show a one-line warning, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. In **Top lines**, such a line shows its amount in its own currency with a small orange mark. See [Manual rates](currencies.md#manual-rates).
 
 ## Customizing the overview
 

@@ -222,7 +222,7 @@ Les niveaux et les vagues viennent de **Classifications et continuité** dans le
 
 Les fiches liées à la technologie, une section par genre :
 
-- **Lignes budgétaires** : avec le montant de l'année en cours dans la colonne budgétaire de votre espace de travail, et un total.
+- **Lignes budgétaires** : avec le montant de l'année en cours dans la colonne budgétaire de votre espace de travail, et un total. Une ligne dont la devise n'a pas de taux de change pour l'année affiche son montant dans sa propre devise avec une petite marque orange, et le total l'exclut. Un avertissement d'une ligne sous le tableau l'indique. Voir [Taux manuels](currencies.md#taux-manuels).
 - **Contrats** : fournisseur, date de fin et montant annuel, avec un total par devise.
 - **Projets** : statut et fin prévue.
 - **Incidents** : sévérité, statut et date de détection. Lier un incident demande `incidents:contributor`. Un incident clos ou annulé ne peut être ni lié ni délié.

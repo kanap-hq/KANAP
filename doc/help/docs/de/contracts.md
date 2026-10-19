@@ -89,7 +89,9 @@ Mit Lesezugriff auf Budgetzeilen (`budget:reader`) zeigt die rechte Seite der Sy
 - **Abweichung**: Budget minus Verpflichtung. Ein Fehlbetrag erscheint in Orange. **Keine Zeile** bedeutet, dass auf keiner verknüpften Zeile etwas budgetiert ist, und **Vertrag abgelaufen**, dass auf einem beendeten Vertrag noch Budget liegt
 - **Budgetdeckung** (standardmäßig ausgeblendet): einer der sechs Deckungsstände
 
-Ein Vertrag in einer Währung ohne Wechselkurs für das Jahr zeigt „Kein Kurs für USD“ statt eines Betrags. Ohne das Budgetrecht sind diese Spalten, die Auswahl und die beiden Budget-Schnellfilter ausgeblendet.
+Ein Vertrag in einer Währung ohne Wechselkurs für das Jahr zeigt „Kein Kurs für USD“ statt eines Betrags.
+
+Hat eine verknüpfte Budgetzeile für das Jahr keinen Wechselkurs, lässt der Betrag **Budget** sie aus und zeigt eine kleine orangefarbene Markierung. **Abweichung** und **Budgetdeckung** bleiben leer, da die Deckung unbekannt ist. Ein einzeiliger Hinweis unter der Liste nennt die ausgelassenen Zeilen, zum Beispiel „1 Zeile ohne Wechselkurs ausgeschlossen: USD 2026.“ Siehe [Manuelle Kurse](currencies.md#manuelle-kurse). Ohne das Budgetrecht sind diese Spalten, die Auswahl und die beiden Budget-Schnellfilter ausgeblendet.
 
 ### Summenzeile
 
@@ -177,6 +179,8 @@ Ein Vertrag über 350 000 pro Jahr, der sich jeden 1. Juli verlängert, verpflic
 - **Unterbudgetiert**: Die verknüpften Zeilen enthalten weniger als die Verpflichtung
 - **Budget über dem Vertrag**: Die verknüpften Zeilen enthalten mehr als die Verpflichtung plus 10 %
 - **Gedeckt**: alle anderen Fälle
+
+Hat eine verknüpfte Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung, und die Summe sowie **Verknüpfte Zeilen** lassen sie aus. Der Stand dieses Jahres lautet **Unbekannt: eine verknüpfte Zeile hat keinen Wechselkurs**. Ein einzeiliger Hinweis unter der Deckungstabelle nennt die ausgelassenen Zeilen, zum Beispiel „1 Zeile ohne Wechselkurs ausgeschlossen: USD 2026.“ Siehe [Fehlender Kurs](currencies.md#umrechnungsmechanismen-kurzreferenz) und [Manuelle Kurse](currencies.md#manuelle-kurse).
 
 ### Konformität
 

@@ -112,6 +112,8 @@ Plaid utilise un petit ensemble d'outils internes pour répondre aux questions :
 
 `Search all` trouve les lignes budgétaires par le nom de leurs valeurs analytiques, et indique à Plaid les valeurs de chaque ligne. Plaid désigne une ligne budgétaire par sa référence `BL-12`, et ses liens ouvrent la ligne.
 
+Quand Plaid additionne des montants budgétaires, une ligne dont la devise n'a pas de taux de change pour l'année est exclue de la somme. Plaid indique alors quelles devises et quelles années il a exclues. Les assistants connectés par MCP reçoivent la même réponse.
+
 ## Artefacts et aperçus
 
 Certaines réponses s'accompagnent de contenu supplémentaire qui ne trouve pas naturellement sa place dans le fil de discussion. KANAP les appelle des **artefacts**.

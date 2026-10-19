@@ -90,6 +90,8 @@ Fonctionnement :
 
 Quand la devise d'une ligne n'a pas de taux de change pour une année, les rapports budgétaires, **Effectifs par mois** et **Coût par ETP** excluent les montants de cette ligne pour l'année de leurs chiffres. Un avertissement d'une ligne en haut du rapport les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises. L'avertissement n'est pas imprimé. Voir [Taux manuels](currencies.md#taux-manuels).
 
+Les deux rapports de refacturation excluent ces montants de tous leurs chiffres : payé, consommé, départements et flux intersociétés. Chaque rapport reste équilibré sur ce qu'il compte. Le même avertissement s'affiche au-dessus du rapport.
+
 ### Ouvrir la liste depuis un rapport
 
 Dans **Effectifs par mois**, **Coût par ETP**, **Dimensions analytiques** et **Comptes de consolidation**, le nom d'un groupe est un lien qui ouvre la [liste des lignes budgétaires](budget-lines.md) dans un nouvel onglet, sur les lignes budgétaires que compte la ligne du rapport :
