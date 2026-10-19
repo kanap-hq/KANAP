@@ -8,13 +8,14 @@ import { TechnologiesService } from '../../technologies/technologies.service';
 import { TechnologyReachService } from '../../technologies/technology-reach.service';
 import { technology } from '../../technologies/__tests__/technologies.fixtures';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spend/__tests__/round-inputs.fixtures';
-import { ItOpsSettingsService } from '../it-ops-settings.service';
+import { DEFAULT_ADMIN_ZONES, ItOpsSettingsService } from '../it-ops-settings.service';
 
 // The "Administration zones" catalog and the enriched domains (lot A1a), against a real database in
 // transactions rolled back at the end:
-// - no zone is shipped; zones are written with names only (codes generated) and their attributes
-//   (administrator group, description); a too long attribute is refused; a stored privilege
-//   level or secrets location is ignored;
+// - the three ANSSI tiers are shipped when the catalog is absent; an empty stored list stays
+//   empty; a tenant may replace them; zones are written with names only (codes generated) and
+//   their attributes (administrator group, description); a too long attribute is refused; a
+//   stored privilege level or secrets location is ignored;
 // - domains stored before the lot are served unchanged; forest, trusts and counts are saved; a
 //   trust to the domain itself, to a system entry, to an unknown domain or twice is dropped; an
 //   invalid count or direction is refused;
@@ -29,7 +30,20 @@ async function testZonesCatalog() {
     const tenantId = await seedTenant(runner, 'adz-cat');
     const settings = settingsService(runner);
     const opts = { manager: runner.manager };
-    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones, [], 'no zone is shipped');
+    assert.deepEqual(
+      (await settings.getSettings(tenantId, opts)).adminZones,
+      DEFAULT_ADMIN_ZONES.map((zone) => ({ ...zone, deprecated: false })),
+      'ANSSI tiers are served when the catalog is absent',
+    );
+    await runner.query(
+      `UPDATE tenants SET metadata = jsonb_build_object('it_ops', jsonb_build_object('admin_zones', '[]'::jsonb)) WHERE id = $1`,
+      [tenantId],
+    );
+    assert.deepEqual((await settings.getSettings(tenantId, opts)).adminZones, [], 'an empty stored list stays empty');
+    await runner.query(
+      `UPDATE tenants SET metadata = '{}'::jsonb WHERE id = $1`,
+      [tenantId],
+    );
 
     const saved = await settings.updateSettings(tenantId, { adminZones: [
       { label: 'Tier 0', admin_group: ' Domain admins ', privilege_level: 'Tier 0', secrets_location: 'Vault A', description: 'Identity core' },

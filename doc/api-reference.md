@@ -773,7 +773,7 @@ Tenant-scoped configuration for IT Landscape dropdowns and enums.
     - `forest`: optional text (200 characters); `account_count`, `machine_count`: optional whole numbers from 0 to 100,000,000, as a number or its digits (`400` otherwise, booleans included)
     - `trusts`: optional list of `{ domain, direction }`, `direction` `two_way`, `outgoing` (this domain trusts the other) or `incoming` (`400` otherwise); a trust to the domain itself, to a system entry, to a domain not in the list, or a second trust to the same domain is dropped. Removing a domain drops the trusts to it.
     - Domains stored before these fields stay valid: the fields are absent until typed.
-  - Administration zones (`adminZones`, none shipped): `label`, optional `admin_group` (200), `description` (2000). A stored `privilege_level` or `secrets_location` is ignored on read and dropped on the next save. A zone used by a technology (`technologies.admin_zone`) or an asset (`assets.admin_zone`) cannot be removed (`409`, `CATALOG_VALUE_IN_USE`); retire it instead.
+  - Administration zones (`adminZones`): `label`, optional `admin_group` (200), `description` (2000). Tenants that never customised the list receive the three ANSSI tiers (`tier_0` "Tier 0 (core of trust)", `tier_1` "Tier 1 (servers and applications)", `tier_2` "Tier 2 (workstations)"); an empty stored list stays empty. A stored `privilege_level` or `secrets_location` is ignored on read and dropped on the next save. A zone used by a technology (`technologies.admin_zone`) or an asset (`assets.admin_zone`) cannot be removed (`409`, `CATALOG_VALUE_IN_USE`); retire it instead.
 
 - POST `/it-ops/settings/reset`
   - Guards: `JwtAuthGuard`, `PermissionGuard`, `@RequireLevel('settings', 'admin')`

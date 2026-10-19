@@ -180,6 +180,11 @@
       "supplier": {"source": "Supplier", "en": "Supplier", "fr": "Fournisseur", "de": "Lieferant", "es": "Proveedor"},
       "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
     },
+    "adminZones": {
+      "tier_0": {"source": "Tier 0 (core of trust)", "en": "Tier 0 (core of trust)", "fr": "", "de": "", "es": ""},
+      "tier_1": {"source": "Tier 1 (servers and applications)", "en": "Tier 1 (servers and applications)", "fr": "", "de": "", "es": ""},
+      "tier_2": {"source": "Tier 2 (workstations)", "en": "Tier 2 (workstations)", "fr": "", "de": "", "es": ""}
+    },
     "technologyFamilies": {
       "operating_system": {"source": "Operating system", "en": "Operating system", "fr": "Système d’exploitation", "de": "Betriebssystem", "es": "Sistema operativo"},
       "database": {"source": "Database", "en": "Database", "fr": "Base de données", "de": "Datenbank", "es": "Base de datos"},

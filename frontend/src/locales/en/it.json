@@ -3137,6 +3137,16 @@
       "administration": "Administration",
       "other": "Other"
     },
+    "adminZones": {
+      "tier_0": "Tier 0 (core of trust)",
+      "tier_1": "Tier 1 (servers and applications)",
+      "tier_2": "Tier 2 (workstations)"
+    },
+    "adminZonesDescriptions": {
+      "tier_0": "Identity and trust infrastructure: directories such as Active Directory or Entra ID, PKI, identity administration tools, and the systems that host them.",
+      "tier_1": "Business servers, applications, databases and middleware.",
+      "tier_2": "User workstations and devices."
+    },
     "domains": {
       "workgroup": "Workgroup",
       "n-a": "N/A"
