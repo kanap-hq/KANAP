@@ -465,6 +465,7 @@ export default function CompaniesPage() {
         onImported={() => setRefreshKey((k) => k + 1)}
         params={{ year }}
         flexibleFormat
+        hint={t('companies.importHint', { years: `${year - 1}, ${year}, ${year + 1}` })}
       />
     </>
   );

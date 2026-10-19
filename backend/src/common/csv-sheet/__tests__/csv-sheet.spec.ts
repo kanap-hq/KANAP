@@ -746,7 +746,32 @@ async function main() {
   testHeaderWithoutBom();
   await testRowCap();
   testHeaderMismatch();
+  await testNoticeUnknown();
   console.log('csv-sheet.spec: ok');
+}
+
+/** An unknown header the caller notices stays in the report and does not refuse the file. */
+async function testNoticeUnknown() {
+  const noticed = await readMasterDataFile({
+    file: Buffer.from('name,headcount_2031\nAda,4\n'),
+    fields: ['name'],
+    language: 'en',
+    noticeUnknown: (header) => /^headcount_\d{4}$/i.test(header),
+  });
+  assert.equal(noticed.headerError, null);
+  assert.deepEqual(noticed.ignoredColumns, ['headcount_2031']);
+  assert.equal(noticed.rows[0]?.cells.name, 'Ada');
+
+  const refused = await readMasterDataFile({
+    file: Buffer.from('name,headcount_2031,mystery\nAda,4,x\n'),
+    fields: ['name'],
+    language: 'en',
+    noticeUnknown: (header) => /^headcount_\d{4}$/i.test(header),
+  });
+  assert.equal(refused.headerError?.code, 'CSV_HEADER_UNKNOWN_COLUMNS');
+  assert.match(refused.headerError?.message ?? '', /mystery/);
+  assert.doesNotMatch(refused.headerError?.message ?? '', /headcount_2031/);
+  assert.equal(refused.rows.length, 0);
 }
 
 /** The header refusal names only the parts that apply, with a code per case for the interface. */

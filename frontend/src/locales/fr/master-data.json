@@ -125,6 +125,7 @@
     "pinnedTotal": "Total",
     "export": "Exporter les sociétés",
     "import": "Importer les sociétés",
+    "importHint": "Métriques lues : {{years}}, d'après l'année de la liste. Chaque année est facultative. Valeurs acceptées pour status : enabled ou disabled.",
     "previous": "Société précédente",
     "next": "Société suivante",
     "fields": {

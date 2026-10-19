@@ -5,6 +5,11 @@ import { CompanyMetric } from './company-metric.entity';
 import { AuditService, AuditSourceOptions } from '../audit/audit.service';
 import { FreezeService } from '../freeze/freeze.service';
 
+/** A validation refusal the interface translates (`errors:<code>`). `message` stays the English sentence. */
+function metricError(code: string, message: string) {
+  return new BadRequestException({ statusCode: 400, error: 'Bad Request', message, code });
+}
+
 @Injectable()
 export class CompanyMetricsService {
   constructor(
@@ -14,7 +19,7 @@ export class CompanyMetricsService {
   ) {}
 
   async list(year: number, opts?: { manager?: EntityManager }) {
-    if (!Number.isInteger(year)) throw new BadRequestException('year is required');
+    if (!Number.isInteger(year)) throw metricError('COMPANY_METRIC_YEAR_REQUIRED', 'year is required');
     const repo = opts?.manager ? opts.manager.getRepository(CompanyMetric) : this.repo;
     const items = await repo.find({ where: { fiscal_year: year } as any, order: { created_at: 'DESC' as any } });
     return { items, total: items.length };
@@ -26,6 +31,11 @@ export class CompanyMetricsService {
     return found || null;
   }
 
+  /** Refuses a write of company metrics for a frozen year (`DATA_FROZEN`). */
+  async assertYearOpen(year: number, opts?: { manager?: EntityManager }) {
+    await this.freeze.assertNotFrozen({ scope: 'companies', year }, opts);
+  }
+
   async upsertForCompany(
     companyId: string,
     year: number,
@@ -33,9 +43,9 @@ export class CompanyMetricsService {
     userId?: string,
     opts?: { manager?: EntityManager; audit?: AuditSourceOptions },
   ) {
-    if (!Number.isInteger(year)) throw new BadRequestException('year is required');
+    if (!Number.isInteger(year)) throw metricError('COMPANY_METRIC_YEAR_REQUIRED', 'year is required');
     if (body.headcount == null || !Number.isInteger(Number(body.headcount)) || Number(body.headcount) < 0) {
-      throw new BadRequestException('headcount is required and must be a non-negative integer');
+      throw metricError('COMPANY_METRIC_HEADCOUNT_INVALID', 'headcount is required and must be a non-negative integer');
     }
     await this.freeze.assertNotFrozen({ scope: 'companies', year }, opts);
     const repo = opts?.manager ? opts.manager.getRepository(CompanyMetric) : this.repo;
@@ -43,13 +53,13 @@ export class CompanyMetricsService {
     // Validate integers and decimals
     if (body.it_users != null) {
       const iu = Number(body.it_users);
-      if (!Number.isInteger(iu) || iu < 0) throw new BadRequestException('it_users must be a non-negative integer');
+      if (!Number.isInteger(iu) || iu < 0) throw metricError('COMPANY_METRIC_IT_USERS_INVALID', 'it_users must be a non-negative integer');
     }
     if (body.turnover != null) {
       const tv = Number(body.turnover);
-      if (!Number.isFinite(tv) || tv < 0) throw new BadRequestException('turnover must be a non-negative number');
+      if (!Number.isFinite(tv) || tv < 0) throw metricError('COMPANY_METRIC_TURNOVER_INVALID', 'turnover must be a non-negative number');
       const decimals = (String(body.turnover).split('.')[1] || '').length;
-      if (decimals > 3) throw new BadRequestException('turnover allows at most 3 decimals');
+      if (decimals > 3) throw metricError('COMPANY_METRIC_TURNOVER_DECIMALS', 'turnover allows at most 3 decimals');
     }
     const next = repo.create({
       ...(existing ?? {}),
