@@ -726,6 +726,53 @@ async function testExport() {
   });
 }
 
+async function testScale() {
+  await inRolledBackTransaction(async (runner) => {
+    const a = await seedTenant(runner, 'adm-scale');
+    await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster)
+       SELECT $1, 'bulk-' || lpad(g::text, 5, '0'), 'vm', 'prod', false FROM generate_series(1, 2000) g`,
+      [a],
+    );
+    const settings = new Map<string, Settings>([[a, { adminZones: ZONES, domains: [], technologyFamilies: DEFAULT_TECHNOLOGY_FAMILIES }]]);
+    const svc = service(settings);
+    const opts = { manager: runner.manager, tenantId: a };
+    const started = Date.now();
+    const page = await svc.assets({ page: 1, limit: 50 }, opts);
+    const pageMs = Date.now() - started;
+    console.log(`administration assets: page of ${page.items.length} on ${page.total} assets in ${pageMs} ms`);
+    assert.equal(page.items.length, 50);
+    assert.equal(page.total, 2000);
+    assert.equal(page.items[0].name, 'bulk-00001');
+    assert.ok(pageMs < 2000, `page took ${pageMs} ms`);
+    const filteredAt = Date.now();
+    const filtered = await svc.assets({ limit: 50, filters: setFilter('control', ['domain_controllers_outside']) }, opts);
+    const filterMs = Date.now() - filteredAt;
+    console.log(`administration assets: control filter on 2000 assets in ${filterMs} ms (total ${filtered.total})`);
+    assert.equal(filtered.total, 0);
+    assert.ok(filterMs < 2000, `filter took ${filterMs} ms`);
+
+    await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster)
+       SELECT $1, 'cap-' || lpad(g::text, 5, '0'), 'vm', 'prod', false FROM generate_series(1, 3001) g`,
+      [a],
+    );
+    await assert.rejects(
+      svc.assignZone({ zone: 'tier_0', all: true, dry_run: true }, opts),
+      (error: any) => error instanceof BadRequestException && (error.getResponse() as any).code === 'bulk_too_many' && /5001/.test(error.message),
+    );
+    await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment, is_cluster)
+       SELECT $1, 'exp-' || lpad(g::text, 5, '0'), 'vm', 'prod', false FROM generate_series(1, 5000) g`,
+      [a],
+    );
+    await assert.rejects(
+      svc.csv({ language: 'en' }, opts),
+      (error: any) => error instanceof BadRequestException && /10000/.test(error.message),
+    );
+  });
+}
+
 async function testRoutes() {
   assert.equal(Reflect.getMetadata(PATH_METADATA, AdministrationViewController), 'technologies/reports/administration');
   const proto = AdministrationViewController.prototype as any;
@@ -746,5 +793,6 @@ void runSpecs('Administration view', [
   ['the asset page: order, filters, caps', testAssetsPage],
   ['bulk zone assignment', testBulk],
   ['CSV export of assets and domains', testExport],
+  ['a page of 50 on 2000 assets, and the bulk and export caps', testScale],
   ['routes: paths and permission', testRoutes],
 ]);
