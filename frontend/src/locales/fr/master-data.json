@@ -146,7 +146,7 @@
       "year": "Année",
       "headcount": "Effectif",
       "itUsers": "Utilisateurs IT",
-      "turnover": "Chiffre d'affaires (M€)"
+      "turnover": "Chiffre d'affaires (M {{currency}})"
     },
     "status": {
       "enabled": "Activé",
@@ -170,11 +170,12 @@
       "vatNumber": "ex. FR12345678901",
       "notes": "ex. Entité de services partagés du groupe",
       "itUsers": "ex. 120",
-      "turnover": "ex. 12.5"
+      "turnover": "ex. 12,5"
     },
     "messages": {
       "saveFailed": "Échec de l'enregistrement de la société.",
       "createFailed": "Échec de la création de la société.",
+      "deleteFailed": "Échec de la suppression de la société.",
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Une autre société porte déjà ce nom.",
       "countryRequired": "Choisissez un pays.",

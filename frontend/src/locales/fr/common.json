@@ -460,7 +460,8 @@
         "capexItem": "Ligne CAPEX",
         "incident": "Incident",
         "location": "Site",
-        "document": "Document"
+        "document": "Document",
+        "company": "Société"
       },
       "myTimeTitle": "Mon temps",
       "newRequestsTitle": "Nouvelles demandes",
