@@ -60,9 +60,15 @@ export type ManualRateInput = {
   rate: number;
 };
 
+export type ManualRateResult = CurrencyRateRow & {
+  /** Frozen budget versions of that year. They keep the rate from when they were frozen. */
+  frozenVersions: number;
+};
+
 export type RemoveManualRateResult = {
   ok: boolean;
   refreshQueued: boolean;
+  frozenVersions: number;
 };
 
 export async function fetchCurrencyRates(): Promise<CurrencyRateMatrix> {
@@ -86,8 +92,8 @@ export async function fetchMissingRates(): Promise<MissingRatePair[]> {
 }
 
 /** Stores a manual rate. It wins over the automatic sources until it is removed. */
-export async function setManualRate(payload: ManualRateInput): Promise<CurrencyRateRow> {
-  const res = await api.put<CurrencyRateRow>('/currency/rates/manual', payload);
+export async function setManualRate(payload: ManualRateInput): Promise<ManualRateResult> {
+  const res = await api.put<ManualRateResult>('/currency/rates/manual', payload);
   return res.data;
 }
 

@@ -11,7 +11,6 @@ import {
   refreshCurrencyRates,
   type CurrencyRateRow,
   type MissingRatePair,
-  type RemoveManualRateResult,
 } from '../../services/currency';
 import useCurrencyRates, {
   invalidateCurrencyRateQueries,
@@ -52,6 +51,54 @@ export function parseRateDraft(raw: string): number | null {
   return Number(normalized);
 }
 
+const MANUAL_RATE_MAX = 1_000_000_000;
+
+export type ManualRateProblem = 'empty' | 'nan' | 'nonPositive' | 'tooLarge' | 'tooSmall';
+
+/** Why a typed rate cannot be stored. `null` when it can. */
+export function manualRateProblem(raw: string): ManualRateProblem | null {
+  if (raw.trim() === '') return 'empty';
+  const rate = parseRateDraft(raw);
+  if (rate == null || Number.isNaN(rate) || !Number.isFinite(rate)) return 'nan';
+  if (rate <= 0) return 'nonPositive';
+  if (rate > MANUAL_RATE_MAX) return 'tooLarge';
+  if (Number(rate.toFixed(6)) === 0) return 'tooSmall';
+  return null;
+}
+
+/** The nearest published automatic rate of the same currency, one year before or after. */
+function neighbouringAutomaticRate(
+  rows: CurrencyRateRow[] | undefined,
+  currency: string,
+  year: number,
+): { year: number; rate: number } | null {
+  let best: { year: number; rate: number } | null = null;
+  for (const row of rows ?? []) {
+    if (Math.abs(row.fiscalYear - year) !== 1) continue;
+    const source = row.rateSources?.[currency];
+    const value = row.rates?.[currency];
+    if (!source || source === 'manual' || source === 'identity') continue;
+    if (typeof value !== 'number' || !Number.isFinite(value) || value <= 0) continue;
+    // Both neighbours: the earlier year is the one already on the books.
+    if (!best || row.fiscalYear < best.year) best = { year: row.fiscalYear, rate: value };
+  }
+  return best;
+}
+
+const MANUAL_RATE_ERROR_KEYS = {
+  currency_invalid: 'operations.currency.errors.currency_invalid',
+  currency_reporting: 'operations.currency.errors.currency_reporting',
+  year_out_of_range: 'operations.currency.errors.year_out_of_range',
+  rate_out_of_range: 'operations.currency.errors.rate_out_of_range',
+  rate_too_small: 'operations.currency.errors.rate_too_small',
+  manual_rate_not_found: 'operations.currency.errors.manual_rate_not_found',
+} as const;
+
+function apiErrorCode(error: unknown): string {
+  const code = (error as { response?: { data?: { code?: unknown } } } | null)?.response?.data?.code;
+  return typeof code === 'string' ? code : '';
+}
+
 function normalizeList(value: string): string[] | null {
   if (!value) return null;
   const parts = value
@@ -76,6 +123,7 @@ export default function CurrencySettingsPage() {
   const [defaultCapexCurrency, setDefaultCapexCurrency] = React.useState('EUR');
   const [allowedCurrencies, setAllowedCurrencies] = React.useState('');
   const [successMessage, setSuccessMessage] = React.useState('');
+  const [frozenNotice, setFrozenNotice] = React.useState('');
 
   React.useEffect(() => {
     if (data) {
@@ -145,6 +193,7 @@ export default function CurrencySettingsPage() {
       {!canEdit && <Alert severity="info" sx={{ maxWidth: 720 }}>{t('operations.budgetAdminOnly')}</Alert>}
       {isError && <Alert severity="error">{t(`${C}.loadError`)}</Alert>}
       {successMessage && <Alert severity="success">{successMessage}</Alert>}
+      {frozenNotice && <Alert severity="info">{frozenNotice}</Alert>}
       {syncMutation.isPending && <Alert severity="info">{t(`${C}.refreshingFx`)}</Alert>}
       {errorMessage && <Alert severity="error">{errorMessage}</Alert>}
       {syncError && <Alert severity="error">{syncError}</Alert>}
@@ -255,12 +304,20 @@ export default function CurrencySettingsPage() {
           reportingCurrency={reporting}
           rows={rateRows}
           onClose={() => setManualTarget(null)}
-          onRemoved={(result) => {
-            setSuccessMessage(t(`${C}.manualRateRemoved`));
-            // The automatic rate comes back from a background fetch: look again once it has had time.
-            if (result.refreshQueued) {
-              window.setTimeout(() => invalidateCurrencyRateQueries(queryClient), 5000);
+          onApplied={(result) => {
+            if (result.removed) {
+              setSuccessMessage(t(`${C}.manualRateRemoved`));
+              // The automatic rate comes back from a background fetch: look again once it has had time.
+              if (result.refreshQueued) {
+                window.setTimeout(() => invalidateCurrencyRateQueries(queryClient), 5000);
+              }
             }
+            const frozenVersions = Number(result.frozenVersions);
+            setFrozenNotice(
+              Number.isInteger(frozenVersions) && frozenVersions > 0
+                ? t(`${C}.frozenVersionsKept`, { count: frozenVersions, year: result.year })
+                : '',
+            );
           }}
         />
       )}
@@ -274,52 +331,73 @@ type ManualRateDialogProps = {
   reportingCurrency: string;
   rows: CurrencyRateRow[] | undefined;
   onClose: () => void;
-  onRemoved: (result: RemoveManualRateResult) => void;
+  onApplied: (result: { frozenVersions: number; refreshQueued: boolean; removed: boolean; year: number }) => void;
 };
 
 /** Enters, changes or removes the manual rate of one currency and year. */
-function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, onRemoved }: ManualRateDialogProps) {
+function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, onApplied }: ManualRateDialogProps) {
   const { t } = useTranslation(['ops', 'common']);
   const C = 'operations.currency';
   const locale = useLocale();
+  const inputRef = React.useRef<HTMLInputElement>(null);
   const set = rows?.find((row) => row.fiscalYear === year);
   const current = set?.rates?.[currency];
   const isManual = set?.rateSources?.[currency] === 'manual';
+  const neighbour = neighbouringAutomaticRate(rows, currency, year);
   // The same 6-decimal locale format as the matrix. A typed comma or point is read either way.
   const [draft, setDraft] = React.useState(current != null ? formatRate(current, locale) : '');
-  const [invalid, setInvalid] = React.useState(false);
+  const [fieldError, setFieldError] = React.useState<string | null>(null);
   const save = useSetManualRate();
   const remove = useRemoveManualRate();
   const busy = save.isPending || remove.isPending;
-  const apiError = save.error
-    ? getApiErrorMessage(save.error, t, t(`${C}.failedToSaveManualRate`))
-    : remove.error
-      ? getApiErrorMessage(remove.error, t, t(`${C}.failedToRemoveManualRate`))
-      : null;
+
+  // The dialog's focus trap runs after mount. Focus the field once it has settled.
+  React.useEffect(() => {
+    const focus = () => inputRef.current?.focus();
+    focus();
+    const timer = window.setTimeout(focus, 0);
+    return () => window.clearTimeout(timer);
+  }, []);
+
+  const serverError = save.error ?? remove.error;
+  const serverMessage = serverError
+    ? manualRateServerMessage(serverError, t, t(save.error ? `${C}.failedToSaveManualRate` : `${C}.failedToRemoveManualRate`))
+    : null;
+  const shownError = fieldError ?? serverMessage;
 
   const handleSave = async () => {
-    const rate = parseRateDraft(draft);
-    if (rate == null || Number.isNaN(rate) || !Number.isFinite(rate) || rate <= 0) {
-      setInvalid(true);
+    const problem = manualRateProblem(draft);
+    if (problem) {
+      setFieldError(manualRateProblemMessage(problem, t, locale));
       return;
     }
+    const rate = parseRateDraft(draft);
+    if (rate == null) return;
     remove.reset();
+    setFieldError(null);
     try {
-      await save.mutateAsync({ currency, year, rate: Number(rate.toFixed(6)) });
+      const result = await save.mutateAsync({ currency, year, rate: Number(rate.toFixed(6)) });
+      onApplied({ frozenVersions: Number(result.frozenVersions ?? 0), refreshQueued: false, removed: false, year });
       onClose();
     } catch {
-      // Shown in the dialog.
+      // The code's message is shown under the field.
     }
   };
 
   const handleRemove = async () => {
     save.reset();
+    setFieldError(null);
     try {
       const result = await remove.mutateAsync({ year, currency });
-      onRemoved(result);
+      onApplied({
+        frozenVersions: Number(result.frozenVersions ?? 0),
+        refreshQueued: result.refreshQueued,
+        removed: true,
+        year,
+      });
       onClose();
     } catch {
-      // Shown in the dialog.
+      // The code's message is shown under the field.
     }
   };
 
@@ -339,29 +417,33 @@ function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, on
       ) : undefined}
     >
       <Stack spacing={1.5}>
-        {apiError && <Alert severity="error">{apiError}</Alert>}
         <PropertyRow
           label={t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency })}
-          helperText={t(`${C}.manualRateHint`)}
+          helperText={neighbour
+            ? t(`${C}.automaticRateHint`, { year: neighbour.year, rate: formatRate(neighbour.rate, locale) })
+            : t(`${C}.manualRateHint`)}
           required
-          valueSx={{ maxWidth: 200 }}
+          valueSx={{ maxWidth: 240 }}
         >
           <TextField
             variant="standard"
             value={draft}
-            error={invalid}
-            placeholder={t(`${C}.manualRatePlaceholder`)}
+            error={Boolean(shownError)}
+            autoFocus
+            inputRef={inputRef}
             inputProps={{ 'aria-label': t(`${C}.manualRateLabel`, { reporting: reportingCurrency, currency }), inputMode: 'decimal' }}
             onChange={(event) => {
               setDraft(event.target.value);
-              setInvalid(false);
+              setFieldError(null);
+              save.reset();
+              remove.reset();
             }}
             fullWidth
           />
         </PropertyRow>
-        {invalid && (
+        {shownError && (
           <Typography role="alert" sx={{ fontSize: 12, color: 'error.main' }}>
-            {t(`${C}.manualRateInvalid`)}
+            {shownError}
           </Typography>
         )}
         <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>
@@ -370,6 +452,30 @@ function ManualRateDialog({ currency, year, reportingCurrency, rows, onClose, on
       </Stack>
     </KanapDialog>
   );
+}
+
+function manualRateProblemMessage(
+  problem: ManualRateProblem,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  locale: string,
+): string {
+  switch (problem) {
+    case 'empty': return t('operations.currency.manualRateEmpty');
+    case 'nan': return t('operations.currency.manualRateNotANumber');
+    case 'nonPositive': return t('operations.currency.manualRateInvalid');
+    case 'tooLarge': return t('operations.currency.manualRateTooLarge', { max: formatDecimal(MANUAL_RATE_MAX, locale, 0) });
+    case 'tooSmall': return t('operations.currency.manualRateTooSmall');
+  }
+}
+
+/** A known `code` from the manual-rate endpoints. Anything else stays the generic error, never the English `message`. */
+function manualRateServerMessage(
+  error: unknown,
+  t: (key: string, options?: Record<string, unknown>) => string,
+  fallback: string,
+): string {
+  const key = MANUAL_RATE_ERROR_KEYS[apiErrorCode(error) as keyof typeof MANUAL_RATE_ERROR_KEYS];
+  return key ? t(key) : fallback;
 }
 
 type RatesTableProps = {
@@ -396,7 +502,16 @@ const SOURCE_LABEL_KEYS: Record<string, string> = {
 const headSx = { fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', px: 1, py: 0.75, whiteSpace: 'nowrap', verticalAlign: 'bottom' } as const;
 const cellSx = { px: 1, py: 0.75, fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums' } as const;
 const markSx = { ml: 0.75, fontSize: 11, color: 'kanap.text.tertiary', fontVariantNumeric: 'normal' } as const;
-const manualStarSx = { ml: 0.25, fontSize: 11, color: 'kanap.text.tertiary', lineHeight: 0 } as const;
+const manualStarSx = {
+  ml: 0.25,
+  fontSize: 11,
+  color: 'kanap.text.tertiary',
+  lineHeight: 0,
+  cursor: 'default',
+  outline: 'none',
+  borderRadius: '2px',
+  '&:focus-visible': { boxShadow: (theme: Theme) => `0 0 0 2px ${theme.palette.primary.main}` },
+} as const;
 const editableCellSx = {
   display: 'inline-block',
   mx: -0.5,
@@ -414,10 +529,8 @@ const pairKey = (currency: string, year: number) => `${currency}:${year}`;
  * One cell of the matrix: the rate, an asterisk for a manual one (explained under the table),
  * a small mark for an estimated one, an orange dash when it is missing.
  */
-function RateValue({ value, source, missing }: { value: number | null; source: string | undefined; missing: boolean }) {
-  const { t } = useTranslation(['ops']);
+function RateValue({ value, missing }: { value: number | null; missing: boolean }) {
   const locale = useLocale();
-  const C = 'operations.currency';
   if (value == null) {
     return (
       <Box component="span" sx={missing ? { color: 'warning.main' } : undefined}>
@@ -425,12 +538,50 @@ function RateValue({ value, source, missing }: { value: number | null; source: s
       </Box>
     );
   }
+  return <Box component="span">{formatRate(value, locale)}</Box>;
+}
+
+/**
+ * The manual asterisk. It opens its explanation on hover and on any focus, including the keyboard.
+ * MUI's own focus listener waits for :focus-visible, which a click earlier in the page suppresses.
+ */
+function ManualStar() {
+  const { t } = useTranslation(['ops']);
+  const label = t('operations.currency.manualFootnote');
+  const [open, setOpen] = React.useState(false);
+  return (
+    <Tooltip
+      title={label}
+      open={open}
+      onClose={() => setOpen(false)}
+      disableFocusListener
+      disableHoverListener
+      disableTouchListener
+    >
+      <Box
+        component="span"
+        tabIndex={0}
+        aria-label={label}
+        onMouseEnter={() => setOpen(true)}
+        onMouseLeave={() => setOpen(false)}
+        onFocus={() => setOpen(true)}
+        onBlur={() => setOpen(false)}
+        sx={manualStarSx}
+      >
+        *
+      </Box>
+    </Tooltip>
+  );
+}
+
+/** The manual asterisk (keyboard focusable, with its explanation) and the estimate mark. */
+function RateMarks({ source }: { source: string | undefined }) {
+  const { t } = useTranslation(['ops']);
+  const C = 'operations.currency';
+  if (source !== 'manual' && source !== 'estimate') return null;
   return (
     <>
-      <Box component="span">{formatRate(value, locale)}</Box>
-      {source === 'manual' && (
-        <Box component="sup" aria-label={t(`${C}.manualFootnote`)} sx={manualStarSx}>*</Box>
-      )}
+      {source === 'manual' && <ManualStar />}
       {source === 'estimate' && (
         <Tooltip title={t(`${C}.estimateTooltip`)}>
           <Box component="span" sx={markSx}>{t(`${C}.estimateMark`)}</Box>
@@ -525,9 +676,11 @@ function CurrencyRatesTable({
                     const source = set?.rateSources?.[code];
                     // The reporting currency is 1 by definition: no manual rate for it.
                     const editable = canEdit && code !== reportingCurrency && source !== 'identity';
-                    const content = (
-                      <RateValue value={value ?? null} source={source} missing={missingKeys.has(pairKey(code, year))} />
+                    const number = (
+                      <RateValue value={value ?? null} missing={missingKeys.has(pairKey(code, year))} />
                     );
+                    // The asterisk sits beside the button so it can take keyboard focus on its own.
+                    const marks = value != null ? <RateMarks source={source} /> : null;
                     return (
                       <Box component="td" key={year} sx={{ ...cellSx, textAlign: 'right', whiteSpace: 'nowrap' }}>
                         {editable ? (
@@ -544,9 +697,10 @@ function CurrencyRatesTable({
                             }}
                             sx={editableCellSx}
                           >
-                            {content}
+                            {number}
                           </Box>
-                        ) : content}
+                        ) : number}
+                        {marks}
                       </Box>
                     );
                   })}

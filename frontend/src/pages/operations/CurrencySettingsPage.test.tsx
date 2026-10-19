@@ -218,26 +218,142 @@ describe('CurrencySettingsPage', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
   });
 
-  it('refuses a rate that is not greater than 0 and shows the API errors', async () => {
+  it('focuses the rate field, saves with Enter and closes with Escape', async () => {
     const user = userEvent.setup();
-    matrix = { currencies: ['CHF', 'EUR', 'USD', 'NOK'], rates: [RATES_2025] };
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
+    mocked.put.mockResolvedValue({ data: { ...RATES_2025, frozenVersions: 0 } });
+    renderPage();
+
+    const cell = await screen.findByRole('button', { name: 'Edit the rate for EUR in 2025' });
+    await user.click(cell);
+    const dialog = await screen.findByRole('dialog');
+    const field = within(dialog).getByRole('textbox', { name: 'Rate in CHF for 1 EUR' });
+    await waitFor(() => expect(field).toHaveFocus());
+    expect(field).not.toHaveAttribute('placeholder');
+
+    await user.keyboard('{Enter}');
+    await waitFor(() => expect(mocked.put).toHaveBeenCalledWith('/currency/rates/manual', { currency: 'EUR', year: 2025, rate: 0.93 }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+
+    await user.click(screen.getByRole('button', { name: 'Edit the rate for USD in 2025' }));
+    expect(await screen.findByRole('dialog')).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.put).toHaveBeenCalledTimes(1);
+  });
+
+  it('explains a neighbouring automatic rate and validates before sending', async () => {
+    const user = userEvent.setup();
+    matrix = {
+      currencies: ['CHF', 'USD', 'NOK'],
+      rates: [
+        {
+          ...RATES_2025,
+          fiscalYear: 2024,
+          rates: { CHF: 1, USD: 0.0858 },
+          rateSources: { CHF: 'identity', USD: 'world-bank-annual' },
+        },
+        RATES_2025,
+      ],
+    };
     missing = [NOK_2025];
-    mocked.put.mockRejectedValue({ response: { data: { message: 'Rate must be a finite number greater than 0 and at most 1000000000.' } } });
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Edit the rate for USD in 2025' }));
+    let dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Automatic rate for 2024: 0.0858')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Use the average rate of the year published by your central bank or your treasury.')).not.toBeInTheDocument();
+    await user.keyboard('{Escape}');
+
+    await user.click(await screen.findByRole('button', { name: 'Enter a rate for NOK in 2025' }));
+    dialog = await screen.findByRole('dialog');
+    const field = within(dialog).getByRole('textbox', { name: 'Rate in CHF for 1 NOK' });
+    expect(within(dialog).getByText('Use the average rate of the year published by your central bank or your treasury.')).toBeInTheDocument();
+
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByText('Enter a rate.')).toBeInTheDocument();
+
+    await user.type(field, 'abc');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByText('Enter a number.')).toBeInTheDocument();
+
+    await user.clear(field);
+    await user.type(field, '0');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByText('Enter a rate greater than 0.')).toBeInTheDocument();
+
+    await user.clear(field);
+    await user.type(field, '1000000001');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByText('The rate cannot be greater than 1,000,000,000.')).toBeInTheDocument();
+
+    await user.clear(field);
+    await user.type(field, '0.0000004');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(within(dialog).getByText('Rounded to 6 decimal places, this rate is 0.')).toBeInTheDocument();
+    expect(mocked.put).not.toHaveBeenCalled();
+  });
+
+  it('maps a server code under the field and keeps an unknown code generic', async () => {
+    const user = userEvent.setup();
+    matrix = { currencies: ['CHF', 'NOK'], rates: [RATES_2025] };
+    missing = [NOK_2025];
+    mocked.put.mockRejectedValueOnce({
+      response: { data: { code: 'rate_too_small', message: 'Rate rounds to 0 at 6 decimal places and cannot be stored.' } },
+    });
     renderPage();
 
     await user.click(await screen.findByRole('button', { name: 'Enter a rate for NOK in 2025' }));
     const dialog = await screen.findByRole('dialog');
     const field = within(dialog).getByRole('textbox', { name: 'Rate in CHF for 1 NOK' });
-    await user.type(field, '0');
+    await user.type(field, '0.5');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
-    expect(within(dialog).getByText('Enter a rate greater than 0.')).toBeInTheDocument();
-    expect(mocked.put).not.toHaveBeenCalled();
+    expect(await within(dialog).findByText('This rate is too small: rounded to 6 decimal places, it is 0.')).toBeInTheDocument();
+    expect(within(dialog).queryByText('Rate rounds to 0 at 6 decimal places and cannot be stored.')).not.toBeInTheDocument();
 
+    mocked.put.mockRejectedValueOnce({ response: { data: { code: 'nope', message: 'English boom' } } });
     await user.clear(field);
-    await user.type(field, '2000000000');
+    await user.type(field, '0.5');
     await user.click(within(dialog).getByRole('button', { name: 'Save' }));
-    expect(await within(dialog).findByText('Rate must be a finite number greater than 0 and at most 1000000000.')).toBeInTheDocument();
-    expect(screen.getByRole('dialog')).toBeInTheDocument();
+    expect(await within(dialog).findByText('The rate could not be saved.')).toBeInTheDocument();
+    expect(within(dialog).queryByText('English boom')).not.toBeInTheDocument();
+  });
+
+  it('tells how many frozen versions keep their rate after a save or a removal', async () => {
+    const user = userEvent.setup();
+    matrix = { currencies: ['CHF', 'EUR', 'NOK'], rates: [RATES_2025] };
+    missing = [NOK_2025];
+    mocked.put.mockResolvedValue({ data: { ...RATES_2025, frozenVersions: 2 } });
+    mocked.delete.mockResolvedValue({ data: { ok: true, refreshQueued: false, frozenVersions: 1 } });
+    renderPage();
+
+    await user.click(await screen.findByRole('button', { name: 'Enter a rate for NOK in 2025' }));
+    let dialog = await screen.findByRole('dialog');
+    await user.type(within(dialog).getByRole('textbox', { name: 'Rate in CHF for 1 NOK' }), '0,0852');
+    await user.click(within(dialog).getByRole('button', { name: 'Save' }));
+    expect(await screen.findByText('The 2 frozen versions of 2025 keep the rate from when they were frozen.')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: 'Edit the rate for EUR in 2025' }));
+    dialog = await screen.findByRole('dialog');
+    await user.click(within(dialog).getByRole('button', { name: 'Remove manual rate' }));
+    expect(await screen.findByText('The frozen version of 2025 keeps the rate from when it was frozen.')).toBeInTheDocument();
+    expect(screen.getByText('The automatic rate will be fetched again.')).toBeInTheDocument();
+  });
+
+  it('explains the manual marker from the keyboard', async () => {
+    const user = userEvent.setup();
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
+    renderPage();
+    const cell = await screen.findByRole('button', { name: 'Edit the rate for EUR in 2025' });
+    const marker = screen.getByLabelText('Rate entered manually');
+    expect(marker).toHaveTextContent('*');
+    expect(marker).toHaveAttribute('tabindex', '0');
+    // Tab from the cell. A programmatic focus() does not match :focus-visible after a click,
+    // and that is the only signal MUI uses to open the tooltip.
+    cell.focus();
+    await user.tab();
+    expect(marker).toHaveFocus();
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Rate entered manually');
   });
 
   it('opens a manual rate from its cell, pre-filled, and removes it', async () => {

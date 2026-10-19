@@ -1020,14 +1020,28 @@
       "editRate": "Editar el tipo de {{currency}} en {{year}}",
       "manualDialogTitle": "Tipo de cambio manual",
       "manualRateLabel": "Tipo en {{reporting}} para 1 {{currency}}",
-      "manualRatePlaceholder": "1,05",
       "manualRateHint": "Use el tipo medio del año publicado por su banco central o su tesorería.",
+      "automaticRateHint": "Tipo automático {{year}}: {{rate}}",
       "manualRateReplaces": "Un tipo manual sustituye al tipo automático de este año hasta que lo retire.",
+      "manualRateEmpty": "Introduzca un tipo.",
+      "manualRateNotANumber": "Introduzca un número.",
       "manualRateInvalid": "Introduzca un tipo mayor que 0.",
+      "manualRateTooLarge": "El tipo no puede ser mayor que {{max}}.",
+      "manualRateTooSmall": "Redondeado a 6 decimales, este tipo vale 0.",
       "removeManualRate": "Retirar el tipo manual",
       "manualRateRemoved": "El tipo automático se volverá a obtener.",
       "failedToSaveManualRate": "No se pudo guardar el tipo.",
-      "failedToRemoveManualRate": "No se pudo retirar el tipo manual."
+      "failedToRemoveManualRate": "No se pudo retirar el tipo manual.",
+      "frozenVersionsKept_one": "La versión congelada de {{year}} conserva el tipo de su congelación.",
+      "frozenVersionsKept_other": "Las {{count}} versiones congeladas de {{year}} conservan el tipo de su congelación.",
+      "errors": {
+        "currency_invalid": "La moneda debe ser un código ISO de tres letras.",
+        "currency_reporting": "No se puede introducir un tipo manual para la moneda de reporting.",
+        "year_out_of_range": "El año debe ser un número entero entre 1990 y 2100.",
+        "rate_out_of_range": "El tipo debe ser mayor que 0 y como máximo 1.000.000.000.",
+        "rate_too_small": "Este tipo es demasiado pequeño: redondeado a 6 decimales, vale 0.",
+        "manual_rate_not_found": "No se encuentra este tipo manual."
+      }
     },
     "budgetColumns": {
       "budget": "Presupuesto",

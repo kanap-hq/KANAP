@@ -1020,14 +1020,28 @@
       "editRate": "Kurs für {{currency}} im Jahr {{year}} bearbeiten",
       "manualDialogTitle": "Manueller Wechselkurs",
       "manualRateLabel": "Kurs in {{reporting}} für 1 {{currency}}",
-      "manualRatePlaceholder": "1,05",
       "manualRateHint": "Verwenden Sie den Jahresdurchschnitt, den Ihre Zentralbank oder Ihre Treasury veröffentlicht.",
+      "automaticRateHint": "Automatischer Kurs {{year}}: {{rate}}",
       "manualRateReplaces": "Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn entfernen.",
+      "manualRateEmpty": "Geben Sie einen Kurs ein.",
+      "manualRateNotANumber": "Geben Sie eine Zahl ein.",
       "manualRateInvalid": "Geben Sie einen Kurs größer als 0 ein.",
+      "manualRateTooLarge": "Der Kurs darf {{max}} nicht überschreiten.",
+      "manualRateTooSmall": "Auf 6 Dezimalstellen gerundet ergibt dieser Kurs 0.",
       "removeManualRate": "Manuellen Kurs entfernen",
       "manualRateRemoved": "Der automatische Kurs wird erneut abgerufen.",
       "failedToSaveManualRate": "Der Kurs konnte nicht gespeichert werden.",
-      "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden."
+      "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden.",
+      "frozenVersionsKept_one": "Die eingefrorene Version von {{year}} behält den Kurs ihres Einfrierens.",
+      "frozenVersionsKept_other": "Die {{count}} eingefrorenen Versionen von {{year}} behalten den Kurs ihres Einfrierens.",
+      "errors": {
+        "currency_invalid": "Die Währung muss ein dreistelliger ISO-Code sein.",
+        "currency_reporting": "Für die Reporting-Währung kann kein manueller Kurs erfasst werden.",
+        "year_out_of_range": "Das Jahr muss eine ganze Zahl zwischen 1990 und 2100 sein.",
+        "rate_out_of_range": "Der Kurs muss größer als 0 und höchstens 1.000.000.000 sein.",
+        "rate_too_small": "Dieser Kurs ist zu klein: auf 6 Dezimalstellen gerundet ergibt er 0.",
+        "manual_rate_not_found": "Dieser manuelle Kurs wurde nicht gefunden."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",

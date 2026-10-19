@@ -1020,14 +1020,28 @@
       "editRate": "Edit the rate for {{currency}} in {{year}}",
       "manualDialogTitle": "Manual exchange rate",
       "manualRateLabel": "Rate in {{reporting}} for 1 {{currency}}",
-      "manualRatePlaceholder": "1.05",
       "manualRateHint": "Use the average rate of the year published by your central bank or your treasury.",
+      "automaticRateHint": "Automatic rate for {{year}}: {{rate}}",
       "manualRateReplaces": "A manual rate replaces the automatic rate for this year until you remove it.",
+      "manualRateEmpty": "Enter a rate.",
+      "manualRateNotANumber": "Enter a number.",
       "manualRateInvalid": "Enter a rate greater than 0.",
+      "manualRateTooLarge": "The rate cannot be greater than {{max}}.",
+      "manualRateTooSmall": "Rounded to 6 decimal places, this rate is 0.",
       "removeManualRate": "Remove manual rate",
       "manualRateRemoved": "The automatic rate will be fetched again.",
       "failedToSaveManualRate": "The rate could not be saved.",
-      "failedToRemoveManualRate": "The manual rate could not be removed."
+      "failedToRemoveManualRate": "The manual rate could not be removed.",
+      "frozenVersionsKept_one": "The frozen version of {{year}} keeps the rate from when it was frozen.",
+      "frozenVersionsKept_other": "The {{count}} frozen versions of {{year}} keep the rate from when they were frozen.",
+      "errors": {
+        "currency_invalid": "The currency must be a three-letter ISO code.",
+        "currency_reporting": "A manual rate cannot be entered for the reporting currency.",
+        "year_out_of_range": "The year must be a whole number from 1990 to 2100.",
+        "rate_out_of_range": "The rate must be greater than 0 and at most 1,000,000,000.",
+        "rate_too_small": "This rate is too small: rounded to 6 decimal places, it is 0.",
+        "manual_rate_not_found": "This manual rate cannot be found."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",

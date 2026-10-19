@@ -1020,14 +1020,28 @@
       "editRate": "Modifier le taux pour {{currency}} en {{year}}",
       "manualDialogTitle": "Taux de change manuel",
       "manualRateLabel": "Taux en {{reporting}} pour 1 {{currency}}",
-      "manualRatePlaceholder": "1,05",
       "manualRateHint": "Utilisez le taux moyen de l'année publié par votre banque centrale ou votre trésorerie.",
+      "automaticRateHint": "Taux automatique {{year}} : {{rate}}",
       "manualRateReplaces": "Un taux manuel remplace le taux automatique pour cette année jusqu'à ce que vous le retiriez.",
+      "manualRateEmpty": "Saisissez un taux.",
+      "manualRateNotANumber": "Saisissez un nombre.",
       "manualRateInvalid": "Saisissez un taux supérieur à 0.",
+      "manualRateTooLarge": "Le taux ne peut pas dépasser {{max}}.",
+      "manualRateTooSmall": "Arrondi à 6 décimales, ce taux vaut 0.",
       "removeManualRate": "Retirer le taux manuel",
       "manualRateRemoved": "Le taux automatique sera de nouveau récupéré.",
       "failedToSaveManualRate": "Le taux n'a pas pu être enregistré.",
-      "failedToRemoveManualRate": "Le taux manuel n'a pas pu être retiré."
+      "failedToRemoveManualRate": "Le taux manuel n'a pas pu être retiré.",
+      "frozenVersionsKept_one": "La version gelée de {{year}} garde le taux de son gel.",
+      "frozenVersionsKept_other": "Les {{count}} versions gelées de {{year}} gardent le taux de leur gel.",
+      "errors": {
+        "currency_invalid": "La devise doit être un code ISO à trois lettres.",
+        "currency_reporting": "Un taux manuel ne peut pas être saisi pour la devise de reporting.",
+        "year_out_of_range": "L'année doit être un entier entre 1990 et 2100.",
+        "rate_out_of_range": "Le taux doit être supérieur à 0 et d'au plus 1 000 000 000.",
+        "rate_too_small": "Ce taux est trop petit : arrondi à 6 décimales, il vaut 0.",
+        "manual_rate_not_found": "Ce taux manuel est introuvable."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",
