@@ -4,6 +4,7 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { Features } from '../../config/features';
 import { gridTextClause } from '../../technologies/technologies.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
+import { vulnerabilityAlertsSql } from '../../vulnerabilities/vulnerability-alerts';
 import { assetInServiceSql, inServiceSql } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
@@ -23,8 +24,10 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  *   when no version in use has a date); `end_of_standard_support`, the earliest first end;
  *   `end_of_support`, the earliest last end, after which that version has no support at all;
  *   `versions_in_use`, each version with its state, date and servers, the most severe first.
- * - `open_vulnerabilities`: the CVE still to review (as the technology list counts them), null while
- *   the vulnerability feed is off.
+ * - `open_vulnerabilities`: the CVE still to review that alert (as the technology list counts
+ *   them). A version follows its technology unless that version has its own setting, and a row
+ *   with no version follows the technology. Operating systems start excluded. null while the
+ *   vulnerability feed is off.
  *
  * Every statement carries the tenant on every table besides RLS.
  */
@@ -121,7 +124,9 @@ export function technologyOpenVulnerabilitiesSql(t: string): string {
   return `(SELECT count(DISTINCT tv.cve_id)::int
              FROM technology_vulnerabilities tv
              JOIN vulnerability_cves vc ON vc.cve_id = tv.cve_id
-            WHERE tv.tenant_id = ${t}.tenant_id AND tv.technology_id = ${t}.id AND tv.state = 'to_review')`;
+             LEFT JOIN technology_versions ver ON ver.tenant_id = tv.tenant_id AND ver.id = tv.technology_version_id
+            WHERE tv.tenant_id = ${t}.tenant_id AND tv.technology_id = ${t}.id AND tv.state = 'to_review'
+              AND ${vulnerabilityAlertsSql('ver', t)})`;
 }
 
 /**

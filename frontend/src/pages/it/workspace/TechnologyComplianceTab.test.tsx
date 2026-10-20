@@ -1,7 +1,10 @@
 import React from 'react';
 import { fireEvent, render, screen, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
-import { describe, expect, it, vi } from 'vitest';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { MemoryRouter } from 'react-router-dom';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
+import api from '../../../api';
 import { createAppTheme } from '../../../config/ThemeContext';
 import TechnologyComplianceTab from './TechnologyComplianceTab';
 import type { TechnologyDetail } from './TechnologyOverviewTab';
@@ -19,6 +22,9 @@ const catalog = {
   ],
 };
 vi.mock('../../../hooks/useApplicationClassificationCatalog', () => ({ default: () => ({ data: catalog }) }));
+vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
+const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
+vi.mock('../../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 
 const TECHNOLOGY = {
   id: 'tech-1', reference: 'TEC-1', name: 'Active Directory', editor: 'Microsoft', family: 'directory', hosting_type: 'on_prem', lifecycle: 'active',
@@ -29,14 +35,23 @@ const TECHNOLOGY = {
 function renderTab(canManage = true, technology: TechnologyDetail = TECHNOLOGY) {
   const onPatch = vi.fn();
   render(
-    <ThemeProvider theme={createAppTheme('light')}>
-      <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={onPatch} />
-    </ThemeProvider>,
+    <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter>
+          <TechnologyComplianceTab technology={technology} canManage={canManage} onPatch={onPatch} />
+        </MemoryRouter>
+      </ThemeProvider>
+    </QueryClientProvider>,
   );
   return { onPatch };
 }
 
 describe('TechnologyComplianceTab', () => {
+  beforeEach(() => {
+    features.vulnerabilityFeed = false;
+    vi.mocked(api.get).mockReset();
+  });
+
   it('shows the continuity classification without the business, data and review parts of the application', () => {
     renderTab();
     expect(screen.getByText('Critical')).toBeInTheDocument();
@@ -70,5 +85,30 @@ describe('TechnologyComplianceTab', () => {
     renderTab(false);
     expect(screen.getByRole('combobox', { name: 'Recovery wave' })).toHaveAttribute('aria-disabled', 'true');
     expect(screen.getByRole('spinbutton', { name: 'Recovery time objective' })).toBeDisabled();
+  });
+
+  it('shows the vulnerabilities of the technology under the continuity classification', async () => {
+    features.vulnerabilityFeed = true;
+    vi.mocked(api.get).mockResolvedValue({
+      data: {
+        technology: { id: 'tech-1', reference: 'TEC-1' },
+        cves: 1,
+        versions: [{
+          version_id: 'v-1', label: '16', alerts: true, servers: 2,
+          open: { critical: 1, high: 0, medium: 0, low: 0, none: 0, unknown: 0 }, total: 1,
+        }],
+      },
+    } as never);
+    renderTab();
+    expect(await screen.findByRole('region', { name: 'Vulnerabilities' })).toBeInTheDocument();
+    expect(await screen.findByText('16')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
+    expect(vi.mocked(api.get)).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities/summary');
+  });
+
+  it('hides the vulnerabilities while the feed is off', () => {
+    renderTab();
+    expect(screen.queryByRole('region', { name: 'Vulnerabilities' })).not.toBeInTheDocument();
+    expect(vi.mocked(api.get)).not.toHaveBeenCalled();
   });
 });

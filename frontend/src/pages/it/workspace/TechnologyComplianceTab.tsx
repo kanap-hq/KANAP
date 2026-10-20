@@ -6,6 +6,7 @@ import { classificationText } from '../../../utils/applicationClassification';
 import { HelpLabel, LevelSelect } from '../components/ApplicationClassificationPanel';
 import DurationEditor from '../components/DurationEditor';
 import type { TechnologyDetail, TechnologyPatch } from './TechnologyOverviewTab';
+import TechnologyVulnerabilitiesSection from './TechnologyVulnerabilitiesSection';
 
 // The rows and titles of the application's classification panel, so both read the same.
 const rowSx = { display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)', columnGap: '18px', alignItems: 'start' } as const;
@@ -72,6 +73,7 @@ export default function TechnologyComplianceTab({ technology, canManage, onPatch
           </PropertyRow>
         </Stack>
       </Box>
+      <TechnologyVulnerabilitiesSection technologyId={technology.id} canEdit={canManage} />
     </Stack>
   );
 }

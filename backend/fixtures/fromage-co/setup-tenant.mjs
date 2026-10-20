@@ -1980,7 +1980,11 @@ async function runImports() {
 // the VMs; a SQL Server cluster runs two versions; the application server carries Tomcat and a SQL
 // Server Express; the RDS database carries PostgreSQL. With the hosting of applications on these
 // servers, business processes linked to applications, an unknown version (Active Directory) and
-// versions past their end of support (PostgreSQL 13, SQL Server 2017). Every step is idempotent.
+// versions past their end of support (PostgreSQL 13, SQL Server 2017). The demo stories on top:
+// the cave edge node and gateways carry CaveGuard and its dashboard; the IT tools (PRTG, Veeam,
+// vSphere) run on their own servers, Veeam on the backup SAN that reaches end of life; the two aging
+// hosts carry Talend and the S/4HANA QA server; S/4HANA prod and QA run on separate servers.
+// Every step is idempotent.
 
 const ASSET_CLUSTERS = {
   'PAR-VSPHERE-CL01': ['PAR-ESX-01', 'PAR-ESX-02'],
@@ -1991,12 +1995,17 @@ const ASSET_CONTAINS = {
   'PAR-ESX-01': ['PAR-ERP-01', 'PAR-ERP-02', 'PAR-AD-01', 'PAR-SQL-01', 'PAR-VCENTER-01'],
   'PAR-ESX-02': ['PAR-DB-01', 'PAR-APP-01', 'PAR-WEB-01', 'PAR-AD-02', 'PAR-SQL-02'],
   'PAR-VSPHERE-CL01': ['PAR-MON-01', 'PAR-BKP-01'],
+  // The aging hosts, scheduled for the DC refresh.
+  'PAR-ESX-03': ['PAR-ETL-01'],
+  'PAR-ESX-04': ['PAR-ERP-QA-01'],
 };
 
 /** [application, environment, server, role]: the instances of 20-app-instances.csv on their servers. */
 const APP_SERVERS = [
   ['SAP S/4HANA', 'prod', 'PAR-ERP-01', 'app'],
+  ['SAP S/4HANA', 'qa', 'PAR-ERP-QA-01', 'app'],
   ['SAP BW/4HANA', 'prod', 'PAR-ERP-02', 'app'],
+  ['Fromage B2B Portal', 'prod', 'PAR-WEB-01', 'web'],
   ['Fromage B2B Portal', 'prod', 'PAR-APP-01', 'app'],
   ['Fromage B2B Portal', 'prod', 'PAR-DB-01', 'db'],
   ['QualityLab LIMS', 'prod', 'PAR-APP-01', 'app'],
@@ -2008,6 +2017,19 @@ const APP_SERVERS = [
   ['Sage X3', 'prod', 'PRM-SAGE-01', 'app'],
   ['Sage X3', 'prod', 'PAR-SQL-01', 'db'],
   ['Sage X3', 'prod', 'PAR-SQL-02', 'db'],
+  ['CaveGuard IoT', 'prod', 'CAVE-EDGE-01', 'app'],
+  ['CaveGuard IoT', 'prod', 'CAVE-GW-01', 'proxy'],
+  ['CaveGuard IoT', 'prod', 'CAVE-GW-02', 'proxy'],
+  ['Cave Monitoring Dashboard', 'prod', 'CAVE-EDGE-01', 'web'],
+  ['Talend Data Integration', 'prod', 'PAR-ETL-01', 'app'],
+  ['PRTG Network Monitor', 'prod', 'PAR-MON-01', 'monitoring'],
+  ['Veeam Backup & Replication', 'prod', 'PAR-BKP-01', 'backup'],
+  ['Veeam Backup & Replication', 'prod', 'PAR-SAN-02', 'backup'],
+  ['VMware vSphere', 'prod', 'PAR-VCENTER-01', 'app'],
+  ['VMware vSphere', 'prod', 'PAR-ESX-01', 'virtualization'],
+  ['VMware vSphere', 'prod', 'PAR-ESX-02', 'virtualization'],
+  ['VMware vSphere', 'prod', 'PAR-ESX-03', 'virtualization'],
+  ['VMware vSphere', 'prod', 'PAR-ESX-04', 'virtualization'],
 ];
 
 /**

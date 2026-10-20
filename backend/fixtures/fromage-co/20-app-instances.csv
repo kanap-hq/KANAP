@@ -21,3 +21,6 @@ Fromage B2B Portal;prod;active;enabled;https://b2b.fromage-co.example;;EU-Paris;
 QualityLab LIMS;prod;active;enabled;;;EU-Paris;LIMS production instance
 La Boutique du Fromage;prod;active;enabled;https://boutique.fromage-co.example;eu-west-1;;Online shop production instance
 Sage X3;prod;active;enabled;;;EU-Gouda;Sage X3 production instance for the Dutch and Italian sites
+PRTG Network Monitor;prod;active;enabled;;;EU-Paris;PRTG production server
+Veeam Backup & Replication;prod;active;enabled;;;EU-Paris;Veeam production backup
+VMware vSphere;prod;active;enabled;;;EU-Paris;Paris vSphere production platform

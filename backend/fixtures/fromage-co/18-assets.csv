@@ -40,3 +40,5 @@ PAR-VSPHERE-CL01;PAR-DC1;Other;prod;true;active;2023-06-01;;;;vSphere cluster of
 PAR-SQL-01;PAR-DC1;Virtual Machine;prod;false;active;2020-02-01;;par-sql-01.fromage-co.local;Windows Server 2022;SQL Server cluster node 1
 PAR-SQL-02;PAR-DC1;Virtual Machine;prod;false;active;2024-03-01;;par-sql-02.fromage-co.local;Windows Server 2022;SQL Server cluster node 2 — upgraded first, the other node follows
 PAR-SQL-CL01;PAR-DC1;Other;prod;true;active;2020-02-01;;;;SQL Server Always On cluster — CheeseTrack and Sage X3 databases
+PAR-ETL-01;PAR-DC1;Virtual Machine;prod;false;active;2022-09-01;;par-etl-01.fromage-co.local;Ubuntu 22.04 LTS;Talend runtime server — 8 vCPU, 32GB RAM — still on PAR-ESX-03, moves with the DC refresh
+PAR-ERP-QA-01;PAR-DC1;Virtual Machine;qa;false;active;2023-09-01;;par-erp-qa-01.fromage-co.local;SUSE Linux Enterprise 15;SAP S/4HANA QA application server — 8 vCPU, 64GB RAM — still on PAR-ESX-04, moves with the DC refresh

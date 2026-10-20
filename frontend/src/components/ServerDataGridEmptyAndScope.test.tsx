@@ -30,7 +30,10 @@ type Row = { id: string; name: string; status: string };
 const page = (names: string[]) => ({ data: { items: names.map((name) => ({ id: name, name, status: 'enabled' })), total: names.length, page: 1, limit: 50 } });
 const t = ((key: string) => key) as any;
 
-function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode; defaultFilterModel?: Record<string, unknown> }) {
+function Grid(props: {
+  onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode; defaultFilterModel?: Record<string, unknown>;
+  extraNarrows?: boolean; onResetFilters?: () => void;
+}) {
   return (
     <MemoryRouter>
       <ServerDataGrid<Row>
@@ -47,6 +50,8 @@ function Grid(props: { onGridApiReady?: (api: any) => void; withScope?: boolean;
         emptyState={props.emptyState}
         initialState={props.defaultFilterModel ? { filter: { filterModel: props.defaultFilterModel } } : undefined}
         defaultFilterModel={props.defaultFilterModel}
+        extraNarrows={props.extraNarrows}
+        onResetFilters={props.onResetFilters}
       />
     </MemoryRouter>
   );
@@ -160,6 +165,27 @@ describe('ServerDataGrid', () => {
       expect(await screen.findByText('common:filters.resultCount:1')).toBeInTheDocument();
       expect(gridApi.getFilterModel()).toEqual(opening);
       await waitFor(() => expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument());
+      view.unmount();
+    }, 20_000);
+
+    it('counts a control of the page as a filter, and hands it the reset', async () => {
+      get.mockImplementation(async () => page(['Alpha']));
+      const onResetFilters = vi.fn();
+      const view = render(<Grid extraNarrows onResetFilters={onResetFilters} />);
+      expect(await screen.findByText('common:filters.resultCount:1')).toBeInTheDocument();
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
+      expect(onResetFilters).toHaveBeenCalledTimes(1);
+      view.unmount();
+    }, 20_000);
+
+    it('says a control of the page hides every row, and clears it with the filters', async () => {
+      get.mockImplementation(async () => page([]));
+      const onResetFilters = vi.fn();
+      const view = render(<Grid extraNarrows onResetFilters={onResetFilters} emptyState={<span>Nothing at all</span>} />);
+      expect(await screen.findByText('common:filters.noResultsFiltered')).toBeInTheDocument();
+      expect(screen.queryByText('Nothing at all')).not.toBeInTheDocument();
+      fireEvent.click(screen.getByRole('button', { name: 'common:filters.clearAll' }));
+      expect(onResetFilters).toHaveBeenCalledTimes(1);
       view.unmount();
     }, 20_000);
   });

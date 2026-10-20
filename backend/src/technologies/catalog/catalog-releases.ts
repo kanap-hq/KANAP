@@ -40,11 +40,20 @@ type CpeVersionRule = {
   patterns?: Array<[RegExp, string]>;
   /**
    * The CPE product the NVD gives each release of the entry, `{year}` standing for the year that
-   * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`; the matching applies
-   * such a product to the versions whose label starts with that year, `productRelease` in
-   * `vulnerabilities/vulnerability-rules.ts`). A release the living catalog adds receives it.
+   * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`) and Windows Server
+   * (`o:microsoft:windows_server_2022`). The matching applies such a product to the versions whose
+   * label starts with that year (`productRelease` in `vulnerabilities/vulnerability-rules.ts`).
+   * A release the living catalog adds receives it. `productPerReleaseFrom` leaves earlier years out
+   * (Windows 2000: the NVD product is `windows_2000`, not `windows_server_2000`).
    */
   productPerRelease?: string;
+  productPerReleaseFrom?: number;
+  /**
+   * Leading numeric segments the matching compares for this entry (`VERSION_PRECISION` in
+   * `vulnerabilities/vulnerability-rules.ts`). The NVD names the branch: `9.0` is the whole major,
+   * `22.04` the whole Ubuntu `YY.MM`. A version typed `9.4` or `22.04.3 LTS` still meets it.
+   */
+  matchSegments?: number;
 };
 
 /**
@@ -56,7 +65,21 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   'oracle-database': { fromLabel: true },
   msexchange: { patterns: [[/^subscription edition\b/i, '15.2']] },
   mssqlserver: { productPerRelease: 'a:microsoft:sql_server_{year}' },
+  'windows-server': { productPerRelease: 'o:microsoft:windows_server_{year}', productPerReleaseFrom: 2003 },
+  // Matched on the branch the NVD publishes. Twin of `VERSION_PRECISION`.
+  rhel: { matchSegments: 1 },
+  debian: { matchSegments: 1 },
+  'oracle-linux': { matchSegments: 1 },
+  almalinux: { matchSegments: 1 },
+  'rocky-linux': { matchSegments: 1 },
+  centos: { matchSegments: 1 },
+  ubuntu: { matchSegments: 2 },
 };
+
+/** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
+export function versionPrecisionOf(catalogKey: string): number | null {
+  return CPE_VERSION_RULES[catalogKey]?.matchSegments ?? null;
+}
 
 /**
  * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
@@ -147,9 +170,11 @@ const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean;
 
 /** The CPE product of the release `label` of an entry with one product per release, or null. */
 export function releaseProduct(catalogKey: string, label: string): string | null {
-  const template = CPE_VERSION_RULES[catalogKey]?.productPerRelease;
+  const rule = CPE_VERSION_RULES[catalogKey];
   const year = /^((?:19|20)\d{2})(?!\d)/.exec(String(label ?? '').trim())?.[1];
-  return template && year ? template.replace('{year}', year) : null;
+  if (!rule?.productPerRelease || !year) return null;
+  if (rule.productPerReleaseFrom != null && Number(year) < rule.productPerReleaseFrom) return null;
+  return rule.productPerRelease.replace('{year}', year);
 }
 
 const LINE_BREAK = /[\n\r\u2028\u2029]/;
@@ -359,17 +384,39 @@ export type CatalogVersionValues = {
   cpe_version: string | null;
 };
 
+/** Identifiers compared and stored without case, once each, in order. */
+export function lowerSorted(ids: readonly string[]): string[] {
+  return Array.from(new Set(ids.map((id) => id.toLowerCase()))).sort();
+}
+
 /**
  * `technologies.catalog_state`: what the catalog has given a technology. `cpe_products`: the
- * identifiers it offered (one the tenant removed is not offered again). `versions`: per version
- * key, the values it last wrote; a key present was offered once (a version the tenant deleted is
- * not created again). `description`: the short description the catalog wrote on the technology;
- * absent or null while it wrote none, so an empty description is filled once and never again.
+ * identifiers it offers, including one the cache added. One the tenant removed stays here until
+ * it has been seen leaving the shipped file, so it is not offered again. One the shipped file
+ * withdrew leaves, and is added again if the catalog offers it later. `shipped_cpe`: the
+ * identifiers the shipped file listed at the last pass, in lower case. Absent on a state written
+ * before that field: the next pass records the current shipped file and withdraws nothing.
+ * `cpe_written`: the identifiers the catalog itself wrote and the tenant still holds, lower case.
+ * Absent: none, so nothing is withdrawn until the catalog writes one. An identifier the tenant
+ * typed first, or held before an adoption, is not in this list.
+ * `versions`: per version key, the values it last wrote; a key present was offered once (a
+ * version the tenant deleted is not created again). `description`: the short description the
+ * catalog last wrote; absent or null while it wrote none. `description_language`: the language of
+ * that text. A description follows the catalog when the text in that same language changes and the
+ * technology still holds the same characters. The state records the new text only when the update
+ * changes the row. A change of the tenant's language rewrites nothing. Absent: the language whose
+ * catalog text equals `description` is recorded, and nothing is rewritten when none equals it.
  */
 export type CatalogState = {
   cpe_products: string[];
   versions: Record<string, CatalogVersionValues>;
   description?: string | null;
+  /** Language of `description`. Absent: inferred from the catalog text, or left alone. */
+  description_language?: 'en' | 'fr' | 'de' | 'es';
+  /** Identifiers of the shipped file at the last pass, lower case. Absent: not known yet. */
+  shipped_cpe?: string[];
+  /** Identifiers the catalog wrote and the tenant still holds, lower case. Absent: none. */
+  cpe_written?: string[];
 };
 
 export function valuesOf(version: CatalogVersion): CatalogVersionValues {

@@ -383,7 +383,9 @@
       "versionNoneHint": "Ninguna versión registrada: potencialmente afectada",
       "empty": {
         "none": "Ninguna vulnerabilidad por revisar. Las vulnerabilidades aparecen para las tecnologías que indican sus identificadores CPE: complételos en una tecnología o adóptela desde el catálogo.",
-        "filtered": "Ninguna vulnerabilidad coincide con estos filtros."
+        "filtered": "Ninguna vulnerabilidad coincide con estos filtros.",
+        "noneInAlerts": "Ninguna vulnerabilidad está en las alertas.",
+        "showExcluded": "Mostrar las excluidas"
       },
       "columns": {
         "cve": "CVE",
@@ -423,16 +425,52 @@
         "via": "a través de {{name}}",
         "stateOf": "Estado de {{version}}",
         "noteOf": "Nota sobre {{version}}",
-        "notePlaceholder": "p. ej., parcheado el 12 de marzo"
+        "notePlaceholder": "p. ej., parcheado el 12 de marzo",
+        "serversInAlerts_one": "{{count}} servidor, de ellos {{alerting}} en las alertas",
+        "serversInAlerts_other": "{{count}} servidores, de ellos {{alerting}} en las alertas",
+        "applicationsInAlerts_one": "{{count}} aplicación, de ellas {{alerting}} en las alertas",
+        "applicationsInAlerts_other": "{{count}} aplicaciones, de ellas {{alerting}} en las alertas"
       },
       "section": {
         "title": "Vulnerabilidades",
         "empty": "Ninguna vulnerabilidad conocida afecta a esta tecnología.",
         "searching": "Búsqueda de vulnerabilidades en curso…",
         "loadFailed": "No se pudieron cargar las vulnerabilidades.",
-        "rematch": "Volver a cotejar",
+        "rematch": "Actualizar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
-        "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo."
+        "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo.",
+        "noLongerMatches": "Ya no coincide",
+        "see": "Ver",
+        "seeAll": "Ver todo en la página Vulnerabilidades",
+        "notInstalled": "No instalada",
+        "notInstalledHint": "KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.",
+        "columns": {
+          "open": "Por revisar",
+          "total": "Total"
+        },
+        "alerts": {
+          "excluded": "Excluida de las alertas",
+          "excludedExcept_one": "Excluida de las alertas, excepto {{count}} versión",
+          "excludedExcept_other": "Excluida de las alertas, excepto {{count}} versiones",
+          "versionsExcluded_one": "{{count}} versión excluida de las alertas",
+          "versionsExcluded_other": "{{count}} versiones excluidas de las alertas",
+          "set": "Cambiar"
+        }
+      },
+      "alerts": {
+        "label": "Alertas",
+        "included": "Incluidas",
+        "excluded": "Excluidas",
+        "all": "Todas"
+      },
+      "published": {
+        "label": "Publicada",
+        "all": "Todas",
+        "7d": "Menos de 7 días",
+        "30d": "Menos de 30 días",
+        "90d": "Menos de 90 días",
+        "1y": "Menos de un año",
+        "older1y": "Más de un año"
       }
     },
     "interfaces": {
@@ -2031,6 +2069,16 @@
         "servers_other": "{{count}} servidores",
         "applications_one": "{{count}} aplicación",
         "applications_other": "{{count}} aplicaciones",
+        "alertsColumn": "Alertas",
+        "alertsColumnHint": "Incluye esta versión en las alertas de vulnerabilidad: la página Vulnerabilidades, los contadores y el correo de resumen. Cada versión sigue el ajuste de la tecnología, salvo que un punto señale un ajuste propio.",
+        "includeInAlerts": "Incluir en las alertas de vulnerabilidad",
+        "alertsFor": "Alertas de vulnerabilidad de {{label}}",
+        "alertsHint": "Ajuste de la tecnología: se aplica a las versiones sin ajuste propio, a las versiones futuras y a los vínculos sin versión.",
+        "alertsOwn": "Ajuste propio de esta versión",
+        "alertsConfirmTitle": "Alertas de vulnerabilidad",
+        "alertsReset_one": "{{count}} versión tiene un ajuste propio. Se sustituirá.",
+        "alertsReset_other": "{{count}} versiones tienen un ajuste propio. Se sustituirán.",
+        "alertsReplace": "Sustituir",
         "status": {
           "supported": "Con soporte",
           "ending_soon": "Finaliza pronto",

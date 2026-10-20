@@ -64,7 +64,9 @@ What the two support dates mean depends on the publisher:
 
 Any technology can be an operating system: put VMware ESXi or FortiOS in the **Operating system** family and it can be the operating system of a host or a firewall.
 
-The catalog's operating systems have no CPE product identifiers yet, so KANAP does not match them with vulnerabilities.
+The catalog's operating systems come with CPE product identifiers, and KANAP matches them with published vulnerabilities. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Operating systems are excluded from alerts by default. The setting is on the technology workspace, in the Vulnerability alerts column of the versions table.
+
+Operating systems are excluded from vulnerability alerts by default. KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities, most of them already patched. This applies to a technology of the **Operating system** family and to an operating system adopted from the catalog, whatever its family. An existing technology that you adopt from the catalog as an operating system becomes excluded too. You can include it again: see [Vulnerability alerts](#vulnerability-alerts).
 
 Installations upgraded from an earlier version keep their data: the operating systems the servers used, and the entries added to the former operating systems list of the settings, became technologies with their versions and dates.
 
@@ -85,7 +87,7 @@ Each row is one technology. Click a row to open it.
 | **Servers** | Assets that carry it, directly or because they sit inside an asset that carries it |
 | **Applications** | Applications that declare it or are hosted on a server that carries it |
 | **Next end of support** | The earliest end of standard support to come among the versions in use. Shown in orange when it falls within the next 12 months |
-| **Vulnerabilities to review** | The known vulnerabilities still to review on the versions in use. Shown in orange with the count of critical or high ones (`3 · 1 critical or high`). Click it to open the [Vulnerabilities](vulnerabilities.md) page on this technology. Present when vulnerabilities are followed |
+| **Vulnerabilities to review** | The known vulnerabilities still to review on the versions in use that are in the alerts. Shown in orange with the count of critical or high ones (`3 · 1 critical or high`). Click it to open the [Vulnerabilities](vulnerabilities.md) page on this technology. Present when vulnerabilities are followed |
 
 **Additional columns** (through the column chooser): **Lifecycle**, **Versions in use**, **IT owner**.
 
@@ -147,13 +149,27 @@ A type marked **No longer offered** stays on the technologies that have it. A ty
 
 Support still runs on its end date. With a single date, that date is the end. **Add version** adds a line; hover a line to edit or delete it. Deleting a version used by servers or applications asks first: those links then show an unknown version.
 
+#### Vulnerability alerts
+
+When vulnerabilities are followed, the versions table chooses which versions count in the vulnerability alerts. A version in the alerts appears on the [Vulnerabilities](vulnerabilities.md) page by default, in the emails and in the counts. A version out of the alerts is still matched with the vulnerabilities: the technology's [Vulnerabilities](#vulnerabilities) section still shows it, and the page shows its rows with its **Alerts** filter.
+
+- **Include in vulnerability alerts**: the switch in the title line of **Versions**, next to **Add version**. It is the setting of the technology. Hover it for a reminder: it applies to the versions without their own setting, to the versions added later, and to the servers and applications that name no version. Changing it replaces the own settings of the versions; when some versions have one, KANAP asks first and says how many. It shows even when the technology has no version.
+- **Alerts** column: a switch per version, for an exception on one version. Hover the information icon of its header for what it does. A small dot next to the switch marks a version with its own setting. Set the switch back to the value of the technology and the version follows the technology again.
+
+New technologies are in the alerts, with two exceptions:
+
+- **Operating systems**: see [Operating systems](#operating-systems).
+- **Cloud services run by a provider**: a technology whose [hosting type](#hosting-type) is in the cloud, such as **Public cloud** or **SaaS**, and a catalog entry the provider runs, such as Entra ID. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a **Private cloud** stays in the alerts.
+
+Changing the family or the hosting type of a technology later leaves its setting as it is. The switches need `infrastructure:member`.
+
 #### Versions from the catalog
 
 A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog says "Versions and dates kept up to date from the catalog" under its versions. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
 
 The check adds the new versions and CPE product identifiers of the product, and updates the end of support dates and identifiers the catalog changed. It never overwrites a value you changed, and never brings back a version or an identifier you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Catalog entries come with their identifiers, except the operating systems.
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included. SUSE Linux Enterprise Server arrives without them: the NVD publishes too few of its vulnerabilities for a reliable match.
 
 **Notes**: free text, such as licensing terms or renewal dates.
 
@@ -219,6 +235,27 @@ The same classification as applications, for the technologies that matter to you
 
 The levels and waves come from **Classifications and continuity** in [IT Landscape Settings](it-ops-settings.md#classifications-and-continuity). Hover the question mark next to a field for its meaning.
 
+Below them, when vulnerabilities are followed, the **Vulnerabilities** section sums up the known vulnerabilities of each version. See [Vulnerabilities](#vulnerabilities).
+
+#### Vulnerabilities
+
+A summary of the vulnerabilities, one line per version of the technology, in the order of the versions table. The count next to the title is the number of distinct vulnerabilities, every state.
+
+| Column | What it shows |
+|---|---|
+| **Version** | The version. A version out of the alerts is greyed and says **Excluded from alerts**. **Version not recorded (potentially concerned)** groups the servers and applications that name no version; this line shows only when there are some |
+| **Servers** | How many servers in service carry this version |
+| **To review** | The vulnerabilities still to review, by severity: **Critical**, **High**, **Medium**, **Low**, **None** and **Not rated**. **0** when none is left |
+| **Total** | The distinct vulnerabilities of this version, every state |
+
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the version: on its vulnerabilities to review when it has some, on every state otherwise. **See everything on the Vulnerabilities page**, under the table, opens the page on the whole technology, every state.
+
+A version that no server and no application uses shows **Not installed** in place of the counts, and no **See** link. KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.
+
+When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With `infrastructure:member`, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
+
+KANAP matches the technology again as soon as its identifiers, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Refresh** (`infrastructure:member`) runs the comparison by hand.
+
 ### Relations
 
 The records linked to the technology, one section per kind:
@@ -229,15 +266,8 @@ The records linked to the technology, one section per kind:
 - **Incidents**: severity, status and detection date. Linking an incident needs `incidents:contributor`. A closed or cancelled incident cannot be linked or unlinked.
 - **Documents**: files uploaded to the technology, with their size and date. **Add** uploads files; click a name to download it.
 - **Web links**: a name and an address, such as the publisher's release notes. Click the name to open it; hover a row to edit it. Addresses start with `http://` or `https://`; an address without one opens as `https://`.
-- **Vulnerabilities**: when vulnerabilities are followed, the known vulnerabilities of the versions in use. See [Vulnerabilities](#vulnerabilities).
 
 A section appears only if you can read its module. **Add** (`infrastructure:member`) opens a search in place; the cross at the end of a row removes the link.
-
-#### Vulnerabilities
-
-One row per version and vulnerability, most severe first, with its **CVE**, **Severity**, **Version** and **State**. The count next to the title is the number of distinct vulnerabilities. Click a row to open it on the [Vulnerabilities](vulnerabilities.md) page, where you review it.
-
-KANAP matches the technology again as soon as its identifiers, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Match again** (`infrastructure:member`) runs the comparison by hand.
 
 ---
 

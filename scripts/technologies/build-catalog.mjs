@@ -85,13 +85,17 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * version]` for labels without a usable number (see `cpeVersionOf`).
  * `cpeExclude`: identifiers published by endoflife.date that the NVD does not use for this product.
  * `noCpe`: why an entry has no identifier (checked by --check-cpe); it drops any published one. Every identifier kept was
- * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17): it exists in the CPE
- * dictionary and CVE name it.
+ * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17; the operating systems, lot V3,
+ * 2026-10-20; the entries still without one, lot V5, 2026-10-20): CVE name it. A name the dictionary
+ * does not list yet is kept when CVE use it (`a:microsoft:entra_provisioning_service`).
  * `versionLabel(release)`: the label stored, when cleanLabel would not match the names KANAP
  * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  */
-const OS_NO_CPE = 'OS vulnerabilities are a separate decision: KANAP does not know the patch level, and Windows Server uses one CPE product per version';
+// The service pack is the CPE update component (`linux_enterprise_server:15:sp5`). The matching reads the
+// version only, so one identifier would attach every service pack of a major version to every other.
+// `o:suse:sles`, the identifier endoflife.date publishes, names no CVE.
+const SLES_NO_CPE = 'The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE.';
 
 /**
  * "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2"; the service
@@ -132,16 +136,22 @@ function slesLabel(release) {
 }
 
 const PRODUCTS = [
-  // Operating systems (lot T3). No CPE: see OS_NO_CPE.
-  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
-  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
-  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', noCpe: OS_NO_CPE },
-  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: debianLabel },
-  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: OS_NO_CPE, versionLabel: slesLabel },
-  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
-  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', noCpe: OS_NO_CPE },
-  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', noCpe: OS_NO_CPE },
-  { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', noCpe: OS_NO_CPE },
+  // Operating systems (lot T3). CPE identifiers checked at the NVD (lot V3). Windows Server is one
+  // product per long-term release from 2003 (the build is not `cpe_version`: the year rule matches the
+  // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_NO_CPE.
+  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS are matched on the major, Ubuntu
+  // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
+  // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
+  // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
+  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
+  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux'] },
+  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], versionLabel: debianLabel },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: SLES_NO_CPE, versionLabel: slesLabel },
+  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'] },
+  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'] },
+  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'] },
+  { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', cpe: ['o:centos:centos'] },
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
@@ -177,7 +187,7 @@ const PRODUCTS = [
   // ESXi is an operating system for the NVD (`o:vmware:esxi`; `a:vmware:esxi` holds CVE of 2011 at
   // the latest). The versions come from vCenter: both carry the vSphere major (7.0, 8.0, 9.0).
   { key: 'vsphere', slug: 'vcenter', name: 'VMware vSphere', editor: 'Broadcom', family: 'hypervisor', cpe: ['o:vmware:esxi'] },
-  { key: 'nutanix-prism', slug: 'nutanix-prism', name: 'Nutanix Prism', editor: 'Nutanix', family: 'hypervisor', noCpe: 'The NVD names no CVE under a Nutanix Prism product.' },
+  { key: 'nutanix-prism', slug: 'nutanix-prism', name: 'Nutanix Prism', editor: 'Nutanix', family: 'hypervisor', noCpe: 'Verified on 2026-10-20: a:nutanix:prism is in the CPE dictionary and names no CVE. CVE-2026-84731 (Prism Element) has no CPE criterion.' },
   { key: 'ovirt', slug: 'ovirt', name: 'oVirt', editor: 'oVirt', family: 'hypervisor', cpe: ['a:ovirt:ovirt', 'a:ovirt:ovirt-engine', 'a:redhat:ovirt-engine'] },
   { key: 'citrix-vad', slug: 'citrix-vad', name: 'Citrix Virtual Apps and Desktops', editor: 'Citrix', family: 'hypervisor', cpe: ['a:citrix:virtual_apps_and_desktops'] },
   // Containers
@@ -188,12 +198,15 @@ const PRODUCTS = [
   { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform'] },
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
-  { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'The NVD names no CVE under an Amazon EKS product.' },
-  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
-  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
+  { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon EKS product. a:amazon:eks and a:amazon:elastic_kubernetes_service do not exist, and CVE-2026-86831 (the EKS Network Policy Agent) has no CPE criterion.' },
+  // 11 CVE on 2026-10-20, the newest CVE-2026-50516. The version is `-` (the whole service), except two platform dates.
+  { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', cpe: ['a:microsoft:azure_kubernetes_service'] },
+  { key: 'google-kubernetes-engine', slug: 'google-kubernetes-engine', name: 'Google Kubernetes Engine', editor: 'Google', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: a:google:kubernetes_engine holds CVE-2019-5736 (runc, every version) and CVE-2019-10365 (the Jenkins plugin, up to 0.6.2). a:google:gke does not exist.' },
   // Directory and identity
-  { key: 'active-directory', slug: null, name: 'Active Directory', editor: 'Microsoft', family: 'directory', noCpe: 'Its CVE are filed under Windows Server, an operating system (lot T3); a:microsoft:active_directory holds three CVE, the last of 2022.' },
-  { key: 'entra-id', slug: null, name: 'Microsoft Entra ID', editor: 'Microsoft', family: 'directory', mode: 'subscribed', noCpe: 'An online service its provider patches: its CVE call for no action from the customer.' },
+  { key: 'active-directory', slug: null, name: 'Active Directory', editor: 'Microsoft', family: 'directory', noCpe: 'Verified on 2026-10-20: its CVE are filed under Windows Server, which carries its identifiers. a:microsoft:active_directory names one vulnerable criterion, CVE-2013-1282; the two 2022 matches are an IBM plug-in. a:microsoft:active_directory_domain_services does not exist.' },
+  // entra_id (14 CVE, CVE-2026-83941), the former azure_active_directory (6 CVE, CVE-2026-50481) and the
+  // provisioning service (2 CVE, CVE-2026-59115). The version is `-`.
+  { key: 'entra-id', slug: null, name: 'Microsoft Entra ID', editor: 'Microsoft', family: 'directory', mode: 'subscribed', cpe: ['a:microsoft:azure_active_directory', 'a:microsoft:entra_id', 'a:microsoft:entra_provisioning_service'] },
   { key: 'keycloak', slug: 'keycloak', name: 'Keycloak', editor: 'Red Hat', family: 'directory' },
   { key: 'samba', slug: 'samba', name: 'Samba', editor: 'Samba Team', family: 'directory', cpe: ['a:samba:samba'] },
   { key: 'authentik', slug: 'authentik', name: 'authentik', editor: 'Authentik Security', family: 'directory' },
@@ -213,7 +226,7 @@ const PRODUCTS = [
   { key: 'apache-apisix', slug: 'apache-apisix', name: 'Apache APISIX', editor: 'Apache Software Foundation', family: 'integration' },
   // Backup
   { key: 'veeam-backup-and-replication', slug: 'veeam-backup-and-replication', name: 'Veeam Backup & Replication', editor: 'Veeam', family: 'backup', cpe: ['a:veeam:veeam_backup_\\&_replication'] },
-  { key: 'veeam-backup-for-microsoft-365', slug: 'veeam-backup-for-microsoft-365', name: 'Veeam Backup for Microsoft 365', editor: 'Veeam', family: 'backup', noCpe: 'The NVD names no CVE under a Veeam Backup for Microsoft 365 product.' },
+  { key: 'veeam-backup-for-microsoft-365', slug: 'veeam-backup-for-microsoft-365', name: 'Veeam Backup for Microsoft 365', editor: 'Veeam', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a Veeam Backup for Microsoft 365 product. a:veeam:backup_for_microsoft_365 and a:veeam:backup_for_microsoft_office_365 do not exist.' },
   { key: 'commvault', slug: 'commvault', name: 'Commvault', editor: 'Commvault', family: 'backup' },
   { key: 'proxmox-backup-server', slug: 'proxmox-backup-server', name: 'Proxmox Backup Server', editor: 'Proxmox', family: 'backup', cpe: ['a:proxmox:backup_server'] },
   // Monitoring
@@ -241,7 +254,7 @@ const PRODUCTS = [
   { key: 'powershell', slug: 'powershell', name: 'PowerShell', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:powershell_core'] },
   // Storage
   { key: 'ceph', slug: 'ceph', name: 'Ceph', editor: 'Ceph Foundation', family: 'storage', cpe: ['a:ceph:ceph', 'a:linuxfoundation:ceph', 'a:redhat:ceph'] },
-  { key: 'nutanix-files', slug: 'nutanix-files', name: 'Nutanix Files', editor: 'Nutanix', family: 'storage', noCpe: 'The NVD names no CVE under a Nutanix Files product.' },
+  { key: 'nutanix-files', slug: 'nutanix-files', name: 'Nutanix Files', editor: 'Nutanix', family: 'storage', noCpe: 'Verified on 2026-10-20: a:nutanix:files_storage is in the CPE dictionary and names no CVE. a:nutanix:files does not exist.' },
   // Network and security
   { key: 'hashicorp-vault', slug: 'hashicorp-vault', name: 'HashiCorp Vault', editor: 'HashiCorp', family: 'network_security' },
   { key: 'bind-9', slug: 'bind-9', name: 'BIND 9', editor: 'ISC', family: 'network_security', cpe: ['a:isc:bind'] },
@@ -284,7 +297,9 @@ function cpeProductsOf(entry, published) {
 // backend/src/technologies/catalog/catalog-releases.ts repeats `cleanLabel`, `cpeVersionOf` (with the
 // `cpeVersion` and `cpeVersions` of PRODUCTS) and `versionsOf`. Change both; its spec checks that it
 // gives back the `cpe_version` of every shipped version. There too, `productPerRelease` gives a SQL
-// Server release published between two versions its `a:microsoft:sql_server_<year>` product.
+// Server release published between two versions its `a:microsoft:sql_server_<year>` product, and a
+// Windows Server release from 2003 its `o:microsoft:windows_server_<year>` (Windows 2000 stays out:
+// the NVD names it `windows_2000`).
 
 /** "2022 'Dallas'", "24 (LTS)" → "2022", "24". */
 function cleanLabel(label, name) {
@@ -425,6 +440,8 @@ function refreshCpeVersions(out) {
     added += cpe.filter((id) => !product.cpe_products.includes(id)).length;
     removed += product.cpe_products.filter((id) => !cpe.includes(id)).length;
     product.cpe_products = cpe;
+    if (entry?.noCpe) product.noCpe = entry.noCpe;
+    else delete product.noCpe;
     for (const version of product.versions) {
       const next = cpeVersionOf(version.label, entry);
       if (next !== version.cpe_version) changed += 1;
@@ -597,6 +614,7 @@ async function main() {
       mode: entry.mode ?? 'installed',
       ...(entry.hosting_type ? { hosting_type: entry.hosting_type } : {}),
       cpe_products: cpe,
+      ...(entry.noCpe ? { noCpe: entry.noCpe } : {}),
       source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
       versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],
     });

@@ -1,4 +1,4 @@
-import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
+import { BadRequestException, Body, Controller, Delete, ForbiddenException, Get, Param, Patch, Post, Put, Query, Res, UploadedFile, UseGuards, UseInterceptors } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
@@ -35,6 +35,19 @@ const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, adm
 /** The caller holds `level` or more on `resource` (an administrator holds everything). */
 export function hasLevel(ctx: TenantRequest, resource: string, level: keyof typeof RANK): boolean {
   return ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK[level];
+}
+
+/** `dry_run=true` on the query, or `dry_run: true` in the body. The query wins when it is sent. */
+function dryRunRequested(query: string | undefined, body: unknown): boolean {
+  if (query !== undefined && String(query).trim() !== '') {
+    const value = String(query).trim().toLowerCase();
+    if (value === 'true') return true;
+    if (value === 'false') return false;
+    throw new BadRequestException('dry_run must be true or false.');
+  }
+  if (body === true) return true;
+  if (body === false || body === undefined || body === null) return false;
+  throw new BadRequestException('dry_run must be true or false.');
 }
 
 /**
@@ -285,6 +298,18 @@ export class TechnologiesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
     return this.svc.update(id, body, this.opts(ctx));
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Put(':id/vulnerability-alerts')
+  setVulnerabilityAlerts(
+    @Param('id') id: string,
+    @Body() body: { enabled?: unknown; dry_run?: unknown },
+    @Query('dry_run') dryRunRaw: string | undefined,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.svc.setVulnerabilityAlerts(id, body?.enabled, this.opts(ctx), dryRunRequested(dryRunRaw, body?.dry_run));
   }
 
   @UseGuards(PermissionGuard)
