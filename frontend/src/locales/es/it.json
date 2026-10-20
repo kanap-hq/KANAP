@@ -436,7 +436,7 @@
         "empty": "Ninguna vulnerabilidad conocida afecta a esta tecnología.",
         "searching": "Búsqueda de vulnerabilidades en curso…",
         "loadFailed": "No se pudieron cargar las vulnerabilidades.",
-        "rematch": "Volver a cotejar",
+        "rematch": "Actualizar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
         "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo.",
         "noLongerMatches": "Ya no coincide",

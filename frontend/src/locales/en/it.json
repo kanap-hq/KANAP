@@ -436,7 +436,7 @@
         "empty": "No known vulnerability concerns this technology.",
         "searching": "Searching for vulnerabilities…",
         "loadFailed": "The vulnerabilities could not be loaded.",
-        "rematch": "Match again",
+        "rematch": "Refresh",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",
         "rematchFailed": "The match could not run. Try again.",
         "noLongerMatches": "No longer matches",

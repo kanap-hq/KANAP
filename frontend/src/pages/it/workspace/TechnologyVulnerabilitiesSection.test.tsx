@@ -66,7 +66,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&version=9.0.80&state=all&alerts=all&q=CVE-2026-1001');
     fireEvent.click(rows[2]);
     expect(navigate).toHaveBeenLastCalledWith('/it/vulnerabilities?technology=TEC-7&version=none&state=all&alerts=all&q=CVE-2026-1002');
-    expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
   });
 
@@ -148,7 +148,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
     postMock.mockResolvedValue({ data: { ok: true, added: 2, updated: 0, removed: 1, unmatched: 0 } } as any);
     renderSection(true);
     await screen.findByRole('table', { name: 'Vulnerabilities' });
-    fireEvent.click(screen.getByRole('button', { name: 'Match again' }));
+    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
     await waitFor(() => expect(postMock).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities/rematch'));
     expect((await screen.findByRole('status')).textContent).toBe('Matched again: 2 new, 1 removed.');
     await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2));

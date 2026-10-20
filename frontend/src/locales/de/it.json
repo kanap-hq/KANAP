@@ -436,7 +436,7 @@
         "empty": "Keine bekannte Schwachstelle betrifft diese Technologie.",
         "searching": "Suche nach Schwachstellen läuft…",
         "loadFailed": "Die Schwachstellen konnten nicht geladen werden.",
-        "rematch": "Erneut abgleichen",
+        "rematch": "Aktualisieren",
         "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
         "rematchFailed": "Der Abgleich konnte nicht ausgeführt werden. Versuchen Sie es erneut.",
         "noLongerMatches": "Trifft nicht mehr zu",

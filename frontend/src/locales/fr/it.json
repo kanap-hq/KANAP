@@ -436,7 +436,7 @@
         "empty": "Aucune vulnérabilité connue ne concerne cette technologie.",
         "searching": "Recherche des vulnérabilités en cours…",
         "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
-        "rematch": "Rapprocher à nouveau",
+        "rematch": "Actualiser",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
         "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez.",
         "noLongerMatches": "Ne correspond plus",

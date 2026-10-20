@@ -102,7 +102,7 @@ describe('TechnologyComplianceTab', () => {
     renderTab();
     expect(await screen.findByRole('region', { name: 'Vulnerabilities' })).toBeInTheDocument();
     expect(await screen.findByText('CVE-2026-1001')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'Match again' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
     expect(vi.mocked(api.get)).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities');
   });
 
