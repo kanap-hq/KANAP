@@ -502,13 +502,21 @@ export class CompaniesService {
    * The list's totals for the year. Each company enters its turnover in millions of its base
    * currency: the total is converted into the tenant's reporting currency (`turnover_currency`)
    * at the rates of the year's budget versions: the set the year is frozen at, else the live
-   * rates (`yearRateSetId`). A currency without a rate is counted unconverted, as the version
-   * amounts are, and named in `turnover_fx_missing`.
+   * rates (`yearRateSetId`). A currency without a rate is left out of `turnover` and named in
+   * `turnover_fx_missing` (`companies` is how many companies of that currency had a turnover).
+   * Each row of the list stays in the company's own currency.
    */
   async totals(
     query: any,
     opts: { manager?: EntityManager; tenantId: string },
-  ): Promise<{ headcount: number; it_users: number; turnover: number; turnover_currency: string; turnover_fx_missing: string[]; year: number }> {
+  ): Promise<{
+    headcount: number;
+    it_users: number;
+    turnover: number;
+    turnover_currency: string;
+    turnover_fx_missing: Array<{ currency: string; year: number; companies: number }>;
+    year: number;
+  }> {
     const repo = this.getRepo(opts?.manager);
     const tenantId = opts?.tenantId;
     if (!tenantId) throw new BadRequestException('A tenant is required');
@@ -607,6 +615,7 @@ export class CompaniesService {
       .addSelect('SUM(COALESCE(m.headcount, 0))', 'headcount')
       .addSelect('SUM(COALESCE(m.it_users, 0))', 'it_users')
       .addSelect('SUM(COALESCE(m.turnover, 0))', 'turnover')
+      .addSelect('COUNT(*) FILTER (WHERE COALESCE(m.turnover, 0) <> 0)', 'companies')
       .where('c.tenant_id = :tenantId', { tenantId })
       .groupBy("NULLIF(UPPER(TRIM(c.base_currency)), '')");
 
@@ -641,7 +650,7 @@ export class CompaniesService {
     }
     compiledFilters.forEach((cond) => qb.andWhere(cond.sql, cond.params));
 
-    const rows = (await qb.getRawMany()) as Array<{ currency?: string | null; headcount?: any; it_users?: any; turnover?: any }>;
+    const rows = (await qb.getRawMany()) as Array<{ currency?: string | null; headcount?: any; it_users?: any; turnover?: any; companies?: any }>;
     const toNum = (v: any) => {
       const n = Number(v ?? 0);
       return Number.isFinite(n) ? n : 0;
@@ -649,26 +658,32 @@ export class CompaniesService {
     const round3 = (n: number) => Math.round(n * 1000) / 1000;
     const headcount = Math.round(rows.reduce((acc, row) => acc + toNum(row.headcount), 0));
     const it_users = Math.round(rows.reduce((acc, row) => acc + toNum(row.it_users), 0));
+    const groups = rows.filter((row) => toNum(row.turnover) !== 0);
     const converted = await convertTurnovers({
       fxRates: this.fxRates,
       manager: repo.manager,
       tenantId,
       fiscalYear: year,
       rateSetId: await yearRateSetId(repo.manager, tenantId, year),
-      entries: rows
-        .filter((row) => toNum(row.turnover) !== 0)
-        // One entry per currency, keyed by its position.
-        .map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
+      // One entry per currency, keyed by its position.
+      entries: groups.map((row, idx) => ({ companyId: String(idx), currency: row.currency ?? null, turnover: toNum(row.turnover) })),
     });
     let turnover = 0;
     converted.values.forEach((value) => { turnover += value ?? 0; });
+    const turnover_fx_missing = converted.missing
+      .map((item) => ({
+        currency: item.currency,
+        year,
+        companies: Math.max(0, Math.round(toNum(groups[Number(item.companyId)]?.companies))),
+      }))
+      .sort((a, b) => a.currency.localeCompare(b.currency) || a.year - b.year);
 
     return {
       headcount,
       it_users,
       turnover: round3(turnover),
       turnover_currency: converted.reportingCurrency,
-      turnover_fx_missing: converted.missingCurrencies,
+      turnover_fx_missing,
       year,
     };
   }

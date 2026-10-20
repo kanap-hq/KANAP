@@ -7,10 +7,10 @@ The split of responsibility is deliberate. Netbox stays the reference for the eq
 ## Where to find it
 
 - Workspace: **IT Landscape**
-- Path: **IT Landscape > Netbox**
-- Route: `/it/netbox`
+- Path: **IT Landscape > Settings**, **Netbox** tab
+- Route: `/it/settings?tab=netbox`. The former address `/it/netbox` opens the same tab.
 - Connection settings: **Administration > Integrations**
-- Permission: `infrastructure:admin`, for both the connection card and the synchronisation page
+- Permission: `infrastructure:admin`, for both the connection card and the **Netbox** tab. With this permission, the **Settings** entry of the IT Landscape menu appears even if you cannot see the lists of the **Lists** tab.
 - Available in the cloud and in the on-premise edition. There is no feature flag to turn on.
 
 ---
@@ -39,13 +39,13 @@ Go to **Administration > Integrations** and open the **Netbox inventory** card.
 | **Automatic synchronisation** | Runs every hour and applies the changes on its own. Leave it off until your first run looks right. |
 | **Environment for new assets** | Applied to the assets this integration creates. It is never changed afterwards. |
 
-**Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to **IT Landscape > Netbox**.
+**Test connection** makes a read-only call and reports the Netbox version it found, or the reason it failed. Run it after every change to the address or the token. Once the settings are saved, the card offers a link to **Set up the synchronisation**, which takes you to the **Netbox** tab of **IT Landscape > Settings**.
 
 ---
 
 ## Choose what is imported
 
-Open the **Mappings** tab on the Netbox page. Four tables sit there. The first two decide the whole scope of the import.
+On the **Netbox** tab, open **Mappings**. Four tables sit there. The first two decide the whole scope of the import.
 
 - **Netbox roles > KANAP asset type**. Each device role Netbox knows about gets an asset type, or **Do not import**.
 - **Netbox sites > KANAP location**. Each Netbox site gets one of your locations, or **Do not import**.
@@ -231,9 +231,9 @@ A manual run and a scheduled run cannot overlap: if one is already going, the ot
 
 ---
 
-## The management page
+## The Netbox tab
 
-**IT Landscape > Netbox** is where the work happens after the connection is set up. The strip at the top shows the last run: when it happened, whether it was started by hand or automatically, how long it took, its result, and how many objects are linked or need attention.
+The **Netbox** tab of **IT Landscape > Settings** is where the work happens after the connection is set up. The strip at the top shows the last run: when it happened, whether it was started by hand or automatically, how long it took, its result, and how many objects are linked or need attention.
 
 Below it, the **Objects** tab lists every Netbox object in scope, filtered by state.
 

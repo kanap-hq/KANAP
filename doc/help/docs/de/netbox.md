@@ -7,10 +7,10 @@ Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Refe
 ## Wo Sie es finden
 
 - Arbeitsbereich: **IT-Landschaft**
-- Pfad: **IT-Landschaft > Netbox**
-- Route: `/it/netbox`
+- Pfad: **IT-Landschaft > Einstellungen**, Tab **Netbox**
+- Route: `/it/settings?tab=netbox`. Die frühere Adresse `/it/netbox` öffnet denselben Tab.
 - Verbindungseinstellungen: **Administration > Integrationen**
-- Berechtigung: `infrastructure:admin`, sowohl für die Verbindungskarte als auch für die Synchronisierungsseite
+- Berechtigung: `infrastructure:admin`, sowohl für die Verbindungskarte als auch für den Tab **Netbox**. Mit dieser Berechtigung erscheint der Eintrag **Einstellungen** im Menü der IT-Landschaft, auch wenn Sie die Listen des Tabs **Listen** nicht sehen.
 - Verfügbar in der Cloud und in der On-Premise-Edition. Es gibt kein Feature-Flag, das aktiviert werden muss.
 
 ---
@@ -39,13 +39,13 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 | **Automatische Synchronisierung** | Läuft stündlich und wendet die Änderungen selbstständig an. Lassen Sie sie aus, bis Ihr erster Lauf stimmig aussieht. |
 | **Umgebung für neue Assets** | Gilt für die Assets, die diese Integration anlegt. Danach wird sie nie geändert. |
 
-**Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zu **IT-Landschaft > Netbox** führt.
+**Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zum Tab **Netbox** unter **IT-Landschaft > Einstellungen** führt.
 
 ---
 
 ## Auswählen, was importiert wird
 
-Öffnen Sie auf der Netbox-Seite den Tab **Zuordnungen**. Dort stehen vier Tabellen. Die ersten beiden bestimmen den gesamten Umfang des Imports.
+Öffnen Sie im Tab **Netbox** den Bereich **Zuordnungen**. Dort stehen vier Tabellen. Die ersten beiden bestimmen den gesamten Umfang des Imports.
 
 - **Netbox-Rolle > KANAP-Asset-Typ**. Jede Geräterolle, die Netbox kennt, erhält einen Asset-Typ oder **Nicht importieren**.
 - **Netbox-Standort > KANAP-Standort**. Jeder Netbox-Standort erhält einen Ihrer Standorte oder **Nicht importieren**.
@@ -231,9 +231,9 @@ Ein manueller und ein geplanter Lauf können sich nicht überschneiden: Läuft b
 
 ---
 
-## Die Verwaltungsseite
+## Der Tab Netbox
 
-Auf **IT-Landschaft > Netbox** findet die Arbeit statt, sobald die Verbindung eingerichtet ist. Der Streifen oben zeigt den letzten Lauf: wann er stattfand, ob er manuell oder automatisch gestartet wurde, wie lange er dauerte, sein Ergebnis und wie viele Objekte verknüpft sind oder geprüft werden müssen.
+Im Tab **Netbox** unter **IT-Landschaft > Einstellungen** findet die Arbeit statt, sobald die Verbindung eingerichtet ist. Der Streifen oben zeigt den letzten Lauf: wann er stattfand, ob er manuell oder automatisch gestartet wurde, wie lange er dauerte, sein Ergebnis und wie viele Objekte verknüpft sind oder geprüft werden müssen.
 
 Darunter listet der Tab **Objekte** jedes Netbox-Objekt im Umfang auf, gefiltert nach Status.
 

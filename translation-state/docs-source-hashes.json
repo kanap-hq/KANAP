@@ -34,15 +34,15 @@
 
     "budget-file.md": "f6b2fc9645d564f88e21a384193c068f",
 
-    "budget-lines.md": "9aa3e0523274582e69ce2b9f42d3cbc5",
+    "budget-lines.md": "c9f7117d46cda0ed9aa3c4854c94e210",
 
-    "budget-operations.md": "4ecea83194a42ed8cc439d7aefa0700b",
+    "budget-operations.md": "eb2f9b52b8b949a3c34c4f282be00219",
 
     "business-processes.md": "fdd14e150bd444bbe4ec87fbdaf0f048",
 
     "chart-of-accounts.md": "ae8b6d49fff322c2ed5e6b691ee51620",
 
-    "companies.md": "d6f23867dd184a56da0c6070c2273993",
+    "companies.md": "1b46139ab7114474685c6ebeb8c0f726",
 
     "connected-apps.md": "a5ccbff16dcd15aa33c08505ca236702",
 
@@ -58,7 +58,7 @@
 
     "csv-files.md": "9e9899c195967442210f9df9b15cdae6",
 
-    "currencies.md": "086ba1c9c78e5fc651f00782834ee142",
+    "currencies.md": "310b3d598fca38fef72c593306662d66",
 
     "departments.md": "33aff6bbd5aad01108ec450d1ae9d8d8",
 
@@ -66,7 +66,7 @@
 
     "fast-track/apps-and-assets.md": "6a549ebc8872b722b02dce8f4311a547",
 
-    "fast-track/getting-started.md": "4c6200192099fa5f388197dd5ec73ba6",
+    "fast-track/getting-started.md": "8c35b4e4622d08b23bb31055f5d92826",
 
     "fast-track/index.md": "6563fa6dfaa869b07b0297a32845f456",
 
@@ -74,15 +74,15 @@
 
     "incidents.md": "ef59929d4231ef3336b2f467d7183eec",
 
-    "index.md": "d70bbd62cd334934d0b74b577960bcb4",
+    "index.md": "0e373a2e900ef9e56612e46d664545ed",
 
-    "integrations.md": "08e93abcf4c16c9e2245db72783d7fb1",
+    "integrations.md": "a85a5f58ba84582a323c330f8d611e2f",
 
     "interface-map.md": "09393b8117553b88972a0b04a1271da9",
 
     "interfaces.md": "dcec2470d78137f70a9306e82b8545ee",
 
-    "it-ops-settings.md": "9f048ff7c34ae8801c478bd8927d6a7f",
+    "it-ops-settings.md": "e7898d90255f6f0358b88f3ee7134ddd",
 
     "knowledge.md": "1b050c28addcbf5de529b62223bfeaec",
 
@@ -92,7 +92,7 @@
 
     "my-dashboard.md": "ea4bf00ed7393ec0e3bcfda14ce0bed8",
 
-    "netbox.md": "e9950fe66b6b16fc68712f2b6bfa2141",
+    "netbox.md": "3bca1c9e4808f28b72b797d597453223",
 
     "on-premise/configuration.md": "dea4b272d24e819622a6eec6abb39a24",
 
@@ -108,7 +108,7 @@
 
     "on-premise/sso-entra.md": "64c4ba1183a02398aa122dd70f0fd9ba",
 
-    "operations-dashboard.md": "a9adddea2e39c2db6856d020ee74fd10",
+    "operations-dashboard.md": "cb3b47ac83afce221e2ee8d2fcc59ec7",
 
     "portfolio-planning.md": "90a8528b994c5c562148b8f069a0701e",
 
@@ -122,7 +122,7 @@
 
     "portfolio-team-members.md": "5c09afe8ba330aa1b7871ff8b97e1694",
 
-    "reports.md": "72d74542baaa5a52574b78b307c09100",
+    "reports.md": "bb98b348b24c5fa046def6984ef3f863",
 
     "sample-data.md": "680d0dcb02bda54a2f82d64acf3eb3ba",
 
@@ -142,10 +142,10 @@
   "glossary_hash": "9f44e04a31257e1141582ae5b9c01324",
 
   "nav_hashes": {
-    "de": "bf0cc63fac178f9619281ba22e8c1b11",
+    "de": "269d5dcf0232b622f471480e7711bea8",
 
-    "es": "dd896f35c0ee213f27a3181e4c277df6",
+    "es": "d3380368cba4ab3bb415b0e9971d3a9d",
 
-    "fr": "6be68a8ac10571d2e68d3960825eb9a3"
+    "fr": "825e6a423163f49747c78a583033d23a"
   }
 }

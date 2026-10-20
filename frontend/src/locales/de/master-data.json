@@ -123,7 +123,9 @@
       "turnoverYear": "Umsatz ({{year}})"
     },
     "pinnedTotal": "Gesamt",
-    "turnoverTotalFxMissing": "{{value}} (noch kein Kurs für {{currencies}}, ohne Umrechnung gezählt)",
+    "turnoverFxExcluded": "Umsatz ohne Wechselkurs vom Gesamtbetrag ausgeschlossen: {{pairs}}.",
+    "turnoverFxExcludedPair_one": "{{currency}} {{year}} ({{count}} Unternehmen)",
+    "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} Unternehmen)",
     "export": "Unternehmen exportieren",
     "import": "Unternehmen importieren",
     "importHint": "Gelesene Kennzahlen: {{years}}, nach dem Jahr der Liste. Jedes Jahr ist optional. Zulässige Werte für status: enabled oder disabled.",

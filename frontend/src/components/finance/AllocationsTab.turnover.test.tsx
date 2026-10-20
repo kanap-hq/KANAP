@@ -19,7 +19,7 @@ const mocked = api as unknown as { get: ReturnType<typeof vi.fn> };
 const YEAR = 2026;
 
 // The turnover split is computed in the reporting currency: the tab names each company's base
-// currency next to its turnover, and says when a currency had no rate yet (counted unconverted).
+// currency next to its turnover, and names each company left out for lack of a rate.
 function serve(warning: unknown) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/spend-items/item-1/versions') {
@@ -73,10 +73,16 @@ describe('AllocationsTab by turnover', () => {
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
-  it('says when a turnover was counted without a rate', async () => {
-    serve({ code: 'turnover_fx_missing', currencies: ['USD'], year: YEAR, reportingCurrency: 'EUR' });
+  it('says which company is left out when its turnover has no rate', async () => {
+    serve({
+      code: 'turnover_fx_missing',
+      items: [{ companyId: 'ny', companyName: 'New York', currency: 'USD', year: YEAR }],
+      reportingCurrency: 'EUR',
+    });
     await renderTab();
     const alert = await screen.findByRole('alert');
-    expect(alert).toHaveTextContent('No EUR exchange rate for USD in 2026 yet');
+    expect(alert).toHaveTextContent(
+      'New York is left out of the allocation: no exchange rate from USD to EUR for 2026.',
+    );
   });
 });

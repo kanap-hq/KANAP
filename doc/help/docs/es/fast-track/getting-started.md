@@ -24,7 +24,7 @@ KANAP está organizado en torno a una estructura simple. La barra superior muest
 |------|-------------|
 | **Panel de control** | Su centro personal. Haga clic en el logotipo de KANAP o navegue a `/` |
 | **Portafolio** | Tareas, Solicitudes, Proyectos, Planificación, Informes, Colaboradores |
-| **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Tecnologías, Conexiones, Mapa de conexiones, Ubicaciones, Netbox, Incidentes, Fin de soporte, Vulnerabilidades |
+| **Panorama IT** | Aplicaciones, Interfaces, Mapa de interfaces, Activos, Conexiones, Mapa de conexiones, Zonas de administración, Ubicaciones, Tecnologías, Incidentes, Fin de soporte, Vulnerabilidades, Configuración (listas y Netbox) |
 | **Base de conocimiento** | Documentos y plantillas con flujos de trabajo de revisión |
 | **Gestión presupuestaria** | OPEX, CAPEX, Contratos, Informes, Administración (monedas, columnas presupuestarias, operaciones de congelación y copia) |
 | **Datos maestros** | Empresas, Departamentos, Centros de coste, Proveedores, Contactos, Planes de cuentas, Calendarios laborales, Dimensiones analíticas, Procesos de negocio |

@@ -124,7 +124,7 @@ describe('DashboardPage budget snapshot', () => {
         expect(JSON.parse(url.searchParams.get('filters')!)).toEqual(scope === 'all' ? {} : { nature: { filterType: 'set', values: [scope] } });
       });
     });
-    const requests = get.mock.calls.filter(([url]) => String(url).endsWith('/summary/totals'));
+    const requests = get.mock.calls.filter(([url, config]) => String(url).endsWith('/summary/totals') && !config?.params);
     expect(requests.map(([url]) => url)).toEqual([
       '/spend-items/summary/totals', '/capex-items/summary/totals', '/budget-lines/summary/totals',
     ]);
@@ -208,6 +208,33 @@ describe('DashboardPage budget snapshot', () => {
     const link = await within(tile).findByRole('link', { name: /Tokyo hosting/ });
     expect(link).toHaveTextContent('ops:shared.fxMissing.localAmount');
     expect(within(link).getByRole('img', { name: 'shared.fxMissing.lineTooltip' })).toBeInTheDocument();
+  });
+
+  it('names a line the top list leaves out when its year has no exchange rate', async () => {
+    const Y = new Date().getFullYear();
+    const ranked = {
+      id: 'l-1', item_number: 1, nature: 'opex', product_name: 'Ranked line', currency: 'EUR',
+      versions: { y: { year: Y, totals: { budget: 5000 }, reporting: { budget: 5000, currency: 'EUR', fx_source: 'set' } } },
+    };
+    get.mockImplementation(async (url: string, config?: { params?: Record<string, unknown> }) => {
+      if (url === '/dashboard/budget-config') return { data: savedDashboard };
+      if (url === '/budget-lines/summary/totals' && config?.params?.amounts) {
+        return { data: { fxMissing: [{ currency: 'ZAR', year: Y, lines: 1 }, { currency: 'JPY', year: Y + 2, lines: 3 }] } };
+      }
+      if (url.endsWith('/summary/totals')) return { data: {} };
+      if (url === '/budget-lines/summary' && config?.params?.sort !== 'updated_at:DESC') {
+        return { data: { items: [ranked], total: 1, page: 1, limit: 5 } };
+      }
+      return { data: { items: [], total: 0 } };
+    });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: TOP_ITEMS });
+    expect(await within(tile).findByText('Ranked line')).toBeInTheDocument();
+    const notice = await within(tile).findByRole('status');
+    // One pair of this year: the other year on the totals answer stays off this tile.
+    expect(notice).toHaveTextContent('shared.fxMissing.excluding');
+    expect(notice).not.toHaveTextContent('excludingSeveral');
+    expect(get.mock.calls.some(([url, config]) => url === '/budget-lines/summary/totals' && config?.params?.amounts === 'yBudget')).toBe(true);
   });
 
   it('fetches the snapshot without calling any summary/aggregate endpoint', async () => {
@@ -607,10 +634,29 @@ describe('DashboardPage budget tiles', () => {
     // BL-21 (IT owner, 3k), BL-23 (business owner and budget holder, once), BL-25 (IT owner, 0.4k); BL-26 (0.2k) stays out.
     expect(lines.map((link) => link.getAttribute('href'))).toEqual(['/ops/budget/BL-21', '/ops/budget/BL-23', '/ops/budget/BL-25']);
     expect(lines.map((link) => link.textContent)).toEqual(['BL-21Opex grows3k', 'BL-23Opex shrinks1k', 'BL-25Opex cut0k']);
+    // BL-26 is outside the three. A rate it lacks is still named: the notice reads the whole role, not the slice.
+    expect(lines.map((link) => link.getAttribute('href'))).not.toContain('/ops/budget/BL-26');
     // The three role requests only: one per role.
     const roleRequests = aggregateCalls('/budget-lines/summary/aggregate').filter((body) => body.query.filters && body.spec.measures.length);
     expect(roleRequests).toHaveLength(3);
     expect(summaryCalls('/budget-lines/summary').some((p) => p.limit === 3)).toBe(false);
+  });
+
+  it('names under my lines a line the three largest leave out when it has no rate', async () => {
+    const Y = new Date().getFullYear();
+    const base = post.getMockImplementation() as (url: string, body: any) => Promise<{ data: Record<string, unknown> }>;
+    post.mockImplementation(async (url: string, body: any) => {
+      const answer = await base(url, body);
+      const roleSum = body.spec?.measures?.length > 0 && body.spec?.limit === 3;
+      if (roleSum) return { data: { ...answer.data, fxMissing: [{ currency: 'ZAR', year: Y, lines: 1 }] } };
+      return answer;
+    });
+    renderPage();
+    const tile = await screen.findByRole('region', { name: MY_BUDGET });
+    await within(tile).findByText('dashboard.myBudget.myLines');
+    const lines = within(tile).getAllByRole('link').filter((link) => link.getAttribute('href')!.startsWith('/ops/budget/BL-'));
+    expect(lines.map((link) => link.getAttribute('href'))).toEqual(['/ops/budget/BL-21', '/ops/budget/BL-23', '/ops/budget/BL-25']);
+    expect(await within(tile).findByRole('status')).toHaveTextContent('shared.fxMissing.excluding');
   });
 
   it('shows a role without lines as plain text, and one line when the user has none', async () => {

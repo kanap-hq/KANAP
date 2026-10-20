@@ -159,7 +159,7 @@ const MAPPING_OPTIONS_WITH_OS_SUGGESTION = {
   suggested_os_map: { 'debian-12': 'Debian 12 (bookworm)' },
 };
 
-function renderPage(initialPath = '/it/netbox') {
+function renderPage(initialPath = '/it/settings?tab=netbox') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -228,14 +228,14 @@ describe('NetboxSyncPage', () => {
   });
 
   it('honours the state query parameter', async () => {
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('AST-9')).toBeInTheDocument();
   });
 
   it('shows the KANAP asset type of a linked object, not the Netbox object type', async () => {
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('Network switch')).toBeInTheDocument();
@@ -348,6 +348,36 @@ describe('NetboxSyncPage', () => {
     renderPage();
     fireEvent.click(await screen.findByText('Mappings'));
   }
+
+  it('shows a translated message when the mapping options fail with a server error', async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/netbox/status') return Promise.resolve(STATUS);
+      if (url === '/netbox/mapping-options') {
+        return Promise.reject({ response: { status: 500, data: { message: 'Internal server error', error: 'Internal Server Error' } } });
+      }
+      if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('Mappings'));
+
+    expect(await screen.findByText('The Netbox roles and sites could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText('Internal server error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Internal Server Error')).not.toBeInTheDocument();
+  });
+
+  it('keeps a business error from Netbox as the server wrote it', async () => {
+    await openMappings(MAPPING_OPTIONS);
+    (apiClient.put as any).mockRejectedValue({
+      response: { status: 400, data: { message: 'Set up the Netbox connection first, then save the matches.', error: 'Bad Request' } },
+    });
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+
+    expect(await screen.findByText('Set up the Netbox connection first, then save the matches.')).toBeInTheDocument();
+    expect(screen.queryByText('The mappings could not be saved.')).not.toBeInTheDocument();
+  });
 
   it('matches each Netbox platform with a KANAP operating system, suggestion included', async () => {
     await openMappings(MAPPING_OPTIONS_WITH_OS_SUGGESTION);
@@ -650,7 +680,7 @@ describe('NetboxSyncPage', () => {
       throw new Error(`Unexpected GET ${url}`);
     });
 
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('Netbox reports this object as failed.')).toBeInTheDocument();
     expect(screen.queryByText(/SHOULD NOT BE SHOWN/)).not.toBeInTheDocument();

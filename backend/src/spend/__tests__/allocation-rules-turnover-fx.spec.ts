@@ -102,8 +102,8 @@ async function testSavingARuleChecksTheSelectionWithoutRates() {
   const fx = fakeFx({ [`live:${YEAR}:USD`]: 0.9 });
   const resolved = await service(fx).setTenantMethod(TENANT, YEAR, { mode: 'manual_company', method: 'turnover', company_ids: ['paris', 'newyork'] }, 'u1', { manager: fakeManager(null) });
   assert.deepEqual(pct(resolved.shares), { paris: 68.9655, newyork: 31.0345 });
-  // The positivity check needs no rate (a rate is positive, a missing one counts 1): the only
-  // read of the rates is the preview's.
+  // The save check does not read rates. A turnover without a rate is left out when the split
+  // is computed. The only read of the rates is the preview's.
   assert.equal(fx.calls.length, 1);
 }
 

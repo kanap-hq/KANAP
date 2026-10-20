@@ -10,9 +10,16 @@ export interface FxResolvedRate {
   rate: number;
   rateSetId: string | null;
   fiscalYear: number;
+  /** The tenant's current reporting currency. */
   reportingCurrency: string;
   source: FxRateSource;
   capturedAt: Date | null;
+  /**
+   * Set when a pinned rate set was captured in another base: the rate is
+   * `pinned[source → via] × live[via → reporting]` for the same year
+   * (`live[via]` alone when the source is `via`). Null on a direct rate.
+   */
+  via: string | null;
 }
 
 export interface FxLookupKey {
@@ -109,11 +116,49 @@ export class FxRateService {
   }
 
   /**
+   * A usable rate from a set: 1 when the currency is the set's base, the stored
+   * value when it is finite and strictly positive, otherwise null.
+   */
+  private usableRate(rateSet: CurrencyRateSet | null, currency: string): number | null {
+    const resolved = this.resolveRateFromSet(rateSet, currency);
+    if (resolved.source === 'missing' || !(resolved.rate > 0)) return null;
+    return resolved.rate;
+  }
+
+  /**
+   * A pinned set captured in another base keeps its own rates. The result in
+   * that base is brought into the current reporting currency at the live rate
+   * of the year: `pinned[source → oldBase] × live[oldBase → reporting]`.
+   * The old base itself takes the live rate alone. The new reporting currency
+   * goes through the pin as well (the frozen rate stays the anchor).
+   * `missing` when that live rate is absent; `fallback` when the pin does not
+   * rate the source, which then reads the live set directly.
+   */
+  private crossPinned(
+    pinned: CurrencyRateSet,
+    live: CurrencyRateSet | null,
+    sourceCurrency: string,
+    oldBase: string,
+  ): 'fallback' | 'missing' | { rate: number; source: FxRateSource; capturedAt: Date | null } {
+    const sourceIsOldBase = sourceCurrency === oldBase;
+    const pinnedFactor = sourceIsOldBase ? null : this.usableRate(pinned, sourceCurrency);
+    if (!sourceIsOldBase && pinnedFactor == null) return 'fallback';
+    const liveOld = this.usableRate(live, oldBase);
+    if (liveOld == null) return 'missing';
+    if (sourceIsOldBase) {
+      return { rate: liveOld, source: 'live', capturedAt: live?.captured_at ?? null };
+    }
+    return { rate: pinnedFactor! * liveOld, source: 'snapshot', capturedAt: pinned.captured_at ?? null };
+  }
+
+  /**
    * Resolves each lookup to a rate (its snapshot set, else the latest live set
    * of its year, else 1 with the source `missing`, also when the year's set
    * exists but does not rate the currency) and warns for each distinct key
    * whose rate is missing. Those years go to the missing-rates listener, which
    * fetches them: the next read finds the rate.
+   * A pinned set whose base is no longer the reporting currency keeps its
+   * rates and converts them at the live rate of that old base (`via`).
    * `quiet`: no warning, for a caller resolving speculative keys that no
    * version may use (the list engine's rate table).
    */
@@ -162,51 +207,88 @@ export class FxRateService {
 
     for (const item of uniqueKeys.values()) {
       const upperSource = item.sourceCurrency.toUpperCase();
+      const reporting = settings.reportingCurrency;
+      const reportingUpper = reporting.toUpperCase();
       let rateSet: CurrencyRateSet | null = null;
       let rateSource: FxRateSource = 'missing';
 
       if (item.rateSetId) {
-        rateSet = snapshotById.get(item.rateSetId) ?? null;
-        const resolved = this.resolveRateFromSet(rateSet, upperSource);
-        rateSource = resolved.source === 'snapshot' ? 'snapshot' : resolved.source;
-        if (resolved.source === 'missing' || resolved.rate <= 0) {
-          rateSet = null; // fall back to live
-        } else {
-          result.set(item.key, {
-            rate: resolved.rate,
-            rateSetId: rateSet?.id ?? null,
-            fiscalYear: item.fiscalYear,
-            reportingCurrency: rateSet?.base_currency ?? settings.reportingCurrency,
-            source: rateSource,
-            capturedAt: rateSet?.captured_at ?? null,
-          });
-          continue;
+        const pinned = snapshotById.get(item.rateSetId) ?? null;
+        const pinnedBase = pinned?.base_currency?.toUpperCase() ?? '';
+        if (pinned && pinnedBase && pinnedBase !== reportingUpper) {
+          const live = await latestLiveSet(item.fiscalYear);
+          const crossed = this.crossPinned(pinned, live, upperSource, pinnedBase);
+          if (crossed === 'missing') {
+            missingYears.add(item.fiscalYear);
+            if (!opts?.quiet) {
+              this.logger.warn(
+                `Missing FX rate for ${upperSource}->${reporting} ${item.fiscalYear} via ${pinnedBase} (tenant ${tenantId})`,
+              );
+            }
+            result.set(item.key, {
+              rate: 1,
+              rateSetId: pinned.id,
+              fiscalYear: item.fiscalYear,
+              reportingCurrency: reporting,
+              source: 'missing',
+              capturedAt: null,
+              via: pinnedBase,
+            });
+            continue;
+          }
+          if (crossed !== 'fallback') {
+            result.set(item.key, {
+              rate: crossed.rate,
+              rateSetId: pinned.id,
+              fiscalYear: item.fiscalYear,
+              reportingCurrency: reporting,
+              source: crossed.source,
+              capturedAt: crossed.capturedAt,
+              via: pinnedBase,
+            });
+            continue;
+          }
+        } else if (pinned) {
+          const resolved = this.resolveRateFromSet(pinned, upperSource);
+          if (resolved.source !== 'missing' && resolved.rate > 0) {
+            result.set(item.key, {
+              rate: resolved.rate,
+              rateSetId: pinned.id,
+              fiscalYear: item.fiscalYear,
+              reportingCurrency: reporting,
+              source: resolved.source === 'snapshot' ? 'snapshot' : resolved.source,
+              capturedAt: pinned.captured_at ?? null,
+              via: null,
+            });
+            continue;
+          }
         }
       }
 
-      // fallback to latest live set
+      // fallback to latest live set of the current reporting currency
       rateSet = await latestLiveSet(item.fiscalYear);
       const resolved = rateSet
         ? this.resolveRateFromSet(rateSet, upperSource)
-        : upperSource === settings.reportingCurrency.toUpperCase()
+        : upperSource === reportingUpper
           ? { rate: 1, source: 'identity' as FxRateSource }
           : this.resolveRateFromSet(rateSet, upperSource);
       // A rate found in the live set is `live`; the reporting currency stays `identity`, and a
       // currency the set does not rate stays `missing` (counted at 1, which the caller must know).
       rateSource = resolved.source === 'snapshot' ? 'live' : resolved.source;
       if (resolved.source === 'missing') missingYears.add(item.fiscalYear);
-      if (!opts?.quiet && resolved.source === 'missing' && upperSource !== settings.reportingCurrency.toUpperCase()) {
+      if (!opts?.quiet && resolved.source === 'missing' && upperSource !== reportingUpper) {
         this.logger.warn(
-          `Missing FX rate for ${upperSource}->${settings.reportingCurrency} ${item.fiscalYear} (tenant ${tenantId})`,
+          `Missing FX rate for ${upperSource}->${reporting} ${item.fiscalYear} (tenant ${tenantId})`,
         );
       }
       result.set(item.key, {
         rate: resolved.rate,
         rateSetId: rateSet?.id ?? null,
         fiscalYear: item.fiscalYear,
-        reportingCurrency: rateSet?.base_currency ?? settings.reportingCurrency,
+        reportingCurrency: rateSet?.base_currency ?? reporting,
         source: rateSource,
         capturedAt: rateSet?.captured_at ?? null,
+        via: null,
       });
     }
 

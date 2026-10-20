@@ -3,9 +3,16 @@ import { CurrencyController } from '../currency.controller';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { FxRateService } from '../fx-rate.service';
 import {
+  MANUAL_RATE_CURRENCY_CODE,
   MANUAL_RATE_CURRENCY_MESSAGE,
+  MANUAL_RATE_NOT_FOUND_CODE,
+  MANUAL_RATE_RATE_CODE,
   MANUAL_RATE_RATE_MESSAGE,
+  MANUAL_RATE_REPORTING_CODE,
   MANUAL_RATE_REPORTING_MESSAGE,
+  MANUAL_RATE_TOO_SMALL_CODE,
+  MANUAL_RATE_TOO_SMALL_MESSAGE,
+  MANUAL_RATE_YEAR_CODE,
   MANUAL_RATE_YEAR_MESSAGE,
   ManualRatesService,
 } from '../manual-rates.service';
@@ -35,7 +42,8 @@ function harness(reporting = 'EUR') {
   const locks: string[] = [];
   const queued: Array<{ tenantId: string; years: unknown; label?: string }> = [];
   const reported: number[][] = [];
-  let queueStatus: 'queued' | 'skipped' = 'queued';
+  let queueStatus: 'queued' | 'merged' = 'queued';
+  const queuedFresh: unknown[] = [];
   let tick = 0;
   let ids = 0;
 
@@ -104,8 +112,9 @@ function harness(reporting = 'EUR') {
     reported.push(years);
   });
   const ingestion = {
-    queueManualRefresh: async (tenantId: string, years: unknown, opts?: { label?: string }) => {
+    queueManualRefresh: async (tenantId: string, years: unknown, opts?: { label?: string; fresh?: boolean }) => {
       queued.push({ tenantId, years, label: opts?.label });
+      queuedFresh.push(opts?.fresh);
       return queueStatus;
     },
   };
@@ -124,7 +133,8 @@ function harness(reporting = 'EUR') {
     locks,
     queued,
     reported,
-    setQueueStatus: (status: 'queued' | 'skipped') => {
+    queuedFresh,
+    setQueueStatus: (status: 'queued' | 'merged') => {
       queueStatus = status;
     },
     seed(row: Partial<Row> & Pick<Row, 'fiscal_year' | 'rates'>) {
@@ -142,45 +152,53 @@ function harness(reporting = 'EUR') {
   };
 }
 
-async function rejects(run: () => Promise<unknown>, message: string, status: number) {
+async function rejects(run: () => Promise<unknown>, message: string, status: number, code: string) {
   await assert.rejects(run, (error: any) => {
     assert.equal(error.message, message);
     assert.equal(typeof error.getStatus === 'function' ? error.getStatus() : error.status, status);
+    const response = typeof error.getResponse === 'function' ? error.getResponse() : {};
+    assert.equal(response.code, code);
+    assert.equal(response.message, message);
     return true;
   });
 }
 
 async function testValidationWritesNothing() {
   const { service, manager, rows, locks } = harness();
-  const cases: Array<[Record<string, unknown>, string]> = [
-    [{ currency: 'GB', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'GBPP', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'G1P', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 12, year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE],
-    [{ currency: 'GBP', year: 1989, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2101, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2024.5, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: '2024', rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 0 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: -1 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 1e9 + 1 }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: Number.NaN }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: Number.POSITIVE_INFINITY }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: '1.2' }, MANUAL_RATE_RATE_MESSAGE],
-    [{ currency: 'GBP', year: 2024, rate: 0.0000004 }, MANUAL_RATE_RATE_MESSAGE],
+  const cases: Array<[Record<string, unknown>, string, string]> = [
+    [{ currency: 'GB', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'GBPP', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'G1P', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 12, year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'ZZZ', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'XTS', year: 2024, rate: 1.2 }, MANUAL_RATE_CURRENCY_MESSAGE, MANUAL_RATE_CURRENCY_CODE],
+    [{ currency: 'GBP', year: 1989, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2101, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2024.5, rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: '2024', rate: 1.2 }, MANUAL_RATE_YEAR_MESSAGE, MANUAL_RATE_YEAR_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: -1 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 1e9 + 1 }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: Number.NaN }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: Number.POSITIVE_INFINITY }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: '1.2' }, MANUAL_RATE_RATE_MESSAGE, MANUAL_RATE_RATE_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0.0000004 }, MANUAL_RATE_TOO_SMALL_MESSAGE, MANUAL_RATE_TOO_SMALL_CODE],
+    [{ currency: 'GBP', year: 2024, rate: 0.0000001 }, MANUAL_RATE_TOO_SMALL_MESSAGE, MANUAL_RATE_TOO_SMALL_CODE],
   ];
-  for (const [input, message] of cases) {
-    await rejects(() => service.setManualRate('tenant-1', input as any, 'user-1', manager as any), message, 400);
+  for (const [input, message, code] of cases) {
+    await rejects(() => service.setManualRate('tenant-1', input as any, 'user-1', manager as any), message, 400, code);
   }
   await rejects(
     () => service.setManualRate('tenant-1', { currency: 'eur', year: 2024, rate: 1 }, 'user-1', manager as any),
     MANUAL_RATE_REPORTING_MESSAGE,
     400,
+    MANUAL_RATE_REPORTING_CODE,
   );
   await rejects(
     () => service.removeManualRate('tenant-1', { currency: 'GB', year: 2024 }, 'user-1', manager as any),
     MANUAL_RATE_CURRENCY_MESSAGE,
     400,
+    MANUAL_RATE_CURRENCY_CODE,
   );
   assert.equal(rows.length, 0, 'invalid input inserts no set');
   assert.equal(locks.length, 0, 'invalid input takes no lock');
@@ -247,11 +265,13 @@ async function testRemoveRequiresAManualValue() {
     () => service.removeManualRate('tenant-1', { currency: 'GBP', year: 2023 }, 'user-1', manager as any),
     'No manual rate is stored for GBP in 2023.',
     404,
+    MANUAL_RATE_NOT_FOUND_CODE,
   );
   await rejects(
     () => service.removeManualRate('tenant-1', { currency: 'CHF', year: 2050 }, 'user-1', manager as any),
     'No manual rate is stored for CHF in 2050.',
     404,
+    MANUAL_RATE_NOT_FOUND_CODE,
   );
   assert.equal(rows.length, 1, 'a missing manual value inserts nothing');
   assert.equal(queued.length, 0);
@@ -286,19 +306,20 @@ async function testRemoveClearsTheCurrencyAndQueuesARefresh() {
   console.log('ok - removing a manual rate clears it and queues a refresh of the year');
 }
 
-async function testSkippedRefreshReportsTheYear() {
-  const { service, manager, reported, queued, seed, setQueueStatus } = harness();
+async function testRemovalJoinsTheNextRun() {
+  const { service, manager, reported, queued, queuedFresh, seed, setQueueStatus } = harness();
   seed({
     fiscal_year: 2024,
     rates: { EUR: 1, GBP: 1.2 },
     rate_sources: { EUR: 'identity', GBP: 'manual' },
   });
-  setQueueStatus('skipped');
+  setQueueStatus('merged');
   const removed = await service.removeManualRate('tenant-1', { currency: 'GBP', year: 2024 }, 'user-1', manager as any);
-  assert.deepEqual(removed, { ok: true, refreshQueued: false });
+  assert.deepEqual(removed, { ok: true, refreshQueued: true });
   assert.equal(queued.length, 1);
-  assert.deepEqual(reported, [[2024]]);
-  console.log('ok - a refresh already running is followed through the missing-year report');
+  assert.deepEqual(queuedFresh, [true], 'a run already going read the rate before the removal');
+  assert.deepEqual(reported, []);
+  console.log('ok - a refresh already running takes the year into its next run');
 }
 
 async function testLatestSetWins() {
@@ -330,35 +351,32 @@ async function testApiContract() {
   const capturedAt = new Date('2024-06-01T00:00:00.000Z');
   const older = new Date('2024-01-01T00:00:00.000Z');
   const listManager = {
-    query: async () => [],
-    getRepository: () => ({
-      find: async () => [
-        {
-          fiscal_year: 2024,
-          base_currency: 'EUR',
-          rates: { EUR: 1, GBP: 1.2 },
-          rate_sources: null,
-          captured_at: capturedAt,
-          source: 'world-bank-annual',
-        },
-        {
-          fiscal_year: 2024,
-          base_currency: 'EUR',
-          rates: { EUR: 1 },
-          rate_sources: { EUR: 'identity' },
-          captured_at: older,
-          source: 'world-bank-annual',
-        },
-        {
-          fiscal_year: 2023,
-          base_currency: 'EUR',
-          rates: { EUR: 1 },
-          rate_sources: { EUR: 'identity', USD: 'manual' },
-          captured_at: older,
-          source: 'manual',
-        },
-      ],
-    }),
+    // The matrix reads sets with SQL (latest per year, reporting base only). The
+    // older 2024 set is not the latest, so the query does not return it.
+    query: async (sql: string) => {
+      if (sql.includes('DISTINCT ON (fiscal_year)') && sql.includes('rate_sources')) {
+        return [
+          {
+            fiscal_year: 2023,
+            base_currency: 'EUR',
+            rates: { EUR: 1 },
+            rate_sources: { EUR: 'identity', USD: 'manual' },
+            captured_at: older,
+            source: 'manual',
+          },
+          {
+            fiscal_year: 2024,
+            base_currency: 'EUR',
+            rates: { EUR: 1, GBP: 1.2 },
+            rate_sources: null,
+            captured_at: capturedAt,
+            source: 'world-bank-annual',
+          },
+        ];
+      }
+      return [];
+    },
+    getRepository: () => ({ find: async () => [] }),
   };
   const missingManager = {
     query: async (sql: string) => {
@@ -372,24 +390,28 @@ async function testApiContract() {
   const controller = new CurrencyController({} as any, {} as any, service, { manager: listManager } as any);
 
   const listed = await controller.listRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: listManager } });
-  assert.deepEqual(listed, [
-    {
-      fiscalYear: 2023,
-      baseCurrency: 'EUR',
-      rates: { EUR: 1 },
-      rateSources: { EUR: 'identity', USD: 'manual' },
-      capturedAt: older,
-      source: 'manual',
-    },
-    {
-      fiscalYear: 2024,
-      baseCurrency: 'EUR',
-      rates: { EUR: 1, GBP: 1.2 },
-      rateSources: {},
-      capturedAt,
-      source: 'world-bank-annual',
-    },
-  ]);
+  // GBP is stored but not in use and not manual, so the matrix drops it. USD stays: it carries a manual rate.
+  assert.deepEqual(listed, {
+    currencies: ['EUR', 'USD'],
+    rates: [
+      {
+        fiscalYear: 2023,
+        baseCurrency: 'EUR',
+        rates: { EUR: 1 },
+        rateSources: { EUR: 'identity', USD: 'manual' },
+        capturedAt: older,
+        source: 'manual',
+      },
+      {
+        fiscalYear: 2024,
+        baseCurrency: 'EUR',
+        rates: { EUR: 1 },
+        rateSources: {},
+        capturedAt,
+        source: 'world-bank-annual',
+      },
+    ],
+  });
 
   const missing = await controller.listMissingRates({ tenant: { id: 'tenant-1' }, queryRunner: { manager: missingManager } });
   assert.deepEqual(missing, {
@@ -408,23 +430,72 @@ async function testApiContract() {
     rateSources: { EUR: 'identity', GBP: 'manual' },
     capturedAt: saved.capturedAt,
     source: 'manual',
+    frozenVersions: 0,
   });
   assert.ok(saved.capturedAt instanceof Date);
 
   const removed = await controller.removeManualRate('2024', 'GBP', req);
-  assert.deepEqual(removed, { ok: true, refreshQueued: true });
+  assert.deepEqual(removed, { ok: true, refreshQueued: true, frozenVersions: 0 });
 
   await rejects(
     () => controller.setManualRate({ currency: 'EU', year: 2024, rate: 1 }, req),
     MANUAL_RATE_CURRENCY_MESSAGE,
     400,
+    MANUAL_RATE_CURRENCY_CODE,
   );
   await rejects(
     () => controller.removeManualRate('nope', 'GBP', req),
     MANUAL_RATE_YEAR_MESSAGE,
     400,
+    MANUAL_RATE_YEAR_CODE,
   );
   console.log('ok - the currency API returns the manual-rate contract');
+}
+
+/**
+ * The harness query returns no rows, which counts as zero frozen versions.
+ * A query that answers `n` is the number of versions of that year the manual
+ * rate does not reach: pinned in the current base, to a set rating the currency.
+ */
+async function testFrozenVersions() {
+  const { service, manager } = harness();
+  const seen: unknown[][] = [];
+  const wrapped = {
+    query: async (sql: string, params?: unknown[]) => {
+      if (sql.includes('COUNT(*)::int AS n') && sql.includes('fx_rate_set_id')) {
+        seen.push(params ?? []);
+        assert.match(sql, /tenant_id = \$1/);
+        assert.match(sql, /budget_year = \$2/);
+        assert.match(sql, /UPPER\(TRIM\(s\.base_currency\)\) = \$3/, 'only pins in the current base');
+        assert.match(sql, /UPPER\(r\.key\) = \$4/, 'only pins that rate the currency');
+        const year = Number(params?.[1]);
+        if (year === 2024) return [{ n: 2 }];
+        return [];
+      }
+      return manager.query(sql, params);
+    },
+    getRepository: () => manager.getRepository(),
+  };
+  const controller = new CurrencyController({} as any, {} as any, service, { manager: wrapped } as any);
+  const req = { tenant: { id: 'tenant-1' }, user: { sub: 'user-9' }, queryRunner: { manager: wrapped } };
+
+  const saved = await controller.setManualRate({ currency: 'GBP', year: 2024, rate: 1.25 }, req);
+  assert.equal(saved.frozenVersions, 2);
+  assert.deepEqual(seen[0].slice(0, 2), ['tenant-1', 2024]);
+  assert.equal(seen[0][3], 'GBP');
+
+  const removed = await controller.removeManualRate('2024', 'GBP', req);
+  assert.equal(removed.frozenVersions, 2);
+  assert.equal(removed.ok, true);
+  assert.equal(removed.refreshQueued, true);
+  assert.deepEqual(seen[1].slice(0, 2), ['tenant-1', 2024]);
+  assert.equal(seen[1][3], 'GBP');
+
+  const otherYear = await controller.setManualRate({ currency: 'USD', year: 2025, rate: 1.1 }, req);
+  assert.equal(otherYear.frozenVersions, 0);
+  assert.deepEqual(seen[2].slice(0, 2), ['tenant-1', 2025]);
+  assert.equal(seen[2][3], 'USD');
+  console.log('ok - a manual rate reports the frozen versions of its year it does not reach');
 }
 
 (async () => {
@@ -433,9 +504,10 @@ async function testApiContract() {
   await testSetCopiesTheLatestSet();
   await testRemoveRequiresAManualValue();
   await testRemoveClearsTheCurrencyAndQueuesARefresh();
-  await testSkippedRefreshReportsTheYear();
+  await testRemovalJoinsTheNextRun();
   await testLatestSetWins();
   await testApiContract();
+  await testFrozenVersions();
   console.log('manual-rates.spec: ok');
 })().catch((error) => {
   console.error(error);

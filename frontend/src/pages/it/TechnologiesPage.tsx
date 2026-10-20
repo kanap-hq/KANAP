@@ -99,6 +99,17 @@ function EditorVulnerabilitiesCell({ value }: ICellRendererParams<TechnologyRow,
 
 /** The two files of links: servers and technologies, applications and technologies. */
 type LinkFile = 'asset' | 'application';
+
+/** The import note, once it is an introduction plus one line per rule. A plain string stays a paragraph. */
+function importHintList(value: unknown): { intro: string; items: string[] } | null {
+  if (!value || typeof value !== 'object') return null;
+  const hint = value as { intro?: unknown; items?: unknown };
+  const items = Array.isArray(hint.items)
+    ? hint.items.filter((item): item is string => typeof item === 'string' && item !== '')
+    : [];
+  if (items.length === 0) return null;
+  return { intro: typeof hint.intro === 'string' ? hint.intro : '', items };
+}
 const LINK_FILE_ENDPOINTS: Record<LinkFile, string> = {
   asset: '/technologies/asset-links',
   application: '/technologies/application-links',
@@ -364,7 +375,7 @@ export default function TechnologiesPage() {
         onClose={() => setImportOpen(false)}
         endpoint={LINK_FILE_ENDPOINTS[linkFile]}
         title={t(`pages.technologies.linkFiles.importTitle.${linkFile}`)}
-        hint={t(`pages.technologies.linkFiles.importHint.${linkFile}`)}
+        hintList={importHintList(t(`pages.technologies.linkFiles.importHint.${linkFile}`, { returnObjects: true })) ?? undefined}
         onImported={() => setRefreshKey((k) => k + 1)}
         flexibleFormat
       />
