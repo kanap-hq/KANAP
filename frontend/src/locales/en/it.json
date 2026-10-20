@@ -423,7 +423,11 @@
         "via": "through {{name}}",
         "stateOf": "State of {{version}}",
         "noteOf": "Note on {{version}}",
-        "notePlaceholder": "e.g., patched on 12 March"
+        "notePlaceholder": "e.g., patched on 12 March",
+        "serversInAlerts_one": "{{count}} server, of which {{alerting}} in the alerts",
+        "serversInAlerts_other": "{{count}} servers, of which {{alerting}} in the alerts",
+        "applicationsInAlerts_one": "{{count}} application, of which {{alerting}} in the alerts",
+        "applicationsInAlerts_other": "{{count}} applications, of which {{alerting}} in the alerts"
       },
       "section": {
         "title": "Vulnerabilities",
@@ -441,6 +445,12 @@
           "versionsExcluded_other": "{{count}} versions excluded from alerts",
           "set": "Set"
         }
+      },
+      "alerts": {
+        "label": "Alerts",
+        "included": "Included",
+        "excluded": "Excluded",
+        "all": "All"
       }
     },
     "interfaces": {

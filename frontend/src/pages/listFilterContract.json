@@ -561,7 +561,9 @@
     ]
   },
   "/vulnerabilities": {
-    "params": {},
+    "params": {
+      "alerts": "included"
+    },
     "filters": {
       "cve_id": "text",
       "severity": "set",

@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
@@ -77,6 +77,14 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
   return model;
 }
 
+export type AlertsFilter = 'included' | 'excluded' | 'all';
+
+/** `alerts` on the address: included when it is absent or unknown. */
+export function alertsFromSearch(search: string): AlertsFilter {
+  const value = new URLSearchParams(search).get('alerts');
+  return value === 'excluded' || value === 'all' ? value : 'included';
+}
+
 /** The list's parameters, without its paging, for the export and the change in bulk. */
 function scopeParams(request: ListRequest | null): Record<string, unknown> {
   const { page: _page, limit: _limit, ...rest } = (request?.params ?? {}) as Record<string, unknown>;
@@ -84,14 +92,14 @@ function scopeParams(request: ListRequest | null): Record<string, unknown> {
 }
 
 /** A neutral link (a server, an application, a technology): underline and teal on hover only. */
-function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
+function RecordLink({ to, children, quiet = false }: { to: string; children: React.ReactNode; quiet?: boolean }) {
   return (
     <MLink
       component={RouterLink}
       to={to}
       underline="hover"
       onClick={(event: React.MouseEvent) => event.stopPropagation()}
-      sx={{ color: 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}
+      sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}
     >
       {children}
     </MLink>
@@ -109,6 +117,17 @@ function DetailBlock({ title, children }: { title: string; children: React.React
 
 const listSx = { listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px', fontSize: 13 } as const;
 const quietSx = { fontSize: 13, color: 'kanap.text.tertiary' } as const;
+
+/** The count line when some of the rows stay out of the alerts. */
+function inAlertsLine(
+  total: number,
+  alerting: number | undefined,
+  t: (key: string, opts: { count: number; alerting: number }) => string,
+  key: string,
+): string | null {
+  if (alerting == null || alerting === total) return null;
+  return t(key, { count: total, alerting });
+}
 
 /**
  * The state and the note of one technology version for a CVE: a member changes them in place
@@ -192,6 +211,10 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
     return <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />;
   }
   const d = detail.data;
+  const serversLine = inAlertsLine(d.servers, d.alerting?.servers, t, 'pages.vulnerabilities.detail.serversInAlerts');
+  const applicationsLine = d.applications == null
+    ? null
+    : inAlertsLine(d.applications, d.alerting?.applications, t, 'pages.vulnerabilities.detail.applicationsInAlerts');
   // The panel stays open; the grid, which does not read react-query, is refreshed by its caller.
   const onSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
@@ -245,41 +268,49 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
       </DetailBlock>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         <DetailBlock title={t('pages.vulnerabilities.detail.servers')}>
+          {serversLine && <Typography sx={{ ...quietSx, mb: 0.5 }}>{serversLine}</Typography>}
           {d.servers_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noServers')}</Typography>
           ) : (
             <Box component="ul" sx={listSx}>
-              {d.servers_list.map((server, index) => (
-                <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
-                  <RecordLink to={`/it/assets/${server.asset_id}`}>{server.name ?? server.reference ?? ''}</RecordLink>
-                  <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
-                    {' · '}{server.technology_name} {versionText(server, t)}
-                    {server.via_asset_name && <>{' · '}{t('pages.vulnerabilities.detail.via', { name: server.via_asset_name })}</>}
-                  </Box>
-                </li>
-              ))}
+              {d.servers_list.map((server, index) => {
+                const quiet = server.alerts === false;
+                return (
+                  <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
+                    <RecordLink to={`/it/assets/${server.asset_id}`} quiet={quiet}>{server.name ?? server.reference ?? ''}</RecordLink>
+                    <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
+                      {' · '}{server.technology_name} {versionText(server, t)}
+                      {server.via_asset_name && <>{' · '}{t('pages.vulnerabilities.detail.via', { name: server.via_asset_name })}</>}
+                    </Box>
+                  </li>
+                );
+              })}
             </Box>
           )}
         </DetailBlock>
         <DetailBlock title={t('pages.vulnerabilities.detail.applications')}>
+          {applicationsLine && <Typography sx={{ ...quietSx, mb: 0.5 }}>{applicationsLine}</Typography>}
           {d.applications_list === null ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.applicationsHidden')}</Typography>
           ) : d.applications_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noApplications')}</Typography>
           ) : (
             <Box component="ul" sx={listSx}>
-              {d.applications_list.map((app, index) => (
-                <li key={`${app.application_id}:${index}`}>
-                  <RecordLink to={`/it/applications/${app.application_id}`}>
-                    {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
-                    {app.name ?? ''}
-                  </RecordLink>
-                  <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
-                    {' · '}{app.technology_name} {versionText(app, t)}
-                    {app.server_name && <>{' · '}{app.server_name}</>}
-                  </Box>
-                </li>
-              ))}
+              {d.applications_list.map((app, index) => {
+                const quiet = app.alerts === false;
+                return (
+                  <li key={`${app.application_id}:${index}`}>
+                    <RecordLink to={`/it/applications/${app.application_id}`} quiet={quiet}>
+                      {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
+                      {app.name ?? ''}
+                    </RecordLink>
+                    <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
+                      {' · '}{app.technology_name} {versionText(app, t)}
+                      {app.server_name && <>{' · '}{app.server_name}</>}
+                    </Box>
+                  </li>
+                );
+              })}
             </Box>
           )}
         </DetailBlock>
@@ -494,6 +525,9 @@ export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
   const location = useLocation();
+  const navigate = useNavigate();
+  const alerts = alertsFromSearch(location.search);
+  const extraParams = useMemo(() => ({ alerts }), [alerts]);
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
@@ -549,9 +583,10 @@ export default function VulnerabilitiesPage() {
     const params: Record<string, unknown> = { fields: 'version' };
     if (state.q) params.q = state.q;
     if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
+    params.alerts = alerts;
     const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
     return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
-  }, [t]);
+  }, [alerts, t]);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
     ...(canEdit ? [{
@@ -657,6 +692,32 @@ export default function VulnerabilitiesPage() {
     },
   ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
+  const setAlerts = (next: AlertsFilter) => {
+    const params = new URLSearchParams(location.search);
+    if (next === 'included') params.delete('alerts');
+    else params.set('alerts', next);
+    const search = params.toString();
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+  };
+
+  const alertsFilter = (
+    <Stack direction="row" spacing={0.75} alignItems="center">
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.alerts.label')}</Typography>
+      <TextField
+        select
+        variant="standard"
+        value={alerts}
+        onChange={(event) => setAlerts(event.target.value as AlertsFilter)}
+        sx={inlineControlSx}
+        SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.vulnerabilities.alerts.label') } }}
+      >
+        <MenuItem value="included" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.included')}</MenuItem>
+        <MenuItem value="excluded" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.excluded')}</MenuItem>
+        <MenuItem value="all" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.all')}</MenuItem>
+      </TextField>
+    </Stack>
+  );
+
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
 
@@ -706,12 +767,16 @@ export default function VulnerabilitiesPage() {
       <Box sx={{
         '& .ag-header-cell[col-id="select"]': { px: 0 },
         '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
+        '& .vulnerability-row-muted .ag-cell': { color: 'kanap.text.tertiary' },
       }}
       >
       <ServerDataGrid<VulnerabilityRow>
         columns={columns}
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
+        extraParams={extraParams}
+        toolbarExtras={alertsFilter}
+        getRowClass={({ data }) => (alerts !== 'included' && data?.alerts === false ? 'vulnerability-row-muted' : undefined)}
         getRowId={rowId}
         showRowCount
         rowCountText={rowCountText}

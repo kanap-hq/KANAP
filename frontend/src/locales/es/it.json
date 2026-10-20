@@ -423,7 +423,11 @@
         "via": "a través de {{name}}",
         "stateOf": "Estado de {{version}}",
         "noteOf": "Nota sobre {{version}}",
-        "notePlaceholder": "p. ej., parcheado el 12 de marzo"
+        "notePlaceholder": "p. ej., parcheado el 12 de marzo",
+        "serversInAlerts_one": "{{count}} servidor, de ellos {{alerting}} en las alertas",
+        "serversInAlerts_other": "{{count}} servidores, de ellos {{alerting}} en las alertas",
+        "applicationsInAlerts_one": "{{count}} aplicación, de ellas {{alerting}} en las alertas",
+        "applicationsInAlerts_other": "{{count}} aplicaciones, de ellas {{alerting}} en las alertas"
       },
       "section": {
         "title": "Vulnerabilidades",
@@ -441,6 +445,12 @@
           "versionsExcluded_other": "{{count}} versiones excluidas de las alertas",
           "set": "Ajustar"
         }
+      },
+      "alerts": {
+        "label": "Alertas",
+        "included": "Incluidas",
+        "excluded": "Excluidas",
+        "all": "Todas"
       }
     },
     "interfaces": {

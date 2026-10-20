@@ -162,6 +162,8 @@ export type ServerDataGridProps<T> = {
    * message and its way out.
    */
   emptyState?: React.ReactNode;
+  /** A class for one row, from its data (a muted row when it stays out of the alerts). */
+  getRowClass?: (params: { data?: T }) => string | string[] | undefined;
   /**
    * One line under the grid, about its totals (amounts the totals leave out). The grid gives it
    * room within the viewport while it is set; without it the grid keeps its full height.
@@ -521,6 +523,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   setFilterExcludeMode = false,
   emptyState,
   footer,
+  getRowClass,
 }: ServerDataGridProps<T>) {
   const { t } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
@@ -1645,6 +1648,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           // Rows scrolled past quickly are not asked for, and a change of query starts one request.
           blockLoadDebounceMillis={150}
           getRowId={agGetRowId}
+          getRowClass={getRowClass}
           onGridReady={(e) => {
             onGridReady(e);
             gridApiRef.current = e.api;

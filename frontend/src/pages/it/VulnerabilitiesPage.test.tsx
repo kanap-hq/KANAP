@@ -1,6 +1,6 @@
 import '../../i18n';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter } from 'react-router-dom';
+import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -81,12 +81,20 @@ const DETAIL: VulnerabilityDetail = {
   applications_list: null,
 };
 
-function renderPage(path = '/it/vulnerabilities') {
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
+
+function renderPage(path = '/it/vulnerabilities', withLocation = false) {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={client}>
-        <MemoryRouter initialEntries={[path]}><VulnerabilitiesPage /></MemoryRouter>
+        <MemoryRouter initialEntries={[path]}>
+          <VulnerabilitiesPage />
+          {withLocation ? <LocationProbe /> : null}
+        </MemoryRouter>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -175,7 +183,9 @@ describe('VulnerabilitiesPage', () => {
     // The labels the other filters reach, then "Not recorded"; the column's own filter left out.
     const filters = { state: { filterType: 'set', values: ['to_review'] }, version: { filterType: 'set', values: ['9.0.80'] } };
     const values = await column('version').filterParams.getValues({ context: { getQueryState: () => ({ q: '', filters }) } });
-    expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({ params: { fields: 'version', filters: FILTERS } }));
+    expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({
+      params: { fields: 'version', filters: FILTERS, alerts: 'included' },
+    }));
     expect(values).toEqual([{ value: '9.0.80', label: '9.0.80' }, { value: '10.1.5', label: '10.1.5' }, { value: null, label: 'Not recorded' }]);
     expect(column('version').filterParams.emptyLabel).toBe('Not recorded');
   });
@@ -220,6 +230,43 @@ describe('VulnerabilitiesPage', () => {
     }
   });
 
+  it('filters the rows by alerts and keeps the choice in the address', async () => {
+    renderPage('/it/vulnerabilities?technology=TEC-1', true);
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBeUndefined();
+    const open = () => {
+      const view = render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.toolbarExtras}</ThemeProvider>);
+      fireEvent.mouseDown(screen.getByRole('combobox', { name: 'Alerts' }));
+      return view;
+    };
+    let view = open();
+    fireEvent.click(await screen.findByRole('option', { name: 'Excluded' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&alerts=excluded'));
+    expect(grid.props!.extraParams).toEqual({ alerts: 'excluded' });
+    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBe('vulnerability-row-muted');
+    expect(grid.props!.getRowClass({ data: { alerts: true } })).toBeUndefined();
+    view.unmount();
+
+    view = open();
+    fireEvent.click(await screen.findByRole('option', { name: 'All' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&alerts=all'));
+    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBe('vulnerability-row-muted');
+    view.unmount();
+
+    view = open();
+    fireEvent.click(await screen.findByRole('option', { name: 'Included' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1'));
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    view.unmount();
+  });
+
+  it('dims the rows that stay out of the alerts when the address already asks for them', () => {
+    renderPage('/it/vulnerabilities?alerts=all&state=all');
+    expect(grid.props!.extraParams).toEqual({ alerts: 'all' });
+    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBe('vulnerability-row-muted');
+    expect(grid.props!.initialState.filter.filterModel.state).toBeUndefined();
+  });
+
   it('says what to do when nothing is to review', () => {
     renderPage();
     render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
@@ -253,6 +300,42 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
+  });
+
+  it('names how many servers and applications raise an alert, and dims the others', async () => {
+    getMock.mockImplementation(async (url: string) => {
+      if (url === `/vulnerabilities/${CVE}`) {
+        return {
+          data: {
+            ...DETAIL,
+            servers: 3,
+            applications: 2,
+            alerting: { servers: 1, applications: 1 },
+            servers_list: [
+              { ...DETAIL.servers_list[0], alerts: true },
+              { ...DETAIL.servers_list[1], alerts: false },
+              { asset_id: 'a-3', name: 'SRV-QUIET', reference: null, technology_id: 'tech-1', technology_name: 'Tomcat', version_label: '8.5', via_asset_name: null, alerts: false },
+            ],
+            applications_list: [
+              { application_id: 'app-1', name: 'Billing', reference: 'APP-1', technology_name: 'Tomcat', version_label: '9.0.80', server_name: null, alerts: true },
+              { application_id: 'app-2', name: 'Archive', reference: 'APP-2', technology_name: 'Tomcat', version_label: '8.5', server_name: null, alerts: false },
+            ],
+          },
+        } as any;
+      }
+      if (url === '/technologies') return { data: { items: [] } } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    renderPage();
+    act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+    const detail = await screen.findByTestId('vulnerability-detail');
+    expect(detail.textContent).toContain('3 servers, of which 1 in the alerts');
+    expect(detail.textContent).toContain('2 applications, of which 1 in the alerts');
+    const quiet = within(detail).getByRole('link', { name: 'SRV-QUIET' });
+    const loud = within(detail).getByRole('link', { name: 'SRV-WEB-01' });
+    expect(getComputedStyle(quiet).color).toBe('rgb(108, 116, 130)');
+    expect(getComputedStyle(loud).color).not.toBe('rgb(108, 116, 130)');
+    expect(getComputedStyle(within(detail).getByRole('link', { name: 'APP-2 Archive' })).color).toBe('rgb(108, 116, 130)');
   });
 
   it('selects every row of the filter from the header box, unticked rows left out, and changes them after the count', async () => {

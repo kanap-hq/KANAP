@@ -423,7 +423,11 @@
         "via": "über {{name}}",
         "stateOf": "Status von {{version}}",
         "noteOf": "Notiz zu {{version}}",
-        "notePlaceholder": "z. B. am 12. März gepatcht"
+        "notePlaceholder": "z. B. am 12. März gepatcht",
+        "serversInAlerts_one": "{{count}} Server, davon {{alerting}} in den Warnungen",
+        "serversInAlerts_other": "{{count}} Server, davon {{alerting}} in den Warnungen",
+        "applicationsInAlerts_one": "{{count}} Anwendung, davon {{alerting}} in den Warnungen",
+        "applicationsInAlerts_other": "{{count}} Anwendungen, davon {{alerting}} in den Warnungen"
       },
       "section": {
         "title": "Schwachstellen",
@@ -441,6 +445,12 @@
           "versionsExcluded_other": "{{count}} Versionen von den Warnungen ausgeschlossen",
           "set": "Festlegen"
         }
+      },
+      "alerts": {
+        "label": "Warnungen",
+        "included": "Eingeschlossen",
+        "excluded": "Ausgeschlossen",
+        "all": "Alle"
       }
     },
     "interfaces": {
