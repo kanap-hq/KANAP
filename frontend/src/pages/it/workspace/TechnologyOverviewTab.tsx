@@ -25,7 +25,8 @@ import EditIcon from '@mui/icons-material/Edit';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
-import { PropertyGroup, PropertyRow, StatusDot, useKanapDialogs } from '../../../components/design';
+import DeleteConfirmDialog from '../../../components/DeleteConfirmDialog';
+import { PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
@@ -400,6 +401,25 @@ function statusLabel(status: SupportState, t: TFunction) {
   return t(`workspace.technology.versions.status.${status}`);
 }
 
+/** The confirmation for one version. Counts are named only when the detail already brought them. */
+function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning: string; dependants: boolean } {
+  const { servers, applications, label } = version;
+  if (typeof servers !== 'number' || typeof applications !== 'number') {
+    return { warning: t('workspace.technology.versions.deletePlain', { label }), dependants: false };
+  }
+  if (servers + applications === 0) {
+    return { warning: t('workspace.technology.versions.deleteUnused', { label }), dependants: false };
+  }
+  return {
+    dependants: true,
+    warning: t('workspace.technology.versions.deleteUsed', {
+      label,
+      servers: t('workspace.technology.versions.servers', { count: servers }),
+      applications: t('workspace.technology.versions.applications', { count: applications }),
+    }),
+  };
+}
+
 function VersionsTable({ technology, canManage, onChanged, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
@@ -409,10 +429,11 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const locale = useLocale();
-  const dialogs = useKanapDialogs();
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
   const [saving, setSaving] = React.useState(false);
+  const [pending, setPending] = React.useState<TechnologyVersion | null>(null);
+  const [removing, setRemoving] = React.useState(false);
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -443,24 +464,21 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
     }
   };
 
-  const remove = async (version: TechnologyVersion) => {
-    const used = (version.servers ?? 0) + (version.applications ?? 0);
-    if (used > 0) {
-      const confirmed = await dialogs.confirm({
-        title: t('workspace.technology.versions.deleteTitle', { label: version.label }),
-        message: t('workspace.technology.versions.deleteMessage', { count: used }),
-        confirmLabel: t('common:buttons.delete'),
-        intent: 'danger',
-      });
-      if (!confirmed) return;
-    }
+  const confirmRemove = async () => {
+    if (!pending || removing) return;
+    setRemoving(true);
     try {
-      await api.delete(`/technologies/${technology.id}/versions/${version.id}`);
+      await api.delete(`/technologies/${technology.id}/versions/${pending.id}`);
+      setPending(null);
       await onChanged();
     } catch (err) {
       onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+    } finally {
+      setRemoving(false);
     }
   };
+
+  const pendingCopy = pending ? versionDeleteCopy(pending, t) : null;
 
   const editRow = (key: string) => (
     <TableRow key={key}>
@@ -559,7 +577,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                       <IconButton size="small" aria-label={t('workspace.technology.versions.edit', { label: version.label })} onClick={() => startEdit(version)}>
                         <EditIcon sx={{ fontSize: 16 }} />
                       </IconButton>
-                      <IconButton size="small" aria-label={t('workspace.technology.versions.remove', { label: version.label })} onClick={() => { void remove(version); }}>
+                      <IconButton size="small" aria-label={t('workspace.technology.versions.remove', { label: version.label })} onClick={() => setPending(version)}>
                         <DeleteIcon sx={{ fontSize: 16 }} />
                       </IconButton>
                     </Box>
@@ -576,6 +594,17 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
           {t('workspace.technology.versions.catalogNote')}
         </Typography>
       )}
+      <DeleteConfirmDialog
+        open={pending != null}
+        onClose={() => { if (!removing) setPending(null); }}
+        onConfirm={() => { void confirmRemove(); }}
+        title={pending ? t('workspace.technology.versions.deleteTitle', { label: pending.label }) : ''}
+        warning={pendingCopy?.warning}
+        confirmLabel={pendingCopy?.dependants ? t('workspace.technology.deleteAnyway') : t('common:buttons.delete')}
+        itemCount={1}
+        items={pending ? [{ id: pending.id, name: pending.label }] : []}
+        loading={removing}
+      />
     </Box>
   );
 }

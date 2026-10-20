@@ -150,9 +150,10 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
     isRetiredServer(row) ? <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{node}</Box> : node
   );
   const stop = (event: React.SyntheticEvent) => event.stopPropagation();
+  const versionClip = { display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const;
   const versionText = (row: TechnologyServerRow) => (row.version_label
-    ? <span title={row.version_label}>{row.version_label}</span>
-    : <Box component="span" title={t('workspace.technology.versionPicker.unknown')} sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>);
+    ? <Box component="span" title={row.version_label} sx={versionClip}>{row.version_label}</Box>
+    : <Box component="span" title={t('workspace.technology.versionPicker.unknown')} sx={{ ...versionClip, color: 'kanap.text.tertiary' }}>{dash}</Box>);
 
   const columns: Array<RelationsColumn<TechnologyServerRow>> = [
     { key: 'ref', header: t('workspace.technology.servers.columns.ref'), width: 72, render: (row) => <RelationRef>{row.asset_reference ?? dash}</RelationRef> },
@@ -174,7 +175,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       render: (row) => muted(row, <span title={row.operating_system_label ?? undefined}>{row.operating_system_label ?? dash}</span>),
     },
     {
-      key: 'version', header: t('workspace.technology.servers.columns.version'), width: 90,
+      key: 'version', header: t('workspace.technology.servers.columns.version'), width: 128,
       render: (row) => (editable(row) ? (
         <Box
           component="button"
@@ -182,7 +183,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
           aria-label={t('workspace.technology.servers.changeVersion', { name: row.asset_name ?? '' })}
           onClick={(event: React.MouseEvent<HTMLButtonElement>) => { event.stopPropagation(); setEditingVersion({ anchor: event.currentTarget, row }); }}
           onKeyDown={stop}
-          sx={{ all: 'unset', cursor: 'pointer', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', '&:hover': { textDecoration: 'underline' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' } }}
+          sx={{ all: 'unset', display: 'block', width: '100%', cursor: 'pointer', '&:hover': { textDecoration: 'underline' }, '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main' } }}
         >
           {muted(row, versionText(row))}
         </Box>

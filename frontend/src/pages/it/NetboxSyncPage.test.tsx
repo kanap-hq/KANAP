@@ -349,6 +349,36 @@ describe('NetboxSyncPage', () => {
     fireEvent.click(await screen.findByText('Mappings'));
   }
 
+  it('shows a translated message when the mapping options fail with a server error', async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/netbox/status') return Promise.resolve(STATUS);
+      if (url === '/netbox/mapping-options') {
+        return Promise.reject({ response: { status: 500, data: { message: 'Internal server error', error: 'Internal Server Error' } } });
+      }
+      if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('Mappings'));
+
+    expect(await screen.findByText('The Netbox roles and sites could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText('Internal server error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Internal Server Error')).not.toBeInTheDocument();
+  });
+
+  it('keeps a business error from Netbox as the server wrote it', async () => {
+    await openMappings(MAPPING_OPTIONS);
+    (apiClient.put as any).mockRejectedValue({
+      response: { status: 400, data: { message: 'Set up the Netbox connection first, then save the matches.', error: 'Bad Request' } },
+    });
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+
+    expect(await screen.findByText('Set up the Netbox connection first, then save the matches.')).toBeInTheDocument();
+    expect(screen.queryByText('The mappings could not be saved.')).not.toBeInTheDocument();
+  });
+
   it('matches each Netbox platform with a KANAP operating system, suggestion included', async () => {
     await openMappings(MAPPING_OPTIONS_WITH_OS_SUGGESTION);
 

@@ -149,7 +149,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       },
     },
     {
-      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 88,
+      key: 'version', header: t('workspace.asset.technologies.columns.version'), width: 128,
       render: (row) => {
         const standardEnd = row.standard_support_end ?? null;
         const extendedEnd = row.extended_support_end ?? null;
@@ -158,13 +158,16 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
           standardEnd ? t('workspace.asset.technical.standardSupportEnds', { date: formatSupportDate(standardEnd, locale) }) : '',
           extendedEnd ? t('workspace.asset.technical.extendedSupportEnds', { date: formatSupportDate(extendedEnd, locale) }) : '',
         ].filter(Boolean).join(' / ');
-        const title = hint || (row.version_label ? row.version_label : t('workspace.technology.versionPicker.unknown'));
+        // The label leads the hint, so a clipped version stays readable on hover.
+        const title = [row.version_label, hint].filter(Boolean).join(' · ')
+          || t('workspace.technology.versionPicker.unknown');
         const label = row.version_label
           ? row.version_label
           : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{dash}</Box>;
+        const clip = { display: 'block', maxWidth: '100%', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const;
         const editable = canManage && row.kind === 'installed' && !!row.link_id;
         if (!editable) {
-          return <Box component="span" title={title} sx={{ color }}>{label}</Box>;
+          return <Box component="span" title={title} sx={{ color, ...clip }}>{label}</Box>;
         }
         return (
           <Box
@@ -178,10 +181,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
             }}
             sx={{
               all: 'unset',
-              display: 'inline',
-              maxWidth: '100%',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
+              ...clip,
               color,
               cursor: 'pointer',
             }}

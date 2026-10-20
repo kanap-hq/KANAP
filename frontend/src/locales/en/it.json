@@ -179,8 +179,25 @@
           "application": "Export applications and technologies"
         },
         "importHint": {
-          "asset": "Each row adds or updates one link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first. The server matches by its reference (AST-n) when the cell is filled, otherwise by its name. operating_system: “yes” marks the link as the server's operating system, “no” never marks it. The export writes these words in the file's language; the import reads them in English, French, German or Spanish. An empty cell marks a new link of the Operating system family when the server has none yet, as the server page does. The import never clears a mark.",
-          "application": "Each row adds or updates one declared link. Links missing from the file stay as they are. The technology must already be in the list: adopt it from the catalog first."
+          "asset": {
+            "intro": "Each row adds or updates one link.",
+            "items": [
+              "Links missing from the file stay as they are.",
+              "The technology must already be in the list: adopt it from the catalog first.",
+              "The server matches by its reference (AST-n) when the cell is filled, otherwise by its name.",
+              "operating_system: “yes” marks the link as the server's operating system, “no” never marks it.",
+              "The export writes these words in the file's language; the import reads them in English, French, German or Spanish.",
+              "An empty cell marks a new link of the Operating system family when the server has none yet, as the server page does.",
+              "The import never clears a mark."
+            ]
+          },
+          "application": {
+            "intro": "Each row adds or updates one declared link.",
+            "items": [
+              "Links missing from the file stay as they are.",
+              "The technology must already be in the list: adopt it from the catalog first."
+            ]
+          }
         },
         "exportNoteApplication": "The file holds the declared links. Links deduced from the servers are left out."
       },
@@ -2003,8 +2020,13 @@
         "edit": "Edit version {{label}}",
         "remove": "Delete version {{label}}",
         "deleteTitle": "Delete version {{label}}?",
-        "deleteMessage_one": "{{count}} server or application names this version: it will show \"version unknown\".",
-        "deleteMessage_other": "{{count}} servers or applications name this version: they will show \"version unknown\".",
+        "deletePlain": "Version {{label}} will be deleted. This cannot be undone.",
+        "deleteUnused": "Version {{label}} is used by no server and no application. This cannot be undone.",
+        "deleteUsed": "Version {{label}} is used by {{servers}} and {{applications}}. They will show \"version unknown\".",
+        "servers_one": "{{count}} server",
+        "servers_other": "{{count}} servers",
+        "applications_one": "{{count}} application",
+        "applications_other": "{{count}} applications",
         "status": {
           "supported": "Supported",
           "ending_soon": "Ending soon",
