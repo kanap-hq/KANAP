@@ -31,7 +31,7 @@ Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle 
 
 Navigieren Sie zu **IT-Landschaft > Technologien** und klicken Sie auf **Neue Technologie**.
 
-Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Der Katalog bietet nur Produkte an, die Sie noch nicht hinzugefügt haben.
+Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Der Katalog bietet nur Produkte an, die Sie noch nicht hinzugefügt haben.
 
 Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt KANAP die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
 
@@ -167,9 +167,19 @@ Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung
 
 Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt unter ihren Versionen „Versionen und Daten werden aus dem Katalog aktuell gehalten“. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
 
-Die Prüfung fügt die neuen Versionen und CPE-Produktkennungen des Produkts hinzu und aktualisiert die Supportende-Daten und Kennungen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version oder Kennung wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
+Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen des Produkts hinzu und aktualisiert die Supportende-Daten, Kennungen und Namen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version, Kennung oder einen Namen wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server kommt ohne Kennung: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich.
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Eine Technologie ohne CPE-Kennung und ohne CVE.org-Namen erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server kommt ohne Kennung: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich.
+
+**CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. KANAP gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Der Abschnitt steht unter den CPE-Produktkennungen und erscheint, wenn KANAP die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
+
+- **Einen Namen hinzufügen**: Durchsuchen Sie das Verzeichnis der veröffentlichten Namen. Jedes Ergebnis zeigt seine Anzahl an Schwachstellen und das Datum der letzten. Wählen Sie einen aus, mit einer optionalen Version. Ein Name, der nicht im Verzeichnis steht, lässt sich nicht eintippen.
+- **Vorschläge**: die Namen, die auf den Schwachstellen Ihrer CPE-Kennungen vorkommen. Jeder zeigt seine Anzahl an Schwachstellen und den Anteil dieser Schwachstellen, die ihn tragen.
+- **Genaue Namen**: Der Vergleich ignoriert Groß- und Kleinschreibung sowie Satzzeichen und verlangt ansonsten den genauen Namen. Ein ähnlicher Name passt nicht: Erfassen Sie jede Variante eines Produkts einzeln.
+- **Version**: Ein Name mit Version gilt nur für die Versionen, deren Bezeichnung mit ihr beginnt, zum Beispiel `2019` für `Windows Server 2019`. Beginnt eine Bezeichnung mit mehreren davon, zählt nur die längste: `2012 R2` erhält den Namen von `2012 R2` und nicht den von `2012`.
+- **Aus dem Katalog**: Viele Katalogeinträge bringen ihre Namen mit (Microsoft, Apache, Datenbanken und andere). Die Katalogprüfung hält sie wie die CPE-Kennungen aktuell, und ein Name, den Sie entfernt haben, kommt nicht zurück.
+
+Wo Sie diesen Wert finden: Öffnen Sie auf [cve.org](https://www.cve.org) den Eintrag einer Schwachstelle des Produkts und übernehmen Sie die Hersteller- und Produktnamen, die er nennt. Zum Ändern der Namen brauchen Sie `infrastructure:member`, wie für die CPE-Kennungen.
 
 **Notizen**: Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
 
@@ -254,7 +264,7 @@ Eine Version, die kein Server und keine Anwendung nutzt, zeigt **Nicht installie
 
 Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
-KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
+KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, CVE.org-Namen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ### Beziehungen
 
@@ -352,5 +362,5 @@ Ein als Anwendung angelegter Eintrag kann in Wirklichkeit eine Technologie sein,
 - **Vom Katalog ausgehen**: Sie erhalten die Versionen und ihre Supportende-Daten, ohne sie einzutippen.
 - **Hauptversionen verfolgen**: Eine Zeile pro Hauptversion (2019, 2022) genügt, um den Support zu verfolgen.
 - **Verantwortliche benennen**: Die IT-Verantwortlichen sind die Ansprechpartner, wenn eine Version ihr Supportende erreicht. Sie erhalten auch die E-Mail über neue kritische Schwachstellen.
-- **CPE-Produktkennungen ausfüllen**: Ohne sie kann KANAP die Technologie nicht mit den veröffentlichten Schwachstellen abgleichen.
+- **CPE-Produktkennungen und CVE.org-Namen ausfüllen**: Ohne beides kann KANAP die Technologie nicht mit den veröffentlichten Schwachstellen abgleichen.
 - **Die Version auf jedem Server erfassen**: Eine unbekannte Version ist potenziell von jeder Schwachstelle des Produkts betroffen.

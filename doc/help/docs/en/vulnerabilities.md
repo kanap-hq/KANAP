@@ -6,23 +6,32 @@ Open it from **IT Landscape > Vulnerabilities**, in the **Operations** group. Yo
 
 ## Availability
 
-Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) or a mirror of it. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
+Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) and the CVE.org list, or a mirror of each. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
 
 ## How KANAP finds them
 
-KANAP reads the vulnerabilities published by the NVD every 6 hours and compares them with your technologies:
+KANAP reads two sources every 6 hours and compares them with your technologies:
 
-- **Products**: a technology is compared through its CPE product identifiers (see [Technologies](technologies.md#overview)). A technology without one gets no vulnerability. The catalog's operating systems have them too. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Retired technologies are left out.
+- **The NVD**: the vulnerabilities analysed by the US National Vulnerability Database. The NVD does not analyse every vulnerability. Many stay without a product identifier for a long time, and some never get one.
+- **The CVE.org list**: the records that publishers write themselves for their own products. A vulnerability its publisher has published appears even when the NVD has not analysed it.
+
+These records come from the CVE list (CVE.org), under the [terms of use of the CVE program](https://www.cve.org/Legal/TermsOfUse).
+
+Each technology is compared as follows:
+
+- **Products**: a technology is compared through its CPE product identifiers and its CVE.org names (see [Technologies](technologies.md#overview)). The CPE identifiers also match the CVE.org records that carry them, as Red Hat's do. A technology with neither gets no vulnerability. The catalog's operating systems have CPE identifiers too. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Retired technologies are left out.
+- **CVE.org names**: the publisher and product names as the publisher writes them in its records, for example publisher `SAP_SE` and product `SAP HANA Database`. The comparison ignores case and punctuation, and otherwise needs the exact name. A close name does not match, so each variant of a product is declared on its own. A name can carry a version: it then applies only to the versions of the technology whose label starts with that version, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` carries `2012` and `2012 R2`, and gets the name of `2012 R2` only.
 - **Versions**: only the versions in use count: installed on a server in service, or used by an application in service.
 - **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version KANAP cannot compare, such as a label without a number, counts as concerned.
+- **Versions in publisher records**: the same rules apply to the versions a CVE.org record lists. A version KANAP cannot compare with the publisher's counts as concerned, and the **Match** column of the export says "Version not comparable". This happens when your version is named by a year and the publisher numbers its components, for example `2021` against `106`. Check the publisher's record to decide whether your version is concerned.
 - **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. Windows Server compares on its year only, as KANAP does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
 - **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row shows **Not recorded** in the **Version** column.
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
-A vulnerability the NVD has not analysed yet appears once it is.
+A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. A vulnerability that CVE.org or the NVD rejects no longer matches.
 
-Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
+Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a CVE.org name, a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
 
 ## Alerts
 
@@ -30,7 +39,7 @@ Each technology and each version is in the vulnerability alerts or out of them. 
 
 Two kinds of technologies are out of the alerts by default:
 
-- **Operating systems**: KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities.
+- **Operating systems**: KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities. The CVE.org list adds many more: the publishers of operating systems list the whole version as concerned.
 - **Cloud services run by a provider**: a technology hosted in the public cloud or as SaaS, or a catalog entry the provider runs. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a private cloud stays in the alerts.
 
 You can include them again on the technology.
@@ -45,7 +54,7 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 
 The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-**Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
+**Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
 
 **Columns**:
 
@@ -56,7 +65,7 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 | **Exploited** | **Yes** or **No**. Hidden by default: the icon in **Severity** shows the same fact |
 | **Score** | The CVSS score. Hidden by default |
 | **EPSS (%)** | The probability of exploitation within the next 30 days, as a percentage in the language of your screen. For example, 15.3%. The side panel adds the percentile |
-| **Summary** | The NVD description |
+| **Summary** | The description of the vulnerability |
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
 | **Publisher** | The technology's publisher. Hidden by default |
@@ -107,7 +116,7 @@ Set the state of each version:
 
 The note records how, for example "patched on 12 March, change CHG-123". It saves when you leave the field. The audit log keeps who changed a state, and when.
 
-KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, the NVD changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
+KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, a source changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
 
 ## Exploitation { #exploitation }
 
@@ -130,7 +139,7 @@ The email to the IT owners announces an exploited vulnerability of any severity,
 After each check, the IT owners of a technology receive one email about its new vulnerabilities still to review, on the versions in the alerts. The email includes a vulnerability that is critical or high, or known to be exploited at any severity:
 
 - **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, when it is critical, high or listed as exploited, or a known vulnerability that has just become critical or high.
-- **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page.
+- **What is not**: the first comparison of a technology, or of a CPE identifier or a CVE.org name you just added, is silent. So is the first comparison of a technology with the CVE.org list. Their results wait on this page.
 - **How much**: 25 lines at most, one per technology and vulnerability, then a link to the page, filtered on the vulnerabilities published within the last 30 days.
 - **How often**: each person hears about a vulnerability on a technology once. A vulnerability not announced at its check is never announced later.
 
@@ -144,5 +153,6 @@ The recipients are the IT owners of the technology whose account is enabled and 
 ## Tips
 
 - **Fill in the CPE identifiers**: most catalog technologies come with them, operating systems included. SUSE Linux Enterprise Server has none. For the others, search the product in the NIST CPE dictionary.
+- **Add the CVE.org names**: they bring in vulnerabilities the NVD has not analysed. Many catalog technologies come with them.
 - **Record versions**: a server or application without a version is potentially concerned by everything, which hides the real exposure.
 - **Write the note**: the next person to read the vulnerability sees what was done.

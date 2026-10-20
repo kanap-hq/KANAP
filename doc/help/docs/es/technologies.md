@@ -31,7 +31,7 @@ Una tecnología abarca un producto en su conjunto. "SQL Server" representa todos
 
 Navegue a **Panorama IT > Tecnologías** y haga clic en **Nueva tecnología**.
 
-La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. KANAP crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. El catálogo solo ofrece los productos que aún no ha añadido.
+La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. KANAP crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus nombres CVE.org, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. El catálogo solo ofrece los productos que aún no ha añadido.
 
 Una tecnología adoptada desde el catálogo se mantiene al día: cuando el editor publica una nueva versión o cambia una fecha, KANAP añade la versión y mueve la fecha (consulte [Versiones del catálogo](#versiones-del-catalogo)).
 
@@ -167,9 +167,19 @@ Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja s
 
 Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo indica «Versiones y fechas mantenidas al día desde el catálogo» bajo sus versiones. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
 
-La comprobación añade las nuevas versiones e identificadores de producto CPE del producto, y actualiza las fechas de fin de soporte y los identificadores que el catálogo cambió. Nunca sobrescribe un valor que usted cambió, y nunca vuelve a crear una versión o un identificador que usted eliminó. Una versión que registró antes de que el catálogo la conociera se vincula a él cuando las etiquetas coinciden, y se rellenan sus fechas vacías.
+La comprobación añade las nuevas versiones, identificadores de producto CPE y nombres CVE.org del producto, y actualiza las fechas de fin de soporte, los identificadores y los nombres que el catálogo cambió. Nunca sobrescribe un valor que usted cambió, y nunca vuelve a crear una versión, un identificador o un nombre que usted eliminó. Una versión que registró antes de que el catálogo la conociera se vincula a él cuando las etiquetas coinciden, y se rellenan sus fechas vacías.
 
-**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas: una tecnología sin ninguno no recibe ninguna vulnerabilidad. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos. SUSE Linux Enterprise Server llega sin identificador: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable.
+**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Una tecnología sin identificador CPE ni nombre CVE.org no recibe ninguna vulnerabilidad. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos. SUSE Linux Enterprise Server llega sin identificador: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable.
+
+**Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. KANAP los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). La sección está bajo los identificadores de producto CPE y aparece cuando KANAP lee la lista CVE.org. Cada nombre aparece por separado.
+
+- **Añadir un nombre**: busque en el directorio de los nombres publicados. Cada resultado muestra su número de vulnerabilidades y la fecha de la última. Elija uno, con una versión opcional. No se puede escribir un nombre que no esté en el directorio.
+- **Sugerencias**: los nombres vistos en las vulnerabilidades de sus identificadores CPE. Cada uno muestra su número de vulnerabilidades y la parte de esas vulnerabilidades que lo llevan.
+- **Nombres exactos**: la comparación ignora mayúsculas, minúsculas y puntuación, y por lo demás exige el nombre exacto. Un nombre parecido no coincide: declare cada variante de un producto por separado.
+- **Versión**: un nombre con una versión solo vale para las versiones cuya etiqueta empieza por ella, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` recibe el nombre de `2012 R2` y deja el de `2012`.
+- **Desde el catálogo**: muchas entradas del catálogo llegan con sus nombres (Microsoft, Apache, bases de datos y otras). La comprobación del catálogo los mantiene al día como los identificadores CPE, y un nombre que usted quitó no vuelve.
+
+Dónde encontrar este valor: en [cve.org](https://www.cve.org), abra la ficha de una vulnerabilidad del producto y anote los nombres de editor y de producto que lista. Cambiar los nombres requiere `infrastructure:member`, como para los identificadores CPE.
 
 **Notas**: texto libre, como las condiciones de licencia o las fechas de renovación.
 
@@ -254,7 +264,7 @@ Una versión que ningún servidor ni ninguna aplicación usa muestra **No instal
 
 Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con `infrastructure:member`, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
-KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
+KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, nombres CVE.org, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. **Actualizar** (`infrastructure:member`) lanza la comparación a mano.
 
 ### Relaciones
 
@@ -352,5 +362,5 @@ Una ficha creada como aplicación puede ser en realidad una tecnología, por eje
 - **Parta del catálogo**: obtiene las versiones y sus fechas de fin de soporte sin escribirlas.
 - **Siga las versiones principales**: una línea por versión principal (2019, 2022) basta para seguir el soporte.
 - **Nombre a los responsables**: los responsables de TI son las personas a quienes llamar cuando una versión llega a su fin de soporte. También reciben el correo sobre las nuevas vulnerabilidades críticas.
-- **Rellene los identificadores de producto CPE**: sin ellos, KANAP no puede cotejar la tecnología con las vulnerabilidades publicadas.
+- **Rellene los identificadores de producto CPE y los nombres CVE.org**: sin ninguno de los dos, KANAP no puede cotejar la tecnología con las vulnerabilidades publicadas.
 - **Registre la versión en cada servidor**: una versión desconocida está potencialmente afectada por todas las vulnerabilidades del producto.
