@@ -242,6 +242,7 @@ export class NvdFeedService implements OnModuleInit {
 
   onModuleInit() {
     this.cpeEvents?.subscribe((event) => this.onCpeProductsAdded(event));
+    this.signals?.onNewlyExploited((cveIds) => this.announceExploited(cveIds));
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
     this.scheduledTasks.register({
       name: NVD_FEED_TASK_NAME,
@@ -293,6 +294,9 @@ export class NvdFeedService implements OnModuleInit {
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
+    // The CVE just cached carry the exploitation signals before they are matched and announced:
+    // a new medium CVE already exploited is announced at this run, not left to the signals task.
+    await this.applyKnownSignals();
     const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
     for (const tenantId of await this.tenantIds()) {
@@ -497,13 +501,7 @@ export class NvdFeedService implements OnModuleInit {
       if (done) collected.push(product);
       if (serviceDown) break;
     }
-    // The CVE just cached should carry the signals already downloaded, without a second fetch.
-    // A failure here does not fail the collection: the next signals run stamps them.
-    try {
-      await this.signals?.applyKnown();
-    } catch (error: any) {
-      this.logger.warn(`[${NVD_FEED_TASK_NAME}] known signals: ${String(error?.message ?? error).slice(0, 300)}`);
-    }
+    await this.applyKnownSignals();
     this.noteRematch(tenantId, collected);
   }
 
@@ -558,6 +556,41 @@ export class NvdFeedService implements OnModuleInit {
       if (rows.length > 0) carriers.push(tenantId);
     }
     return carriers;
+  }
+
+  /**
+   * The CVE just cached take the signals already downloaded, without a second fetch. A failure
+   * does not fail the collection: the next signals run stamps them.
+   */
+  private async applyKnownSignals(): Promise<void> {
+    try {
+      await this.signals?.applyKnown();
+    } catch (error: any) {
+      this.logger.warn(`[${NVD_FEED_TASK_NAME}] known signals: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
+  }
+
+  /**
+   * CVE already cached that entered the CISA KEV or the EU KEV (told by the signals task after its
+   * run): their rows still to review and in the alerts are announced to the IT owners as "now
+   * known to be exploited", once, in a vulnerability email (lead decision, lot K2a). The same
+   * tenants as a run: active ones, email on. Returns the number of digests claimed.
+   */
+  async announceExploited(cveIds: string[]): Promise<number> {
+    if (cveIds.length === 0) return 0;
+    const notified = await this.notifiedTenantIds();
+    let claimed = 0;
+    for (const tenantId of await this.tenantIds()) {
+      if (!notified.has(tenantId)) continue;
+      try {
+        const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claimNowExploited(mg, tenantId, cveIds));
+        claimed += digests.length;
+        void this.notifier.send(tenantId, digests);
+      } catch (error: any) {
+        this.logger.warn(`[${NVD_FEED_TASK_NAME}] exploited CVE of tenant ${tenantId}: ${String(error?.message ?? error).slice(0, 300)}`);
+      }
+    }
+    return claimed;
   }
 
   /** A product's failure, kept for the next run and for the technology's section. */

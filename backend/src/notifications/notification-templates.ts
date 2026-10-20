@@ -1023,6 +1023,8 @@ export type VulnerabilityDigestItem = {
   severity: 'critical' | 'high' | 'medium' | 'low' | 'none' | null;
   /** Known to be exploited (CISA KEV or EU KEV), whatever the severity. */
   exploited?: boolean;
+  /** Found earlier, and entered a catalog of exploited CVE since: said "now known to be exploited". */
+  nowExploited?: boolean;
   score: number | null;
   summary: string | null;
   technologyName: string;
@@ -1056,7 +1058,8 @@ export function buildVulnerabilityDigestEmail(params: {
   const severityOf = (item: VulnerabilityDigestItem) => {
     const name = item.severity && item.severity in s.severities ? item.severity : 'unknown';
     const label = `${s.severities[name]}${item.score != null ? ` ${item.score.toFixed(1)}` : ''}`;
-    return item.exploited ? `${label} · ${s.exploited}` : label;
+    if (!item.exploited) return label;
+    return `${label} · ${item.nowExploited ? s.nowExploited : s.exploited}`;
   };
   const shortSummary = (summary: string | null) => {
     const text = (summary ?? '').trim();

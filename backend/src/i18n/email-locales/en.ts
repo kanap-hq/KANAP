@@ -121,6 +121,7 @@ export const en = {
         unknown: 'Not rated',
       },
       exploited: 'Known to be exploited',
+      nowExploited: 'Now known to be exploited',
       versions: 'Versions: {{versions}}',
       unknownVersion: 'version not recorded (potentially concerned)',
       view: 'Open vulnerabilities',

@@ -123,6 +123,7 @@ export const de: EmailStrings = {
         unknown: 'Nicht bewertet',
       },
       exploited: 'Bekannt ausgenutzt',
+      nowExploited: 'Jetzt bekannt ausgenutzt',
       versions: 'Versionen: {{versions}}',
       unknownVersion: 'Version nicht erfasst (möglicherweise betroffen)',
       view: 'Schwachstellen öffnen',
