@@ -138,6 +138,9 @@ const PRODUCTS = [
   // Operating systems (lot T3). CPE identifiers checked at the NVD (lot V3). Windows Server is one
   // product per long-term release from 2003 (the build is not `cpe_version`: the year rule matches the
   // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_NO_CPE.
+  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS are matched on the major, Ubuntu
+  // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
+  // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
   // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
   { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
   { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },

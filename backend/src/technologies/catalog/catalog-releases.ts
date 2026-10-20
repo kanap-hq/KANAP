@@ -48,6 +48,12 @@ type CpeVersionRule = {
    */
   productPerRelease?: string;
   productPerReleaseFrom?: number;
+  /**
+   * Leading numeric segments the matching compares for this entry (`VERSION_PRECISION` in
+   * `vulnerabilities/vulnerability-rules.ts`). The NVD names the branch: `9.0` is the whole major,
+   * `22.04` the whole Ubuntu `YY.MM`. A version typed `9.4` or `22.04.3 LTS` still meets it.
+   */
+  matchSegments?: number;
 };
 
 /**
@@ -60,7 +66,20 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   msexchange: { patterns: [[/^subscription edition\b/i, '15.2']] },
   mssqlserver: { productPerRelease: 'a:microsoft:sql_server_{year}' },
   'windows-server': { productPerRelease: 'o:microsoft:windows_server_{year}', productPerReleaseFrom: 2003 },
+  // Matched on the branch the NVD publishes. Twin of `VERSION_PRECISION`.
+  rhel: { matchSegments: 1 },
+  debian: { matchSegments: 1 },
+  'oracle-linux': { matchSegments: 1 },
+  almalinux: { matchSegments: 1 },
+  'rocky-linux': { matchSegments: 1 },
+  centos: { matchSegments: 1 },
+  ubuntu: { matchSegments: 2 },
 };
+
+/** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
+export function versionPrecisionOf(catalogKey: string): number | null {
+  return CPE_VERSION_RULES[catalogKey]?.matchSegments ?? null;
+}
 
 /**
  * How an operating system reads the support dates of endoflife.date, so that they keep the meaning

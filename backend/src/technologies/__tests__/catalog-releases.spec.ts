@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { ConfigController } from '../../config/config.controller';
 import { Features } from '../../config/features';
-import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, MAX_VERSIONS, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
-import { versionMatches } from '../../vulnerabilities/vulnerability-rules';
+import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, MAX_VERSIONS, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionPrecisionOf, versionsOfReleases } from '../catalog/catalog-releases';
+import { VERSION_PRECISION, versionMatches } from '../../vulnerabilities/vulnerability-rules';
 import { TechnologyCatalogService, type CatalogVersion } from '../catalog/technology-catalog.service';
 
 // The living catalog (lot C4) reads endoflife.date with the rules of the script that builds the
@@ -299,6 +299,23 @@ function testOperatingSystemCpe() {
   const bound = { version_exact: null, version_start: null, start_including: null, version_end: '10.0.99999.1', end_including: false };
   assert.equal(versionMatches(added, 'o:microsoft:windows_server_2028', bound), 'in_range');
   assert.equal(versionMatches(version('2025'), 'o:microsoft:windows_server_2028', bound), 'out');
+
+  // The branch the matching compares is the same number on the catalog entry and on the CPE product.
+  const precision: Array<[string, number]> = [
+    ['rhel', 1], ['debian', 1], ['oracle-linux', 1], ['almalinux', 1], ['rocky-linux', 1], ['centos', 1], ['ubuntu', 2],
+  ];
+  const branched = new Set<string>();
+  for (const [key, segments] of precision) {
+    assert.equal(versionPrecisionOf(key), segments, key);
+    for (const id of ids(key)) {
+      assert.equal(VERSION_PRECISION[id], segments, id);
+      branched.add(id);
+    }
+  }
+  for (const id of Object.keys(VERSION_PRECISION)) assert.ok(branched.has(id), `${id} is a shipped operating-system product`);
+  assert.equal(versionPrecisionOf('windows-server'), null);
+  assert.equal(versionPrecisionOf('mssqlserver'), null);
+  assert.equal(versionPrecisionOf('postgresql'), null);
 }
 
 function main() {
