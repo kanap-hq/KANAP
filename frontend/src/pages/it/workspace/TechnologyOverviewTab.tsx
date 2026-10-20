@@ -41,6 +41,7 @@ import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, draw
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
+import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
 
 export type TechnologyVersion = {
   id: string;
@@ -76,6 +77,8 @@ export type TechnologyDetail = {
   description: string | null;
   notes: string | null;
   cpe_products: string[];
+  /** Publisher and product as CVE.org writes them. A version limits the name to technology versions whose label starts with it. */
+  cve_names?: TechnologyCveName[];
   /** The catalog entry the technology was adopted from; its versions and dates are then kept up to date. */
   catalog_key?: string | null;
   replaced_by_id: string | null;
@@ -92,7 +95,7 @@ export type TechnologyDetail = {
 };
 
 export type TechnologyPatch = Partial<Pick<TechnologyDetail,
-  'name' | 'editor' | 'family' | 'admin_zone' | 'hosting_type' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
+  'name' | 'editor' | 'family' | 'admin_zone' | 'hosting_type' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'cve_names' | 'replaced_by_id'
   | 'cyber_criticality' | 'recovery_wave' | 'rto_minutes' | 'rpo_minutes' | 'support_notes'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
@@ -816,15 +819,16 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   );
 }
 
-/** The Overview tab: description, notes, CPE product identifiers and versions. */
+/** The Overview tab: description, notes, CPE product identifiers, CVE.org names and versions. */
 export default function TechnologyOverviewTab({ technology, canManage, onPatch, onVersionsChanged, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
-  onPatch: (patch: TechnologyPatch) => void;
+  onPatch: (patch: TechnologyPatch) => void | Promise<void>;
   onVersionsChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const { config } = useFeatures();
   return (
     <Stack spacing={3.5}>
       <Box>
@@ -844,6 +848,15 @@ export default function TechnologyOverviewTab({ technology, canManage, onPatch, 
         <SectionLabel>{t('workspace.technology.cpe.title')}</SectionLabel>
         <CpeProducts values={technology.cpe_products || []} canManage={canManage} onChange={(cpe_products) => onPatch({ cpe_products })} />
       </Box>
+      {config.features.cveNames === true && (
+        <TechnologyCveNames
+          technologyId={technology.id}
+          names={technology.cve_names ?? []}
+          cpeProducts={technology.cpe_products ?? []}
+          canManage={canManage}
+          onChange={(cve_names) => onPatch({ cve_names })}
+        />
+      )}
       <Box>
         <SectionLabel>{t('workspace.technology.fields.notes')}</SectionLabel>
         <AutosaveText
