@@ -12,7 +12,7 @@ Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installatio
 
 KANAP lit les vulnérabilités publiées par la NVD toutes les 6 heures et les compare à vos technologies :
 
-- **Produits** : une technologie est comparée par ses identifiants CPE produit (voir [Technologies](technologies.md#apercu)). Une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Les systèmes d'exploitation du catalogue en ont aussi. SUSE Linux Enterprise Server n'en a pas : la NVD place le service pack à côté de la version. Les technologies retirées sont écartées.
+- **Produits** : une technologie est comparée par ses identifiants CPE produit (voir [Technologies](technologies.md#apercu)). Une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Les systèmes d'exploitation du catalogue en ont aussi. SUSE Linux Enterprise Server n'en a pas : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable. Les systèmes d'exploitation sont exclus des alertes par défaut. Le réglage est sur la fiche technologie, dans la colonne Alertes de vulnérabilité de la table des versions. Les technologies retirées sont écartées.
 - **Versions** : seules les versions en service comptent : installées sur un serveur en service, ou utilisées par une application en service.
 - **Numéros de version** : les versions se comparent sur leurs nombres, partie par partie. `2016 SP3` compte comme 2016 et `19c` comme 19. Une version de moins de trois nombres vaut pour toute sa branche : `9.0` couvre tous les `9.0.x`. Une version que KANAP ne peut pas comparer, comme un libellé sans nombre, compte comme concernée.
 - **Version inconnue** : un serveur ou une application qui ne nomme aucune version est potentiellement concerné par toutes les vulnérabilités du produit. Sa ligne affiche **Non renseignée** dans la colonne **Version**.
@@ -106,6 +106,6 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 
 ## Conseils
 
-- **Renseignez les identifiants CPE** : les technologies du catalogue les ont déjà, y compris les systèmes d'exploitation. SUSE Linux Enterprise Server n'en a pas. Pour les autres, cherchez le produit dans le dictionnaire CPE du NIST.
+- **Renseignez les identifiants CPE** : les technologies du catalogue les ont déjà, y compris les systèmes d'exploitation. SUSE Linux Enterprise Server n'en a pas : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable. Les systèmes d'exploitation sont exclus des alertes par défaut. Pour les autres, cherchez le produit dans le dictionnaire CPE du NIST.
 - **Saisissez les versions** : un serveur ou une application sans version est potentiellement concerné par tout, ce qui masque l'exposition réelle.
 - **Écrivez la note** : la personne qui lira la vulnérabilité ensuite voit ce qui a été fait.

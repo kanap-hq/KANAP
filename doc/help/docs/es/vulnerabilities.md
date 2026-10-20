@@ -12,7 +12,7 @@ Las vulnerabilidades se siguen por defecto en la nube. En una instalación local
 
 KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD y las compara con sus tecnologías:
 
-- **Productos**: una tecnología se compara por sus identificadores de producto CPE (consulte [Tecnologías](technologies.md#resumen)). Una tecnología sin ninguno no recibe ninguna vulnerabilidad. Los sistemas operativos del catálogo también los tienen. SUSE Linux Enterprise Server no tiene: la NVD anota el service pack junto a la versión. Las tecnologías retiradas quedan fuera.
+- **Productos**: una tecnología se compara por sus identificadores de producto CPE (consulte [Tecnologías](technologies.md#resumen)). Una tecnología sin ninguno no recibe ninguna vulnerabilidad. Los sistemas operativos del catálogo también los tienen. SUSE Linux Enterprise Server no tiene: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable. Los sistemas operativos quedan excluidos de las alertas por defecto. El ajuste está en el espacio de trabajo de la tecnología, en la columna Alertas de vulnerabilidad de la tabla de versiones. Las tecnologías retiradas quedan fuera.
 - **Versiones**: solo cuentan las versiones en uso: instaladas en un servidor en servicio, o usadas por una aplicación en servicio.
 - **Números de versión**: las versiones se comparan por sus números, parte por parte. `2016 SP3` cuenta como 2016 y `19c` como 19. Una versión de menos de tres números vale por toda su rama: `9.0` abarca todas las `9.0.x`. Una versión que KANAP no puede comparar, como una etiqueta sin número, cuenta como afectada.
 - **Versión desconocida**: un servidor o una aplicación que no indica ninguna versión está potencialmente afectado por todas las vulnerabilidades del producto. Su fila muestra **Sin registrar** en la columna **Versión**.
@@ -106,6 +106,6 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 
 ## Consejos
 
-- **Rellene los identificadores CPE**: las tecnologías del catálogo ya los traen, incluidos los sistemas operativos. SUSE Linux Enterprise Server no tiene. Para las demás, busque el producto en el diccionario CPE del NIST.
+- **Rellene los identificadores CPE**: las tecnologías del catálogo ya los traen, incluidos los sistemas operativos. SUSE Linux Enterprise Server no tiene: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable. Los sistemas operativos quedan excluidos de las alertas por defecto. Para las demás, busque el producto en el diccionario CPE del NIST.
 - **Registre las versiones**: un servidor o una aplicación sin versión está potencialmente afectado por todo, lo que oculta la exposición real.
 - **Escriba la nota**: quien lea la vulnerabilidad después verá lo que se hizo.
