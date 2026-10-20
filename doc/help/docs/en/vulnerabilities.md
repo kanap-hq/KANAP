@@ -45,17 +45,17 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 
 The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-**Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** sets **Alerts** back to **Included**, **Published** back to **All**, and turns **Exploited only** off. The export and the state changes on the whole filter follow these three.
+**Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
 | **CVE** | The vulnerability's identifier, for example `CVE-2024-1234` |
-| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**. An **Actively exploited** badge follows the name when CISA or the European Union lists the vulnerability |
-| **Exploited** | **Yes** or **No**. Hidden by default: the badge in **Severity** shows the same fact |
+| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**. An alert icon follows the name when CISA or the European Union lists the vulnerability. Its tooltip names the catalogs, and ransomware use when CISA records it |
+| **Exploited** | **Yes** or **No**. Hidden by default: the icon in **Severity** shows the same fact |
 | **Score** | The CVSS score. Hidden by default |
-| **EPSS** | The probability of exploitation within the next 30 days, as a percentage in the language of your screen, with the percentile when one is published. For example, 15.3% (92nd percentile) |
+| **EPSS (%)** | The probability of exploitation within the next 30 days, as a percentage in the language of your screen. For example, 15.3%. The side panel adds the percentile |
 | **Summary** | The NVD description |
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
@@ -66,9 +66,9 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 | **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS** a minimum probability from 0 to 1, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
-**Sort** by **Exploited**, **Severity**, **Score**, **EPSS**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
+**Sort** by **Exploited**, **Severity**, **Score**, **EPSS (%)**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
 
 **Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts, `?exploited=1` the actively exploited vulnerabilities. The link of the emails uses `period`.
 
@@ -87,7 +87,7 @@ For example, to mark every unrecorded version of PostgreSQL as not affected: fil
 
 ## Reviewing a vulnerability
 
-Click a row to open its vulnerability in a side panel. The panel covers every technology and version the vulnerability concerns. You see:
+Click a row to open its vulnerability in a side panel. Its header stays in view with the CVE identifier, the severity and the alert icon when the vulnerability is actively exploited. **Close** (the cross) or Escape closes the panel. The panel covers every technology and version the vulnerability concerns. You see:
 
 - The summary, the CVSS vector and the reference links (publisher advisories, patches).
 - **Technologies and versions**: each concerned version, with its **State** and a note.
@@ -111,9 +111,9 @@ KANAP never changes a state you chose. When a version no longer matches (you upg
 
 ## Exploitation { #exploitation }
 
-A vulnerability is **actively exploited** when the CISA catalog (United States) or the catalog of the European Union lists it, or both. The **Actively exploited** badge sits next to the severity. Its detail names the catalogs. When CISA records use in ransomware campaigns, the detail says so.
+A vulnerability is **actively exploited** when the CISA catalog (United States) or the catalog of the European Union lists it, or both. An alert icon sits next to the severity, in the list and in the side panel. Its tooltip names the catalogs that list the vulnerability. When CISA records use in ransomware campaigns, the tooltip says so.
 
-**EPSS** is the probability that the vulnerability will be exploited within the next 30 days. [FIRST](https://www.first.org/epss) computes it every day. The column and the side panel show it as a percentage, with the percentile of that day when one is published, and the day of the score. The panel names the method: EPSS: FIRST.
+**EPSS** is the probability that the vulnerability will be exploited within the next 30 days. [FIRST](https://www.first.org/epss) computes it every day. The **EPSS (%)** column shows it as a percentage. The side panel adds the percentile of that day when one is published, and the day of the score. The panel names the method: EPSS: FIRST.
 
 The side panel also shows the **EUVD** identifier when the European mapping has one, with the link **See on the European vulnerability database (ENISA)**. ENISA's European vulnerability database is the European catalogue used when reviewing vulnerabilities in the scope of NIS2. The panel names the source: ENISA, European vulnerability database.
 

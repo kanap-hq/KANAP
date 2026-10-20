@@ -45,17 +45,17 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 
 La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad. Las vulnerabilidades explotadas activamente van primero, y después las más graves. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
-**Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas**, **Publicada** en **Todas**, y desactiva **Solo explotadas**. La exportación y los cambios de estado sobre todo el filtro siguen estos tres ajustes.
+**Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** devuelve la página a su estado de apertura: las filas **Por revisar**, las vulnerabilidades explotadas activamente primero, **Alertas** en **Incluidas**, **Publicada** en todas las fechas y **Solo explotadas** desactivado. La exportación y un cambio de estado en bloque siguen estos tres ajustes.
 
 **Columnas**:
 
 | Columna | Qué muestra |
 |---|---|
 | **CVE** | El identificador de la vulnerabilidad, por ejemplo `CVE-2024-1234` |
-| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**. Una pastilla **Explotada activamente** sigue al nombre cuando la CISA o la Unión Europea incluye la vulnerabilidad |
-| **Explotada** | **Sí** o **No**. Oculta por defecto: la pastilla de **Gravedad** muestra el mismo hecho |
+| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**. Un icono de alerta sigue al nombre cuando la CISA o la Unión Europea incluye la vulnerabilidad. Su información emergente nombra los catálogos, y el uso en ransomware cuando la CISA lo registra |
+| **Explotada** | **Sí** o **No**. Oculta por defecto: el icono de **Gravedad** muestra el mismo hecho |
 | **Puntuación** | La puntuación CVSS. Oculta por defecto |
-| **EPSS** | La probabilidad de explotación en los próximos 30 días, como porcentaje en el idioma de su pantalla, con el percentil cuando se publica uno. Por ejemplo, 15,3 % (percentil 92) |
+| **EPSS (%)** | La probabilidad de explotación en los próximos 30 días, como porcentaje en el idioma de su pantalla. Por ejemplo, 15,3 %. El panel lateral añade el percentil |
 | **Resumen** | La descripción de la NVD |
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
@@ -66,9 +66,9 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 | **Nota** | La nota de la fila. Oculta por defecto |
 | **Publicación** | La fecha de publicación |
 
-**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor**, **Estado** y **Explotada** ofrecen casillas (**Versión** ofrece también **Sin registrar**, **Explotada** ofrece **Sí** y **No**), **Puntuación** un número, **EPSS** una probabilidad mínima de 0 a 1, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
+**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor**, **Estado** y **Explotada** ofrecen casillas (**Versión** ofrece también **Sin registrar**, **Explotada** ofrece **Sí** y **No**), **Puntuación** un número, **EPSS (%)** un porcentaje mínimo de 0 a 100, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
 
-**Orden** por **Explotada**, **Gravedad**, **Puntuación**, **EPSS**, **Publicación**, **CVE** o **Tecnología**. La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
+**Orden** por **Explotada**, **Gravedad**, **Puntuación**, **EPSS (%)**, **Publicación**, **CVE** o **Tecnología**. La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
 
 **Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?published=30d` las vulnerabilidades publicadas en los últimos 30 días (`7d`, `30d`, `90d`, `1y` u `older1y`, como el filtro **Publicada**), `?period=30` lo mismo mediante el filtro de la columna **Publicada**, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas, `?exploited=1` las vulnerabilidades explotadas activamente. El enlace de los correos usa `period`.
 
@@ -87,7 +87,7 @@ Por ejemplo, para marcar todas las versiones sin registrar de PostgreSQL como no
 
 ## Revisar una vulnerabilidad
 
-Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. El panel abarca todas las tecnologías y versiones a las que afecta la vulnerabilidad. Verá:
+Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. Su encabezado queda visible, con el identificador CVE, la gravedad y el icono de alerta cuando la vulnerabilidad está explotada activamente. **Cerrar** (la cruz) o Esc cierra el panel. El panel abarca todas las tecnologías y versiones a las que afecta la vulnerabilidad. Verá:
 
 - El resumen, el vector CVSS y los enlaces de referencia (avisos del editor, parches).
 - **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota.
@@ -111,9 +111,9 @@ KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coin
 
 ## Explotación { #exploitation }
 
-Una vulnerabilidad está **explotada activamente** cuando el catálogo de la CISA (Estados Unidos) o el de la Unión Europea la incluye, o ambos. La pastilla **Explotada activamente** aparece junto a la gravedad. Su detalle nombra los catálogos. Cuando la CISA registra un uso en campañas de ransomware, el detalle lo indica.
+Una vulnerabilidad está **explotada activamente** cuando el catálogo de la CISA (Estados Unidos) o el de la Unión Europea la incluye, o ambos. Un icono de alerta aparece junto a la gravedad, en la lista y en el panel lateral. Su información emergente nombra los catálogos que incluyen la vulnerabilidad. Cuando la CISA registra un uso en campañas de ransomware, la información emergente lo indica.
 
-El **EPSS** es la probabilidad de que la vulnerabilidad se explote en los próximos 30 días. [FIRST](https://www.first.org/epss) la calcula cada día. La columna y el panel lateral la muestran como porcentaje, con el percentil de ese día cuando FIRST publica uno, y con el día de la puntuación. El panel nombra el método: EPSS: FIRST.
+El **EPSS** es la probabilidad de que la vulnerabilidad se explote en los próximos 30 días. [FIRST](https://www.first.org/epss) la calcula cada día. La columna **EPSS (%)** la muestra como porcentaje. El panel lateral añade el percentil de ese día cuando FIRST publica uno, y el día de la puntuación. El panel nombra el método: EPSS: FIRST.
 
 El panel lateral muestra también el identificador **EUVD** cuando la correspondencia europea tiene uno, con el enlace **Ver en la base europea de vulnerabilidades (ENISA)**. La base europea de vulnerabilidades de la ENISA es el catálogo europeo que se usa al revisar vulnerabilidades en el ámbito de NIS2. El panel nombra la fuente: ENISA, base europea de vulnerabilidades.
 

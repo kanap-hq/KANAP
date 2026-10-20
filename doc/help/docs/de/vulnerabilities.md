@@ -45,17 +45,17 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle. Aktiv ausgenutzte Schwachstellen kommen zuerst, danach die schwersten. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
 
-**Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen**, **Veröffentlicht** auf **Alle** und schaltet **Nur ausgenutzte** aus. Der Export und die Statusänderungen für den ganzen Filter folgen diesen drei Einstellungen.
+**Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** bringt die Seite in den Zustand beim Öffnen zurück: die Zeilen **Zu prüfen**, aktiv ausgenutzte Schwachstellen zuerst, **Warnungen** auf **Eingeschlossen**, **Veröffentlicht** auf alle Daten und **Nur ausgenutzte** ausgeschaltet. Der Export und eine Statusänderung für mehrere Zeilen folgen diesen drei Einstellungen.
 
 **Spalten**:
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **CVE** | Die Kennung der Schwachstelle, zum Beispiel `CVE-2024-1234` |
-| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**. Eine Pastille **Aktiv ausgenutzt** folgt dem Namen, wenn die CISA oder die Europäische Union die Schwachstelle führt |
-| **Ausgenutzt** | **Ja** oder **Nein**. Standardmäßig ausgeblendet: die Pastille in **Schweregrad** zeigt denselben Sachverhalt |
+| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**. Ein Warnsymbol folgt dem Namen, wenn die CISA oder die Europäische Union die Schwachstelle führt. Sein Tooltip nennt die Kataloge und den Einsatz durch Ransomware, wenn die CISA ihn verzeichnet |
+| **Ausgenutzt** | **Ja** oder **Nein**. Standardmäßig ausgeblendet: das Symbol in **Schweregrad** zeigt denselben Sachverhalt |
 | **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
-| **EPSS** | Die Wahrscheinlichkeit einer Ausnutzung innerhalb der nächsten 30 Tage, als Prozentsatz in der Sprache Ihres Bildschirms, mit dem Perzentil, wenn eines veröffentlicht ist. Zum Beispiel 15,3 % (92. Perzentil) |
+| **EPSS (%)** | Die Wahrscheinlichkeit einer Ausnutzung innerhalb der nächsten 30 Tage, als Prozentsatz in der Sprache Ihres Bildschirms. Zum Beispiel 15,3 %. Der Seitenbereich ergänzt das Perzentil |
 | **Zusammenfassung** | Die Beschreibung der NVD |
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
@@ -66,9 +66,9 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 | **Notiz** | Die Notiz der Zeile. Standardmäßig ausgeblendet |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS** eine Mindestwahrscheinlichkeit von 0 bis 1, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS (%)** einen Mindestprozentsatz von 0 bis 100, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
 
-**Sortieren** nach **Ausgenutzt**, **Schweregrad**, **Score**, **EPSS**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
+**Sortieren** nach **Ausgenutzt**, **Schweregrad**, **Score**, **EPSS (%)**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
 **Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?published=30d` die in den letzten 30 Tagen veröffentlichten Schwachstellen (`7d`, `30d`, `90d`, `1y` oder `older1y`, wie der Filter **Veröffentlicht**), `?period=30` dasselbe über den Filter der Spalte **Veröffentlicht**, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen, `?exploited=1` die aktiv ausgenutzten Schwachstellen. Der Link der E-Mails nutzt `period`.
 
@@ -87,7 +87,7 @@ Zum Beispiel, um alle nicht erfassten Versionen von PostgreSQL als nicht betroff
 
 ## Eine Schwachstelle prüfen
 
-Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Der Bereich umfasst alle Technologien und Versionen, die die Schwachstelle betrifft. Sie sehen:
+Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Sein Kopf bleibt sichtbar, mit der CVE-Kennung, dem Schweregrad und dem Warnsymbol, wenn die Schwachstelle aktiv ausgenutzt wird. **Schließen** (das Kreuz) oder Esc schließt den Bereich. Der Bereich umfasst alle Technologien und Versionen, die die Schwachstelle betrifft. Sie sehen:
 
 - Die Zusammenfassung, den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
 - **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz.
@@ -111,9 +111,9 @@ KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht 
 
 ## Ausnutzung { #exploitation }
 
-Eine Schwachstelle ist **aktiv ausgenutzt**, wenn der Katalog der CISA (Vereinigte Staaten) oder der Katalog der Europäischen Union sie führt, oder beide. Die Pastille **Aktiv ausgenutzt** steht neben dem Schweregrad. Ihr Hinweis nennt die Kataloge. Wenn die CISA einen Einsatz in Ransomware-Kampagnen verzeichnet, sagt der Hinweis das.
+Eine Schwachstelle ist **aktiv ausgenutzt**, wenn der Katalog der CISA (Vereinigte Staaten) oder der Katalog der Europäischen Union sie führt, oder beide. Ein Warnsymbol steht neben dem Schweregrad, in der Liste und im Seitenbereich. Sein Tooltip nennt die Kataloge, die die Schwachstelle führen. Wenn die CISA einen Einsatz in Ransomware-Kampagnen verzeichnet, sagt der Tooltip das.
 
-**EPSS** ist die Wahrscheinlichkeit, dass die Schwachstelle innerhalb der nächsten 30 Tage ausgenutzt wird. [FIRST](https://www.first.org/epss) berechnet sie jeden Tag. Die Spalte und der Seitenbereich zeigen sie als Prozentsatz, mit dem Perzentil dieses Tages, wenn FIRST eines veröffentlicht, und mit dem Tag des Werts. Der Bereich nennt das Verfahren: EPSS: FIRST.
+**EPSS** ist die Wahrscheinlichkeit, dass die Schwachstelle innerhalb der nächsten 30 Tage ausgenutzt wird. [FIRST](https://www.first.org/epss) berechnet sie jeden Tag. Die Spalte **EPSS (%)** zeigt sie als Prozentsatz. Der Seitenbereich ergänzt das Perzentil dieses Tages, wenn FIRST eines veröffentlicht, und den Tag des Werts. Der Bereich nennt das Verfahren: EPSS: FIRST.
 
 Der Seitenbereich zeigt auch die Kennung **EUVD**, wenn die europäische Zuordnung eine nennt, mit dem Link **In der europäischen Schwachstellendatenbank (ENISA) ansehen**. Die europäische Schwachstellendatenbank der ENISA ist der europäische Katalog für die Prüfung von Schwachstellen im Rahmen von NIS2. Der Bereich nennt die Quelle: ENISA, europäische Schwachstellendatenbank.
 
