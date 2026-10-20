@@ -96,7 +96,7 @@ function buildSavePayload(
 
 /**
  * Connection card for the Netbox inventory. Saving and testing live here;
- * the day-to-day synchronisation work happens on `/it/netbox`.
+ * the day-to-day synchronisation work happens on the Netbox tab of IT settings.
  */
 export default function NetboxIntegrationCard() {
   const { t } = useTranslation(['admin', 'it', 'common']);
@@ -299,7 +299,7 @@ export default function NetboxIntegrationCard() {
             {saveSuccess && form.enabled && hasStoredToken ? (
               <Alert severity="info">
                 {t('integrations.netbox.messages.nextStep')}{' '}
-                <Link component={RouterLink} to="/it/netbox">
+                <Link component={RouterLink} to="/it/settings?tab=netbox">
                   {t('integrations.netbox.actions.goToSync')}
                 </Link>
               </Alert>

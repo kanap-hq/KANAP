@@ -24,7 +24,7 @@ KANAP est organisé autour d'une structure simple. La barre supérieure affiche 
 |------|---------------------|
 | **Tableau de bord** | Votre hub personnel : cliquez sur le logo KANAP ou naviguez vers `/` |
 | **Portefeuille** | Tâches, Demandes, Projets, Planification, Rapports, Contributeurs |
-| **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Technologies, Connexions, Carte des connexions, Sites, Netbox, Incidents, Fins de support, Vulnérabilités |
+| **Cartographie SI** | Applications, Interfaces, Carte des interfaces, Actifs, Connexions, Carte des connexions, Zones d'administration, Sites, Technologies, Incidents, Fins de support, Vulnérabilités, Paramètres (listes et Netbox) |
 | **Base de connaissances** | Documents et modèles avec workflows de revue |
 | **Gestion budgétaire** | OPEX, CAPEX, Contrats, Rapports, Administration (devises, colonnes budgétaires, opérations de gel et de copie) |
 | **Données de référence** | Sociétés, Départements, Centres de coûts, Fournisseurs, Contacts, Plans comptables, Calendriers de jours ouvrés, Dimensions analytiques, Processus métier |

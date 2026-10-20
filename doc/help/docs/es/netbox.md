@@ -7,10 +7,10 @@ El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia
 ## Dónde encontrarlo
 
 - Espacio de trabajo: **Panorama IT**
-- Ruta: **Panorama IT > Netbox**
-- Ruta: `/it/netbox`
+- Ruta: **Panorama IT > Configuración**, pestaña **Netbox**
+- Ruta: `/it/settings?tab=netbox`. La dirección anterior `/it/netbox` abre la misma pestaña.
 - Configuración de la conexión: **Administración > Integraciones**
-- Permiso: `infrastructure:admin`, tanto para la tarjeta de conexión como para la página de sincronización
+- Permiso: `infrastructure:admin`, tanto para la tarjeta de conexión como para la pestaña **Netbox**. Con este permiso, la entrada **Configuración** del menú del Panorama IT aparece aunque usted no vea las listas de la pestaña **Listas**.
 - Disponible en la nube y en la edición on-premise. No hay ningún indicador de funcionalidad que activar.
 
 ---
@@ -39,13 +39,13 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 | **Sincronización automática** | Se ejecuta cada hora y aplica los cambios por su cuenta. Déjela desactivada hasta que la primera ejecución le parezca correcta. |
 | **Entorno de los nuevos activos** | Se aplica a los activos que crea esta integración. Después no se cambia nunca. |
 
-**Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a **Panorama IT > Netbox**.
+**Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a la pestaña **Netbox** de **Panorama IT > Configuración**.
 
 ---
 
 ## Elegir qué se importa
 
-Abra la pestaña **Correspondencias** en la página de Netbox. Ahí hay cuatro tablas. Las dos primeras deciden todo el alcance de la importación.
+En la pestaña **Netbox**, abra **Correspondencias**. Ahí hay cuatro tablas. Las dos primeras deciden todo el alcance de la importación.
 
 - **Rol de Netbox > Tipo de activo KANAP**. Cada rol de equipo que Netbox conoce recibe un tipo de activo, o **No importar**.
 - **Sitio de Netbox > Ubicación KANAP**. Cada sitio de Netbox recibe una de sus ubicaciones, o **No importar**.
@@ -231,9 +231,9 @@ Una ejecución manual y una ejecución programada no pueden solaparse: si ya hay
 
 ---
 
-## La página de gestión
+## La pestaña Netbox
 
-**Panorama IT > Netbox** es donde se trabaja una vez configurada la conexión. La banda superior muestra la última ejecución: cuándo fue, si se inició a mano o de forma automática, cuánto duró, su resultado, y cuántos objetos están vinculados o necesitan atención.
+La pestaña **Netbox** de **Panorama IT > Configuración** es donde se trabaja una vez configurada la conexión. La banda superior muestra la última ejecución: cuándo fue, si se inició a mano o de forma automática, cuánto duró, su resultado, y cuántos objetos están vinculados o necesitan atención.
 
 Debajo, la pestaña **Objetos** enumera todos los objetos de Netbox dentro del alcance, filtrados por estado.
 

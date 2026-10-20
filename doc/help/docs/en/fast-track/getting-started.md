@@ -24,7 +24,7 @@ KANAP is organized around a simple structure. The top bar shows the sections you
 |------|-----------------|
 | **Dashboard** | Your personal hub. Click the KANAP logo or navigate to `/` |
 | **Portfolio** | Tasks, Requests, Projects, Planning, Reporting, Contributors |
-| **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Technologies, Connections, Connection Map, Locations, Netbox, Incidents, End of support, Vulnerabilities |
+| **IT Landscape** | Applications, Interfaces, Interface Map, Assets, Connections, Connection Map, Administration zones, Locations, Technologies, Incidents, End of support, Vulnerabilities, Settings (lists and Netbox) |
 | **Knowledge** | Documents and templates with review workflows |
 | **Budget Management** | OPEX, CAPEX, Contracts, Reporting, Administration (currencies, budget columns, freeze and copy operations) |
 | **Master Data** | Companies, Departments, Cost centers, Suppliers, Contacts, Charts of Accounts, Working-day calendars, Analytics Dimensions, Business Processes |

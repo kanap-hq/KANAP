@@ -24,6 +24,14 @@ describe('getDocUrl', () => {
     expect(getDocUrl('/it/incidents/INC-14/journal', 'es')).toBe('https://doc.kanap.net/es/incidents/');
   });
 
+  it('opens the Netbox manual from the Netbox tab and the IT settings manual from the lists', () => {
+    expect(getDocUrl('/it/settings')).toBe('https://doc.kanap.net/it-ops-settings/');
+    expect(getDocUrl('/it/settings', 'fr', '?tab=lists')).toBe('https://doc.kanap.net/fr/it-ops-settings/');
+    expect(getDocUrl('/it/settings', 'de', '?tab=netbox')).toBe('https://doc.kanap.net/de/netbox/');
+    expect(getDocUrl('/it/settings', 'es', '?tab=netbox&state=linked')).toBe('https://doc.kanap.net/es/netbox/');
+    expect(getDocUrl('/it/netbox', undefined, '?state=missing')).toBe('https://doc.kanap.net/netbox/');
+  });
+
   it('keeps the overview and falls back to the docs home', () => {
     expect(getDocUrl('/ops')).toBe('https://doc.kanap.net/operations-dashboard/');
     expect(getDocUrl('/ops/budgets')).toBe('https://doc.kanap.net/');
