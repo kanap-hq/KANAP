@@ -398,6 +398,10 @@
         "published": "Publicación",
         "version": "Versión",
         "score": "Puntuación",
+        "exploited": "Explotada",
+        "exploitedYes": "Sí",
+        "exploitedNo": "No",
+        "epss": "EPSS (%)",
         "editor": "Editor",
         "note": "Nota"
       },
@@ -429,7 +433,17 @@
         "serversInAlerts_one": "{{count}} servidor, de ellos {{alerting}} en las alertas",
         "serversInAlerts_other": "{{count}} servidores, de ellos {{alerting}} en las alertas",
         "applicationsInAlerts_one": "{{count}} aplicación, de ellas {{alerting}} en las alertas",
-        "applicationsInAlerts_other": "{{count}} aplicaciones, de ellas {{alerting}} en las alertas"
+        "applicationsInAlerts_other": "{{count}} aplicaciones, de ellas {{alerting}} en las alertas",
+        "exploitation": "Explotación",
+        "sources": "Fuentes",
+        "sourceCisa": "CISA",
+        "sourceEu": "Unión Europea",
+        "kevAdded": "Añadida a la lista de la CISA",
+        "epss": "EPSS",
+        "epssOn": "a {{date}}",
+        "epssFirst": "EPSS: FIRST",
+        "euvdLink": "Ver en la base europea de vulnerabilidades (ENISA)",
+        "euvdSource": "Fuente: ENISA, base europea de vulnerabilidades"
       },
       "section": {
         "title": "Vulnerabilidades",
@@ -471,6 +485,22 @@
         "90d": "Menos de 90 días",
         "1y": "Menos de un año",
         "older1y": "Más de un año"
+      },
+      "exploited": {
+        "badge": "Explotada activamente",
+        "tooltip": "Explotada activamente: incluida por la CISA (Estados Unidos) y/o la Unión Europea.",
+        "ransomware": "Usada en campañas de ransomware"
+      },
+      "epss": {
+        "cell": "{{percent}} ({{ordinal}})",
+        "percentile_one": "percentil {{rank}}",
+        "percentile_two": "percentil {{rank}}",
+        "percentile_few": "percentil {{rank}}",
+        "percentile_other": "percentil {{rank}}",
+        "minimumHint": "Probabilidad mínima, de 0 a 100"
+      },
+      "shortcut": {
+        "exploitedOnly": "Solo explotadas"
       }
     },
     "interfaces": {

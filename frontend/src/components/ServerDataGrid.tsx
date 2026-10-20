@@ -118,6 +118,11 @@ export type ServerDataGridProps<T> = {
   initialState?: any; // AG Grid initialState, applied once at grid creation
   /** The filters the page starts on without a link (open tasks, applications not retired): Reset filters goes back to them. */
   defaultFilterModel?: Record<string, unknown> | null;
+  /**
+   * Reset filters also puts the sort back to `defaultSort`. Off by default, so a list keeps the
+   * sort the user chose.
+   */
+  resetSortOnReset?: boolean;
   enableColumnChooser?: boolean; // default: true
   requiredColumns?: string[]; // columns that cannot be hidden
   defaultHiddenColumns?: string[]; // columns hidden by default
@@ -503,6 +508,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   initialFilterModel,
   initialState,
   defaultFilterModel,
+  resetSortOnReset = false,
   enableColumnChooser = true,
   requiredColumns = [],
   defaultHiddenColumns = [],
@@ -669,6 +675,11 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const [offDefault, setOffDefault] = useState(false);
   const defaultFilterKeyRef = useRef(filterModelKey(defaultFilterModel));
   defaultFilterKeyRef.current = filterModelKey(defaultFilterModel);
+  // The datasource is created once. These follow the props, for the "off the opening state" check.
+  const defaultSortRef = useRef(defaultSort);
+  defaultSortRef.current = defaultSort;
+  const resetSortOnResetRef = useRef(resetSortOnReset);
+  resetSortOnResetRef.current = resetSortOnReset;
 
   const gridApiRef = useRef<any>(null);
   const columnApiRef = useRef<any>(null); // deprecated in AG Grid v32+, keep for backward compat (unused)
@@ -1086,7 +1097,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           page,
           limit,
           // use AG's live sort model for accuracy
-          sort: parseSortParam((params as any).sortModel, defaultSort),
+          sort: parseSortParam((params as any).sortModel, defaultSortRef.current),
           ...extraParamsRef.current,
           ...columnParams,
         };
@@ -1122,7 +1133,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
         if (startRow === 0) {
           const narrowed = !!reqParams.q || !!reqParams.filters || scopeNarrowsRef.current();
           setEmptyResult(total === 0 ? (narrowed ? 'filtered' : 'empty') : null);
-          setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filterModelKey(fm) !== defaultFilterKeyRef.current);
+          const openingSort = `${defaultSortRef.current.field}:${defaultSortRef.current.direction}`;
+          const sortOff = resetSortOnResetRef.current
+            && parseSortParam((params as any).sortModel, defaultSortRef.current) !== openingSort;
+          setOffDefault(!!reqParams.q || scopeNarrowsRef.current() || filterModelKey(fm) !== defaultFilterKeyRef.current || sortOff);
         }
         onTotalChangeRef.current?.(total);
         if (startRow === 0 && onListRequestChangeRef.current) {
@@ -1339,13 +1353,21 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, resetPageControls]);
 
   // Reset filters: the list as the page opens it (no search, its default filters, the default Show scope).
+  // The sort stays, unless the page asks to put it back to `defaultSort` (`resetSortOnReset`).
   const resetFilters = useCallback(() => {
     resetPageControls();
     setSearch('');
     searchRef.current = '';
     if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
-    gridApiRef.current?.setFilterModel?.(defaultFilterModel ?? null);
-  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, defaultFilterModel, resetPageControls]);
+    const api = gridApiRef.current;
+    if (resetSortOnReset) {
+      api?.applyColumnState?.({
+        defaultState: { sort: null },
+        state: [{ colId: defaultSort.field, sort: defaultSort.direction.toLowerCase() as 'asc' | 'desc' }],
+      });
+    }
+    api?.setFilterModel?.(defaultFilterModel ?? null);
+  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, defaultFilterModel, resetPageControls, resetSortOnReset, defaultSort]);
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.

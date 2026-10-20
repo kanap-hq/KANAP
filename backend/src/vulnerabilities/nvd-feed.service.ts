@@ -7,6 +7,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
+import { VulnerabilitySignalsService } from './vulnerability-signals.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
 
@@ -235,10 +236,13 @@ export class NvdFeedService implements OnModuleInit {
     private readonly matcher: VulnerabilityMatchService,
     private readonly notifier: VulnerabilityNotificationsService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
+    /** Stamps exploitation signals already downloaded onto CVE this collection just cached. */
+    @Optional() private readonly signals?: VulnerabilitySignalsService,
   ) {}
 
   onModuleInit() {
     this.cpeEvents?.subscribe((event) => this.onCpeProductsAdded(event));
+    this.signals?.onNewlyExploited((cveIds) => this.announceExploited(cveIds));
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
     this.scheduledTasks.register({
       name: NVD_FEED_TASK_NAME,
@@ -290,6 +294,9 @@ export class NvdFeedService implements OnModuleInit {
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
+    // The CVE just cached carry the exploitation signals before they are matched and announced:
+    // a new medium CVE already exploited is announced at this run, not left to the signals task.
+    await this.applyKnownSignals();
     const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
     for (const tenantId of await this.tenantIds()) {
@@ -494,6 +501,8 @@ export class NvdFeedService implements OnModuleInit {
       if (done) collected.push(product);
       if (serviceDown) break;
     }
+    // The CVE just cached take the signals already downloaded before the rematch reads them.
+    await this.applyKnownSignals();
     this.noteRematch(tenantId, collected);
   }
 
@@ -548,6 +557,41 @@ export class NvdFeedService implements OnModuleInit {
       if (rows.length > 0) carriers.push(tenantId);
     }
     return carriers;
+  }
+
+  /**
+   * The CVE just cached take the signals already downloaded, without a second fetch. A failure
+   * does not fail the collection: the next signals run stamps them.
+   */
+  private async applyKnownSignals(): Promise<void> {
+    try {
+      await this.signals?.applyKnown();
+    } catch (error: any) {
+      this.logger.warn(`[${NVD_FEED_TASK_NAME}] known signals: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
+  }
+
+  /**
+   * CVE already cached that entered the CISA KEV or the EU KEV (told by the signals task after its
+   * run): their rows still to review and in the alerts are announced to the IT owners as "now
+   * known to be exploited", once, in a vulnerability email (lead decision, lot K2a). The same
+   * tenants as a run: active ones, email on. Returns the number of digests claimed.
+   */
+  async announceExploited(cveIds: string[]): Promise<number> {
+    if (cveIds.length === 0) return 0;
+    const notified = await this.notifiedTenantIds();
+    let claimed = 0;
+    for (const tenantId of await this.tenantIds()) {
+      if (!notified.has(tenantId)) continue;
+      try {
+        const digests = await withTenant(this.dataSource, tenantId, (mg) => this.notifier.claimNowExploited(mg, tenantId, cveIds));
+        claimed += digests.length;
+        void this.notifier.send(tenantId, digests);
+      } catch (error: any) {
+        this.logger.warn(`[${NVD_FEED_TASK_NAME}] exploited CVE of tenant ${tenantId}: ${String(error?.message ?? error).slice(0, 300)}`);
+      }
+    }
+    return claimed;
   }
 
   /** A product's failure, kept for the next run and for the technology's section. */
@@ -685,7 +729,10 @@ export class NvdFeedService implements OnModuleInit {
    * already in the cache whose severity rose to critical or high (lot T6b: announced once).
    */
   async store(mg: EntityManager, cves: ParsedCve[]): Promise<string[]> {
-    const unique = Array.from(new Map(cves.map((c) => [c.cve_id, c])).values());
+    // In cve_id order: the upsert locks its rows in the order the signals task locks them
+    // (vulnerability-signals.service.ts, writeOrdered), so the two never deadlock.
+    const unique = Array.from(new Map(cves.map((c) => [c.cve_id, c])).values())
+      .sort((a, b) => (a.cve_id < b.cve_id ? -1 : a.cve_id > b.cve_id ? 1 : 0));
     // Every step of the statement reads the same snapshot: `old` holds the severities before the upsert.
     const raised: Array<{ cve_id: string }> = await mg.query(
       `WITH old AS (
@@ -693,11 +740,14 @@ export class NvdFeedService implements OnModuleInit {
           WHERE cve_id IN (SELECT i.cve_id FROM jsonb_to_recordset($1::jsonb) AS i(cve_id text))
        ), up AS (
        INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
+       -- Signal columns (cisa_kev, eu_kev, epss, euvd_id and the rest) are omitted on purpose:
+       -- a re-read from the NVD must keep what the signals task stored.
        SELECT i.cve_id, i.summary, i.cvss_score, i.severity, i.cvss_version, i.cvss_vector, i.published_at, i.last_modified_at, i.nvd_status,
               COALESCE(ARRAY(SELECT jsonb_array_elements_text(i.reference_urls)), '{}'), now()
          FROM jsonb_to_recordset($1::jsonb) AS i(
            cve_id text, summary text, cvss_score numeric, severity text, cvss_version text, cvss_vector text,
            published_at timestamptz, last_modified_at timestamptz, nvd_status text, reference_urls jsonb)
+        ORDER BY i.cve_id
        ON CONFLICT (cve_id) DO UPDATE SET
          summary = EXCLUDED.summary, cvss_score = EXCLUDED.cvss_score, severity = EXCLUDED.severity,
          cvss_version = EXCLUDED.cvss_version, cvss_vector = EXCLUDED.cvss_vector, published_at = EXCLUDED.published_at,

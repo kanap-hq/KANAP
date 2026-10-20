@@ -37,12 +37,21 @@ export type VulnerabilityFilters = {
    * `included` (default): the rows that alert. `excluded`: the others. `all`: both.
    */
   alerts?: unknown;
+  /** `yes` or `no`: known to be exploited (CISA KEV or the EU KEV). */
+  exploited?: unknown;
+  /** A number: the minimum EPSS probability, from 0 to 1. */
+  epss?: unknown;
 };
 
 /** At most this many rows (technology version and CVE) in one change of state in bulk. */
 export const BULK_MAX_ROWS = 5000;
 /** Rows written by one statement of a bulk change. */
 const BULK_BATCH = 500;
+
+/** Known to be exploited: in the CISA KEV or the EU KEV (a null flag counts as not). */
+const EXPLOITED_SQL = `(COALESCE(c.cisa_kev, false) OR COALESCE(c.eu_kev, false))`;
+/** The page of a CVE in the European vulnerability database. */
+const EUVD_VULNERABILITY_URL = 'https://euvd.enisa.europa.eu/vulnerability/';
 
 /** The grid's sortable columns. */
 const GRID_SORTS: Record<string, string> = {
@@ -51,7 +60,13 @@ const GRID_SORTS: Record<string, string> = {
   published_at: 'c.published_at',
   cve_id: 'c.cve_id',
   technology: 'lower(t.name)',
+  epss: 'c.epss',
+  exploited: EXPLOITED_SQL,
 };
+
+/** Signal columns of the cache, dates and ratios as text so the driver does not shift a day or a decimal. */
+const SIGNAL_COLUMNS = `c.cisa_kev, c.kev_added_at::text AS kev_added_at, c.kev_ransomware, c.eu_kev,
+            c.epss::text AS epss, c.epss_percentile::text AS epss_percentile, c.epss_date::text AS epss_date, c.euvd_id`;
 
 /** A grid date filter (`equals`, `greaterThan`, `lessThan`, `inRange`) on a day column. */
 function gridDateClause(expr: string, model: any, push: (value: unknown) => string): string | null {
@@ -132,6 +147,14 @@ type Cve = {
   last_modified_at: Date | null;
   nvd_status: string | null;
   reference_urls: string[];
+  cisa_kev: boolean | null;
+  kev_added_at: string | null;
+  kev_ransomware: boolean | null;
+  eu_kev: boolean | null;
+  epss: string | null;
+  epss_percentile: string | null;
+  epss_date: string | null;
+  euvd_id: string | null;
 };
 
 function commaList(value: unknown): string[] {
@@ -145,7 +168,38 @@ function cveIdOrThrow(value: unknown): string {
   return id;
 }
 
+function dayText(value: string | Date | null | undefined): string | null {
+  if (value == null || value === '') return null;
+  const text = value instanceof Date ? value.toISOString().slice(0, 10) : String(value).slice(0, 10);
+  return DAY_RE.test(text) ? text : null;
+}
+
+function ratio(value: string | number | null | undefined): number | null {
+  if (value == null || value === '') return null;
+  const n = Number(value);
+  return Number.isFinite(n) ? n : null;
+}
+
+/** `yes` / `true` / `1`, `no` / `false` / `0`, or nothing. Anything else is a 400. */
+function exploitedChoice(value: unknown): boolean | null {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'yes' || raw === 'true' || raw === '1') return true;
+  if (raw === 'no' || raw === 'false' || raw === '0') return false;
+  throw new BadRequestException('exploited must be yes or no.');
+}
+
+/** The minimum EPSS probability, or nothing. A value that is not a number from 0 to 1 is a 400. */
+function epssMinimum(value: unknown): number | null {
+  if (value === undefined || value === null || String(value).trim() === '') return null;
+  const n = Number(value);
+  if (!Number.isFinite(n) || n < 0 || n > 1) throw new BadRequestException('epss must be a number from 0 to 1.');
+  return n;
+}
+
 function presentCve(c: Omit<Cve, 'cvss_vector' | 'reference_urls'>) {
+  const cisa = c.cisa_kev === true;
+  const eu = c.eu_kev === true;
   return {
     cve_id: c.cve_id,
     summary: c.summary,
@@ -155,6 +209,15 @@ function presentCve(c: Omit<Cve, 'cvss_vector' | 'reference_urls'>) {
     published_at: c.published_at,
     last_modified_at: c.last_modified_at,
     nvd_status: c.nvd_status,
+    cisa_kev: cisa,
+    eu_kev: eu,
+    exploited: cisa || eu,
+    kev_added_at: dayText(c.kev_added_at),
+    kev_ransomware: c.kev_ransomware == null ? null : c.kev_ransomware === true,
+    epss: ratio(c.epss),
+    epss_percentile: ratio(c.epss_percentile),
+    epss_date: dayText(c.epss_date),
+    euvd_id: c.euvd_id ?? null,
   };
 }
 
@@ -261,6 +324,10 @@ export class VulnerabilitiesService {
       const like = push(`%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
       where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
     }
+    const exploited = exploitedChoice(filters.exploited);
+    if (exploited !== null) where.push(exploited ? EXPLOITED_SQL : `NOT ${EXPLOITED_SQL}`);
+    const epssMin = epssMinimum(filters.epss);
+    if (epssMin !== null) where.push(`c.epss >= ${push(epssMin)}::numeric`);
     where.push(...this.gridClauses(filters.filters, push));
     const alerts = this.alertsClause(filters);
     if (alerts) where.push(alerts);
@@ -285,9 +352,10 @@ export class VulnerabilitiesService {
    * The list grid's filter model (lots T6b, T6c), on rows: set filters on `severity`, `state`,
    * `editor` (without case), `technology` (id or `TEC-n`; an unknown one matches nothing) and
    * `version` (labels, `null` for the rows without version), text filters on `cve_id` and
-   * `summary`, a number filter on `cvss_score`, a date filter on `published_at`. An unreadable
-   * model or another column is ignored; `technologies` (the name before T6c) reads as `technology`;
-   * a set filter in exclude mode is a 400.
+   * `summary`, a number filter on `cvss_score` and `epss`, a date filter on `published_at`, a set
+   * filter on `exploited` (`yes` / `no`; an unknown value matches nothing, both match every row).
+   * An unreadable model or another column is ignored; `technologies` (the name before T6c) reads
+   * as `technology`; a set filter in exclude mode is a 400.
    */
   private gridClauses(raw: unknown, push: (value: unknown) => string): string[] {
     let model: Record<string, any>;
@@ -336,6 +404,16 @@ export class VulnerabilitiesService {
     }
     const score = gridNumberClause('c.cvss_score', model.cvss_score, push);
     if (score) out.push(score);
+    const epss = gridNumberClause('c.epss', model.epss, push);
+    if (epss) out.push(epss);
+    const exploited = setValues('exploited');
+    if (exploited) {
+      const yes = exploited.some((v) => v.toLowerCase() === 'yes' || v.toLowerCase() === 'true' || v === '1');
+      const no = exploited.some((v) => v.toLowerCase() === 'no' || v.toLowerCase() === 'false' || v === '0');
+      if (!yes && !no) out.push('false');
+      else if (yes && !no) out.push(EXPLOITED_SQL);
+      else if (no && !yes) out.push(`NOT ${EXPLOITED_SQL}`);
+    }
     const published = gridDateClause('c.published_at', model.published_at, push);
     if (published) out.push(`(${published})`);
     return out;
@@ -370,8 +448,9 @@ export class VulnerabilitiesService {
   private async cves(mg: EntityManager, ids: string[]): Promise<Map<string, Cve>> {
     const rows: Cve[] = ids.length
       ? await mg.query(
-        `SELECT cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls
-           FROM vulnerability_cves WHERE cve_id = ANY($1::text[])`,
+        `SELECT c.cve_id, c.summary, c.cvss_score, c.severity, c.cvss_version, c.cvss_vector, c.published_at,
+                c.last_modified_at, c.nvd_status, c.reference_urls, ${SIGNAL_COLUMNS}
+           FROM vulnerability_cves c WHERE c.cve_id = ANY($1::text[])`,
         [ids],
       )
       : [];
@@ -431,8 +510,8 @@ export class VulnerabilitiesService {
   }
 
   /**
-   * The rows (technology, version and CVE) that concern the tenant, filtered, most severe first,
-   * paged by row (lot T6c: the unit that carries the state).
+   * The rows (technology, version and CVE) that concern the tenant, filtered, exploited first and
+   * then most severe, paged by row (lot T6c: the unit that carries the state).
    */
   async list(filters: VulnerabilityFilters, opts: VulnOpts, applications: ApplicationsAccess) {
     const { items, total, cves, limit, offset } = await this.listRows(filters, opts, applications, true);
@@ -450,20 +529,25 @@ export class VulnerabilitiesService {
     const offset = !paging ? 0
       : filters.offset !== undefined ? whole(filters.offset, 0, 1_000_000_000)
         : Math.max(whole(filters.page, 1, 10_000_000) - 1, 0) * limit;
-    // The grid's `field:DIR`; most severe first by default.
+    // The grid's `field:DIR`. Omitted: exploited first, then most severe.
     const [sortField, sortDir] = String(filters.sort ?? '').split(':');
     // Own keys only (`constructor` or `__proto__` would read the prototype); another column is a 400.
     if (sortField && !Object.prototype.hasOwnProperty.call(GRID_SORTS, sortField)) {
-      throw new BadRequestException('sort must be severity, cvss_score, published_at, cve_id or technology.');
+      throw new BadRequestException('sort must be severity, cvss_score, published_at, cve_id, technology, epss or exploited.');
     }
     const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     // Then by CVE, technology, version and row: a stable order, so the pages neither repeat nor skip a row.
     const tail = `c.cve_id DESC, lower(t.name), t.id, ${versionOrderSql('v.label')}, tv.id`;
-    // Another column: most severe first among equals (a technology's rows most severe first).
-    const primary = sortField === 'technology' ? `lower(t.name) ${direction}, t.id` : `${GRID_SORTS[sortField]} ${direction} NULLS LAST`;
-    const order = sortField && sortField !== 'severity'
-      ? `${primary}, ${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST, ${tail}`
-      : `${SEVERITY_ORDER} ${sortField ? direction : 'DESC'}, c.cvss_score ${sortField ? direction : 'DESC'} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`;
+    const severityThen = `${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST`;
+    // Exploited first (the default, and the column itself). An explicit severity sort stays on the
+    // severity. Another column: that column, then most severe.
+    const order = !sortField || sortField === 'exploited'
+      ? `${EXPLOITED_SQL} ${sortField === 'exploited' ? direction : 'DESC'}, ${severityThen}, c.published_at DESC NULLS LAST, ${tail}`
+      : sortField === 'severity'
+        ? `${SEVERITY_ORDER} ${direction}, c.cvss_score ${direction} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`
+        : sortField === 'technology'
+          ? `lower(t.name) ${direction}, t.id, ${severityThen}, ${tail}`
+          : `${GRID_SORTS[sortField]} ${direction} NULLS LAST, ${severityThen}, ${tail}`;
     const params: unknown[] = [tenantId];
     const where = await this.filterSql(mg, tenantId, filters, params);
     // The rows and the distinct CVE among them: the grid's total speaks of both.
@@ -478,7 +562,8 @@ export class VulnerabilitiesService {
     }
     const rows: GridRow[] = total === 0 ? [] : await mg.query(
       `SELECT ${this.rowColumns},
-              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status
+              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status,
+              ${SIGNAL_COLUMNS}
          ${this.rowsFrom}
          ${this.usersJoin}
         WHERE tv.tenant_id = $1 ${where}
@@ -606,8 +691,15 @@ export class VulnerabilitiesService {
         };
       }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
     }
+    const presented = presentCve(cve);
+    const kevSources: Array<'cisa' | 'eu'> = [];
+    if (presented.cisa_kev) kevSources.push('cisa');
+    if (presented.eu_kev) kevSources.push('eu');
     return {
-      ...presentCve(cve),
+      ...presented,
+      /** The European record: its EUVD id, or the CVE id when the mapping has none. */
+      euvd_url: `${EUVD_VULNERABILITY_URL}${presented.euvd_id || cve.cve_id}`,
+      kev_sources: kevSources,
       cvss_vector: cve.cvss_vector,
       reference_urls: cve.reference_urls ?? [],
       technologies: groupByTechnology(rows),
@@ -1037,7 +1129,7 @@ export class VulnerabilitiesService {
   /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
     const { items } = await this.listRows(filters, opts, applications, false);
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications', 'Alerts'];
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications', 'Exploited', 'KEV added', 'Ransomware', 'EPSS', 'EPSS percentile', 'EUVD', 'Alerts'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
@@ -1058,6 +1150,12 @@ export class VulnerabilitiesService {
       item.note ?? '',
       String(item.servers),
       item.applications == null ? '' : String(item.applications),
+      item.exploited ? 'yes' : 'no',
+      item.kev_added_at ?? '',
+      item.kev_ransomware == null ? '' : item.kev_ransomware ? 'yes' : 'no',
+      item.epss == null ? '' : String(item.epss),
+      item.epss_percentile == null ? '' : String(item.epss_percentile),
+      item.euvd_id ?? '',
       item.alerts ? 'yes' : 'no',
     ]);
     const content = writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows: lines });

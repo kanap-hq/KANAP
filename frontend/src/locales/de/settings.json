@@ -69,7 +69,7 @@
     },
     "technologies": {
       "title": "Technologie-Benachrichtigungen",
-      "vulnerabilities": "Kritische oder hohe Schwachstellen in Technologien, für die ich IT-verantwortlich bin"
+      "vulnerabilities": "Schwachstellen in Technologien, für die ich IT-verantwortlich bin: kritische oder hohe, oder bekanntermaßen ausgenutzt"
     },
     "weeklyReview": {
       "title": "Wöchentliche Übersichts-E-Mail",

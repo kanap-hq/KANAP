@@ -6,7 +6,7 @@ Ouvrez-la depuis **Cartographie SI > Vulnérabilités**, dans le groupe **Exploi
 
 ## Disponibilité
 
-Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne [les active](on-premise/configuration.md#optional-vulnerabilities) pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) ou un miroir de celle-ci. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans la liste des technologies, ni section sur une technologie, ni réglage de notification, ni e-mail.
+Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne [les active](on-premise/configuration.md#optional-vulnerabilities) pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) ou un miroir de celle-ci. Le même interrupteur lit aussi trois sources d'exploitation, ou un miroir de chacune : le catalogue de la CISA, la base européenne des vulnérabilités de l'ENISA et les scores EPSS du jour. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans la liste des technologies, ni section sur une technologie, ni réglage de notification, ni e-mail.
 
 ## Comment KANAP les trouve
 
@@ -43,17 +43,19 @@ Une version hors des alertes reste rapprochée des vulnérabilités. Elle reste 
 
 ## La liste
 
-La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité, la plus sévère en premier. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** qui sont dans les alertes : videz le filtre de la colonne **État** pour voir les autres états.
+La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité. Les vulnérabilités exploitées activement viennent en premier, puis les plus sévères. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** qui sont dans les alertes : videz le filtre de la colonne **État** pour voir les autres états.
 
-**Alertes**, au-dessus de la grille, choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Publiée**, à côté, garde les vulnérabilités selon leur date de publication à la NVD : **Toutes** (par défaut), **Moins de 7 jours**, **Moins de 30 jours**, **Moins de 90 jours**, **Moins d'un an** ou **Plus d'un an**. La période se compte à partir d'aujourd'hui, donc un lien enregistré ou partagé continue de montrer les plus récentes. L'export et les changements d'état sur tout le filtre suivent les deux filtres. **Réinitialiser les filtres** remet **Alertes** sur **Incluses** et **Publiée** sur **Toutes**.
+**Alertes**, **Publiée** et **Exploitées seulement** sont au-dessus de la grille. **Alertes** choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Publiée** garde les vulnérabilités selon leur date de publication à la NVD : **Toutes** (par défaut), **Moins de 7 jours**, **Moins de 30 jours**, **Moins de 90 jours**, **Moins d'un an** ou **Plus d'un an**. La période se compte à partir d'aujourd'hui, donc un lien enregistré ou partagé continue de montrer les plus récentes. **Exploitées seulement** ne garde que les vulnérabilités listées comme exploitées activement. L'adresse porte `exploited=1`. **Réinitialiser les filtres** ramène la page à son état d'ouverture : les lignes **À traiter**, les vulnérabilités exploitées activement en premier, **Alertes** sur **Incluses**, **Publiée** sur toutes les dates et **Exploitées seulement** éteint. L'export et un changement d'état en masse suivent ces trois réglages.
 
 **Colonnes** :
 
 | Colonne | Ce qu'elle montre |
 |---|---|
 | **CVE** | L'identifiant de la vulnérabilité, par exemple `CVE-2024-1234` |
-| **Sévérité** | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** ou **Non évaluée** |
+| **Sévérité** | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** ou **Non évaluée**. Une icône d'alerte suit le nom quand la CISA ou l'Union européenne liste la vulnérabilité. Son infobulle nomme les catalogues, et l'usage par des rançongiciels quand la CISA l'enregistre |
+| **Exploitée** | **Oui** ou **Non**. Masquée par défaut : l'icône de **Sévérité** montre le même fait |
 | **Score** | Le score CVSS. Masquée par défaut |
+| **EPSS (%)** | La probabilité d'exploitation dans les 30 jours qui viennent, en pourcentage dans la langue de votre écran. Par exemple, 15,3 %. Le panneau latéral ajoute le centile |
 | **Résumé** | La description de la NVD |
 | **Technologie** | La technologie concernée |
 | **Version** | La version concernée. **Non renseignée** quand un serveur ou une application utilise la technologie sans nommer sa version : la ligne est alors potentiellement concernée |
@@ -64,11 +66,11 @@ La liste utilise la grille standard : une ligne par technologie, version et vuln
 | **Note** | La note de la ligne. Masquée par défaut |
 | **Publication** | La date de publication |
 
-**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologie**, **Version**, **Éditeur** et **État** proposent des cases à cocher (**Version** propose aussi **Non renseignée**), **Score** un nombre, **Publication** une date, **CVE** et **Résumé** un texte. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
+**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologie**, **Version**, **Éditeur**, **État** et **Exploitée** proposent des cases à cocher (**Version** propose aussi **Non renseignée**, **Exploitée** propose **Oui** et **Non**), **Score** un nombre, **EPSS (%)** un pourcentage minimal de 0 à 100, **Publication** une date, **CVE** et **Résumé** un texte. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
 
-**Tri** par **Sévérité**, **Score**, **Publication**, **CVE** ou **Technologie**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
+**Tri** par **Exploitée**, **Sévérité**, **Score**, **EPSS (%)**, **Publication**, **CVE** ou **Technologie**. La liste s'ouvre sur les vulnérabilités exploitées activement, puis les plus sévères. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
 
-**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?published=30d` les vulnérabilités publiées dans les 30 derniers jours (`7d`, `30d`, `90d`, `1y` ou `older1y`, comme le filtre **Publiée**), `?period=30` la même chose par le filtre de la colonne **Publiée**, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes. Le lien des e-mails utilise `period`.
+**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?published=30d` les vulnérabilités publiées dans les 30 derniers jours (`7d`, `30d`, `90d`, `1y` ou `older1y`, comme le filtre **Publiée**), `?period=30` la même chose par le filtre de la colonne **Publiée**, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes, `?exploited=1` les vulnérabilités exploitées activement. Le lien des e-mails utilise `period`.
 
 ## Changer l'état de plusieurs lignes
 
@@ -85,12 +87,13 @@ Par exemple, pour marquer toutes les versions non renseignées de PostgreSQL com
 
 ## Traiter une vulnérabilité
 
-Cliquez sur une ligne pour ouvrir sa vulnérabilité dans un panneau latéral. Le panneau couvre toutes les technologies et versions que la vulnérabilité concerne. Vous voyez :
+Cliquez sur une ligne pour ouvrir sa vulnérabilité dans un panneau latéral. Son en-tête reste visible, avec l'identifiant CVE, la sévérité et l'icône d'alerte quand la vulnérabilité est exploitée activement. **Fermer** (la croix) ou Échap ferme le panneau. Le panneau couvre toutes les technologies et versions que la vulnérabilité concerne. Vous voyez :
 
 - Le résumé, le vecteur CVSS et les liens de référence (avis de l'éditeur, correctifs).
 - **Technologies et versions** : chaque version concernée, avec son **État** et une note.
 - **Serveurs** : chaque serveur qui porte une version concernée, avec la technologie, la version et le serveur dans lequel il tourne.
 - **Applications** : chaque application qui utilise une version concernée, avec son serveur.
+- **Exploitation**, quand un catalogue, un score EPSS ou un identifiant européen est connu. Voir [Exploitation](#exploitation).
 
 Une version hors des alertes est grisée, avec ses serveurs et ses applications. Quand une partie seulement est dans les alertes, une ligne au-dessus de la liste dit combien, par exemple « 3 serveurs, dont 1 dans les alertes ».
 
@@ -106,15 +109,27 @@ La note dit comment, par exemple « corrigé le 12 mars, changement CHG-123 ». 
 
 KANAP ne change jamais un état que vous avez choisi. Quand une version ne correspond plus (vous l'avez mise à jour, la technologie a été retirée, la NVD a changé ses données), une ligne encore **À traiter** disparaît. Une ligne que vous avez traitée reste, grisée, avec son état ; elle revient telle quelle si la version correspond de nouveau.
 
+## Exploitation { #exploitation }
+
+Une vulnérabilité est **exploitée activement** quand le catalogue de la CISA (États-Unis) ou celui de l'Union européenne la liste, ou les deux. Une icône d'alerte se place à côté de la sévérité, dans la liste et dans le panneau latéral. Son infobulle nomme les catalogues qui listent la vulnérabilité. Quand la CISA enregistre un usage dans des campagnes de rançongiciels, l'infobulle le dit.
+
+L'**EPSS** est la probabilité que la vulnérabilité soit exploitée dans les 30 jours qui viennent. [FIRST](https://www.first.org/epss) la calcule chaque jour. La colonne **EPSS (%)** l'affiche en pourcentage. Le panneau latéral ajoute le centile du jour quand FIRST en publie un, et le jour du score. Le panneau nomme la méthode : EPSS : FIRST.
+
+Le panneau latéral montre aussi l'identifiant **EUVD** quand la correspondance européenne en a un, avec le lien **Voir sur la base européenne des vulnérabilités (ENISA)**. La base européenne des vulnérabilités de l'ENISA est le catalogue européen utilisé pour l'examen des vulnérabilités dans le cadre de NIS2. Le panneau nomme la source : ENISA, base européenne des vulnérabilités.
+
+La liste s'ouvre sur les vulnérabilités exploitées activement, puis les plus sévères. **Exploitées seulement**, au-dessus de la grille, garde ces lignes (`?exploited=1`). **Réinitialiser les filtres** l'éteint. L'export et un changement d'état en masse le suivent.
+
+L'e-mail aux responsables IT annonce une vulnérabilité exploitée quelle que soit sa sévérité, sur les versions dans les alertes, avec les mêmes règles qu'une vulnérabilité critique ou élevée : publiée dans les 30 derniers jours, sur un produit auquel la technologie était déjà comparée, encore à traiter. Une vulnérabilité déjà détectée qui rejoint ensuite un catalogue est annoncée une fois, comme désormais exploitée, si elle est dans les alertes.
+
 ## Export
 
 **Exporter en CSV** télécharge les vulnérabilités qui répondent aux filtres, une ligne par ligne de la grille, dans son ordre, dans la langue de votre écran. Au-delà de 10 000 vulnérabilités, resserrez d'abord les filtres.
 
 ## Notifications par e-mail
 
-Après chaque vérification, les responsables IT d'une technologie reçoivent un e-mail sur ses nouvelles vulnérabilités critiques ou élevées encore à traiter, sur les versions dans les alertes :
+Après chaque vérification, les responsables IT d'une technologie reçoivent un e-mail sur ses nouvelles vulnérabilités encore à traiter, sur les versions dans les alertes. L'e-mail comprend une vulnérabilité critique ou élevée, ou connue comme exploitée quelle que soit sa sévérité :
 
-- **Ce qui est annoncé** : une vulnérabilité publiée dans les 30 derniers jours sur un produit auquel la technologie était déjà comparée, ou une vulnérabilité connue qui vient de devenir critique ou élevée.
+- **Ce qui est annoncé** : une vulnérabilité publiée dans les 30 derniers jours sur un produit auquel la technologie était déjà comparée, quand elle est critique, élevée ou listée comme exploitée, ou une vulnérabilité connue qui vient de devenir critique ou élevée.
 - **Ce qui ne l'est pas** : la première comparaison d'une technologie, ou d'un identifiant CPE que vous venez d'ajouter, est silencieuse. Ses résultats attendent sur cette page.
 - **Combien** : 25 lignes au plus, une par technologie et par vulnérabilité, puis un lien vers la page, filtrée sur les vulnérabilités publiées dans les 30 derniers jours.
 - **Combien de fois** : chaque personne entend parler d'une vulnérabilité sur une technologie une seule fois. Une vulnérabilité non annoncée lors de sa vérification ne l'est jamais plus tard.

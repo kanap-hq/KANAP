@@ -111,11 +111,17 @@ export const en = {
     vulnerabilities: {
       subject: 'New vulnerabilities on your technologies ({{count}})',
       heading: 'New vulnerabilities on your technologies',
-      intro: 'KANAP found critical or high vulnerabilities on technologies you own for IT ({{count}}). Review them and set their state.',
+      intro: 'KANAP found vulnerabilities on technologies you own for IT ({{count}}): critical or high, or known to be exploited. Review them and set their state.',
       severities: {
         critical: 'Critical',
         high: 'High',
+        medium: 'Medium',
+        low: 'Low',
+        none: 'None',
+        unknown: 'Not rated',
       },
+      exploited: 'Known to be exploited',
+      nowExploited: 'Now known to be exploited',
       versions: 'Versions: {{versions}}',
       unknownVersion: 'version not recorded (potentially concerned)',
       view: 'Open vulnerabilities',

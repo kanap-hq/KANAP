@@ -445,17 +445,21 @@ Chaque utilisateur l'ouvre, confirme, puis se connecte à KANAP comme décrit da
 
 ## Facultatif : vulnérabilités { #optional-vulnerabilities }
 
-La page [Vulnérabilités](../vulnerabilities.md), ses notifications par e-mail et les compteurs de vulnérabilités des technologies sont désactivés par défaut sur site. Une fois activé, KANAP lit toutes les 6 heures les vulnérabilités publiées par la NVD (la base nationale des vulnérabilités des États-Unis), pour les produits CPE que nomment vos technologies.
+La page [Vulnérabilités](../vulnerabilities.md), ses notifications par e-mail et les compteurs de vulnérabilités des technologies sont désactivés par défaut sur site. Une fois activé, KANAP lit toutes les 6 heures les vulnérabilités publiées par la NVD (la base nationale des vulnérabilités des États-Unis), pour les produits CPE que nomment vos technologies. Le même interrupteur lit les signaux d'exploitation : le catalogue CISA des vulnérabilités exploitées connues, la base européenne des vulnérabilités de l'ENISA (catalogue européen et identifiants EUVD) et les scores EPSS du jour.
 
 | Variable | Description | Défaut |
 |----------|-------------|---------|
 | `VULNERABILITY_FEED_ENABLED` | Active les vulnérabilités. | `false` sur site |
 | `NVD_API_BASE_URL` | Adresse d'un miroir de l'API CVE 2.0 de la NVD, quand le serveur ne peut pas joindre la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Clé facultative qui fait passer la cadence de 5 à 50 requêtes par 30 secondes : la première lecture se termine plus vite. Demandez-la gratuitement sur le [site de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *non définie* |
+| `KEV_FEED_URL` | Adresse d'un miroir du catalogue CISA des vulnérabilités exploitées connues. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `EPSS_FEED_URL` | Adresse d'un miroir des scores EPSS du jour. L'EPSS est décrit sur [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
+| `EUVD_BASE_URL` | Adresse d'un miroir de la base européenne des vulnérabilités de l'ENISA (catalogue européen et correspondance EUVD). | `https://euvdservices.enisa.europa.eu` |
 
 Remarques :
 
-- L'API a besoin d'un accès HTTPS sortant vers `services.nvd.nist.gov`, ou vers votre miroir (voir [Règles de pare-feu](#regles-de-pare-feu)).
+- L'API a besoin d'un accès HTTPS sortant, port 443, vers `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` et `euvdservices.enisa.europa.eu`, ou vers vos miroirs (voir [Règles de pare-feu](#regles-de-pare-feu)).
+- Une adresse de miroir vide garde l'adresse publique. Une source que le serveur ne joint pas laisse ses colonnes en l'état et est nommée dans le résumé de la tâche. Les autres sources continuent.
 - Les notifications par e-mail demandent aussi que l'envoi d'e-mails soit configuré (Resend ou SMTP).
 - Redémarrez l'API après avoir changé ces valeurs.
 
@@ -595,6 +599,9 @@ S3_FORCE_PATH_STYLE=false
 # VULNERABILITY_FEED_ENABLED=false
 # NVD_API_KEY=
 # NVD_API_BASE_URL=
+# KEV_FEED_URL=
+# EPSS_FEED_URL=
+# EUVD_BASE_URL=
 
 # CATALOGUE DES TECHNOLOGIES (facultatif - désactivé par défaut)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -660,6 +667,9 @@ Nécessaire uniquement si la fonction correspondante est activée.
 | `claude.ai` | 443 | Lit la description de Claude, Claude Desktop ou Claude Code quand un utilisateur le connecte via MCP sans clé | Si `AI_MCP_ENABLED=true` et que des utilisateurs se connectent via OAuth (inutile pour les clés API) |
 | `chatgpt.com`, `grok.com` | 443 | Lit la description de ChatGPT ou de Grok quand un utilisateur le connecte via MCP sans clé | Comme pour `claude.ai` |
 | `services.nvd.nist.gov`, ou votre miroir | 443 | Vulnérabilités publiées (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `www.cisa.gov`, ou votre miroir | 443 | Catalogue CISA des vulnérabilités exploitées connues | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `epss.empiricalsecurity.com`, ou votre miroir | 443 | Scores EPSS du jour | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `euvdservices.enisa.europa.eu`, ou votre miroir | 443 | Base européenne des vulnérabilités (ENISA) : catalogue européen et identifiants EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `endoflife.date`, ou votre miroir | 443 | Versions et dates de fin de support du catalogue des technologies | Si `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Taux de change annuels | Facultatif |
 | `open.er-api.com` | 443 | Taux de change au comptant | Facultatif |

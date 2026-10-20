@@ -20,7 +20,7 @@ export interface WorkspaceSettings {
     status_changes: boolean;
     comments: boolean;
   };
-  /** Technologies (lot T6b): the critical or high vulnerabilities found on a technology the user owns for IT. */
+  /** Technologies (lot T6b, K2a): critical or high vulnerabilities, or known exploited ones, on a technology the user owns for IT. */
   technologies: {
     enabled: boolean;
     vulnerabilities: boolean;

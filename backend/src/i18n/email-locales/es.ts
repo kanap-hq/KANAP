@@ -113,11 +113,17 @@ export const es: EmailStrings = {
     vulnerabilities: {
       subject: 'Nuevas vulnerabilidades en sus tecnologías ({{count}})',
       heading: 'Nuevas vulnerabilidades en sus tecnologías',
-      intro: 'KANAP encontró vulnerabilidades críticas o altas en tecnologías de las que usted es responsable de TI ({{count}}). Revíselas e indique su estado.',
+      intro: 'KANAP encontró vulnerabilidades en tecnologías de las que usted es responsable de TI ({{count}}): críticas o altas, o con explotación conocida. Revíselas e indique su estado.',
       severities: {
         critical: 'Crítica',
         high: 'Alta',
+        medium: 'Media',
+        low: 'Baja',
+        none: 'Ninguna',
+        unknown: 'Sin evaluar',
       },
+      exploited: 'Explotación conocida',
+      nowExploited: 'Ahora con explotación conocida',
       versions: 'Versiones: {{versions}}',
       unknownVersion: 'versión no registrada (potencialmente afectada)',
       view: 'Abrir vulnerabilidades',

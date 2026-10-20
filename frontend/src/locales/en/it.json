@@ -398,6 +398,10 @@
         "published": "Published",
         "version": "Version",
         "score": "Score",
+        "exploited": "Exploited",
+        "exploitedYes": "Yes",
+        "exploitedNo": "No",
+        "epss": "EPSS (%)",
         "editor": "Publisher",
         "note": "Note"
       },
@@ -429,7 +433,17 @@
         "serversInAlerts_one": "{{count}} server, {{alerting}} in alerts",
         "serversInAlerts_other": "{{count}} servers, {{alerting}} in alerts",
         "applicationsInAlerts_one": "{{count}} application, {{alerting}} in alerts",
-        "applicationsInAlerts_other": "{{count}} applications, {{alerting}} in alerts"
+        "applicationsInAlerts_other": "{{count}} applications, {{alerting}} in alerts",
+        "exploitation": "Exploitation",
+        "sources": "Sources",
+        "sourceCisa": "CISA",
+        "sourceEu": "European Union",
+        "kevAdded": "Added to the CISA list",
+        "epss": "EPSS",
+        "epssOn": "as of {{date}}",
+        "epssFirst": "EPSS: FIRST",
+        "euvdLink": "See on the European vulnerability database (ENISA)",
+        "euvdSource": "Source: ENISA, European vulnerability database"
       },
       "section": {
         "title": "Vulnerabilities",
@@ -471,6 +485,22 @@
         "90d": "Less than 90 days",
         "1y": "Less than a year",
         "older1y": "More than a year"
+      },
+      "exploited": {
+        "badge": "Actively exploited",
+        "tooltip": "Actively exploited: listed by CISA (United States) and/or the European Union.",
+        "ransomware": "Used in ransomware campaigns"
+      },
+      "epss": {
+        "cell": "{{percent}} ({{ordinal}})",
+        "percentile_one": "{{rank}}st percentile",
+        "percentile_two": "{{rank}}nd percentile",
+        "percentile_few": "{{rank}}rd percentile",
+        "percentile_other": "{{rank}}th percentile",
+        "minimumHint": "Minimum probability, from 0 to 100"
+      },
+      "shortcut": {
+        "exploitedOnly": "Exploited only"
       }
     },
     "interfaces": {

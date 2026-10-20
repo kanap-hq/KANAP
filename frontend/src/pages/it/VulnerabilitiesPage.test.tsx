@@ -7,8 +7,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
+import i18n from '../../i18n';
+import { formatShortDate } from '../../lib/dateFormat';
 import VulnerabilitiesPage, { filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
-import type { VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
+import { formatEpssCell, formatEpssPercent, formatEpssPercentInput, parseEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() } }));
 const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'none' }));
@@ -145,18 +147,25 @@ describe('VulnerabilitiesPage', () => {
     renderPage();
     expect(grid.props!.endpoint).toBe('/vulnerabilities');
     expect(grid.props!.columnPreferencesKey).toBe('it-vulnerabilities');
-    expect(grid.props!.defaultSort).toEqual({ field: 'severity', direction: 'DESC' });
+    expect(grid.props!.defaultSort).toEqual({ field: 'exploited', direction: 'DESC' });
+    // Reset filters goes back to this opening: rows to review, exploited first. The sort reset is
+    // opt-in, so the other lists keep the sort the user chose.
+    expect(grid.props!.defaultFilterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
+    expect(grid.props!.resetSortOnReset).toBe(true);
     expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
     expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([
-      'select', 'cve_id', 'severity', 'cvss_score', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
+      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
-    // The default set fits a 1,440 px window, the selection column included: the summary takes the rest.
+    // EPSS is shown as a percentage only. The exploited column stays hidden: the icon next to the severity carries that signal.
+    // The default set is then 1,219 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
-    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBeLessThanOrEqual(1100);
+    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1219);
+    expect(column('exploited').defaultHidden).toBe(true);
+    expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
     expect(grid.props!.enableRowSelection).toBeFalsy();
     expect(column('summary').flex).toBe(1);
@@ -360,6 +369,10 @@ describe('VulnerabilitiesPage', () => {
     expect(within(detail).getByRole('link', { name: 'SRV-WEB-01' }).getAttribute('href')).toBe('/it/assets/a-1');
     expect(detail.textContent).toContain('VM-APP-02 · Tomcat Version not recorded (potentially concerned) · through ESX-01');
     expect(detail.textContent).toContain('The applications are hidden');
+    // No exploitation signal on this CVE: the block stays out.
+    expect(within(detail).queryByText('Exploitation')).toBeNull();
+    expect(within(detail).queryByRole('link', { name: 'EPSS: FIRST' })).toBeNull();
+    expect(within(detail).queryByRole('link', { name: 'See on the European vulnerability database (ENISA)' })).toBeNull();
     // A member changes the state of one version there.
     patchMock.mockResolvedValue({ data: { ok: true } } as any);
     fireEvent.mouseDown(screen.getByRole('combobox', { name: 'State of 9.0.80' }));
@@ -371,6 +384,18 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.queryByTestId('vulnerabilities-selection')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'Close' }));
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
+  });
+
+  it('places the drawer under the application bar and closes it on escape', async () => {
+    renderPage();
+    act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+    await screen.findByTestId('vulnerability-detail');
+    const paper = document.querySelector('.MuiDrawer-paper') as HTMLElement;
+    expect(getComputedStyle(paper).top).toBe('48px');
+    const note = screen.getByRole('textbox', { name: 'Note on 9.0.80' });
+    act(() => { note.focus(); });
+    fireEvent.keyDown(note, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: CVE })).toBeNull());
   });
 
   it('names how many servers and applications raise an alert, and dims the others', async () => {
@@ -672,6 +697,194 @@ describe('VulnerabilitiesPage', () => {
     renderPage('/it/vulnerabilities?published=nope');
     expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
     expect(grid.props!.extraNarrows).toBe(false);
+  });
+
+  const TIP = 'Actively exploited: listed by CISA (United States) and/or the European Union.';
+  const RANSOM = 'Used in ransomware campaigns';
+
+  it('shows an actively exploited icon next to the severity, in light and dark', async () => {
+    renderPage();
+    const Severity = column('severity').cellRenderer;
+    const light = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <Severity data={{ ...ROW, exploited: true, kev_ransomware: false }} />
+        <Severity data={ROW} />
+      </ThemeProvider>,
+    );
+    const badge = screen.getByRole('img', { name: TIP });
+    expect(badge.querySelector('svg')).toBeTruthy();
+    expect(badge.textContent).toBe('');
+    expect(document.querySelectorAll('[data-exploited]')).toHaveLength(1);
+    expect(getComputedStyle(badge).color).toBe('rgb(180, 83, 9)');
+    expect(getComputedStyle(badge).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    expect(getComputedStyle(badge).cursor).not.toBe('help');
+    fireEvent.mouseOver(badge);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(TIP);
+    expect(screen.queryByRole('tooltip')?.textContent).not.toContain(RANSOM);
+    light.unmount();
+
+    const named = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <Severity data={{ ...ROW, exploited: true, cisa_kev: true, eu_kev: true }} />
+        <Severity data={{ ...ROW, exploited: true, cisa_kev: true, kev_ransomware: true }} />
+        <Severity data={{ ...ROW, exploited: true, kev_sources: ['eu'] }} />
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('img', { name: 'Actively exploited: CISA, European Union' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: `Actively exploited: CISA ${RANSOM}` })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Actively exploited: European Union' })).toBeTruthy();
+    named.unmount();
+
+    render(
+      <ThemeProvider theme={createAppTheme('dark')}>
+        <Severity data={{ ...ROW, exploited: true, kev_ransomware: true }} />
+      </ThemeProvider>,
+    );
+    const darkBadge = screen.getByRole('img', { name: `${TIP} ${RANSOM}` });
+    expect(darkBadge.querySelector('svg')).toBeTruthy();
+    expect(getComputedStyle(darkBadge).color).toBe('rgb(240, 168, 48)');
+    expect(getComputedStyle(darkBadge).backgroundColor).toBe('rgba(0, 0, 0, 0)');
+    fireEvent.mouseOver(darkBadge);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(`${TIP} ${RANSOM}`);
+  });
+
+  it('formats the EPSS cell as a percentage, and keeps the percentile for the detail', async () => {
+    renderPage();
+    const epss = column('epss');
+    expect(epss.defaultHidden).toBeFalsy();
+    expect(epss.sortable).not.toBe(false);
+    expect(epss.headerName).toBe('EPSS (%)');
+    expect(epss.filter).toBe('agNumberColumnFilter');
+    expect(epss.filterParams).toMatchObject({
+      suppressAndOrCondition: true,
+      maxNumConditions: 1,
+      buttons: ['clear'],
+      filterOptions: ['greaterThanOrEqual'],
+      defaultOption: 'greaterThanOrEqual',
+      allowedCharPattern: '\\d\\,\\.',
+    });
+    // Typed as a percentage, stored as the probability the API compares.
+    expect(epss.filterParams.numberParser('90')).toBe(0.9);
+    expect(epss.filterParams.numberParser('90,5')).toBe(0.905);
+    expect(epss.filterParams.numberParser('14.2')).toBeCloseTo(0.142);
+    expect(epss.filterParams.numberParser('0,5')).toBe(0.005);
+    expect(epss.filterParams.numberParser('')).toBeNull();
+    expect(epss.filterParams.numberParser('150')).toBe(1);
+    expect(epss.filterParams.numberFormatter(0.9)).toBe('90');
+    expect(epss.filterParams.numberFormatter(0.142)).toBe('14.2');
+    expect(parseEpssPercent('90')).toBe(0.9);
+    expect(formatEpssPercentInput(0.905, 'fr')).toBe('90,5');
+    expect(formatEpssPercentInput(0.142, 'de')).toBe('14,2');
+    expect(epss.headerTooltip).toBe('Minimum probability, from 0 to 100');
+    // The grid omits the percentile even when the row has one. The drawer keeps it (formatEpssCell).
+    expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: 0.92 } })).toBe('15.3%');
+    expect(epss.valueFormatter({ value: 0.142, data: { epss: 0.142, epss_percentile: 0.5 } })).toBe('14.2%');
+    expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: null } })).toBe('15.3%');
+    expect(epss.valueFormatter({ value: null, data: { epss: null } })).toBe('');
+    expect(formatEpssPercent(0.142, 'fr')).toBe('14,2\u00a0%');
+    expect((await column('exploited').filterParams.getValues({})).map((value: { value: string }) => value.value)).toEqual(['yes', 'no']);
+    const t = (key: string, options?: Record<string, unknown>) => String(i18n.t(key, { ...options, lng: 'fr', ns: 'it' }));
+    expect(formatEpssCell(0.153, 0.92, 'fr', t)).toBe('15,3\u00a0% (92e centile)');
+    expect(formatEpssCell(0.153, 0.92, 'de', (key, options) => String(i18n.t(key, { ...options, lng: 'de', ns: 'it' })))).toBe('15,3\u00a0% (92. Perzentil)');
+    expect(formatEpssCell(0.153, 0.92, 'es', (key, options) => String(i18n.t(key, { ...options, lng: 'es', ns: 'it' })))).toBe('15,3\u00a0% (percentil 92)');
+  });
+
+  it('keeps exploited only in the address, the list, the export and the reset', async () => {
+    renderPage('/it/vulnerabilities?technology=TEC-1', true);
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    expect(grid.props!.extraNarrows).toBe(false);
+    const view = render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.toolbarExtras}</ThemeProvider>);
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Exploited only' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&exploited=1'));
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included', exploited: 'yes' });
+    expect(grid.props!.extraNarrows).toBe(true);
+    view.unmount();
+
+    render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('vulnerabilities-empty').textContent).toBe('No vulnerability matches these filters.');
+
+    await column('version').filterParams.getValues({ context: { getQueryState: () => ({ filters: {} }) } });
+    expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({
+      params: { fields: 'version', alerts: 'included', exploited: 'yes' },
+    }));
+
+    getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
+    postMock.mockImplementation(async (_url: string, body: any) => ({
+      data: body.dry_run ? { rows: 3, cves: 2, changes: 3, as_of: '2026-10-18T10:00:02.000Z' } : { ok: true, changed: 3 },
+    }) as any);
+    act(() => grid.props!.onListRequestChange({
+      params: { page: 1, limit: 50, sort: 'exploited:DESC', filters: FILTERS, ...grid.props!.extraParams },
+      total: 3,
+    }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
+      params: { sort: 'exploited:DESC', filters: FILTERS, alerts: 'included', exploited: 'yes' },
+      responseType: 'blob',
+    })));
+    fireEvent.click(box(ALL_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
+      state: 'handled', all: true, filters: { sort: 'exploited:DESC', filters: FILTERS, alerts: 'included', exploited: 'yes' }, dry_run: true,
+    }));
+
+    act(() => grid.props!.onResetFilters());
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1'));
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    expect(grid.props!.extraNarrows).toBe(false);
+  });
+
+  it('reads only exploited=1 as the shortcut', () => {
+    const { unmount } = renderPage('/it/vulnerabilities?exploited=yes');
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    expect(grid.props!.extraNarrows).toBe(false);
+    unmount();
+    renderPage('/it/vulnerabilities?exploited=1&published=7d');
+    expect(grid.props!.extraParams.exploited).toBe('yes');
+    expect(grid.props!.extraNarrows).toBe(true);
+  });
+
+  it('shows the exploitation block when a signal, a score or a European identifier is present', async () => {
+    const added = formatShortDate('2024-03-12', 'en', { year: 'always' });
+    const scored = formatShortDate('2026-10-18', 'en', { year: 'always' });
+    getMock.mockImplementation(async (url: string) => {
+      if (url === `/vulnerabilities/${CVE}`) {
+        return {
+          data: {
+            ...DETAIL,
+            kev_sources: ['cisa', 'eu'],
+            kev_added_at: '2024-03-12',
+            kev_ransomware: true,
+            epss: 0.153,
+            epss_percentile: 0.92,
+            epss_date: '2026-10-18',
+            euvd_id: 'EUVD-2024-1234',
+            euvd_url: 'https://euvd.enisa.europa.eu/vulnerability/EUVD-2024-1234',
+          },
+        } as any;
+      }
+      throw new Error(`unexpected ${url}`);
+    });
+    renderPage();
+    act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+    const detail = await screen.findByTestId('vulnerability-detail');
+    const region = screen.getByRole('region', { name: CVE });
+    expect(within(region).getByRole('heading', { name: CVE })).toBeTruthy();
+    expect(within(region).getByRole('img', { name: `Actively exploited: CISA, European Union ${RANSOM}` })).toBeTruthy();
+    expect(within(detail).getByText('Exploitation')).toBeTruthy();
+    expect(detail.textContent).toContain('Sources CISA, European Union');
+    expect(detail.textContent).toContain(`Added to the CISA list ${added}`);
+    expect(detail.textContent).toContain(RANSOM);
+    expect(detail.textContent).toContain(`EPSS 15.3% (92nd percentile) as of ${scored}`);
+    const first = within(detail).getByRole('link', { name: 'EPSS: FIRST' });
+    expect(first.getAttribute('href')).toBe('https://www.first.org/epss');
+    expect(first.getAttribute('target')).toBe('_blank');
+    expect(first.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(first.className).toContain('MuiLink-underlineHover');
+    expect(detail.textContent).toContain('EUVD-2024-1234');
+    const euvd = within(detail).getByRole('link', { name: 'See on the European vulnerability database (ENISA)' });
+    expect(euvd.getAttribute('href')).toBe('https://euvd.enisa.europa.eu/vulnerability/EUVD-2024-1234');
+    expect(euvd.getAttribute('target')).toBe('_blank');
+    expect(detail.textContent).toContain('Source: ENISA, European vulnerability database');
   });
 
   it('gives a reader neither selection nor change of state', () => {

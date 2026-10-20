@@ -85,6 +85,8 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
     'purge stay within the tenant\'s tables. The feed never deletes a CVE that a tenant row names.',
   'vulnerability_cves.cve_id':
     'Not a reference: the CVE number published by the NVD, primary key of the platform cache.',
+  'vulnerability_cves.euvd_id':
+    'Not a reference: the ENISA identifier of the same CVE (EUVD-AAAA-NNNNN), stored when the European mapping names one.',
 
   // Identifiers of other systems.
   'ai_api_keys.oauth_client_id': EXTERNAL,

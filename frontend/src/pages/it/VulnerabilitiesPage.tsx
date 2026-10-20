@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Button, Checkbox, Drawer, IconButton, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography,
+  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
@@ -27,10 +27,18 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
 import {
+  EPSS_HOME,
+  ExploitedBadge,
   SEVERITIES,
   SeverityCell,
   VULNERABILITY_STATES,
   VulnerabilityStateCell,
+  exploitationSources,
+  formatEpssCell,
+  formatEpssPercent,
+  formatEpssPercentInput,
+  parseEpssPercent,
+  hasExploitationData,
   versionText,
   type VulnerabilityDetail,
   type VulnerabilityGridRow,
@@ -39,6 +47,11 @@ import {
 } from './vulnerabilities/vulnerabilityTypes';
 
 const ENDPOINT = '/vulnerabilities';
+
+/** The filters the page opens on, with no link: rows to review. Reset filters goes back to them. */
+const OPENING_FILTER_MODEL: Record<string, unknown> = {
+  state: { filterType: 'set', values: ['to_review'] },
+};
 
 /** A list row: one technology, version and CVE (`GET /vulnerabilities`). */
 export type VulnerabilityRow = VulnerabilityGridRow;
@@ -84,6 +97,26 @@ export function alertsFromSearch(search: string): AlertsFilter {
   const value = new URLSearchParams(search).get('alerts');
   return value === 'excluded' || value === 'all' ? value : 'included';
 }
+
+/** `exploited=1` on the address. Any other value leaves the shortcut off, and the API then receives no `exploited`. */
+export function exploitedOnlyFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('exploited') === '1';
+}
+
+/**
+ * EPSS filter: the user types a percentage (`90` is 90%). The model keeps the probability from 0 to 1,
+ * which is what the API compares with the stored ratio. A column's filterParams replace the grid's
+ * number operators, so the whole set is named here. The text field accepts a comma or a dot.
+ */
+const EPSS_FILTER_PARAMS = {
+  suppressAndOrCondition: true,
+  maxNumConditions: 1,
+  buttons: ['clear'],
+  filterOptions: ['greaterThanOrEqual'],
+  defaultOption: 'greaterThanOrEqual',
+  allowedCharPattern: '\\d\\,\\.',
+  numberParser: (text: string | null) => parseEpssPercent(text),
+};
 
 /** A relative publication window. Absent or unknown reads as every date. Distinct from `period` (the emails' link). */
 export const PUBLISHED_PERIODS = ['7d', '30d', '90d', '1y', 'older1y'] as const;
@@ -147,17 +180,104 @@ function RecordLink({ to, children, quiet = false }: { to: string; children: Rea
   );
 }
 
-function DetailBlock({ title, children }: { title: string; children: React.ReactNode }) {
+/** One section of the detail drawer. Later sections take a soft rule and the same gap. */
+function DetailBlock({ title, children, divided = false }: { title?: string; children: React.ReactNode; divided?: boolean }) {
   return (
-    <Box sx={{ minWidth: 0 }}>
-      <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.tertiary', mb: 0.5 }}>{title}</Typography>
+    <Box sx={{
+      minWidth: 0,
+      ...(divided ? { mt: 3, pt: 3, borderTop: '1px solid', borderColor: 'kanap.border.soft' } : {}),
+    }}
+    >
+      {title ? (
+        <Typography sx={{ fontSize: 12, fontWeight: 500, color: 'kanap.text.secondary', mb: 1 }}>{title}</Typography>
+      ) : null}
       {children}
     </Box>
   );
 }
 
-const listSx = { listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px', fontSize: 13 } as const;
+/** Same placement as the interface-mapping rule drawer: under the 48px application bar. */
+const detailDrawerPaperSx = {
+  top: 48,
+  height: 'calc(100dvh - 48px)',
+  width: { xs: '100vw', sm: 600 },
+  maxWidth: '100vw',
+  bgcolor: 'kanap.bg.drawer',
+  borderLeft: '1px solid',
+  borderColor: 'kanap.border.default',
+  boxShadow: 'none',
+  overflow: 'hidden',
+} as const;
+
+const detailDrawerShellSx = {
+  height: '100%',
+  minHeight: 0,
+  display: 'flex',
+  flexDirection: 'column',
+  bgcolor: 'kanap.bg.drawer',
+  color: 'kanap.text.primary',
+} as const;
+
+const detailDrawerHeaderSx = {
+  px: 2,
+  py: 1.25,
+  gap: 1,
+  borderBottom: '1px solid',
+  borderColor: 'kanap.border.soft',
+  bgcolor: 'kanap.bg.drawer',
+  flex: '0 0 auto',
+} as const;
+
+const detailDrawerBodySx = {
+  flex: '1 1 auto',
+  minHeight: 0,
+  overflowY: 'auto',
+  px: 2,
+  py: 2,
+} as const;
+
+const detailCloseButtonSx = {
+  width: 28,
+  height: 28,
+  color: 'kanap.text.secondary',
+  flexShrink: 0,
+} as const;
+
+/** Long-form description, off the drawer surface in light and dark. */
+const detailDescriptionSx = {
+  bgcolor: 'kanap.bg.composer',
+  border: '1px solid',
+  borderColor: 'kanap.border.default',
+  borderRadius: '8px',
+  px: 2,
+  py: 1.75,
+} as const;
+
+const versionRowSx = {
+  display: 'grid',
+  gridTemplateColumns: { xs: '1fr', sm: 'minmax(0, 1fr) 150px minmax(0, 1.15fr)' },
+  columnGap: 1,
+  rowGap: 1,
+  alignItems: 'center',
+} as const;
+
+const versionCellSx = {
+  minHeight: 32,
+  display: 'flex',
+  alignItems: 'center',
+  minWidth: 0,
+} as const;
+
+const listSx = { listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px', fontSize: 13, lineHeight: 1.4 } as const;
 const quietSx = { fontSize: 13, color: 'kanap.text.tertiary' } as const;
+
+function ExternalLink({ href, children }: { href: string; children: React.ReactNode }) {
+  return (
+    <MLink href={href} target="_blank" rel="noopener noreferrer" underline="hover" sx={{ fontSize: 13 }}>
+      {children}
+    </MLink>
+  );
+}
 
 /** The count line when some of the rows stay out of the alerts. */
 function inAlertsLine(
@@ -198,17 +318,15 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
     }
   };
   return (
-    <Box component="li" sx={{ display: 'grid', gridTemplateColumns: '160px 150px 1fr', gap: 1, alignItems: 'center' }}>
+    <Box component="li" sx={versionRowSx}>
       <Box
-        component="span"
         sx={{
-          overflow: 'hidden',
-          textOverflow: 'ellipsis',
+          ...versionCellSx,
           color: quiet ? 'kanap.text.tertiary' : version.potential ? 'kanap.text.secondary' : 'kanap.text.primary',
         }}
         title={quiet ? `${label} · ${t('pages.vulnerabilities.section.alerts.excluded')}` : label}
       >
-        {label}
+        <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{label}</Box>
       </Box>
       {canEdit ? (
         <TextField
@@ -217,14 +335,14 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
           value={version.state}
           onChange={(event) => void save({ state: event.target.value as VulnerabilityState })}
           SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.vulnerabilities.detail.stateOf', { version: label }) } }}
-          sx={inlineControlSx}
+          sx={drawerSelectSx}
         >
           {VULNERABILITY_STATES.map((state) => (
             <MenuItem key={state} value={state} sx={drawerMenuItemSx}><VulnerabilityStateCell state={state} /></MenuItem>
           ))}
         </TextField>
       ) : (
-        <VulnerabilityStateCell state={version.state} />
+        <Box sx={versionCellSx}><VulnerabilityStateCell state={version.state} /></Box>
       )}
       {canEdit ? (
         <TextField
@@ -237,9 +355,12 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
             const next = note.trim() || null;
             if (next !== (version.note ?? null)) void save({ note: next });
           }}
+          sx={{ width: '100%' }}
         />
       ) : (
-        <Box component="span" sx={{ color: 'kanap.text.secondary', overflow: 'hidden', textOverflow: 'ellipsis' }}>{version.note ?? ''}</Box>
+        <Box sx={{ ...versionCellSx, color: quiet ? 'kanap.text.tertiary' : 'kanap.text.primary' }}>
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{version.note ?? ''}</Box>
+        </Box>
       )}
       {failed && (
         <Typography role="alert" sx={{ gridColumn: '1 / -1', fontSize: 12, color: 'kanap.text.secondary' }}>
@@ -250,48 +371,135 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   );
 }
 
-/** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
-function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string; canEdit: boolean; onChanged?: () => void }) {
+function DetailHeader({ cveId, detail, onClose }: {
+  cveId: string;
+  detail?: VulnerabilityDetail;
+  onClose: () => void;
+}) {
   const { t } = useTranslation('it');
+  const sources = detail ? exploitationSources(detail) : [];
+  return (
+    <Stack direction="row" alignItems="flex-start" justifyContent="space-between" sx={detailDrawerHeaderSx}>
+      <Box sx={{ minWidth: 0, pt: '2px' }}>
+        <Typography component="h2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500, color: 'kanap.text.primary', lineHeight: 1.3 }}>
+          {cveId}
+        </Typography>
+        {detail && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: 0.5, minWidth: 0, flexWrap: 'wrap' }}>
+            <SeverityCell severity={detail.severity} score={detail.cvss_score} />
+            {(detail.exploited || sources.length > 0) && <ExploitedBadge row={detail} />}
+          </Box>
+        )}
+      </Box>
+      <IconButton aria-label={t('pages.vulnerabilities.panel.close')} onClick={onClose} sx={detailCloseButtonSx}>
+        <CloseIcon fontSize="small" />
+      </IconButton>
+    </Stack>
+  );
+}
+
+/** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
+function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
+  cveId: string;
+  canEdit: boolean;
+  onClose: () => void;
+  onChanged?: () => void;
+}) {
+  const { t } = useTranslation('it');
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: ['vulnerabilities', 'detail', cveId],
     queryFn: async () => (await api.get<VulnerabilityDetail>(`${ENDPOINT}/${encodeURIComponent(cveId)}`)).data,
   });
-  if (!detail.data) {
-    return <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />;
-  }
   const d = detail.data;
-  const serversLine = inAlertsLine(d.servers, d.alerting?.servers, t, 'pages.vulnerabilities.detail.serversInAlerts');
-  const applicationsLine = d.applications == null
+  const sources = d ? exploitationSources(d) : [];
+  const epssKnown = d != null && d.epss != null && Number.isFinite(Number(d.epss));
+  const serversLine = d ? inAlertsLine(d.servers, d.alerting?.servers, t, 'pages.vulnerabilities.detail.serversInAlerts') : null;
+  const applicationsLine = !d || d.applications == null
     ? null
     : inAlertsLine(d.applications, d.alerting?.applications, t, 'pages.vulnerabilities.detail.applicationsInAlerts');
+  const showDescription = Boolean(d && (d.summary || d.cvss_vector || d.reference_urls.length > 0));
+  const showExploitation = Boolean(d && hasExploitationData(d));
   // The panel stays open; the grid, which does not read react-query, is refreshed by its caller.
   const onSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
     onChanged?.();
   };
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }} data-testid="vulnerability-detail">
-      <Box>
-        {d.summary && <Typography sx={{ fontSize: 13, color: 'kanap.text.primary', mb: 0.5 }}>{d.summary}</Typography>}
-        {d.cvss_vector && (
-          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
-            {t('pages.vulnerabilities.detail.vector')}{' '}
-            <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY }}>{d.cvss_vector}</Box>
-          </Typography>
-        )}
-        {d.reference_urls.length > 0 && (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', mt: 0.5 }}>
-            {d.reference_urls.slice(0, 6).map((url) => (
-              <MLink key={url} href={url} target="_blank" rel="noopener noreferrer" sx={{ fontSize: 12 }}>
-                {url.replace(/^https?:\/\//, '').slice(0, 60)}
-              </MLink>
-            ))}
+    <>
+      <DetailHeader cveId={cveId} detail={d} onClose={onClose} />
+      <Box sx={detailDrawerBodySx}>
+        {!d ? (
+          <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />
+        ) : (
+    <Box data-testid="vulnerability-detail">
+      {showDescription && (
+        <DetailBlock>
+          <Box sx={detailDescriptionSx}>
+            {d.summary && <Typography sx={{ fontSize: 14, lineHeight: 1.6, color: 'kanap.text.primary' }}>{d.summary}</Typography>}
+            {d.cvss_vector && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary', mt: d.summary ? 1 : 0 }}>
+                <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.vector')}</Box>
+                {' '}
+                <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY }}>{d.cvss_vector}</Box>
+              </Typography>
+            )}
+            {d.reference_urls.length > 0 && (
+              <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: '4px 12px', mt: 1 }}>
+                {d.reference_urls.slice(0, 6).map((url) => (
+                  <ExternalLink key={url} href={url}>{url.replace(/^https?:\/\//, '').slice(0, 60)}</ExternalLink>
+                ))}
+              </Box>
+            )}
           </Box>
-        )}
-      </Box>
-      <DetailBlock title={t('pages.vulnerabilities.detail.versions')}>
+        </DetailBlock>
+      )}
+      {showExploitation && (
+        <DetailBlock title={t('pages.vulnerabilities.detail.exploitation')} divided={showDescription}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {sources.length > 0 && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.sources')}</Box>
+                {' '}
+                {sources.map((source) => t(source === 'cisa' ? 'pages.vulnerabilities.detail.sourceCisa' : 'pages.vulnerabilities.detail.sourceEu')).join(', ')}
+              </Typography>
+            )}
+            {d.kev_added_at && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.kevAdded')}</Box>
+                {' '}
+                {formatShortDate(d.kev_added_at, locale, { year: 'always' })}
+              </Typography>
+            )}
+            {d.kev_ransomware === true && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('pages.vulnerabilities.exploited.ransomware')}</Typography>
+            )}
+            {epssKnown && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.epss')}</Box>
+                {' '}
+                {formatEpssCell(d.epss, d.epss_percentile, locale, t)}
+                {d.epss_date ? ` ${t('pages.vulnerabilities.detail.epssOn', { date: formatShortDate(d.epss_date, locale, { year: 'always' }) })}` : ''}
+                {' · '}
+                <ExternalLink href={EPSS_HOME}>{t('pages.vulnerabilities.detail.epssFirst')}</ExternalLink>
+              </Typography>
+            )}
+            {(d.euvd_id || d.euvd_url) && (
+              <Box>
+                {d.euvd_id && (
+                  <Typography sx={{ fontSize: 13, fontFamily: MONO_FONT_FAMILY, color: 'kanap.text.primary' }}>{d.euvd_id}</Typography>
+                )}
+                {d.euvd_url && (
+                  <ExternalLink href={d.euvd_url}>{t('pages.vulnerabilities.detail.euvdLink')}</ExternalLink>
+                )}
+                <Typography sx={{ fontSize: 12, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.euvdSource')}</Typography>
+              </Box>
+            )}
+          </Box>
+        </DetailBlock>
+      )}
+      <DetailBlock title={t('pages.vulnerabilities.detail.versions')} divided={showDescription || showExploitation}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {d.technologies.map((tech) => (
             <Box key={tech.technology_id}>
@@ -317,7 +525,24 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
           ))}
         </Box>
       </DetailBlock>
-      <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
+      <Box sx={{
+        display: 'grid',
+        gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
+        columnGap: 3,
+        alignItems: 'start',
+        mt: 3,
+        pt: 3,
+        borderTop: '1px solid',
+        borderColor: 'kanap.border.soft',
+        // One column on a phone: the two lists stay separate sections.
+        '& > * + *': {
+          borderTop: { xs: '1px solid', md: 'none' },
+          borderColor: 'kanap.border.soft',
+          mt: { xs: 3, md: 0 },
+          pt: { xs: 3, md: 0 },
+        },
+      }}
+      >
         <DetailBlock title={t('pages.vulnerabilities.detail.servers')}>
           {serversLine && <Typography sx={{ ...quietSx, mb: 0.5 }}>{serversLine}</Typography>}
           {d.servers_list.length === 0 ? (
@@ -367,6 +592,9 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
         </DetailBlock>
       </Box>
     </Box>
+        )}
+      </Box>
+    </>
   );
 }
 
@@ -568,9 +796,10 @@ const rowId = (row: VulnerabilityRow) => row.id;
 /**
  * IT › Vulnerabilities (lots T6b, T6c): one row per technology, version and published CVE (NVD) of
  * the workspace, on the list grid of the repository (filters per column, version included, columns
- * chosen and kept, sort, total, export), "to review" by default and most severe first. Ticked rows,
- * or every row of the filter (the header box), change state at once; a row opens its CVE in a side
- * panel. Shown only while the vulnerability feed is on (`features.vulnerabilityFeed`).
+ * chosen and kept, sort, total, export). It opens on the rows to review, exploited first and then
+ * most severe. Ticked rows, or every row of the filter (the header box), change state at once; a
+ * row opens its CVE in a side panel. Shown only while the vulnerability feed is on
+ * (`features.vulnerabilityFeed`).
  */
 export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -579,9 +808,14 @@ export default function VulnerabilitiesPage() {
   const navigate = useNavigate();
   const alerts = alertsFromSearch(location.search);
   const published = publishedFromSearch(location.search);
+  const exploitedOnly = exploitedOnlyFromSearch(location.search);
   // Recomputed when the period changes. A page left open past midnight UTC keeps the day it opened on.
   const publishedDays = useMemo(() => publishedRange(published), [published]);
-  const extraParams = useMemo(() => ({ alerts, ...publishedDays }), [alerts, publishedDays]);
+  // `exploited=1` becomes the API's `yes`. Off sends nothing, so the list contract stays on `alerts` alone.
+  const extraParams = useMemo(
+    () => ({ alerts, ...publishedDays, ...(exploitedOnly ? { exploited: 'yes' } : {}) }),
+    [alerts, exploitedOnly, publishedDays],
+  );
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
@@ -592,6 +826,17 @@ export default function VulnerabilitiesPage() {
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openCve, setOpenCve] = useState<string | null>(null);
+  // Escape closes the drawer even when a note field has the focus. An open menu takes the first one.
+  useEffect(() => {
+    if (!openCve) return undefined;
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== 'Escape') return;
+      if (document.querySelector('.MuiMenu-root, .MuiPopover-root')) return;
+      setOpenCve(null);
+    };
+    document.addEventListener('keydown', onKey, true);
+    return () => document.removeEventListener('keydown', onKey, true);
+  }, [openCve]);
   const [bulkOpen, setBulkOpen] = useState(false);
   const [exportError, setExportError] = useState(false);
   const requestRef = useRef<ListRequest | null>(null);
@@ -620,6 +865,10 @@ export default function VulnerabilitiesPage() {
     [t],
   );
   const severityValues = useCallback(async () => SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })), [t]);
+  const exploitedValues = useCallback(async () => [
+    { value: 'yes', label: t('pages.vulnerabilities.columns.exploitedYes') },
+    { value: 'no', label: t('pages.vulnerabilities.columns.exploitedNo') },
+  ], [t]);
   const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
   const editorValues = useCallback(async () => {
     const res = await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } });
@@ -638,11 +887,12 @@ export default function VulnerabilitiesPage() {
     if (state.q) params.q = state.q;
     if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
     params.alerts = alerts;
+    if (exploitedOnly) params.exploited = 'yes';
     if (publishedDays.from) params.from = publishedDays.from;
     if (publishedDays.to) params.to = publishedDays.to;
     const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
     return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
-  }, [alerts, publishedDays, t]);
+  }, [alerts, exploitedOnly, publishedDays, t]);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
     ...(canEdit ? [{
@@ -683,13 +933,46 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
-      width: 105,
+      // The score, and the actively exploited icon when the row is listed.
+      width: 160,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
-      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
+      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0, maxWidth: '100%' }}>
+          <SeverityCell severity={p.data.severity} score={p.data.cvss_score} />
+          {p.data.exploited ? <ExploitedBadge row={p.data} /> : null}
+        </Box>
+      ) : null),
+    },
+    {
+      headerName: t('pages.vulnerabilities.columns.exploited'),
+      field: 'exploited',
+      width: 120,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: exploitedValues, searchable: false },
+      valueFormatter: (p: { value?: boolean }) => (p.value ? t('pages.vulnerabilities.columns.exploitedYes') : t('pages.vulnerabilities.columns.exploitedNo')),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
+    {
+      headerName: t('pages.vulnerabilities.columns.epss'),
+      field: 'epss',
+      // The cell is the probability only (`15.3%`). The percentile stays in the detail drawer.
+      width: 100,
+      type: 'rightAligned',
+      headerTooltip: t('pages.vulnerabilities.epss.minimumHint'),
+      filter: 'agNumberColumnFilter',
+      filterParams: {
+        ...EPSS_FILTER_PARAMS,
+        numberFormatter: (value: number | null) => formatEpssPercentInput(value, locale),
+      },
+      valueFormatter: (p: { value?: number | null; data?: VulnerabilityRow }) => {
+        const value = p.data?.epss ?? p.value;
+        return value == null || !Number.isFinite(Number(value)) ? '' : formatEpssPercent(Number(value), locale);
+      },
+    },
     { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 115, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technology'),
@@ -718,7 +1001,7 @@ export default function VulnerabilitiesPage() {
       headerName: t('pages.vulnerabilities.columns.editor'),
       field: 'editor',
       width: 130,
-      // Hidden by default: the default set fits a 1,440 px window (the column chooser shows it).
+      // Hidden by default. The chooser shows it. EPSS is shown; the badge carries the exploited signal.
       defaultHidden: true,
       sortable: false,
       filter: CheckboxSetFilter,
@@ -746,10 +1029,10 @@ export default function VulnerabilitiesPage() {
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
+  ], [canEdit, editorValues, exploitedValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
-  // One write, so resetting the alerts and the publication window cannot overwrite each other.
-  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod }) => {
+  // One write, so resetting the alerts, the publication window and the shortcut cannot overwrite each other.
+  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod; exploitedOnly?: boolean }) => {
     const params = new URLSearchParams(location.search);
     if (next.alerts !== undefined) {
       if (next.alerts === 'included') params.delete('alerts');
@@ -758,6 +1041,10 @@ export default function VulnerabilitiesPage() {
     if (next.published !== undefined) {
       if (next.published === 'all') params.delete('published');
       else params.set('published', next.published);
+    }
+    if (next.exploitedOnly !== undefined) {
+      if (next.exploitedOnly) params.set('exploited', '1');
+      else params.delete('exploited');
     }
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
@@ -877,19 +1164,33 @@ export default function VulnerabilitiesPage() {
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
         extraParams={extraParams}
-        extraNarrows={alerts !== 'included' || published !== 'all'}
-        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all' })}
+        extraNarrows={alerts !== 'included' || published !== 'all' || exploitedOnly}
+        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all', exploitedOnly: false })}
+        defaultFilterModel={OPENING_FILTER_MODEL}
+        resetSortOnReset
         toolbarExtras={(
           <Stack direction="row" spacing={2} alignItems="center">
             {alertsFilter}
             {publishedFilter}
+            <FormControlLabel
+              sx={{ mr: 0 }}
+              control={(
+                <Switch
+                  size="small"
+                  checked={exploitedOnly}
+                  onChange={(_event, checked) => writeSearch({ exploitedOnly: checked })}
+                  inputProps={{ 'aria-label': t('pages.vulnerabilities.shortcut.exploitedOnly') }}
+                />
+              )}
+              label={<Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.shortcut.exploitedOnly')}</Typography>}
+            />
           </Stack>
         )}
         getRowClass={getRowClass}
         getRowId={rowId}
         showRowCount
         rowCountText={rowCountText}
-        defaultSort={{ field: 'severity', direction: 'DESC' }}
+        defaultSort={{ field: 'exploited', direction: 'DESC' }}
         initialState={{ filter: { filterModel: initialModel } }}
         requiredColumns={['cve_id']}
         enableColumnChooser
@@ -922,7 +1223,7 @@ export default function VulnerabilitiesPage() {
             </Stack>
           ) : (
             <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all'
+              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all' || exploitedOnly
                 ? t('pages.vulnerabilities.empty.filtered')
                 : t('pages.vulnerabilities.empty.none')}
             </Typography>
@@ -934,17 +1235,14 @@ export default function VulnerabilitiesPage() {
         anchor="right"
         open={!!openCve}
         onClose={() => setOpenCve(null)}
-        PaperProps={{ sx: { width: 600, maxWidth: '90vw', bgcolor: 'kanap.bg.drawer' } }}
+        PaperProps={{ sx: detailDrawerPaperSx }}
       >
         {openCve && (
-          <Box sx={{ p: 2 }} role="region" aria-label={openCve}>
-            <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1.5 }}>
-              <Typography component="h2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 15, fontWeight: 500 }}>{openCve}</Typography>
-              <IconButton size="small" aria-label={t('pages.vulnerabilities.panel.close')} onClick={() => setOpenCve(null)}><CloseIcon fontSize="small" /></IconButton>
-            </Stack>
+          <Box sx={detailDrawerShellSx} role="region" aria-label={openCve}>
             <VulnerabilityDetailPanel
               cveId={openCve}
               canEdit={canEdit}
+              onClose={() => setOpenCve(null)}
               // The rows change: a selection made on the rows before would not be the one on screen.
               onChanged={() => { setSelection(NO_SELECTION); setRefreshKey((k) => k + 1); }}
             />

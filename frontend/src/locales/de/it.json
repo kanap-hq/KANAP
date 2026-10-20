@@ -398,6 +398,10 @@
         "published": "Veröffentlicht",
         "version": "Version",
         "score": "Score",
+        "exploited": "Ausgenutzt",
+        "exploitedYes": "Ja",
+        "exploitedNo": "Nein",
+        "epss": "EPSS (%)",
         "editor": "Hersteller",
         "note": "Notiz"
       },
@@ -429,7 +433,17 @@
         "serversInAlerts_one": "{{count}} Server, davon {{alerting}} in den Warnungen",
         "serversInAlerts_other": "{{count}} Server, davon {{alerting}} in den Warnungen",
         "applicationsInAlerts_one": "{{count}} Anwendung, davon {{alerting}} in den Warnungen",
-        "applicationsInAlerts_other": "{{count}} Anwendungen, davon {{alerting}} in den Warnungen"
+        "applicationsInAlerts_other": "{{count}} Anwendungen, davon {{alerting}} in den Warnungen",
+        "exploitation": "Ausnutzung",
+        "sources": "Quellen",
+        "sourceCisa": "CISA",
+        "sourceEu": "Europäische Union",
+        "kevAdded": "Zur CISA-Liste hinzugefügt",
+        "epss": "EPSS",
+        "epssOn": "Stand {{date}}",
+        "epssFirst": "EPSS: FIRST",
+        "euvdLink": "In der europäischen Schwachstellendatenbank (ENISA) ansehen",
+        "euvdSource": "Quelle: ENISA, europäische Schwachstellendatenbank"
       },
       "section": {
         "title": "Schwachstellen",
@@ -471,6 +485,22 @@
         "90d": "Weniger als 90 Tage",
         "1y": "Weniger als ein Jahr",
         "older1y": "Mehr als ein Jahr"
+      },
+      "exploited": {
+        "badge": "Aktiv ausgenutzt",
+        "tooltip": "Aktiv ausgenutzt: gelistet von der CISA (Vereinigte Staaten) und/oder der Europäischen Union.",
+        "ransomware": "In Ransomware-Kampagnen verwendet"
+      },
+      "epss": {
+        "cell": "{{percent}} ({{ordinal}})",
+        "percentile_one": "{{rank}}. Perzentil",
+        "percentile_two": "{{rank}}. Perzentil",
+        "percentile_few": "{{rank}}. Perzentil",
+        "percentile_other": "{{rank}}. Perzentil",
+        "minimumHint": "Mindestwahrscheinlichkeit, von 0 bis 100"
+      },
+      "shortcut": {
+        "exploitedOnly": "Nur ausgenutzte"
       }
     },
     "interfaces": {

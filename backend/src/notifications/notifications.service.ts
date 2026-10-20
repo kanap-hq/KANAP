@@ -51,6 +51,8 @@ export type VulnerabilityCandidate = {
   email: string;
   locale: string | null;
   technologyId: string;
+  /** `exploited`: the CVE entered a catalog of exploited CVE after its row was found, announced once on its own. */
+  event?: 'exploited';
   item: VulnerabilityDigestItem;
 };
 
@@ -1383,7 +1385,8 @@ export class NotificationsService {
    * - only the recipients whose preferences let them through (emails on, Technologies ›
    *   vulnerabilities on) are kept and recorded;
    * - each recipient hears of a CVE on a technology once: the claim is a system row of the
-   *   tenant's audit log (`vulnerability_notifications`, key user:technology:CVE), so a row deleted
+   *   tenant's audit log (`vulnerability_notifications`, key user:technology:CVE, plus `:exploited`
+   *   for the entry of an already found CVE into a catalog of exploited CVE), so a row deleted
    *   and found again later, or a second run, sends nothing twice; the advisory lock serialises
    *   two claims of the tenant;
    * - one digest per recipient, every CVE of a technology listed once with its versions.
@@ -1399,7 +1402,7 @@ export class NotificationsService {
       const prefs = await this.preferencesService.getForUser(userId, tenantId, { manager });
       allowed.set(userId, this.checkPreferences(prefs, 'technologies', 'vulnerability'));
     }
-    const keyOf = (c: VulnerabilityCandidate) => `${c.userId}:${c.technologyId}:${c.item.cveId}`;
+    const keyOf = (c: VulnerabilityCandidate) => `${c.userId}:${c.technologyId}:${c.item.cveId}${c.event ? `:${c.event}` : ''}`;
     const optedIn = candidates.filter((c) => allowed.get(c.userId));
     if (optedIn.length === 0) return [];
 
