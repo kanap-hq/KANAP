@@ -112,7 +112,7 @@ function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
   return (
     <Tooltip
       title={description}
-      placement="left"
+      placement="bottom-start"
       enterDelay={OPTION_HINT_DELAY_MS}
       enterNextDelay={OPTION_HINT_DELAY_MS}
       describeChild
