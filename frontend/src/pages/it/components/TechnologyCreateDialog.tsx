@@ -1,10 +1,12 @@
 import React from 'react';
-import { Alert, Autocomplete, Box, CircularProgress, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
+import { Alert, Autocomplete, Box, CircularProgress, MenuItem, Select, Stack, TextField, Tooltip, Typography } from '@mui/material';
+import type { Theme } from '@mui/material/styles';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { screenLanguage } from '../../../components/csv/readings';
 import { KanapDialog, PropertyRow } from '../../../components/design';
+import { OPTION_HINT_DELAY_MS } from '../../../components/fields/OptionWithHint';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { drawerAutocompleteListboxSx, drawerMenuItemSx } from '../../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../../utils/apiErrorMessage';
@@ -30,6 +32,96 @@ type Props = {
 };
 
 const SEARCH_DEBOUNCE_MS = 250;
+
+/** One line of a picker option: the shared ellipsis, so a long name or family never wraps or spills. */
+const optionLineSx = { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' } as const;
+
+/**
+ * Two text lines, the same height on every product: the name, the family on the right of that line,
+ * the editor under it. The classes take their type from `drawerAutocompleteListboxSx`.
+ */
+const catalogRowSx = (busy: boolean) => (theme: Theme) => ({
+  display: 'flex',
+  flexDirection: 'column',
+  justifyContent: 'center',
+  alignItems: 'stretch',
+  width: '100%',
+  minWidth: 0,
+  maxWidth: '100%',
+  boxSizing: 'border-box' as const,
+  overflow: 'hidden',
+  border: 0,
+  borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
+  bgcolor: 'transparent',
+  color: theme.palette.kanap.text.primary,
+  font: 'inherit',
+  textAlign: 'left' as const,
+  px: 0.5,
+  py: '6px',
+  cursor: busy ? 'default' : 'pointer',
+  '&:hover': { bgcolor: theme.palette.kanap.bg.hover },
+  '&:focus-visible': {
+    outline: `2px solid ${theme.palette.kanap.teal}`,
+    outlineOffset: -2,
+    bgcolor: theme.palette.kanap.bg.hover,
+  },
+});
+
+/**
+ * One catalog product. The hosting type is chosen at adoption and stays off this line.
+ * The description is the delayed tooltip (and the accessible description), never a third line.
+ */
+function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
+  entry: CatalogEntry;
+  familyLabel: string;
+  busy: boolean;
+  onAdopt: (entry: CatalogEntry) => void;
+}) {
+  const hintId = React.useId();
+  const description = entry.description?.trim() || '';
+  const row = (
+    <Box
+      role="listitem"
+      component="button"
+      type="button"
+      disabled={busy}
+      onClick={() => onAdopt(entry)}
+      // Tooltip with `describeChild` sets a native title while closed: keep only the delayed tooltip.
+      title={undefined}
+      aria-describedby={description ? hintId : undefined}
+      sx={catalogRowSx(busy)}
+    >
+      <Box sx={{ display: 'flex', alignItems: 'baseline', gap: 1, width: '100%', minWidth: 0 }}>
+        <Box component="span" className="kanap-autocomplete-option-primary" sx={{ ...optionLineSx, flex: '1 1 auto' }}>
+          {entry.name}
+        </Box>
+        {familyLabel ? (
+          <Box component="span" className="kanap-autocomplete-option-secondary kanap-catalog-family">
+            {familyLabel}
+          </Box>
+        ) : null}
+      </Box>
+      {/* Always present, so a product without an editor stays the same height as the others. */}
+      <Box component="span" className="kanap-autocomplete-option-secondary" sx={{ ...optionLineSx, display: 'block' }}>
+        {entry.editor || '\u00a0'}
+      </Box>
+      {description ? <span id={hintId} hidden>{description}</span> : null}
+    </Box>
+  );
+  if (!description) return row;
+  return (
+    <Tooltip
+      title={description}
+      placement="left"
+      enterDelay={OPTION_HINT_DELAY_MS}
+      enterNextDelay={OPTION_HINT_DELAY_MS}
+      describeChild
+      disableInteractive
+    >
+      {row}
+    </Tooltip>
+  );
+}
 
 function useDebounced<T>(value: T, delay: number): T {
   const [debounced, setDebounced] = React.useState(value);
@@ -183,7 +275,30 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
             <Box
               role="list"
               aria-label={t('pages.technologies.create.catalog')}
-              sx={(theme) => ({ maxHeight: 320, overflowY: 'auto', borderTop: `1px solid ${theme.palette.kanap.border.soft}` })}
+              sx={[
+                drawerAutocompleteListboxSx,
+                {
+                  // The shared secondary class is a line under the name. On the family, it sits on the name's line.
+                  '& .kanap-autocomplete-option-secondary.kanap-catalog-family': {
+                    mt: 0,
+                    flex: '0 1 auto',
+                    maxWidth: '50%',
+                    minWidth: 0,
+                    overflow: 'hidden',
+                    textOverflow: 'ellipsis',
+                    whiteSpace: 'nowrap',
+                    textAlign: 'right',
+                  },
+                },
+                (theme) => ({
+                  // The listbox padding belongs to autocomplete menus. This list stays flush, at the same height.
+                  py: 0,
+                  maxHeight: 320,
+                  minWidth: 0,
+                  overflowY: 'auto',
+                  borderTop: `1px solid ${theme.palette.kanap.border.soft}`,
+                }),
+              ]}
             >
               {catalogQuery.isFetching && entries.length === 0 && (
                 <Box sx={{ py: 1.5, display: 'flex', justifyContent: 'center' }}><CircularProgress size={16} /></Box>
@@ -194,58 +309,13 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
                 </Typography>
               )}
               {entries.map((entry) => (
-                <Box
+                <CatalogRow
                   key={entry.key}
-                  role="listitem"
-                  component="button"
-                  type="button"
-                  disabled={busy}
-                  onClick={() => { void adopt(entry); }}
-                  sx={(theme) => ({
-                    display: 'block',
-                    width: '100%',
-                    border: 0,
-                    borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
-                    bgcolor: 'transparent',
-                    color: theme.palette.kanap.text.primary,
-                    font: 'inherit',
-                    fontSize: 13,
-                    textAlign: 'left',
-                    px: 0.5,
-                    py: 0.75,
-                    cursor: busy ? 'default' : 'pointer',
-                    '&:hover': { bgcolor: theme.palette.kanap.bg.hover },
-                  })}
-                >
-                  {/* Top: the name at its full width, then the secondary facts on the right. */}
-                  <Box component="span" sx={{ display: 'flex', alignItems: 'baseline', gap: 1.5 }}>
-                    <Box component="span" sx={{ flex: '1 0 auto' }}>{entry.name}</Box>
-                    <Box
-                      component="span"
-                      sx={(theme) => ({ flex: '0 1 auto', minWidth: 0, textAlign: 'right', fontSize: 12, color: theme.palette.kanap.text.tertiary })}
-                    >
-                      {[entry.editor, labelFor('technologyFamily', entry.family), labelFor('hostingType', entry.hosting_type)].filter(Boolean).join(' · ')}
-                    </Box>
-                  </Box>
-                  {/* Below: the description across the row, cut at its end, whole on hover. */}
-                  {entry.description && (
-                    <Box
-                      component="span"
-                      title={entry.description}
-                      sx={(theme) => ({
-                        display: 'block',
-                        mt: 0.25,
-                        fontSize: 12,
-                        color: theme.palette.kanap.text.tertiary,
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                      })}
-                    >
-                      {entry.description}
-                    </Box>
-                  )}
-                </Box>
+                  entry={entry}
+                  familyLabel={labelFor('technologyFamily', entry.family)}
+                  busy={busy}
+                  onAdopt={(item) => { void adopt(item); }}
+                />
               ))}
             </Box>
             <Box
