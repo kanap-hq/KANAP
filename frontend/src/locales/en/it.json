@@ -2083,7 +2083,7 @@
         "empty": "No name yet.",
         "remove": "Remove {{value}}",
         "search": "CVE.org name",
-        "searchPlaceholder": "e.g., SAP S/4HANA",
+        "searchPlaceholder": "e.g., SAP HANA",
         "version": "Version (optional)",
         "versionPlaceholder": "e.g., 2019",
         "duplicate": "This name is already listed.",
