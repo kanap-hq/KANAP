@@ -2053,6 +2053,8 @@
         "applications_one": "{{count}} aplicación",
         "applications_other": "{{count}} aplicaciones",
         "alertsColumn": "Alertas",
+        "alertsColumnHint": "Incluye esta versión en las alertas de vulnerabilidad: la página Vulnerabilidades, los contadores y el correo de resumen. Cada versión sigue el ajuste de la tecnología, salvo que un punto señale un ajuste propio.",
+        "includeInAlerts": "Incluir en las alertas de vulnerabilidad",
         "alertsLabel": "Alertas de vulnerabilidad",
         "alertsFor": "Alertas de vulnerabilidad de {{label}}",
         "alertsHint": "Ajuste de la tecnología: se aplica a las versiones sin ajuste propio, a las versiones futuras y a los vínculos sin versión.",

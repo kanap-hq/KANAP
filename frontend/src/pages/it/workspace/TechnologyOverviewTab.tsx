@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -414,24 +415,37 @@ function statusLabel(status: SupportState, t: TFunction) {
 export const TECHNOLOGY_VERSIONS_ANCHOR = 'technology-versions';
 
 /**
- * The header is the short title plus the switch (40px) and the own-setting slot (6px).
- * "Warnungen" is the longest title, about 62px at 11px, so 136px holds the line.
+ * "Warnungen" is the longest title, about 62px at 11px, plus the 13px hint icon.
+ * 88px holds that line. The switch (about 40px) and the own-setting slot (6px) sit inside it.
  * With the other columns (170 + 170 + 150 + 64) the table stays inside 1000px.
  */
-const ALERTS_COLUMN_SX = { width: 136, maxWidth: 136, whiteSpace: 'nowrap', px: 0, boxSizing: 'border-box' } as const;
+const ALERTS_COLUMN_SX = { width: 88, maxWidth: 88, whiteSpace: 'nowrap', px: 0, boxSizing: 'border-box' } as const;
 const ALERTS_ROW_SX = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' } as const;
 const ALERTS_SWITCHES_SX = { display: 'inline-flex', alignItems: 'center', gap: '4px', flex: '0 0 auto' } as const;
 
-/** Title on the header only. Both rows pack the switches to the trailing edge, so they line up. */
-function AlertsCell({ title, children }: { title?: string; children: React.ReactNode }) {
+/** The version switches, packed to the trailing edge so every row lines up. */
+function AlertsCell({ children }: { children: React.ReactNode }) {
   return (
     <TableCell sx={ALERTS_COLUMN_SX}>
       <Box sx={ALERTS_ROW_SX}>
-        {title ? (
-          <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>{title}</Box>
-        ) : null}
         <Box sx={ALERTS_SWITCHES_SX}>{children}</Box>
       </Box>
+    </TableCell>
+  );
+}
+
+/** "Alerts" and the explanation of the column. The technology's own switch sits in the section title. */
+function AlertsColumnHeader() {
+  const { t } = useTranslation('it');
+  const hint = t('workspace.technology.versions.alertsColumnHint');
+  return (
+    <TableCell sx={ALERTS_COLUMN_SX}>
+      <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>
+        {t('workspace.technology.versions.alertsColumn')}
+      </Box>
+      <Tooltip title={hint}>
+        <InfoOutlinedIcon tabIndex={0} role="img" aria-hidden={false} aria-label={hint} sx={{ fontSize: 13, color: 'kanap.text.tertiary', ml: 0.5, verticalAlign: 'middle' }} />
+      </Tooltip>
     </TableCell>
   );
 }
@@ -670,24 +684,29 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
     </TableRow>
   );
 
-  const alertsHeader = (
-    <AlertsCell title={t('workspace.technology.versions.alertsColumn')}>
+  const includeLabel = t('workspace.technology.versions.includeInAlerts');
+  const technologySwitch = showAlerts ? (
+    <Box component="label" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 13, color: 'kanap.text.secondary' }}>
       <AlertSwitch
         checked={technologyAlerts}
         disabled={!canManage || alertsBusy}
-        label={t('workspace.technology.versions.alertsLabel')}
-        tooltip={t('workspace.technology.versions.alertsHint')}
+        label={includeLabel}
         onChange={(next) => { void setTechnologyAlerts(next); }}
       />
-      <OwnSettingMark visible={false} />
-    </AlertsCell>
-  );
+      {includeLabel}
+    </Box>
+  ) : null;
 
   return (
     <Box id={TECHNOLOGY_VERSIONS_ANCHOR}>
       <SectionLabel
-        action={canManage && editing !== 'new' ? (
-          <Button variant="action" size="small" onClick={() => startEdit(null)}>{t('workspace.technology.versions.add')}</Button>
+        action={(technologySwitch || (canManage && editing !== 'new')) ? (
+          <Stack direction="row" spacing={1} alignItems="center">
+            {technologySwitch}
+            {canManage && editing !== 'new' ? (
+              <Button variant="action" size="small" onClick={() => startEdit(null)}>{t('workspace.technology.versions.add')}</Button>
+            ) : null}
+          </Stack>
         ) : undefined}
       >
         {t('workspace.technology.versions.title')}
@@ -709,7 +728,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.standardEnd')}</TableCell>
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.extendedEnd')}</TableCell>
             <TableCell sx={{ width: 150 }}>{t('workspace.technology.versions.statusHeader')}</TableCell>
-            {showAlerts && alertsHeader}
+            {showAlerts && <AlertsColumnHeader />}
             {canManage && <TableCell sx={{ width: 64 }} />}
           </TableRow>
         </TableHead>

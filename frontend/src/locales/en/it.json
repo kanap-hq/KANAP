@@ -2053,6 +2053,8 @@
         "applications_one": "{{count}} application",
         "applications_other": "{{count}} applications",
         "alertsColumn": "Alerts",
+        "alertsColumnHint": "Includes this version in vulnerability alerts: the Vulnerabilities page, the counts and the summary email. Each version follows the technology setting unless a dot marks its own setting.",
+        "includeInAlerts": "Include in vulnerability alerts",
         "alertsLabel": "Vulnerability alerts",
         "alertsFor": "Vulnerability alerts for {{label}}",
         "alertsHint": "Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.",

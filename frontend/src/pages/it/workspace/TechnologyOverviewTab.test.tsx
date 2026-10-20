@@ -141,12 +141,19 @@ describe('TechnologyOverviewTab', () => {
       .mockResolvedValueOnce({ data: { versions_reset: 0 } })
       .mockResolvedValueOnce({ data: { enabled: true, versions_reset: 0 } });
     const { onVersionsChanged } = renderTab();
-    const header = screen.getByRole('switch', { name: 'Vulnerability alerts' });
+    const title = screen.getByRole('heading', { name: 'Versions' }).parentElement!;
+    const header = within(title).getByRole('switch', { name: 'Include in vulnerability alerts' });
+    expect(within(title).getByText('Include in vulnerability alerts')).toBeInTheDocument();
+    expect(within(title).getByRole('button', { name: 'Add version' })).toBeInTheDocument();
     expect(header).not.toBeChecked();
-    fireEvent.mouseOver(header.parentElement!);
-    expect(await screen.findByRole('tooltip')).toHaveTextContent(
-      'Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.',
-    );
+    const table = screen.getByRole('table', { name: 'Versions' });
+    const column = within(table).getByRole('columnheader', { name: /Alerts/ });
+    expect(within(column).queryByRole('switch')).toBeNull();
+    const hint = 'Includes this version in vulnerability alerts: the Vulnerabilities page, the counts and the summary email. Each version follows the technology setting unless a dot marks its own setting.';
+    const info = within(column).getByRole('img', { name: hint });
+    fireEvent.keyDown(document.body, { key: 'Tab' });
+    act(() => info.focus());
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(hint);
     fireEvent.click(header);
     await waitFor(() => expect(api.put).toHaveBeenCalledTimes(2));
     expect(api.put).toHaveBeenNthCalledWith(
@@ -164,7 +171,7 @@ describe('TechnologyOverviewTab', () => {
     vi.mocked(api.put).mockReset();
     vi.mocked(api.put).mockResolvedValue({ data: { versions_reset: 2, enabled: false } });
     const { onVersionsChanged } = renderTab({ ...TECHNOLOGY, vulnerability_alerts: true });
-    const header = screen.getByRole('switch', { name: 'Vulnerability alerts' });
+    const header = screen.getByRole('switch', { name: 'Include in vulnerability alerts' });
     expect(header).toBeChecked();
     fireEvent.click(header);
     const dialog = await screen.findByRole('dialog');
@@ -180,8 +187,8 @@ describe('TechnologyOverviewTab', () => {
     );
     expect(onVersionsChanged).not.toHaveBeenCalled();
 
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('switch', { name: 'Include in vulnerability alerts' }));
     const again = await screen.findByRole('dialog');
     fireEvent.click(within(again).getByRole('button', { name: 'Replace' }));
     await waitFor(() => expect(api.put).toHaveBeenCalledTimes(3));
@@ -226,7 +233,7 @@ describe('TechnologyOverviewTab', () => {
         vulnerability_alerts: false, vulnerability_alerts_effective: false,
       }],
     }, false);
-    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeDisabled();
     expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 15' })).toBeDisabled();
     expect(screen.getByRole('img', { name: 'Own setting for this version' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete version 15' })).not.toBeInTheDocument();
@@ -245,7 +252,7 @@ describe('TechnologyOverviewTab', () => {
 
   it('keeps the technology alert switch when there is no version', () => {
     renderTab({ ...TECHNOLOGY, versions: [], vulnerability_alerts: false });
-    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeInTheDocument();
+    expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeInTheDocument();
     expect(screen.getByText('No version yet.')).toBeInTheDocument();
   });
 
@@ -260,8 +267,8 @@ describe('TechnologyOverviewTab', () => {
     expect(invalidate).toHaveBeenCalledTimes(1);
     expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vulnerabilities'] });
 
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
-    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('switch', { name: 'Include in vulnerability alerts' }));
     await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(2));
     expect(invalidate).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vulnerabilities'] });
@@ -279,12 +286,12 @@ describe('TechnologyOverviewTab', () => {
     await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' })).toBeEnabled());
     expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' })).toBeChecked();
 
-    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Include in vulnerability alerts' }));
     await waitFor(() => expect(onError).toHaveBeenCalledTimes(2));
     expect(api.put).toHaveBeenCalledTimes(1);
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
-    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
-    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeChecked();
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeEnabled());
+    expect(screen.getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeChecked();
     expect(onVersionsChanged).not.toHaveBeenCalled();
     expect(invalidate).not.toHaveBeenCalled();
   });
@@ -297,7 +304,7 @@ describe('TechnologyOverviewTab', () => {
     const row = screen.getByRole('switch', { name: 'Vulnerability alerts for 16' });
     fireEvent.click(row);
     fireEvent.click(row);
-    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    fireEvent.click(screen.getByRole('switch', { name: 'Include in vulnerability alerts' }));
     expect(api.patch).toHaveBeenCalledTimes(1);
     expect(api.put).not.toHaveBeenCalled();
     await act(async () => { release({ data: {} }); });
@@ -313,13 +320,16 @@ describe('TechnologyOverviewTab', () => {
         { ...VERSION, id: 'v-own', label: '15', standard_support_end: null, catalog_key: null, vulnerability_alerts: false, vulnerability_alerts_effective: false },
       ],
     });
-    const slots = ['Vulnerability alerts', 'Vulnerability alerts for 16', 'Vulnerability alerts for 15'].map((name) => {
-      const row = screen.getByRole('switch', { name }).closest('td, th')!.firstElementChild as HTMLElement;
-      // Trailing edge: the header word sits beside its switch, and every row switch lines up under it.
+    const slots = ['Vulnerability alerts for 16', 'Vulnerability alerts for 15'].map((name) => {
+      const row = screen.getByRole('switch', { name }).closest('td')!.firstElementChild as HTMLElement;
+      // Trailing edge: every version switch lines up, the own-setting slot kept on each row.
       expect(getComputedStyle(row).justifyContent).toBe('flex-end');
       return row.lastElementChild!.children.length;
     });
-    expect(slots).toEqual([2, 2, 2]);
+    expect(slots).toEqual([2, 2]);
+    const title = screen.getByRole('heading', { name: 'Versions' }).parentElement!;
+    expect(within(title).getByRole('switch', { name: 'Include in vulnerability alerts' })).toBeInTheDocument();
+    expect(within(screen.getByRole('table', { name: 'Versions' })).queryByRole('switch', { name: 'Include in vulnerability alerts' })).toBeNull();
     expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(1);
   });
 
@@ -347,9 +357,10 @@ describe('TechnologyOverviewTab', () => {
       expect(getComputedStyle(title).fontWeight).toBe(getComputedStyle(status).fontWeight);
       expect(getComputedStyle(title).color).toBe(getComputedStyle(status).color);
       expect(getComputedStyle(header!).whiteSpace).toBe('nowrap');
-      expect(within(header!).getByRole('switch', { name: 'Vulnerability alerts' })).toBeTruthy();
-      // Wider than the switch alone, still narrow: the fixed columns leave the version column room at 1000px.
-      expect(pixelWidth(header!)).toBeGreaterThan(56);
+      expect(within(header!).queryByRole('switch')).toBeNull();
+      expect(within(header!).getByRole('img', { name: /Includes this version in vulnerability alerts/ })).toBeTruthy();
+      // The title and its icon, still narrow: the fixed columns leave the version column room at 1000px.
+      expect(pixelWidth(header!)).toBeGreaterThan(40);
       expect(pixelWidth(header!)).toBeLessThan(200);
       expect(headers.reduce((sum, cell) => sum + pixelWidth(cell), 0)).toBeLessThan(1000);
       view.unmount();
