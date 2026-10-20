@@ -934,7 +934,7 @@ export default function VulnerabilitiesPage() {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
       // The score, and the actively exploited icon when the row is listed.
-      width: 200,
+      width: 160,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
@@ -960,7 +960,7 @@ export default function VulnerabilitiesPage() {
       headerName: t('pages.vulnerabilities.columns.epss'),
       field: 'epss',
       // The cell is the probability only (`15.3%`). The percentile stays in the detail drawer.
-      width: 120,
+      width: 100,
       type: 'rightAligned',
       headerTooltip: t('pages.vulnerabilities.epss.minimumHint'),
       filter: 'agNumberColumnFilter',
