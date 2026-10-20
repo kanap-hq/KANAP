@@ -383,7 +383,9 @@
       "versionNoneHint": "Keine Version erfasst: möglicherweise betroffen",
       "empty": {
         "none": "Keine Schwachstelle zu prüfen. Schwachstellen erscheinen für Technologien mit CPE-Kennungen: Tragen Sie diese bei einer Technologie ein oder übernehmen Sie die Technologie aus dem Katalog.",
-        "filtered": "Keine Schwachstelle entspricht diesen Filtern."
+        "filtered": "Keine Schwachstelle entspricht diesen Filtern.",
+        "noneInAlerts": "Keine Schwachstelle ist in den Warnungen.",
+        "showExcluded": "Ausgeschlossene anzeigen"
       },
       "columns": {
         "cve": "CVE",

@@ -383,7 +383,9 @@
       "versionNoneHint": "Ninguna versión registrada: potencialmente afectada",
       "empty": {
         "none": "Ninguna vulnerabilidad por revisar. Las vulnerabilidades aparecen para las tecnologías que indican sus identificadores CPE: complételos en una tecnología o adóptela desde el catálogo.",
-        "filtered": "Ninguna vulnerabilidad coincide con estos filtros."
+        "filtered": "Ninguna vulnerabilidad coincide con estos filtros.",
+        "noneInAlerts": "Ninguna vulnerabilidad está en las alertas.",
+        "showExcluded": "Mostrar las excluidas"
       },
       "columns": {
         "cve": "CVE",

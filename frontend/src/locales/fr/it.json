@@ -383,7 +383,9 @@
       "versionNoneHint": "Aucune version renseignée : potentiellement concernée",
       "empty": {
         "none": "Aucune vulnérabilité à traiter. Les vulnérabilités s'affichent pour les technologies qui indiquent leurs identifiants CPE : renseignez-les sur une technologie, ou adoptez-la depuis le catalogue.",
-        "filtered": "Aucune vulnérabilité ne correspond à ces filtres."
+        "filtered": "Aucune vulnérabilité ne correspond à ces filtres.",
+        "noneInAlerts": "Aucune vulnérabilité n'est dans les alertes.",
+        "showExcluded": "Afficher les exclues"
       },
       "columns": {
         "cve": "CVE",
@@ -448,7 +450,7 @@
       },
       "alerts": {
         "label": "Alertes",
-        "included": "Inclues",
+        "included": "Incluses",
         "excluded": "Exclues",
         "all": "Toutes"
       }

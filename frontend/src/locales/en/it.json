@@ -383,7 +383,9 @@
       "versionNoneHint": "No version recorded: potentially concerned",
       "empty": {
         "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
-        "filtered": "No vulnerability matches these filters."
+        "filtered": "No vulnerability matches these filters.",
+        "noneInAlerts": "No vulnerability is in the alerts.",
+        "showExcluded": "Show the excluded ones"
       },
       "columns": {
         "cve": "CVE",

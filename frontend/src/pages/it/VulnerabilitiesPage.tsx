@@ -700,6 +700,16 @@ export default function VulnerabilitiesPage() {
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
   };
 
+  // Nothing alerts, with no search and no column filter: are there rows outside the alerts? The
+  // empty line then says so and offers them, rather than telling to fill in CPE identifiers.
+  const nothingAlerts = alerts === 'included' && request?.total === 0 && !request.params?.filters && !request.params?.q;
+  const excludedRows = useQuery({
+    queryKey: ['vulnerabilities', 'excluded-rows'],
+    queryFn: async () => Number((await api.get<{ total: number }>(ENDPOINT, { params: { alerts: 'excluded', page: 1, limit: 1 } })).data?.total ?? 0),
+    enabled: enabled && allowed && nothingAlerts,
+    retry: false,
+  });
+
   const alertsFilter = (
     <Stack direction="row" spacing={0.75} alignItems="center">
       <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.alerts.label')}</Typography>
@@ -775,6 +785,8 @@ export default function VulnerabilitiesPage() {
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
         extraParams={extraParams}
+        extraNarrows={alerts !== 'included'}
+        onResetFilters={() => setAlerts('included')}
         toolbarExtras={alertsFilter}
         getRowClass={({ data }) => (alerts !== 'included' && data?.alerts === false ? 'vulnerability-row-muted' : undefined)}
         getRowId={rowId}
@@ -806,9 +818,18 @@ export default function VulnerabilitiesPage() {
           scopeKeyRef.current = key;
         }}
         emptyState={(
-          <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-            {request?.params?.filters || request?.params?.q ? t('pages.vulnerabilities.empty.filtered') : t('pages.vulnerabilities.empty.none')}
-          </Typography>
+          nothingAlerts && (excludedRows.data ?? 0) > 0 ? (
+            <Stack alignItems="center" spacing={0.5} data-testid="vulnerabilities-empty">
+              <Typography sx={quietSx}>{t('pages.vulnerabilities.empty.noneInAlerts')}</Typography>
+              <Button size="small" onClick={() => setAlerts('excluded')}>{t('pages.vulnerabilities.empty.showExcluded')}</Button>
+            </Stack>
+          ) : (
+            <Typography sx={quietSx} data-testid="vulnerabilities-empty">
+              {request?.params?.filters || request?.params?.q || alerts !== 'included'
+                ? t('pages.vulnerabilities.empty.filtered')
+                : t('pages.vulnerabilities.empty.none')}
+            </Typography>
+          )
         )}
       />
       </Box>
