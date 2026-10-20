@@ -5,6 +5,7 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
+import { CveListFeedService, type CveListSummary } from './cve-list-feed.service';
 import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 import { VulnerabilitySignalsService } from './vulnerability-signals.service';
@@ -158,6 +159,8 @@ export type FeedSummary = {
   tenants_matched: number;
   rows_added: number;
   rows_removed: number;
+  /** The CVE.org pass of this run, when that service is wired. */
+  cve_org?: CveListSummary;
 };
 
 export function defaultRuntime(): FeedRuntime {
@@ -204,8 +207,10 @@ function serviceFailure(error: unknown): boolean {
  * - A CVE without CPE configuration yet (frequent since 2024) is kept with no criterion: it matches
  *   at the run that follows its analysis, when its `lastModified` brings it back.
  * Scheduled task `vulnerability-feed` (model: `cleanup/lifecycle-status-sync.service.ts`),
- * registered only while `VULNERABILITY_FEED_ENABLED`. The scheduler awaits the handler and records a
- * failure; nothing here is started without being awaited.
+ * registered only while `VULNERABILITY_FEED_ENABLED`. The same pass reads the CVE.org list
+ * (`CveListFeedService`) after the NVD and before the workspaces are matched. A failure of
+ * CVE.org is named in the summary and does not stop the NVD collection or the matching.
+ * The scheduler awaits the handler and records a failure; nothing here is started without being awaited.
  */
 @Injectable()
 export class NvdFeedService implements OnModuleInit {
@@ -238,6 +243,8 @@ export class NvdFeedService implements OnModuleInit {
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
     /** Stamps exploitation signals already downloaded onto CVE this collection just cached. */
     @Optional() private readonly signals?: VulnerabilitySignalsService,
+    /** The CVE.org list. Specs that build the service by hand leave it out. */
+    @Optional() private readonly cveList?: CveListFeedService,
   ) {}
 
   onModuleInit() {
@@ -246,7 +253,7 @@ export class NvdFeedService implements OnModuleInit {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
     this.scheduledTasks.register({
       name: NVD_FEED_TASK_NAME,
-      description: 'Reads the published vulnerabilities (NVD) of the products the technologies name, and matches them with each workspace',
+      description: 'Reads the published vulnerabilities from the NVD and from CVE.org, and matches them with each workspace',
       defaultCron: '20 */6 * * *',
       handler: () => this.run(),
     });
@@ -288,12 +295,23 @@ export class NvdFeedService implements OnModuleInit {
     return new Set(rows.map((r) => r.id));
   }
 
-  /** The scheduled run: collect, then match every tenant and tell the owners what is new. */
+  /** The scheduled run: collect the NVD, then CVE.org, then match every tenant and tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
+    // CVE.org is its own pass. A failure here is recorded and does not skip the matching below,
+    // nor does it undo the NVD collection that just finished.
+    try {
+      const cveOrg = await this.cveList?.collect();
+      if (cveOrg) {
+        summary.cve_org = cveOrg;
+        for (const error of cveOrg.errors) summary.errors.push(`CVE.org: ${error}`);
+      }
+    } catch (error: any) {
+      summary.errors.push(`CVE.org: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
     // The CVE just cached carry the exploitation signals before they are matched and announced:
     // a new medium CVE already exploited is announced at this run, not left to the signals task.
     await this.applyKnownSignals();
