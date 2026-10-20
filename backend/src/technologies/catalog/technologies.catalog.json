@@ -769,7 +769,9 @@
       "family": "container",
       "mode": "subscribed",
       "hosting_type": "public_cloud",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:microsoft:azure_kubernetes_service"
+      ],
       "source_url": "https://endoflife.date/azure-kubernetes-service",
       "versions": [
         {
@@ -2905,7 +2907,11 @@
       "editor": "Microsoft",
       "family": "directory",
       "mode": "subscribed",
-      "cpe_products": [],
+      "cpe_products": [
+        "a:microsoft:azure_active_directory",
+        "a:microsoft:entra_id",
+        "a:microsoft:entra_provisioning_service"
+      ],
       "source_url": null,
       "versions": []
     },
