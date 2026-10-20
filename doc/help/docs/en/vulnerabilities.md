@@ -23,9 +23,23 @@ A vulnerability the NVD has not analysed yet appears once it is.
 
 Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Match again** on the technology does the same by hand.
 
+## Alerts
+
+Each technology and each version is in the vulnerability alerts or out of them. You choose with the switches of the versions table on the technology: see [Vulnerability alerts](technologies.md#vulnerability-alerts). A version follows the setting of its technology unless it has its own. A server or an application that names no version follows the technology.
+
+Operating systems are out of the alerts by default. KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities.
+
+A version out of the alerts is still matched with the vulnerabilities. Its rows stay in the technology's **Vulnerabilities** section and on this page under the **Alerts** filter. They are left out of everything else:
+
+- This page shows only the rows in the alerts by default.
+- The emails announce only the rows in the alerts.
+- The **Vulnerabilities to review** column of the technologies list counts only the rows in the alerts.
+
 ## The list
 
-The list uses the standard grid: one row per technology, version and vulnerability, most severe first. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review**: clear the filter of the **State** column to see the others.
+The list uses the standard grid: one row per technology, version and vulnerability, most severe first. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
+
+**Alerts**, above the grid, chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Reset filters** sets **Alerts** back to **Included**.
 
 **Columns**:
 
@@ -48,7 +62,7 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 
 **Sort** by **Severity**, **Score**, **Published**, **CVE** or **Technology**. The column chooser shows or hides columns, and the grid remembers your choice.
 
-**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?period=30` the vulnerabilities published within the last 30 days. The link of the emails uses `period`.
+**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?period=30` the vulnerabilities published within the last 30 days, `?alerts=excluded` or `?alerts=all` the rows out of the alerts. The link of the emails uses `period`.
 
 ## Changing the state of several rows
 
@@ -72,6 +86,8 @@ Click a row to open its vulnerability in a side panel. The panel covers every te
 - **Servers**: each server that carries a concerned version, with the technology, the version and the server it runs in.
 - **Applications**: each application that uses a concerned version, with its server.
 
+A version out of the alerts is greyed, with its servers and applications. When only some of them are in the alerts, a line above the list says how many, for example "3 servers, 1 in alerts".
+
 Set the state of each version:
 
 | State | Meaning |
@@ -90,7 +106,7 @@ KANAP never changes a state you chose. When a version no longer matches (you upg
 
 ## Email notifications
 
-After each check, the IT owners of a technology receive one email about its new critical or high vulnerabilities still to review:
+After each check, the IT owners of a technology receive one email about its new critical or high vulnerabilities still to review, on the versions in the alerts:
 
 - **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, or a known vulnerability that has just become critical or high.
 - **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page.
@@ -102,7 +118,7 @@ The recipients are the IT owners of the technology whose account is enabled and 
 ## Where vulnerabilities also appear
 
 - **Technologies list**: the **Vulnerabilities to review** column, in orange when some are critical or high. See [Technologies](technologies.md#working-with-the-list).
-- **Technology workspace**: the **Vulnerabilities** section of the Relations tab. See [Technologies](technologies.md#vulnerabilities).
+- **Technology workspace**: the **Vulnerabilities** section of the Compliance tab. See [Technologies](technologies.md#vulnerabilities).
 
 ## Tips
 

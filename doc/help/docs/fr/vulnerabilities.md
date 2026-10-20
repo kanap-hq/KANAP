@@ -23,9 +23,23 @@ Une vulnérabilité que la NVD n'a pas encore analysée apparaît une fois analy
 
 Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Rapprocher à nouveau** sur la technologie fait la même chose à la main.
 
+## Alertes
+
+Chaque technologie et chaque version est dans les alertes de vulnérabilité ou hors d'elles. Vous choisissez avec les interrupteurs de la table des versions de la technologie : voir [Alertes de vulnérabilité](technologies.md#alertes-de-vulnerabilite). Une version suit le réglage de sa technologie, sauf si elle a le sien. Un serveur ou une application qui n'indique aucune version suit la technologie.
+
+Les systèmes d'exploitation sont hors des alertes par défaut. KANAP ne connaît pas le niveau de correctifs d'un serveur : un système d'exploitation remonterait un très grand nombre de vulnérabilités.
+
+Une version hors des alertes reste rapprochée des vulnérabilités. Ses lignes restent dans la section **Vulnérabilités** de la technologie et sur cette page, avec le filtre **Alertes**. Tout le reste les écarte :
+
+- Cette page ne montre par défaut que les lignes dans les alertes.
+- Les e-mails n'annoncent que les lignes dans les alertes.
+- La colonne **Vulnérabilités à traiter** de la liste des technologies ne compte que les lignes dans les alertes.
+
 ## La liste
 
-La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité, la plus sévère en premier. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** : videz le filtre de la colonne **État** pour voir les autres.
+La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité, la plus sévère en premier. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** qui sont dans les alertes : videz le filtre de la colonne **État** pour voir les autres états.
+
+**Alertes**, au-dessus de la grille, choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Réinitialiser les filtres** remet **Alertes** sur **Incluses**.
 
 **Colonnes** :
 
@@ -48,7 +62,7 @@ La liste utilise la grille standard : une ligne par technologie, version et vuln
 
 **Tri** par **Sévérité**, **Score**, **Publication**, **CVE** ou **Technologie**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
 
-**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?period=30` les vulnérabilités publiées dans les 30 derniers jours. Le lien des e-mails utilise `period`.
+**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?period=30` les vulnérabilités publiées dans les 30 derniers jours, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes. Le lien des e-mails utilise `period`.
 
 ## Changer l'état de plusieurs lignes
 
@@ -72,6 +86,8 @@ Cliquez sur une ligne pour ouvrir sa vulnérabilité dans un panneau latéral. L
 - **Serveurs** : chaque serveur qui porte une version concernée, avec la technologie, la version et le serveur dans lequel il tourne.
 - **Applications** : chaque application qui utilise une version concernée, avec son serveur.
 
+Une version hors des alertes est grisée, avec ses serveurs et ses applications. Quand une partie seulement est dans les alertes, une ligne au-dessus de la liste dit combien, par exemple « 3 serveurs, dont 1 dans les alertes ».
+
 Réglez l'état de chaque version :
 
 | État | Signification |
@@ -90,7 +106,7 @@ KANAP ne change jamais un état que vous avez choisi. Quand une version ne corre
 
 ## Notifications par e-mail
 
-Après chaque vérification, les responsables IT d'une technologie reçoivent un e-mail sur ses nouvelles vulnérabilités critiques ou élevées encore à traiter :
+Après chaque vérification, les responsables IT d'une technologie reçoivent un e-mail sur ses nouvelles vulnérabilités critiques ou élevées encore à traiter, sur les versions dans les alertes :
 
 - **Ce qui est annoncé** : une vulnérabilité publiée dans les 30 derniers jours sur un produit auquel la technologie était déjà comparée, ou une vulnérabilité connue qui vient de devenir critique ou élevée.
 - **Ce qui ne l'est pas** : la première comparaison d'une technologie, ou d'un identifiant CPE que vous venez d'ajouter, est silencieuse. Ses résultats attendent sur cette page.
@@ -102,7 +118,7 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 ## Où les vulnérabilités apparaissent aussi
 
 - **Liste des technologies** : la colonne **Vulnérabilités à traiter**, en orange quand certaines sont critiques ou élevées. Voir [Technologies](technologies.md#travailler-avec-la-liste).
-- **Fiche technologie** : la section **Vulnérabilités** de l'onglet Relations. Voir [Technologies](technologies.md#vulnerabilites).
+- **Fiche technologie** : la section **Vulnérabilités** de l'onglet Conformité. Voir [Technologies](technologies.md#vulnerabilites).
 
 ## Conseils
 

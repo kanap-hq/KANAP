@@ -23,9 +23,23 @@ Una vulnerabilidad que la NVD aún no ha analizado aparece en cuanto se analiza.
 
 Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Volver a cotejar** en la tecnología hace lo mismo a mano.
 
+## Alertas
+
+Cada tecnología y cada versión está en las alertas de vulnerabilidad o fuera de ellas. Usted elige con los interruptores de la tabla de versiones de la tecnología: consulte [Alertas de vulnerabilidad](technologies.md#alertas-de-vulnerabilidad). Una versión sigue el ajuste de su tecnología, salvo si tiene uno propio. Un servidor o una aplicación que no indica ninguna versión sigue a la tecnología.
+
+Los sistemas operativos están fuera de las alertas por defecto. KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades.
+
+Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. Sus filas siguen en la sección **Vulnerabilidades** de la tecnología y en esta página, con el filtro **Alertas**. Todo lo demás las deja fuera:
+
+- Esta página solo muestra por defecto las filas en las alertas.
+- Los correos solo anuncian las filas en las alertas.
+- La columna **Vulnerabilidades por revisar** de la lista de tecnologías solo cuenta las filas en las alertas.
+
 ## La lista
 
-La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad, la más grave primero. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar**: vacíe el filtro de la columna **Estado** para ver las demás.
+La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad, la más grave primero. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
+
+**Alertas**, encima de la cuadrícula, elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas**.
 
 **Columnas**:
 
@@ -48,7 +62,7 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 
 **Orden** por **Gravedad**, **Puntuación**, **Publicación**, **CVE** o **Tecnología**. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
 
-**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?period=30` las vulnerabilidades publicadas en los últimos 30 días. El enlace de los correos usa `period`.
+**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?period=30` las vulnerabilidades publicadas en los últimos 30 días, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas. El enlace de los correos usa `period`.
 
 ## Cambiar el estado de varias filas
 
@@ -72,6 +86,8 @@ Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. El panel
 - **Servidores**: cada servidor que lleva una versión afectada, con la tecnología, la versión y el servidor en el que se ejecuta.
 - **Aplicaciones**: cada aplicación que usa una versión afectada, con su servidor.
 
+Una versión fuera de las alertas aparece atenuada, con sus servidores y aplicaciones. Cuando solo una parte está en las alertas, una línea encima de la lista indica cuántos, por ejemplo «3 servidores, de ellos 1 en las alertas».
+
 Establezca el estado de cada versión:
 
 | Estado | Significado |
@@ -90,7 +106,7 @@ KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coin
 
 ## Notificaciones por correo electrónico
 
-Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades críticas o altas aún por revisar:
+Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades críticas o altas aún por revisar, en las versiones en las alertas:
 
 - **Qué se anuncia**: una vulnerabilidad publicada en los últimos 30 días sobre un producto con el que la tecnología ya se comparaba, o una vulnerabilidad conocida que acaba de pasar a crítica o alta.
 - **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página.
@@ -102,7 +118,7 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 ## Dónde aparecen también las vulnerabilidades
 
 - **Lista de tecnologías**: la columna **Vulnerabilidades por revisar**, en naranja cuando algunas son críticas o altas. Consulte [Tecnologías](technologies.md#trabajar-con-la-lista).
-- **Espacio de trabajo de la tecnología**: la sección **Vulnerabilidades** de la pestaña Relaciones. Consulte [Tecnologías](technologies.md#vulnerabilidades).
+- **Espacio de trabajo de la tecnología**: la sección **Vulnerabilidades** de la pestaña Cumplimiento. Consulte [Tecnologías](technologies.md#vulnerabilidades).
 
 ## Consejos
 

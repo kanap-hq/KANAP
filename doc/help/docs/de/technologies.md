@@ -66,6 +66,8 @@ Jede Technologie kann ein Betriebssystem sein: Ordnen Sie VMware ESXi oder Forti
 
 Die Betriebssysteme des Katalogs haben noch keine CPE-Produktkennungen, daher gleicht KANAP sie nicht mit Schwachstellen ab.
 
+Betriebssysteme sind standardmäßig von den Warnungen zu Schwachstellen ausgeschlossen. KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden, die meisten davon bereits gepatcht. Das gilt für eine Technologie der Familie **Betriebssystem** und für ein aus dem Katalog übernommenes Betriebssystem, unabhängig von seiner Familie. Eine bestehende Technologie, die Sie als Betriebssystem aus dem Katalog übernehmen, wird ebenfalls ausgeschlossen. Sie können sie wieder einschließen: siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
+
 Installationen, die von einer früheren Version aktualisiert wurden, behalten ihre Daten: Die von den Servern genutzten Betriebssysteme und die Einträge, die der früheren Betriebssystemliste der Einstellungen hinzugefügt wurden, sind zu Technologien geworden, mit ihren Versionen und Daten.
 
 ---
@@ -85,7 +87,7 @@ Jede Zeile ist eine Technologie. Klicken Sie auf eine Zeile, um sie zu öffnen.
 | **Server** | Assets, die sie tragen, direkt oder weil sie in einem Asset liegen, das sie trägt |
 | **Anwendungen** | Anwendungen, die sie deklarieren oder auf einem Server gehostet werden, der sie trägt |
 | **Nächstes Supportende** | Das früheste kommende Ende des Standardsupports unter den Versionen im Einsatz. Orange, wenn es in die nächsten 12 Monate fällt |
-| **Zu prüfende Schwachstellen** | Die bekannten Schwachstellen, die auf den Versionen im Einsatz noch zu prüfen sind. Orange mit der Anzahl der kritischen oder hohen (`3 · 1 kritisch oder hoch`). Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md) für diese Technologie. Vorhanden, wenn Schwachstellen verfolgt werden |
+| **Zu prüfende Schwachstellen** | Die bekannten Schwachstellen, die auf den Versionen im Einsatz in den Warnungen noch zu prüfen sind. Orange mit der Anzahl der kritischen oder hohen (`3 · 1 kritisch oder hoch`). Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md) für diese Technologie. Vorhanden, wenn Schwachstellen verfolgt werden |
 
 **Weitere Spalten** (über die Spaltenauswahl): **Lebenszyklus**, **Versionen im Einsatz**, **IT-Verantwortlicher**.
 
@@ -146,6 +148,15 @@ Ein als **Nicht mehr anbieten** markierter Typ bleibt bei den Technologien, die 
 | **Datum unbekannt** | Kein Enddatum erfasst |
 
 Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum das Ende. **Version hinzufügen** fügt eine Zeile hinzu; fahren Sie über eine Zeile, um sie zu bearbeiten oder zu löschen. Das Löschen einer Version, die Server oder Anwendungen nutzen, fragt zuerst nach: Diese Verknüpfungen zeigen dann eine unbekannte Version.
+
+#### Warnungen zu Schwachstellen
+
+Die letzte Spalte der Versionstabelle enthält einen Schalter pro Version. Er legt fest, welche Versionen in den Warnungen zu Schwachstellen zählen. Eine Version in den Warnungen erscheint standardmäßig auf der Seite [Schwachstellen](vulnerabilities.md), in den E-Mails und in den Zählern. Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen: Ihre Zeilen bleiben im Abschnitt [Schwachstellen](#schwachstellen) der Technologie, und die Seite zeigt sie über ihren Filter **Warnungen**.
+
+- **Schalter in der Kopfzeile**: die Einstellung der Technologie. Sie gilt für die Versionen ohne eigene Einstellung, für später hinzugefügte Versionen und für die Server und Anwendungen, die keine Version angeben. Eine Änderung ersetzt die eigenen Einstellungen der Versionen; haben einige eine, fragt KANAP zuerst nach und nennt ihre Anzahl.
+- **Schalter einer Version**: eine Ausnahme für eine Version. Ein kleiner Punkt neben dem Schalter markiert eine Version mit eigener Einstellung. Stellen Sie den Schalter auf den Wert der Kopfzeile zurück, dann folgt die Version wieder der Technologie.
+
+Neue Technologien sind in den Warnungen, außer den Betriebssystemen (siehe [Betriebssysteme](#betriebssysteme)). Eine spätere Änderung der Familie lässt die Einstellung unverändert. Die Schalter erfordern `infrastructure:member`.
 
 #### Versionen aus dem Katalog
 
@@ -219,6 +230,21 @@ Dieselbe Einstufung wie bei Anwendungen, für die Technologien, die in Ihren Kon
 
 Die Stufen und Wellen stammen aus **Einstufungen und Kontinuität** in den [IT-Landschaft-Einstellungen](it-ops-settings.md#einstufungen-und-kontinuitat). Fahren Sie über das Fragezeichen neben einem Feld, um seine Bedeutung zu sehen.
 
+Darunter listet der Abschnitt **Schwachstellen** die bekannten Schwachstellen der Versionen im Einsatz, wenn Schwachstellen verfolgt werden. Siehe [Schwachstellen](#schwachstellen).
+
+#### Schwachstellen
+
+Eine Zeile pro Version und Schwachstelle, die schwerste zuerst, mit **CVE**, **Schweregrad**, **Version** und **Status**. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen. Ein Klick auf eine Zeile öffnet sie auf der Seite [Schwachstellen](vulnerabilities.md), wo Sie sie prüfen.
+
+Der Abschnitt listet alle Zeilen, in den Warnungen oder nicht. Eine ausgegraute Zeile nennt den Grund:
+
+- **Trifft nicht mehr zu**: Sie haben die Zeile geprüft, und ihre Version entspricht der Schwachstelle nicht mehr.
+- **Von den Warnungen ausgeschlossen**: Ihre Version ist außerhalb der Warnungen.
+
+Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
+
+KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Erneut abgleichen** (`infrastructure:member`) startet den Vergleich von Hand.
+
 ### Beziehungen
 
 Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
@@ -229,15 +255,8 @@ Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
 - **Vorfälle**: Schweregrad, Status und Erkennungsdatum. Das Verknüpfen eines Vorfalls erfordert `incidents:contributor`. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden.
 - **Dokumente**: die zur Technologie hochgeladenen Dateien mit Größe und Datum. **Hinzufügen** lädt Dateien hoch; ein Klick auf einen Namen lädt die Datei herunter.
 - **Weblinks**: ein Name und eine Adresse, etwa die Release Notes des Herstellers. Ein Klick auf den Namen öffnet sie; fahren Sie über eine Zeile, um sie zu bearbeiten. Adressen beginnen mit `http://` oder `https://`; eine Adresse ohne Präfix öffnet sich als `https://`.
-- **Schwachstellen**: Wenn Schwachstellen verfolgt werden, die bekannten Schwachstellen der Versionen im Einsatz. Siehe [Schwachstellen](#schwachstellen).
 
 Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** (`infrastructure:member`) öffnet eine Suche an Ort und Stelle; das Kreuz am Ende einer Zeile entfernt die Verknüpfung.
-
-#### Schwachstellen
-
-Eine Zeile pro Version und Schwachstelle, die schwerste zuerst, mit **CVE**, **Schweregrad**, **Version** und **Status**. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen. Ein Klick auf eine Zeile öffnet sie auf der Seite [Schwachstellen](vulnerabilities.md), wo Sie sie prüfen.
-
-KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Erneut abgleichen** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ---
 

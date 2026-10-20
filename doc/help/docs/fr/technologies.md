@@ -66,6 +66,8 @@ Toute technologie peut être un système d'exploitation : placez VMware ESXi ou 
 
 Les systèmes d'exploitation du catalogue n'ont pas encore d'identifiants CPE produit : KANAP ne les rapproche donc pas des vulnérabilités.
 
+Les systèmes d'exploitation sont exclus des alertes de vulnérabilité par défaut. KANAP ne connaît pas le niveau de correctifs d'un serveur : un système d'exploitation remonterait un très grand nombre de vulnérabilités, la plupart déjà corrigées. Cela vaut pour une technologie de la famille **Système d'exploitation** et pour un système d'exploitation adopté depuis le catalogue, quelle que soit sa famille. Une technologie existante que vous adoptez depuis le catalogue comme système d'exploitation passe exclue elle aussi. Vous pouvez la réinclure : voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
+
 Les installations mises à jour depuis une version antérieure gardent leurs données : les systèmes d'exploitation utilisés par les serveurs, et les entrées ajoutées à l'ancienne liste des systèmes d'exploitation des paramètres, sont devenus des technologies, avec leurs versions et leurs dates.
 
 ---
@@ -85,7 +87,7 @@ Chaque ligne est une technologie. Cliquez sur une ligne pour l'ouvrir.
 | **Serveurs** | Les actifs qui la portent, directement ou parce qu'ils sont dans un actif qui la porte |
 | **Applications** | Les applications qui la déclarent ou sont hébergées sur un serveur qui la porte |
 | **Prochaine fin de support** | La plus proche fin de support standard à venir parmi les versions en service. En orange quand elle tombe dans les 12 prochains mois |
-| **Vulnérabilités à traiter** | Les vulnérabilités connues encore à traiter sur les versions en service. En orange avec le nombre de critiques ou élevées (`3 · 1 critiques ou élevées`). Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) sur cette technologie. Présente quand les vulnérabilités sont suivies |
+| **Vulnérabilités à traiter** | Les vulnérabilités connues encore à traiter sur les versions en service qui sont dans les alertes. En orange avec le nombre de critiques ou élevées (`3 · 1 critiques ou élevées`). Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) sur cette technologie. Présente quand les vulnérabilités sont suivies |
 
 **Colonnes supplémentaires** (par le sélecteur de colonnes) : **Cycle de vie**, **Versions en service**, **Responsable IT**.
 
@@ -146,6 +148,15 @@ Un type marqué **Ne plus proposer** reste sur les technologies qui l'ont. Un ty
 | **Date inconnue** | Aucune date de fin saisie |
 
 Le support court encore le jour de sa date de fin. Avec une seule date, cette date est la fin. **Ajouter une version** ajoute une ligne ; survolez une ligne pour la modifier ou la supprimer. Supprimer une version utilisée par des serveurs ou des applications demande confirmation : ces liens affichent alors une version inconnue.
+
+#### Alertes de vulnérabilité
+
+La dernière colonne de la table des versions porte un interrupteur par version. Il choisit les versions qui comptent dans les alertes de vulnérabilité. Une version dans les alertes apparaît par défaut sur la page [Vulnérabilités](vulnerabilities.md), dans les e-mails et dans les compteurs. Une version hors des alertes reste rapprochée des vulnérabilités : ses lignes restent dans la section [Vulnérabilités](#vulnerabilites) de la technologie, et la page les montre avec son filtre **Alertes**.
+
+- **Interrupteur de l'en-tête** : le réglage de la technologie. Il vaut pour les versions sans réglage propre, pour les versions ajoutées plus tard, et pour les serveurs et applications qui n'indiquent aucune version. Le changer remplace les réglages propres des versions ; quand certaines en ont un, KANAP demande d'abord et dit combien.
+- **Interrupteur d'une version** : une exception pour une version. Un petit point à côté de l'interrupteur marque une version qui a son réglage propre. Remettez l'interrupteur sur la valeur de l'en-tête et la version suit de nouveau la technologie.
+
+Les nouvelles technologies sont dans les alertes, sauf les systèmes d'exploitation (voir [Systèmes d'exploitation](#systemes-dexploitation)). Changer plus tard la famille d'une technologie laisse son réglage tel quel. Les interrupteurs demandent `infrastructure:member`.
 
 #### Versions issues du catalogue
 
@@ -219,6 +230,21 @@ La même classification que pour les applications, pour les technologies qui com
 
 Les niveaux et les vagues viennent de **Classifications et continuité** dans les [Paramètres de la cartographie SI](it-ops-settings.md#classifications-et-continuite). Survolez le point d'interrogation à côté d'un champ pour voir sa signification.
 
+Dessous, quand les vulnérabilités sont suivies, la section **Vulnérabilités** liste les vulnérabilités connues des versions en service. Voir [Vulnérabilités](#vulnerabilites).
+
+#### Vulnérabilités
+
+Une ligne par version et par vulnérabilité, la plus sévère en premier, avec sa **CVE**, sa **Sévérité**, sa **Version** et son **État**. Le nombre à côté du titre est le nombre de vulnérabilités distinctes. Cliquez sur une ligne pour l'ouvrir dans la page [Vulnérabilités](vulnerabilities.md), où vous la traitez.
+
+La section liste toutes les lignes, dans les alertes ou non. Une ligne grisée dit pourquoi :
+
+- **Ne correspond plus** : vous avez traité la ligne, et sa version ne correspond plus à la vulnérabilité.
+- **Exclue des alertes** : sa version est hors des alertes.
+
+Quand la technologie ou certaines de ses versions sont hors des alertes, une ligne en tête de la section le dit : **Exclue des alertes**, **Exclue des alertes, sauf 2 versions** ou **3 versions exclues des alertes**. Avec `infrastructure:member`, **Modifier** à côté ouvre la table des versions de l'onglet Aperçu, où se trouvent les interrupteurs. Voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
+
+KANAP rapproche à nouveau la technologie dès que ses identifiants, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. **Rapprocher à nouveau** (`infrastructure:member`) lance la comparaison à la main.
+
 ### Relations
 
 Les fiches liées à la technologie, une section par genre :
@@ -229,15 +255,8 @@ Les fiches liées à la technologie, une section par genre :
 - **Incidents** : sévérité, statut et date de détection. Lier un incident demande `incidents:contributor`. Un incident clos ou annulé ne peut être ni lié ni délié.
 - **Documents** : les fichiers déposés sur la technologie, avec leur taille et leur date. **Ajouter** dépose des fichiers ; cliquez sur un nom pour le télécharger.
 - **Liens web** : un nom et une adresse, comme les notes de version de l'éditeur. Cliquez sur le nom pour l'ouvrir ; survolez une ligne pour la modifier. Les adresses commencent par `http://` ou `https://` ; une adresse sans préfixe s'ouvre en `https://`.
-- **Vulnérabilités** : quand les vulnérabilités sont suivies, les vulnérabilités connues des versions en service. Voir [Vulnérabilités](#vulnerabilites).
 
 Une section n'apparaît que si vous pouvez lire son module. **Ajouter** (`infrastructure:member`) ouvre une recherche sur place ; la croix au bout d'une ligne retire le lien.
-
-#### Vulnérabilités
-
-Une ligne par version et par vulnérabilité, la plus sévère en premier, avec sa **CVE**, sa **Sévérité**, sa **Version** et son **État**. Le nombre à côté du titre est le nombre de vulnérabilités distinctes. Cliquez sur une ligne pour l'ouvrir dans la page [Vulnérabilités](vulnerabilities.md), où vous la traitez.
-
-KANAP rapproche à nouveau la technologie dès que ses identifiants, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. **Rapprocher à nouveau** (`infrastructure:member`) lance la comparaison à la main.
 
 ---
 

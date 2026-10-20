@@ -23,9 +23,23 @@ Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie
 
 Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Erneut abgleichen** bei der Technologie tut dasselbe von Hand.
 
+## Warnungen
+
+Jede Technologie und jede Version ist in den Warnungen zu Schwachstellen oder außerhalb davon. Sie wählen das mit den Schaltern der Versionstabelle der Technologie: siehe [Warnungen zu Schwachstellen](technologies.md#warnungen-zu-schwachstellen). Eine Version folgt der Einstellung ihrer Technologie, außer sie hat eine eigene. Ein Server oder eine Anwendung ohne Version folgt der Technologie.
+
+Betriebssysteme sind standardmäßig außerhalb der Warnungen. KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden.
+
+Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen. Ihre Zeilen bleiben im Abschnitt **Schwachstellen** der Technologie und auf dieser Seite über den Filter **Warnungen**. Überall sonst fehlen sie:
+
+- Diese Seite zeigt standardmäßig nur die Zeilen in den Warnungen.
+- Die E-Mails melden nur die Zeilen in den Warnungen.
+- Die Spalte **Zu prüfende Schwachstellen** der Technologieliste zählt nur die Zeilen in den Warnungen.
+
 ## Die Liste
 
-Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle, die schwerste zuerst. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**: Leeren Sie den Filter der Spalte **Status**, um die anderen zu sehen.
+Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle, die schwerste zuerst. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
+
+**Warnungen** über dem Raster wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen**.
 
 **Spalten**:
 
@@ -48,7 +62,7 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 
 **Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
-**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?period=30` die in den letzten 30 Tagen veröffentlichten Schwachstellen. Der Link der E-Mails nutzt `period`.
+**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?period=30` die in den letzten 30 Tagen veröffentlichten Schwachstellen, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen. Der Link der E-Mails nutzt `period`.
 
 ## Den Status mehrerer Zeilen ändern
 
@@ -72,6 +86,8 @@ Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Der 
 - **Server**: jeder Server, der eine betroffene Version trägt, mit Technologie, Version und dem Server, in dem er läuft.
 - **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, mit ihrem Server.
 
+Eine Version außerhalb der Warnungen ist ausgegraut, mit ihren Servern und Anwendungen. Ist nur ein Teil davon in den Warnungen, nennt eine Zeile über der Liste die Anzahl, zum Beispiel „3 Server, davon 1 in den Warnungen“.
+
 Legen Sie den Status jeder Version fest:
 
 | Status | Bedeutung |
@@ -90,7 +106,7 @@ KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht 
 
 ## E-Mail-Benachrichtigungen
 
-Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen kritischen oder hohen Schwachstellen, die noch zu prüfen sind:
+Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen kritischen oder hohen Schwachstellen, die noch zu prüfen sind, auf den Versionen in den Warnungen:
 
 - **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
 - **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite.
@@ -102,7 +118,7 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 ## Wo Schwachstellen außerdem erscheinen
 
 - **Technologieliste**: die Spalte **Zu prüfende Schwachstellen**, orange, wenn kritische oder hohe darunter sind. Siehe [Technologien](technologies.md#mit-der-liste-arbeiten).
-- **Technologie-Arbeitsbereich**: der Abschnitt **Schwachstellen** im Reiter Beziehungen. Siehe [Technologien](technologies.md#schwachstellen).
+- **Technologie-Arbeitsbereich**: der Abschnitt **Schwachstellen** im Reiter Compliance. Siehe [Technologien](technologies.md#schwachstellen).
 
 ## Tipps
 

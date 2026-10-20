@@ -66,6 +66,8 @@ Cualquier tecnología puede ser un sistema operativo: ponga VMware ESXi o FortiO
 
 Los sistemas operativos del catálogo aún no tienen identificadores CPE de producto, así que KANAP no los cruza con las vulnerabilidades.
 
+Los sistemas operativos quedan excluidos de las alertas de vulnerabilidad por defecto. KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades, la mayoría ya corregidas. Esto se aplica a una tecnología de la familia **Sistema operativo** y a un sistema operativo adoptado desde el catálogo, sea cual sea su familia. Una tecnología existente que usted adopta desde el catálogo como sistema operativo queda excluida también. Puede volver a incluirla: consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
+
 Las instalaciones actualizadas desde una versión anterior conservan sus datos: los sistemas operativos que usaban los servidores, y las entradas añadidas a la antigua lista de sistemas operativos de la configuración, se han convertido en tecnologías, con sus versiones y fechas.
 
 ---
@@ -85,7 +87,7 @@ Cada fila es una tecnología. Haga clic en una fila para abrirla.
 | **Servidores** | Los activos que la llevan, directamente o porque están dentro de un activo que la lleva |
 | **Aplicaciones** | Las aplicaciones que la declaran o se alojan en un servidor que la lleva |
 | **Próximo fin de soporte** | El fin de soporte estándar más cercano por venir entre las versiones en uso. En naranja cuando cae dentro de los próximos 12 meses |
-| **Vulnerabilidades por revisar** | Las vulnerabilidades conocidas que quedan por revisar en las versiones en uso. En naranja con el número de críticas o altas (`3 · 1 críticas o altas`). Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) sobre esta tecnología. Presente cuando se siguen las vulnerabilidades |
+| **Vulnerabilidades por revisar** | Las vulnerabilidades conocidas que quedan por revisar en las versiones en uso que están en las alertas. En naranja con el número de críticas o altas (`3 · 1 críticas o altas`). Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) sobre esta tecnología. Presente cuando se siguen las vulnerabilidades |
 
 **Columnas adicionales** (con el selector de columnas): **Ciclo de vida**, **Versiones en uso**, **Responsable de TI**.
 
@@ -146,6 +148,15 @@ Un tipo marcado con **Dejar de proponer** se mantiene en las tecnologías que lo
 | **Fecha desconocida** | No hay fecha de fin registrada |
 
 El soporte sigue vigente el día de su fecha de fin. Con una sola fecha, esa fecha es el fin. **Añadir versión** añade una línea; pase el ratón por una línea para editarla o eliminarla. Eliminar una versión que usan servidores o aplicaciones pide confirmación: esos vínculos muestran entonces una versión desconocida.
+
+#### Alertas de vulnerabilidad
+
+La última columna de la tabla de versiones tiene un interruptor por versión. Elige las versiones que cuentan en las alertas de vulnerabilidad. Una versión en las alertas aparece por defecto en la página [Vulnerabilidades](vulnerabilities.md), en los correos y en los contadores. Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades: sus filas siguen en la sección [Vulnerabilidades](#vulnerabilidades) de la tecnología, y la página las muestra con su filtro **Alertas**.
+
+- **Interruptor de la cabecera**: el ajuste de la tecnología. Se aplica a las versiones sin ajuste propio, a las versiones añadidas más tarde, y a los servidores y aplicaciones que no indican ninguna versión. Cambiarlo sustituye los ajustes propios de las versiones; cuando algunas tienen uno, KANAP pregunta primero e indica cuántas.
+- **Interruptor de una versión**: una excepción para una versión. Un pequeño punto junto al interruptor marca una versión con ajuste propio. Vuelva a poner el interruptor en el valor de la cabecera y la versión sigue de nuevo a la tecnología.
+
+Las nuevas tecnologías están en las alertas, salvo los sistemas operativos (consulte [Sistemas operativos](#sistemas-operativos)). Cambiar más tarde la familia de una tecnología deja su ajuste como está. Los interruptores requieren `infrastructure:member`.
 
 #### Versiones del catálogo
 
@@ -219,6 +230,21 @@ La misma clasificación que para las aplicaciones, para las tecnologías que cue
 
 Los niveles y las olas vienen de **Clasificaciones y continuidad** en la [Configuración del panorama IT](it-ops-settings.md#clasificaciones-y-continuidad). Pase el ratón por el signo de interrogación junto a un campo para ver su significado.
 
+Debajo, cuando se siguen las vulnerabilidades, la sección **Vulnerabilidades** lista las vulnerabilidades conocidas de las versiones en uso. Consulte [Vulnerabilidades](#vulnerabilidades).
+
+#### Vulnerabilidades
+
+Una fila por versión y vulnerabilidad, la más grave primero, con su **CVE**, su **Gravedad**, su **Versión** y su **Estado**. El número junto al título es el número de vulnerabilidades distintas. Haga clic en una fila para abrirla en la página [Vulnerabilidades](vulnerabilities.md), donde la revisa.
+
+La sección lista todas las filas, en las alertas o no. Una fila atenuada indica por qué:
+
+- **Ya no coincide**: usted revisó la fila, y su versión ya no coincide con la vulnerabilidad.
+- **Excluida de las alertas**: su versión está fuera de las alertas.
+
+Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con `infrastructure:member`, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
+
+KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. **Volver a cotejar** (`infrastructure:member`) lanza la comparación a mano.
+
 ### Relaciones
 
 Los registros vinculados a la tecnología, una sección por tipo:
@@ -229,15 +255,8 @@ Los registros vinculados a la tecnología, una sección por tipo:
 - **Incidentes**: gravedad, estado y fecha de detección. Vincular un incidente requiere `incidents:contributor`. Un incidente cerrado o cancelado no se puede vincular ni desvincular.
 - **Documentos**: los archivos subidos a la tecnología, con su tamaño y su fecha. **Añadir** sube archivos; haga clic en un nombre para descargarlo.
 - **Enlaces web**: un nombre y una dirección, como las notas de la versión del editor. Haga clic en el nombre para abrirlo; pase el ratón por una fila para editarla. Las direcciones empiezan por `http://` o `https://`; una dirección sin prefijo se abre como `https://`.
-- **Vulnerabilidades**: cuando se siguen las vulnerabilidades, las vulnerabilidades conocidas de las versiones en uso. Consulte [Vulnerabilidades](#vulnerabilidades).
 
 Una sección solo aparece si puede leer su módulo. **Añadir** (`infrastructure:member`) abre una búsqueda en el sitio; la cruz al final de una fila quita el vínculo.
-
-#### Vulnerabilidades
-
-Una fila por versión y vulnerabilidad, la más grave primero, con su **CVE**, su **Gravedad**, su **Versión** y su **Estado**. El número junto al título es el número de vulnerabilidades distintas. Haga clic en una fila para abrirla en la página [Vulnerabilidades](vulnerabilities.md), donde la revisa.
-
-KANAP vuelve a cotejar la tecnología en cuanto cambian sus identificadores, versiones, servidores o aplicaciones. Tras un nuevo identificador de producto CPE, la sección indica «Búsqueda de vulnerabilidades en curso…» mientras KANAP lee ese producto en la NVD. **Volver a cotejar** (`infrastructure:member`) lanza la comparación a mano.
 
 ---
 
