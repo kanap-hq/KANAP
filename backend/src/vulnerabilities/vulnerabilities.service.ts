@@ -654,6 +654,9 @@ export class VulnerabilitiesService {
     const products = await this.productStates(mg, tech.cpe_products);
     // One statement: the reach ($1 tenant, $2 this technology) and the rows ($3). A technology with
     // no version and no link still returns `cves` through the left join (the pad row has a null `installed`).
+    // The rows are grouped by version first (`agg`), and the servers counted once per version
+    // (`servers`, materialized), then both are joined to the few version lines: the reach is never
+    // aggregated again for each match row.
     const rows: Array<{
       technology_version_id: string | null;
       label: string | null;
@@ -670,7 +673,7 @@ export class VulnerabilitiesService {
       cves: number;
     }> = await withoutJit(mg,
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
-       servers AS (
+       servers AS MATERIALIZED (
          SELECT technology_version_id, count(DISTINCT asset_id)::int AS servers
            FROM reach
           GROUP BY technology_version_id
