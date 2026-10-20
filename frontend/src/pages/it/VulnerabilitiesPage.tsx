@@ -1,6 +1,6 @@
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Button, Checkbox, Drawer, IconButton, Link as MLink, MenuItem, Stack, TextField, Tooltip, Typography,
+  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
@@ -27,10 +27,15 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
 import {
+  EPSS_HOME,
+  ExploitedBadge,
   SEVERITIES,
   SeverityCell,
   VULNERABILITY_STATES,
   VulnerabilityStateCell,
+  exploitationSources,
+  formatEpssCell,
+  hasExploitationData,
   versionText,
   type VulnerabilityDetail,
   type VulnerabilityGridRow,
@@ -84,6 +89,23 @@ export function alertsFromSearch(search: string): AlertsFilter {
   const value = new URLSearchParams(search).get('alerts');
   return value === 'excluded' || value === 'all' ? value : 'included';
 }
+
+/** `exploited=1` on the address. Any other value leaves the shortcut off, and the API then receives no `exploited`. */
+export function exploitedOnlyFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('exploited') === '1';
+}
+
+/**
+ * EPSS filter: a minimum probability from 0 to 1, the value the API compares with the stored ratio.
+ * A column's filterParams replace the grid's number operators, so the whole set is named here.
+ */
+const EPSS_FILTER_PARAMS = {
+  suppressAndOrCondition: true,
+  maxNumConditions: 1,
+  buttons: ['clear'],
+  filterOptions: ['greaterThanOrEqual'],
+  defaultOption: 'greaterThanOrEqual',
+};
 
 /** A relative publication window. Absent or unknown reads as every date. Distinct from `period` (the emails' link). */
 export const PUBLISHED_PERIODS = ['7d', '30d', '90d', '1y', 'older1y'] as const;
@@ -253,6 +275,7 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
 /** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
 function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string; canEdit: boolean; onChanged?: () => void }) {
   const { t } = useTranslation('it');
+  const locale = useLocale();
   const queryClient = useQueryClient();
   const detail = useQuery({
     queryKey: ['vulnerabilities', 'detail', cveId],
@@ -262,6 +285,8 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
     return <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />;
   }
   const d = detail.data;
+  const sources = exploitationSources(d);
+  const epssKnown = d.epss != null && Number.isFinite(Number(d.epss));
   const serversLine = inAlertsLine(d.servers, d.alerting?.servers, t, 'pages.vulnerabilities.detail.serversInAlerts');
   const applicationsLine = d.applications == null
     ? null
@@ -291,6 +316,52 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
           </Box>
         )}
       </Box>
+      {hasExploitationData(d) && (
+        <DetailBlock title={t('pages.vulnerabilities.detail.exploitation')}>
+          <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+            {sources.length > 0 && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.detail.sources')}</Box>
+                {' '}
+                {sources.map((source) => t(source === 'cisa' ? 'pages.vulnerabilities.detail.sourceCisa' : 'pages.vulnerabilities.detail.sourceEu')).join(', ')}
+              </Typography>
+            )}
+            {d.kev_added_at && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.detail.kevAdded')}</Box>
+                {' '}
+                {formatShortDate(d.kev_added_at, locale, { year: 'always' })}
+              </Typography>
+            )}
+            {d.kev_ransomware === true && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>{t('pages.vulnerabilities.exploited.ransomware')}</Typography>
+            )}
+            {epssKnown && (
+              <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+                <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.detail.epss')}</Box>
+                {' '}
+                {formatEpssCell(d.epss, d.epss_percentile, locale, t)}
+                {d.epss_date ? ` ${t('pages.vulnerabilities.detail.epssOn', { date: formatShortDate(d.epss_date, locale, { year: 'always' }) })}` : ''}
+                {' · '}
+                <MLink href={EPSS_HOME} target="_blank" rel="noopener noreferrer">{t('pages.vulnerabilities.detail.epssFirst')}</MLink>
+              </Typography>
+            )}
+            {(d.euvd_id || d.euvd_url) && (
+              <Box>
+                {d.euvd_id && (
+                  <Typography sx={{ fontSize: 13, fontFamily: MONO_FONT_FAMILY, color: 'kanap.text.primary' }}>{d.euvd_id}</Typography>
+                )}
+                {d.euvd_url && (
+                  <MLink href={d.euvd_url} target="_blank" rel="noopener noreferrer" sx={{ fontSize: 13 }}>
+                    {t('pages.vulnerabilities.detail.euvdLink')}
+                  </MLink>
+                )}
+                <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.detail.euvdSource')}</Typography>
+              </Box>
+            )}
+          </Box>
+        </DetailBlock>
+      )}
       <DetailBlock title={t('pages.vulnerabilities.detail.versions')}>
         <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
           {d.technologies.map((tech) => (
@@ -580,9 +651,14 @@ export default function VulnerabilitiesPage() {
   const navigate = useNavigate();
   const alerts = alertsFromSearch(location.search);
   const published = publishedFromSearch(location.search);
+  const exploitedOnly = exploitedOnlyFromSearch(location.search);
   // Recomputed when the period changes. A page left open past midnight UTC keeps the day it opened on.
   const publishedDays = useMemo(() => publishedRange(published), [published]);
-  const extraParams = useMemo(() => ({ alerts, ...publishedDays }), [alerts, publishedDays]);
+  // `exploited=1` becomes the API's `yes`. Off sends nothing, so the list contract stays on `alerts` alone.
+  const extraParams = useMemo(
+    () => ({ alerts, ...publishedDays, ...(exploitedOnly ? { exploited: 'yes' } : {}) }),
+    [alerts, exploitedOnly, publishedDays],
+  );
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
@@ -643,11 +719,12 @@ export default function VulnerabilitiesPage() {
     if (state.q) params.q = state.q;
     if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
     params.alerts = alerts;
+    if (exploitedOnly) params.exploited = 'yes';
     if (publishedDays.from) params.from = publishedDays.from;
     if (publishedDays.to) params.to = publishedDays.to;
     const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
     return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
-  }, [alerts, publishedDays, t]);
+  }, [alerts, exploitedOnly, publishedDays, t]);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
     ...(canEdit ? [{
@@ -688,11 +765,17 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
-      width: 105,
+      // The score, and the actively exploited badge when the row is listed.
+      width: 268,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
-      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
+      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? (
+        <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0, maxWidth: '100%' }}>
+          <SeverityCell severity={p.data.severity} score={p.data.cvss_score} />
+          {p.data.exploited ? <ExploitedBadge ransomware={p.data.kev_ransomware} /> : null}
+        </Box>
+      ) : null),
     },
     {
       headerName: t('pages.vulnerabilities.columns.exploited'),
@@ -705,7 +788,16 @@ export default function VulnerabilitiesPage() {
       valueFormatter: (p: { value?: boolean }) => (p.value ? t('pages.vulnerabilities.columns.exploitedYes') : t('pages.vulnerabilities.columns.exploitedNo')),
     },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
-    { headerName: t('pages.vulnerabilities.columns.epss'), field: 'epss', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
+    {
+      headerName: t('pages.vulnerabilities.columns.epss'),
+      field: 'epss',
+      width: 200,
+      type: 'rightAligned',
+      headerTooltip: t('pages.vulnerabilities.epss.minimumHint'),
+      filter: 'agNumberColumnFilter',
+      filterParams: EPSS_FILTER_PARAMS,
+      valueFormatter: (p: { value?: number | null; data?: VulnerabilityRow }) => formatEpssCell(p.data?.epss ?? p.value, p.data?.epss_percentile, locale, t),
+    },
     { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 115, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technology'),
@@ -734,7 +826,7 @@ export default function VulnerabilitiesPage() {
       headerName: t('pages.vulnerabilities.columns.editor'),
       field: 'editor',
       width: 130,
-      // Hidden by default: the default set fits a 1,440 px window (the column chooser shows it).
+      // Hidden by default. The chooser shows it. EPSS is shown; the badge carries the exploited signal.
       defaultHidden: true,
       sortable: false,
       filter: CheckboxSetFilter,
@@ -764,8 +856,8 @@ export default function VulnerabilitiesPage() {
     },
   ], [canEdit, editorValues, exploitedValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
-  // One write, so resetting the alerts and the publication window cannot overwrite each other.
-  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod }) => {
+  // One write, so resetting the alerts, the publication window and the shortcut cannot overwrite each other.
+  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod; exploitedOnly?: boolean }) => {
     const params = new URLSearchParams(location.search);
     if (next.alerts !== undefined) {
       if (next.alerts === 'included') params.delete('alerts');
@@ -774,6 +866,10 @@ export default function VulnerabilitiesPage() {
     if (next.published !== undefined) {
       if (next.published === 'all') params.delete('published');
       else params.set('published', next.published);
+    }
+    if (next.exploitedOnly !== undefined) {
+      if (next.exploitedOnly) params.set('exploited', '1');
+      else params.delete('exploited');
     }
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
@@ -893,12 +989,24 @@ export default function VulnerabilitiesPage() {
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
         extraParams={extraParams}
-        extraNarrows={alerts !== 'included' || published !== 'all'}
-        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all' })}
+        extraNarrows={alerts !== 'included' || published !== 'all' || exploitedOnly}
+        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all', exploitedOnly: false })}
         toolbarExtras={(
           <Stack direction="row" spacing={2} alignItems="center">
             {alertsFilter}
             {publishedFilter}
+            <FormControlLabel
+              sx={{ mr: 0 }}
+              control={(
+                <Switch
+                  size="small"
+                  checked={exploitedOnly}
+                  onChange={(_event, checked) => writeSearch({ exploitedOnly: checked })}
+                  inputProps={{ 'aria-label': t('pages.vulnerabilities.shortcut.exploitedOnly') }}
+                />
+              )}
+              label={<Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.shortcut.exploitedOnly')}</Typography>}
+            />
           </Stack>
         )}
         getRowClass={getRowClass}
@@ -938,7 +1046,7 @@ export default function VulnerabilitiesPage() {
             </Stack>
           ) : (
             <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all'
+              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all' || exploitedOnly
                 ? t('pages.vulnerabilities.empty.filtered')
                 : t('pages.vulnerabilities.empty.none')}
             </Typography>
