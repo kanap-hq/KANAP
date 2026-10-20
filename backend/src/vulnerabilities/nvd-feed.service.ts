@@ -728,7 +728,10 @@ export class NvdFeedService implements OnModuleInit {
    * already in the cache whose severity rose to critical or high (lot T6b: announced once).
    */
   async store(mg: EntityManager, cves: ParsedCve[]): Promise<string[]> {
-    const unique = Array.from(new Map(cves.map((c) => [c.cve_id, c])).values());
+    // In cve_id order: the upsert locks its rows in the order the signals task locks them
+    // (vulnerability-signals.service.ts, writeOrdered), so the two never deadlock.
+    const unique = Array.from(new Map(cves.map((c) => [c.cve_id, c])).values())
+      .sort((a, b) => (a.cve_id < b.cve_id ? -1 : a.cve_id > b.cve_id ? 1 : 0));
     // Every step of the statement reads the same snapshot: `old` holds the severities before the upsert.
     const raised: Array<{ cve_id: string }> = await mg.query(
       `WITH old AS (
@@ -743,6 +746,7 @@ export class NvdFeedService implements OnModuleInit {
          FROM jsonb_to_recordset($1::jsonb) AS i(
            cve_id text, summary text, cvss_score numeric, severity text, cvss_version text, cvss_vector text,
            published_at timestamptz, last_modified_at timestamptz, nvd_status text, reference_urls jsonb)
+        ORDER BY i.cve_id
        ON CONFLICT (cve_id) DO UPDATE SET
          summary = EXCLUDED.summary, cvss_score = EXCLUDED.cvss_score, severity = EXCLUDED.severity,
          cvss_version = EXCLUDED.cvss_version, cvss_vector = EXCLUDED.cvss_vector, published_at = EXCLUDED.published_at,
