@@ -151,12 +151,17 @@ Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum
 
 #### Warnungen zu Schwachstellen
 
-Die letzte Spalte der Versionstabelle enthält einen Schalter pro Version. Er legt fest, welche Versionen in den Warnungen zu Schwachstellen zählen. Eine Version in den Warnungen erscheint standardmäßig auf der Seite [Schwachstellen](vulnerabilities.md), in den E-Mails und in den Zählern. Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen: Ihre Zeilen bleiben im Abschnitt [Schwachstellen](#schwachstellen) der Technologie, und die Seite zeigt sie über ihren Filter **Warnungen**.
+Wenn Schwachstellen verfolgt werden, legt die Versionstabelle fest, welche Versionen in den Warnungen zu Schwachstellen zählen. Eine Version in den Warnungen erscheint standardmäßig auf der Seite [Schwachstellen](vulnerabilities.md), in den E-Mails und in den Zählern. Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen: Der Abschnitt [Schwachstellen](#schwachstellen) der Technologie zeigt sie weiterhin, und die Seite zeigt ihre Zeilen über ihren Filter **Warnungen**.
 
-- **Schalter in der Kopfzeile**: die Einstellung der Technologie. Sie gilt für die Versionen ohne eigene Einstellung, für später hinzugefügte Versionen und für die Server und Anwendungen, die keine Version angeben. Eine Änderung ersetzt die eigenen Einstellungen der Versionen; haben einige eine, fragt KANAP zuerst nach und nennt ihre Anzahl.
-- **Schalter einer Version**: eine Ausnahme für eine Version. Ein kleiner Punkt neben dem Schalter markiert eine Version mit eigener Einstellung. Stellen Sie den Schalter auf den Wert der Kopfzeile zurück, dann folgt die Version wieder der Technologie.
+- **In Schwachstellenwarnungen aufnehmen**: der Schalter in der Titelzeile **Versionen**, neben **Version hinzufügen**. Er ist die Einstellung der Technologie. Fahren Sie mit der Maus darüber für einen Hinweis: Sie gilt für die Versionen ohne eigene Einstellung, für später hinzugefügte Versionen und für die Server und Anwendungen, die keine Version angeben. Eine Änderung ersetzt die eigenen Einstellungen der Versionen; haben einige eine, fragt KANAP zuerst nach und nennt ihre Anzahl. Der Schalter erscheint auch, wenn die Technologie keine Version hat.
+- Spalte **Warnungen**: ein Schalter pro Version, für eine Ausnahme bei einer Version. Das Informationssymbol in ihrer Kopfzeile erklärt beim Überfahren, was sie bewirkt. Ein kleiner Punkt neben dem Schalter markiert eine Version mit eigener Einstellung. Stellen Sie den Schalter auf den Wert der Technologie zurück, dann folgt die Version wieder der Technologie.
 
-Neue Technologien sind in den Warnungen, außer den Betriebssystemen (siehe [Betriebssysteme](#betriebssysteme)). Eine spätere Änderung der Familie lässt die Einstellung unverändert. Die Schalter erfordern `infrastructure:member`.
+Neue Technologien sind in den Warnungen, mit zwei Ausnahmen:
+
+- **Betriebssysteme**: siehe [Betriebssysteme](#betriebssysteme).
+- **Von einem Anbieter betriebene Cloud-Dienste**: eine Technologie, deren [Hosting-Typ](#hosting-typ) in der Cloud liegt, etwa **Public Cloud** oder **SaaS**, und ein Katalogeintrag, den der Anbieter betreibt, etwa Entra ID. Der Anbieter patcht einen Online-Dienst, daher verlangen seine Schwachstellen keine Maßnahme von Ihnen. Eine Technologie in einer **Private Cloud** bleibt in den Warnungen.
+
+Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung unverändert. Die Schalter erfordern `infrastructure:member`.
 
 #### Versionen aus dem Katalog
 
@@ -230,20 +235,26 @@ Dieselbe Einstufung wie bei Anwendungen, für die Technologien, die in Ihren Kon
 
 Die Stufen und Wellen stammen aus **Einstufungen und Kontinuität** in den [IT-Landschaft-Einstellungen](it-ops-settings.md#einstufungen-und-kontinuitat). Fahren Sie über das Fragezeichen neben einem Feld, um seine Bedeutung zu sehen.
 
-Darunter listet der Abschnitt **Schwachstellen** die bekannten Schwachstellen der Versionen im Einsatz, wenn Schwachstellen verfolgt werden. Siehe [Schwachstellen](#schwachstellen).
+Darunter fasst der Abschnitt **Schwachstellen** die bekannten Schwachstellen jeder Version zusammen, wenn Schwachstellen verfolgt werden. Siehe [Schwachstellen](#schwachstellen).
 
 #### Schwachstellen
 
-Eine Zeile pro Version und Schwachstelle, die schwerste zuerst, mit **CVE**, **Schweregrad**, **Version** und **Status**. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen. Ein Klick auf eine Zeile öffnet sie auf der Seite [Schwachstellen](vulnerabilities.md), wo Sie sie prüfen.
+Eine Zusammenfassung der Schwachstellen, eine Zeile pro Version der Technologie, in der Reihenfolge der Versionstabelle. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen, alle Status zusammen.
 
-Der Abschnitt listet alle Zeilen, in den Warnungen oder nicht. Eine ausgegraute Zeile nennt den Grund:
+| Spalte | Was sie zeigt |
+|---|---|
+| **Version** | Die Version. Eine Version außerhalb der Warnungen ist ausgegraut und zeigt **Von den Warnungen ausgeschlossen**. **Version nicht erfasst (möglicherweise betroffen)** fasst die Server und Anwendungen zusammen, die keine Version angeben; diese Zeile erscheint nur, wenn es solche gibt |
+| **Server** | Wie viele Server in Betrieb diese Version tragen |
+| **Zu prüfen** | Die noch zu prüfenden Schwachstellen nach Schweregrad: **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** und **Nicht bewertet**. **0**, wenn keine mehr übrig ist |
+| **Gesamt** | Die verschiedenen Schwachstellen dieser Version, alle Status zusammen |
 
-- **Trifft nicht mehr zu**: Sie haben die Zeile geprüft, und ihre Version entspricht der Schwachstelle nicht mehr.
-- **Von den Warnungen ausgeschlossen**: Ihre Version ist außerhalb der Warnungen.
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Version: auf ihre zu prüfenden Schwachstellen, wenn sie welche hat, sonst auf alle Status. **Alles auf der Seite Schwachstellen ansehen** unter der Tabelle öffnet die Seite für die ganze Technologie, alle Status zusammen.
+
+Eine Version, die kein Server und keine Anwendung nutzt, zeigt **Nicht installiert** anstelle der Zähler und keinen Link **Ansehen**. KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
 
 Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
-KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Erneut abgleichen** (`infrastructure:member`) startet den Vergleich von Hand.
+KANAP gleicht die Technologie erneut ab, sobald sich ihre Kennungen, Versionen, Server oder Anwendungen ändern. Nach einer neuen CPE-Produktkennung zeigt der Abschnitt „Suche nach Schwachstellen läuft…“, während KANAP dieses Produkt aus der NVD liest. **Aktualisieren** (`infrastructure:member`) startet den Vergleich von Hand.
 
 ### Beziehungen
 

@@ -21,15 +21,20 @@ Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, 
 
 Una vulnerabilidad que la NVD aún no ha analizado aparece en cuanto se analiza.
 
-Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Volver a cotejar** en la tecnología hace lo mismo a mano.
+Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
 
 ## Alertas
 
-Cada tecnología y cada versión está en las alertas de vulnerabilidad o fuera de ellas. Usted elige con los interruptores de la tabla de versiones de la tecnología: consulte [Alertas de vulnerabilidad](technologies.md#alertas-de-vulnerabilidad). Una versión sigue el ajuste de su tecnología, salvo si tiene uno propio. Un servidor o una aplicación que no indica ninguna versión sigue a la tecnología.
+Cada tecnología y cada versión está en las alertas de vulnerabilidad o fuera de ellas. Usted elige en la tecnología, en su tabla de versiones: el interruptor **Incluir en las alertas de vulnerabilidad** ajusta la tecnología, y la columna **Alertas** tiene un interruptor por versión. Consulte [Alertas de vulnerabilidad](technologies.md#alertas-de-vulnerabilidad). Una versión sigue el ajuste de su tecnología, salvo si tiene uno propio. Un servidor o una aplicación que no indica ninguna versión sigue a la tecnología.
 
-Los sistemas operativos están fuera de las alertas por defecto. KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades.
+Dos tipos de tecnologías están fuera de las alertas por defecto:
 
-Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. Sus filas siguen en la sección **Vulnerabilidades** de la tecnología y en esta página, con el filtro **Alertas**. Todo lo demás las deja fuera:
+- **Sistemas operativos**: KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades.
+- **Servicios en la nube gestionados por un proveedor**: una tecnología alojada en cloud público o como SaaS, o una entrada del catálogo que el proveedor ejecuta. El proveedor corrige un servicio en línea, así que sus vulnerabilidades no le piden ninguna acción. Una tecnología en un cloud privado sigue en las alertas.
+
+Puede volver a incluirlas en la tecnología.
+
+Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. Sigue en la sección **Vulnerabilidades** de la tecnología, y sus filas siguen en esta página, con el filtro **Alertas**. Todo lo demás las deja fuera:
 
 - Esta página solo muestra por defecto las filas en las alertas.
 - Los correos solo anuncian las filas en las alertas.
@@ -39,7 +44,7 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 
 La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad, la más grave primero. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
-**Alertas**, encima de la cuadrícula, elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas**.
+**Alertas**, encima de la cuadrícula, elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada**, a su lado, conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. La exportación y los cambios de estado sobre todo el filtro siguen ambos filtros. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas** y **Publicada** en **Todas**.
 
 **Columnas**:
 
@@ -62,7 +67,7 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 
 **Orden** por **Gravedad**, **Puntuación**, **Publicación**, **CVE** o **Tecnología**. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
 
-**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?period=30` las vulnerabilidades publicadas en los últimos 30 días, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas. El enlace de los correos usa `period`.
+**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?published=30d` las vulnerabilidades publicadas en los últimos 30 días (`7d`, `30d`, `90d`, `1y` u `older1y`, como el filtro **Publicada**), `?period=30` lo mismo mediante el filtro de la columna **Publicada**, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas. El enlace de los correos usa `period`.
 
 ## Cambiar el estado de varias filas
 

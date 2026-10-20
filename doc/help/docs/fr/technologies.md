@@ -151,12 +151,17 @@ Le support court encore le jour de sa date de fin. Avec une seule date, cette da
 
 #### Alertes de vulnérabilité
 
-La dernière colonne de la table des versions porte un interrupteur par version. Il choisit les versions qui comptent dans les alertes de vulnérabilité. Une version dans les alertes apparaît par défaut sur la page [Vulnérabilités](vulnerabilities.md), dans les e-mails et dans les compteurs. Une version hors des alertes reste rapprochée des vulnérabilités : ses lignes restent dans la section [Vulnérabilités](#vulnerabilites) de la technologie, et la page les montre avec son filtre **Alertes**.
+Quand les vulnérabilités sont suivies, la table des versions choisit les versions qui comptent dans les alertes de vulnérabilité. Une version dans les alertes apparaît par défaut sur la page [Vulnérabilités](vulnerabilities.md), dans les e-mails et dans les compteurs. Une version hors des alertes reste rapprochée des vulnérabilités : la section [Vulnérabilités](#vulnerabilites) de la technologie la montre toujours, et la page montre ses lignes avec son filtre **Alertes**.
 
-- **Interrupteur de l'en-tête** : le réglage de la technologie. Il vaut pour les versions sans réglage propre, pour les versions ajoutées plus tard, et pour les serveurs et applications qui n'indiquent aucune version. Le changer remplace les réglages propres des versions ; quand certaines en ont un, KANAP demande d'abord et dit combien.
-- **Interrupteur d'une version** : une exception pour une version. Un petit point à côté de l'interrupteur marque une version qui a son réglage propre. Remettez l'interrupteur sur la valeur de l'en-tête et la version suit de nouveau la technologie.
+- **Inclure dans les alertes de vulnérabilité** : l'interrupteur de la ligne de titre **Versions**, à côté de **Ajouter une version**. C'est le réglage de la technologie. Survolez-le pour un rappel : il vaut pour les versions sans réglage propre, pour les versions ajoutées plus tard, et pour les serveurs et applications qui n'indiquent aucune version. Le changer remplace les réglages propres des versions ; quand certaines en ont un, KANAP demande d'abord et dit combien. Il s'affiche même quand la technologie n'a aucune version.
+- Colonne **Alertes** : un interrupteur par version, pour une exception sur une version. Survolez l'icône d'information de son en-tête pour savoir ce qu'elle fait. Un petit point à côté de l'interrupteur marque une version qui a son réglage propre. Remettez l'interrupteur sur la valeur de la technologie et la version suit de nouveau la technologie.
 
-Les nouvelles technologies sont dans les alertes, sauf les systèmes d'exploitation (voir [Systèmes d'exploitation](#systemes-dexploitation)). Changer plus tard la famille d'une technologie laisse son réglage tel quel. Les interrupteurs demandent `infrastructure:member`.
+Les nouvelles technologies sont dans les alertes, avec deux exceptions :
+
+- **Systèmes d'exploitation** : voir [Systèmes d'exploitation](#systemes-dexploitation).
+- **Services cloud gérés par un fournisseur** : une technologie dont le [type d'hébergement](#type-dhebergement) est dans le cloud, comme **Cloud public** ou **SaaS**, et une entrée du catalogue que le fournisseur fait tourner, comme Entra ID. Le fournisseur corrige un service en ligne, donc ses vulnérabilités ne vous demandent aucune action. Une technologie en **Cloud privé** reste dans les alertes.
+
+Changer plus tard la famille ou le type d'hébergement d'une technologie laisse son réglage tel quel. Les interrupteurs demandent `infrastructure:member`.
 
 #### Versions issues du catalogue
 
@@ -230,20 +235,26 @@ La même classification que pour les applications, pour les technologies qui com
 
 Les niveaux et les vagues viennent de **Classifications et continuité** dans les [Paramètres de la cartographie SI](it-ops-settings.md#classifications-et-continuite). Survolez le point d'interrogation à côté d'un champ pour voir sa signification.
 
-Dessous, quand les vulnérabilités sont suivies, la section **Vulnérabilités** liste les vulnérabilités connues des versions en service. Voir [Vulnérabilités](#vulnerabilites).
+Dessous, quand les vulnérabilités sont suivies, la section **Vulnérabilités** résume les vulnérabilités connues de chaque version. Voir [Vulnérabilités](#vulnerabilites).
 
 #### Vulnérabilités
 
-Une ligne par version et par vulnérabilité, la plus sévère en premier, avec sa **CVE**, sa **Sévérité**, sa **Version** et son **État**. Le nombre à côté du titre est le nombre de vulnérabilités distinctes. Cliquez sur une ligne pour l'ouvrir dans la page [Vulnérabilités](vulnerabilities.md), où vous la traitez.
+Un résumé des vulnérabilités, une ligne par version de la technologie, dans l'ordre de la table des versions. Le nombre à côté du titre est le nombre de vulnérabilités distinctes, tous états confondus.
 
-La section liste toutes les lignes, dans les alertes ou non. Une ligne grisée dit pourquoi :
+| Colonne | Ce qu'elle montre |
+|---|---|
+| **Version** | La version. Une version hors des alertes est grisée et indique **Exclue des alertes**. **Version non renseignée (potentiellement concernée)** regroupe les serveurs et applications qui n'indiquent aucune version ; cette ligne n'apparaît que s'il y en a |
+| **Serveurs** | Le nombre de serveurs en service qui portent cette version |
+| **À traiter** | Les vulnérabilités encore à traiter, par sévérité : **Critique**, **Élevée**, **Moyenne**, **Faible**, **Aucune** et **Non évaluée**. **0** quand il n'en reste aucune |
+| **Total** | Les vulnérabilités distinctes de cette version, tous états confondus |
 
-- **Ne correspond plus** : vous avez traité la ligne, et sa version ne correspond plus à la vulnérabilité.
-- **Exclue des alertes** : sa version est hors des alertes.
+**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur la version : sur ses vulnérabilités à traiter quand elle en a, sur tous les états sinon. **Tout voir dans la page Vulnérabilités**, sous la table, ouvre la page sur toute la technologie, tous états confondus.
+
+Une version qu'aucun serveur ni aucune application n'utilise affiche **Non installée** à la place des compteurs, sans lien **Voir**. KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.
 
 Quand la technologie ou certaines de ses versions sont hors des alertes, une ligne en tête de la section le dit : **Exclue des alertes**, **Exclue des alertes, sauf 2 versions** ou **3 versions exclues des alertes**. Avec `infrastructure:member`, **Modifier** à côté ouvre la table des versions de l'onglet Aperçu, où se trouvent les interrupteurs. Voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
 
-KANAP rapproche à nouveau la technologie dès que ses identifiants, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. **Rapprocher à nouveau** (`infrastructure:member`) lance la comparaison à la main.
+KANAP rapproche à nouveau la technologie dès que ses identifiants, ses versions, ses serveurs ou ses applications changent. Après un nouvel identifiant CPE produit, la section indique « Recherche des vulnérabilités en cours… » pendant que KANAP lit ce produit dans la NVD. **Actualiser** (`infrastructure:member`) lance la comparaison à la main.
 
 ### Relations
 

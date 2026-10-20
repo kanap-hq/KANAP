@@ -21,15 +21,20 @@ Certaines vulnérabilités ne s'appliquent que lorsque deux produits tournent en
 
 Une vulnérabilité que la NVD n'a pas encore analysée apparaît une fois analysée.
 
-Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Rapprocher à nouveau** sur la technologie fait la même chose à la main.
+Les changements comptent tout de suite. Quand vous ajoutez une technologie ou un identifiant CPE produit, KANAP cherche aussitôt ce produit dans la NVD ; la section **Vulnérabilités** de la technologie indique « Recherche des vulnérabilités en cours… » jusqu'à la fin de la recherche. Quand une version, un serveur ou une application d'une technologie change, KANAP rapproche à nouveau la technologie dès que le changement est enregistré. **Actualiser**, dans la section **Vulnérabilités** de la technologie, fait la même chose à la main.
 
 ## Alertes
 
-Chaque technologie et chaque version est dans les alertes de vulnérabilité ou hors d'elles. Vous choisissez avec les interrupteurs de la table des versions de la technologie : voir [Alertes de vulnérabilité](technologies.md#alertes-de-vulnerabilite). Une version suit le réglage de sa technologie, sauf si elle a le sien. Un serveur ou une application qui n'indique aucune version suit la technologie.
+Chaque technologie et chaque version est dans les alertes de vulnérabilité ou hors d'elles. Vous choisissez sur la technologie, dans sa table des versions : l'interrupteur **Inclure dans les alertes de vulnérabilité** règle la technologie, et la colonne **Alertes** porte un interrupteur par version. Voir [Alertes de vulnérabilité](technologies.md#alertes-de-vulnerabilite). Une version suit le réglage de sa technologie, sauf si elle a le sien. Un serveur ou une application qui n'indique aucune version suit la technologie.
 
-Les systèmes d'exploitation sont hors des alertes par défaut. KANAP ne connaît pas le niveau de correctifs d'un serveur : un système d'exploitation remonterait un très grand nombre de vulnérabilités.
+Deux sortes de technologies sont hors des alertes par défaut :
 
-Une version hors des alertes reste rapprochée des vulnérabilités. Ses lignes restent dans la section **Vulnérabilités** de la technologie et sur cette page, avec le filtre **Alertes**. Tout le reste les écarte :
+- **Systèmes d'exploitation** : KANAP ne connaît pas le niveau de correctifs d'un serveur, donc un système d'exploitation remonterait un très grand nombre de vulnérabilités.
+- **Services cloud gérés par un fournisseur** : une technologie hébergée en cloud public ou en SaaS, ou une entrée du catalogue que le fournisseur fait tourner. Le fournisseur corrige un service en ligne, donc ses vulnérabilités ne vous demandent aucune action. Une technologie en cloud privé reste dans les alertes.
+
+Vous pouvez les inclure de nouveau sur la technologie.
+
+Une version hors des alertes reste rapprochée des vulnérabilités. Elle reste dans la section **Vulnérabilités** de la technologie, et ses lignes restent sur cette page, avec le filtre **Alertes**. Tout le reste les écarte :
 
 - Cette page ne montre par défaut que les lignes dans les alertes.
 - Les e-mails n'annoncent que les lignes dans les alertes.
@@ -39,7 +44,7 @@ Une version hors des alertes reste rapprochée des vulnérabilités. Ses lignes 
 
 La liste utilise la grille standard : une ligne par technologie, version et vulnérabilité, la plus sévère en premier. Une vulnérabilité qui concerne trois versions de SQL Server donne trois lignes, chacune avec son propre état. Elle s'ouvre sur les lignes **À traiter** qui sont dans les alertes : videz le filtre de la colonne **État** pour voir les autres états.
 
-**Alertes**, au-dessus de la grille, choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Réinitialiser les filtres** remet **Alertes** sur **Incluses**.
+**Alertes**, au-dessus de la grille, choisit les lignes selon leur réglage d'alertes : **Incluses** (par défaut), **Exclues** ou **Toutes**. Sous **Toutes**, les lignes hors des alertes sont grisées. Quand aucune ligne n'est dans les alertes et que certaines sont exclues, la liste vide propose **Afficher les exclues**. **Publiée**, à côté, garde les vulnérabilités selon leur date de publication à la NVD : **Toutes** (par défaut), **Moins de 7 jours**, **Moins de 30 jours**, **Moins de 90 jours**, **Moins d'un an** ou **Plus d'un an**. La période se compte à partir d'aujourd'hui, donc un lien enregistré ou partagé continue de montrer les plus récentes. L'export et les changements d'état sur tout le filtre suivent les deux filtres. **Réinitialiser les filtres** remet **Alertes** sur **Incluses** et **Publiée** sur **Toutes**.
 
 **Colonnes** :
 
@@ -62,7 +67,7 @@ La liste utilise la grille standard : une ligne par technologie, version et vuln
 
 **Tri** par **Sévérité**, **Score**, **Publication**, **CVE** ou **Technologie**. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
 
-**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?period=30` les vulnérabilités publiées dans les 30 derniers jours, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes. Le lien des e-mails utilise `period`.
+**Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?published=30d` les vulnérabilités publiées dans les 30 derniers jours (`7d`, `30d`, `90d`, `1y` ou `older1y`, comme le filtre **Publiée**), `?period=30` la même chose par le filtre de la colonne **Publiée**, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes. Le lien des e-mails utilise `period`.
 
 ## Changer l'état de plusieurs lignes
 

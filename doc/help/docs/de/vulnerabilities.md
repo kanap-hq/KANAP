@@ -21,15 +21,20 @@ Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispi
 
 Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie analysiert ist.
 
-Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Erneut abgleichen** bei der Technologie tut dasselbe von Hand.
+Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
 
 ## Warnungen
 
-Jede Technologie und jede Version ist in den Warnungen zu Schwachstellen oder außerhalb davon. Sie wählen das mit den Schaltern der Versionstabelle der Technologie: siehe [Warnungen zu Schwachstellen](technologies.md#warnungen-zu-schwachstellen). Eine Version folgt der Einstellung ihrer Technologie, außer sie hat eine eigene. Ein Server oder eine Anwendung ohne Version folgt der Technologie.
+Jede Technologie und jede Version ist in den Warnungen zu Schwachstellen oder außerhalb davon. Sie wählen das bei der Technologie, in ihrer Versionstabelle: Der Schalter **In Schwachstellenwarnungen aufnehmen** stellt die Technologie ein, und die Spalte **Warnungen** enthält einen Schalter pro Version. Siehe [Warnungen zu Schwachstellen](technologies.md#warnungen-zu-schwachstellen). Eine Version folgt der Einstellung ihrer Technologie, außer sie hat eine eigene. Ein Server oder eine Anwendung ohne Version folgt der Technologie.
 
-Betriebssysteme sind standardmäßig außerhalb der Warnungen. KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden.
+Zwei Arten von Technologien sind standardmäßig außerhalb der Warnungen:
 
-Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen. Ihre Zeilen bleiben im Abschnitt **Schwachstellen** der Technologie und auf dieser Seite über den Filter **Warnungen**. Überall sonst fehlen sie:
+- **Betriebssysteme**: KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden.
+- **Von einem Anbieter betriebene Cloud-Dienste**: eine Technologie in der Public Cloud oder als SaaS, oder ein Katalogeintrag, den der Anbieter betreibt. Der Anbieter patcht einen Online-Dienst, daher verlangen seine Schwachstellen keine Maßnahme von Ihnen. Eine Technologie in einer Private Cloud bleibt in den Warnungen.
+
+Sie können sie bei der Technologie wieder aufnehmen.
+
+Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen. Sie bleibt im Abschnitt **Schwachstellen** der Technologie, und ihre Zeilen bleiben auf dieser Seite über den Filter **Warnungen**. Überall sonst fehlen sie:
 
 - Diese Seite zeigt standardmäßig nur die Zeilen in den Warnungen.
 - Die E-Mails melden nur die Zeilen in den Warnungen.
@@ -39,7 +44,7 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle, die schwerste zuerst. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
 
-**Warnungen** über dem Raster wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen**.
+**Warnungen** über dem Raster wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** daneben behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. Der Export und die Statusänderungen für den ganzen Filter folgen beiden Filtern. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen** und **Veröffentlicht** auf **Alle**.
 
 **Spalten**:
 
@@ -62,7 +67,7 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 
 **Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
-**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?period=30` die in den letzten 30 Tagen veröffentlichten Schwachstellen, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen. Der Link der E-Mails nutzt `period`.
+**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?published=30d` die in den letzten 30 Tagen veröffentlichten Schwachstellen (`7d`, `30d`, `90d`, `1y` oder `older1y`, wie der Filter **Veröffentlicht**), `?period=30` dasselbe über den Filter der Spalte **Veröffentlicht**, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen. Der Link der E-Mails nutzt `period`.
 
 ## Den Status mehrerer Zeilen ändern
 

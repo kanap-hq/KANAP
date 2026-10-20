@@ -151,12 +151,17 @@ Support still runs on its end date. With a single date, that date is the end. **
 
 #### Vulnerability alerts
 
-The last column of the versions table holds a switch per version. It chooses which versions count in the vulnerability alerts. A version in the alerts appears on the [Vulnerabilities](vulnerabilities.md) page by default, in the emails and in the counts. A version out of the alerts is still matched with the vulnerabilities: its rows stay in the technology's [Vulnerabilities](#vulnerabilities) section, and the page shows them with its **Alerts** filter.
+When vulnerabilities are followed, the versions table chooses which versions count in the vulnerability alerts. A version in the alerts appears on the [Vulnerabilities](vulnerabilities.md) page by default, in the emails and in the counts. A version out of the alerts is still matched with the vulnerabilities: the technology's [Vulnerabilities](#vulnerabilities) section still shows it, and the page shows its rows with its **Alerts** filter.
 
-- **Header switch**: the setting of the technology. It applies to the versions without their own setting, to the versions added later, and to the servers and applications that name no version. Changing it replaces the own settings of the versions; when some versions have one, KANAP asks first and says how many.
-- **Version switch**: an exception for one version. A small dot next to the switch marks a version with its own setting. Set the switch back to the value of the header and the version follows the technology again.
+- **Include in vulnerability alerts**: the switch in the title line of **Versions**, next to **Add version**. It is the setting of the technology. Hover it for a reminder: it applies to the versions without their own setting, to the versions added later, and to the servers and applications that name no version. Changing it replaces the own settings of the versions; when some versions have one, KANAP asks first and says how many. It shows even when the technology has no version.
+- **Alerts** column: a switch per version, for an exception on one version. Hover the information icon of its header for what it does. A small dot next to the switch marks a version with its own setting. Set the switch back to the value of the technology and the version follows the technology again.
 
-New technologies are in the alerts, except the operating systems (see [Operating systems](#operating-systems)). Changing the family of a technology later leaves its setting as it is. The switches need `infrastructure:member`.
+New technologies are in the alerts, with two exceptions:
+
+- **Operating systems**: see [Operating systems](#operating-systems).
+- **Cloud services run by a provider**: a technology whose [hosting type](#hosting-type) is in the cloud, such as **Public cloud** or **SaaS**, and a catalog entry the provider runs, such as Entra ID. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a **Private cloud** stays in the alerts.
+
+Changing the family or the hosting type of a technology later leaves its setting as it is. The switches need `infrastructure:member`.
 
 #### Versions from the catalog
 
@@ -230,20 +235,26 @@ The same classification as applications, for the technologies that matter to you
 
 The levels and waves come from **Classifications and continuity** in [IT Landscape Settings](it-ops-settings.md#classifications-and-continuity). Hover the question mark next to a field for its meaning.
 
-Below them, when vulnerabilities are followed, the **Vulnerabilities** section lists the known vulnerabilities of the versions in use. See [Vulnerabilities](#vulnerabilities).
+Below them, when vulnerabilities are followed, the **Vulnerabilities** section sums up the known vulnerabilities of each version. See [Vulnerabilities](#vulnerabilities).
 
 #### Vulnerabilities
 
-One row per version and vulnerability, most severe first, with its **CVE**, **Severity**, **Version** and **State**. The count next to the title is the number of distinct vulnerabilities. Click a row to open it on the [Vulnerabilities](vulnerabilities.md) page, where you review it.
+A summary of the vulnerabilities, one line per version of the technology, in the order of the versions table. The count next to the title is the number of distinct vulnerabilities, every state.
 
-The section lists every row, in the alerts or not. A greyed row says why:
+| Column | What it shows |
+|---|---|
+| **Version** | The version. A version out of the alerts is greyed and says **Excluded from alerts**. **Version not recorded (potentially concerned)** groups the servers and applications that name no version; this line shows only when there are some |
+| **Servers** | How many servers in service carry this version |
+| **To review** | The vulnerabilities still to review, by severity: **Critical**, **High**, **Medium**, **Low**, **None** and **Not rated**. **0** when none is left |
+| **Total** | The distinct vulnerabilities of this version, every state |
 
-- **No longer matches**: you reviewed the row, and the version no longer matches the vulnerability.
-- **Excluded from alerts**: the version is out of the alerts.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the version: on its vulnerabilities to review when it has some, on every state otherwise. **See everything on the Vulnerabilities page**, under the table, opens the page on the whole technology, every state.
+
+A version that no server and no application uses shows **Not installed** in place of the counts, and no **See** link. KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.
 
 When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With `infrastructure:member`, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
 
-KANAP matches the technology again as soon as its identifiers, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Match again** (`infrastructure:member`) runs the comparison by hand.
+KANAP matches the technology again as soon as its identifiers, versions, servers or applications change. After a new CPE product identifier, the section says "Searching for vulnerabilities…" while KANAP reads that product from the NVD. **Refresh** (`infrastructure:member`) runs the comparison by hand.
 
 ### Relations
 

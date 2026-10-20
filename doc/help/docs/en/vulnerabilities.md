@@ -21,15 +21,20 @@ Some vulnerabilities only apply when two products run together, for example Tomc
 
 A vulnerability the NVD has not analysed yet appears once it is.
 
-Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Match again** on the technology does the same by hand.
+Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
 
 ## Alerts
 
-Each technology and each version is in the vulnerability alerts or out of them. You choose with the switches of the versions table on the technology: see [Vulnerability alerts](technologies.md#vulnerability-alerts). A version follows the setting of its technology unless it has its own. A server or an application that names no version follows the technology.
+Each technology and each version is in the vulnerability alerts or out of them. You choose on the technology, in its versions table: the **Include in vulnerability alerts** switch sets the technology, and the **Alerts** column holds a switch per version. See [Vulnerability alerts](technologies.md#vulnerability-alerts). A version follows the setting of its technology unless it has its own. A server or an application that names no version follows the technology.
 
-Operating systems are out of the alerts by default. KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities.
+Two kinds of technologies are out of the alerts by default:
 
-A version out of the alerts is still matched with the vulnerabilities. Its rows stay in the technology's **Vulnerabilities** section and on this page under the **Alerts** filter. They are left out of everything else:
+- **Operating systems**: KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities.
+- **Cloud services run by a provider**: a technology hosted in the public cloud or as SaaS, or a catalog entry the provider runs. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a private cloud stays in the alerts.
+
+You can include them again on the technology.
+
+A version out of the alerts is still matched with the vulnerabilities. It stays in the technology's **Vulnerabilities** section, and its rows stay on this page under the **Alerts** filter. They are left out of everything else:
 
 - This page shows only the rows in the alerts by default.
 - The emails announce only the rows in the alerts.
@@ -39,7 +44,7 @@ A version out of the alerts is still matched with the vulnerabilities. Its rows 
 
 The list uses the standard grid: one row per technology, version and vulnerability, most severe first. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-**Alerts**, above the grid, chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Reset filters** sets **Alerts** back to **Included**.
+**Alerts**, above the grid, chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published**, next to it, keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. The export and the state changes on the whole filter follow both filters. **Reset filters** sets **Alerts** back to **Included** and **Published** back to **All**.
 
 **Columns**:
 
@@ -62,7 +67,7 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 
 **Sort** by **Severity**, **Score**, **Published**, **CVE** or **Technology**. The column chooser shows or hides columns, and the grid remembers your choice.
 
-**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?period=30` the vulnerabilities published within the last 30 days, `?alerts=excluded` or `?alerts=all` the rows out of the alerts. The link of the emails uses `period`.
+**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts. The link of the emails uses `period`.
 
 ## Changing the state of several rows
 
