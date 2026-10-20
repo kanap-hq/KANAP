@@ -21,6 +21,6 @@ Jede Stammdatenseite hat **CSV exportieren** und **CSV importieren** in ihrer Sy
 
 Ein Datum, das die Datei nicht selbst entscheiden kann, zum Beispiel `01/03/2027`, wird in der Reihenfolge der Sprache gelesen, in der die Oberfläche angezeigt wird: Tag zuerst auf Französisch, Deutsch und Spanisch, Monat zuerst auf Englisch. Die Prüfung sagt, wie sie die Datei gelesen hat, mit einer Schaltfläche zum Ändern der Lesart. Ein Datum mit einem Tag über 12 entscheidet die Frage selbst, und die Datei trägt keinen Hinweis auf die Sprache, in der sie exportiert wurde.
 
-Ein Import liest Ja oder Nein in jeder dieser Sprachen sowie `true`, `false`, `1` und `0` älterer Dateien. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben folgen derselben Tabelle.
+Ein Import liest Ja oder Nein in jeder dieser Sprachen sowie `true`, `false`, `1` und `0` älterer Dateien. Die Dateien der Anwendungen, Assets, Incidents, Projekte, Anfragen und Aufgaben folgen derselben Tabelle, ebenso die Verknüpfungsdateien der Technologieliste. Siehe [Technologien](technologies.md#verknupfungen-importieren-und-exportieren).
 
 **Größe.** Eine Datei enthält bis zu 20.000 Zeilen.

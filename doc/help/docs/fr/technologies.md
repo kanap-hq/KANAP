@@ -96,6 +96,7 @@ Quand les vulnérabilités sont suivies, la colonne **Éditeur** ouvre aussi la 
 **Actions** :
 
 - **Nouvelle technologie** (`infrastructure:member`).
+- **Importer les liens** (`infrastructure:member`) et **Exporter les liens** : chargez ou téléchargez les liens entre les technologies et les serveurs ou les applications dans un fichier CSV. Voir [Importer et exporter les liens](#importer-et-exporter-les-liens).
 - **Supprimer** les lignes sélectionnées (`infrastructure:admin`). La confirmation compte ce qui part avec elles : liens vers les serveurs et les applications, contrats, lignes budgétaires, projets, incidents et documents.
 
 ---
@@ -248,6 +249,56 @@ Vous pouvez indiquer qu'un serveur porte une technologie depuis l'un ou l'autre 
 - Depuis le serveur : onglet **Technique** de l'actif, section **Technologies**, **Ajouter**, puis choisissez la technologie et la version. Voir [Actifs](assets.md#technique).
 
 Saisissez la technologie sur le serveur où elle est installée : l'hôte pour un hyperviseur, chaque contrôleur de domaine pour Active Directory, le serveur de base de données pour SQL Server. Les serveurs qui tournent dedans, ou les membres de son cluster, l'affichent alors sans autre saisie. Une technologie dans le cloud, comme Entra ID, ne tourne sur aucun de vos serveurs : déclarez-la plutôt sur les applications.
+
+---
+
+## Importer et exporter les liens
+
+La liste des technologies charge et télécharge les liens en masse, un lien par ligne d'un fichier CSV. Il existe deux fichiers :
+
+- **Serveurs et technologies** : les technologies installées sur chaque serveur.
+- **Applications et technologies** : les technologies que chaque application déclare. Les applications hébergées sur un serveur qui porte une technologie sont déduites des serveurs : le fichier les laisse de côté.
+
+Cliquez sur **Importer les liens** ou **Exporter les liens** dans la barre d'outils, puis choisissez le fichier. L'export propose les données ou un modèle vide. Les règles générales des fichiers CSV s'appliquent : encodage, séparateur, oui et non en quatre langues, 20 000 lignes au plus. Voir [Fichiers CSV](csv-files.md).
+
+**Permissions** :
+
+- Exporter le fichier des serveurs : `infrastructure:reader`.
+- Importer le fichier des serveurs : `infrastructure:member`.
+- Le fichier des applications demande aussi le droit de lire les applications. Un Business Contributor exporte et importe les liens de ses propres applications uniquement.
+
+### Colonnes
+
+| Colonne | Signification |
+|---|---|
+| `asset_reference`, `asset_name` | Le serveur (fichier des serveurs). La référence (`AST-12`) est lue en premier. Sans elle, le nom trouve le serveur, et un nom porté par deux serveurs est une erreur. Une référence et un nom qui désignent deux serveurs différents sont aussi une erreur |
+| `application_reference`, `application_name` | L'application (fichier des applications), par sa référence (`APP-4`) d'abord, puis par son nom |
+| `technology_reference`, `technology_name` | La technologie, par sa référence (`TEC-3`) d'abord, puis par son nom |
+| `version` | Le libellé de la version. Une cellule vide signifie que la version est inconnue |
+| `operating_system` | Fichier des serveurs uniquement. Indique si la technologie est le système d'exploitation du serveur : voir ci-dessous |
+| `notes` | Texte libre sur le lien |
+| `source` | L'origine du lien : saisie manuelle, import, assistant, agent ou Netbox. L'export l'écrit ; l'import l'ignore |
+
+La colonne `operating_system` prend trois valeurs :
+
+- **oui** : le lien devient le système d'exploitation du serveur. L'import refuse la ligne quand la technologie n'est pas de la famille **Système d'exploitation**, quand le serveur est un cluster, ou quand le serveur a déjà un autre système d'exploitation.
+- **non** : le lien n'est jamais marqué.
+- **Vide** : un nouveau lien suit la règle de la fiche du serveur. Une technologie de la famille **Système d'exploitation** devient le système d'exploitation du serveur quand celui-ci n'en a pas encore et n'est pas un cluster. L'aperçu l'indique sur la ligne.
+
+L'import ne retire jamais la marque de système d'exploitation d'un lien.
+
+### Ce que fait un import
+
+**Vérification préalable** lit le fichier et liste ce que le chargement ferait, avec les éventuelles erreurs par ligne. Un fichier qui contient une erreur ne charge rien.
+
+- Un lien, c'est un serveur ou une application, une technologie et une version : une ligne avec une autre version ajoute un second lien. Le même lien deux fois dans un fichier est une erreur.
+- Chaque ligne ajoute un lien ou met à jour un lien existant. Les liens absents du fichier restent tels quels : l'import ne supprime jamais de lien.
+- Un lien existant garde son origine. Ses notes changent quand la cellule `notes` contient un texte différent, et une cellule vide les laisse telles quelles.
+- Un nouveau lien est marqué comme issu d'un import, avec le nom du fichier.
+- La technologie doit déjà figurer dans votre liste. Adoptez-la depuis le catalogue ou créez-la d'abord.
+- Une version que vous ne suivez pas encore est créée sur la technologie. L'aperçu la nomme.
+
+Un gros fichier prend du temps à charger et retient les liens de ses technologies jusqu'à la fin. Plusieurs petits fichiers gênent moins les personnes qui travaillent au même moment.
 
 ---
 

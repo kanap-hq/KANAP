@@ -1,6 +1,6 @@
 # Plaid
 
-Plaid is KANAP's built-in chat assistant. It is connected to the same data you already work with (applications, assets, incidents, projects, requests, tasks, contracts, knowledge documents, and master data), so you can ask questions in plain language instead of clicking through several screens to find an answer.
+Plaid is KANAP's built-in chat assistant. It is connected to the same data you already work with (applications, assets, technologies, incidents, projects, requests, tasks, contracts, knowledge documents, and master data), so you can ask questions in plain language instead of clicking through several screens to find an answer.
 
 Plaid does not replace the rest of the application. It is a faster way to summarise context, locate records, draft text, or prepare changes. Sensitive operations are always shown as previews you must approve before anything is written back into KANAP.
 
@@ -111,6 +111,8 @@ When the stream finishes, focus jumps back to the composer so you can keep the c
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
 
 `Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line.
+
+Plaid lists and reads technologies for users who can read the infrastructure. It can filter them by family, publisher, end of support or number of servers, and read a technology's versions, servers and applications. Asked about a server, an application or a technology by its name, without its reference, it also reads the related records. It cannot change a technology. Assistants connected over MCP get the same answers.
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 

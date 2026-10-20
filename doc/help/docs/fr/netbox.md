@@ -45,7 +45,7 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 
 ## Choisir ce qui est importé
 
-Ouvrez l'onglet **Correspondances** de la page Netbox. Trois tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
+Ouvrez l'onglet **Correspondances** de la page Netbox. Quatre tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
 
 - **Rôles Netbox > Type d'actif KANAP**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
 - **Sites Netbox > Site KANAP**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
@@ -69,6 +69,22 @@ Les lignes sont préremplies quand KANAP voit la réponse : le même nom, ou le 
 Ce tableau n'est pas un filtre. Une plateforme laissée sur **Aucune correspondance** n'écarte jamais rien de l'import. L'équipement entre et son système d'exploitation reste exactement tel qu'il est dans KANAP. Mettez la plateforme en correspondance plus tard et l'exécution suivante renseigne le champ.
 
 Netbox accorde les droits de lecture par type d'objet : un jeton autorisé à lire les équipements, les rôles et les sites peut malgré tout se voir refuser les plateformes. Les rôles et les sites continuent de fonctionner et l'import n'est pas affecté. Seule cette section reste vide, et elle en dit la raison.
+
+### Clusters
+
+La section **Clusters** associe chaque cluster Netbox à un cluster KANAP : un actif marqué comme cluster et en service. Chaque ligne indique combien de machines virtuelles le cluster Netbox contient. Un cluster KANAP du même nom est suggéré et, comme ailleurs, une suggestion ne compte qu'une fois que vous appuyez sur **Enregistrer les correspondances**.
+
+À la synchronisation suivante, chaque machine virtuelle d'un cluster associé est ajoutée aux relations **Contient** de son cluster KANAP. Une technologie installée sur le cluster atteint alors la machine et les applications qu'elle héberge. Une machine dont seul le cluster change apparaît sous **À mettre à jour**, avec une ligne **Cluster**. Une machine créée par la synchronisation rejoint son cluster tout de suite.
+
+L'import ne fait qu'ajouter :
+
+- Une machine déjà présente dans un autre cluster KANAP y reste. L'aperçu le signale sur la ligne de la machine, pour que vous puissiez retirer cette relation à la main si elle est périmée.
+- Modifier une correspondance ajoute les machines au nouveau cluster et les garde dans l'ancien.
+- Une machine que vous retirez de son cluster y revient à la synchronisation suivante, tant qu'elle se trouve dans ce cluster Netbox et que la correspondance existe. Pour la retirer définitivement, supprimez d'abord la correspondance, puis la relation.
+
+Un cluster Netbox laissé sur **Aucune correspondance** ne rattache rien et ne bloque pas l'import. L'aperçu le mentionne une fois. Une correspondance vers un actif supprimé, retiré ou qui n'est plus un cluster ne rattache rien non plus, et chaque synchronisation la signale par un avertissement. Elle ne vous empêche pas d'enregistrer les autres correspondances.
+
+Les hôtes ne sont pas rattachés : les membres d'un cluster restent à gérer par vous depuis la fiche du cluster. Si le jeton d'API ne peut pas lire les clusters, la section le dit et le reste de l'onglet continue de fonctionner.
 
 ---
 
@@ -266,6 +282,8 @@ La tuile reste discrète quand il n'y a rien à faire : une ligne indiquant que 
 | L'exécution a échoué après quelques objets | Dix objets consécutifs n'ont pas pu être enregistrés, l'exécution s'est donc arrêtée. La cause est en général la même pour tous, et les détails figurent dans le journal du serveur. |
 | « Netbox a renvoyé plus de pages que prévu. Certains objets n'ont pas été examinés. » | L'inventaire est plus grand que ce qu'une exécution lit. Ce qui a été lu est appliqué, et rien n'est marqué absent. Restreignez le périmètre dans **Correspondances** pour que l'exécution couvre ce qui compte pour vous. |
 | Un sous-site signale que son nom est déjà utilisé | Deux emplacements Netbox de ce site portent le même nom, ou deux sites mis en correspondance pointent vers le même site KANAP et portent chacun un emplacement de ce nom. Renommez l'un des deux dans Netbox, ou fusionnez-les là-bas. Les équipements sont importés dans tous les cas, sans sous-site. |
+| « Netbox n'a pas renvoyé ses clusters » | Le jeton d'API ne peut pas lire les clusters. Accordez-lui la permission sur `virtualization.cluster` dans Netbox, ou laissez-le ainsi : les équipements s'importent toujours, seul le rattachement des machines virtuelles à leur cluster est hors de portée. |
+| Une machine virtuelle n'a pas été rattachée à son cluster | Son cluster Netbox n'a pas de correspondance dans **Correspondances > Clusters**, ou la correspondance désigne un actif retiré ou qui n'est plus un cluster. Corrigez la correspondance, puis relancez la synchronisation. |
 | « Netbox n'a pas renvoyé ses emplacements » | Le jeton d'API ne peut pas lire les emplacements. Accordez-lui la permission sur `dcim.location` dans Netbox, ou laissez-le ainsi : l'import des équipements n'est pas affecté. |
 
 ---
