@@ -189,11 +189,11 @@ function exploitedChoice(value: unknown): boolean | null {
   throw new BadRequestException('exploited must be yes or no.');
 }
 
-/** The minimum EPSS probability, or nothing. A value that is not a number is a 400. */
+/** The minimum EPSS probability, or nothing. A value that is not a number from 0 to 1 is a 400. */
 function epssMinimum(value: unknown): number | null {
   if (value === undefined || value === null || String(value).trim() === '') return null;
   const n = Number(value);
-  if (!Number.isFinite(n)) throw new BadRequestException('epss must be a number.');
+  if (!Number.isFinite(n) || n < 0 || n > 1) throw new BadRequestException('epss must be a number from 0 to 1.');
   return n;
 }
 
