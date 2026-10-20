@@ -32,7 +32,7 @@ const t = ((key: string) => key) as any;
 
 function Grid(props: {
   onGridApiReady?: (api: any) => void; withScope?: boolean; emptyState?: React.ReactNode; defaultFilterModel?: Record<string, unknown>;
-  extraNarrows?: boolean; onResetFilters?: () => void;
+  extraNarrows?: boolean; onResetFilters?: () => void; resetSortOnReset?: boolean;
 }) {
   return (
     <MemoryRouter>
@@ -52,6 +52,7 @@ function Grid(props: {
         defaultFilterModel={props.defaultFilterModel}
         extraNarrows={props.extraNarrows}
         onResetFilters={props.onResetFilters}
+        resetSortOnReset={props.resetSortOnReset}
       />
     </MemoryRouter>
   );
@@ -176,6 +177,39 @@ describe('ServerDataGrid', () => {
       fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
       expect(onResetFilters).toHaveBeenCalledTimes(1);
       view.unmount();
+    }, 20_000);
+
+    it('keeps a sort the user chose, unless the page asks to restore its own', async () => {
+      get.mockImplementation(async () => page(['Alpha']));
+      const sortOf = (api: any) => (api.getColumnState() as Array<{ colId?: string; sort?: string | null }>)
+        .find((col) => col.colId === 'name')?.sort;
+      const lastSort = () => (get.mock.calls[get.mock.calls.length - 1]?.[1] as Config | undefined)?.params.sort;
+
+      let gridApi: any = null;
+      const kept = render(<Grid onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByText('Alpha')).toBeInTheDocument();
+      await act(async () => { gridApi.applyColumnState({ state: [{ colId: 'name', sort: 'desc' }], defaultState: { sort: null } }); });
+      await waitFor(() => {
+        expect(lastSort()).toBe('name:DESC');
+        expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument();
+      });
+      await act(async () => { gridApi.setFilterModel({ name: { filterType: 'text', type: 'contains', filter: 'al' } }); });
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
+      await waitFor(() => expect(gridApi.getFilterModel()).toEqual({}));
+      expect(lastSort()).toBe('name:DESC');
+      expect(sortOf(gridApi)).toBe('desc');
+      kept.unmount();
+
+      gridApi = null;
+      const restored = render(<Grid resetSortOnReset onGridApiReady={(a) => { gridApi = a; }} />);
+      expect(await screen.findByText('Alpha')).toBeInTheDocument();
+      await act(async () => { gridApi.applyColumnState({ state: [{ colId: 'name', sort: 'desc' }], defaultState: { sort: null } }); });
+      await waitFor(() => expect(lastSort()).toBe('name:DESC'));
+      fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.resetFilters' }));
+      await waitFor(() => expect(lastSort()).toBe('name:ASC'));
+      expect(sortOf(gridApi)).toBe('asc');
+      await waitFor(() => expect(screen.queryByRole('button', { name: 'common:buttons.resetFilters' })).not.toBeInTheDocument());
+      restored.unmount();
     }, 20_000);
 
     it('says a control of the page hides every row, and clears it with the filters', async () => {

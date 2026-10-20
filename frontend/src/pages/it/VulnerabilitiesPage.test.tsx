@@ -148,6 +148,10 @@ describe('VulnerabilitiesPage', () => {
     expect(grid.props!.endpoint).toBe('/vulnerabilities');
     expect(grid.props!.columnPreferencesKey).toBe('it-vulnerabilities');
     expect(grid.props!.defaultSort).toEqual({ field: 'exploited', direction: 'DESC' });
+    // Reset filters goes back to this opening: rows to review, exploited first. The sort reset is
+    // opt-in, so the other lists keep the sort the user chose.
+    expect(grid.props!.defaultFilterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
+    expect(grid.props!.resetSortOnReset).toBe(true);
     expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
     expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([

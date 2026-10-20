@@ -48,6 +48,11 @@ import {
 
 const ENDPOINT = '/vulnerabilities';
 
+/** The filters the page opens on, with no link: rows to review. Reset filters goes back to them. */
+const OPENING_FILTER_MODEL: Record<string, unknown> = {
+  state: { filterType: 'set', values: ['to_review'] },
+};
+
 /** A list row: one technology, version and CVE (`GET /vulnerabilities`). */
 export type VulnerabilityRow = VulnerabilityGridRow;
 
@@ -1161,6 +1166,8 @@ export default function VulnerabilitiesPage() {
         extraParams={extraParams}
         extraNarrows={alerts !== 'included' || published !== 'all' || exploitedOnly}
         onResetFilters={() => writeSearch({ alerts: 'included', published: 'all', exploitedOnly: false })}
+        defaultFilterModel={OPENING_FILTER_MODEL}
+        resetSortOnReset
         toolbarExtras={(
           <Stack direction="row" spacing={2} alignItems="center">
             {alertsFilter}
