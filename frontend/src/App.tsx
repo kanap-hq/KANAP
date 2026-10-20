@@ -88,7 +88,6 @@ const TechnologyWorkspacePage = React.lazy(() => import('./pages/it/TechnologyWo
 const EndOfSupportReportPage = React.lazy(() => import('./pages/it/EndOfSupportReportPage'));
 const VulnerabilitiesPage = React.lazy(() => import('./pages/it/VulnerabilitiesPage'));
 const IncidentsPage = React.lazy(() => import('./pages/it/IncidentsPage'));
-const NetboxSyncPage = React.lazy(() => import('./pages/it/NetboxSyncPage'));
 const IncidentWorkspacePage = React.lazy(() => import('./pages/it/IncidentWorkspacePage'));
 const BusinessProcessesPage = React.lazy(() => import('./pages/BusinessProcessesPage'));
 const BusinessProcessWorkspacePage = React.lazy(() => import('./pages/business-processes/BusinessProcessWorkspacePage'));
@@ -132,6 +131,8 @@ const AdminPlatformAiPage = React.lazy(() => import('./pages/admin/AdminPlatform
 const ScheduledTasksPage = React.lazy(() => import('./pages/admin/ScheduledTasksPage'));
 import { useAiCapabilities } from './ai/useAiCapabilities';
 import { useBusinessContributorApplicationVisibility } from './hooks/useBusinessContributorApplicationVisibility';
+import ItNetboxRedirect from './pages/it/ItNetboxRedirect';
+import { itDefaultTarget } from './pages/it/itDefaultTarget';
 
 function HomeRoute() {
   const { isPlatformHost } = useTenant();
@@ -175,26 +176,20 @@ function PortfolioDefaultRedirect() {
 function ItDefaultRedirect() {
   const { hasLevel } = useAuth();
   const applicationVisibility = useBusinessContributorApplicationVisibility();
-  if (hasLevel('locations', 'reader')) return <Navigate to="/it/locations" replace />;
-  if (hasLevel('infrastructure', 'reader')) return <Navigate to="/it/assets" replace />;
-  if (hasLevel('applications', 'reader')) {
-    if (applicationVisibility.hasScopedApplicationReaderAccess) {
-      if (applicationVisibility.isLoading) {
-        return (
-          <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
-            <CircularProgress />
-          </Box>
-        );
-      }
-      if (!applicationVisibility.shouldHideApplications) {
-        return <Navigate to="/it/applications" replace />;
-      }
-    } else {
-      return <Navigate to="/it/applications" replace />;
-    }
+  const target = itDefaultTarget({
+    hasLevel,
+    hasScopedApplicationReaderAccess: applicationVisibility.hasScopedApplicationReaderAccess,
+    isLoading: applicationVisibility.isLoading,
+    shouldHideApplications: applicationVisibility.shouldHideApplications,
+  });
+  if (target === 'loading') {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="50vh">
+        <CircularProgress />
+      </Box>
+    );
   }
-  if (hasLevel('settings', 'reader')) return <Navigate to="/it/settings" replace />;
-  return <Navigate to="/403" replace />;
+  return <Navigate to={target} replace />;
 }
 
 function LegacyTaskRedirect() {
@@ -370,7 +365,7 @@ function AppRoutes() {
           <Route path="/it/interfaces/:id/:tab" element={<InterfaceWorkspacePage />} />
           <Route path="/it/interface-map" element={<InterfaceMapPage />} />
           <Route path="/it/connection-map" element={<ConnectionMapPage />} />
-          <Route path="/it/netbox" element={<NetboxSyncPage />} />
+          <Route path="/it/netbox" element={<ItNetboxRedirect />} />
           <Route path="/it/settings" element={<ItOperationsSettingsPage />} />
           {/* Portfolio */}
           <Route path="/portfolio" element={<PortfolioDefaultRedirect />} />
