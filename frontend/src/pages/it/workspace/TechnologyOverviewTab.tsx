@@ -10,6 +10,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -22,15 +23,18 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
 import DeleteConfirmDialog from '../../../components/DeleteConfirmDialog';
-import { PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
+import { PropertyGroup, PropertyRow, StatusDot, useKanapDialogs } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { useLookupPicker } from '../../../hooks/useLookupPicker';
+import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
@@ -48,6 +52,10 @@ export type TechnologyVersion = {
   notes: string | null;
   /** Set when the version comes from the catalog (adoption or the living catalog's sync). */
   catalog_key?: string | null;
+  /** Own setting: `true`, `false`, or `null` when the version follows the technology. */
+  vulnerability_alerts?: boolean | null;
+  /** The version's exception, or the technology's setting. */
+  vulnerability_alerts_effective?: boolean;
   servers?: number;
   applications?: number;
 };
@@ -73,6 +81,8 @@ export type TechnologyDetail = {
   replaced_by_id: string | null;
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
+  /** Whether the technology raises vulnerability alerts. Versions without their own setting follow it. */
+  vulnerability_alerts?: boolean;
   owners: TechnologyOwner[];
   cyber_criticality?: string | null;
   recovery_wave?: string | null;
@@ -401,6 +411,102 @@ function statusLabel(status: SupportState, t: TFunction) {
   return t(`workspace.technology.versions.status.${status}`);
 }
 
+/** The versions table, so a link from Compliance can bring it into view. */
+export const TECHNOLOGY_VERSIONS_ANCHOR = 'technology-versions';
+
+/**
+ * "Warnungen" is the longest title, about 62px at 11px, plus the 13px hint icon.
+ * 88px holds that line. The switch (about 40px) and the own-setting slot (6px) sit inside it.
+ * With the other columns (170 + 170 + 150 + 64) the table stays inside 1000px.
+ */
+const ALERTS_COLUMN_SX = { width: 88, maxWidth: 88, whiteSpace: 'nowrap', px: 0, boxSizing: 'border-box' } as const;
+const ALERTS_ROW_SX = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' } as const;
+const ALERTS_SWITCHES_SX = { display: 'inline-flex', alignItems: 'center', gap: '4px', flex: '0 0 auto' } as const;
+
+/** The version switches, packed to the trailing edge so every row lines up. */
+function AlertsCell({ children }: { children: React.ReactNode }) {
+  return (
+    <TableCell sx={ALERTS_COLUMN_SX}>
+      <Box sx={ALERTS_ROW_SX}>
+        <Box sx={ALERTS_SWITCHES_SX}>{children}</Box>
+      </Box>
+    </TableCell>
+  );
+}
+
+/** "Alerts" and the explanation of the column. The technology's own switch sits in the section title. */
+function AlertsColumnHeader() {
+  const { t } = useTranslation('it');
+  const hint = t('workspace.technology.versions.alertsColumnHint');
+  return (
+    <TableCell sx={ALERTS_COLUMN_SX}>
+      {/* Packed to the trailing edge, as the switches below it. */}
+      <Box sx={{ ...ALERTS_ROW_SX, gap: 0.5 }}>
+        <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>
+          {t('workspace.technology.versions.alertsColumn')}
+        </Box>
+        <Tooltip title={hint}>
+          <InfoOutlinedIcon tabIndex={0} role="img" aria-hidden={false} aria-label={hint} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+        </Tooltip>
+      </Box>
+    </TableCell>
+  );
+}
+
+function AlertSwitch({ checked, disabled, label, tooltip, onChange }: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  tooltip?: string;
+  onChange?: (next: boolean) => void;
+}) {
+  const control = (
+    <Switch
+      size="small"
+      checked={checked}
+      disabled={disabled}
+      onChange={(_, next) => onChange?.(next)}
+      inputProps={{ 'aria-label': label, role: 'switch' }}
+      sx={{ m: 0 }}
+    />
+  );
+  if (!tooltip) return control;
+  // A disabled switch does not receive hover: the span keeps the tooltip.
+  return <Tooltip title={tooltip}><span>{control}</span></Tooltip>;
+}
+
+/** A version whose setting is its own (`vulnerability_alerts` is true or false). */
+/**
+ * The "own setting" dot. Its 6 px slot is kept on every row (hidden when the version follows the
+ * technology), so every switch of the column sits at the same place.
+ */
+function OwnSettingMark({ visible }: { visible: boolean }) {
+  const { t } = useTranslation('it');
+  const label = t('workspace.technology.versions.alertsOwn');
+  if (!visible) {
+    return <Box component="span" aria-hidden sx={{ display: 'inline-block', width: 6, height: 6, flex: '0 0 auto', visibility: 'hidden' }} />;
+  }
+  return (
+    <Tooltip title={label}>
+      <Box
+        component="span"
+        role="img"
+        tabIndex={0}
+        aria-label={label}
+        data-own-setting=""
+        sx={(theme) => ({
+          display: 'inline-block',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          bgcolor: theme.palette.kanap.text.tertiary,
+          flex: '0 0 auto',
+        })}
+      />
+    </Tooltip>
+  );
+}
+
 /** The confirmation for one version. Counts are named only when the detail already brought them. */
 function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning: string; dependants: boolean } {
   const { servers, applications, label } = version;
@@ -429,11 +535,19 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const locale = useLocale();
+  const dialogs = useKanapDialogs();
+  // No vulnerability feed (on-premise without it): nothing about vulnerabilities is shown, the alerts column neither.
+  const { config } = useFeatures();
+  const showAlerts = config.features.vulnerabilityFeed === true;
+  const queryClient = useQueryClient();
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
   const [saving, setSaving] = React.useState(false);
   const [pending, setPending] = React.useState<TechnologyVersion | null>(null);
   const [removing, setRemoving] = React.useState(false);
+  const [alertsBusy, setAlertsBusy] = React.useState(false);
+  const alertsBusyRef = React.useRef(false);
+  const technologyAlerts = technology.vulnerability_alerts === true;
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -480,6 +594,68 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
 
   const pendingCopy = pending ? versionDeleteCopy(pending, t) : null;
 
+  /**
+   * After an alert setting is written: the technology is read again, and every vulnerability query
+   * (this technology's section, the page's detail and counts) is marked stale, so each shows the
+   * new state the next time it is on screen.
+   */
+  const alertsWritten = async () => {
+    void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+    await onChanged();
+  };
+
+  /** Towards the technology's value the exception disappears (`null`); the other value is stored. */
+  const setVersionAlerts = async (version: TechnologyVersion, next: boolean) => {
+    if (alertsBusyRef.current) return;
+    alertsBusyRef.current = true;
+    setAlertsBusy(true);
+    const value = next === technologyAlerts ? null : next;
+    try {
+      await api.patch(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      await alertsWritten();
+    } catch (err) {
+      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+    } finally {
+      alertsBusyRef.current = false;
+      setAlertsBusy(false);
+    }
+  };
+
+  /**
+   * The technology's setting replaces every version exception. A dry run counts them first:
+   * with any, the change waits for a confirmation.
+   */
+  const setTechnologyAlerts = async (enabled: boolean) => {
+    if (alertsBusyRef.current) return;
+    alertsBusyRef.current = true;
+    setAlertsBusy(true);
+    const url = `/technologies/${technology.id}/vulnerability-alerts`;
+    try {
+      const preview = await api.put<{ versions_reset: number }>(url, { enabled }, { params: { dry_run: true } });
+      const versionsReset = Number(preview.data?.versions_reset ?? 0);
+      if (versionsReset > 0) {
+        const accepted = await dialogs.confirm({
+          title: t('workspace.technology.versions.alertsConfirmTitle'),
+          message: t('workspace.technology.versions.alertsReset', { count: versionsReset }),
+          confirmLabel: t('workspace.technology.versions.alertsReplace'),
+        });
+        if (!accepted) return;
+      }
+      await api.put(url, { enabled });
+      await alertsWritten();
+    } catch (err) {
+      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+    } finally {
+      alertsBusyRef.current = false;
+      setAlertsBusy(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (window.location.hash !== `#${TECHNOLOGY_VERSIONS_ANCHOR}`) return;
+    document.getElementById(TECHNOLOGY_VERSIONS_ANCHOR)?.scrollIntoView({ block: 'start' });
+  }, []);
+
   const editRow = (key: string) => (
     <TableRow key={key}>
       <TableCell>
@@ -500,7 +676,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
       <TableCell>
         <DateEUField label="" hideLabel size="small" valueYmd={draft.extended_support_end} onChangeYmd={(value) => setDraft((prev) => ({ ...prev, extended_support_end: value }))} />
       </TableCell>
-      <TableCell colSpan={2} align="right">
+      <TableCell colSpan={showAlerts ? 3 : 2} align="right">
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
           <Button variant="action" size="small" onClick={() => setEditing(null)}>{t('common:buttons.cancel')}</Button>
           <Button variant="action-primary" size="small" disabled={!draft.label.trim() || saving} onClick={() => { void save(); }}>
@@ -511,11 +687,30 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
     </TableRow>
   );
 
+  const includeLabel = t('workspace.technology.versions.includeInAlerts');
+  const technologySwitch = showAlerts ? (
+    <Box component="label" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5, fontSize: 13, color: 'kanap.text.secondary' }}>
+      <AlertSwitch
+        checked={technologyAlerts}
+        disabled={!canManage || alertsBusy}
+        label={includeLabel}
+        tooltip={t('workspace.technology.versions.alertsHint')}
+        onChange={(next) => { void setTechnologyAlerts(next); }}
+      />
+      {includeLabel}
+    </Box>
+  ) : null;
+
   return (
-    <Box>
+    <Box id={TECHNOLOGY_VERSIONS_ANCHOR}>
       <SectionLabel
-        action={canManage && editing !== 'new' ? (
-          <Button variant="action" size="small" onClick={() => startEdit(null)}>{t('workspace.technology.versions.add')}</Button>
+        action={(technologySwitch || (canManage && editing !== 'new')) ? (
+          <Stack direction="row" spacing={1} alignItems="center">
+            {technologySwitch}
+            {canManage && editing !== 'new' ? (
+              <Button variant="action" size="small" onClick={() => startEdit(null)}>{t('workspace.technology.versions.add')}</Button>
+            ) : null}
+          </Stack>
         ) : undefined}
       >
         {t('workspace.technology.versions.title')}
@@ -537,13 +732,14 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.standardEnd')}</TableCell>
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.extendedEnd')}</TableCell>
             <TableCell sx={{ width: 150 }}>{t('workspace.technology.versions.statusHeader')}</TableCell>
+            {showAlerts && <AlertsColumnHeader />}
             {canManage && <TableCell sx={{ width: 64 }} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {technology.versions.length === 0 && editing !== 'new' && (
             <TableRow>
-              <TableCell colSpan={canManage ? 5 : 4} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
+              <TableCell colSpan={(canManage ? 6 : 5) - (showAlerts ? 0 : 1)} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
                 {t('workspace.technology.versions.empty')}
               </TableCell>
             </TableRow>
@@ -571,6 +767,17 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                     {statusLabel(status, t)}
                   </Box>
                 </TableCell>
+                {showAlerts && (
+                  <AlertsCell>
+                    <AlertSwitch
+                      checked={version.vulnerability_alerts_effective ?? technologyAlerts}
+                      disabled={!canManage || alertsBusy}
+                      label={t('workspace.technology.versions.alertsFor', { label: version.label })}
+                      onChange={(next) => { void setVersionAlerts(version, next); }}
+                    />
+                    <OwnSettingMark visible={version.vulnerability_alerts != null} />
+                  </AlertsCell>
+                )}
                 {canManage && (
                   <TableCell align="right">
                     <Box className="hover-actions" sx={{ display: 'inline-flex' }}>

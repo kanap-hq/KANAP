@@ -6,7 +6,8 @@ import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
-import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
+import { defaultVulnerabilityAlerts } from '../../vulnerabilities/vulnerability-alerts';
+import { hostingTypeOfMode, isCloudHostingType, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
 import { lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
@@ -178,7 +179,12 @@ export class TechnologyCatalogService {
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
    * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
-   * the description when it has none. Two
+   * the description when it has none. A new technology takes the default alert setting
+   * (`defaultVulnerabilityAlerts`: an operating system or a cloud service, an entry of mode
+   * `subscribed` or a hosting type of the cloud category, starts excluded); a technology of the
+   * same name that receives the key of an operating system is excluded from vulnerability alerts,
+   * as if it had been created from the entry (its version exceptions stay). Its hosting type does
+   * not change, so its setting does not follow a `subscribed` entry. Two
    * adoptions of one entry at once run one after the other (transaction-level advisory lock).
    */
   async adopt(key: string, opts: Opts & { language?: unknown }) {
@@ -226,9 +232,11 @@ export class TechnologyCatalogService {
             SET catalog_key = $3,
                 cpe_products = ARRAY(SELECT DISTINCT unnest(cpe_products || $4::text[]) ORDER BY 1),
                 editor = COALESCE(editor, $5),
-                description = COALESCE(NULLIF(btrim(description), ''), $6), catalog_state = $7::jsonb, updated_at = now()
+                description = COALESCE(NULLIF(btrim(description), ''), $6), catalog_state = $7::jsonb,
+                vulnerability_alerts = vulnerability_alerts AND $8::boolean, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, stateFor(before.cpe_products)],
+        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, stateFor(before.cpe_products),
+          defaultVulnerabilityAlerts({ catalogKey: product.key })],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
       await this.audit.log({ table: 'technologies', recordId: technologyId, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
@@ -239,9 +247,14 @@ export class TechnologyCatalogService {
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, stateFor([])],
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state, vulnerability_alerts)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) RETURNING id`,
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, stateFor([]),
+          defaultVulnerabilityAlerts({
+            family,
+            catalogKey: product.key,
+            cloudService: product.mode === 'subscribed' || isCloudHostingType(settings.hostingTypes, hostingType),
+          })],
       );
       technologyId = row.id;
       created = true;

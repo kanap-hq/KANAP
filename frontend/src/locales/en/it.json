@@ -383,7 +383,9 @@
       "versionNoneHint": "No version recorded: potentially concerned",
       "empty": {
         "none": "No vulnerability to review. Vulnerabilities show for the technologies that name their CPE identifiers: fill them in on a technology, or adopt it from the catalog.",
-        "filtered": "No vulnerability matches these filters."
+        "filtered": "No vulnerability matches these filters.",
+        "noneInAlerts": "No vulnerability is in the alerts.",
+        "showExcluded": "Show the excluded ones"
       },
       "columns": {
         "cve": "CVE",
@@ -423,16 +425,52 @@
         "via": "through {{name}}",
         "stateOf": "State of {{version}}",
         "noteOf": "Note on {{version}}",
-        "notePlaceholder": "e.g., patched on 12 March"
+        "notePlaceholder": "e.g., patched on 12 March",
+        "serversInAlerts_one": "{{count}} server, {{alerting}} in alerts",
+        "serversInAlerts_other": "{{count}} servers, {{alerting}} in alerts",
+        "applicationsInAlerts_one": "{{count}} application, {{alerting}} in alerts",
+        "applicationsInAlerts_other": "{{count}} applications, {{alerting}} in alerts"
       },
       "section": {
         "title": "Vulnerabilities",
         "empty": "No known vulnerability concerns this technology.",
         "searching": "Searching for vulnerabilities…",
         "loadFailed": "The vulnerabilities could not be loaded.",
-        "rematch": "Match again",
+        "rematch": "Refresh",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",
-        "rematchFailed": "The match could not run. Try again."
+        "rematchFailed": "The match could not run. Try again.",
+        "noLongerMatches": "No longer matches",
+        "see": "See",
+        "seeAll": "See everything on the Vulnerabilities page",
+        "notInstalled": "Not installed",
+        "notInstalledHint": "KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.",
+        "columns": {
+          "open": "To review",
+          "total": "Total"
+        },
+        "alerts": {
+          "excluded": "Excluded from alerts",
+          "excludedExcept_one": "Excluded from alerts, except {{count}} version",
+          "excludedExcept_other": "Excluded from alerts, except {{count}} versions",
+          "versionsExcluded_one": "{{count}} version excluded from alerts",
+          "versionsExcluded_other": "{{count}} versions excluded from alerts",
+          "set": "Change"
+        }
+      },
+      "alerts": {
+        "label": "Alerts",
+        "included": "Included",
+        "excluded": "Excluded",
+        "all": "All"
+      },
+      "published": {
+        "label": "Published",
+        "all": "All",
+        "7d": "Less than 7 days",
+        "30d": "Less than 30 days",
+        "90d": "Less than 90 days",
+        "1y": "Less than a year",
+        "older1y": "More than a year"
       }
     },
     "interfaces": {
@@ -2031,6 +2069,16 @@
         "servers_other": "{{count}} servers",
         "applications_one": "{{count}} application",
         "applications_other": "{{count}} applications",
+        "alertsColumn": "Alerts",
+        "alertsColumnHint": "Includes this version in vulnerability alerts: the Vulnerabilities page, the counts and the summary email. Each version follows the technology setting unless a dot marks its own setting.",
+        "includeInAlerts": "Include in vulnerability alerts",
+        "alertsFor": "Vulnerability alerts for {{label}}",
+        "alertsHint": "Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.",
+        "alertsOwn": "Own setting for this version",
+        "alertsConfirmTitle": "Vulnerability alerts",
+        "alertsReset_one": "{{count}} version has its own setting. It will be replaced.",
+        "alertsReset_other": "{{count}} versions have their own setting. They will be replaced.",
+        "alertsReplace": "Replace",
         "status": {
           "supported": "Supported",
           "ending_soon": "Ending soon",

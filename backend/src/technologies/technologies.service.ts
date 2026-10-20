@@ -13,7 +13,8 @@ import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service
 import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
-import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
+import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
+import { defaultVulnerabilityAlerts, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -45,6 +46,12 @@ type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; hosting_type: unknown; lifecycle: unknown; description: unknown; notes: unknown;
   support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
+  /**
+   * Create only. Absent: an operating system is excluded, every other family is included.
+   * A later change of family does not move the setting. PATCH refuses it (400): the setting
+   * is written by PUT /technologies/:id/vulnerability-alerts, which also clears the exceptions.
+   */
+  vulnerability_alerts: unknown;
   /** Gone since lot H1: refused, so a client still sending it learns it changed nothing. */
   mode: unknown;
 }>;
@@ -52,6 +59,8 @@ type TechnologyInput = Partial<{
 type VersionInput = Partial<{
   label: unknown; cpe_version: unknown; build_prefixes: unknown; standard_support_end: unknown; extended_support_end: unknown;
   notes: unknown;
+  /** true or false: an exception. null: follow the technology. */
+  vulnerability_alerts: unknown;
 }>;
 
 const LINK_URL_MAX = 2000;
@@ -196,14 +205,19 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    // The CVE still to review of each technology, and those critical or high (lot T6b), while the
-    // vulnerability feed is on; null otherwise.
+    // The CVE still to review that alert, and those critical or high (lot T6b, lot V1), while the
+    // vulnerability feed is on; null otherwise. A version follows the technology unless it has its
+    // own setting; a row with no version follows the technology. A CVE matched on both an alerting
+    // row and a silent one still counts.
     // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
     // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
     const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
       ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
-            FROM technology_vulnerabilities tv JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
-           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review') AS vulnerability_counts`
+            FROM technology_vulnerabilities tv
+            JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+            LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review'
+             AND ${vulnerabilityAlertsSql('v', 't')}) AS vulnerability_counts`
       : 'NULL::int[] AS vulnerability_counts';
     const rows: Array<TechnologyRow & {
       total: string;
@@ -278,11 +292,24 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const values = await this.validate(body, null, opts);
     if (!values.name) throw new BadRequestException('Name is required.');
+    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
     if (!('hosting_type' in values)) {
-      const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       values.hosting_type = resolveHostingType(settings.hostingTypes, DEFAULT_TECHNOLOGY_HOSTING_TYPE);
     }
     await this.assertNameFree(mg, tenantId, values.name as string, null);
+    // Explicit true or false wins. Otherwise an operating system or a cloud service starts excluded,
+    // every other technology included (`defaultVulnerabilityAlerts`).
+    if (Object.prototype.hasOwnProperty.call(body, 'vulnerability_alerts') && body.vulnerability_alerts !== undefined) {
+      if (body.vulnerability_alerts !== true && body.vulnerability_alerts !== false) {
+        throw new BadRequestException('vulnerability_alerts must be true or false.');
+      }
+      values.vulnerability_alerts = body.vulnerability_alerts;
+    } else {
+      values.vulnerability_alerts = defaultVulnerabilityAlerts({
+        family: typeof values.family === 'string' ? values.family : 'other',
+        cloudService: isCloudHostingType(settings.hostingTypes, values.hosting_type as string | null),
+      });
+    }
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];
     const params = [tenantId, itemNumber, ...Object.values(values)];
@@ -318,12 +345,81 @@ export class TechnologiesService {
     return this.get(before.id, opts);
   }
 
+  /**
+   * Sets whether the technology raises vulnerability alerts, and clears every version exception
+   * in the same transaction (the technology row is locked first, then the versions that have
+   * their own setting). A version created later follows the technology again.
+   * `dryRun` writes nothing and returns only how many exceptions would be cleared.
+   */
+  async setVulnerabilityAlerts(idOrRef: string, enabled: unknown, opts: Opts, dryRun = false) {
+    if (enabled !== true && enabled !== false) throw new BadRequestException('enabled must be true or false.');
+    const { manager: mg, tenantId } = opts;
+    if (dryRun) {
+      const tech = await readTechnology(mg, tenantId, idOrRef);
+      const [{ versions_reset }] = await mg.query(
+        `SELECT count(*)::int AS versions_reset FROM technology_versions
+          WHERE tenant_id = $1 AND technology_id = $2 AND vulnerability_alerts IS NOT NULL`,
+        [tenantId, tech.id],
+      );
+      return { versions_reset: Number(versions_reset) };
+    }
+    const before = await readTechnology(mg, tenantId, idOrRef, true);
+    // The column is not a key: NO KEY UPDATE lets a matching that inserts rows naming these
+    // versions (foreign key checks take KEY SHARE) go on.
+    const exceptions: TechnologyVersionRow[] = await mg.query(
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.vulnerability_alerts IS NOT NULL
+        ORDER BY v.id
+        FOR NO KEY UPDATE OF v`,
+      [tenantId, before.id],
+    );
+    if (before.vulnerability_alerts !== enabled) {
+      await mg.query(
+        `UPDATE technologies SET vulnerability_alerts = $3, updated_at = now() WHERE tenant_id = $1 AND id = $2`,
+        [tenantId, before.id, enabled],
+      );
+      const after = await readTechnology(mg, tenantId, before.id);
+      await this.audit.log(
+        { table: 'technologies', recordId: before.id, action: 'update', before, after, userId: opts.userId ?? null },
+        { manager: mg },
+      );
+    }
+    if (exceptions.length) {
+      const ids = exceptions.map((row) => row.id);
+      await mg.query(
+        `UPDATE technology_versions SET vulnerability_alerts = NULL, updated_at = now()
+          WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
+        [tenantId, before.id, ids],
+      );
+      const cleared: TechnologyVersionRow[] = await mg.query(
+        `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+           JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+          WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = ANY($3::uuid[])`,
+        [tenantId, before.id, ids],
+      );
+      const afterById = new Map(cleared.map((row) => [row.id, row]));
+      // One entry per version, as a PATCH of the version writes it.
+      for (const row of exceptions) {
+        await this.audit.log(
+          { table: 'technology_versions', recordId: before.id, action: 'update', before: row, after: afterById.get(row.id) ?? null, userId: opts.userId ?? null },
+          { manager: mg },
+        );
+      }
+    }
+    return { enabled, versions_reset: exceptions.length };
+  }
+
   /** The columns a create or PATCH writes, checked against the tenant's catalogs. */
   private async validate(body: TechnologyInput, current: TechnologyRow | null, opts: Opts): Promise<Record<string, unknown>> {
     const { manager: mg, tenantId } = opts;
     const out: Record<string, unknown> = {};
     const has = (key: keyof TechnologyInput) => body && Object.prototype.hasOwnProperty.call(body, key) && body[key] !== undefined;
     if (has('mode')) throw new BadRequestException('mode is replaced by hosting_type.');
+    // A PATCH that sends it would change nothing: refused, so the client learns where it is set.
+    if (current && has('vulnerability_alerts')) {
+      throw new BadRequestException('vulnerability_alerts is set with PUT /technologies/:id/vulnerability-alerts.');
+    }
     if (has('name')) out.name = optionalText(body.name, 'Name', 200);
     if (has('editor')) out.editor = optionalText(body.editor, 'Editor', 200);
     if (has('description')) out.description = optionalText(body.description, 'Description', 20000);
@@ -457,6 +553,7 @@ export class TechnologiesService {
               (SELECT count(*)::int FROM asset_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS servers,
               (SELECT count(*)::int FROM application_technologies a WHERE a.tenant_id = v.tenant_id AND a.technology_version_id = v.id AND a.technology_id = v.technology_id) AS applications
          FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
         WHERE v.tenant_id = $1 AND v.technology_id = $2
         ORDER BY v.id`,
       [tenantId, technologyId],
@@ -504,7 +601,10 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
-      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
+      // The alert setting does not take part in the matching: a change of it alone matches nothing again.
+      if (keys.some((key) => key !== 'vulnerability_alerts')) {
+        await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
+      }
       return after;
     }
     return before;
@@ -558,7 +658,9 @@ export class TechnologiesService {
     const id = String(versionId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new NotFoundException('Version not found');
     const rows: TechnologyVersionRow[] = await mg.query(
-      `SELECT ${VERSION_COLUMNS} FROM technology_versions v WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = $3`,
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = $3`,
       [tenantId, technologyId, id],
     );
     if (!rows[0]) throw new NotFoundException('Version not found');
@@ -574,6 +676,13 @@ export class TechnologiesService {
     if (has('standard_support_end')) out.standard_support_end = optionalDay(body.standard_support_end, 'Standard support end');
     if (has('extended_support_end')) out.extended_support_end = optionalDay(body.extended_support_end, 'Extended support end');
     if (has('notes')) out.notes = optionalText(body.notes, 'Notes', 20000);
+    if (has('vulnerability_alerts')) {
+      const value = body.vulnerability_alerts;
+      if (value !== true && value !== false && value !== null) {
+        throw new BadRequestException('vulnerability_alerts must be true, false or null.');
+      }
+      out.vulnerability_alerts = value;
+    }
     const s = out.standard_support_end as string | null | undefined;
     const e = out.extended_support_end as string | null | undefined;
     if (s && e && e < s) throw new BadRequestException('The extended support cannot end before the standard support.');

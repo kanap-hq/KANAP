@@ -6,7 +6,7 @@ import CloseIcon from '@mui/icons-material/Close';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
-import { Link as RouterLink, useLocation } from 'react-router-dom';
+import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
@@ -77,21 +77,70 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
   return model;
 }
 
+export type AlertsFilter = 'included' | 'excluded' | 'all';
+
+/** `alerts` on the address: included when it is absent or unknown. */
+export function alertsFromSearch(search: string): AlertsFilter {
+  const value = new URLSearchParams(search).get('alerts');
+  return value === 'excluded' || value === 'all' ? value : 'included';
+}
+
+/** A relative publication window. Absent or unknown reads as every date. Distinct from `period` (the emails' link). */
+export const PUBLISHED_PERIODS = ['7d', '30d', '90d', '1y', 'older1y'] as const;
+export type PublishedPeriod = 'all' | (typeof PUBLISHED_PERIODS)[number];
+
+/** `published` on the address stays relative, so a saved link keeps meaning "the last 30 days". */
+export function publishedFromSearch(search: string): PublishedPeriod {
+  const value = new URLSearchParams(search).get('published');
+  return (PUBLISHED_PERIODS as readonly string[]).includes(value ?? '') ? (value as PublishedPeriod) : 'all';
+}
+
+function utcDay(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
+/** `day` (YYYY-MM-DD) shifted by calendar days and years, in UTC. */
+function shiftUtcDay(day: string, days: number, years = 0): string {
+  const [year, month, date] = day.split('-').map(Number);
+  return utcDay(new Date(Date.UTC(year + years, month - 1, date + days)));
+}
+
+/**
+ * Inclusive `from` and `to` for the publication date (`GET /vulnerabilities` keeps both days), from
+ * the UTC day of `now`. Less than N days covers exactly N days, today included (`from` is N - 1 days
+ * back). Less than a year starts the day after the anniversary; more than a year stops on it and
+ * sends no `from`, so the two share no day and miss none. All sends neither.
+ */
+export function publishedRange(period: PublishedPeriod, now = new Date()): { from?: string; to?: string } {
+  if (period === 'all') return {};
+  const today = utcDay(now);
+  const anniversary = shiftUtcDay(today, 0, -1);
+  if (period === 'older1y') return { to: anniversary };
+  const from = period === '1y' ? shiftUtcDay(anniversary, 1) : shiftUtcDay(today, 1 - Number(period.slice(0, -1)));
+  return { from, to: today };
+}
+
 /** The list's parameters, without its paging, for the export and the change in bulk. */
 function scopeParams(request: ListRequest | null): Record<string, unknown> {
   const { page: _page, limit: _limit, ...rest } = (request?.params ?? {}) as Record<string, unknown>;
   return rest;
 }
 
+/** The same list query for the rows kept out of the alerts. One row is enough to know they exist. */
+function excludedProbeOf(request: ListRequest): Record<string, unknown> {
+  const { alerts: _alerts, ...rest } = scopeParams(request);
+  return { ...rest, alerts: 'excluded', page: 1, limit: 1 };
+}
+
 /** A neutral link (a server, an application, a technology): underline and teal on hover only. */
-function RecordLink({ to, children }: { to: string; children: React.ReactNode }) {
+function RecordLink({ to, children, quiet = false }: { to: string; children: React.ReactNode; quiet?: boolean }) {
   return (
     <MLink
       component={RouterLink}
       to={to}
       underline="hover"
       onClick={(event: React.MouseEvent) => event.stopPropagation()}
-      sx={{ color: 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}
+      sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.primary', fontSize: 13, '&:hover': { color: 'primary.main' } }}
     >
       {children}
     </MLink>
@@ -110,6 +159,17 @@ function DetailBlock({ title, children }: { title: string; children: React.React
 const listSx = { listStyle: 'none', m: 0, p: 0, display: 'flex', flexDirection: 'column', gap: '2px', fontSize: 13 } as const;
 const quietSx = { fontSize: 13, color: 'kanap.text.tertiary' } as const;
 
+/** The count line when some of the rows stay out of the alerts. */
+function inAlertsLine(
+  total: number,
+  alerting: number | undefined,
+  t: (key: string, opts: { count: number; alerting: number }) => string,
+  key: string,
+): string | null {
+  if (alerting == null || alerting === total) return null;
+  return t(key, { count: total, alerting });
+}
+
 /**
  * The state and the note of one technology version for a CVE: a member changes them in place
  * (`PATCH /technologies/:id/vulnerabilities/:cveId`, the state on change, the note on blur).
@@ -126,6 +186,8 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   const [failed, setFailed] = useState(false);
   useEffect(() => { setNote(version.note ?? ''); }, [version.note]);
   const label = versionText(version, t);
+  // A version out of the alerts reads quieter, as its servers and applications below.
+  const quiet = version.alerts === false;
   const save = async (body: { state?: VulnerabilityState; note?: string | null }) => {
     setFailed(false);
     try {
@@ -137,7 +199,15 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   };
   return (
     <Box component="li" sx={{ display: 'grid', gridTemplateColumns: '160px 150px 1fr', gap: 1, alignItems: 'center' }}>
-      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', color: version.potential ? 'kanap.text.secondary' : 'kanap.text.primary' }} title={label}>
+      <Box
+        component="span"
+        sx={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          color: quiet ? 'kanap.text.tertiary' : version.potential ? 'kanap.text.secondary' : 'kanap.text.primary',
+        }}
+        title={quiet ? `${label} · ${t('pages.vulnerabilities.section.alerts.excluded')}` : label}
+      >
         {label}
       </Box>
       {canEdit ? (
@@ -192,6 +262,10 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
     return <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />;
   }
   const d = detail.data;
+  const serversLine = inAlertsLine(d.servers, d.alerting?.servers, t, 'pages.vulnerabilities.detail.serversInAlerts');
+  const applicationsLine = d.applications == null
+    ? null
+    : inAlertsLine(d.applications, d.alerting?.applications, t, 'pages.vulnerabilities.detail.applicationsInAlerts');
   // The panel stays open; the grid, which does not read react-query, is refreshed by its caller.
   const onSaved = () => {
     void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
@@ -245,41 +319,49 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
       </DetailBlock>
       <Box sx={{ display: 'grid', gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' }, gap: 3 }}>
         <DetailBlock title={t('pages.vulnerabilities.detail.servers')}>
+          {serversLine && <Typography sx={{ ...quietSx, mb: 0.5 }}>{serversLine}</Typography>}
           {d.servers_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noServers')}</Typography>
           ) : (
             <Box component="ul" sx={listSx}>
-              {d.servers_list.map((server, index) => (
-                <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
-                  <RecordLink to={`/it/assets/${server.asset_id}`}>{server.name ?? server.reference ?? ''}</RecordLink>
-                  <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
-                    {' · '}{server.technology_name} {versionText(server, t)}
-                    {server.via_asset_name && <>{' · '}{t('pages.vulnerabilities.detail.via', { name: server.via_asset_name })}</>}
-                  </Box>
-                </li>
-              ))}
+              {d.servers_list.map((server, index) => {
+                const quiet = server.alerts === false;
+                return (
+                  <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
+                    <RecordLink to={`/it/assets/${server.asset_id}`} quiet={quiet}>{server.name ?? server.reference ?? ''}</RecordLink>
+                    <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
+                      {' · '}{server.technology_name} {versionText(server, t)}
+                      {server.via_asset_name && <>{' · '}{t('pages.vulnerabilities.detail.via', { name: server.via_asset_name })}</>}
+                    </Box>
+                  </li>
+                );
+              })}
             </Box>
           )}
         </DetailBlock>
         <DetailBlock title={t('pages.vulnerabilities.detail.applications')}>
+          {applicationsLine && <Typography sx={{ ...quietSx, mb: 0.5 }}>{applicationsLine}</Typography>}
           {d.applications_list === null ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.applicationsHidden')}</Typography>
           ) : d.applications_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noApplications')}</Typography>
           ) : (
             <Box component="ul" sx={listSx}>
-              {d.applications_list.map((app, index) => (
-                <li key={`${app.application_id}:${index}`}>
-                  <RecordLink to={`/it/applications/${app.application_id}`}>
-                    {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
-                    {app.name ?? ''}
-                  </RecordLink>
-                  <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
-                    {' · '}{app.technology_name} {versionText(app, t)}
-                    {app.server_name && <>{' · '}{app.server_name}</>}
-                  </Box>
-                </li>
-              ))}
+              {d.applications_list.map((app, index) => {
+                const quiet = app.alerts === false;
+                return (
+                  <li key={`${app.application_id}:${index}`}>
+                    <RecordLink to={`/it/applications/${app.application_id}`} quiet={quiet}>
+                      {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
+                      {app.name ?? ''}
+                    </RecordLink>
+                    <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
+                      {' · '}{app.technology_name} {versionText(app, t)}
+                      {app.server_name && <>{' · '}{app.server_name}</>}
+                    </Box>
+                  </li>
+                );
+              })}
             </Box>
           )}
         </DetailBlock>
@@ -494,6 +576,12 @@ export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
   const location = useLocation();
+  const navigate = useNavigate();
+  const alerts = alertsFromSearch(location.search);
+  const published = publishedFromSearch(location.search);
+  // Recomputed when the period changes. A page left open past midnight UTC keeps the day it opened on.
+  const publishedDays = useMemo(() => publishedRange(published), [published]);
+  const extraParams = useMemo(() => ({ alerts, ...publishedDays }), [alerts, publishedDays]);
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
@@ -549,9 +637,12 @@ export default function VulnerabilitiesPage() {
     const params: Record<string, unknown> = { fields: 'version' };
     if (state.q) params.q = state.q;
     if (Object.keys(filters).length > 0) params.filters = JSON.stringify(filters);
+    params.alerts = alerts;
+    if (publishedDays.from) params.from = publishedDays.from;
+    if (publishedDays.to) params.to = publishedDays.to;
     const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
     return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
-  }, [t]);
+  }, [alerts, publishedDays, t]);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
     ...(canEdit ? [{
@@ -657,6 +748,78 @@ export default function VulnerabilitiesPage() {
     },
   ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
+  // One write, so resetting the alerts and the publication window cannot overwrite each other.
+  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod }) => {
+    const params = new URLSearchParams(location.search);
+    if (next.alerts !== undefined) {
+      if (next.alerts === 'included') params.delete('alerts');
+      else params.set('alerts', next.alerts);
+    }
+    if (next.published !== undefined) {
+      if (next.published === 'all') params.delete('published');
+      else params.set('published', next.published);
+    }
+    const search = params.toString();
+    navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
+  };
+  const setAlerts = (next: AlertsFilter) => writeSearch({ alerts: next });
+
+  // Muted rows inform only when both kinds are listed: under "Excluded" every row would be muted.
+  const getRowClass = useCallback(
+    ({ data }: { data?: VulnerabilityRow }) => (alerts === 'all' && data?.alerts === false ? 'vulnerability-row-muted' : undefined),
+    [alerts],
+  );
+
+  // The rows in the alerts are none. The same query, for the rows kept out, says whether the empty
+  // line can offer them. The offer keeps every other filter.
+  const excludedProbe = useMemo(() => {
+    if (alerts !== 'included' || !request || request.total !== 0) return null;
+    return excludedProbeOf(request);
+  }, [alerts, request]);
+  const excludedRows = useQuery({
+    queryKey: ['vulnerabilities', 'excluded-rows', excludedProbe],
+    queryFn: async () => Number((await api.get<{ total: number }>(ENDPOINT, { params: excludedProbe ?? {} })).data?.total ?? 0),
+    enabled: enabled && allowed && excludedProbe != null,
+    retry: false,
+  });
+
+  const alertsFilter = (
+    <Stack direction="row" spacing={0.75} alignItems="center">
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.alerts.label')}</Typography>
+      <TextField
+        select
+        variant="standard"
+        value={alerts}
+        onChange={(event) => setAlerts(event.target.value as AlertsFilter)}
+        sx={inlineControlSx}
+        SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.vulnerabilities.alerts.label') } }}
+      >
+        <MenuItem value="included" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.included')}</MenuItem>
+        <MenuItem value="excluded" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.excluded')}</MenuItem>
+        <MenuItem value="all" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.alerts.all')}</MenuItem>
+      </TextField>
+    </Stack>
+  );
+
+  const publishedFilter = (
+    <Stack direction="row" spacing={0.75} alignItems="center">
+      <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.published.label')}</Typography>
+      <TextField
+        select
+        variant="standard"
+        value={published}
+        onChange={(event) => writeSearch({ published: event.target.value as PublishedPeriod })}
+        sx={inlineControlSx}
+        SelectProps={{ MenuProps: reportFilterMenuProps, inputProps: { 'aria-label': t('pages.vulnerabilities.published.label') } }}
+      >
+        <MenuItem value="all" sx={drawerMenuItemSx}>{t('pages.vulnerabilities.published.all')}</MenuItem>
+        {PUBLISHED_PERIODS.map((period) => (
+          <MenuItem key={period} value={period} sx={drawerMenuItemSx}>{t(`pages.vulnerabilities.published.${period}`)}</MenuItem>
+        ))}
+      </TextField>
+    </Stack>
+  );
+
   if (!enabled) return null;
   if (!allowed) return <ForbiddenPage />;
 
@@ -706,12 +869,23 @@ export default function VulnerabilitiesPage() {
       <Box sx={{
         '& .ag-header-cell[col-id="select"]': { px: 0 },
         '& .ag-header-cell[col-id="select"] .ag-header-cell-comp-wrapper': { justifyContent: 'center' },
+        '& .vulnerability-row-muted .ag-cell': { color: 'kanap.text.tertiary' },
       }}
       >
       <ServerDataGrid<VulnerabilityRow>
         columns={columns}
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
+        extraParams={extraParams}
+        extraNarrows={alerts !== 'included' || published !== 'all'}
+        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all' })}
+        toolbarExtras={(
+          <Stack direction="row" spacing={2} alignItems="center">
+            {alertsFilter}
+            {publishedFilter}
+          </Stack>
+        )}
+        getRowClass={getRowClass}
         getRowId={rowId}
         showRowCount
         rowCountText={rowCountText}
@@ -741,9 +915,18 @@ export default function VulnerabilitiesPage() {
           scopeKeyRef.current = key;
         }}
         emptyState={(
-          <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-            {request?.params?.filters || request?.params?.q ? t('pages.vulnerabilities.empty.filtered') : t('pages.vulnerabilities.empty.none')}
-          </Typography>
+          excludedProbe != null && (excludedRows.data ?? 0) > 0 ? (
+            <Stack alignItems="center" spacing={0.5} data-testid="vulnerabilities-empty">
+              <Typography sx={quietSx}>{t('pages.vulnerabilities.empty.noneInAlerts')}</Typography>
+              <Button size="small" onClick={() => setAlerts('excluded')}>{t('pages.vulnerabilities.empty.showExcluded')}</Button>
+            </Stack>
+          ) : (
+            <Typography sx={quietSx} data-testid="vulnerabilities-empty">
+              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all'
+                ? t('pages.vulnerabilities.empty.filtered')
+                : t('pages.vulnerabilities.empty.none')}
+            </Typography>
+          )
         )}
       />
       </Box>

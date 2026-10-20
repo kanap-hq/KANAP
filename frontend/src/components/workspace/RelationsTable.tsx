@@ -20,6 +20,11 @@ export type RelationsColumn<T> = {
    * always shows.
    */
   hideOrder?: number;
+  /**
+   * How many columns this cell covers for the row (1 by default). The following columns are
+   * skipped, so their render is not called. The span stops at the last column still shown.
+   */
+  span?: (row: T) => number;
   render: (row: T) => React.ReactNode;
 };
 
@@ -212,6 +217,24 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
           {rows.map((row) => {
             const href = rowHref?.(row) ?? null;
             const muted = rowMuted?.(row) ?? false;
+            const nameIndex = columns.findIndex((column) => !column.width);
+            const cells: React.ReactNode[] = [];
+            for (let index = 0; index < columns.length;) {
+              const column = columns[index];
+              const span = Math.max(1, Math.min(column.span?.(row) ?? 1, columns.length - index));
+              cells.push(
+                <Box
+                  component="td"
+                  key={column.key}
+                  colSpan={span > 1 ? span : undefined}
+                  className={column.align === 'right' && span === 1 ? 'r' : undefined}
+                  sx={muted && index === nameIndex ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
+                >
+                  {column.render(row)}
+                </Box>,
+              );
+              index += span;
+            }
             return (
               <tr
                 key={rowKey(row)}
@@ -220,16 +243,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                 onClick={href ? () => open(row) : undefined}
                 onKeyDown={href ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
               >
-                {columns.map((column, index) => (
-                  <Box
-                    component="td"
-                    key={column.key}
-                    className={column.align === 'right' ? 'r' : undefined}
-                    sx={muted && index === columns.findIndex((c) => !c.width) ? { color: 'kanap.text.tertiary' } : undefined}
-                  >
-                    {column.render(row)}
-                  </Box>
-                ))}
+                {cells}
                 {action ? (
                   <td className="r" onClick={(event) => event.stopPropagation()}>{action.render(row)}</td>
                 ) : null}

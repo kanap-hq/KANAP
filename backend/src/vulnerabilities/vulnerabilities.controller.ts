@@ -95,6 +95,13 @@ export class TechnologyVulnerabilitiesController {
     return this.svc.ofTechnology(id, opts(ctx));
   }
 
+  /** One row per version (lot V4). Declared before `:cveId`. */
+  @RequireLevel('infrastructure', 'reader')
+  @Get('summary')
+  async summary(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.summary(id, opts(ctx));
+  }
+
   @RequireLevel('infrastructure', 'member')
   @Post('rematch')
   async rematch(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
