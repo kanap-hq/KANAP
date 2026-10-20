@@ -7,6 +7,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
+import { VulnerabilitySignalsService } from './vulnerability-signals.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
 
@@ -235,6 +236,8 @@ export class NvdFeedService implements OnModuleInit {
     private readonly matcher: VulnerabilityMatchService,
     private readonly notifier: VulnerabilityNotificationsService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
+    /** Stamps exploitation signals already downloaded onto CVE this collection just cached. */
+    @Optional() private readonly signals?: VulnerabilitySignalsService,
   ) {}
 
   onModuleInit() {
@@ -494,6 +497,13 @@ export class NvdFeedService implements OnModuleInit {
       if (done) collected.push(product);
       if (serviceDown) break;
     }
+    // The CVE just cached should carry the signals already downloaded, without a second fetch.
+    // A failure here does not fail the collection: the next signals run stamps them.
+    try {
+      await this.signals?.applyKnown();
+    } catch (error: any) {
+      this.logger.warn(`[${NVD_FEED_TASK_NAME}] known signals: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
     this.noteRematch(tenantId, collected);
   }
 
@@ -693,6 +703,8 @@ export class NvdFeedService implements OnModuleInit {
           WHERE cve_id IN (SELECT i.cve_id FROM jsonb_to_recordset($1::jsonb) AS i(cve_id text))
        ), up AS (
        INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
+       -- Signal columns (cisa_kev, eu_kev, epss, euvd_id and the rest) are omitted on purpose:
+       -- a re-read from the NVD must keep what the signals task stored.
        SELECT i.cve_id, i.summary, i.cvss_score, i.severity, i.cvss_version, i.cvss_vector, i.published_at, i.last_modified_at, i.nvd_status,
               COALESCE(ARRAY(SELECT jsonb_array_elements_text(i.reference_urls)), '{}'), now()
          FROM jsonb_to_recordset($1::jsonb) AS i(
