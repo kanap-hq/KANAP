@@ -30,7 +30,8 @@ export function hostingCategory(types: ItOpsEnumOption[] | undefined, code: stri
  */
 export function isCloudHostingType(types: ItOpsEnumOption[] | undefined, code: string | null | undefined): boolean {
   const normalized = String(code ?? '').trim().toLowerCase();
-  return !!normalized && hostingCategory(types, normalized) === 'cloud';
+  // A private cloud is run and patched by the customer (or for them): its flaws call for action, so it is not one.
+  return !!normalized && normalized !== 'private_cloud' && hostingCategory(types, normalized) === 'cloud';
 }
 
 /**
