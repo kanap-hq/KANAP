@@ -1,5 +1,7 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
-import { aiAmountsCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { FxRateService } from '../../currency/fx-rate.service';
+import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem } from '../../spend/allocation-distribution';
+import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
@@ -51,6 +53,7 @@ import {
 } from './ai-filter.types';
 import { assertPlainTextQuickSearch } from './ai-quick-search-validation.util';
 import { resolveAiEntityRegistry } from './registries';
+import { COMPANY_AGGREGATE_METRIC_YEAR_SQL } from './registries/companies.registry';
 import { resolveFteField } from '../../spend/spend-summary.builder';
 import type { AggregateSpec } from '../../common/list-engine/list-aggregate';
 import type { FxMissingPair } from '../../spend/budget-list/budget-list.service';
@@ -394,6 +397,48 @@ function getMetricOrderDirection(fn: AiAggregateFunction): 'ASC' | 'DESC' {
   return fn === 'min' ? 'ASC' : 'DESC';
 }
 
+/** Null keys last, then code-point order, as `ORDER BY key ASC NULLS LAST`. */
+function compareNullableKeys(a: string | null, b: string | null): number {
+  if (a == null) return b == null ? 0 : 1;
+  if (b == null) return -1;
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/**
+ * `ORDER BY value <dir> NULLS LAST, key ASC NULLS LAST` of the generic metric path.
+ * A null value is a group with nothing left to aggregate.
+ */
+function compareMetricGroups(
+  a: { key: string | null; value: number | null },
+  b: { key: string | null; value: number | null },
+  direction: 'ASC' | 'DESC',
+): number {
+  if (a.value == null || b.value == null) {
+    if (a.value != null) return -1;
+    if (b.value != null) return 1;
+  } else if (a.value !== b.value) {
+    return direction === 'ASC' ? a.value - b.value : b.value - a.value;
+  }
+  return compareNullableKeys(a.key, b.key);
+}
+
+/** sum, avg, min, max over the converted turnovers of one group. Empty means no value. */
+function aggregateConverted(fn: 'sum' | 'avg' | 'min' | 'max', values: number[]): number | null {
+  if (values.length === 0) return null;
+  let total = 0;
+  let min = values[0];
+  let max = values[0];
+  for (const value of values) {
+    total += value;
+    if (value < min) min = value;
+    if (value > max) max = value;
+  }
+  if (fn === 'min') return min;
+  if (fn === 'max') return max;
+  if (fn === 'avg') return total / values.length;
+  return total;
+}
+
 function buildMetricAggregateExpression(fn: AiAggregateFunction, expression: string): string {
   switch (fn) {
     case 'sum':
@@ -445,6 +490,8 @@ export class AiAggregateExecutor {
     private readonly interfaces: InterfacesService,
     private readonly connections: ConnectionsService,
     private readonly incidents: IncidentsService,
+    /** Live rates for company turnover aggregates. Tests that build the executor by hand omit it. */
+    @Optional() private readonly fxRates?: FxRateService,
   ) {}
 
   private async normalizePersonFilters(
@@ -1091,6 +1138,103 @@ export class AiAggregateExecutor {
   }
 
   /**
+   * Company `turnover_year` (sum, avg, min, max). Count stays on the generic path.
+   *
+   * The metric year is the registry join's (`COMPANY_AGGREGATE_METRIC_YEAR_SQL`):
+   * `aggregate_entities` has no year argument. Each company's turnover, in millions
+   * of its base currency, is converted at the live rates of that year (`rateSetId`
+   * null). A company in the reporting currency, or without a base currency, is not
+   * converted. A company without a rate is left out of its group; a group with
+   * nothing left has a null value. The same filters, search and scope as the
+   * generic path: `ids` is that set.
+   */
+  private async aggregateCompanyTurnover(
+    context: AiExecutionContextWithManager,
+    registry: AiEntityFilterRegistry,
+    groupBy: string,
+    ids: string[],
+    fn: AiAggregateFunction,
+  ): Promise<{ groups: Array<{ key: string | null; value: number | null }>; missing: TurnoverFxMissingItem[] }> {
+    if (fn === 'count') {
+      throw new BadRequestException('Company turnover conversion does not apply to count.');
+    }
+    const groupField = registry.aggregate.groupFields[groupBy];
+    const metric = registry.aggregate.metricFields?.turnover_year;
+    if (!groupField || !metric) {
+      throw new BadRequestException('Unsupported group_by field.');
+    }
+
+    const joins = Array.from(new Set([...(groupField.joins || []), ...(metric.joins || [])])).join('\n');
+    const alias = registry.aggregate.alias;
+    const idColumn = registry.aggregate.idColumn ?? 'id';
+    const baseWhere = registry.aggregate.baseWhere ? ` AND ${registry.aggregate.baseWhere}` : '';
+    const rows: Array<{
+      company_id: string;
+      company_name: string | null;
+      base_currency: string | null;
+      key: string | null;
+      turnover: string | number | null;
+      metric_year: number | string;
+    }> = await context.manager.query(
+      `SELECT ${alias}.id AS company_id,
+              ${alias}.name AS company_name,
+              ${alias}.base_currency AS base_currency,
+              ${groupField.expression} AS key,
+              ${metric.expression} AS turnover,
+              ${COMPANY_AGGREGATE_METRIC_YEAR_SQL} AS metric_year
+       FROM ${registry.aggregate.baseTable} ${alias}
+       ${joins}
+       WHERE ${alias}.tenant_id = $1${baseWhere}
+         AND ${alias}.${idColumn} = ANY($2::uuid[])`,
+      [context.tenantId, ids],
+    );
+    if (!rows?.length) return { groups: [], missing: [] };
+
+    const year = Number(rows[0].metric_year);
+    const converted = await convertTurnovers({
+      fxRates: this.fxRates,
+      manager: context.manager,
+      tenantId: context.tenantId,
+      fiscalYear: year,
+      rateSetId: null,
+      entries: rows.map((row) => ({
+        companyId: String(row.company_id),
+        currency: row.base_currency,
+        turnover: row.turnover,
+      })),
+    });
+
+    const buckets = new Map<string, { key: string | null; values: number[] }>();
+    for (const row of rows) {
+      const key = row.key == null ? null : String(row.key);
+      // 'n' marks a null key so it cannot collide with a real key.
+      const bucketKey = key == null ? 'n' : `k${key}`;
+      let bucket = buckets.get(bucketKey);
+      if (!bucket) {
+        bucket = { key, values: [] };
+        buckets.set(bucketKey, bucket);
+      }
+      const value = converted.values.get(String(row.company_id));
+      if (typeof value === 'number' && Number.isFinite(value)) bucket.values.push(value);
+    }
+
+    const direction = getMetricOrderDirection(fn);
+    const groups = Array.from(buckets.values())
+      .map((bucket) => ({ key: bucket.key, value: aggregateConverted(fn, bucket.values) }))
+      .sort((a, b) => compareMetricGroups(a, b, direction));
+    const missing = turnoverMissingItems(
+      converted.missing,
+      year,
+      rows.map((row) => ({ id: String(row.company_id), name: row.company_name })),
+    );
+    missing.sort((a, b) => a.year - b.year
+      || a.currency.localeCompare(b.currency)
+      || a.companyName.localeCompare(b.companyName)
+      || a.companyId.localeCompare(b.companyId));
+    return { groups, missing };
+  }
+
+  /**
    * Connections by criticality, data class or PII: the effective values the list shows and
    * filters on (a derived connection takes them from its linked interfaces), read through the
    * connections service rather than the stored columns. Counts only: connections have no metric.
@@ -1195,6 +1339,12 @@ export class AiAggregateExecutor {
     },
   ): Promise<AiAggregateResult> {
     const result = await this.executeAggregate(context, input);
+    // Company turnover (sum, avg, min, max) is in the reporting currency. A count has none.
+    // Attached here, as the budget and contract notes are, so chat and MCP both carry it.
+    if (input.entity_type === 'companies' && result.metric === 'turnover_year') {
+      const amounts = await aiCompanyTurnoverCurrency(context, result.turnover_fx_missing);
+      return { ...result, ...amounts };
+    }
     // A sum or an average of amounts names their currency; a count or an FTE has none.
     const metric = input.metric?.trim() ?? '';
     const isAmount = metric !== '' && (
@@ -1387,6 +1537,24 @@ export class AiAggregateExecutor {
         filters_applied: adapted.applied,
         filters_ignored: adapted.ignored,
         scope: scoped.scope,
+      };
+    }
+
+    if (input.entity_type === 'companies' && metric?.key === 'turnover_year') {
+      const turnover = await this.aggregateCompanyTurnover(context, registry, input.group_by, ids, fn);
+      return {
+        group_by: input.group_by,
+        metric: metric.key,
+        function: fn,
+        groups: turnover.groups,
+        total: scoped.total,
+        returned: turnover.groups.length,
+        truncated,
+        complete: !truncated && isCompleteAggregateResult(scoped.scope),
+        filters_applied: adapted.applied,
+        filters_ignored: adapted.ignored,
+        scope: scoped.scope,
+        ...(turnover.missing.length ? { turnover_fx_missing: turnover.missing } : {}),
       };
     }
 

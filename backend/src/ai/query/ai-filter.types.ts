@@ -148,6 +148,12 @@ export type AiAggregateResult = {
    * amounts the values leave out, with the number of lines (`[]` when none).
    */
   amounts_fx_missing?: Array<{ currency: string; year: number; lines: number }>;
+  /**
+   * Company turnover (sum, avg, min, max): the companies left out of the values because their
+   * base currency has no rate for the metric year. Absent when every turnover was converted.
+   * Shape of `TurnoverFxMissingItem`.
+   */
+  turnover_fx_missing?: Array<{ companyId: string; companyName: string; currency: string; year: number }>;
   group_by: string;
   metric?: string | null;
   function?: 'count' | 'sum' | 'avg' | 'min' | 'max';
