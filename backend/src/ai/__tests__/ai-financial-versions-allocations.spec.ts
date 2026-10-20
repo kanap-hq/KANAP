@@ -44,7 +44,11 @@ async function testVersionsCarryTheComputedAllocation() {
           { company_id: 'ny', department_id: null, allocation_pct: 31.0345, source: 'auto' },
         ],
         error: null,
-        warning: { code: 'turnover_fx_missing', currencies: ['USD'], year: 2026, reportingCurrency: 'EUR' },
+        warning: {
+          code: 'turnover_fx_missing',
+          items: [{ companyId: 'ny', companyName: 'New York', currency: 'USD', year: 2026 }],
+          reportingCurrency: 'EUR',
+        },
       }]]);
     },
   };

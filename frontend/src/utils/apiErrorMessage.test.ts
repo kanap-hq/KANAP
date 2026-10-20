@@ -6,6 +6,30 @@ import { getApiErrorMessage, getDocumentSaveErrorMessage } from './apiErrorMessa
 const t = i18n.getFixedT('en');
 
 describe('getApiErrorMessage', () => {
+  it('translates a turnover that cannot be compared because every selected company lacks a rate', () => {
+    const missing = {
+      response: {
+        status: 400,
+        data: {
+          code: 'turnover_fx_missing_all',
+          message: 'No exchange rate from ZAR to EUR for 2026: the turnover of the selected companies cannot be compared. Enter the rate, or choose another allocation driver.',
+        },
+      },
+    };
+    expect(getApiErrorMessage(missing, t, 'fallback')).toBe(
+      'None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver.',
+    );
+    expect(getApiErrorMessage(missing, i18n.getFixedT('fr'), 'fallback')).toBe(
+      "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition.",
+    );
+    expect(getApiErrorMessage(missing, i18n.getFixedT('de'), 'fallback')).toBe(
+      'Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium.',
+    );
+    expect(getApiErrorMessage(missing, i18n.getFixedT('es'), 'fallback')).toBe(
+      'Ninguna de las empresas seleccionadas tiene un tipo de cambio hacia la moneda de reporting. Su facturación no se puede comparar. Introduzca los tipos, o elija otro criterio de asignación.',
+    );
+  });
+
   it('translates a code', () => {
     expect(getApiErrorMessage({ response: { status: 400, data: { code: 'confirmation_mismatch', message: 'raw' } } }, t, 'fallback'))
       .toBe('The name typed does not match the name of the workspace.');

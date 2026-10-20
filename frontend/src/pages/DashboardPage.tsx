@@ -25,6 +25,7 @@ import {
   type BudgetScope,
   costCenterTotalsRequest,
   countRequest,
+  currentYearField,
   keepValues,
   lineTotalRequest,
   nextYearField,
@@ -344,10 +345,16 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
     queryKey: ['budget-lines-summary', 'dashboard', 'top-items', scope, Y, column, limit],
     enabled,
     queryFn: async () => {
-      const params = { limit, sort, years: [Y - 1, Y].join(','), ...(scope === 'all' ? {} : { filters: JSON.stringify({ nature: keepValues([scope]) }) }) } as Record<string, any>;
-      const res = await api.get<ServerListResponse<BudgetSummaryRow & { nature: NatureScope }>>('/budget-lines/summary', { params });
-      const items = res.data.items || [];
-      return items.map((row) => ({
+      const filters = scope === 'all' ? undefined : JSON.stringify({ nature: keepValues([scope]) });
+      const params = { limit, sort, years: [Y - 1, Y].join(','), ...(filters ? { filters } : {}) };
+      // A line without a rate sorts last, so it can miss this list. The totals name every such line.
+      const [res, totals] = await Promise.all([
+        api.get<ServerListResponse<BudgetSummaryRow & { nature: NatureScope }>>('/budget-lines/summary', { params }),
+        api.get<{ fxMissing?: FxMissing[] }>('/budget-lines/summary/totals', {
+          params: { amounts: currentYearField(column), ...(filters ? { filters } : {}) },
+        }),
+      ]);
+      const items = (res.data.items || []).map((row) => ({
         id: row.id,
         path: buildItemPath('budget', row.item_number != null ? formatItemRef('budget', row.item_number) : row.id),
         name: row.product_name || '\u2014',
@@ -355,6 +362,8 @@ function useTopItemsCurrentYear(scope: BudgetScope, enabled: boolean, column: Am
         yMinus1: getColumnValueFromRow(row, 'yMinus1', column),
         yMissingRate: missingRateOfRow(row, column, Y),
       }));
+      const fxMissing = (totals.data?.fxMissing ?? []).filter((item) => item?.currency && item.year === Y);
+      return { items, fxMissing };
     },
     staleTime: 60 * 1000,
   });
@@ -444,13 +453,15 @@ export default function DashboardPage() {
 
   const [topScope, setTopScope] = useTileScope('topItems');
   // Both tiles wait for the default column so the list is not fetched twice.
-  const { data: topItems, isLoading: topQueryLoading } = useTopItemsCurrentYear(
+  const { data: topItemsResult, isLoading: topQueryLoading } = useTopItemsCurrentYear(
     topScope,
     readableScopes.length > 0 && tileEnabled('top-lines') && budgetColumns.ready,
     defaultColumn.key,
     budgetColumns.defaultSort,
     5,
   );
+  const topItems = topItemsResult?.items;
+  const topFxMissing = topItemsResult?.fxMissing;
   const topLoading = topQueryLoading || (readableScopes.length > 0 && !budgetColumns.ready);
   const [increaseScope, setIncreaseScope] = useTileScope('topIncreases');
   const { items: topIncreases, fxMissing: increasesFxMissing, isLoading: increasesLoading } = useTopIncreases(increaseScope, readableScopes.length > 0 && tileEnabled('top-increases'), defaultColumn.key, budgetColumns.ready, 5);
@@ -727,6 +738,7 @@ export default function DashboardPage() {
                 {(topItems?.length || 0) === 0 && (
                   <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
+                <FxMissingNotice items={topFxMissing} sx={{ pt: 0.5 }} />
               </Stack>
             </DashboardTile>
           </Box>

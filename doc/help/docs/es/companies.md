@@ -58,7 +58,7 @@ La lista muestra todas las empresas de su espacio de trabajo. Utilícela para re
 - Una métrica que nunca se introdujo para el año muestra **—**. Un cero introducido muestra **0**
 - Los números siguen el idioma de KANAP: coma decimal en español, francés y alemán, punto decimal en inglés
 - La facturación de cada fila está en la moneda base de la empresa. La fila **Total** está en la moneda de reporte: cada facturación se convierte a los tipos del año. Cuando la columna presupuestaria por defecto del año está congelada, son los tipos que fijó. Si no, son los tipos actuales (consulte [Configuración de monedas](currencies.md))
-- Cuando una moneda aún no tiene tipo, su facturación se suma sin convertir y el total lo indica, por ejemplo «1.250 M EUR (aún sin tipo para BRL, contado sin conversión)». KANAP busca el tipo que falta en la próxima actualización de los tipos
+- Cuando una moneda no tiene tipo para el año, la facturación de las empresas en esa moneda queda fuera del total, y el total indica la moneda y el número de empresas excluidas. KANAP obtiene el tipo que falta en segundo plano. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
 
 **Acciones**:
 
@@ -191,7 +191,7 @@ Muchas partes de la aplicación son conscientes del año. Las empresas tienen m�
 
 **Dónde es importante**:
 
-- Las asignaciones pueden usar Plantilla, Usuarios IT o Facturación para distribuir costes entre empresas para un año determinado. Las facturaciones en monedas distintas se convierten primero a la moneda de reporte. Consulte [Asignaciones](budget-lines.md#asignaciones).
+- Las asignaciones pueden usar Plantilla, Usuarios IT o Facturación para distribuir costes entre empresas para un año determinado. Las facturaciones en monedas distintas se convierten primero a la moneda de reporte. Una empresa cuya moneda no tiene tipo para el año no recibe ninguna parte de un reparto por facturación. Consulte [Asignaciones](budget-lines.md#asignaciones).
 - Los informes utilizan estas métricas para KPI y ratios.
 - Solo las empresas activas para un año se consideran para la asignación e informes de ese año.
 

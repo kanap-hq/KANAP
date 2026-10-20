@@ -89,7 +89,7 @@ Sin acceso de lectura a las líneas presupuestarias (`budget:reader`), los mosai
 
 ### Importes sin tipo de cambio
 
-Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. En **Top líneas**, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tasas manuales](currencies.md#tasas-manuales).
+Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe queda excluido de los totales de ese año. Los mosaicos **Presupuesto**, **Mayores incrementos**, **Mi presupuesto** y **Por centro de coste** muestran entonces un aviso de una línea, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. En **Top líneas**, una línea así muestra su importe en su propia moneda con una pequeña marca naranja. Vea [Tipos manuales](currencies.md#tipos-manuales).
 
 ## Personalizar la vista general
 

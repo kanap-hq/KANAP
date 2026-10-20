@@ -24,6 +24,8 @@ const YEAR = 2034;
 type Seed = { tenantId: string; paris: string; newYork: string; versionId: string };
 
 async function seed(runner: QueryRunner): Promise<Seed> {
+  const [{ current }] = await runner.query(`SELECT current_database() AS current`);
+  assert.notEqual(current, 'appdb', 'this spec must not write the dev database');
   const tenantId = await seedTenant(runner, 'chargeback-fx');
   const { companyId: paris } = await seedCompany(runner, tenantId, 'Paris');
   const { companyId: newYork } = await seedCompany(runner, tenantId, 'New York');
@@ -120,14 +122,28 @@ async function testFrozenVersionsConvertAtTheirRateSet() {
   });
 }
 
-async function testMissingRateCountsUnconvertedWithAWarning() {
+async function testMissingRateIsLeftOutWithAWarning() {
   await inRolledBackTransaction(async (runner) => {
     const seeded = await seed(runner);
     const svc = service(seeded, {});
     const global = await svc.generateGlobal(YEAR, 'budget', seeded.tenantId, { manager: runner.manager });
     const newYork = global.kpis.find((row) => row.companyId === seeded.newYork)!;
-    assert.equal(newYork.turnover, 35000, 'as the amounts: rate 1 until the rate is fetched');
-    assert.deepEqual(global.warnings, [{ code: 'turnover_fx_missing', currencies: ['USD'], year: YEAR, reportingCurrency: 'EUR' }]);
+    const paris = global.kpis.find((row) => row.companyId === seeded.paris)!;
+    assert.equal(newYork.turnover, null, 'no rate: left out of the reporting-currency turnover');
+    assert.equal(newYork.turnoverRaw, 35000, 'the raw turnover stays in the base currency');
+    assert.equal(newYork.costVsTurnoverPct, null);
+    assert.equal(paris.turnover, 70000);
+    assert.deepEqual(global.warnings, [{
+      code: 'turnover_fx_missing',
+      items: [{ companyId: seeded.newYork, companyName: 'New York', currency: 'USD', year: YEAR }],
+      reportingCurrency: 'EUR',
+    }]);
+    const company = await svc.generateCompany(YEAR, 'budget', seeded.newYork, seeded.tenantId, { manager: runner.manager });
+    assert.equal(company.company.turnover, null);
+    assert.equal(company.globalKpi.turnover, 70000, 'the global turnover leaves out the company without a rate');
+    assert.equal(company.globalKpi.amount, 1200, 'the global cost keeps every company');
+    assert.equal(company.globalKpi.costVsTurnoverPct, 0.86, 'the ratio sets Paris cost (600) against Paris turnover (70,000) alone');
+    assert.equal(company.warnings.filter((warning) => typeof warning !== 'string' && warning.code === 'turnover_fx_missing').length, 1);
   });
 }
 
@@ -136,7 +152,11 @@ async function testAVersionNotCountedGivesNoWarning() {
     const seeded = await seed(runner);
     // A second line with nothing in the year: the report does not count it.
     const { versionId: empty } = await seedLine(runner, 'opex', seeded.tenantId, YEAR, {}, 2);
-    const jpy = { code: 'turnover_fx_missing', currencies: ['JPY'], year: YEAR, reportingCurrency: 'EUR' };
+    const jpy = {
+      code: 'turnover_fx_missing' as const,
+      items: [{ companyId: 'osaka', companyName: 'Osaka', currency: 'JPY', year: YEAR }],
+      reportingCurrency: 'EUR',
+    };
     const shares = [{ company_id: seeded.paris, department_id: null, allocation_pct: 100 }];
     const svc = new ChargebackReportService(undefined as any, {
       computeForVersions: async (versions: Array<{ id: string }>) => new Map(versions.map((v) => [
@@ -164,7 +184,7 @@ void runSpecs('chargeback-turnover-fx.integration.spec', [
   ['testAVersionNotCountedGivesNoWarning', testAVersionNotCountedGivesNoWarning],
   ['testTurnoverIndicatorsAreInTheReportingCurrency', testTurnoverIndicatorsAreInTheReportingCurrency],
   ['testFrozenVersionsConvertAtTheirRateSet', testFrozenVersionsConvertAtTheirRateSet],
-  ['testMissingRateCountsUnconvertedWithAWarning', testMissingRateCountsUnconvertedWithAWarning],
+  ['testMissingRateIsLeftOutWithAWarning', testMissingRateIsLeftOutWithAWarning],
 ]);
 
 // `dataSource` is imported so the CI runner schedules this spec on the database lane.

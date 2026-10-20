@@ -1,14 +1,21 @@
 import type { TFunction } from 'i18next';
 import { fxMissingText, mergeFxMissing, type FxMissing } from '../components/finance/fxMissing';
 
+/** One company left out of a turnover split: no rate from `currency` into the reporting currency. */
+export type TurnoverFxMissingItem = {
+  companyId: string;
+  companyName: string;
+  currency: string;
+  year: number;
+};
+
 /**
- * An allocation computed with a reservation: the turnovers in `currencies` had no rate into
- * `reportingCurrency` for `year` and were counted unconverted (backend `allocation-distribution.ts`).
+ * Companies left out of a turnover split (backend `allocation-distribution.ts`). Their turnover
+ * is not in the weights.
  */
 export type TurnoverFxMissingWarning = {
   code: 'turnover_fx_missing';
-  currencies: string[];
-  year: number;
+  items: TurnoverFxMissingItem[];
   reportingCurrency: string;
 };
 
@@ -29,12 +36,13 @@ export type ReportWarning = string | TurnoverFxMissingWarning | AmountFxMissingW
 export function allocationWarningText(t: TFunction, warning: ReportWarning): string {
   if (typeof warning === 'string') return warning;
   if (warning.code === 'amount_fx_missing') return fxMissingText(t, warning.items ?? []);
-  return t('ops:shared.allocationWarnings.turnoverFxMissing', {
-    count: warning.currencies.length,
-    currencies: warning.currencies.join(', '),
-    year: warning.year,
+  return (warning.items ?? []).map((item) => t('ops:shared.allocationWarnings.turnoverFxMissing', {
+    count: 1,
+    company: item.companyName.trim() || t('master-data:companies.companyFallback'),
+    currency: item.currency,
+    year: item.year,
     reportingCurrency: warning.reportingCurrency,
-  });
+  })).join('\n');
 }
 
 /** A stable React key for a warning. */
@@ -43,7 +51,7 @@ export function allocationWarningKey(warning: ReportWarning): string {
   if (warning.code === 'amount_fx_missing') {
     return `${warning.code}:${(warning.items ?? []).map((item) => `${item.currency}-${item.year}`).join(',')}`;
   }
-  return `${warning.code}:${warning.year}:${warning.currencies.join(',')}`;
+  return `${warning.code}:${(warning.items ?? []).map((item) => `${item.companyId}:${item.currency}:${item.year}`).join(',')}`;
 }
 
 /** Whether a warning is the lines a report leaves out for lack of a rate. */

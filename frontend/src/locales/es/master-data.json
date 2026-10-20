@@ -123,7 +123,9 @@
       "turnoverYear": "Facturación ({{year}})"
     },
     "pinnedTotal": "Total",
-    "turnoverTotalFxMissing": "{{value}} (aún sin tipo para {{currencies}}, contado sin conversión)",
+    "turnoverFxExcluded": "Facturación sin tipo de cambio excluida del total: {{pairs}}.",
+    "turnoverFxExcludedPair_one": "{{currency}} {{year}} ({{count}} empresa)",
+    "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} empresas)",
     "export": "Exportar empresas",
     "import": "Importar empresas",
     "importHint": "Indicadores leídos: {{years}}, según el año de la lista. Cada año es opcional. Valores aceptados para status: enabled o disabled.",

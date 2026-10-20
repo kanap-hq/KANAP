@@ -33,6 +33,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTenant } from '../tenant/TenantContext';
 import { useThemeMode } from '../config/ThemeContext';
+import GridFooter, { GRID_FOOTER_GAP, GRID_FOOTER_LINE_HEIGHT } from './grid/GridFooter';
 import { useAgGridLocaleText } from './grid/useAgGridLocaleText';
 import {
   StatusScopeColumnFilter,
@@ -163,15 +164,11 @@ export type ServerDataGridProps<T> = {
    */
   emptyState?: React.ReactNode;
   /**
-   * One line under the grid, about its totals (amounts the totals leave out). The grid gives it
-   * room within the viewport while it is set; without it the grid keeps its full height.
+   * Under the grid, about its totals (amounts the totals leave out). It wraps, and the grid gives
+   * it room within the viewport while it is set; without it the grid keeps its full height.
    */
   footer?: React.ReactNode;
 };
-
-/** Height of the `footer` line and the gap above it. */
-const FOOTER_LINE_HEIGHT = 20;
-const FOOTER_GAP = 8;
 
 function parseSortParam(sortModel: SortModelItem[] | undefined, fallback: { field: string; direction: 'ASC' | 'DESC' }) {
   if (sortModel && sortModel.length > 0) {
@@ -666,6 +663,10 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   const appliedInitialSortRef = useRef(false);
   const appliedInitialColumnStateRef = useRef(false);
   const [containerHeight, setContainerHeight] = useState<number>(480);
+  const [footerHeight, setFooterHeight] = useState(GRID_FOOTER_LINE_HEIGHT);
+  const onFooterHeight = useCallback((height: number) => {
+    setFooterHeight((prev) => (prev === height ? prev : height));
+  }, []);
 
   const initialSortModel = useMemo(() => parseUrlSort(sortFromUrl, defaultSort), [sortFromUrl, defaultSort]);
   const [sortModel, setSortModel] = useState<SortModelItem[]>(initialSortModel);
@@ -1618,7 +1619,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
       </Stack>
       <div
         style={{
-          height: footer ? Math.max(200, containerHeight - FOOTER_LINE_HEIGHT - FOOTER_GAP) : containerHeight,
+          height: footer ? Math.max(200, containerHeight - footerHeight - GRID_FOOTER_GAP) : containerHeight,
           width: '100%',
           position: 'relative',
           overflow: 'hidden', // contain grid overflow; grid manages its own scrollbars
@@ -1733,9 +1734,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           </div>
         )}
       </div>
-      {footer && (
-        <Box sx={{ mt: `${FOOTER_GAP}px`, height: FOOTER_LINE_HEIGHT, minWidth: 0, overflow: 'hidden' }}>{footer}</Box>
-      )}
+      {footer && <GridFooter onHeight={onFooterHeight}>{footer}</GridFooter>}
 
       {/* Custom Column Chooser Popover (Community Edition Compatible) */}
       <Popover

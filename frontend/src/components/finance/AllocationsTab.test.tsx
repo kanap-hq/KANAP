@@ -352,6 +352,27 @@ describe('AllocationsTab saves (lot 3E)', () => {
     expect(puts()).toHaveLength(1);
   });
 
+  it('names the missing rates when every selected company is left out of a manual allocation', async () => {
+    mocked.put.mockRejectedValueOnce({
+      response: {
+        status: 400,
+        data: {
+          statusCode: 400,
+          error: 'Bad Request',
+          code: 'turnover_fx_missing_all',
+          message: 'No exchange rate from ZAR to EUR for 2026: the turnover of the selected companies cannot be compared. Enter the rate, or choose another allocation driver.',
+        },
+      },
+    });
+    const ref = renderWithRef();
+    expect(await screen.findByText('Alpha Industries')).toBeInTheDocument();
+    await pickMethod('opex.allocations.manualByPct');
+    expect(await flushTab(ref)).toBe(false);
+    const alert = await screen.findByRole('alert');
+    expect(alert).toHaveTextContent('errors:turnover_fx_missing_all');
+    expect(alert).not.toHaveTextContent('cannot be compared');
+  });
+
   it('a conflict answer the screen cannot read is an error the user sees', async () => {
     mocked.put.mockRejectedValueOnce({ response: { status: 409, data: { code: 'edit_conflict', conflicts: [] } } });
     const ref = renderWithRef();
