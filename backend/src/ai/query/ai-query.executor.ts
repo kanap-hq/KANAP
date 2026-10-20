@@ -935,6 +935,7 @@ export class AiQueryExecutor {
         headcount,
         it_users: itUsers,
         turnover,
+        turnover_currency: scalar(row.base_currency),
         metrics_frozen: row.metrics_frozen == null ? null : Boolean(row.metrics_frozen),
       },
     });
