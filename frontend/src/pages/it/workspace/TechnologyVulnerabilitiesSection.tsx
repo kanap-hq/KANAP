@@ -69,7 +69,9 @@ type Props = {
  * The vulnerabilities of a technology, for its Compliance tab: one line per version, with the CVE
  * still to review by severity. A version that is not in use shows "Not installed" in place of the
  * server and CVE counts. "See" opens the Vulnerabilities page on an installed version that has a
- * CVE. The count next to the title is of distinct CVE. A member can match the technology again.
+ * CVE: on its CVE to review when it has some, on every state otherwise. The count next to the title
+ * is of distinct CVE, every state; "See everything" opens every state too. A member can match the
+ * technology again.
  * Renders nothing while the vulnerability feed is off (`features.vulnerabilityFeed`).
  */
 export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit }: Props) {
@@ -99,7 +101,13 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const banner = alertsBanner(data, t);
   // The address keeps the list context of the workspace (its search), as its other links do.
   const settingsHref = `/it/technologies/${encodeURIComponent(technologyRef)}/overview${location.search}#${TECHNOLOGY_VERSIONS_ANCHOR}`;
-  const pageOf = (version: string) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&version=${encodeURIComponent(version)}&alerts=all`;
+  const pageBase = `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}`;
+  // The page opens on "To review" by default; `state=all` shows every state, as the title count and Total do.
+  // A version with CVE still to review opens on them, one whose CVE are all reviewed on every state.
+  const pageOf = (row: TechnologyVulnerabilityVersion) => {
+    const toReview = OPEN_KEYS.some((key) => (row.open[key] ?? 0) > 0);
+    return `${pageBase}&version=${encodeURIComponent(row.label ?? 'none')}&alerts=all${toReview ? '' : '&state=all'}`;
+  };
 
   const rematch = async () => {
     setBusy(true);
@@ -178,7 +186,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       render: (row) => row.installed && row.total > 0 ? (
         <Link
           component={RouterLink}
-          to={pageOf(row.label ?? 'none')}
+          to={pageOf(row)}
           underline="hover"
           onClick={(event) => event.stopPropagation()}
           sx={seeLinkSx}
@@ -227,7 +235,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
             ariaLabel={t('pages.vulnerabilities.section.title')}
           />
           <Box sx={{ mt: 1 }}>
-            <Link component={RouterLink} to={`/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&alerts=all`} underline="hover" sx={{ fontSize: 13 }}>
+            <Link component={RouterLink} to={`${pageBase}&alerts=all&state=all`} underline="hover" sx={{ fontSize: 13 }}>
               {t('pages.vulnerabilities.section.seeAll')}
             </Link>
           </Box>

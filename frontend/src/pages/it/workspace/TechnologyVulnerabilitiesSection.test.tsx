@@ -11,6 +11,7 @@ import fr from '../../../locales/fr/it.json';
 import de from '../../../locales/de/it.json';
 import es from '../../../locales/es/it.json';
 import TechnologyVulnerabilitiesSection, { type TechnologyVulnerabilityVersion } from './TechnologyVulnerabilitiesSection';
+import { filterModelFromSearch } from '../VulnerabilitiesPage';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
 const navigate = vi.hoisted(() => vi.fn());
@@ -81,10 +82,11 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/it/vulnerabilities?technology=TEC-7&version=10.1&alerts=all',
       '/it/vulnerabilities?technology=TEC-7&version=9.0&alerts=all',
-      '/it/vulnerabilities?technology=TEC-7&version=none&alerts=all',
+      // Every CVE of the unknown version is reviewed: the page opens on every state.
+      '/it/vulnerabilities?technology=TEC-7&version=none&alerts=all&state=all',
     ]);
     expect(screen.getByRole('link', { name: 'See everything on the Vulnerabilities page' }).getAttribute('href'))
-      .toBe('/it/vulnerabilities?technology=TEC-7&alerts=all');
+      .toBe('/it/vulnerabilities?technology=TEC-7&alerts=all&state=all');
     expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
   });
@@ -101,6 +103,29 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(row.textContent).toBe('10.14High1None1Not rated24See');
     expect(Array.from(row.querySelectorAll('[data-severity]')).map((el) => el.getAttribute('data-severity')))
       .toEqual(['high', 'none', 'unknown']);
+  });
+
+  it('opens See on every state when the only CVE to review has no severity yet, or on To review', async () => {
+    getMock.mockResolvedValue({
+      data: summary({
+        versions: [
+          version({ open: { critical: 0, high: 0, medium: 0, low: 0, none: 0, unknown: 1 }, total: 3 }),
+          version({ version_id: 'v-2', label: '9.0', open: { critical: 0, high: 0, medium: 0, low: 0, none: 0, unknown: 0 }, total: 3 }),
+        ],
+      }),
+    } as any);
+    renderSection(false);
+    const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
+    expect(within(table).getAllByRole('link', { name: 'See' }).map((link) => link.getAttribute('href'))).toEqual([
+      '/it/vulnerabilities?technology=TEC-7&version=10.1&alerts=all',
+      '/it/vulnerabilities?technology=TEC-7&version=9.0&alerts=all&state=all',
+    ]);
+    // The page reads `state`: absent is To review, `all` drops the state filter.
+    const [toReview, every] = within(table).getAllByRole('link', { name: 'See' }).map((link) => link.getAttribute('href')!.split('?')[1]);
+    expect(filterModelFromSearch(`?${toReview}`).state).toEqual({ filterType: 'set', values: ['to_review'] });
+    expect(filterModelFromSearch(`?${every}`).state).toBeUndefined();
+    const all = screen.getByRole('link', { name: 'See everything on the Vulnerabilities page' }).getAttribute('href')!.split('?')[1];
+    expect(filterModelFromSearch(`?${all}`).state).toBeUndefined();
   });
 
   it('dims a version that stays out of the alerts', async () => {
