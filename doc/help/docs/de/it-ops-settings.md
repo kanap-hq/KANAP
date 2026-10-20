@@ -7,16 +7,22 @@ Für eine bessere Lesbarkeit der Karte enthalten **Entitäten** und **Serverroll
 ## Wo Sie es finden
 
 - Arbeitsbereich: **IT-Landschaft**
-- Pfad: **IT-Landschaft → Einstellungen**
+- Pfad: **IT-Landschaft → Einstellungen**, der letzte Eintrag des Menüs
 - Berechtigungen:
-  - Sie benötigen mindestens `settings:reader`, um die Seite anzuzeigen.
+  - Sie benötigen mindestens `settings:reader`, um den Tab **Listen** anzuzeigen.
   - Sie benötigen `settings:admin`, um Werte zu ändern.
+  - Sie benötigen `infrastructure:admin`, um den Tab **Netbox** zu sehen.
 
-Wenn Sie den Eintrag **Einstellungen** im Menü der IT-Landschaft nicht sehen, bitten Sie Ihren Administrator, Ihnen die passenden Berechtigungen zu erteilen.
+Sie sehen nur die Tabs, die Ihre Berechtigungen erlauben. Wenn Sie den Eintrag **Einstellungen** im Menü der IT-Landschaft nicht sehen, bitten Sie Ihren Administrator, Ihnen die passenden Berechtigungen zu erteilen. Andere Bildschirme nennen diese Seite die IT-Einstellungen.
 
 ## Wie die Seite organisiert ist
 
-Der Editor **Einstufungen und Kontinuität** steht oben auf der Seite. Darunter sind die Listen in vier zusammenklappbare Abschnitte gruppiert:
+Die Seite hat zwei Tabs:
+
+- **Listen** enthält die Dropdown-Werte, die auf dieser Seite beschrieben sind.
+- **Netbox** enthält die Synchronisierung mit Ihrem Netbox-Inventar. Siehe [Netbox-Synchronisierung](netbox.md).
+
+Im Tab **Listen** steht der Editor **Einstufungen und Kontinuität** oben. Darunter sind die Listen in vier zusammenklappbare Abschnitte gruppiert:
 
 1. **Standorte** - Listen für die Erstellung oder Bearbeitung von Standorten.
 2. **Server und Verbindungen** - Listen für Server, Verbindungen und zugehörige Risiko-/Endpoint-Daten.

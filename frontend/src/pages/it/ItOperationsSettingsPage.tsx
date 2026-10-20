@@ -68,8 +68,13 @@ import {
   updateItOpsSettings,
 } from '../../services/itOpsSettings';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
+import { useAuth } from '../../auth/AuthContext';
+import ForbiddenPage from '../ForbiddenPage';
+import WorkspaceTabs from '../portfolio/workspace/WorkspaceTabs';
 import ClassificationCatalogSettings from './components/ClassificationCatalogSettings';
 import DomainTrustsDialog from './components/DomainTrustsDialog';
+import { NetboxSyncPanel } from './NetboxSyncPage';
 
 // ============================================================================
 // Utility Functions
@@ -958,7 +963,7 @@ export function autosaveBlocked(state: SettingsState, id: ListId): boolean {
 // Main Component
 // ============================================================================
 
-export default function ItOperationsSettingsPage() {
+function ItSettingsLists() {
   const { t } = useTranslation(['it', 'common']);
   const queryClient = useQueryClient();
   const { data, isError } = useItOpsSettings();
@@ -1066,9 +1071,6 @@ export default function ItOperationsSettingsPage() {
 
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
-      <Box sx={{ pt: 1, pb: 1 }}>
-        <PageHeader title={t('pages.settings.title')} />
-      </Box>
       <Typography variant="body1" color="text.secondary">
         {t('pages.settings.description')}
       </Typography>
@@ -1162,6 +1164,76 @@ export default function ItOperationsSettingsPage() {
           );
         })}
       </Stack>
+    </Box>
+  );
+}
+
+const LISTS_TAB = 'lists';
+const NETBOX_TAB = 'netbox';
+
+/**
+ * IT settings: the reusable lists, and the Netbox synchronisation. Each tab is shown only to
+ * someone who could open that page before. The address uses `tab` for this choice (`netbox`,
+ * or absent for the lists). Netbox keeps its own record filter in `state`.
+ */
+export default function ItOperationsSettingsPage() {
+  const { t } = useTranslation(['it', 'common']);
+  const { hasLevel } = useAuth();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const canLists = hasLevel('settings', 'reader');
+  const canNetbox = hasLevel('infrastructure', 'admin');
+  const tabs = [
+    ...(canLists ? [{ key: LISTS_TAB, label: t('pages.settings.tabs.lists') }] : []),
+    ...(canNetbox ? [{ key: NETBOX_TAB, label: t('pages.settings.tabs.netbox') }] : []),
+  ];
+  const requested = searchParams.get('tab');
+  const active = tabs.some((tab) => tab.key === requested) ? requested! : (tabs[0]?.key ?? '');
+
+  // The help button reads the address. A tab the user cannot open, and a Netbox-only visit
+  // with no `tab`, are written back so the address matches the tab on screen.
+  React.useEffect(() => {
+    if (!active) return;
+    const want = active === LISTS_TAB ? null : active;
+    const have = searchParams.get('tab');
+    const matches = want === null ? have === null || have === LISTS_TAB : have === want;
+    if (matches) return;
+    setSearchParams((current) => {
+      const next = new URLSearchParams(current);
+      if (want === null) next.delete('tab');
+      else next.set('tab', want);
+      return next;
+    }, { replace: true });
+  }, [active, searchParams, setSearchParams]);
+
+  const changeTab = (next: string) => {
+    setSearchParams((current) => {
+      const params = new URLSearchParams(current);
+      if (next === LISTS_TAB) params.delete('tab');
+      else params.set('tab', next);
+      return params;
+    }, { replace: true });
+  };
+
+  if (!active) return <ForbiddenPage />;
+
+  return (
+    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+      <Box>
+        <Box sx={{ pt: 1, pb: 1 }}>
+          <PageHeader title={t('pages.settings.title')} />
+        </Box>
+        <Box sx={{ borderBottom: '1px solid', borderColor: 'kanap.border.default' }}>
+          <WorkspaceTabs
+            tabs={tabs}
+            activeTab={active}
+            onTabChange={changeTab}
+            ariaLabel={t('pages.settings.title')}
+          />
+        </Box>
+      </Box>
+      {/* Kept mounted while hidden: a list draft not yet saved survives a visit to the Netbox tab. */}
+      {canLists && <Box hidden={active !== LISTS_TAB}><ItSettingsLists /></Box>}
+      {active === NETBOX_TAB && <NetboxSyncPanel />}
     </Box>
   );
 }

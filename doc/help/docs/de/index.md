@@ -33,20 +33,23 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 
 ### IT-Landschaft
 
-**Infrastruktur**
-
-- [Standorte](locations.md) - Rechenzentren und Cloud-Regionen verfolgen
-- [Assets](assets.md) - Infrastruktur-Inventar verwalten (Server, VMs, Container, Cloud-Instanzen)
-- [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende
-- [Verbindungen](connections.md) - Netzwerk- und Systemverbindungen verfolgen
-- [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
-- [Administrationszonen](administration-view.md) - Sehen, wer was verwaltet: Zonen, Kontrollpunkte, Domänen und Domänencontroller
-
 **Anwendungen**
 
 - [Anwendungen](applications.md) - Ihre Anwendungslandschaft dokumentieren
 - [Schnittstellen](interfaces.md) - Datenflüsse zwischen Anwendungen abbilden
 - [Schnittstellenkarte](interface-map.md) - Schnittstellenbeziehungen visualisieren
+
+**Infrastruktur**
+
+- [Assets](assets.md) - Infrastruktur-Inventar verwalten (Server, VMs, Container, Cloud-Instanzen)
+- [Verbindungen](connections.md) - Netzwerk- und Systemverbindungen verfolgen
+- [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
+- [Administrationszonen](administration-view.md) - Sehen, wer was verwaltet: Zonen, Kontrollpunkte, Domänen und Domänencontroller
+
+**Referenzdaten**
+
+- [Standorte](locations.md) - Rechenzentren und Cloud-Regionen verfolgen
+- [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende
 
 **Betrieb**
 
@@ -57,6 +60,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 **Einstellungen**
 
 - [IT-Landschaft-Einstellungen](it-ops-settings.md) - Dropdown-Werte und Kataloge konfigurieren
+- [Netbox-Synchronisierung](netbox.md) - Ihre Assets im Einklang mit Ihrem Netbox-Inventar halten, im Tab **Netbox** der Einstellungen
 
 ### Wissensdatenbank
 

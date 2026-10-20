@@ -1,7 +1,7 @@
 import React from 'react';
 import '../../../i18n';
-import { render, screen } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { fireEvent, render, screen } from '@testing-library/react';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -35,14 +35,21 @@ const BASE_STATUS = {
   records: { linked: 12, ambiguous: 0, missing: 0, ignored: 0, error: 0 },
 };
 
+function Where() {
+  const { pathname, search } = useLocation();
+  return <div data-testid="where">{`${pathname}${search}`}</div>;
+}
+
 function renderTile() {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/']}>
+          <Where />
           <Routes>
             <Route path="/" element={<NetboxSyncTile />} />
+            <Route path="/it/settings" element={<div>settings</div>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -86,5 +93,18 @@ describe('NetboxSyncTile', () => {
     expect(screen.getByText('2 objects to decide')).toBeInTheDocument();
     expect(screen.getByText('1 asset missing from Netbox')).toBeInTheDocument();
     expect(screen.queryByText(/error/)).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: '2 objects to decide' }));
+    const decided = new URLSearchParams(screen.getByTestId('where').textContent?.split('?')[1]);
+    expect(screen.getByTestId('where').textContent?.startsWith('/it/settings?')).toBe(true);
+    expect(decided.get('tab')).toBe('netbox');
+    expect(decided.get('state')).toBe('ambiguous');
+  });
+
+  it('opens the Netbox tab from View all', async () => {
+    (apiClient.get as any).mockResolvedValue(BASE_STATUS);
+    renderTile();
+    fireEvent.click(await screen.findByRole('button', { name: 'View all' }));
+    expect(screen.getByTestId('where')).toHaveTextContent('/it/settings?tab=netbox');
   });
 });

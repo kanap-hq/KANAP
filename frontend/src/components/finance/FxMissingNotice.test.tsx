@@ -48,8 +48,36 @@ describe('FxMissingNotice', () => {
     expect(screen.queryByRole('link', { name: 'Enter a rate' })).not.toBeInTheDocument();
     reader.unmount();
     auth.levels = { budget: 'admin', budget_ops: 'admin' };
-    renderNotice([{ currency: 'USD', year: 2026, lines: 2 }]);
-    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute('href', '/ops/operations/currency');
+    renderNotice([{ currency: 'ZAR', year: 2028, lines: 1 }]);
+    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute(
+      'href',
+      '/ops/operations/currency?currency=ZAR&year=2028',
+    );
+  });
+
+  it('wraps a long notice instead of clipping it', () => {
+    render(
+      <MemoryRouter>
+        <div style={{ width: 320 }}>
+          <FxMissingNotice items={[{ currency: 'ZAR', year: 2028, lines: 2 }]} wrap />
+        </div>
+      </MemoryRouter>,
+    );
+    const status = screen.getByRole('status');
+    expect(status).toHaveStyle({ maxWidth: '100%' });
+    expect(screen.getByText(/Excluding 2 lines/)).toHaveStyle({ whiteSpace: 'normal', overflowWrap: 'anywhere' });
+  });
+
+  it('links several pairs to the first one', () => {
+    auth.levels = { budget: 'admin', budget_ops: 'admin' };
+    renderNotice([
+      { currency: 'ZAR', year: 2028, lines: 1 },
+      { currency: 'USD', year: 2026, lines: 2 },
+    ]);
+    expect(screen.getByRole('link', { name: 'Enter a rate' })).toHaveAttribute(
+      'href',
+      '/ops/operations/currency?currency=ZAR&year=2028',
+    );
   });
 
   it('words the notice in every language', () => {

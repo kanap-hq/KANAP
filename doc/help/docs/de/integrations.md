@@ -67,7 +67,7 @@ Wenn Ihre KANAP-Instanz keinen konfigurierten Geheimnisspeicher hat, erscheint u
 
 Diese Verbindung ist von den KI-Funktionen unabhängig. Sie benötigt `infrastructure:admin`, funktioniert in der Cloud und in der On-Premise-Edition und bleibt verfügbar, wenn KI deaktiviert ist.
 
-Konfigurieren Sie die Verbindung hier und gehen Sie dann zu **IT-Landschaft > Netbox**, um auszuwählen, was importiert wird, und die Synchronisierung auszuführen. Das vollständige Vorgehen, die Zuordnungsregeln und die Tabelle zur Fehlerbehebung finden Sie unter [Netbox-Synchronisierung](netbox.md).
+Konfigurieren Sie die Verbindung hier und öffnen Sie dann den Tab **Netbox** unter **IT-Landschaft > Einstellungen**, um auszuwählen, was importiert wird, und die Synchronisierung auszuführen. Das vollständige Vorgehen, die Zuordnungsregeln und die Tabelle zur Fehlerbehebung finden Sie unter [Netbox-Synchronisierung](netbox.md).
 
 ---
 

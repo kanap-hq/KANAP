@@ -33,20 +33,23 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 
 ### Panorama IT
 
-**Infraestructura**
-
-- [Ubicaciones](locations.md) - Seguimiento de centros de datos y regiones en la nube
-- [Activos](assets.md) - Gestión del inventario de infraestructura (servidores, VMs, contenedores, instancias en la nube)
-- [Tecnologías](technologies.md) - Seguimiento de los productos sobre los que funcionan sus aplicaciones, sus versiones y su fin de soporte
-- [Conexiones](connections.md) - Seguimiento de conexiones de red y sistemas
-- [Mapa de conexiones](connection-map.md) - Visualización de la topología de conexiones
-- [Zonas de administración](administration-view.md) - Quién administra qué: zonas, puntos de control, dominios y controladores de dominio
-
 **Aplicaciones**
 
 - [Aplicaciones](applications.md) - Documentación de su panorama de aplicaciones
 - [Interfaces](interfaces.md) - Mapeo de flujos de datos entre aplicaciones
 - [Mapa de interfaces](interface-map.md) - Visualización de las relaciones entre interfaces
+
+**Infraestructura**
+
+- [Activos](assets.md) - Gestión del inventario de infraestructura (servidores, VMs, contenedores, instancias en la nube)
+- [Conexiones](connections.md) - Seguimiento de conexiones de red y sistemas
+- [Mapa de conexiones](connection-map.md) - Visualización de la topología de conexiones
+- [Zonas de administración](administration-view.md) - Quién administra qué: zonas, puntos de control, dominios y controladores de dominio
+
+**Datos de referencia**
+
+- [Ubicaciones](locations.md) - Seguimiento de centros de datos y regiones en la nube
+- [Tecnologías](technologies.md) - Seguimiento de los productos sobre los que funcionan sus aplicaciones, sus versiones y su fin de soporte
 
 **Operaciones**
 
@@ -57,6 +60,7 @@ Si desea el camino más corto hacia la productividad, comience con las guías de
 **Configuración**
 
 - [Configuración del Panorama IT](it-ops-settings.md) - Configuración de valores desplegables y catálogos
+- [Sincronización con Netbox](netbox.md) - Mantener sus activos alineados con su inventario de Netbox, desde la pestaña **Netbox** de la configuración
 
 ### Base de conocimiento
 

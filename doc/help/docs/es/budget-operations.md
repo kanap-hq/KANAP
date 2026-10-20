@@ -78,7 +78,7 @@ La fila **Total** única de [la lista de líneas presupuestarias](budget-lines.m
 
 ### Congelar la columna por defecto fija los tipos de cambio
 
-Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el tipo de línea que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Descongelar la columna por defecto los libera.
+Congelar la [columna por defecto](#columnas-presupuestarias) de un año también fija los tipos de cambio de ese año para el tipo de línea que congela. KANAP actualiza los tipos del año y luego conserva el último conjunto para cada importe OPEX o CAPEX de ese año. Los informes convierten entonces esos importes con los mismos tipos, aunque lleguen tipos más recientes. Si la moneda de reporte cambia más adelante, estos importes conservan los tipos congelados y luego se convierten a la nueva moneda de reporte al tipo de la anterior en ese mismo año. Sin ese tipo, quedan excluidos de los totales y se señalan como cualquier tipo faltante. Consulte [Años congelados](currencies.md#anos-congelados). Descongelar la columna por defecto los libera.
 
 Congelar otra columna no afecta a los tipos. Cambiar más tarde la columna por defecto no fija ni libera nada por sí solo: los tipos siguen la próxima congelación o descongelación de la nueva columna por defecto. **Congelar ambas** solo congela la celda abierta, así que un tipo de línea cuya columna por defecto ya está congelada conserva los tipos de cambio ya fijados.
 
@@ -294,7 +294,7 @@ Defina el método que siguen las líneas de OPEX y las inversiones de CAPEX cuan
 ### Sociedades seleccionadas
 
 - El generador se aplica únicamente a las sociedades seleccionadas: sus porcentajes se calculan a partir de su propia plantilla, sus usuarios IT o su facturación del año
-- La página muestra el reparto resultante, para que pueda comprobar el efecto antes de confiar en él. La columna **Generador** muestra el valor de cada empresa. Una facturación se muestra con la moneda base de la empresa, por ejemplo **35 M USD**, y el reparto la usa convertida a la moneda de reporte, como en la [pestaña Asignaciones](budget-lines.md#asignaciones). Cuando una moneda aún no tiene tipo para el año, un aviso sobre el reparto indica que sus facturaciones se cuentan sin convertir
+- La página muestra el reparto resultante, para que pueda comprobar el efecto antes de confiar en él. La columna **Generador** muestra el valor de cada empresa. Una facturación se muestra con la moneda base de la empresa, por ejemplo **35 M USD**, y el reparto la usa convertida a la moneda de reporte, como en la [pestaña Asignaciones](budget-lines.md#asignaciones). Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera del reparto: no reciben ninguna parte, las demás empresas seleccionadas se reparten el 100 %, y un aviso sobre el reparto nombra cada empresa excluida
 - Una sola sociedad seleccionada siempre asume el **100%**, sin necesidad de un valor del generador
 - A partir de dos sociedades, cada sociedad seleccionada necesita un valor para el generador elegido. Una sociedad sin valor se rechaza al guardar. Corrija primero las métricas de la sociedad en **Datos maestros > Empresas**
 - Una sociedad desactivada para el año no se puede seleccionar: las sociedades desactivadas quedan excluidas de las asignaciones de ese año

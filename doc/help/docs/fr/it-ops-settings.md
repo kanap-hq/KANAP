@@ -7,16 +7,22 @@ Pour la lisibilité des cartes, les **Entités** et les **Rôles de serveur** in
 ## Où trouver cette page
 
 - Espace de travail : **Cartographie SI**
-- Chemin : **Cartographie SI > Paramètres**
+- Chemin : **Cartographie SI > Paramètres**, dernière entrée du menu
 - Autorisations :
-  - Vous avez besoin au minimum de `settings:reader` pour consulter la page.
+  - Vous avez besoin au minimum de `settings:reader` pour consulter l'onglet **Listes**.
   - Vous avez besoin de `settings:admin` pour modifier les valeurs.
+  - Vous avez besoin de `infrastructure:admin` pour voir l'onglet **Netbox**.
 
-Si vous ne voyez pas l'entrée **Paramètres** dans le tiroir de la Cartographie SI, demandez à votre administrateur de vous accorder les autorisations appropriées.
+Vous ne voyez que les onglets que vos autorisations permettent. Si vous ne voyez pas l'entrée **Paramètres** dans le tiroir de la Cartographie SI, demandez à votre administrateur de vous accorder les autorisations appropriées. D'autres écrans appellent cette page les paramètres de l'IT.
 
 ## Organisation de la page
 
-L'éditeur **Classifications et continuité** se trouve en haut de la page. En dessous, les listes sont regroupées en quatre sections repliables :
+La page compte deux onglets :
+
+- **Listes** contient les valeurs des listes déroulantes décrites sur cette page.
+- **Netbox** contient la synchronisation avec votre inventaire Netbox. Voir [Synchronisation Netbox](netbox.md).
+
+Dans l'onglet **Listes**, l'éditeur **Classifications et continuité** se trouve en haut. En dessous, les listes sont regroupées en quatre sections repliables :
 
 1. **Sites** - Listes utilisées lors de la création ou de la modification des sites.
 2. **Serveurs et connexions** - Listes utilisées pour les serveurs, les connexions et les données de risque/endpoint associées.

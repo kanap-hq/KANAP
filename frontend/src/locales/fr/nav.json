@@ -54,7 +54,8 @@
       "sections": {
         "infrastructure": "Infrastructure",
         "applications": "Applications",
-        "operations": "Exploitation"
+        "operations": "Exploitation",
+        "referenceData": "Référentiels"
       },
       "incidents": "Incidents",
       "locations": "Sites",

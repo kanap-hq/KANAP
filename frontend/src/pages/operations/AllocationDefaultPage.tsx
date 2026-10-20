@@ -222,7 +222,9 @@ export default function AllocationDefaultPage() {
           {t('operations.allocationDefault.previewError', { reason: data.preview_error })}
         </Alert>
       )}
-      {data?.preview_warning && <Alert severity="warning">{allocationWarningText(t, data.preview_warning)}</Alert>}
+      {data?.preview_warning && (
+        <Alert severity="warning" sx={{ whiteSpace: 'pre-line' }}>{allocationWarningText(t, data.preview_warning)}</Alert>
+      )}
 
       <Paper variant="outlined" sx={{ p: 2, maxWidth: 640 }}>
         <Stack spacing={1}>

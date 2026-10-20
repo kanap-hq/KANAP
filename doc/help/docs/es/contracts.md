@@ -91,7 +91,7 @@ Con acceso de lectura a las líneas presupuestarias (`budget:reader`), la derech
 
 Un contrato en una moneda sin tipo de cambio para el año muestra «Sin tipo de cambio USD» en lugar de un importe.
 
-Cuando una línea presupuestaria vinculada no tiene tipo de cambio para el año, el importe **Presupuesto** la excluye y muestra una pequeña marca naranja. **Diferencia** y **Cobertura del presupuesto** quedan vacías, porque la cobertura es desconocida. Un aviso de una línea bajo la lista indica las líneas excluidas, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tasas manuales](currencies.md#tasas-manuales). Sin el permiso de presupuesto, estas columnas, el selector y los dos filtros rápidos de presupuesto están ocultos.
+Cuando una línea presupuestaria vinculada no tiene tipo de cambio para el año, el importe **Presupuesto** la excluye y muestra una pequeña marca naranja. **Diferencia** y **Cobertura del presupuesto** quedan vacías, porque la cobertura es desconocida. Un aviso de una línea bajo la lista indica las líneas excluidas, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tipos manuales](currencies.md#tipos-manuales). Sin el permiso de presupuesto, estas columnas, el selector y los dos filtros rápidos de presupuesto están ocultos.
 
 ### Fila de total
 
@@ -180,7 +180,7 @@ Por ejemplo, un contrato de 350 000 al año que se renueva cada 1 de julio compr
 - **Presupuesto superior al contrato**: las líneas vinculadas suman más que el compromiso más un 10 %
 - **Cubierto**: cualquier otro caso
 
-Cuando una línea vinculada no tiene tipo de cambio para un año, su importe se muestra en su propia moneda con una pequeña marca naranja, y el total y **Líneas vinculadas** la excluyen. La situación de ese año indica **Desconocido: una línea vinculada no tiene tipo de cambio**. Un aviso de una línea bajo la tabla de cobertura indica las líneas excluidas, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tasa faltante](currencies.md#mecanicas-de-conversion-referencia-rapida) y [Tasas manuales](currencies.md#tasas-manuales).
+Cuando una línea vinculada no tiene tipo de cambio para un año, su importe se muestra en su propia moneda con una pequeña marca naranja, y el total y **Líneas vinculadas** la excluyen. La situación de ese año indica **Desconocido: una línea vinculada no tiene tipo de cambio**. Un aviso de una línea bajo la tabla de cobertura indica las líneas excluidas, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tasa faltante](currencies.md#mecanicas-de-conversion-referencia-rapida) y [Tipos manuales](currencies.md#tipos-manuales).
 
 ### Conformidad
 

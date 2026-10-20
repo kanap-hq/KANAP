@@ -983,9 +983,6 @@
       "subtitle": "Konfigurieren Sie die Reporting- und Standardwährungen für OPEX- und CAPEX-Workflows. Alle Werte werden als dreistellige ISO-Codes gespeichert.",
       "loadError": "Aktuelle Währungseinstellungen konnten nicht geladen werden.",
       "saveSuccess": "Währungseinstellungen erfolgreich aktualisiert",
-      "fxSyncRunning": "Die Wechselkurssynchronisierung läuft bereits im Hintergrund.",
-      "fxSyncStarted": "Wechselkurssynchronisierung für Geschäftsjahre {{years}} gestartet. Die Kurse werden in Kürze aktualisiert.",
-      "refreshingFx": "Wechselkurse werden aktualisiert…",
       "failedToRefreshFx": "Wechselkurse konnten nicht aktualisiert werden",
       "failedToUpdate": "Einstellungen konnten nicht aktualisiert werden",
       "reportingCurrency": "Reporting-Währung",
@@ -1020,14 +1017,41 @@
       "editRate": "Kurs für {{currency}} im Jahr {{year}} bearbeiten",
       "manualDialogTitle": "Manueller Wechselkurs",
       "manualRateLabel": "Kurs in {{reporting}} für 1 {{currency}}",
-      "manualRatePlaceholder": "1,05",
       "manualRateHint": "Verwenden Sie den Jahresdurchschnitt, den Ihre Zentralbank oder Ihre Treasury veröffentlicht.",
+      "automaticRateHint": "Automatischer Kurs {{year}}: {{rate}}",
       "manualRateReplaces": "Ein manueller Kurs ersetzt den automatischen Kurs für dieses Jahr, bis Sie ihn entfernen.",
+      "manualRateEmpty": "Geben Sie einen Kurs ein.",
+      "manualRateNotANumber": "Geben Sie eine Zahl ein.",
       "manualRateInvalid": "Geben Sie einen Kurs größer als 0 ein.",
+      "manualRateTooLarge": "Der Kurs darf {{max}} nicht überschreiten.",
+      "manualRateTooSmall": "Auf 6 Dezimalstellen gerundet ergibt dieser Kurs 0.",
       "removeManualRate": "Manuellen Kurs entfernen",
       "manualRateRemoved": "Der automatische Kurs wird erneut abgerufen.",
       "failedToSaveManualRate": "Der Kurs konnte nicht gespeichert werden.",
-      "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden."
+      "failedToRemoveManualRate": "Der manuelle Kurs konnte nicht entfernt werden.",
+      "frozenVersionsKept_one": "Die eingefrorene Version von {{year}} behält den Kurs ihres Einfrierens.",
+      "frozenVersionsKept_other": "Die {{count}} eingefrorenen Versionen von {{year}} behalten den Kurs ihres Einfrierens.",
+      "syncFetched_one": "{{count}} Kurs abgerufen.",
+      "syncFetched_other": "{{count}} Kurse abgerufen.",
+      "syncStillMissing": "Weiterhin fehlend: {{pairs}}.",
+      "syncContinues": "Die Synchronisierung läuft im Hintergrund weiter.",
+      "syncSourceUnreachable": "Die Wechselkursquelle hat nicht geantwortet. Versuchen Sie es später erneut, oder geben Sie die fehlenden Kurse ein.",
+      "changeReportingTitle": "Reporting-Währung in {{currency}} ändern?",
+      "changeReportingEffect": "Jeder Betrag wird zum Kurs seines Jahres in {{currency}} umgerechnet. Die Kurse werden für die verwendeten Jahre abgerufen.",
+      "changeReportingManual": "Diese manuell erfassten Kurse gelten nicht mehr. Sie gelten wieder, wenn Sie erneut {{previous}} wählen.",
+      "changeReportingManualItem": "{{currency}} {{year}}: {{rate}}",
+      "changeReportingFrozen_one": "Die eingefrorene Version von {{year}} behält die Kurse ihres Einfrierens, umgerechnet in {{currency}} zum Kurs des Jahres.",
+      "changeReportingFrozen_other": "Die eingefrorenen Versionen von {{year}} ({{count}}) behalten die Kurse ihres Einfrierens, umgerechnet in {{currency}} zum Kurs des Jahres.",
+      "changeReportingAllowed": "{{currency}} wird zu den zulässigen Währungen hinzugefügt.",
+      "changeReportingConfirm": "Währung ändern",
+      "errors": {
+        "currency_invalid": "Die Währung muss ein dreistelliger ISO-Code sein.",
+        "currency_reporting": "Für die Reporting-Währung kann kein manueller Kurs erfasst werden.",
+        "year_out_of_range": "Das Jahr muss eine ganze Zahl zwischen 1990 und 2100 sein.",
+        "rate_out_of_range": "Der Kurs muss größer als 0 und höchstens 1.000.000.000 sein.",
+        "rate_too_small": "Dieser Kurs ist zu klein: auf 6 Dezimalstellen gerundet ergibt er 0.",
+        "manual_rate_not_found": "Dieser manuelle Kurs wurde nicht gefunden."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",
@@ -1267,8 +1291,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "Noch keine Wechselkurse von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in diesen Währungen wird ohne Umrechnung gezählt, bis die Kurse verfügbar sind.",
-      "turnoverFxMissing_one": "Noch kein Wechselkurs von {{currencies}} nach {{reportingCurrency}} für {{year}}: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist."
+      "turnoverFxMissing": "{{company}} ist von der Zuordnung ausgeschlossen: kein Wechselkurs von {{currency}} nach {{reportingCurrency}} für {{year}}.",
+      "turnoverFxMissing_one": "{{company}} ist von der Zuordnung ausgeschlossen: kein Wechselkurs von {{currency}} nach {{reportingCurrency}} für {{year}}."
     },
     "fxMissing": {
       "excluding_one": "{{count}} Zeile ohne Wechselkurs ausgeschlossen: {{pairs}}.",

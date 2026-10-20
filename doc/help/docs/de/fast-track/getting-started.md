@@ -24,7 +24,7 @@ KANAP ist um eine einfache Struktur herum organisiert. Die obere Leiste zeigt di
 |---------|----------------|
 | **Dashboard** | Ihr persönlicher Hub. Klicken Sie auf das KANAP-Logo oder navigieren Sie zu `/` |
 | **Portfolio** | Aufgaben, Anfragen, Projekte, Planung, Berichte, Mitwirkende |
-| **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Technologien, Verbindungen, Verbindungskarte, Standorte, Netbox, Vorfälle, Supportende, Schwachstellen |
+| **IT-Landschaft** | Anwendungen, Schnittstellen, Schnittstellenkarte, Assets, Verbindungen, Verbindungskarte, Administrationszonen, Standorte, Technologien, Vorfälle, Supportende, Schwachstellen, Einstellungen (Listen und Netbox) |
 | **Wissensdatenbank** | Dokumente und Vorlagen mit Review-Workflows |
 | **Budgetverwaltung** | OPEX, CAPEX, Verträge, Berichte, Administration (Währungen, Budgetspalten, Vorgänge zum Einfrieren und Kopieren) |
 | **Stammdaten** | Unternehmen, Abteilungen, Kostenstellen, Lieferanten, Kontakte, Kontenpläne, Arbeitstagekalender, Analysedimensionen, Geschäftsprozesse |

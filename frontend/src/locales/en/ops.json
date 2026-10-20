@@ -983,9 +983,6 @@
       "subtitle": "Configure reporting and default currencies used across OPEX and CAPEX workflows. All values are saved as three-letter ISO codes.",
       "loadError": "Failed to load current currency settings.",
       "saveSuccess": "Currency settings updated successfully",
-      "fxSyncRunning": "FX rates sync is already running in the background.",
-      "fxSyncStarted": "FX rates sync started for fiscal years {{years}}. Rates will update shortly.",
-      "refreshingFx": "Refreshing FX rates…",
       "failedToRefreshFx": "Failed to refresh FX rates",
       "failedToUpdate": "Failed to update settings",
       "reportingCurrency": "Reporting currency",
@@ -1020,14 +1017,41 @@
       "editRate": "Edit the rate for {{currency}} in {{year}}",
       "manualDialogTitle": "Manual exchange rate",
       "manualRateLabel": "Rate in {{reporting}} for 1 {{currency}}",
-      "manualRatePlaceholder": "1.05",
       "manualRateHint": "Use the average rate of the year published by your central bank or your treasury.",
+      "automaticRateHint": "Automatic rate for {{year}}: {{rate}}",
       "manualRateReplaces": "A manual rate replaces the automatic rate for this year until you remove it.",
+      "manualRateEmpty": "Enter a rate.",
+      "manualRateNotANumber": "Enter a number.",
       "manualRateInvalid": "Enter a rate greater than 0.",
+      "manualRateTooLarge": "The rate cannot be greater than {{max}}.",
+      "manualRateTooSmall": "Rounded to 6 decimal places, this rate is 0.",
       "removeManualRate": "Remove manual rate",
       "manualRateRemoved": "The automatic rate will be fetched again.",
       "failedToSaveManualRate": "The rate could not be saved.",
-      "failedToRemoveManualRate": "The manual rate could not be removed."
+      "failedToRemoveManualRate": "The manual rate could not be removed.",
+      "frozenVersionsKept_one": "The frozen version of {{year}} keeps the rate from when it was frozen.",
+      "frozenVersionsKept_other": "The {{count}} frozen versions of {{year}} keep the rate from when they were frozen.",
+      "syncFetched_one": "{{count}} rate fetched.",
+      "syncFetched_other": "{{count}} rates fetched.",
+      "syncStillMissing": "Still missing: {{pairs}}.",
+      "syncContinues": "Synchronisation continues in the background.",
+      "syncSourceUnreachable": "The exchange rate source did not respond. Try again later, or enter the missing rates.",
+      "changeReportingTitle": "Change the reporting currency to {{currency}}?",
+      "changeReportingEffect": "Every amount is converted to {{currency}} at that year's rate. Rates are fetched for the years in use.",
+      "changeReportingManual": "These manually entered rates no longer apply. They apply again if you choose {{previous}} again.",
+      "changeReportingManualItem": "{{currency}} {{year}}: {{rate}}",
+      "changeReportingFrozen_one": "The frozen version of {{year}} keeps the rates from when it was frozen, converted to {{currency}} at that year's rate.",
+      "changeReportingFrozen_other": "The frozen versions of {{year}} ({{count}}) keep the rates from when they were frozen, converted to {{currency}} at that year's rate.",
+      "changeReportingAllowed": "{{currency}} will be added to the allowed currencies.",
+      "changeReportingConfirm": "Change the currency",
+      "errors": {
+        "currency_invalid": "The currency must be a three-letter ISO code.",
+        "currency_reporting": "A manual rate cannot be entered for the reporting currency.",
+        "year_out_of_range": "The year must be a whole number from 1990 to 2100.",
+        "rate_out_of_range": "The rate must be greater than 0 and at most 1,000,000,000.",
+        "rate_too_small": "This rate is too small: rounded to 6 decimal places, it is 0.",
+        "manual_rate_not_found": "This manual rate cannot be found."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",
@@ -1267,8 +1291,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in these currencies is counted unconverted until the rates are available.",
-      "turnoverFxMissing_one": "No {{reportingCurrency}} exchange rate for {{currencies}} in {{year}} yet: the turnover of the companies in this currency is counted unconverted until the rate is available."
+      "turnoverFxMissing": "{{company}} is left out of the allocation: no exchange rate from {{currency}} to {{reportingCurrency}} for {{year}}.",
+      "turnoverFxMissing_one": "{{company}} is left out of the allocation: no exchange rate from {{currency}} to {{reportingCurrency}} for {{year}}."
     },
     "fxMissing": {
       "excluding_one": "Excluding {{count}} line with no exchange rate: {{pairs}}.",

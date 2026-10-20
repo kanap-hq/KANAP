@@ -88,7 +88,7 @@ So funktionieren sie:
 
 ### Beträge ohne Wechselkurs
 
-Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, lassen die Budgetberichte, **Personal nach Monat** und **Kosten pro VZÄ** die Beträge dieser Zeile für das Jahr bei ihren Zahlen aus. Ein einzeiliger Hinweis oben im Bericht nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet. Der Hinweis wird nicht gedruckt. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
+Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, lassen die Budgetberichte, **Personal nach Monat** und **Kosten pro VZÄ** die Beträge dieser Zeile für das Jahr bei ihren Zahlen aus. Ein einzeiliger Hinweis oben im Bericht nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs. Der Hinweis wird nicht gedruckt. Siehe [Manuelle Kurse](currencies.md#manuelle-kurse).
 
 Die beiden Leistungsverrechnungsberichte lassen diese Beträge bei allen Zahlen aus: bezahlt, verbraucht, Abteilungen und konzerninterne Flüsse. So bleibt jeder Bericht für das, was er zählt, ausgeglichen. Derselbe Hinweis erscheint über dem Bericht.
 
@@ -190,7 +190,7 @@ Detailansicht der Leistungsverrechnungs-Zuordnungen eines einzelnen Unternehmens
 
 **Unternehmens-Zusammenfassungskarte**: Unternehmensname, Gesamtbetrag, Berichtswährung, Mitarbeiterzahl, IT-Benutzer, Kosten pro Benutzer, Kosten pro IT-Benutzer und IT-Kosten vs. Umsatz.
 
-**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und der Bericht zeigt eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse.
+**Umsatz in den Leistungsverrechnungsberichten**: Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Beide Berichte rechnen ihn zu den Kursen der Budgetversion des Jahres in die Berichtswährung um, wie die Beträge. Der Umsatz, das Verhältnis IT-Kosten vs. Umsatz und der Gesamtumsatz der KPI-Tabellen verwenden den umgerechneten Wert. Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus den Umsatzkennzahlen heraus, und eine Warnung oben im Bericht nennt jedes von ihnen. Das globale Verhältnis IT-Kosten vs. Umsatz wird dann nur über die Unternehmen berechnet, deren Umsatz umgerechnet wurde, bei den Kosten wie beim Umsatz. KANAP ruft den fehlenden Kurs im Hintergrund ab.
 
 **Abteilungs-Summen** (wenn aktiviert):
 

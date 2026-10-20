@@ -39,7 +39,6 @@ import HistoryIcon from '@mui/icons-material/History';
 import MenuBookIcon from '@mui/icons-material/MenuBook';
 import MonitorHeartIcon from '@mui/icons-material/MonitorHeart';
 import ScheduleIcon from '@mui/icons-material/Schedule';
-import SyncIcon from '@mui/icons-material/Sync';
 import BrushIcon from '@mui/icons-material/Brush';
 import DatasetIcon from '@mui/icons-material/Dataset';
 import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
@@ -73,6 +72,7 @@ const appearLater = keyframes({ to: { opacity: 1 } });
 const drawerWidth = 220;
 
 type NavLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
+type NavGrant = { resource: string; level?: NavLevel };
 type NavItem = {
   to: string;
   label: string;
@@ -81,6 +81,8 @@ type NavItem = {
   /** Visible when the user has any one of these resources (instead of `resource`). */
   anyResource?: string[];
   level?: NavLevel;
+  /** Visible when any one of these holds. Each names its own level. */
+  anyOf?: NavGrant[];
 };
 type NavDivider = { divider: string };
 type NavEntry = NavItem | NavDivider;
@@ -104,12 +106,18 @@ function isNavItem(entry: NavEntry): entry is NavItem {
 /** The resources that grant an item: any one suffices. Empty for an item open to everyone. */
 const itemResources = (item: NavItem): string[] => item.anyResource ?? (item.resource ? [item.resource] : []);
 
+/** One grant per way in. `anyOf` carries a level per resource; the other forms share `item.level`. */
+const itemGrants = (item: NavItem): NavGrant[] => {
+  if (item.anyOf && item.anyOf.length > 0) return item.anyOf;
+  return itemResources(item).map((resource) => ({ resource, level: item.level }));
+};
+
 // One requirement per granting resource; callers check `some`, so an item with
 // several alternatives grants its workspace through any of them.
 const getNavRequirements = (entries: NavEntry[]): Array<{ resource: string; level: NavLevel }> =>
   entries
     .filter(isNavItem)
-    .flatMap((item) => itemResources(item).map((resource) => ({ resource, level: item.level ?? 'reader' })));
+    .flatMap((item) => itemGrants(item).map((grant) => ({ resource: grant.resource, level: grant.level ?? 'reader' })));
 
 export default function Layout() {
   const location = useLocation();
@@ -171,19 +179,19 @@ export default function Layout() {
     { to: '/master-data/business-processes', label: t('nav:sidebar.masterData.businessProcesses'), icon: <WorkOutlineIcon />, resource: 'business_processes' },
   ];
 
-  const itOperations: NavEntry[] = [
-    { divider: t('nav:sidebar.it.sections.infrastructure') },
-    { to: '/it/locations', label: t('nav:sidebar.it.locations'), icon: <LocationCityIcon />, resource: 'locations' },
-    { to: '/it/assets', label: t('nav:sidebar.it.assets'), icon: <DnsIcon />, resource: 'infrastructure' },
-    { to: '/it/technologies', label: t('nav:sidebar.it.technologies'), icon: <LayersOutlinedIcon />, resource: 'infrastructure' },
-    { to: '/it/connections', label: t('nav:sidebar.it.connections'), icon: <LanIcon />, resource: 'infrastructure' },
-    { to: '/it/connection-map', label: t('nav:sidebar.it.connectionMap'), icon: <LanIcon />, resource: 'infrastructure' },
-    { to: '/it/administration-view', label: t('nav:sidebar.it.administrationView'), icon: <AdminPanelSettingsIcon />, resource: 'infrastructure' },
-    { to: '/it/netbox', label: t('nav:sidebar.it.netbox'), icon: <SyncIcon />, resource: 'infrastructure', level: 'admin' as const },
+  const itMenu: NavEntry[] = [
     { divider: t('nav:sidebar.it.sections.applications') },
     { to: '/it/applications', label: t('nav:sidebar.it.applications'), icon: <WorkOutlineIcon />, resource: 'applications' },
     { to: '/it/interfaces', label: t('nav:sidebar.it.interfaces'), icon: <HubIcon />, resource: 'applications' },
     { to: '/it/interface-map', label: t('nav:sidebar.it.interfaceMap'), icon: <AccountTreeIcon />, resource: 'applications' },
+    { divider: t('nav:sidebar.it.sections.infrastructure') },
+    { to: '/it/assets', label: t('nav:sidebar.it.assets'), icon: <DnsIcon />, resource: 'infrastructure' },
+    { to: '/it/connections', label: t('nav:sidebar.it.connections'), icon: <LanIcon />, resource: 'infrastructure' },
+    { to: '/it/connection-map', label: t('nav:sidebar.it.connectionMap'), icon: <LanIcon />, resource: 'infrastructure' },
+    { to: '/it/administration-view', label: t('nav:sidebar.it.administrationView'), icon: <AdminPanelSettingsIcon />, resource: 'infrastructure' },
+    { divider: t('nav:sidebar.it.sections.referenceData') },
+    { to: '/it/locations', label: t('nav:sidebar.it.locations'), icon: <LocationCityIcon />, resource: 'locations' },
+    { to: '/it/technologies', label: t('nav:sidebar.it.technologies'), icon: <LayersOutlinedIcon />, resource: 'infrastructure' },
     { divider: t('nav:sidebar.it.sections.operations') },
     { to: '/it/incidents', label: t('nav:sidebar.it.incidents'), icon: <ReportProblemOutlinedIcon />, resource: 'incidents' },
     { to: '/it/technologies/end-of-support', label: t('nav:sidebar.it.endOfSupport'), icon: <EventBusyIcon />, resource: 'infrastructure' },
@@ -191,8 +199,16 @@ export default function Layout() {
       ? [{ to: '/it/vulnerabilities', label: t('nav:sidebar.it.vulnerabilities'), icon: <GppMaybeOutlinedIcon />, resource: 'infrastructure' }]
       : []),
     { divider: '' },
-    { to: '/it/settings', label: t('nav:sidebar.it.settings'), icon: <SettingsIcon />, resource: 'settings' },
-  ].filter((entry) => (
+    // Lists need settings; Netbox, now a tab of this page, needs infrastructure admin.
+    {
+      to: '/it/settings',
+      label: t('nav:sidebar.it.settings'),
+      icon: <SettingsIcon />,
+      anyOf: [{ resource: 'settings' }, { resource: 'infrastructure', level: 'admin' }],
+    },
+  ];
+
+  const itOperations = itMenu.filter((entry) => (
     !hasScopedApplicationReaderAccess
     || !isNavItem(entry)
     || (
@@ -475,7 +491,7 @@ export default function Layout() {
               <IconButton
                 size="small"
                 sx={{ color: 'text.secondary' }}
-                onClick={() => window.open(getDocUrl(location.pathname, locale), '_blank', 'noopener,noreferrer')}
+                onClick={() => window.open(getDocUrl(location.pathname, locale, location.search), '_blank', 'noopener,noreferrer')}
                 title={t('nav:topBar.help')}
                 aria-label={t('nav:topBar.openDocs')}
               >
@@ -594,8 +610,8 @@ export default function Layout() {
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }
-              const resources = itemResources(entry);
-              return resources.length === 0 || resources.some((resource) => hasLevel(resource, entry.level ?? 'reader'));
+              const grants = itemGrants(entry);
+              return grants.length === 0 || grants.some((grant) => hasLevel(grant.resource, grant.level ?? 'reader'));
             });
             // Drop group headers whose items were all filtered out.
             const visible = permitted.filter((entry, idx) => {

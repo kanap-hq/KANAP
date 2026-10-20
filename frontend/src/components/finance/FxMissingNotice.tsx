@@ -10,31 +10,64 @@ import { fxMissingText, type FxMissing } from './fxMissing';
 /** The administration page where a rate can be entered by hand. */
 export const CURRENCY_SETTINGS_PATH = '/ops/operations/currency';
 
+/** Opens the currency page on one pair. With several pairs the page highlights the whole list. */
+export function currencySettingsHref(pair: { currency: string; year: number }): string {
+  const params = new URLSearchParams({ currency: pair.currency, year: String(pair.year) });
+  return `${CURRENCY_SETTINGS_PATH}?${params.toString()}`;
+}
+
 /**
  * One line saying which amounts the totals leave out for lack of an exchange rate: the currencies
- * and years in the order received, with their line counts. Users who can open the currency settings
- * get a link to enter a rate. Nothing for an empty or absent list.
+ * and years in the order received, with their line counts. `message` replaces that sentence (a
+ * turnover total words companies, not lines) and still links to the first pair. Users who can open
+ * the currency settings get a link to enter a rate. Nothing when there is neither a message nor a pair.
  */
-export default function FxMissingNotice({ items, sx }: { items: ReadonlyArray<FxMissing> | null | undefined; sx?: SxProps<Theme> }) {
+export default function FxMissingNotice({
+  items,
+  message,
+  wrap = false,
+  sx,
+}: {
+  items?: ReadonlyArray<FxMissing> | null;
+  message?: string;
+  /** Lets a long notice wrap under a grid instead of ending in an ellipsis. */
+  wrap?: boolean;
+  sx?: SxProps<Theme>;
+}) {
   const { t } = useTranslation('ops');
   const { hasLevel } = useAuth();
-  if (!items?.length) return null;
-  const text = fxMissingText(t, items);
+  const list = items ?? [];
+  if (!message && !list.length) return null;
+  const text = message || fxMissingText(t, list);
   const canEnterRate = canUseOperation('currency', hasLevel);
   return (
     <Box
       role="status"
       sx={[
-        { display: 'flex', alignItems: 'center', gap: 0.75, minWidth: 0, fontSize: 12, lineHeight: '20px', color: 'warning.main' },
+        {
+          display: 'flex',
+          alignItems: wrap ? 'flex-start' : 'center',
+          gap: 0.75,
+          minWidth: 0,
+          maxWidth: '100%',
+          fontSize: 12,
+          lineHeight: '20px',
+          color: 'warning.main',
+        },
         ...(Array.isArray(sx) ? sx : [sx]),
       ]}
     >
       <Box component="span" sx={attentionDotSx} />
       <Tooltip title={text} placement="top-start">
-        <Box component="span" sx={{ minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{text}</Box>
+        <Box
+          component="span"
+          sx={wrap
+            ? { minWidth: 0, whiteSpace: 'normal', overflowWrap: 'anywhere' }
+            : { minWidth: 0, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}
+        >{text}</Box>
       </Tooltip>
-      {canEnterRate && (
-        <Link component={RouterLink} to={CURRENCY_SETTINGS_PATH} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
+      {canEnterRate && list[0] && (
+        <Link component={RouterLink} to={currencySettingsHref(list[0])} underline="hover" sx={{ fontSize: 12, flexShrink: 0, whiteSpace: 'nowrap' }}>
           {t('shared.fxMissing.enterRate')}
         </Link>
       )}

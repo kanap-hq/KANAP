@@ -280,7 +280,6 @@ BIF|Burundian Franc
 BMD|Bermudian Dollar
 BND|Brunei Dollar
 BOB|Boliviano
-BOV|Bolivian Mvdol
 BRL|Brazilian Real
 BSD|Bahamian Dollar
 BTN|Bhutanese Ngultrum
@@ -289,18 +288,13 @@ BYN|Belarusian Ruble
 BZD|Belize Dollar
 CAD|Canadian Dollar
 CDF|Congolese Franc
-CHE|WIR Euro
 CHF|Swiss Franc
-CHW|WIR Franc
-CLF|Unidad de Fomento
 CLP|Chilean Peso
-CNY|Chinese Yuan
+CNY|Chinese Yuan Renminbi
 COP|Colombian Peso
-COU|Unidad de Valor Real
 CRC|Costa Rican Colon
-CUC|Cuban Convertible Peso
 CUP|Cuban Peso
-CVE|Cabo Verde Escudo
+CVE|Cape Verde Escudo
 CZK|Czech Koruna
 DJF|Djiboutian Franc
 DKK|Danish Krone
@@ -312,8 +306,10 @@ ETB|Ethiopian Birr
 EUR|Euro
 FJD|Fiji Dollar
 FKP|Falkland Islands Pound
+FOK|Faroese Króna
 GBP|Pound Sterling
 GEL|Georgian Lari
+GGP|Guernsey Pound
 GHS|Ghanaian Cedi
 GIP|Gibraltar Pound
 GMD|Gambian Dalasi
@@ -327,18 +323,20 @@ HTG|Haitian Gourde
 HUF|Hungarian Forint
 IDR|Indonesian Rupiah
 ILS|Israeli New Shekel
+IMP|Isle of Man Pound
 INR|Indian Rupee
 IQD|Iraqi Dinar
 IRR|Iranian Rial
-ISK|Icelandic Krona
+ISK|Icelandic Króna
+JEP|Jersey Pound
 JMD|Jamaican Dollar
 JOD|Jordanian Dinar
 JPY|Japanese Yen
 KES|Kenyan Shilling
-KGS|Kyrgyz Som
+KGS|Kyrgyzstani Som
 KHR|Cambodian Riel
+KID|Kiribati Dollar
 KMF|Comorian Franc
-KPW|North Korean Won
 KRW|South Korean Won
 KWD|Kuwaiti Dinar
 KYD|Cayman Islands Dollar
@@ -361,12 +359,11 @@ MUR|Mauritian Rupee
 MVR|Maldivian Rufiyaa
 MWK|Malawian Kwacha
 MXN|Mexican Peso
-MXV|Mexican Unidad de Inversion
 MYR|Malaysian Ringgit
 MZN|Mozambican Metical
 NAD|Namibian Dollar
 NGN|Nigerian Naira
-NIO|Nicaraguan Cordoba
+NIO|Nicaraguan Córdoba
 NOK|Norwegian Krone
 NPR|Nepalese Rupee
 NZD|New Zealand Dollar
@@ -377,7 +374,7 @@ PGK|Papua New Guinean Kina
 PHP|Philippine Peso
 PKR|Pakistani Rupee
 PLN|Polish Zloty
-PYG|Paraguayan Guarani
+PYG|Paraguayan Guaraní
 QAR|Qatari Riyal
 RON|Romanian Leu
 RSD|Serbian Dinar
@@ -390,51 +387,37 @@ SDG|Sudanese Pound
 SEK|Swedish Krona
 SGD|Singapore Dollar
 SHP|Saint Helena Pound
-SLL|Sierra Leonean Leone
+SLE|Sierra Leonean Leone
+SLL|Sierra Leonean Leone (legacy)
 SOS|Somali Shilling
 SRD|Surinamese Dollar
 SSP|South Sudanese Pound
-STN|Sao Tome and Principe Dobra
-SVC|Salvadoran Colon
+STN|São Tomé and Príncipe Dobra
 SYP|Syrian Pound
-SZL|Swazi Lilangeni
+SZL|Eswatini Lilangeni
 THB|Thai Baht
 TJS|Tajikistani Somoni
-TMT|Turkmenistan Manat
+TMT|Turkmenistani Manat
 TND|Tunisian Dinar
-TOP|Tongan Paanga
+TOP|Tongan Paʻanga
 TRY|Turkish Lira
 TTD|Trinidad and Tobago Dollar
+TVD|Tuvaluan Dollar
 TWD|New Taiwan Dollar
 TZS|Tanzanian Shilling
 UAH|Ukrainian Hryvnia
 UGX|Ugandan Shilling
 USD|United States Dollar
-USN|US Dollar Next Day
-UYI|Uruguay Peso en Unidades Indexadas
 UYU|Uruguayan Peso
-UZS|Uzbekistani Som
-VES|Venezuelan Bolivar Soberano
-VND|Vietnamese Dong
+UZS|Uzbekistan Som
+VES|Venezuelan Bolívar
+VND|Vietnamese Đồng
 VUV|Vanuatu Vatu
 WST|Samoan Tala
-XAF|CFA Franc BEAC
-XAG|Silver
-XAU|Gold
-XBA|Bond Markets Unit European Composite
-XBB|Bond Markets Unit European Monetary
-XBC|Bond Markets Unit European Unit of Account 9
-XBD|Bond Markets Unit European Unit of Account 17
+XAF|Central African CFA Franc
 XCD|East Caribbean Dollar
-XDR|Special Drawing Rights
-XOF|CFA Franc BCEAO
-XPD|Palladium
+XOF|West African CFA Franc
 XPF|CFP Franc
-XPT|Platinum
-XSU|Sucre
-XTS|Testing Currency Code
-XUA|ADB Unit of Account
-XXX|No Currency
 YER|Yemeni Rial
 ZAR|South African Rand
 ZMW|Zambian Kwacha
