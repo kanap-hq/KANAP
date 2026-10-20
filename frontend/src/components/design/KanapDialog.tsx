@@ -31,6 +31,8 @@ export type KanapDialogProps = {
   saveLoading?: boolean;
   /** The main action takes the focus when the dialog opens (its answer is the safe one). */
   saveAutoFocus?: boolean;
+  /** A field that takes the focus once the dialog is shown (the modal takes it back from `autoFocus`). */
+  initialFocusRef?: React.RefObject<HTMLElement | null>;
   /** Defaults to the localized "Cancel"; pass one only for a non-standard label. */
   cancelLabel?: string;
   showCancel?: boolean;
@@ -68,6 +70,7 @@ export default function KanapDialog({
   saveDisabled = false,
   saveLoading = false,
   saveAutoFocus = false,
+  initialFocusRef,
   cancelLabel,
   showCancel = true,
   disableEscapeKeyDown = false,
@@ -90,11 +93,13 @@ export default function KanapDialog({
       disableEscapeKeyDown={disableEscapeKeyDown}
       fullWidth
       maxWidth={false}
-      TransitionProps={onExited || saveAutoFocus ? {
+      TransitionProps={onExited || saveAutoFocus || initialFocusRef ? {
         ...(onExited ? { onExited } : {}),
         // The modal's focus trap takes the focus back to the dialog itself
-        // when it opens, after the button's autoFocus: focus it once shown.
-        ...(saveAutoFocus ? { onEntered: () => saveButtonRef.current?.focus() } : {}),
+        // when it opens, after an autoFocus: focus the field or the button once shown.
+        ...(initialFocusRef || saveAutoFocus
+          ? { onEntered: () => (initialFocusRef?.current ?? saveButtonRef.current)?.focus() }
+          : {}),
       } : undefined}
       BackdropProps={{
         sx: (theme: Theme) => ({

@@ -171,6 +171,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   const { byField, labelFor } = useItOpsEnumOptions();
   const [manual, setManual] = React.useState(false);
   const [search, setSearch] = React.useState('');
+  const searchRef = React.useRef<HTMLInputElement>(null);
   const [draft, setDraft] = React.useState({ name: '', family: '', editor: '', hosting_type: '' });
   const [busy, setBusy] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
@@ -253,6 +254,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
   return (
     <KanapDialog
       open={open}
+      initialFocusRef={searchRef}
       title={t('pages.technologies.create.title')}
       onClose={onClose}
       onSave={manual ? createManual : onClose}
@@ -267,6 +269,7 @@ export default function TechnologyCreateDialog({ open, onClose, onCreated }: Pro
           <>
             <TextField
               variant="standard"
+              inputRef={searchRef}
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t('pages.technologies.create.searchPlaceholder')}

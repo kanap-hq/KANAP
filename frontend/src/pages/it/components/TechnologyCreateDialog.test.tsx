@@ -55,6 +55,11 @@ describe('TechnologyCreateDialog', () => {
     });
   });
 
+  it('puts the focus in the search field once the dialog is shown', async () => {
+    renderDialog();
+    await waitFor(() => expect(screen.getByLabelText('pages.technologies.create.searchLabel')).toHaveFocus());
+  });
+
   it('adopts a catalog entry and opens the new technology', async () => {
     post.mockResolvedValueOnce({ data: { ok: true, created: true, technology: { id: 'u1', name: 'Microsoft SQL Server', reference: 'TEC-4' } } });
     const onCreated = renderDialog();
