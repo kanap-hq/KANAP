@@ -1,10 +1,11 @@
 import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
 import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
-import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem } from '../../spend/allocation-distribution';
+import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
 import { listAiVulnerabilities } from './ai-vulnerabilities.query';
-import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
+import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
+import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
 import { AccountsService } from '../../accounts/accounts.service';
 import { ChartOfAccountsService } from '../../accounts/chart-of-accounts.service';
@@ -502,6 +503,7 @@ export class AiAggregateExecutor {
     // Absent, a technology filter on application_count matches nothing: say so once, at start.
     if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
   }
+
   private async normalizePersonFilters(
     context: AiExecutionContextWithManager,
     entityType: AiQueryEntityType,
@@ -1232,7 +1234,8 @@ export class AiAggregateExecutor {
       manager: context.manager,
       tenantId: context.tenantId,
       fiscalYear: year,
-      rateSetId: null,
+      // The rates of the companies list total: the set the year is frozen at, else the live rates.
+      rateSetId: await yearRateSetId(context.manager, context.tenantId, year),
       entries: rows.map((row) => ({
         companyId: String(row.company_id),
         currency: row.base_currency,
