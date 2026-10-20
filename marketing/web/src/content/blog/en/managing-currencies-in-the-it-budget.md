@@ -43,7 +43,7 @@ This holds across budget management:
 
 Amounts are stored as they were entered. CSV exports keep each line's currency: the file can be reimported or analysed with no conversion to undo.
 
-![The budget lines filtered on Fromage & Co Inc.: each line entered in dollars, amounts and total shown in euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
+![The telecom lines of Fromage & Co's headquarters and US subsidiary: lines entered in euros and in dollars, amounts and total shown in euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
 
 ## Everything is consolidated in the group's currency
 
@@ -72,17 +72,17 @@ Many groups set their own rates for the fiscal year: the budget rates of financi
 
 **Enter a rate by hand.** In the rate table, a click on a cell opens the **Manual exchange rate** dialog: you enter your financial controllers' rate for that currency and that year. It replaces the automatic rate until you remove it, it is marked with an asterisk in the table, and every entry is recorded in the audit log.
 
-**Freeze the rates with the budget.** Once the budget is approved, freezing its default column also freezes that year's rates. Amounts stay converted at the rate set of the freeze, even when newer rates arrive. A budget approved with the dollar at €0.92 does not change in June because the dollar moved. See [the article on reporting](/blog/opex-budget-reporting).
+**Freeze the rates with the budget.** Once the budget is approved, freezing its default column also freezes that year's rates. Amounts stay converted at the rate set of the freeze, even when newer rates arrive. A budget signed off with the dollar at €0.92 does not change in June because the dollar moved. See [the article on reporting](/blog/opex-budget-reporting).
 
 ![The Manual exchange rate dialog: the rate in euros for one dollar, with the automatic rate of the neighbouring year as a reference](/screenshots/blog/currency-manual-rate-2026-10-20.png)
 
-## Errors and gaps in plain sight
+## Errors and gaps are flagged
 
 Sometimes a rate is missing: an uncommon currency, or a past year the sources have not published yet. A spreadsheet then often counts the amount at 1, and 100,000 dollars become 100,000 euros without anyone noticing.
 
 KANAP never does that. The amount is left out of that year's totals, and the screen says so: "Excluding 3 lines with no exchange rate: USD 2026", under the list totals, on the overview, at the top of the reports, in contracts. On the line itself, the amount is then shown in its own currency, with an orange mark.
 
-KANAP fetches the rate in the background, and the next display uses it as soon as a source publishes it. If none does, the Currencies page lists the missing rates, and a manual rate settles the matter at once.
+KANAP fetches the rate in the background, and the next display uses it as soon as a source publishes it. If none does, or if your installation has no internet access, the Currencies page lists the missing rates, and a manual rate settles the matter at once.
 
 ![The budget lines list with a line that has no exchange rate: the warning under the totals and the orange mark on the line](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 

@@ -43,7 +43,7 @@ Cela vaut pour toute la gestion budgétaire :
 
 Les montants sont enregistrés tels qu'ils ont été saisis. Les exports CSV gardent la devise de chaque ligne : le fichier se réimporte ou s'analyse sans conversion à défaire.
 
-![La liste des lignes budgétaires filtrée sur Fromage & Co Inc. : chaque ligne saisie en dollars, montants et total affichés en euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
+![Les lignes télécoms du siège et de la filiale américaine de Fromage & Co : des lignes saisies en euros et en dollars, montants et total affichés en euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
 
 ## Tout se consolide dans la devise du groupe
 
@@ -72,17 +72,17 @@ Beaucoup de groupes fixent leurs propres taux pour l'exercice : les taux budgét
 
 **Saisir un taux à la main.** Dans le tableau des taux, un clic sur une cellule ouvre la fenêtre **Taux de change manuel** : vous saisissez le taux de votre contrôle de gestion pour cette devise et cette année. Il remplace le taux automatique jusqu'à ce que vous le retiriez, il est marqué d'un astérisque dans le tableau, et chaque saisie est tracée dans le journal d'audit.
 
-**Figer les taux avec le budget.** Une fois le budget approuvé, geler sa colonne par défaut fige aussi les taux de l'année. Les montants restent convertis au jeu de taux du gel, même quand des taux plus récents arrivent. Un budget voté avec un dollar à 0,92 € ne change pas en juin parce que le dollar a bougé. Voir [l'article sur le reporting](/fr/blog/opex-budget-reporting).
+**Figer les taux avec le budget.** Une fois le budget approuvé, geler sa colonne par défaut fige aussi les taux de l'année. Les montants restent convertis au jeu de taux du gel, même quand des taux plus récents arrivent. Un budget validé avec un dollar à 0,92 € ne change pas en juin parce que le dollar a bougé. Voir [l'article sur le reporting](/fr/blog/opex-budget-reporting).
 
 ![La fenêtre Taux de change manuel : le taux en euros pour un dollar, avec le taux automatique de l'année voisine comme repère](/screenshots/blog/currency-manual-rate-2026-10-20.png)
 
-## Des erreurs ou manques visibles
+## Les erreurs ou manques sont signalés
 
 Il arrive qu'un taux manque : une devise peu courante, ou une année passée que les sources n'ont pas encore publiée. Un tableur compte alors souvent le montant pour 1, et 100 000 dollars deviennent 100 000 euros sans que personne ne le voie.
 
 KANAP ne fait jamais cela. Le montant est exclu des totaux de l'année, et l'écran le dit : « 3 lignes sans taux de change exclues : USD 2026 », sous les totaux de la liste, sur la vue d'ensemble, en haut des rapports, dans les contrats. Sur la ligne, le montant s'affiche alors dans sa propre devise, avec une marque orange.
 
-KANAP va chercher le taux en arrière-plan, et l'affichage suivant l'utilise dès qu'une source le publie. Si aucune ne le publie, la page Devises liste les taux manquants, et un taux manuel règle la question tout de suite.
+KANAP va chercher le taux en arrière-plan, et l'affichage suivant l'utilise dès qu'une source le publie. Si aucune ne le publie ou que votre installation n'a pas accès à Internet, la page Devises liste les taux manquants, et un taux manuel règle la question tout de suite.
 
 ![La liste des lignes budgétaires avec une ligne sans taux de change : l'avertissement sous les totaux et la marque orange sur la ligne](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 

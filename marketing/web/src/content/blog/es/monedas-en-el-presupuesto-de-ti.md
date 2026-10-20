@@ -43,7 +43,7 @@ Esto vale para toda la gestión presupuestaria:
 
 Los importes se guardan tal como se introdujeron. Las exportaciones CSV conservan la moneda de cada línea: el archivo se reimporta o se analiza sin conversión que deshacer.
 
-![Las líneas presupuestarias filtradas en Fromage & Co Inc.: cada línea introducida en dólares, importes y total mostrados en euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
+![Las líneas de telecomunicaciones de la sede y de la filial estadounidense de Fromage & Co: líneas introducidas en euros y en dólares, importes y total mostrados en euros](/screenshots/blog/currency-us-lines-2026-10-20.png)
 
 ## Todo se consolida en la moneda del grupo
 
@@ -72,17 +72,17 @@ Muchos grupos fijan sus propios tipos para el ejercicio: los tipos presupuestari
 
 **Introducir un tipo a mano.** En la tabla de tipos, un clic en una celda abre la ventana **Tipo de cambio manual**: introduce el tipo de su control de gestión para esa moneda y ese año. Sustituye al tipo automático hasta que usted lo retire, se marca con un asterisco en la tabla, y cada entrada queda registrada en el registro de auditoría.
 
-**Congelar los tipos con el presupuesto.** Una vez aprobado el presupuesto, congelar su columna predeterminada congela también los tipos del año. Los importes siguen convertidos con el juego de tipos de la congelación, aunque lleguen tipos más recientes. Un presupuesto aprobado con un dólar a 0,92 € no cambia en junio porque el dólar se haya movido. Vea [el artículo sobre el reporting](/es/blog/presentar-el-presupuesto-de-ti).
+**Congelar los tipos con el presupuesto.** Una vez aprobado el presupuesto, congelar su columna predeterminada congela también los tipos del año. Los importes siguen convertidos con el juego de tipos de la congelación, aunque lleguen tipos más recientes. Un presupuesto validado con un dólar a 0,92 € no cambia en junio porque el dólar se haya movido. Vea [el artículo sobre el reporting](/es/blog/presentar-el-presupuesto-de-ti).
 
 ![La ventana Tipo de cambio manual: el tipo en euros por un dólar, con el tipo automático del año vecino como referencia](/screenshots/blog/currency-manual-rate-2026-10-20.png)
 
-## Errores y carencias a la vista
+## Los errores y las carencias se señalan
 
 A veces falta un tipo: una moneda poco habitual, o un año pasado que las fuentes aún no han publicado. Una hoja de cálculo suele contar entonces el importe a 1, y 100 000 dólares se convierten en 100 000 euros sin que nadie lo vea.
 
 KANAP nunca hace eso. El importe se excluye de los totales del año, y la pantalla lo dice: «Se excluyen 3 líneas sin tipo de cambio: USD 2026», bajo los totales de la lista, en la vista general, en la parte superior de los informes, en los contratos. En la propia línea, el importe se muestra entonces en su propia moneda, con una marca naranja.
 
-KANAP busca el tipo en segundo plano, y la siguiente visualización lo usa en cuanto una fuente lo publica. Si ninguna lo publica, la página Monedas lista los tipos que faltan, y un tipo manual resuelve la cuestión al instante.
+KANAP busca el tipo en segundo plano, y la siguiente visualización lo usa en cuanto una fuente lo publica. Si ninguna lo publica o su instalación no tiene acceso a Internet, la página Monedas lista los tipos que faltan, y un tipo manual resuelve la cuestión al instante.
 
 ![La lista de líneas presupuestarias con una línea sin tipo de cambio: el aviso bajo los totales y la marca naranja en la línea](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 

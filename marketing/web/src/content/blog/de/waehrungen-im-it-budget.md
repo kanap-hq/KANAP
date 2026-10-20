@@ -43,7 +43,7 @@ Das gilt für die gesamte Budgetverwaltung:
 
 Die Beträge werden so gespeichert, wie sie erfasst wurden. CSV-Exporte behalten die Währung jeder Zeile: Die Datei lässt sich ohne rückgängig zu machende Umrechnung wieder importieren oder auswerten.
 
-![Die Budgetzeilen gefiltert auf Fromage & Co Inc.: jede Zeile in Dollar erfasst, Beträge und Summe in Euro angezeigt](/screenshots/blog/currency-us-lines-2026-10-20.png)
+![Die Telekommunikationszeilen der Zentrale und der US-Tochter von Fromage & Co: Zeilen in Euro und in Dollar erfasst, Beträge und Summe in Euro angezeigt](/screenshots/blog/currency-us-lines-2026-10-20.png)
 
 ## Alles wird in der Währung der Gruppe konsolidiert
 
@@ -72,17 +72,17 @@ Viele Gruppen legen eigene Kurse für das Geschäftsjahr fest: die Budgetkurse d
 
 **Einen Kurs von Hand erfassen.** In der Kurstabelle öffnet ein Klick auf eine Zelle den Dialog **Manueller Wechselkurs**: Sie erfassen den Kurs Ihres Controllings für diese Währung und dieses Jahr. Er ersetzt den automatischen Kurs, bis Sie ihn entfernen, ist in der Tabelle mit einem Sternchen markiert, und jede Erfassung wird im Audit-Log protokolliert.
 
-**Die Kurse mit dem Budget einfrieren.** Ist das Budget genehmigt, friert das Einfrieren seiner Standardspalte auch die Kurse des Jahres ein. Die Beträge bleiben zum Kurssatz des Einfrierens umgerechnet, auch wenn neuere Kurse eintreffen. Ein Budget, das mit einem Dollar zu 0,92 € beschlossen wurde, ändert sich im Juni nicht, weil sich der Dollar bewegt hat. Siehe [den Artikel zum Reporting](/de/blog/it-budget-zur-genehmigung-vorlegen).
+**Die Kurse mit dem Budget einfrieren.** Ist das Budget genehmigt, friert das Einfrieren seiner Standardspalte auch die Kurse des Jahres ein. Die Beträge bleiben zum Kurssatz des Einfrierens umgerechnet, auch wenn neuere Kurse eintreffen. Ein Budget, das mit einem Dollar zu 0,92 € freigegeben wurde, ändert sich im Juni nicht, weil sich der Dollar bewegt hat. Siehe [den Artikel zum Reporting](/de/blog/it-budget-zur-genehmigung-vorlegen).
 
 ![Der Dialog Manueller Wechselkurs: der Kurs in Euro für einen Dollar, mit dem automatischen Kurs des Nachbarjahres als Anhaltspunkt](/screenshots/blog/currency-manual-rate-2026-10-20.png)
 
-## Fehler und Lücken sichtbar
+## Fehler und Lücken werden gemeldet
 
 Manchmal fehlt ein Kurs: eine seltene Währung oder ein vergangenes Jahr, das die Quellen noch nicht veröffentlicht haben. Eine Tabellenkalkulation rechnet den Betrag dann oft mit 1, und aus 100.000 Dollar werden 100.000 Euro, ohne dass es jemand merkt.
 
 KANAP tut das nie. Der Betrag wird aus den Summen des Jahres ausgeschlossen, und der Bildschirm sagt es: „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026“, unter den Summen der Liste, in der Übersicht, oben in den Berichten, bei den Verträgen. In der Zeile selbst erscheint der Betrag dann in seiner eigenen Währung, mit einer orangen Markierung.
 
-KANAP holt den Kurs im Hintergrund, und die nächste Anzeige verwendet ihn, sobald eine Quelle ihn veröffentlicht. Veröffentlicht ihn keine, listet die Seite Währungen die fehlenden Kurse auf, und ein manueller Kurs löst die Frage sofort.
+KANAP holt den Kurs im Hintergrund, und die nächste Anzeige verwendet ihn, sobald eine Quelle ihn veröffentlicht. Veröffentlicht ihn keine oder hat Ihre Installation keinen Internetzugang, listet die Seite Währungen die fehlenden Kurse auf, und ein manueller Kurs löst die Frage sofort.
 
 ![Die Liste der Budgetzeilen mit einer Zeile ohne Wechselkurs: der Hinweis unter den Summen und die orange Markierung in der Zeile](/screenshots/blog/currency-missing-rate-2026-10-20.png)
 

@@ -603,8 +603,9 @@ const PAGES = {
       await sleep(1500);
     },
   },
-  // Currencies article (2026-10-20): US subsidiary lines in USD, totals in the reporting currency.
-  // Column choice stays in this browser only; run it apart from the other list shots.
+  // Currencies article (2026-10-20): lines of the two subsidiaries (EUR and USD) side by side, totals in the reporting currency.
+  // Paying company = both companies, quick filter --q (default "telecom"). Column choice and filters stay in this browser only;
+  // run it apart from the other list shots.
   'currency-us-lines-2026-10-20': {
     path: '/ops/budget',
     waitFor: 'main',
@@ -612,11 +613,10 @@ const PAGES = {
       await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
       await clickText(page, 'button', 'Choose columns');
       await page.waitForSelector('.MuiPopover-paper', { timeout: 10000 });
-      for (const label of (flag('cols-off', 'Contract,Allocation') || '').split(',').filter(Boolean)) await clickText(page, '.MuiPopover-paper label', label);
+      for (const label of (flag('cols-off', 'Contract,Allocation,Task,Currency') || '').split(',').filter(Boolean)) await clickText(page, '.MuiPopover-paper label', label);
       await page.keyboard.press('Escape');
       await sleep(800);
-      const col = await page.$eval('.ag-header-cell[col-id="paying_company_name"]', (h) => h.getAttribute('aria-colindex')).catch(() => null);
-      if (!col) throw new Error('paying company column not found');
+      const col = await page.$eval('.ag-header-cell[col-id="paying_company_name"]', (h) => h.getAttribute('aria-colindex'));
       await page.click(`.ag-floating-filter[aria-colindex="${col}"] button`);
       await page.waitForFunction(
         () => [...document.querySelectorAll('.ag-popup button')].some((b) => b.textContent?.trim() === 'Clear')
@@ -625,15 +625,17 @@ const PAGES = {
       );
       await clickText(page, '.ag-popup button', 'Clear');
       await sleep(500);
-      await clickText(page, '.ag-popup label', 'Fromage & Co Inc.');
+      for (const company of ['Fromage & Co SA', 'Fromage & Co Inc.']) await clickText(page, '.ag-popup label', company);
       await sleep(1500);
       await page.keyboard.press('Escape');
+      await page.type('input[placeholder="Quick filter"]', flag('q', 'telecom'), { delay: 20 });
       await page.waitForFunction(() => /Total \(\d+ lines\)/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 });
-      await page.mouse.click(1000, 140); // drop the focus ring of the filter button
       await sleep(1500);
+      await page.mouse.click(1000, 140);
+      await sleep(1000);
     },
   },
-  // Currencies article (2026-10-20): "Manual exchange rate" dialog opened on the USD cell of 2027; nothing typed, nothing saved.
+  // Currencies article (2026-10-20): "Manual exchange rate" dialog opened on the USD cell of 2027, 0.89 typed, never saved.
   'currency-manual-rate-2026-10-20': {
     path: '/ops/operations/currency',
     waitFor: 'main',
@@ -652,7 +654,15 @@ const PAGES = {
       if (!cell) throw new Error('2027 USD cell not found');
       await cell.click();
       await page.waitForSelector('.MuiDialog-paper', { timeout: 15000 });
-      await sleep(1500);
+      await sleep(800);
+      // Typed over the prefill; never saved (the shot ends with the dialog open, the browser closes after).
+      const input = await page.$('.MuiDialog-paper input');
+      await input.click();
+      await page.keyboard.down('Control');
+      await page.keyboard.press('KeyA');
+      await page.keyboard.up('Control');
+      await page.keyboard.type('0.89');
+      await sleep(1000);
     },
   },
   // Currencies article (2026-10-20): missing-rate warning under the totals and orange mark on the line.
