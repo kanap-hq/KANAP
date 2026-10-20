@@ -1231,7 +1231,8 @@ export default function ItOperationsSettingsPage() {
           />
         </Box>
       </Box>
-      {active === LISTS_TAB && <ItSettingsLists />}
+      {/* Kept mounted while hidden: a list draft not yet saved survives a visit to the Netbox tab. */}
+      {canLists && <Box hidden={active !== LISTS_TAB}><ItSettingsLists /></Box>}
       {active === NETBOX_TAB && <NetboxSyncPanel />}
     </Box>
   );
