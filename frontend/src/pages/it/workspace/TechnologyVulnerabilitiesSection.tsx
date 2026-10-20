@@ -29,7 +29,7 @@ type Props = {
 };
 
 /**
- * The vulnerabilities of a technology (lot T6b), for its Relations tab: one line per version and CVE,
+ * The vulnerabilities of a technology (lot T6b), for its Compliance tab: one line per version and CVE,
  * most severe first, each opening the Vulnerabilities page on that CVE (filtered by the `TEC-n`
  * reference). The count is of distinct CVE. A member can match the technology again after a change
  * of its CPE identifiers, its versions or its links. Renders nothing while the vulnerability feed
