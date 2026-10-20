@@ -445,17 +445,21 @@ Jeder Benutzer öffnet ihn, bestätigt und meldet sich dann bei KANAP an, wie un
 
 ## Optional: Schwachstellen { #optional-vulnerabilities }
 
-Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen.
+Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen. Derselbe Schalter liest die Ausnutzungssignale: den CISA-Katalog bekannter ausgenutzter Schwachstellen, die europäische Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Kennungen) und die täglichen EPSS-Werte.
 
 | Variable | Beschreibung | Standard |
 |----------|-------------|---------|
 | `VULNERABILITY_FEED_ENABLED` | Schaltet die Schwachstellen ein. | `false` On-Premise |
 | `NVD_API_BASE_URL` | Adresse eines Spiegels der CVE API 2.0 der NVD, wenn der Server die NVD nicht erreicht. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optionaler Schlüssel, der die Rate von 5 auf 50 Anfragen pro 30 Sekunden anhebt, sodass das erste Einlesen schneller fertig ist. Beantragen Sie ihn kostenlos auf der [Website der NVD](https://nvd.nist.gov/developers/request-an-api-key). | *nicht gesetzt* |
+| `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `EPSS_FEED_URL` | Adresse eines Spiegels der täglichen EPSS-Werte. EPSS ist bei [FIRST](https://www.first.org/epss) beschrieben. | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
+| `EUVD_BASE_URL` | Adresse eines Spiegels der europäischen Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Zuordnung). | `https://euvdservices.enisa.europa.eu` |
 
 Hinweise:
 
-- Die API braucht ausgehenden HTTPS-Zugriff auf `services.nvd.nist.gov` oder auf Ihren Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Eine leere Spiegeladresse behält die öffentliche Adresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
 - Die E-Mail-Benachrichtigungen setzen außerdem einen eingerichteten E-Mail-Versand voraus (Resend oder SMTP).
 - Starten Sie die API nach einer Änderung dieser Werte neu.
 
@@ -595,6 +599,9 @@ S3_FORCE_PATH_STYLE=false
 # VULNERABILITY_FEED_ENABLED=false
 # NVD_API_KEY=
 # NVD_API_BASE_URL=
+# KEV_FEED_URL=
+# EPSS_FEED_URL=
+# EUVD_BASE_URL=
 
 # TECHNOLOGIEKATALOG (optional - standardmäßig aus)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -660,6 +667,9 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `claude.ai` | 443 | Liest die Beschreibung von Claude, Claude Desktop oder Claude Code, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wenn `AI_MCP_ENABLED=true` und Benutzer sich über OAuth verbinden (für API-Schlüssel nicht nötig) |
 | `chatgpt.com`, `grok.com` | 443 | Liest die Beschreibung von ChatGPT oder Grok, wenn ein Benutzer es ohne Schlüssel über MCP verbindet | Wie bei `claude.ai` |
 | `services.nvd.nist.gov` oder Ihr Spiegel | 443 | Veröffentlichte Schwachstellen (NVD) | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `www.cisa.gov` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `epss.empiricalsecurity.com` oder Ihr Spiegel | 443 | Tägliche EPSS-Werte | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `euvdservices.enisa.europa.eu` oder Ihr Spiegel | 443 | Europäische Schwachstellendatenbank (ENISA): europäischer Katalog und EUVD-Kennungen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `endoflife.date` oder Ihr Spiegel | 443 | Versionen und Supportende-Daten des Technologiekatalogs | Wenn `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |

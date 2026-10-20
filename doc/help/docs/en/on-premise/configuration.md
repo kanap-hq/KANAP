@@ -445,17 +445,21 @@ Each user opens it, confirms, then signs in to KANAP as described in [Connecting
 
 ## Optional: vulnerabilities { #optional-vulnerabilities }
 
-The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads the vulnerabilities published by the NVD (the US National Vulnerability Database) every 6 hours, for the CPE products your technologies name.
+The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads the vulnerabilities published by the NVD (the US National Vulnerability Database) every 6 hours, for the CPE products your technologies name. The same switch reads the exploitation signals: the CISA catalog of known exploited vulnerabilities, ENISA's European vulnerability database (the European catalog and the EUVD identifiers) and the daily EPSS scores.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
 | `VULNERABILITY_FEED_ENABLED` | Turns the vulnerabilities on. | `false` on-premise |
 | `NVD_API_BASE_URL` | Address of a mirror of the NVD CVE API 2.0, when the server cannot reach the NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Optional key that raises the request rate from 5 to 50 requests per 30 seconds, so the first reading finishes sooner. Request it free of charge on the [NVD website](https://nvd.nist.gov/developers/request-an-api-key). | *unset* |
+| `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `EPSS_FEED_URL` | Address of a mirror of the daily EPSS scores. EPSS is described at [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
+| `EUVD_BASE_URL` | Address of a mirror of ENISA's European vulnerability database (the European catalog and the EUVD mapping). | `https://euvdservices.enisa.europa.eu` |
 
 Notes:
 
-- The API needs outbound HTTPS access to `services.nvd.nist.gov`, or to your mirror (see [Firewall rules](#firewall-rules)).
+- The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
+- An empty mirror address keeps the public one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
 - The email notifications also need email to be configured (Resend or SMTP).
 - Restart the API after changing these values.
 
@@ -595,6 +599,9 @@ S3_FORCE_PATH_STYLE=false
 # VULNERABILITY_FEED_ENABLED=false
 # NVD_API_KEY=
 # NVD_API_BASE_URL=
+# KEV_FEED_URL=
+# EPSS_FEED_URL=
+# EUVD_BASE_URL=
 
 # TECHNOLOGY CATALOG (optional - off by default)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -660,6 +667,9 @@ Only required if the corresponding feature is enabled.
 | `claude.ai` | 443 | Reads the description of Claude, Claude Desktop or Claude Code when a user connects it over MCP without a key | If `AI_MCP_ENABLED=true` and users connect over OAuth (not needed for API keys) |
 | `chatgpt.com`, `grok.com` | 443 | Reads the description of ChatGPT or Grok when a user connects it over MCP without a key | Same as `claude.ai` |
 | `services.nvd.nist.gov`, or your mirror | 443 | Published vulnerabilities (NVD) | If `VULNERABILITY_FEED_ENABLED=true` |
+| `www.cisa.gov`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities | If `VULNERABILITY_FEED_ENABLED=true` |
+| `epss.empiricalsecurity.com`, or your mirror | 443 | Daily EPSS scores | If `VULNERABILITY_FEED_ENABLED=true` |
+| `euvdservices.enisa.europa.eu`, or your mirror | 443 | European vulnerability database (ENISA): European catalog and EUVD identifiers | If `VULNERABILITY_FEED_ENABLED=true` |
 | `endoflife.date`, or your mirror | 443 | Versions and end of support dates of the technology catalog | If `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
 | `open.er-api.com` | 443 | Spot FX rates | Optional |

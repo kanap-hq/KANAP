@@ -6,7 +6,7 @@ Open it from **IT Landscape > Vulnerabilities**, in the **Operations** group. Yo
 
 ## Availability
 
-Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) or a mirror of it. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
+Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) or a mirror of it. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
 
 ## How KANAP finds them
 
@@ -43,17 +43,19 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 
 ## The list
 
-The list uses the standard grid: one row per technology, version and vulnerability, most severe first. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
+The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
-**Alerts**, above the grid, chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published**, next to it, keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. The export and the state changes on the whole filter follow both filters. **Reset filters** sets **Alerts** back to **Included** and **Published** back to **All**.
+**Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date at the NVD: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** sets **Alerts** back to **Included**, **Published** back to **All**, and turns **Exploited only** off. The export and the state changes on the whole filter follow these three.
 
 **Columns**:
 
 | Column | What it shows |
 |---|---|
 | **CVE** | The vulnerability's identifier, for example `CVE-2024-1234` |
-| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated** |
+| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**. An **Actively exploited** badge follows the name when CISA or the European Union lists the vulnerability |
+| **Exploited** | **Yes** or **No**. Hidden by default: the badge in **Severity** shows the same fact |
 | **Score** | The CVSS score. Hidden by default |
+| **EPSS** | The probability of exploitation within the next 30 days, as a percentage in the language of your screen, with the percentile when one is published. For example, 15.3% (92nd percentile) |
 | **Summary** | The NVD description |
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
@@ -64,11 +66,11 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 | **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher** and **State** offer checkboxes (**Version** offers **Not recorded** too), **Score** a number, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS** a minimum probability from 0 to 1, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
-**Sort** by **Severity**, **Score**, **Published**, **CVE** or **Technology**. The column chooser shows or hides columns, and the grid remembers your choice.
+**Sort** by **Exploited**, **Severity**, **Score**, **EPSS**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
 
-**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts. The link of the emails uses `period`.
+**Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts, `?exploited=1` the actively exploited vulnerabilities. The link of the emails uses `period`.
 
 ## Changing the state of several rows
 
@@ -91,6 +93,7 @@ Click a row to open its vulnerability in a side panel. The panel covers every te
 - **Technologies and versions**: each concerned version, with its **State** and a note.
 - **Servers**: each server that carries a concerned version, with the technology, the version and the server it runs in.
 - **Applications**: each application that uses a concerned version, with its server.
+- **Exploitation**, when a catalog, an EPSS score or a European identifier is known. See [Exploitation](#exploitation).
 
 A version out of the alerts is greyed, with its servers and applications. When only some of them are in the alerts, a line above the list says how many, for example "3 servers, 1 in alerts".
 
@@ -106,16 +109,28 @@ The note records how, for example "patched on 12 March, change CHG-123". It save
 
 KANAP never changes a state you chose. When a version no longer matches (you upgraded it, the technology was retired, the NVD changed its data), a row still **To review** goes away. A row you reviewed stays, greyed out, with its state; it comes back as it was if the version matches again.
 
+## Exploitation { #exploitation }
+
+A vulnerability is **actively exploited** when the CISA catalog (United States) or the catalog of the European Union lists it, or both. The **Actively exploited** badge sits next to the severity. Its detail names the catalogs. When CISA records use in ransomware campaigns, the detail says so.
+
+**EPSS** is the probability that the vulnerability will be exploited within the next 30 days. [FIRST](https://www.first.org/epss) computes it every day. The column and the side panel show it as a percentage, with the percentile of that day when one is published, and the day of the score. The panel names the method: EPSS: FIRST.
+
+The side panel also shows the **EUVD** identifier when the European mapping has one, with the link **See on the European vulnerability database (ENISA)**. ENISA's European vulnerability database is the European catalogue used when reviewing vulnerabilities in the scope of NIS2. The panel names the source: ENISA, European vulnerability database.
+
+The list opens with actively exploited vulnerabilities first, then the most severe. **Exploited only**, above the grid, keeps those rows (`?exploited=1`). **Reset filters** turns it off. The export and a change of state in bulk keep it.
+
+The email to the IT owners announces an exploited vulnerability of any severity, on the versions in the alerts, under the same rules as a critical or high one: published within the last 30 days, on a product the technology was already compared on, still to review. A vulnerability already detected that later joins an exploitation catalog stays on this page.
+
 ## Export
 
 **Export CSV** downloads the vulnerabilities that match the filters, one line per row of the grid, in its order, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
 
 ## Email notifications
 
-After each check, the IT owners of a technology receive one email about its new critical or high vulnerabilities still to review, on the versions in the alerts:
+After each check, the IT owners of a technology receive one email about its new vulnerabilities still to review, on the versions in the alerts. The email includes a vulnerability that is critical or high, or known to be exploited at any severity:
 
-- **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, or a known vulnerability that has just become critical or high.
-- **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page.
+- **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, when it is critical, high or listed as exploited, or a known vulnerability that has just become critical or high.
+- **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page. A vulnerability already detected that later joins an exploitation catalog stays on this page.
 - **How much**: 25 lines at most, one per technology and vulnerability, then a link to the page, filtered on the vulnerabilities published within the last 30 days.
 - **How often**: each person hears about a vulnerability on a technology once. A vulnerability not announced at its check is never announced later.
 

@@ -445,17 +445,21 @@ Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe 
 
 ## Opcional: vulnerabilidades { #optional-vulnerabilities }
 
-La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo y los recuentos de vulnerabilidades de las tecnologías están desactivados por defecto en una instalación local. Una vez activados, KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías.
+La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo y los recuentos de vulnerabilidades de las tecnologías están desactivados por defecto en una instalación local. Una vez activados, KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías. El mismo interruptor lee las señales de explotación: el catálogo de la CISA de vulnerabilidades explotadas conocidas, la base europea de vulnerabilidades de la ENISA (catálogo europeo e identificadores EUVD) y las puntuaciones EPSS del día.
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
 | `VULNERABILITY_FEED_ENABLED` | Activa las vulnerabilidades. | `false` en local |
 | `NVD_API_BASE_URL` | Dirección de una réplica de la API CVE 2.0 de la NVD, cuando el servidor no puede alcanzar la NVD. | `https://services.nvd.nist.gov/rest/json/cves/2.0` |
 | `NVD_API_KEY` | Clave opcional que eleva el ritmo de 5 a 50 solicitudes por 30 segundos, de modo que la primera lectura termina antes. Solicítela gratis en el [sitio de la NVD](https://nvd.nist.gov/developers/request-an-api-key). | *sin definir* |
+| `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
+| `EPSS_FEED_URL` | Dirección de una réplica de las puntuaciones EPSS del día. EPSS se describe en [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
+| `EUVD_BASE_URL` | Dirección de una réplica de la base europea de vulnerabilidades de la ENISA (catálogo europeo y correspondencia EUVD). | `https://euvdservices.enisa.europa.eu` |
 
 Notas:
 
-- La API necesita acceso HTTPS saliente a `services.nvd.nist.gov`, o a su réplica (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- Una dirección de réplica vacía conserva la dirección pública. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
 - Las notificaciones por correo requieren además que el envío de correo esté configurado (Resend o SMTP).
 - Reinicie la API después de cambiar estos valores.
 
@@ -595,6 +599,9 @@ S3_FORCE_PATH_STYLE=false
 # VULNERABILITY_FEED_ENABLED=false
 # NVD_API_KEY=
 # NVD_API_BASE_URL=
+# KEV_FEED_URL=
+# EPSS_FEED_URL=
+# EUVD_BASE_URL=
 
 # CATÁLOGO DE TECNOLOGÍAS (opcional - desactivado por defecto)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -660,6 +667,9 @@ Solo es necesario si la función correspondiente está activada.
 | `claude.ai` | 443 | Lee la descripción de Claude, Claude Desktop o Claude Code cuando un usuario lo conecta mediante MCP sin clave | Si `AI_MCP_ENABLED=true` y los usuarios se conectan mediante OAuth (no es necesario para las claves API) |
 | `chatgpt.com`, `grok.com` | 443 | Lee la descripción de ChatGPT o Grok cuando un usuario lo conecta mediante MCP sin clave | Igual que para `claude.ai` |
 | `services.nvd.nist.gov`, o su réplica | 443 | Vulnerabilidades publicadas (NVD) | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `www.cisa.gov`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `epss.empiricalsecurity.com`, o su réplica | 443 | Puntuaciones EPSS del día | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `euvdservices.enisa.europa.eu`, o su réplica | 443 | Base europea de vulnerabilidades (ENISA): catálogo europeo e identificadores EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `endoflife.date`, o su réplica | 443 | Versiones y fechas de fin de soporte del catálogo de tecnologías | Si `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Tipos de cambio anuales | Opcional |
 | `open.er-api.com` | 443 | Tipos de cambio al contado | Opcional |

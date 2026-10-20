@@ -6,7 +6,7 @@ La página Vulnerabilidades lista las vulnerabilidades publicadas (CVE) que afec
 
 ## Disponibilidad
 
-Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) o una réplica de ella. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
+Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) o una réplica de ella. El mismo interruptor lee también tres fuentes de explotación, o una réplica de cada una: el catálogo de la CISA, la base europea de vulnerabilidades de la ENISA y las puntuaciones EPSS del día. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
 
 ## Cómo las encuentra KANAP
 
@@ -43,17 +43,19 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 
 ## La lista
 
-La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad, la más grave primero. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
+La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad. Las vulnerabilidades explotadas activamente van primero, y después las más graves. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
-**Alertas**, encima de la cuadrícula, elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada**, a su lado, conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. La exportación y los cambios de estado sobre todo el filtro siguen ambos filtros. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas** y **Publicada** en **Todas**.
+**Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** vuelve a poner **Alertas** en **Incluidas**, **Publicada** en **Todas**, y desactiva **Solo explotadas**. La exportación y los cambios de estado sobre todo el filtro siguen estos tres ajustes.
 
 **Columnas**:
 
 | Columna | Qué muestra |
 |---|---|
 | **CVE** | El identificador de la vulnerabilidad, por ejemplo `CVE-2024-1234` |
-| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar** |
+| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**. Una pastilla **Explotada activamente** sigue al nombre cuando la CISA o la Unión Europea incluye la vulnerabilidad |
+| **Explotada** | **Sí** o **No**. Oculta por defecto: la pastilla de **Gravedad** muestra el mismo hecho |
 | **Puntuación** | La puntuación CVSS. Oculta por defecto |
+| **EPSS** | La probabilidad de explotación en los próximos 30 días, como porcentaje en el idioma de su pantalla, con el percentil cuando se publica uno. Por ejemplo, 15,3 % (percentil 92) |
 | **Resumen** | La descripción de la NVD |
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
@@ -64,11 +66,11 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 | **Nota** | La nota de la fila. Oculta por defecto |
 | **Publicación** | La fecha de publicación |
 
-**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor** y **Estado** ofrecen casillas (**Versión** ofrece también **Sin registrar**), **Puntuación** un número, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
+**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor**, **Estado** y **Explotada** ofrecen casillas (**Versión** ofrece también **Sin registrar**, **Explotada** ofrece **Sí** y **No**), **Puntuación** un número, **EPSS** una probabilidad mínima de 0 a 1, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
 
-**Orden** por **Gravedad**, **Puntuación**, **Publicación**, **CVE** o **Tecnología**. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
+**Orden** por **Explotada**, **Gravedad**, **Puntuación**, **EPSS**, **Publicación**, **CVE** o **Tecnología**. La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
 
-**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?published=30d` las vulnerabilidades publicadas en los últimos 30 días (`7d`, `30d`, `90d`, `1y` u `older1y`, como el filtro **Publicada**), `?period=30` lo mismo mediante el filtro de la columna **Publicada**, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas. El enlace de los correos usa `period`.
+**Enlaces**: la página lee sus filtros en su dirección, de modo que puede compartir una lista filtrada. `?technology=TEC-4` conserva una tecnología, `?version=none` las filas sin versión registrada, `?state=all` todos los estados, `?published=30d` las vulnerabilidades publicadas en los últimos 30 días (`7d`, `30d`, `90d`, `1y` u `older1y`, como el filtro **Publicada**), `?period=30` lo mismo mediante el filtro de la columna **Publicada**, `?alerts=excluded` o `?alerts=all` las filas fuera de las alertas, `?exploited=1` las vulnerabilidades explotadas activamente. El enlace de los correos usa `period`.
 
 ## Cambiar el estado de varias filas
 
@@ -91,6 +93,7 @@ Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. El panel
 - **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota.
 - **Servidores**: cada servidor que lleva una versión afectada, con la tecnología, la versión y el servidor en el que se ejecuta.
 - **Aplicaciones**: cada aplicación que usa una versión afectada, con su servidor.
+- **Explotación**, cuando se conoce un catálogo, una puntuación EPSS o un identificador europeo. Consulte [Explotación](#exploitation).
 
 Una versión fuera de las alertas aparece atenuada, con sus servidores y aplicaciones. Cuando solo una parte está en las alertas, una línea encima de la lista indica cuántos, por ejemplo «3 servidores, de ellos 1 en las alertas».
 
@@ -106,16 +109,28 @@ La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123»
 
 KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, la NVD cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
 
+## Explotación { #exploitation }
+
+Una vulnerabilidad está **explotada activamente** cuando el catálogo de la CISA (Estados Unidos) o el de la Unión Europea la incluye, o ambos. La pastilla **Explotada activamente** aparece junto a la gravedad. Su detalle nombra los catálogos. Cuando la CISA registra un uso en campañas de ransomware, el detalle lo indica.
+
+El **EPSS** es la probabilidad de que la vulnerabilidad se explote en los próximos 30 días. [FIRST](https://www.first.org/epss) la calcula cada día. La columna y el panel lateral la muestran como porcentaje, con el percentil de ese día cuando FIRST publica uno, y con el día de la puntuación. El panel nombra el método: EPSS: FIRST.
+
+El panel lateral muestra también el identificador **EUVD** cuando la correspondencia europea tiene uno, con el enlace **Ver en la base europea de vulnerabilidades (ENISA)**. La base europea de vulnerabilidades de la ENISA es el catálogo europeo que se usa al revisar vulnerabilidades en el ámbito de NIS2. El panel nombra la fuente: ENISA, base europea de vulnerabilidades.
+
+La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. **Solo explotadas**, encima de la cuadrícula, conserva esas filas (`?exploited=1`). **Restablecer filtros** lo desactiva. La exportación y un cambio de estado en bloque lo siguen.
+
+El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualquier gravedad, en las versiones en las alertas, con las mismas reglas que una crítica o alta: publicada en los últimos 30 días, sobre un producto con el que la tecnología ya se comparaba, aún por revisar. Una vulnerabilidad ya detectada que entra después en un catálogo permanece en esta página.
+
 ## Exportación
 
 **Exportar CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por fila de la cuadrícula, en su orden, en el idioma de su pantalla. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
 
 ## Notificaciones por correo electrónico
 
-Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades críticas o altas aún por revisar, en las versiones en las alertas:
+Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades aún por revisar, en las versiones en las alertas. El correo incluye una vulnerabilidad crítica o alta, o con explotación conocida de cualquier gravedad:
 
-- **Qué se anuncia**: una vulnerabilidad publicada en los últimos 30 días sobre un producto con el que la tecnología ya se comparaba, o una vulnerabilidad conocida que acaba de pasar a crítica o alta.
-- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página.
+- **Qué se anuncia**: una vulnerabilidad publicada en los últimos 30 días sobre un producto con el que la tecnología ya se comparaba, cuando es crítica, alta o está incluida como explotada, o una vulnerabilidad conocida que acaba de pasar a crítica o alta.
+- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página. Una vulnerabilidad ya detectada que entra después en un catálogo de explotación permanece en esta página.
 - **Cuánto**: 25 líneas como máximo, una por tecnología y vulnerabilidad, y después un enlace a la página, filtrada en las vulnerabilidades publicadas en los últimos 30 días.
 - **Cuántas veces**: cada persona recibe aviso de una vulnerabilidad en una tecnología una sola vez. Una vulnerabilidad no anunciada en su comprobación no se anuncia nunca más tarde.
 

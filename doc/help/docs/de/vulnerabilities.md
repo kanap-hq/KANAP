@@ -6,7 +6,7 @@ Die Seite Schwachstellen listet die veröffentlichten Schwachstellen (CVE), die 
 
 ## Verfügbarkeit
 
-In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) oder einen Spiegel davon erreichen. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
+In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) oder einen Spiegel davon erreichen. Derselbe Schalter liest auch drei Quellen zur Ausnutzung, oder jeweils einen Spiegel: den Katalog der CISA, die europäische Schwachstellendatenbank der ENISA und die täglichen EPSS-Werte. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
 
 ## Wie KANAP sie findet
 
@@ -43,17 +43,19 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 ## Die Liste
 
-Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle, die schwerste zuerst. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
+Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle. Aktiv ausgenutzte Schwachstellen kommen zuerst, danach die schwersten. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
 
-**Warnungen** über dem Raster wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** daneben behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. Der Export und die Statusänderungen für den ganzen Filter folgen beiden Filtern. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen** und **Veröffentlicht** auf **Alle**.
+**Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** stellt **Warnungen** wieder auf **Eingeschlossen**, **Veröffentlicht** auf **Alle** und schaltet **Nur ausgenutzte** aus. Der Export und die Statusänderungen für den ganzen Filter folgen diesen drei Einstellungen.
 
 **Spalten**:
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **CVE** | Die Kennung der Schwachstelle, zum Beispiel `CVE-2024-1234` |
-| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet** |
+| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**. Eine Pastille **Aktiv ausgenutzt** folgt dem Namen, wenn die CISA oder die Europäische Union die Schwachstelle führt |
+| **Ausgenutzt** | **Ja** oder **Nein**. Standardmäßig ausgeblendet: die Pastille in **Schweregrad** zeigt denselben Sachverhalt |
 | **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
+| **EPSS** | Die Wahrscheinlichkeit einer Ausnutzung innerhalb der nächsten 30 Tage, als Prozentsatz in der Sprache Ihres Bildschirms, mit dem Perzentil, wenn eines veröffentlicht ist. Zum Beispiel 15,3 % (92. Perzentil) |
 | **Zusammenfassung** | Die Beschreibung der NVD |
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
@@ -64,11 +66,11 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 | **Notiz** | Die Notiz der Zeile. Standardmäßig ausgeblendet |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller** und **Status** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**), **Score** eine Zahl, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS** eine Mindestwahrscheinlichkeit von 0 bis 1, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
 
-**Sortieren** nach **Schweregrad**, **Score**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
+**Sortieren** nach **Ausgenutzt**, **Schweregrad**, **Score**, **EPSS**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
-**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?published=30d` die in den letzten 30 Tagen veröffentlichten Schwachstellen (`7d`, `30d`, `90d`, `1y` oder `older1y`, wie der Filter **Veröffentlicht**), `?period=30` dasselbe über den Filter der Spalte **Veröffentlicht**, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen. Der Link der E-Mails nutzt `period`.
+**Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?published=30d` die in den letzten 30 Tagen veröffentlichten Schwachstellen (`7d`, `30d`, `90d`, `1y` oder `older1y`, wie der Filter **Veröffentlicht**), `?period=30` dasselbe über den Filter der Spalte **Veröffentlicht**, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen, `?exploited=1` die aktiv ausgenutzten Schwachstellen. Der Link der E-Mails nutzt `period`.
 
 ## Den Status mehrerer Zeilen ändern
 
@@ -91,6 +93,7 @@ Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Der 
 - **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz.
 - **Server**: jeder Server, der eine betroffene Version trägt, mit Technologie, Version und dem Server, in dem er läuft.
 - **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, mit ihrem Server.
+- **Ausnutzung**, wenn ein Katalog, ein EPSS-Wert oder eine europäische Kennung bekannt ist. Siehe [Ausnutzung](#exploitation).
 
 Eine Version außerhalb der Warnungen ist ausgegraut, mit ihren Servern und Anwendungen. Ist nur ein Teil davon in den Warnungen, nennt eine Zeile über der Liste die Anzahl, zum Beispiel „3 Server, davon 1 in den Warnungen“.
 
@@ -106,16 +109,28 @@ Die Notiz hält fest, wie, zum Beispiel „am 12. März gepatcht, Change CHG-123
 
 KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht mehr passt (Sie haben sie aktualisiert, die Technologie wurde außer Betrieb genommen, die NVD hat ihre Daten geändert), verschwindet eine Zeile, die noch **Zu prüfen** ist. Eine geprüfte Zeile bleibt, ausgegraut, mit ihrem Status; sie kehrt unverändert zurück, wenn die Version wieder passt.
 
+## Ausnutzung { #exploitation }
+
+Eine Schwachstelle ist **aktiv ausgenutzt**, wenn der Katalog der CISA (Vereinigte Staaten) oder der Katalog der Europäischen Union sie führt, oder beide. Die Pastille **Aktiv ausgenutzt** steht neben dem Schweregrad. Ihr Hinweis nennt die Kataloge. Wenn die CISA einen Einsatz in Ransomware-Kampagnen verzeichnet, sagt der Hinweis das.
+
+**EPSS** ist die Wahrscheinlichkeit, dass die Schwachstelle innerhalb der nächsten 30 Tage ausgenutzt wird. [FIRST](https://www.first.org/epss) berechnet sie jeden Tag. Die Spalte und der Seitenbereich zeigen sie als Prozentsatz, mit dem Perzentil dieses Tages, wenn FIRST eines veröffentlicht, und mit dem Tag des Werts. Der Bereich nennt das Verfahren: EPSS: FIRST.
+
+Der Seitenbereich zeigt auch die Kennung **EUVD**, wenn die europäische Zuordnung eine nennt, mit dem Link **In der europäischen Schwachstellendatenbank (ENISA) ansehen**. Die europäische Schwachstellendatenbank der ENISA ist der europäische Katalog für die Prüfung von Schwachstellen im Rahmen von NIS2. Der Bereich nennt die Quelle: ENISA, europäische Schwachstellendatenbank.
+
+Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. **Nur ausgenutzte** über dem Raster behält diese Zeilen (`?exploited=1`). **Filter zurücksetzen** schaltet es aus. Der Export und eine Statusänderung für mehrere Zeilen folgen ihm.
+
+Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jeden Schweregrads, auf den Versionen in den Warnungen, nach denselben Regeln wie eine kritische oder hohe: in den letzten 30 Tagen veröffentlicht, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, noch zu prüfen. Eine bereits erkannte Schwachstelle, die später in einen Katalog aufgenommen wird, bleibt auf dieser Seite.
+
 ## Export
 
 **CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
 
 ## E-Mail-Benachrichtigungen
 
-Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen kritischen oder hohen Schwachstellen, die noch zu prüfen sind, auf den Versionen in den Warnungen:
+Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen Schwachstellen, die noch zu prüfen sind, auf den Versionen in den Warnungen. Die E-Mail umfasst eine kritische oder hohe Schwachstelle, oder eine bekanntermaßen ausgenutzte Schwachstelle jeden Schweregrads:
 
-- **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
-- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite.
+- **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, wenn sie kritisch, hoch oder als ausgenutzt geführt ist, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
+- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite. Eine bereits erkannte Schwachstelle, die später in einen Ausnutzungskatalog aufgenommen wird, bleibt auf dieser Seite.
 - **Wie viel**: höchstens 25 Zeilen, eine pro Technologie und Schwachstelle, dann ein Link zur Seite, gefiltert auf die in den letzten 30 Tagen veröffentlichten Schwachstellen.
 - **Wie oft**: Jede Person erfährt von einer Schwachstelle einer Technologie einmal. Eine Schwachstelle, die bei ihrer Prüfung nicht gemeldet wurde, wird auch später nicht gemeldet.
 
