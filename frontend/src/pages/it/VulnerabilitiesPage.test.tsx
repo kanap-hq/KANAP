@@ -155,11 +155,11 @@ describe('VulnerabilitiesPage', () => {
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
-    // EPSS is shown as a percentage only. The exploited column stays hidden: the badge next to the severity carries that signal.
-    // The default set is then 1,347 px, past the old 1,100 px budget. The summary still takes the rest.
+    // EPSS is shown as a percentage only. The exploited column stays hidden: the icon next to the severity carries that signal.
+    // The default set is then 1,279 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
     expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1347);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1279);
     expect(column('exploited').defaultHidden).toBe(true);
     expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
@@ -686,7 +686,7 @@ describe('VulnerabilitiesPage', () => {
   const TIP = 'Actively exploited: listed by CISA (United States) and/or the European Union.';
   const RANSOM = 'Used in ransomware campaigns';
 
-  it('shows an actively exploited badge next to the severity, in light and dark', async () => {
+  it('shows an actively exploited icon next to the severity, in light and dark', async () => {
     renderPage();
     const Severity = column('severity').cellRenderer;
     const light = render(
@@ -696,15 +696,28 @@ describe('VulnerabilitiesPage', () => {
       </ThemeProvider>,
     );
     const badge = screen.getByRole('img', { name: TIP });
-    expect(badge.textContent).toBe('Actively exploited');
+    expect(badge.querySelector('svg')).toBeTruthy();
+    expect(badge.textContent).toBe('');
     expect(document.querySelectorAll('[data-exploited]')).toHaveLength(1);
     expect(getComputedStyle(badge).color).toBe('rgb(180, 83, 9)');
-    expect(getComputedStyle(badge).backgroundColor).toBe('rgb(255, 244, 224)');
+    expect(getComputedStyle(badge).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     expect(getComputedStyle(badge).cursor).not.toBe('help');
     fireEvent.mouseOver(badge);
     expect((await screen.findByRole('tooltip')).textContent).toBe(TIP);
     expect(screen.queryByRole('tooltip')?.textContent).not.toContain(RANSOM);
     light.unmount();
+
+    const named = render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <Severity data={{ ...ROW, exploited: true, cisa_kev: true, eu_kev: true }} />
+        <Severity data={{ ...ROW, exploited: true, cisa_kev: true, kev_ransomware: true }} />
+        <Severity data={{ ...ROW, exploited: true, kev_sources: ['eu'] }} />
+      </ThemeProvider>,
+    );
+    expect(screen.getByRole('img', { name: 'Actively exploited: CISA, European Union' })).toBeTruthy();
+    expect(screen.getByRole('img', { name: `Actively exploited: CISA ${RANSOM}` })).toBeTruthy();
+    expect(screen.getByRole('img', { name: 'Actively exploited: European Union' })).toBeTruthy();
+    named.unmount();
 
     render(
       <ThemeProvider theme={createAppTheme('dark')}>
@@ -712,8 +725,9 @@ describe('VulnerabilitiesPage', () => {
       </ThemeProvider>,
     );
     const darkBadge = screen.getByRole('img', { name: `${TIP} ${RANSOM}` });
+    expect(darkBadge.querySelector('svg')).toBeTruthy();
     expect(getComputedStyle(darkBadge).color).toBe('rgb(240, 168, 48)');
-    expect(getComputedStyle(darkBadge).backgroundColor.replace(/, /g, ',')).toBe('rgba(240,168,48,0.12)');
+    expect(getComputedStyle(darkBadge).backgroundColor).toBe('rgba(0, 0, 0, 0)');
     fireEvent.mouseOver(darkBadge);
     expect((await screen.findByRole('tooltip')).textContent).toBe(`${TIP} ${RANSOM}`);
   });
@@ -823,6 +837,7 @@ describe('VulnerabilitiesPage', () => {
     renderPage();
     act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
     const detail = await screen.findByTestId('vulnerability-detail');
+    expect(within(detail).getByRole('img', { name: `Actively exploited: CISA, European Union ${RANSOM}` })).toBeTruthy();
     expect(within(detail).getByText('Exploitation')).toBeTruthy();
     expect(detail.textContent).toContain('Sources CISA, European Union');
     expect(detail.textContent).toContain(`Added to the CISA list ${added}`);

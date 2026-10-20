@@ -299,6 +299,10 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onChanged }: { cveId: string
   };
   return (
     <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }} data-testid="vulnerability-detail">
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', minWidth: 0 }}>
+        <SeverityCell severity={d.severity} score={d.cvss_score} />
+        {(d.exploited || sources.length > 0) && <ExploitedBadge row={d} />}
+      </Box>
       <Box>
         {d.summary && <Typography sx={{ fontSize: 13, color: 'kanap.text.primary', mb: 0.5 }}>{d.summary}</Typography>}
         {d.cvss_vector && (
@@ -766,15 +770,15 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.severity'),
       field: 'severity',
-      // The score, and the actively exploited badge when the row is listed.
-      width: 268,
+      // The score, and the actively exploited icon when the row is listed.
+      width: 200,
       filter: CheckboxSetFilter,
       floatingFilterComponent: CheckboxSetFloatingFilter,
       filterParams: { getValues: severityValues, searchable: false },
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0, maxWidth: '100%' }}>
           <SeverityCell severity={p.data.severity} score={p.data.cvss_score} />
-          {p.data.exploited ? <ExploitedBadge ransomware={p.data.kev_ransomware} /> : null}
+          {p.data.exploited ? <ExploitedBadge row={p.data} /> : null}
         </Box>
       ) : null),
     },
