@@ -28,6 +28,7 @@ import { backendPath } from '../../common/__tests__/backend-root';
 import { TENANT_RESETTING_CODE } from '../../common/tenancy/request-tenancy.middleware';
 import { StorageService } from '../../common/storage/storage.service';
 import { EmailService } from '../../email/email.service';
+import { Features } from '../../config/features';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from '../../http-app';
 import { DemoDataService, DemoDataState } from '../demo-data.service';
 
@@ -166,6 +167,9 @@ async function checkContactSuppliers(tenantId: string) {
 async function serve(): Promise<Served> {
   // Loaded after the environment above: the modules read it when they load.
   const { AppModule } = require('../../app.module');
+  // The demo data adopts catalog technologies: with the vulnerability feed on, each new CPE product
+  // would be read from the real NVD and stored in the shared cache that later specs read.
+  (Features as any).VULNERABILITY_FEED_ENABLED = false;
   const app: INestApplication = await NestFactory.create(AppModule, { logger: ['error', 'warn'] });
   applyHttpMiddleware(app);
   applyTenancyAndPipeline(app, app.get(DataSource));
