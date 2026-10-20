@@ -14,7 +14,9 @@ const post = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 
-const stableT = (key: string) => key;
+const stableT = (key: string, options?: { returnObjects?: boolean }) => (
+  options?.returnObjects ? { intro: `${key}.intro`, items: [`${key}.a`, `${key}.b`] } : key
+);
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -233,6 +235,18 @@ describe('TechnologiesPage', () => {
       expect(screen.queryByRole('button', { name: 'pages.technologies.importCsv' })).toBeNull();
       fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.exportCsv' }));
       expect(menuItems()).toEqual(['pages.technologies.linkFiles.asset', 'pages.technologies.linkFiles.application']);
+    });
+
+    it('shows the import rules as a short list', async () => {
+      auth.levels = { infrastructure: 'member' };
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.importCsv' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'pages.technologies.linkFiles.asset' }));
+      expect(await screen.findByText('pages.technologies.linkFiles.importHint.asset.intro')).toBeTruthy();
+      expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+        'pages.technologies.linkFiles.importHint.asset.a',
+        'pages.technologies.linkFiles.importHint.asset.b',
+      ]);
     });
 
     it('checks the applications file with dryRun, then loads it', async () => {

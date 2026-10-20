@@ -75,6 +75,7 @@ export default function CsvImportDialog({
   preflight = true,
   flexibleFormat = false,
   hint,
+  hintList,
 }: {
   // i18n handled below
   open: boolean;
@@ -93,6 +94,8 @@ export default function CsvImportDialog({
   flexibleFormat?: boolean;
   /** The values the file's columns accept, when the template's titles do not say it, under the description. */
   hint?: string;
+  /** The same note as a short list: one introduction, then one line per rule. */
+  hintList?: { intro: string; items: string[] };
 }) {
   const { t, i18n } = useTranslation(['common', 'ops']);
   const language = screenLanguage(i18n.resolvedLanguage || i18n.language);
@@ -241,6 +244,16 @@ export default function CsvImportDialog({
           {t(flexibleFormat ? 'csv.uploadDescriptionFlexible' : 'csv.uploadDescription')}
         </Typography>
         {hint && <Typography variant="body2" sx={{ mb: 2 }}>{hint}</Typography>}
+        {hintList && hintList.items.length > 0 && (
+          <Box sx={{ mb: 2 }}>
+            {hintList.intro ? <Typography variant="body2" sx={{ mb: 0.5 }}>{hintList.intro}</Typography> : null}
+            <Box component="ul" sx={{ m: 0, pl: 2.25 }}>
+              {hintList.items.map((item) => (
+                <Typography component="li" key={item} variant="body2">{item}</Typography>
+              ))}
+            </Box>
+          </Box>
+        )}
         <Button
           variant="text"
           size="small"

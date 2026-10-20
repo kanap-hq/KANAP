@@ -15,6 +15,7 @@ import {
 } from '@mui/material';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
 import { Link as RouterLink, useSearchParams } from 'react-router-dom';
 import { useTheme, type Theme } from '@mui/material/styles';
 import PageHeader from '../../components/PageHeader';
@@ -74,6 +75,20 @@ function syncResultColor(status: NetboxStatus['sync']['status'], mode: 'light' |
     case 'running': return getDotColor('info', mode);
     default: return getDotColor('default', mode);
   }
+}
+
+/**
+ * An API failure on this page. A 5xx without an application code is the server's
+ * own English ("Internal server error"): the caller's translated fallback is
+ * shown instead. A 4xx keeps the business sentence, as `getApiErrorMessage` does.
+ */
+function netboxErrorText(error: unknown, t: TFunction, fallback: string): string {
+  const data = (error as { response?: { status?: number; data?: { code?: unknown; error?: unknown } } } | null)?.response;
+  const raw = (value: unknown) => (typeof value === 'string' ? value.trim() : '');
+  // Nest names the HTTP reason in `error` ("Internal Server Error"). An application code has no space.
+  const coded = [raw(data?.data?.code), raw(data?.data?.error)].some((value) => value !== '' && !/\s/.test(value));
+  if ((data?.status ?? 0) >= 500 && !coded) return fallback;
+  return getApiErrorMessage(error, t, fallback);
 }
 
 /**
@@ -594,7 +609,7 @@ function PreviewDialog({ open, preview, applying, onClose, onApply, onPreviewRes
     },
     onError: (error: unknown, input) => {
       if (input.revision !== revisionRef.current) return;
-      setDecisionError(getApiErrorMessage(error, t, t('pages.netbox.messages.previewFailed')));
+      setDecisionError(netboxErrorText(error, t, t('pages.netbox.messages.previewFailed')));
       setSyncedRevision(revisionRef.current);
       const refused = lastBatchRef.current;
       lastBatchRef.current = [];
@@ -1000,11 +1015,11 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
       setSaved(true);
       await queryClient.invalidateQueries({ queryKey: ['netbox-mapping-options'] });
     },
-    onError: (error: unknown) => onError(getApiErrorMessage(error, t, t('pages.netbox.messages.mappingSaveFailed'))),
+    onError: (error: unknown) => onError(netboxErrorText(error, t, t('pages.netbox.messages.mappingSaveFailed'))),
   });
 
   if (optionsQuery.isError) {
-    return <Alert severity="error">{getApiErrorMessage(optionsQuery.error, t, t('pages.netbox.messages.mappingFailed'))}</Alert>;
+    return <Alert severity="error">{netboxErrorText(optionsQuery.error, t, t('pages.netbox.messages.mappingFailed'))}</Alert>;
   }
   if (!data) return null;
 
@@ -1404,7 +1419,7 @@ export default function NetboxSyncPage() {
     mutationFn: () => netboxApi.previewSync(),
     onMutate: () => { setPageError(null); setNotice(null); },
     onSuccess: (result) => { setPreview(result); setPreviewOpen(true); },
-    onError: (error: unknown) => setPageError(getApiErrorMessage(error, t, t('pages.netbox.messages.previewFailed'))),
+    onError: (error: unknown) => setPageError(netboxErrorText(error, t, t('pages.netbox.messages.previewFailed'))),
   });
 
   const applyMutation = useMutation({
@@ -1430,7 +1445,7 @@ export default function NetboxSyncPage() {
         await refreshAll();
         return;
       }
-      setPageError(getApiErrorMessage(error, t, t('pages.netbox.messages.syncFailed')));
+      setPageError(netboxErrorText(error, t, t('pages.netbox.messages.syncFailed')));
     },
   });
 
@@ -1439,7 +1454,7 @@ export default function NetboxSyncPage() {
       netboxApi.resolveRecord(row.id, action),
     onSuccess: refreshAll,
     onError: async (error: any) => {
-      setPageError(getApiErrorMessage(error, t, t('pages.netbox.messages.actionFailed')));
+      setPageError(netboxErrorText(error, t, t('pages.netbox.messages.actionFailed')));
       // Someone linked that asset in the meantime: what we display is already stale.
       if (error?.response?.data?.code === 'NETBOX_ASSET_ALREADY_LINKED') {
         await refreshAll();
@@ -1455,7 +1470,7 @@ export default function NetboxSyncPage() {
       setNotice(noticeText(updated?.message) || null);
       await refreshAll();
     },
-    onError: (error: unknown) => setPageError(getApiErrorMessage(error, t, t('pages.netbox.messages.actionFailed'))),
+    onError: (error: unknown) => setPageError(netboxErrorText(error, t, t('pages.netbox.messages.actionFailed'))),
   });
 
   const retireMutation = useMutation({
@@ -1463,7 +1478,7 @@ export default function NetboxSyncPage() {
     onSuccess: async () => { setRetireTarget(null); await refreshAll(); },
     onError: (error: unknown) => {
       setRetireTarget(null);
-      setPageError(getApiErrorMessage(error, t, t('pages.netbox.messages.actionFailed')));
+      setPageError(netboxErrorText(error, t, t('pages.netbox.messages.actionFailed')));
     },
   });
 
