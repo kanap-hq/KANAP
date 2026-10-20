@@ -91,6 +91,12 @@ function scopeParams(request: ListRequest | null): Record<string, unknown> {
   return rest;
 }
 
+/** The same list query for the rows kept out of the alerts. One row is enough to know they exist. */
+function excludedProbeOf(request: ListRequest): Record<string, unknown> {
+  const { alerts: _alerts, ...rest } = scopeParams(request);
+  return { ...rest, alerts: 'excluded', page: 1, limit: 1 };
+}
+
 /** A neutral link (a server, an application, a technology): underline and teal on hover only. */
 function RecordLink({ to, children, quiet = false }: { to: string; children: React.ReactNode; quiet?: boolean }) {
   return (
@@ -716,13 +722,16 @@ export default function VulnerabilitiesPage() {
     [alerts],
   );
 
-  // Nothing alerts, with no search and no column filter: are there rows outside the alerts? The
-  // empty line then says so and offers them, rather than telling to fill in CPE identifiers.
-  const nothingAlerts = alerts === 'included' && request?.total === 0 && !request.params?.filters && !request.params?.q;
+  // The rows in the alerts are none. The same query, for the rows kept out, says whether the empty
+  // line can offer them. The offer keeps every other filter.
+  const excludedProbe = useMemo(() => {
+    if (alerts !== 'included' || !request || request.total !== 0) return null;
+    return excludedProbeOf(request);
+  }, [alerts, request]);
   const excludedRows = useQuery({
-    queryKey: ['vulnerabilities', 'excluded-rows'],
-    queryFn: async () => Number((await api.get<{ total: number }>(ENDPOINT, { params: { alerts: 'excluded', page: 1, limit: 1 } })).data?.total ?? 0),
-    enabled: enabled && allowed && nothingAlerts,
+    queryKey: ['vulnerabilities', 'excluded-rows', excludedProbe],
+    queryFn: async () => Number((await api.get<{ total: number }>(ENDPOINT, { params: excludedProbe ?? {} })).data?.total ?? 0),
+    enabled: enabled && allowed && excludedProbe != null,
     retry: false,
   });
 
@@ -834,7 +843,7 @@ export default function VulnerabilitiesPage() {
           scopeKeyRef.current = key;
         }}
         emptyState={(
-          nothingAlerts && (excludedRows.data ?? 0) > 0 ? (
+          excludedProbe != null && (excludedRows.data ?? 0) > 0 ? (
             <Stack alignItems="center" spacing={0.5} data-testid="vulnerabilities-empty">
               <Typography sx={quietSx}>{t('pages.vulnerabilities.empty.noneInAlerts')}</Typography>
               <Button size="small" onClick={() => setAlerts('excluded')}>{t('pages.vulnerabilities.empty.showExcluded')}</Button>

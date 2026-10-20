@@ -275,20 +275,45 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.getByTestId('vulnerabilities-empty').textContent).toContain('CPE identifiers');
   });
 
-  it('says no row is in the alerts when only excluded ones exist, and offers them', async () => {
+  it('offers the excluded rows when the same filters reach some, and keeps those filters', async () => {
     getMock.mockImplementation(async (url: string, config?: any) => {
       if (url === '/vulnerabilities' && config?.params?.alerts === 'excluded') return { data: { items: [], total: 4 } } as any;
       throw new Error(`unexpected ${url}`);
     });
-    renderPage('/it/vulnerabilities?state=all', true);
-    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', alerts: 'included' }, total: 0 }));
-    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities', { params: { alerts: 'excluded', page: 1, limit: 1 } }));
+    // Arrival: "To review" is on, so the empty list is a filtered one. Excluded rows of that filter are offered.
+    renderPage('/it/vulnerabilities?technology=TEC-1', true);
+    act(() => grid.props!.onListRequestChange({
+      params: { page: 3, limit: 50, sort: 'severity:DESC', alerts: 'included', filters: FILTERS, q: 'tomcat' },
+      total: 0,
+    }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities', {
+      params: { sort: 'severity:DESC', filters: FILTERS, q: 'tomcat', alerts: 'excluded', page: 1, limit: 1 },
+    }));
     // The page builds the line again once the count is in: the line and its button.
     await waitFor(() => expect(Children.count((grid.props!.emptyState as ReactElement<{ children: ReactNode }>).props.children)).toBe(2));
     render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
     expect(screen.getByTestId('vulnerabilities-empty').textContent).toContain('No vulnerability is in the alerts.');
     fireEvent.click(screen.getByRole('button', { name: 'Show the excluded ones' }));
-    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?state=all&alerts=excluded'));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&alerts=excluded'));
+  });
+
+  it('keeps the filtered empty line when no excluded row matches the same filters', async () => {
+    getMock.mockImplementation(async (url: string, config?: any) => {
+      if (url === '/vulnerabilities' && config?.params?.alerts === 'excluded') return { data: { items: [], total: 0 } } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    renderPage();
+    act(() => grid.props!.onListRequestChange({
+      params: { page: 1, limit: 50, sort: 'severity:DESC', alerts: 'included', filters: FILTERS },
+      total: 0,
+    }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities', {
+      params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', page: 1, limit: 1 },
+    }));
+    await act(async () => undefined);
+    render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
+    expect(screen.getByTestId('vulnerabilities-empty').textContent).toBe('No vulnerability matches these filters.');
+    expect(screen.queryByRole('button', { name: 'Show the excluded ones' })).toBeNull();
   });
 
   it('keeps the first-use line when nothing exists outside the alerts either', async () => {
@@ -298,10 +323,13 @@ describe('VulnerabilitiesPage', () => {
     });
     renderPage('/it/vulnerabilities?state=all');
     act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', alerts: 'included' }, total: 0 }));
-    await waitFor(() => expect(getMock).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities', {
+      params: { sort: 'severity:DESC', alerts: 'excluded', page: 1, limit: 1 },
+    }));
     await act(async () => undefined);
     render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
     expect(screen.getByTestId('vulnerabilities-empty').textContent).toContain('CPE identifiers');
+    expect(screen.queryByRole('button', { name: 'Show the excluded ones' })).toBeNull();
   });
 
   it('counts the alerts filter as a filter, and resets it with the others', async () => {
