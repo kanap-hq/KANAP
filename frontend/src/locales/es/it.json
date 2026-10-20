@@ -460,6 +460,15 @@
         "included": "Incluidas",
         "excluded": "Excluidas",
         "all": "Todas"
+      },
+      "published": {
+        "label": "Publicada",
+        "all": "Todas",
+        "7d": "Menos de 7 días",
+        "30d": "Menos de 30 días",
+        "90d": "Menos de 90 días",
+        "1y": "Menos de un año",
+        "older1y": "Más de un año"
       }
     },
     "interfaces": {
