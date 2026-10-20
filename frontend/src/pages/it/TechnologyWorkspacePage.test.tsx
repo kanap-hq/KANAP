@@ -218,13 +218,21 @@ describe('TechnologyWorkspacePage', () => {
       label: '2012 SP4', standard_support_end: '2017-07-11', extended_support_end: '2022-07-12',
     }));
 
-    // A version that servers name asks first; the one nobody names goes at once.
+    // Every version asks first. Cancel leaves it; a used version names a different confirm action.
     del.mockResolvedValue({ data: {} });
     const removeButtons = screen.getAllByRole('button', { name: 'workspace.technology.versions.remove' });
     fireEvent.click(removeButtons[0]);
+    const unusedDialog = await screen.findByRole('dialog');
+    expect(within(unusedDialog).getByText('workspace.technology.versions.deleteUnused')).toBeTruthy();
+    fireEvent.click(within(unusedDialog).getByRole('button', { name: 'buttons.cancel' }));
+    expect(del).not.toHaveBeenCalled();
+    fireEvent.click(removeButtons[0]);
+    fireEvent.click(within(await screen.findByRole('dialog')).getByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(del).toHaveBeenCalledWith('/technologies/tech-1/versions/v2'));
     fireEvent.click(removeButtons[2]);
-    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const usedDialog = await screen.findByRole('dialog');
+    expect(within(usedDialog).getByText('workspace.technology.versions.deleteUsed')).toBeTruthy();
+    fireEvent.click(within(usedDialog).getByRole('button', { name: 'workspace.technology.deleteAnyway' }));
     await waitFor(() => expect(del).toHaveBeenCalledWith('/technologies/tech-1/versions/v1'));
   });
 

@@ -179,8 +179,25 @@
           "application": "Exporter les applications et technologies"
         },
         "importHint": {
-          "asset": "Chaque ligne ajoute ou met à jour un lien. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue. Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom. operating_system : « oui » marque le lien comme système d'exploitation du serveur, « non » ne le marque jamais. L'export écrit ces mots dans la langue du fichier ; l'import les lit en anglais, français, allemand ou espagnol. Une cellule vide marque un nouveau lien de la famille Système d'exploitation quand le serveur n'en a pas encore, comme sur la fiche du serveur. L'import ne retire jamais un marquage.",
-          "application": "Chaque ligne ajoute ou met à jour un lien déclaré. Les liens absents du fichier restent tels quels. La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue."
+          "asset": {
+            "intro": "Chaque ligne ajoute ou met à jour un lien.",
+            "items": [
+              "Les liens absents du fichier restent tels quels.",
+              "La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue.",
+              "Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom.",
+              "operating_system : « oui » marque le lien comme système d'exploitation du serveur, « non » ne le marque jamais.",
+              "L'export écrit ces mots dans la langue du fichier ; l'import les lit en anglais, français, allemand ou espagnol.",
+              "Une cellule vide marque un nouveau lien de la famille Système d'exploitation quand le serveur n'en a pas encore, comme sur la fiche du serveur.",
+              "L'import ne retire jamais un marquage."
+            ]
+          },
+          "application": {
+            "intro": "Chaque ligne ajoute ou met à jour un lien déclaré.",
+            "items": [
+              "Les liens absents du fichier restent tels quels.",
+              "La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue."
+            ]
+          }
         },
         "exportNoteApplication": "Le fichier contient les liens déclarés. Les liens déduits des serveurs n'y figurent pas."
       },
@@ -2003,8 +2020,13 @@
         "edit": "Modifier la version {{label}}",
         "remove": "Supprimer la version {{label}}",
         "deleteTitle": "Supprimer la version {{label}} ?",
-        "deleteMessage_one": "{{count}} serveur ou application nomme cette version : il affichera « version inconnue ».",
-        "deleteMessage_other": "{{count}} serveurs ou applications nomment cette version : ils afficheront « version inconnue ».",
+        "deletePlain": "La version {{label}} sera supprimée. Cette action est définitive.",
+        "deleteUnused": "La version {{label}} n'est utilisée par aucun serveur ni aucune application. Cette action est définitive.",
+        "deleteUsed": "La version {{label}} est utilisée par {{servers}} et {{applications}}. Ils afficheront « version inconnue ».",
+        "servers_one": "{{count}} serveur",
+        "servers_other": "{{count}} serveurs",
+        "applications_one": "{{count}} application",
+        "applications_other": "{{count}} applications",
         "status": {
           "supported": "Supportée",
           "ending_soon": "Fin proche",
