@@ -384,6 +384,23 @@ describe('CurrencySettingsPage', () => {
     expect(mocked.put).not.toHaveBeenCalled();
   });
 
+  it('waits for the refresh a removal queued, then reads the rates again', async () => {
+    const user = userEvent.setup();
+    matrix = { currencies: ['CHF', 'EUR', 'USD'], rates: [RATES_2025] };
+    mocked.delete.mockResolvedValue({ data: { ok: true, refreshQueued: true, frozenVersions: 0 } });
+    mocked.post.mockResolvedValue({ data: { ok: true, completed: true, failed: false, years: [2025], fetched: 1, stillMissing: [] } });
+    renderPage();
+
+    const cell = await screen.findByRole('button', { name: 'Edit the rate for EUR in 2025' });
+    cell.focus();
+    await user.keyboard('{Enter}');
+    const dialog = await screen.findByRole('dialog');
+    const readsBefore = mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length;
+    await user.click(within(dialog).getByRole('button', { name: 'Remove manual rate' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/currency/rates/refresh', { years: [2025] }));
+    await waitFor(() => expect(mocked.get.mock.calls.filter(([url]) => url === '/currency/rates').length).toBeGreaterThan(readsBefore));
+  });
+
   it('builds matrix rows from currencies, in that order, and trims trailing zeros', async () => {
     matrix = {
       currencies: ['CHF', 'USD', 'EUR'],

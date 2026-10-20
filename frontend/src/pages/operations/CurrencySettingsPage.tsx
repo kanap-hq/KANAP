@@ -463,9 +463,12 @@ export default function CurrencySettingsPage() {
           onApplied={(result) => {
             if (result.removed) {
               setSuccessMessage(t(`${C}.manualRateRemoved`));
-              // The automatic rate comes back from a background fetch: look again once it has had time.
+              // The automatic rate comes back from the fetch the removal queued: wait for it (the
+              // refresh answers within 20 s), then read the rates again, so the cell never stays empty.
               if (result.refreshQueued) {
-                window.setTimeout(() => invalidateCurrencyRateQueries(queryClient), 5000);
+                void refreshCurrencyRates({ years: [result.year] })
+                  .catch(() => undefined)
+                  .finally(() => invalidateCurrencyRateQueries(queryClient));
               }
             }
             const frozenVersions = Number(result.frozenVersions);
