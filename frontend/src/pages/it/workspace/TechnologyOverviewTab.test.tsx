@@ -8,7 +8,9 @@ import { KanapDialogProvider } from '../../../components/design';
 import { createAppTheme } from '../../../config/ThemeContext';
 import TechnologyOverviewTab, { type TechnologyDetail } from './TechnologyOverviewTab';
 
-vi.mock('../../../api', () => ({ default: { get: vi.fn(async () => ({ data: { items: [] } })), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../api', () => ({
+  default: { get: vi.fn(async () => ({ data: { items: [] } })), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
+}));
 
 const VERSION = { cpe_version: null, build_prefixes: [], extended_support_end: null, notes: null };
 const TECHNOLOGY = {
@@ -21,16 +23,25 @@ const TECHNOLOGY = {
   ],
 } as TechnologyDetail;
 
-function renderTab(technology: TechnologyDetail = TECHNOLOGY) {
+function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true) {
+  const onVersionsChanged = vi.fn(async () => undefined);
+  const onError = vi.fn();
   render(
     <QueryClientProvider client={new QueryClient()}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
-          <TechnologyOverviewTab technology={technology} canManage onPatch={vi.fn()} onVersionsChanged={vi.fn(async () => undefined)} onError={vi.fn()} />
+          <TechnologyOverviewTab
+            technology={technology}
+            canManage={canManage}
+            onPatch={vi.fn()}
+            onVersionsChanged={onVersionsChanged}
+            onError={onError}
+          />
         </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
+  return { onVersionsChanged, onError };
 }
 
 describe('TechnologyOverviewTab', () => {
@@ -109,5 +120,111 @@ describe('TechnologyOverviewTab', () => {
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('Version 16.99-c2check will be deleted. This cannot be undone.')).toBeInTheDocument();
     expect(within(dialog).queryByText(/server/)).not.toBeInTheDocument();
+  });
+
+  it('turns technology alerts on without asking when no version has its own setting', async () => {
+    vi.mocked(api.put).mockReset();
+    vi.mocked(api.put)
+      .mockResolvedValueOnce({ data: { versions_reset: 0 } })
+      .mockResolvedValueOnce({ data: { enabled: true, versions_reset: 0 } });
+    const { onVersionsChanged } = renderTab();
+    const header = screen.getByRole('switch', { name: 'Vulnerability alerts' });
+    expect(header).not.toBeChecked();
+    fireEvent.mouseOver(header.parentElement!);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.',
+    );
+    fireEvent.click(header);
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(2));
+    expect(api.put).toHaveBeenNthCalledWith(
+      1,
+      '/technologies/tech-1/vulnerability-alerts',
+      { enabled: true },
+      { params: { dry_run: true } },
+    );
+    expect(api.put).toHaveBeenNthCalledWith(2, '/technologies/tech-1/vulnerability-alerts', { enabled: true });
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    expect(onVersionsChanged).toHaveBeenCalledTimes(1);
+    const cell = header.closest('th');
+    expect(cell).not.toBeNull();
+    expect(getComputedStyle(cell!).maxWidth).toBe('56px');
+  });
+
+  it('asks before replacing version settings and writes only after confirmation', async () => {
+    vi.mocked(api.put).mockReset();
+    vi.mocked(api.put).mockResolvedValue({ data: { versions_reset: 2, enabled: false } });
+    const { onVersionsChanged } = renderTab({ ...TECHNOLOGY, vulnerability_alerts: true });
+    const header = screen.getByRole('switch', { name: 'Vulnerability alerts' });
+    expect(header).toBeChecked();
+    fireEvent.click(header);
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByRole('heading', { name: 'Vulnerability alerts' })).toBeInTheDocument();
+    expect(within(dialog).getByText('2 versions have their own setting. It will be replaced.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(api.put).toHaveBeenCalledTimes(1);
+    expect(api.put).toHaveBeenCalledWith(
+      '/technologies/tech-1/vulnerability-alerts',
+      { enabled: false },
+      { params: { dry_run: true } },
+    );
+    expect(onVersionsChanged).not.toHaveBeenCalled();
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    const again = await screen.findByRole('dialog');
+    fireEvent.click(within(again).getByRole('button', { name: 'Replace' }));
+    await waitFor(() => expect(api.put).toHaveBeenCalledTimes(3));
+    expect(api.put).toHaveBeenNthCalledWith(2, '/technologies/tech-1/vulnerability-alerts', { enabled: false }, { params: { dry_run: true } });
+    expect(api.put).toHaveBeenNthCalledWith(3, '/technologies/tech-1/vulnerability-alerts', { enabled: false });
+    expect(onVersionsChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('clears a version exception when the switch matches the technology and stores the other value', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({ data: {} });
+    const technology = {
+      ...TECHNOLOGY,
+      vulnerability_alerts: true,
+      versions: [
+        { ...VERSION, id: 'v-follow', label: '16', standard_support_end: null, catalog_key: null, vulnerability_alerts: null, vulnerability_alerts_effective: true },
+        { ...VERSION, id: 'v-own', label: '15', standard_support_end: null, catalog_key: null, vulnerability_alerts: false, vulnerability_alerts_effective: false },
+      ],
+    } as TechnologyDetail;
+    const { onVersionsChanged } = renderTab(technology);
+    expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(1);
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/technologies/tech-1/versions/v-follow',
+      { vulnerability_alerts: false },
+    ));
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 15' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/technologies/tech-1/versions/v-own',
+      { vulnerability_alerts: null },
+    ));
+    expect(onVersionsChanged).toHaveBeenCalledTimes(2);
+  });
+
+  it('keeps the alert switches disabled for a reader and still marks an own setting', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      vulnerability_alerts: true,
+      versions: [{
+        ...VERSION, id: 'v-own', label: '15', standard_support_end: null, catalog_key: null,
+        vulnerability_alerts: false, vulnerability_alerts_effective: false,
+      }],
+    }, false);
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeDisabled();
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 15' })).toBeDisabled();
+    expect(screen.getByRole('img', { name: 'Own setting for this version' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'Delete version 15' })).not.toBeInTheDocument();
+  });
+
+  it('keeps the technology alert switch when there is no version', () => {
+    renderTab({ ...TECHNOLOGY, versions: [], vulnerability_alerts: false });
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeInTheDocument();
+    expect(screen.getByText('No version yet.')).toBeInTheDocument();
   });
 });

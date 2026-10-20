@@ -10,6 +10,7 @@ import {
   MenuItem,
   Select,
   Stack,
+  Switch,
   Table,
   TableBody,
   TableCell,
@@ -26,7 +27,7 @@ import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
 import DeleteConfirmDialog from '../../../components/DeleteConfirmDialog';
-import { PropertyGroup, PropertyRow, StatusDot } from '../../../components/design';
+import { PropertyGroup, PropertyRow, StatusDot, useKanapDialogs } from '../../../components/design';
 import DateEUField from '../../../components/fields/DateEUField';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
@@ -48,6 +49,10 @@ export type TechnologyVersion = {
   notes: string | null;
   /** Set when the version comes from the catalog (adoption or the living catalog's sync). */
   catalog_key?: string | null;
+  /** Own setting: `true`, `false`, or `null` when the version follows the technology. */
+  vulnerability_alerts?: boolean | null;
+  /** The version's exception, or the technology's setting. */
+  vulnerability_alerts_effective?: boolean;
   servers?: number;
   applications?: number;
 };
@@ -73,6 +78,8 @@ export type TechnologyDetail = {
   replaced_by_id: string | null;
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
+  /** Whether the technology raises vulnerability alerts. Versions without their own setting follow it. */
+  vulnerability_alerts?: boolean;
   owners: TechnologyOwner[];
   cyber_criticality?: string | null;
   recovery_wave?: string | null;
@@ -401,6 +408,59 @@ function statusLabel(status: SupportState, t: TFunction) {
   return t(`workspace.technology.versions.status.${status}`);
 }
 
+/** The versions table, so a link from Compliance can bring it into view. */
+export const TECHNOLOGY_VERSIONS_ANCHOR = 'technology-versions';
+
+/** A narrow column: the switch is 40px, plus the own-setting dot. */
+const ALERTS_COLUMN_SX = { width: 56, maxWidth: 56, px: 0, boxSizing: 'border-box' } as const;
+
+function AlertSwitch({ checked, disabled, label, tooltip, onChange }: {
+  checked: boolean;
+  disabled?: boolean;
+  label: string;
+  tooltip?: string;
+  onChange?: (next: boolean) => void;
+}) {
+  const control = (
+    <Switch
+      size="small"
+      checked={checked}
+      disabled={disabled}
+      onChange={(_, next) => onChange?.(next)}
+      inputProps={{ 'aria-label': label, role: 'switch' }}
+      sx={{ m: 0 }}
+    />
+  );
+  if (!tooltip) return control;
+  // A disabled switch does not receive hover: the span keeps the tooltip.
+  return <Tooltip title={tooltip}><span>{control}</span></Tooltip>;
+}
+
+/** A version whose setting is its own (`vulnerability_alerts` is true or false). */
+function OwnSettingMark() {
+  const { t } = useTranslation('it');
+  const label = t('workspace.technology.versions.alertsOwn');
+  return (
+    <Tooltip title={label}>
+      <Box
+        component="span"
+        role="img"
+        tabIndex={0}
+        aria-label={label}
+        data-own-setting=""
+        sx={(theme) => ({
+          display: 'inline-block',
+          width: 6,
+          height: 6,
+          borderRadius: '50%',
+          bgcolor: theme.palette.kanap.text.tertiary,
+          flex: '0 0 auto',
+        })}
+      />
+    </Tooltip>
+  );
+}
+
 /** The confirmation for one version. Counts are named only when the detail already brought them. */
 function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning: string; dependants: boolean } {
   const { servers, applications, label } = version;
@@ -429,11 +489,15 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
   const locale = useLocale();
+  const dialogs = useKanapDialogs();
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
   const [saving, setSaving] = React.useState(false);
   const [pending, setPending] = React.useState<TechnologyVersion | null>(null);
   const [removing, setRemoving] = React.useState(false);
+  const [alertsBusy, setAlertsBusy] = React.useState(false);
+  const alertsBusyRef = React.useRef(false);
+  const technologyAlerts = technology.vulnerability_alerts === true;
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -480,6 +544,58 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
 
   const pendingCopy = pending ? versionDeleteCopy(pending, t) : null;
 
+  /** Towards the technology's value the exception disappears (`null`); the other value is stored. */
+  const setVersionAlerts = async (version: TechnologyVersion, next: boolean) => {
+    if (alertsBusyRef.current) return;
+    alertsBusyRef.current = true;
+    setAlertsBusy(true);
+    const value = next === technologyAlerts ? null : next;
+    try {
+      await api.patch(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      await onChanged();
+    } catch (err) {
+      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+    } finally {
+      alertsBusyRef.current = false;
+      setAlertsBusy(false);
+    }
+  };
+
+  /**
+   * The technology's setting replaces every version exception. A dry run counts them first:
+   * with any, the change waits for a confirmation.
+   */
+  const setTechnologyAlerts = async (enabled: boolean) => {
+    if (alertsBusyRef.current) return;
+    alertsBusyRef.current = true;
+    setAlertsBusy(true);
+    const url = `/technologies/${technology.id}/vulnerability-alerts`;
+    try {
+      const preview = await api.put<{ versions_reset: number }>(url, { enabled }, { params: { dry_run: true } });
+      const versionsReset = Number(preview.data?.versions_reset ?? 0);
+      if (versionsReset > 0) {
+        const accepted = await dialogs.confirm({
+          title: t('workspace.technology.versions.alertsConfirmTitle'),
+          message: t('workspace.technology.versions.alertsReset', { count: versionsReset }),
+          confirmLabel: t('workspace.technology.versions.alertsReplace'),
+        });
+        if (!accepted) return;
+      }
+      await api.put(url, { enabled });
+      await onChanged();
+    } catch (err) {
+      onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
+    } finally {
+      alertsBusyRef.current = false;
+      setAlertsBusy(false);
+    }
+  };
+
+  React.useEffect(() => {
+    if (window.location.hash !== `#${TECHNOLOGY_VERSIONS_ANCHOR}`) return;
+    document.getElementById(TECHNOLOGY_VERSIONS_ANCHOR)?.scrollIntoView({ block: 'start' });
+  }, []);
+
   const editRow = (key: string) => (
     <TableRow key={key}>
       <TableCell>
@@ -500,7 +616,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
       <TableCell>
         <DateEUField label="" hideLabel size="small" valueYmd={draft.extended_support_end} onChangeYmd={(value) => setDraft((prev) => ({ ...prev, extended_support_end: value }))} />
       </TableCell>
-      <TableCell colSpan={2} align="right">
+      <TableCell colSpan={3} align="right">
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
           <Button variant="action" size="small" onClick={() => setEditing(null)}>{t('common:buttons.cancel')}</Button>
           <Button variant="action-primary" size="small" disabled={!draft.label.trim() || saving} onClick={() => { void save(); }}>
@@ -511,8 +627,20 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
     </TableRow>
   );
 
+  const alertsHeader = (
+    <TableCell sx={ALERTS_COLUMN_SX} align="center">
+      <AlertSwitch
+        checked={technologyAlerts}
+        disabled={!canManage || alertsBusy}
+        label={t('workspace.technology.versions.alertsLabel')}
+        tooltip={t('workspace.technology.versions.alertsHint')}
+        onChange={(next) => { void setTechnologyAlerts(next); }}
+      />
+    </TableCell>
+  );
+
   return (
-    <Box>
+    <Box id={TECHNOLOGY_VERSIONS_ANCHOR}>
       <SectionLabel
         action={canManage && editing !== 'new' ? (
           <Button variant="action" size="small" onClick={() => startEdit(null)}>{t('workspace.technology.versions.add')}</Button>
@@ -537,13 +665,14 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.standardEnd')}</TableCell>
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.extendedEnd')}</TableCell>
             <TableCell sx={{ width: 150 }}>{t('workspace.technology.versions.statusHeader')}</TableCell>
+            {alertsHeader}
             {canManage && <TableCell sx={{ width: 64 }} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {technology.versions.length === 0 && editing !== 'new' && (
             <TableRow>
-              <TableCell colSpan={canManage ? 5 : 4} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
+              <TableCell colSpan={canManage ? 6 : 5} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
                 {t('workspace.technology.versions.empty')}
               </TableCell>
             </TableRow>
@@ -569,6 +698,17 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
                     <StatusDot color={supportStateColor(status, theme)} />
                     {statusLabel(status, t)}
+                  </Box>
+                </TableCell>
+                <TableCell sx={ALERTS_COLUMN_SX} align="center">
+                  <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                    <AlertSwitch
+                      checked={version.vulnerability_alerts_effective ?? technologyAlerts}
+                      disabled={!canManage || alertsBusy}
+                      label={t('workspace.technology.versions.alertsFor', { label: version.label })}
+                      onChange={(next) => { void setVersionAlerts(version, next); }}
+                    />
+                    {version.vulnerability_alerts != null && <OwnSettingMark />}
                   </Box>
                 </TableCell>
                 {canManage && (
