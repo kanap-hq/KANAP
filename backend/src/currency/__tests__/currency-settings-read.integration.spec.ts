@@ -5,14 +5,15 @@ import { randomUUID } from 'node:crypto';
 import dataSource from '../../data-source';
 import { Tenant } from '../../tenants/tenant.entity';
 import { CurrencySettingsService } from '../currency-settings.service';
+import { ISO_CURRENCIES } from '../iso-currencies';
 
 // GET /currency/settings is read on every OPEX and CAPEX form (lot 1C): a read
 // writes nothing (plan 1B, "sortir l'INSERT INTO currencies du chemin de
 // lecture"). The currency rows are ensured where the settings are saved.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file in its serial database lane.
 
-/** ISO codes no tenant uses (testing, precious metals, units of account). */
-const CANDIDATES = ['XTS', 'XXX', 'XAU', 'XAG', 'XPT', 'XPD', 'XDR', 'XBA', 'XBB', 'XBC', 'XBD', 'XSU', 'XUA'];
+/** Codes of the ISO list, in reverse order: the rarely used ones come first. */
+const CANDIDATES = Object.keys(ISO_CURRENCIES).reverse();
 
 async function main() {
   await dataSource.initialize();
@@ -45,6 +46,17 @@ async function main() {
     await service.updateSettings(tenantId, { allowedCurrencies: [allowed] }, null, { manager: runner.manager });
     assert.equal(await countOf([reporting, allowed]), 2, 'saving the settings ensures their currencies');
     console.log('ok - saving the settings ensures the currency rows');
+
+    // Stored before the ISO check (an installation that allowed XTS): read back without it,
+    // so the page never sends it again and the next save is not refused.
+    await runner.query(
+      `UPDATE tenants SET metadata = metadata || $2::jsonb WHERE id = $1`,
+      [tenantId, JSON.stringify({ allowed_currencies: [allowed, 'XTS'], default_spend_currency: 'XTS' })],
+    );
+    const legacy = await service.getSettings(tenantId, { manager: runner.manager });
+    assert.deepEqual(legacy.allowedCurrencies, [allowed]);
+    assert.equal(legacy.defaultSpendCurrency, reporting);
+    console.log('ok - stored codes outside the ISO list are left out on read');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
