@@ -1,6 +1,6 @@
 import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { FxRateService } from '../../currency/fx-rate.service';
-import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem } from '../../spend/allocation-distribution';
+import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
@@ -1196,7 +1196,8 @@ export class AiAggregateExecutor {
       manager: context.manager,
       tenantId: context.tenantId,
       fiscalYear: year,
-      rateSetId: null,
+      // The rates of the companies list total: the set the year is frozen at, else the live rates.
+      rateSetId: await yearRateSetId(context.manager, context.tenantId, year),
       entries: rows.map((row) => ({
         companyId: String(row.company_id),
         currency: row.base_currency,
