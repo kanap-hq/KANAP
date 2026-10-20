@@ -10,7 +10,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { formatShortDate } from '../../lib/dateFormat';
 import VulnerabilitiesPage, { filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
-import { formatEpssCell, formatEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
+import { formatEpssCell, formatEpssPercent, formatEpssPercentInput, parseEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() } }));
 const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'none' }));
@@ -749,15 +749,29 @@ describe('VulnerabilitiesPage', () => {
     const epss = column('epss');
     expect(epss.defaultHidden).toBeFalsy();
     expect(epss.sortable).not.toBe(false);
+    expect(epss.headerName).toBe('EPSS (%)');
     expect(epss.filter).toBe('agNumberColumnFilter');
-    expect(epss.filterParams).toEqual({
+    expect(epss.filterParams).toMatchObject({
       suppressAndOrCondition: true,
       maxNumConditions: 1,
       buttons: ['clear'],
       filterOptions: ['greaterThanOrEqual'],
       defaultOption: 'greaterThanOrEqual',
+      allowedCharPattern: '\\d\\,\\.',
     });
-    expect(epss.headerTooltip).toBe('Minimum probability, from 0 to 1');
+    // Typed as a percentage, stored as the probability the API compares.
+    expect(epss.filterParams.numberParser('90')).toBe(0.9);
+    expect(epss.filterParams.numberParser('90,5')).toBe(0.905);
+    expect(epss.filterParams.numberParser('14.2')).toBeCloseTo(0.142);
+    expect(epss.filterParams.numberParser('0,5')).toBe(0.005);
+    expect(epss.filterParams.numberParser('')).toBeNull();
+    expect(epss.filterParams.numberParser('150')).toBe(1);
+    expect(epss.filterParams.numberFormatter(0.9)).toBe('90');
+    expect(epss.filterParams.numberFormatter(0.142)).toBe('14.2');
+    expect(parseEpssPercent('90')).toBe(0.9);
+    expect(formatEpssPercentInput(0.905, 'fr')).toBe('90,5');
+    expect(formatEpssPercentInput(0.142, 'de')).toBe('14,2');
+    expect(epss.headerTooltip).toBe('Minimum probability, from 0 to 100');
     // The grid omits the percentile even when the row has one. The drawer keeps it (formatEpssCell).
     expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: 0.92 } })).toBe('15.3%');
     expect(epss.valueFormatter({ value: 0.142, data: { epss: 0.142, epss_percentile: 0.5 } })).toBe('14.2%');

@@ -401,7 +401,7 @@
         "exploited": "Ausgenutzt",
         "exploitedYes": "Ja",
         "exploitedNo": "Nein",
-        "epss": "EPSS",
+        "epss": "EPSS (%)",
         "editor": "Hersteller",
         "note": "Notiz"
       },
@@ -497,7 +497,7 @@
         "percentile_two": "{{rank}}. Perzentil",
         "percentile_few": "{{rank}}. Perzentil",
         "percentile_other": "{{rank}}. Perzentil",
-        "minimumHint": "Mindestwahrscheinlichkeit, von 0 bis 1"
+        "minimumHint": "Mindestwahrscheinlichkeit, von 0 bis 100"
       },
       "shortcut": {
         "exploitedOnly": "Nur ausgenutzte"

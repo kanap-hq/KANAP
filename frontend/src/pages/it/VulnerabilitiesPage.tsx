@@ -36,6 +36,8 @@ import {
   exploitationSources,
   formatEpssCell,
   formatEpssPercent,
+  formatEpssPercentInput,
+  parseEpssPercent,
   hasExploitationData,
   versionText,
   type VulnerabilityDetail,
@@ -97,8 +99,9 @@ export function exploitedOnlyFromSearch(search: string): boolean {
 }
 
 /**
- * EPSS filter: a minimum probability from 0 to 1, the value the API compares with the stored ratio.
- * A column's filterParams replace the grid's number operators, so the whole set is named here.
+ * EPSS filter: the user types a percentage (`90` is 90%). The model keeps the probability from 0 to 1,
+ * which is what the API compares with the stored ratio. A column's filterParams replace the grid's
+ * number operators, so the whole set is named here. The text field accepts a comma or a dot.
  */
 const EPSS_FILTER_PARAMS = {
   suppressAndOrCondition: true,
@@ -106,6 +109,8 @@ const EPSS_FILTER_PARAMS = {
   buttons: ['clear'],
   filterOptions: ['greaterThanOrEqual'],
   defaultOption: 'greaterThanOrEqual',
+  allowedCharPattern: '\\d\\,\\.',
+  numberParser: (text: string | null) => parseEpssPercent(text),
 };
 
 /** A relative publication window. Absent or unknown reads as every date. Distinct from `period` (the emails' link). */
@@ -954,7 +959,10 @@ export default function VulnerabilitiesPage() {
       type: 'rightAligned',
       headerTooltip: t('pages.vulnerabilities.epss.minimumHint'),
       filter: 'agNumberColumnFilter',
-      filterParams: EPSS_FILTER_PARAMS,
+      filterParams: {
+        ...EPSS_FILTER_PARAMS,
+        numberFormatter: (value: number | null) => formatEpssPercentInput(value, locale),
+      },
       valueFormatter: (p: { value?: number | null; data?: VulnerabilityRow }) => {
         const value = p.data?.epss ?? p.value;
         return value == null || !Number.isFinite(Number(value)) ? '' : formatEpssPercent(Number(value), locale);
