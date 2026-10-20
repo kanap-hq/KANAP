@@ -318,6 +318,28 @@ function testOperatingSystemCpe() {
   assert.equal(versionPrecisionOf('postgresql'), null);
 }
 
+/**
+ * Services checked again at the NVD (lot V5, 2026-10-20). Azure Kubernetes Service and
+ * Microsoft Entra ID carry identifiers. Entra ID also keeps its former Azure Active Directory
+ * name and the provisioning service. The others still have none. An AKS label is a kubernetes
+ * minor: it needs no `cpe_version`.
+ */
+function testServiceCpe() {
+  const byKey = new Map(shipped.map((p) => [p.key, p]));
+  const ids = (key: string) => byKey.get(key)!.cpe_products;
+  assert.deepEqual(ids('azure-kubernetes-service'), ['a:microsoft:azure_kubernetes_service']);
+  assert.deepEqual(ids('entra-id'), [
+    'a:microsoft:azure_active_directory',
+    'a:microsoft:entra_id',
+    'a:microsoft:entra_provisioning_service',
+  ]);
+  assert.equal(byKey.get('entra-id')!.versions.length, 0);
+  assert.equal(byKey.get('azure-kubernetes-service')!.versions.find((v) => v.label === '1.32')!.cpe_version, null);
+  for (const key of ['amazon-eks', 'google-kubernetes-engine', 'active-directory', 'nutanix-prism', 'nutanix-files', 'veeam-backup-for-microsoft-365']) {
+    assert.deepEqual(ids(key), [], key);
+  }
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
   testVersionsOfReleases();
@@ -330,6 +352,7 @@ function main() {
   testOperatingSystemSupportDates();
   testOperatingSystemReleases();
   testOperatingSystemCpe();
+  testServiceCpe();
   console.log('catalog-releases.spec: ok');
 }
 
