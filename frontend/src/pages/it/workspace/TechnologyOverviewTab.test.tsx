@@ -26,8 +26,10 @@ const TECHNOLOGY = {
 function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true) {
   const onVersionsChanged = vi.fn(async () => undefined);
   const onError = vi.fn();
+  const client = new QueryClient();
+  const invalidate = vi.spyOn(client, 'invalidateQueries');
   render(
-    <QueryClientProvider client={new QueryClient()}>
+    <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <TechnologyOverviewTab
@@ -41,8 +43,16 @@ function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true) 
       </ThemeProvider>
     </QueryClientProvider>,
   );
-  return { onVersionsChanged, onError };
+  return { onVersionsChanged, onError, invalidate };
 }
+
+const ALERT_VERSIONS = {
+  ...TECHNOLOGY,
+  vulnerability_alerts: true,
+  versions: [
+    { ...VERSION, id: 'v-follow', label: '16', standard_support_end: null, catalog_key: null, vulnerability_alerts: null, vulnerability_alerts_effective: true },
+  ],
+} as TechnologyDetail;
 
 describe('TechnologyOverviewTab', () => {
   it('says the versions follow the catalog and marks the versions that come from it', () => {
@@ -226,5 +236,23 @@ describe('TechnologyOverviewTab', () => {
     renderTab({ ...TECHNOLOGY, versions: [], vulnerability_alerts: false });
     expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeInTheDocument();
     expect(screen.getByText('No version yet.')).toBeInTheDocument();
+  });
+
+  it('marks the vulnerability queries stale after each alert write', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({ data: {} });
+    vi.mocked(api.put).mockReset();
+    vi.mocked(api.put).mockResolvedValue({ data: { versions_reset: 0, enabled: false } });
+    const { invalidate, onVersionsChanged } = renderTab(ALERT_VERSIONS);
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' }));
+    await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(1));
+    expect(invalidate).toHaveBeenCalledTimes(1);
+    expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vulnerabilities'] });
+
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(2));
+    expect(invalidate).toHaveBeenCalledTimes(2);
+    expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vulnerabilities'] });
   });
 });

@@ -23,6 +23,7 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
@@ -490,6 +491,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const theme = useTheme();
   const locale = useLocale();
   const dialogs = useKanapDialogs();
+  const queryClient = useQueryClient();
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
   const [saving, setSaving] = React.useState(false);
@@ -544,6 +546,16 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
 
   const pendingCopy = pending ? versionDeleteCopy(pending, t) : null;
 
+  /**
+   * After an alert setting is written: the technology is read again, and every vulnerability query
+   * (this technology's section, the page's detail and counts) is marked stale, so each shows the
+   * new state the next time it is on screen.
+   */
+  const alertsWritten = async () => {
+    void queryClient.invalidateQueries({ queryKey: ['vulnerabilities'] });
+    await onChanged();
+  };
+
   /** Towards the technology's value the exception disappears (`null`); the other value is stored. */
   const setVersionAlerts = async (version: TechnologyVersion, next: boolean) => {
     if (alertsBusyRef.current) return;
@@ -552,7 +564,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
     const value = next === technologyAlerts ? null : next;
     try {
       await api.patch(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
-      await onChanged();
+      await alertsWritten();
     } catch (err) {
       onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
     } finally {
@@ -582,7 +594,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
         if (!accepted) return;
       }
       await api.put(url, { enabled });
-      await onChanged();
+      await alertsWritten();
     } catch (err) {
       onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
     } finally {
