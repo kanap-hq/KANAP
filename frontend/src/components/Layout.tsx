@@ -489,7 +489,7 @@ export default function Layout() {
               <IconButton
                 size="small"
                 sx={{ color: 'text.secondary' }}
-                onClick={() => window.open(getDocUrl(location.pathname, locale), '_blank', 'noopener,noreferrer')}
+                onClick={() => window.open(getDocUrl(location.pathname, locale, location.search), '_blank', 'noopener,noreferrer')}
                 title={t('nav:topBar.help')}
                 aria-label={t('nav:topBar.openDocs')}
               >

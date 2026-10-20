@@ -57,7 +57,9 @@ const routeToDocSlug: [RegExp, string][] = [
   [/^\/it\/incidents/, 'incidents'],
   [/^\/it\/technologies\/[^/]+/, 'technologies'],
   [/^\/it\/technologies/, 'technologies'],
+  // IT settings is chosen below: the Netbox tab opens the Netbox manual, the lists tab this one.
   [/^\/it\/settings/, 'it-ops-settings'],
+  [/^\/it\/netbox/, 'netbox'],
 
   // Budget Management
   [/^\/ops\/budget(?:\/|$)/, 'budget-lines'],
@@ -130,17 +132,29 @@ function getLocalePrefix(locale?: string): string {
 }
 
 /**
+ * Slug for a route. IT settings uses the query: `tab=netbox` opens the Netbox manual,
+ * any other tab (including the lists) opens the IT settings manual.
+ */
+export function getDocSlug(pathname: string, search?: string): string | null {
+  if (/^\/it\/settings(?:\/|$)/.test(pathname) && new URLSearchParams(search ?? '').get('tab') === 'netbox') {
+    return 'netbox';
+  }
+  for (const [pattern, slug] of routeToDocSlug) {
+    if (pattern.test(pathname)) return slug;
+  }
+  return null;
+}
+
+/**
  * Get the documentation URL for a given route path.
  * Returns the specific page URL if a mapping exists, otherwise returns the docs home.
  * When a supported locale is provided, URLs are prefixed with the locale path.
+ * `search` is the page query (`location.search`), used when one route has several manuals.
  */
-export function getDocUrl(pathname: string, locale?: string): string {
+export function getDocUrl(pathname: string, locale?: string, search?: string): string {
   const prefix = getLocalePrefix(locale);
-  for (const [pattern, slug] of routeToDocSlug) {
-    if (pattern.test(pathname)) {
-      return `${DOC_BASE_URL}${prefix}/${slug}/`;
-    }
-  }
+  const slug = getDocSlug(pathname, search);
+  if (slug) return `${DOC_BASE_URL}${prefix}/${slug}/`;
   return `${DOC_BASE_URL}${prefix}/`;
 }
 
@@ -152,15 +166,4 @@ export function getDocPageUrl(slug: string, locale?: string): string {
   return `${DOC_BASE_URL}${getLocalePrefix(locale)}/${slug}/`;
 }
 
-/**
- * Get just the doc slug (without base URL) for a given route path.
- * Returns null if no specific mapping exists.
- */
-export function getDocSlug(pathname: string): string | null {
-  for (const [pattern, slug] of routeToDocSlug) {
-    if (pattern.test(pathname)) {
-      return slug;
-    }
-  }
-  return null;
-}
+

@@ -617,4 +617,21 @@ describe('Layout IT menu', () => {
     expect(screen.queryByRole('link', { name: 'nav:sidebar.it.settings' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'nav:sidebar.it.assets' })).toBeInTheDocument();
   });
+
+  it('opens the manual of the tab on screen', () => {
+    const open = vi.spyOn(window, 'open').mockImplementation(() => null);
+    try {
+      const { unmount } = renderIt('/it/settings?tab=netbox&state=linked');
+      fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
+      expect(open).toHaveBeenCalledWith('https://doc.kanap.net/netbox/', '_blank', 'noopener,noreferrer');
+      unmount();
+      open.mockClear();
+
+      renderIt('/it/settings?state=linked');
+      fireEvent.click(screen.getByRole('button', { name: 'nav:topBar.openDocs' }));
+      expect(open).toHaveBeenCalledWith('https://doc.kanap.net/it-ops-settings/', '_blank', 'noopener,noreferrer');
+    } finally {
+      open.mockRestore();
+    }
+  });
 });
