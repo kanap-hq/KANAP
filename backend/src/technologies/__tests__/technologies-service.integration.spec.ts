@@ -47,6 +47,62 @@ async function testCreateAndValidate() {
   });
 }
 
+/** CVE.org names (lot 1d): stored sorted, refused when they repeat or run past the limit, and a change emits the rematch. */
+async function testCveNames() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-cve-names');
+    const audit: AuditEntry[] = [];
+    const emitted: Array<{ technologyId: string; products: string[] }> = [];
+    const { technologies } = services(audit);
+    (technologies as unknown as { cpeEvents: { emit: (event: { technologyId: string; products: string[] }) => Promise<void> } }).cpeEvents = {
+      emit: async (event) => { emitted.push({ technologyId: event.technologyId, products: event.products }); },
+    };
+    const opts = { manager: runner.manager, tenantId };
+    const created = await technologies.create({
+      name: 'S/4HANA',
+      cve_names: [
+        { vendor: 'zebra', product: 'Box' },
+        { vendor: 'SAP_SE', product: 'SAP S/4HANA', version: '2023' },
+        { vendor: 'sap se', product: 'NetWeaver' },
+      ],
+    }, opts);
+    assert.deepEqual(created.cve_names, [
+      { vendor: 'sap se', product: 'NetWeaver', version: null },
+      { vendor: 'SAP_SE', product: 'SAP S/4HANA', version: '2023' },
+      { vendor: 'zebra', product: 'Box', version: null },
+    ], 'stored by vendor, product and version, without regard to case');
+    assert.deepEqual((audit.at(-1)?.after as { cve_names?: unknown } | undefined)?.cve_names, created.cve_names, 'the audit carries the names');
+    const listed = await technologies.list({}, opts);
+    assert.deepEqual(listed.items.find((item) => item.id === created.id)?.cve_names, created.cve_names, 'the list returns the names');
+    emitted.length = 0;
+    const updated = await technologies.update(created.id, {
+      cve_names: [{ vendor: 'Apache', product: 'Tomcat' }, { vendor: 'apache', product: 'HTTP Server' }],
+    }, opts);
+    assert.deepEqual(updated.cve_names, [
+      { vendor: 'apache', product: 'HTTP Server', version: null },
+      { vendor: 'Apache', product: 'Tomcat', version: null },
+    ]);
+    assert.deepEqual(emitted, [{ technologyId: created.id, products: [] }], 'a name change emits the rematch, with no new CPE product');
+    const updateAudit = audit.filter((entry) => entry.action === 'update' && entry.recordId === created.id);
+    assert.deepEqual((updateAudit.at(-1)?.before as { cve_names?: unknown } | undefined)?.cve_names, created.cve_names);
+    assert.deepEqual((updateAudit.at(-1)?.after as { cve_names?: unknown } | undefined)?.cve_names, updated.cve_names);
+    await assert.rejects(
+      technologies.update(created.id, { cve_names: Array.from({ length: 51 }, (_, index) => ({ vendor: 'A', product: `B${index}` })) }, opts),
+      (error: unknown) => error instanceof BadRequestException && /at most 50/.test(error.message),
+    );
+    await assert.rejects(
+      technologies.update(created.id, { cve_names: [{ vendor: 'SAP_SE', product: 'X' }, { vendor: 'SAP SE', product: 'X' }] }, opts),
+      (error: unknown) => error instanceof BadRequestException && /repeats/.test(error.message),
+    );
+    await assert.rejects(
+      technologies.update(created.id, { cve_names: [{ vendor: '  ', product: 'X' }] }, opts),
+      (error: unknown) => error instanceof BadRequestException && /vendor/.test(error.message),
+    );
+    const [kept] = await runner.query(`SELECT cve_names FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, created.id]);
+    assert.deepEqual(kept.cve_names, updated.cve_names, 'a refused update leaves the names');
+  });
+}
+
 /**
  * The hosting type (lot H1): on premises by default, a code of the tenant's hosting types
  * (trimmed, without case) or a 400, a list filter (plain and grid) and its values, and the
@@ -599,6 +655,7 @@ async function testAdoptionDescription() {
 
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
+  ['CVE.org names', testCveNames],
   ['hosting type', testHostingType],
   ['version labels', testVersionLabels],
   ['version order', testVersionOrder],

@@ -25,6 +25,8 @@ export type TechnologyRow = {
   support_notes: string | null;
   catalog_key: string | null;
   cpe_products: string[];
+  /** Vendor and product names the technology declares for CVE.org, each with an optional version. */
+  cve_names: Array<{ vendor: string; product: string; version?: string | null }>;
   replaced_by_id: string | null;
   cyber_criticality: string | null;
   recovery_wave: string | null;
@@ -55,7 +57,7 @@ export type TechnologyVersionRow = {
 };
 
 export const TECHNOLOGY_COLUMNS = `t.id, t.tenant_id, t.item_number, t.name, t.editor, t.family, t.hosting_type, t.lifecycle, t.description, t.notes,
-  t.support_notes, t.catalog_key, t.cpe_products, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
+  t.support_notes, t.catalog_key, t.cpe_products, t.cve_names, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
   t.admin_zone, t.vulnerability_alerts, t.created_at, t.updated_at`;
 
 /** Needs the technology joined as `t` (`vulnerability_alerts_effective` follows it). */
