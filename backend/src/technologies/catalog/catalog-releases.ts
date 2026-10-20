@@ -40,11 +40,14 @@ type CpeVersionRule = {
   patterns?: Array<[RegExp, string]>;
   /**
    * The CPE product the NVD gives each release of the entry, `{year}` standing for the year that
-   * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`; the matching applies
-   * such a product to the versions whose label starts with that year, `productRelease` in
-   * `vulnerabilities/vulnerability-rules.ts`). A release the living catalog adds receives it.
+   * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`) and Windows Server
+   * (`o:microsoft:windows_server_2022`). The matching applies such a product to the versions whose
+   * label starts with that year (`productRelease` in `vulnerabilities/vulnerability-rules.ts`).
+   * A release the living catalog adds receives it. `productPerReleaseFrom` leaves earlier years out
+   * (Windows 2000: the NVD product is `windows_2000`, not `windows_server_2000`).
    */
   productPerRelease?: string;
+  productPerReleaseFrom?: number;
 };
 
 /**
@@ -56,6 +59,7 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   'oracle-database': { fromLabel: true },
   msexchange: { patterns: [[/^subscription edition\b/i, '15.2']] },
   mssqlserver: { productPerRelease: 'a:microsoft:sql_server_{year}' },
+  'windows-server': { productPerRelease: 'o:microsoft:windows_server_{year}', productPerReleaseFrom: 2003 },
 };
 
 /**
@@ -147,9 +151,11 @@ const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean;
 
 /** The CPE product of the release `label` of an entry with one product per release, or null. */
 export function releaseProduct(catalogKey: string, label: string): string | null {
-  const template = CPE_VERSION_RULES[catalogKey]?.productPerRelease;
+  const rule = CPE_VERSION_RULES[catalogKey];
   const year = /^((?:19|20)\d{2})(?!\d)/.exec(String(label ?? '').trim())?.[1];
-  return template && year ? template.replace('{year}', year) : null;
+  if (!rule?.productPerRelease || !year) return null;
+  if (rule.productPerReleaseFrom != null && Number(year) < rule.productPerReleaseFrom) return null;
+  return rule.productPerRelease.replace('{year}', year);
 }
 
 const LINE_BREAK = /[\n\r\u2028\u2029]/;

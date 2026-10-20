@@ -5164,7 +5164,9 @@
       "editor": "AlmaLinux OS Foundation",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:almalinux:almalinux"
+      ],
       "source_url": "https://endoflife.date/almalinux",
       "versions": [
         {
@@ -5202,7 +5204,9 @@
       "editor": "The CentOS Project",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:centos:centos"
+      ],
       "source_url": "https://endoflife.date/centos",
       "versions": [
         {
@@ -5249,7 +5253,9 @@
       "editor": "Debian",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:debian:debian_linux"
+      ],
       "source_url": "https://endoflife.date/debian",
       "versions": [
         {
@@ -5370,7 +5376,9 @@
       "editor": "Oracle",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:oracle:linux"
+      ],
       "source_url": "https://endoflife.date/oracle-linux",
       "versions": [
         {
@@ -5426,7 +5434,9 @@
       "editor": "Red Hat",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:redhat:enterprise_linux"
+      ],
       "source_url": "https://endoflife.date/rhel",
       "versions": [
         {
@@ -5500,7 +5510,9 @@
       "editor": "Rocky Enterprise Software Foundation",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:resf:rocky_linux"
+      ],
       "source_url": "https://endoflife.date/rocky-linux",
       "versions": [
         {
@@ -5813,7 +5825,9 @@
       "editor": "Canonical",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:canonical:ubuntu_linux"
+      ],
       "source_url": "https://endoflife.date/ubuntu",
       "versions": [
         {
@@ -5945,7 +5959,15 @@
       "editor": "Microsoft",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:microsoft:windows_server_2003",
+        "o:microsoft:windows_server_2008",
+        "o:microsoft:windows_server_2012",
+        "o:microsoft:windows_server_2016",
+        "o:microsoft:windows_server_2019",
+        "o:microsoft:windows_server_2022",
+        "o:microsoft:windows_server_2025"
+      ],
       "source_url": "https://endoflife.date/windows-server",
       "versions": [
         {
