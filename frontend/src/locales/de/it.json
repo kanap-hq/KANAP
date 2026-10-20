@@ -440,6 +440,12 @@
         "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
         "rematchFailed": "Der Abgleich konnte nicht ausgeführt werden. Versuchen Sie es erneut.",
         "noLongerMatches": "Trifft nicht mehr zu",
+        "see": "Ansehen",
+        "seeAll": "Alles auf der Seite Schwachstellen ansehen",
+        "columns": {
+          "open": "Zu prüfen",
+          "total": "Gesamt"
+        },
         "alerts": {
           "excluded": "Von den Warnungen ausgeschlossen",
           "excludedExcept_one": "Von den Warnungen ausgeschlossen, außer {{count}} Version",

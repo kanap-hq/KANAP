@@ -7,7 +7,7 @@ import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
 import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
-import { TechnologyReachService } from '../technologies/technology-reach.service';
+import { REACH_FROM_TECHNOLOGIES, TechnologyReachService, withoutJit } from '../technologies/technology-reach.service';
 import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
@@ -628,23 +628,114 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
-    // The versions by effective setting, so the screen can say "excluded, except 2 versions".
+    const counts = await this.versionAlertCounts(mg, tenantId, tech.id);
+    return {
+      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      technology_alerts: tech.vulnerability_alerts,
+      ...counts,
+      products: await this.productStates(mg, tech.cpe_products),
+      items,
+    };
+  }
+
+  /**
+   * The vulnerabilities of one technology, one row per version that has a match (lot V4), plus the
+   * unknown version when rows name none. `open` counts distinct CVE still to review, `total` every
+   * distinct CVE of the version, `cves` the distinct CVE of the technology, `servers` the servers
+   * in service the version reaches. Versions with no match stay out of `versions` and still count
+   * in `versions_excluded` and `versions_included`.
+   */
+  async summary(idOrRef: string, opts: VulnOpts) {
+    const { manager: mg, tenantId } = opts;
+    const tech = await readTechnology(mg, tenantId, idOrRef);
+    const counts = await this.versionAlertCounts(mg, tenantId, tech.id);
+    const products = await this.productStates(mg, tech.cpe_products);
+    // One statement: the reach ($1 tenant, $2 this technology) and the rows ($3). A technology with
+    // no row still returns `cves` through the left join (the pad row has a null `total`).
+    const rows: Array<{
+      technology_version_id: string | null;
+      label: string | null;
+      alerts: boolean | null;
+      servers: number | null;
+      critical: number | null;
+      high: number | null;
+      medium: number | null;
+      low: number | null;
+      none: number | null;
+      total: number | null;
+      cves: number;
+    }> = await withoutJit(mg,
+      `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       servers AS (
+         SELECT technology_version_id, count(DISTINCT asset_id)::int AS servers
+           FROM reach
+          GROUP BY technology_version_id
+       ),
+       agg AS (
+         SELECT tv.technology_version_id, v.label,
+                bool_and(${vulnerabilityAlertsSql('v', 't')}) AS alerts,
+                COALESCE(s.servers, 0)::int AS servers,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'critical')::int AS critical,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'high')::int AS high,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'medium')::int AS medium,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'low')::int AS low,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity IS DISTINCT FROM 'critical' AND c.severity IS DISTINCT FROM 'high' AND c.severity IS DISTINCT FROM 'medium' AND c.severity IS DISTINCT FROM 'low')::int AS none,
+                count(DISTINCT tv.cve_id)::int AS total
+           FROM technology_vulnerabilities tv
+           JOIN technologies t ON t.tenant_id = tv.tenant_id AND t.id = tv.technology_id
+           LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id
+           LEFT JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           LEFT JOIN servers s ON s.technology_version_id IS NOT DISTINCT FROM tv.technology_version_id
+          WHERE tv.tenant_id = $1 AND tv.technology_id = $3
+          GROUP BY tv.technology_version_id, v.label, s.servers
+       ),
+       totals AS (
+         SELECT count(DISTINCT cve_id)::int AS cves
+           FROM technology_vulnerabilities
+          WHERE tenant_id = $1 AND technology_id = $3
+       )
+       SELECT a.technology_version_id, a.label, a.alerts, a.servers, a.critical, a.high, a.medium, a.low, a.none, a.total, t.cves
+         FROM totals t
+         LEFT JOIN agg a ON true
+        ORDER BY ${versionOrderSql('a.label')}`,
+      [tenantId, [tech.id], tech.id],
+    );
+    const openOf = (row: (typeof rows)[number]) => ({
+      critical: Number(row.critical),
+      high: Number(row.high),
+      medium: Number(row.medium),
+      low: Number(row.low),
+      none: Number(row.none),
+    });
+    return {
+      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      technology_alerts: tech.vulnerability_alerts,
+      ...counts,
+      collecting: products.some((product) => product.status === 'pending'),
+      products,
+      cves: Number(rows[0]?.cves ?? 0),
+      versions: rows.filter((row) => row.total != null).map((row) => ({
+        version_id: row.technology_version_id,
+        label: row.label,
+        alerts: row.alerts === true,
+        servers: Number(row.servers ?? 0),
+        open: openOf(row),
+        total: Number(row.total),
+      })),
+    };
+  }
+
+  /** Every version of the technology, by its effective alert setting (a version with no match included). */
+  private async versionAlertCounts(mg: EntityManager, tenantId: string, technologyId: string) {
     const [{ versions_excluded, versions_included }] = await mg.query(
       `SELECT count(*) FILTER (WHERE NOT ${vulnerabilityAlertsSql('v', 't')})::int AS versions_excluded,
               count(*) FILTER (WHERE ${vulnerabilityAlertsSql('v', 't')})::int AS versions_included
          FROM technology_versions v
          JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
         WHERE v.tenant_id = $1 AND v.technology_id = $2`,
-      [tenantId, tech.id],
+      [tenantId, technologyId],
     );
-    return {
-      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
-      technology_alerts: tech.vulnerability_alerts,
-      versions_excluded: Number(versions_excluded),
-      versions_included: Number(versions_included),
-      products: await this.productStates(mg, tech.cpe_products),
-      items,
-    };
+    return { versions_excluded: Number(versions_excluded), versions_included: Number(versions_included) };
   }
 
   /**

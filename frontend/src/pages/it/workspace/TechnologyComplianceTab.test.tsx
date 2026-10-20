@@ -92,18 +92,18 @@ describe('TechnologyComplianceTab', () => {
     vi.mocked(api.get).mockResolvedValue({
       data: {
         technology: { id: 'tech-1', reference: 'TEC-1' },
-        items: [{
-          id: 'row-1', cve_id: 'CVE-2026-1001', summary: 'Flaw', cvss_score: 9.8, severity: 'critical',
-          technology_version_id: 'v-1', version_label: '16', potential: false, match_basis: 'version_in_range', matching: true,
-          state: 'to_review', note: null, state_changed_at: null, state_changed_by_name: null,
+        cves: 1,
+        versions: [{
+          version_id: 'v-1', label: '16', alerts: true, servers: 2,
+          open: { critical: 1, high: 0, medium: 0, low: 0, none: 0 }, total: 1,
         }],
       },
     } as never);
     renderTab();
     expect(await screen.findByRole('region', { name: 'Vulnerabilities' })).toBeInTheDocument();
-    expect(await screen.findByText('CVE-2026-1001')).toBeInTheDocument();
+    expect(await screen.findByText('16')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: 'Refresh' })).toBeInTheDocument();
-    expect(vi.mocked(api.get)).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities');
+    expect(vi.mocked(api.get)).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities/summary');
   });
 
   it('hides the vulnerabilities while the feed is off', () => {

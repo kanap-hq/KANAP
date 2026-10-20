@@ -440,6 +440,12 @@
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
         "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo.",
         "noLongerMatches": "Ya no coincide",
+        "see": "Ver",
+        "seeAll": "Ver todo en la página Vulnerabilidades",
+        "columns": {
+          "open": "Por revisar",
+          "total": "Total"
+        },
         "alerts": {
           "excluded": "Excluida de las alertas",
           "excludedExcept_one": "Excluida de las alertas, excepto {{count}} versión",

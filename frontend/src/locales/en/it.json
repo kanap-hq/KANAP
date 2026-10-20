@@ -440,6 +440,12 @@
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",
         "rematchFailed": "The match could not run. Try again.",
         "noLongerMatches": "No longer matches",
+        "see": "See",
+        "seeAll": "See everything on the Vulnerabilities page",
+        "columns": {
+          "open": "To review",
+          "total": "Total"
+        },
         "alerts": {
           "excluded": "Excluded from alerts",
           "excludedExcept_one": "Excluded from alerts, except {{count}} version",

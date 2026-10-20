@@ -440,6 +440,12 @@
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
         "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez.",
         "noLongerMatches": "Ne correspond plus",
+        "see": "Voir",
+        "seeAll": "Tout voir dans la page Vulnérabilités",
+        "columns": {
+          "open": "À traiter",
+          "total": "Total"
+        },
         "alerts": {
           "excluded": "Exclue des alertes",
           "excludedExcept_one": "Exclue des alertes, sauf {{count}} version",
