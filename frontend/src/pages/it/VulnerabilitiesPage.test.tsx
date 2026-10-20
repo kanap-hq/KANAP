@@ -145,11 +145,11 @@ describe('VulnerabilitiesPage', () => {
     renderPage();
     expect(grid.props!.endpoint).toBe('/vulnerabilities');
     expect(grid.props!.columnPreferencesKey).toBe('it-vulnerabilities');
-    expect(grid.props!.defaultSort).toEqual({ field: 'severity', direction: 'DESC' });
+    expect(grid.props!.defaultSort).toEqual({ field: 'exploited', direction: 'DESC' });
     expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
     expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([
-      'select', 'cve_id', 'severity', 'cvss_score', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
+      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);

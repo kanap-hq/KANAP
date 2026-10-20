@@ -398,6 +398,10 @@
         "published": "Veröffentlicht",
         "version": "Version",
         "score": "Score",
+        "exploited": "Ausgenutzt",
+        "exploitedYes": "Ja",
+        "exploitedNo": "Nein",
+        "epss": "EPSS",
         "editor": "Hersteller",
         "note": "Notiz"
       },

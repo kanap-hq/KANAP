@@ -398,6 +398,10 @@
         "published": "Published",
         "version": "Version",
         "score": "Score",
+        "exploited": "Exploited",
+        "exploitedYes": "Yes",
+        "exploitedNo": "No",
+        "epss": "EPSS",
         "editor": "Publisher",
         "note": "Note"
       },

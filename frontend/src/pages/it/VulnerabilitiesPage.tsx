@@ -568,9 +568,10 @@ const rowId = (row: VulnerabilityRow) => row.id;
 /**
  * IT › Vulnerabilities (lots T6b, T6c): one row per technology, version and published CVE (NVD) of
  * the workspace, on the list grid of the repository (filters per column, version included, columns
- * chosen and kept, sort, total, export), "to review" by default and most severe first. Ticked rows,
- * or every row of the filter (the header box), change state at once; a row opens its CVE in a side
- * panel. Shown only while the vulnerability feed is on (`features.vulnerabilityFeed`).
+ * chosen and kept, sort, total, export). It opens on the rows to review, exploited first and then
+ * most severe. Ticked rows, or every row of the filter (the header box), change state at once; a
+ * row opens its CVE in a side panel. Shown only while the vulnerability feed is on
+ * (`features.vulnerabilityFeed`).
  */
 export default function VulnerabilitiesPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -620,6 +621,10 @@ export default function VulnerabilitiesPage() {
     [t],
   );
   const severityValues = useCallback(async () => SEVERITIES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.severities.${s}`) })), [t]);
+  const exploitedValues = useCallback(async () => [
+    { value: 'yes', label: t('pages.vulnerabilities.columns.exploitedYes') },
+    { value: 'no', label: t('pages.vulnerabilities.columns.exploitedNo') },
+  ], [t]);
   const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
   const editorValues = useCallback(async () => {
     const res = await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } });
@@ -689,7 +694,18 @@ export default function VulnerabilitiesPage() {
       filterParams: { getValues: severityValues, searchable: false },
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SeverityCell severity={p.data.severity} score={p.data.cvss_score} /> : null),
     },
+    {
+      headerName: t('pages.vulnerabilities.columns.exploited'),
+      field: 'exploited',
+      width: 120,
+      defaultHidden: true,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: exploitedValues, searchable: false },
+      valueFormatter: (p: { value?: boolean }) => (p.value ? t('pages.vulnerabilities.columns.exploitedYes') : t('pages.vulnerabilities.columns.exploitedNo')),
+    },
     { headerName: t('pages.vulnerabilities.columns.score'), field: 'cvss_score', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
+    { headerName: t('pages.vulnerabilities.columns.epss'), field: 'epss', width: 90, type: 'rightAligned', defaultHidden: true, filter: 'agNumberColumnFilter' },
     { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 115, flex: 1, sortable: false, tooltipField: 'summary' },
     {
       headerName: t('pages.vulnerabilities.columns.technology'),
@@ -746,7 +762,7 @@ export default function VulnerabilitiesPage() {
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [canEdit, editorValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
+  ], [canEdit, editorValues, exploitedValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
   // One write, so resetting the alerts and the publication window cannot overwrite each other.
   const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod }) => {
@@ -889,7 +905,7 @@ export default function VulnerabilitiesPage() {
         getRowId={rowId}
         showRowCount
         rowCountText={rowCountText}
-        defaultSort={{ field: 'severity', direction: 'DESC' }}
+        defaultSort={{ field: 'exploited', direction: 'DESC' }}
         initialState={{ filter: { filterModel: initialModel } }}
         requiredColumns={['cve_id']}
         enableColumnChooser

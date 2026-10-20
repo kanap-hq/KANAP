@@ -567,7 +567,9 @@
     "filters": {
       "cve_id": "text",
       "severity": "set",
+      "exploited": "set",
       "cvss_score": "number",
+      "epss": "number",
       "summary": "text",
       "technology": "set",
       "version": "set",
@@ -578,7 +580,9 @@
     "fields": [
       "cve_id",
       "severity",
+      "exploited",
       "cvss_score",
+      "epss",
       "summary",
       "technology",
       "version",
