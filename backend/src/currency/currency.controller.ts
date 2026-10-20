@@ -76,10 +76,13 @@ export class CurrencyController {
 
     // Checked against the ISO list before any lock or write: 400 `currency_invalid`.
     if (body.reportingCurrency) payload.reportingCurrency = parseCurrency(String(body.reportingCurrency));
-    if (body.defaultSpendCurrency) payload.defaultSpendCurrency = String(body.defaultSpendCurrency).trim().toUpperCase();
-    if (body.defaultCapexCurrency) payload.defaultCapexCurrency = String(body.defaultCapexCurrency).trim().toUpperCase();
+    if (body.defaultSpendCurrency) payload.defaultSpendCurrency = parseCurrency(String(body.defaultSpendCurrency));
+    if (body.defaultCapexCurrency) payload.defaultCapexCurrency = parseCurrency(String(body.defaultCapexCurrency));
     if (Array.isArray(body.allowedCurrencies)) {
-      payload.allowedCurrencies = body.allowedCurrencies.map((code: any) => String(code || '').trim().toUpperCase()).filter((code: string) => code.length === 3);
+      payload.allowedCurrencies = body.allowedCurrencies
+        .map((code: any) => String(code || '').trim())
+        .filter((code: string) => code.length > 0)
+        .map((code: string) => parseCurrency(code));
     }
 
     const manager = req?.queryRunner?.manager as EntityManager | undefined;

@@ -102,9 +102,15 @@ async function testChangedCurrencyQueuesEveryYearAfterTheResponse() {
 
 async function testUnknownReportingCurrencyIsRefused() {
   const { api, req, order, queued } = harness({ before: 'EUR', after: 'EUR' });
-  for (const code of ['XYZ', 'EU', '12A']) {
+  const bodies = [
+    ...['XYZ', 'EU', '12A'].map((code) => ({ reportingCurrency: code })),
+    { defaultSpendCurrency: 'XTS' },
+    { defaultCapexCurrency: 'ABC' },
+    { allowedCurrencies: ['EUR', 'XTS'] },
+  ];
+  for (const body of bodies) {
     await assert.rejects(
-      api.updateSettings({ reportingCurrency: code }, req),
+      api.updateSettings(body, req),
       (error: any) => {
         assert.equal(error.getStatus(), 400);
         assert.equal(error.getResponse().code, 'currency_invalid');
@@ -114,7 +120,7 @@ async function testUnknownReportingCurrencyIsRefused() {
   }
   assert.deepEqual(order, [], 'refused before any read or write');
   assert.deepEqual(queued, []);
-  console.log('ok - a reporting currency outside the ISO list answers 400 currency_invalid');
+  console.log('ok - a reporting, default or allowed currency outside the ISO list answers 400 currency_invalid');
 }
 
 (async () => {
