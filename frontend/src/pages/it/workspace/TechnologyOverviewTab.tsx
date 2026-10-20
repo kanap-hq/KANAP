@@ -413,8 +413,28 @@ function statusLabel(status: SupportState, t: TFunction) {
 /** The versions table, so a link from Compliance can bring it into view. */
 export const TECHNOLOGY_VERSIONS_ANCHOR = 'technology-versions';
 
-/** A narrow column: the switch is 40px, plus the own-setting dot. */
-const ALERTS_COLUMN_SX = { width: 56, maxWidth: 56, px: 0, boxSizing: 'border-box' } as const;
+/**
+ * The header is the short title plus the switch (40px) and the own-setting slot (6px).
+ * "Warnungen" is the longest title, about 62px at 11px, so 136px holds the line.
+ * With the other columns (170 + 170 + 150 + 64) the table stays inside 1000px.
+ */
+const ALERTS_COLUMN_SX = { width: 136, maxWidth: 136, whiteSpace: 'nowrap', px: 0, boxSizing: 'border-box' } as const;
+const ALERTS_ROW_SX = { display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: '6px' } as const;
+const ALERTS_SWITCHES_SX = { display: 'inline-flex', alignItems: 'center', gap: '4px', flex: '0 0 auto' } as const;
+
+/** Title on the header only. Both rows pack the switches to the trailing edge, so they line up. */
+function AlertsCell({ title, children }: { title?: string; children: React.ReactNode }) {
+  return (
+    <TableCell sx={ALERTS_COLUMN_SX}>
+      <Box sx={ALERTS_ROW_SX}>
+        {title ? (
+          <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>{title}</Box>
+        ) : null}
+        <Box sx={ALERTS_SWITCHES_SX}>{children}</Box>
+      </Box>
+    </TableCell>
+  );
+}
 
 function AlertSwitch({ checked, disabled, label, tooltip, onChange }: {
   checked: boolean;
@@ -651,18 +671,16 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   );
 
   const alertsHeader = (
-    <TableCell sx={ALERTS_COLUMN_SX} align="center">
-      <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
-        <AlertSwitch
-          checked={technologyAlerts}
-          disabled={!canManage || alertsBusy}
-          label={t('workspace.technology.versions.alertsLabel')}
-          tooltip={t('workspace.technology.versions.alertsHint')}
-          onChange={(next) => { void setTechnologyAlerts(next); }}
-        />
-        <OwnSettingMark visible={false} />
-      </Box>
-    </TableCell>
+    <AlertsCell title={t('workspace.technology.versions.alertsColumn')}>
+      <AlertSwitch
+        checked={technologyAlerts}
+        disabled={!canManage || alertsBusy}
+        label={t('workspace.technology.versions.alertsLabel')}
+        tooltip={t('workspace.technology.versions.alertsHint')}
+        onChange={(next) => { void setTechnologyAlerts(next); }}
+      />
+      <OwnSettingMark visible={false} />
+    </AlertsCell>
   );
 
   return (
@@ -726,8 +744,8 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                     {statusLabel(status, t)}
                   </Box>
                 </TableCell>
-                {showAlerts && <TableCell sx={ALERTS_COLUMN_SX} align="center">
-                  <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+                {showAlerts && (
+                  <AlertsCell>
                     <AlertSwitch
                       checked={version.vulnerability_alerts_effective ?? technologyAlerts}
                       disabled={!canManage || alertsBusy}
@@ -735,8 +753,8 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                       onChange={(next) => { void setVersionAlerts(version, next); }}
                     />
                     <OwnSettingMark visible={version.vulnerability_alerts != null} />
-                  </Box>
-                </TableCell>}
+                  </AlertsCell>
+                )}
                 {canManage && (
                   <TableCell align="right">
                     <Box className="hover-actions" sx={{ display: 'inline-flex' }}>

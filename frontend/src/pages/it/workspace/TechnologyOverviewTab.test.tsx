@@ -26,14 +26,14 @@ const TECHNOLOGY = {
   ],
 } as TechnologyDetail;
 
-function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true) {
+function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true, mode: 'light' | 'dark' = 'light') {
   const onVersionsChanged = vi.fn(async () => undefined);
   const onError = vi.fn();
   const client = new QueryClient();
   const invalidate = vi.spyOn(client, 'invalidateQueries');
-  render(
+  const view = render(
     <QueryClientProvider client={client}>
-      <ThemeProvider theme={createAppTheme('light')}>
+      <ThemeProvider theme={createAppTheme(mode)}>
         <KanapDialogProvider>
           <TechnologyOverviewTab
             technology={technology}
@@ -46,7 +46,7 @@ function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true) 
       </ThemeProvider>
     </QueryClientProvider>,
   );
-  return { onVersionsChanged, onError, invalidate };
+  return { onVersionsChanged, onError, invalidate, unmount: view.unmount };
 }
 
 const ALERT_VERSIONS = {
@@ -158,9 +158,6 @@ describe('TechnologyOverviewTab', () => {
     expect(api.put).toHaveBeenNthCalledWith(2, '/technologies/tech-1/vulnerability-alerts', { enabled: true });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
     expect(onVersionsChanged).toHaveBeenCalledTimes(1);
-    const cell = header.closest('th');
-    expect(cell).not.toBeNull();
-    expect(getComputedStyle(cell!).maxWidth).toBe('56px');
   });
 
   it('asks before replacing version settings and writes only after confirmation', async () => {
@@ -317,10 +314,45 @@ describe('TechnologyOverviewTab', () => {
       ],
     });
     const slots = ['Vulnerability alerts', 'Vulnerability alerts for 16', 'Vulnerability alerts for 15'].map((name) => {
-      const box = screen.getByRole('switch', { name }).closest('td, th')!.firstElementChild!;
-      return box.children.length;
+      const row = screen.getByRole('switch', { name }).closest('td, th')!.firstElementChild as HTMLElement;
+      // Trailing edge: the header word sits beside its switch, and every row switch lines up under it.
+      expect(getComputedStyle(row).justifyContent).toBe('flex-end');
+      return row.lastElementChild!.children.length;
     });
     expect(slots).toEqual([2, 2, 2]);
     expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(1);
+  });
+
+  it('names the alerts column like the other headers and keeps the table inside 1000px', () => {
+    const pixelWidth = (cell: Element) => {
+      const width = getComputedStyle(cell).width;
+      const value = width.endsWith('px') ? parseFloat(width) : 0;
+      return Number.isFinite(value) ? value : 0;
+    };
+    for (const mode of ['light', 'dark'] as const) {
+      const view = renderTab({
+        ...ALERT_VERSIONS,
+        versions: [
+          ...ALERT_VERSIONS.versions,
+          { ...VERSION, id: 'v-own', label: '15', standard_support_end: null, catalog_key: null, vulnerability_alerts: false, vulnerability_alerts_effective: false },
+        ],
+      }, true, mode);
+      const table = screen.getByRole('table', { name: 'Versions' });
+      const headers = within(table).getAllByRole('columnheader');
+      const header = headers.find((cell) => within(cell).queryByText('Alerts'));
+      expect(header).toBeTruthy();
+      const title = within(header!).getByText('Alerts');
+      const status = within(table).getByRole('columnheader', { name: 'Status' });
+      expect(getComputedStyle(title).fontSize).toBe(getComputedStyle(status).fontSize);
+      expect(getComputedStyle(title).fontWeight).toBe(getComputedStyle(status).fontWeight);
+      expect(getComputedStyle(title).color).toBe(getComputedStyle(status).color);
+      expect(getComputedStyle(header!).whiteSpace).toBe('nowrap');
+      expect(within(header!).getByRole('switch', { name: 'Vulnerability alerts' })).toBeTruthy();
+      // Wider than the switch alone, still narrow: the fixed columns leave the version column room at 1000px.
+      expect(pixelWidth(header!)).toBeGreaterThan(56);
+      expect(pixelWidth(header!)).toBeLessThan(200);
+      expect(headers.reduce((sum, cell) => sum + pixelWidth(cell), 0)).toBeLessThan(1000);
+      view.unmount();
+    }
   });
 });

@@ -2052,6 +2052,7 @@
         "servers_other": "{{count}} serveurs",
         "applications_one": "{{count}} application",
         "applications_other": "{{count}} applications",
+        "alertsColumn": "Alertes",
         "alertsLabel": "Alertes de vulnérabilité",
         "alertsFor": "Alertes de vulnérabilité pour {{label}}",
         "alertsHint": "Réglage de la technologie : vaut pour les versions sans réglage propre, les versions à venir et les liens sans version.",
