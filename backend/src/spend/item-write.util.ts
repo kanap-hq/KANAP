@@ -2,13 +2,14 @@ import { BadRequestException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { validate as isUuid } from 'uuid';
 import { deriveStatusFromDisabledAt, isActiveAt, StatusState } from '../common/status';
+import { assertEffectiveStart } from './dto/effective-start';
 import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analytics.util';
 
 /**
  * The one gate of every OPEX and CAPEX line write (API create and update, the
  * AI mutations and the budget file, all through the item services).
  *
- * Item bodies reach the services unvalidated, and foreign key checks bypass
+ * Item bodies reach the services without the full zod schema, and foreign key checks bypass
  * row level security: without this gate any column could be sent and another
  * tenant's supplier, category or user could be attached to a line. So:
  * - only the writable fields of the nature are kept, anything else is dropped;
@@ -173,6 +174,9 @@ export async function resolveItemWrite(
   if (fields === 'api' && scope === 'capex' && input.company_id != null && input.paying_company_id == null) {
     values.paying_company_id = input.company_id;
   }
+  // Create only. An update that omits the date keeps the stored one. Checked before the
+  // company lookup so a missing date is a 400 on every create path (API, budget lines, file, AI).
+  if (!existing) assertEffectiveStart(values.effective_start);
   const lifecycle: ItemWrite['lifecycle'] = {};
   for (const key of LIFECYCLE_INPUTS) {
     if (supplied(key)) (lifecycle as any)[key] = input[key];

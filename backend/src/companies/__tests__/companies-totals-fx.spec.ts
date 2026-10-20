@@ -106,16 +106,17 @@ async function testSameCurrencyIsNotConverted() {
   assert.deepEqual(totals.turnover_fx_missing, []);
 }
 
-async function testMissingRateIsCountedUnconvertedAndNamed() {
+async function testMissingRateIsLeftOutAndNamed() {
   const fx = fakeFx('EUR', {});
   const { svc } = service([
-    { currency: 'EUR', headcount: '300', it_users: '250', turnover: '120.5' },
-    { currency: 'USD', headcount: '80', it_users: '60', turnover: '35' },
+    { currency: 'EUR', headcount: '300', it_users: '250', turnover: '120.5', companies: '2' },
+    { currency: 'USD', headcount: '80', it_users: '60', turnover: '35', companies: '1' },
   ], fx);
   const totals = await svc.totals({ year: '2027' }, { tenantId: 't1' });
-  assert.equal(totals.turnover, 155.5);
+  assert.equal(totals.turnover, 120.5);
+  assert.equal(totals.headcount, 380);
   assert.equal(totals.year, 2027);
-  assert.deepEqual(totals.turnover_fx_missing, ['USD']);
+  assert.deepEqual(totals.turnover_fx_missing, [{ currency: 'USD', year: 2027, companies: 1 }]);
 }
 
 async function testNoCompanyGivesZero() {
@@ -134,7 +135,7 @@ Promise.resolve()
   .then(testTurnoverIsConvertedIntoTheReportingCurrency)
   .then(testFrozenYearConvertsAtItsRateSet)
   .then(testSameCurrencyIsNotConverted)
-  .then(testMissingRateIsCountedUnconvertedAndNamed)
+  .then(testMissingRateIsLeftOutAndNamed)
   .then(testNoCompanyGivesZero)
   .then(testTenantIsRequired)
   .then(() => console.log('companies-totals-fx: ok'))

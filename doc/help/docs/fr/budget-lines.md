@@ -158,7 +158,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 **Montants sans taux de change** :
 
 - Quand la devise d'une ligne n'a pas de taux de change pour une année, son montant de cette année s'affiche dans sa propre devise avec une petite marque orange. Survolez la marque pour lire, par exemple, « Pas de taux de change USD pour 2026 : exclu des totaux. »
-- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises.
+- Les totaux excluent ces montants, et un avertissement d'une ligne sous la liste les indique, par exemple « 3 lignes sans taux de change exclues : USD 2026. » Les utilisateurs de l'administration budgétaire au niveau administrateur voient aussi **Saisir un taux**, qui ouvre les paramètres des devises sur le taux manquant. Quand l'avertissement ne cite qu'une devise et une année, la fenêtre de saisie du taux s'ouvre directement.
 - Dans une colonne triée, ces lignes viennent en dernier. Un filtre de montant ne les conserve jamais.
 - Voir [Taux manuels](currencies.md#taux-manuels) pour saisir vous-même le taux manquant.
 
@@ -527,7 +527,8 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 **Chiffre d'affaires en plusieurs devises** :
 
 - Chaque société saisit son chiffre d'affaires en millions de sa devise de base. Avant la répartition, KANAP convertit chaque chiffre d'affaires dans la devise de reporting, aux taux de la version budgétaire de l'année : les taux figés au gel de sa colonne par défaut, sinon les taux courants de l'année. Voir [Paramètres de devises](currencies.md)
-- Quand une devise n'a pas encore de taux, ses chiffres d'affaires sont comptés sans conversion et un avertissement s'affiche au-dessus du tableau, par exemple « Pas encore de taux de change BRL vers EUR pour 2026 : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible. » KANAP va chercher le taux manquant lors de la prochaine mise à jour des taux, et la répartition se corrige d'elle-même
+- Quand une devise n'a pas de taux pour l'année, les sociétés dans cette devise sont écartées de la répartition : elles ne reçoivent aucune part, et les autres sociétés se partagent 100 %. Un avertissement au-dessus du tableau nomme chaque société écartée. KANAP récupère le taux manquant en arrière-plan, et la répartition se corrige d'elle-même dès que le taux est disponible. Un [taux manuel](currencies.md#taux-manuels) règle le problème tout de suite
+- Avec **Manuel par société** et l'inducteur Chiffre d'affaires, quand aucune des sociétés sélectionnées n'a de taux, la ventilation est refusée avec un message qui cite les devises et l'année. Saisissez le taux, ou choisissez un autre inducteur
 
 **Comment l'utiliser** :
 
