@@ -432,7 +432,15 @@
         "loadFailed": "No se pudieron cargar las vulnerabilidades.",
         "rematch": "Volver a cotejar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
-        "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo."
+        "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo.",
+        "alerts": {
+          "excluded": "Excluida de las alertas",
+          "excludedExcept_one": "Excluida de las alertas, excepto {{count}} versión",
+          "excludedExcept_other": "Excluida de las alertas, excepto {{count}} versiones",
+          "versionsExcluded_one": "{{count}} versión excluida de las alertas",
+          "versionsExcluded_other": "{{count}} versiones excluidas de las alertas",
+          "set": "Ajustar"
+        }
       }
     },
     "interfaces": {

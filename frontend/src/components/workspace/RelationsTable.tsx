@@ -225,7 +225,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                     component="td"
                     key={column.key}
                     className={column.align === 'right' ? 'r' : undefined}
-                    sx={muted && index === columns.findIndex((c) => !c.width) ? { color: 'kanap.text.tertiary' } : undefined}
+                    sx={muted && index === columns.findIndex((c) => !c.width) ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
                   >
                     {column.render(row)}
                   </Box>

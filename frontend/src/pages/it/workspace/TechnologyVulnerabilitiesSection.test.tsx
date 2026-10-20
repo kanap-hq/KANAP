@@ -63,10 +63,55 @@ describe('TechnologyVulnerabilitiesSection', () => {
     // Critical in orange (dark mode), medium neutral.
     expect(getComputedStyle(rows[0].querySelector('[data-severity="critical"]') as HTMLElement).color).toBe('rgb(240, 168, 48)');
     fireEvent.click(rows[0]);
-    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&version=9.0.80&state=all&q=CVE-2026-1001');
+    expect(navigate).toHaveBeenCalledWith('/it/vulnerabilities?technology=TEC-7&version=9.0.80&state=all&alerts=all&q=CVE-2026-1001');
     fireEvent.click(rows[2]);
-    expect(navigate).toHaveBeenLastCalledWith('/it/vulnerabilities?technology=TEC-7&version=none&state=all&q=CVE-2026-1002');
+    expect(navigate).toHaveBeenLastCalledWith('/it/vulnerabilities?technology=TEC-7&version=none&state=all&alerts=all&q=CVE-2026-1002');
     expect(screen.queryByRole('button', { name: 'Match again' })).toBeNull();
+    expect(screen.queryByRole('link', { name: 'Set' })).toBeNull();
+  });
+
+  it('says the technology is excluded from alerts when no version stays included', async () => {
+    getMock.mockResolvedValue({
+      data: { technology: { id: 'tech-1', reference: 'TEC-7' }, technology_alerts: false, versions_included: 0, versions_excluded: 2, items: [row({})] },
+    } as any);
+    renderSection(false);
+    expect(await screen.findByText('Excluded from alerts')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Set' }).getAttribute('href')).toBe('/it/technologies/TEC-7/overview#technology-versions');
+  });
+
+  it('names the versions that stay included when the technology is excluded', async () => {
+    getMock.mockResolvedValue({
+      data: { technology: { id: 'tech-1', reference: 'TEC-7' }, technology_alerts: false, versions_included: 2, versions_excluded: 3, items: [row({})] },
+    } as any);
+    renderSection(false);
+    expect(await screen.findByText('Excluded from alerts, except 2 versions')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Set' })).toBeTruthy();
+  });
+
+  it('names the versions excluded when the technology stays included', async () => {
+    getMock.mockResolvedValue({
+      data: { technology: { id: 'tech-1', reference: 'TEC-7' }, technology_alerts: true, versions_included: 4, versions_excluded: 1, items: [row({ alerts: false })] },
+    } as any);
+    renderSection(false);
+    expect(await screen.findByText('1 version excluded from alerts')).toBeTruthy();
+    expect(screen.getByRole('link', { name: 'Set' })).toBeTruthy();
+  });
+
+  it('dims a row that does not raise an alert', async () => {
+    getMock.mockResolvedValue({
+      data: {
+        technology: { id: 'tech-1', reference: 'TEC-7' },
+        technology_alerts: true,
+        versions_excluded: 0,
+        items: [row({ alerts: true }), row({ id: 'row-quiet', cve_id: 'CVE-2026-1009', alerts: false, version_label: '8.5' })],
+      },
+    } as any);
+    renderSection(false);
+    const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
+    const body = within(table).getAllByRole('row').slice(1);
+    const versionCell = (rowEl: HTMLElement) => rowEl.querySelectorAll('td')[2];
+    expect(getComputedStyle(versionCell(body[1])).color).toBe('rgb(129, 136, 149)');
+    expect(getComputedStyle(versionCell(body[0])).color).not.toBe('rgb(129, 136, 149)');
   });
 
   it('matches the technology again for a member', async () => {

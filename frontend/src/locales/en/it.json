@@ -432,7 +432,15 @@
         "loadFailed": "The vulnerabilities could not be loaded.",
         "rematch": "Match again",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",
-        "rematchFailed": "The match could not run. Try again."
+        "rematchFailed": "The match could not run. Try again.",
+        "alerts": {
+          "excluded": "Excluded from alerts",
+          "excludedExcept_one": "Excluded from alerts, except {{count}} version",
+          "excludedExcept_other": "Excluded from alerts, except {{count}} versions",
+          "versionsExcluded_one": "{{count}} version excluded from alerts",
+          "versionsExcluded_other": "{{count}} versions excluded from alerts",
+          "set": "Set"
+        }
       }
     },
     "interfaces": {

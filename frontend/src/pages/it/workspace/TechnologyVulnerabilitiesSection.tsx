@@ -1,7 +1,9 @@
 import { useState } from 'react';
-import { Box, Button, Typography } from '@mui/material';
+import { Box, Button, Link, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
+import type { TFunction } from 'i18next';
+import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
 import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
@@ -12,6 +14,7 @@ import {
   VulnerabilityStateCell,
   type VulnerabilityVersion,
 } from '../vulnerabilities/vulnerabilityTypes';
+import { TECHNOLOGY_VERSIONS_ANCHOR } from './TechnologyOverviewTab';
 
 /** One version and CVE of `GET /technologies/:id/vulnerabilities`: CVE fields and row fields. */
 export type TechnologyVulnerabilityRow = VulnerabilityVersion & {
@@ -19,7 +22,29 @@ export type TechnologyVulnerabilityRow = VulnerabilityVersion & {
   summary: string | null;
   cvss_score: number | null;
   severity: string | null;
+  /** False when this version and CVE stay out of the alerts. Absent follows the row as alerting. */
+  alerts?: boolean;
 };
+
+type VulnerabilitySectionData = {
+  technology: { id: string; reference: string | null };
+  technology_alerts?: boolean;
+  versions_excluded?: number;
+  versions_included?: number;
+  products?: Array<{ product: string; status: 'collected' | 'pending' | 'failed' }>;
+  items: TechnologyVulnerabilityRow[];
+};
+
+/** The one quiet line when the technology or some of its versions stay out of the alerts. */
+function alertsBanner(data: VulnerabilitySectionData | undefined, t: TFunction): string | null {
+  if (!data) return null;
+  const includedVersions = data.versions_included ?? 0;
+  const excludedVersions = data.versions_excluded ?? 0;
+  if (data.technology_alerts === false && includedVersions === 0) return t('pages.vulnerabilities.section.alerts.excluded');
+  if (data.technology_alerts === false && includedVersions > 0) return t('pages.vulnerabilities.section.alerts.excludedExcept', { count: includedVersions });
+  if (data.technology_alerts !== false && excludedVersions > 0) return t('pages.vulnerabilities.section.alerts.versionsExcluded', { count: excludedVersions });
+  return null;
+}
 
 type Props = {
   /** The technology's id (or `TEC-n`). */
@@ -44,11 +69,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const [busy, setBusy] = useState(false);
   const query = useQuery({
     queryKey: ['vulnerabilities', 'technology', technologyId],
-    queryFn: async () => (await api.get<{
-      technology: { id: string; reference: string | null };
-      products?: Array<{ product: string; status: 'collected' | 'pending' | 'failed' }>;
-      items: TechnologyVulnerabilityRow[];
-    }>(`/technologies/${technologyId}/vulnerabilities`)).data,
+    queryFn: async () => (await api.get<VulnerabilitySectionData>(`/technologies/${technologyId}/vulnerabilities`)).data,
     enabled,
     // While the feed collects a new product of the technology, read again every 10 seconds.
     refetchInterval: (q) => ((q.state.data?.products ?? []).some((p) => p.status === 'pending') ? 10_000 : false),
@@ -58,6 +79,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const cveCount = new Set(rows.map((row) => row.cve_id)).size;
   // The page's technology filter takes the reference: a raw id would show in it.
   const technologyRef = query.data?.technology?.reference ?? query.data?.technology?.id ?? technologyId;
+  const banner = alertsBanner(query.data, t);
+  const settingsHref = `/it/technologies/${encodeURIComponent(technologyRef)}/overview#${TECHNOLOGY_VERSIONS_ANCHOR}`;
 
   const rematch = async () => {
     setBusy(true);
@@ -84,6 +107,15 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
 
   return (
     <RelationsSection title={t('pages.vulnerabilities.section.title')} count={query.data ? cveCount : undefined}>
+      {banner && (
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 0.5 }}>
+          <Box component="span">{banner}</Box>
+          {' '}
+          <Link component={RouterLink} to={settingsHref} underline="hover">
+            {t('pages.vulnerabilities.section.alerts.set')}
+          </Link>
+        </Typography>
+      )}
       {canEdit && (
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mb: 0.5 }}>
           {result && <Typography role="status" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{result}</Typography>}
@@ -101,8 +133,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           rows={rows}
           rowKey={(row) => row.id}
           // The grid on this row: the technology, its version (`none`: not recorded) and the CVE.
-          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&version=${encodeURIComponent(row.version_label ?? 'none')}&state=all&q=${encodeURIComponent(row.cve_id)}`}
-          rowMuted={(row) => !row.matching}
+          rowHref={(row) => `/it/vulnerabilities?technology=${encodeURIComponent(technologyRef)}&version=${encodeURIComponent(row.version_label ?? 'none')}&state=all&alerts=all&q=${encodeURIComponent(row.cve_id)}`}
+          rowMuted={(row) => !row.matching || row.alerts === false}
           ariaLabel={t('pages.vulnerabilities.section.title')}
         />
       )}

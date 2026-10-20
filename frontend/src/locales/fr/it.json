@@ -432,7 +432,15 @@
         "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
         "rematch": "Rapprocher à nouveau",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
-        "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez."
+        "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez.",
+        "alerts": {
+          "excluded": "Exclue des alertes",
+          "excludedExcept_one": "Exclue des alertes, sauf {{count}} version",
+          "excludedExcept_other": "Exclue des alertes, sauf {{count}} versions",
+          "versionsExcluded_one": "{{count}} version exclue des alertes",
+          "versionsExcluded_other": "{{count}} versions exclues des alertes",
+          "set": "Régler"
+        }
       }
     },
     "interfaces": {
