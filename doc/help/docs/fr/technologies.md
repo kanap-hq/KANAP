@@ -64,7 +64,7 @@ Le sens des deux dates de support dépend de l'éditeur :
 
 Toute technologie peut être un système d'exploitation : placez VMware ESXi ou FortiOS dans la famille **Système d'exploitation** et elle peut devenir le système d'exploitation d'un hôte ou d'un pare-feu.
 
-Les systèmes d'exploitation du catalogue n'ont pas encore d'identifiants CPE produit : KANAP ne les rapproche donc pas des vulnérabilités.
+Les systèmes d'exploitation du catalogue ont des identifiants CPE produit : KANAP les rapproche des vulnérabilités publiées. SUSE Linux Enterprise Server n'en a pas : la NVD place le service pack à côté de la version, et le rapprochement lit la version.
 
 Les installations mises à jour depuis une version antérieure gardent leurs données : les systèmes d'exploitation utilisés par les serveurs, et les entrées ajoutées à l'ancienne liste des systèmes d'exploitation des paramètres, sont devenus des technologies, avec leurs versions et leurs dates.
 
@@ -153,7 +153,7 @@ Une version issue du catalogue affiche **Catalogue** à côté de son libellé, 
 
 La consultation ajoute les nouvelles versions et les nouveaux identifiants CPE produit du produit, et met à jour les dates de fin de support et les identifiants que le catalogue a changés. Elle n'écrase jamais une valeur que vous avez changée, et ne recrée jamais une version ou un identifiant que vous avez supprimé. Une version saisie avant que le catalogue ne la connaisse lui est rattachée quand les libellés correspondent, et ses dates vides sont remplies.
 
-**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées : une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. Les entrées du catalogue arrivent avec leurs identifiants, sauf les systèmes d'exploitation.
+**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées : une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. Les entrées du catalogue arrivent avec leurs identifiants, y compris les systèmes d'exploitation. SUSE Linux Enterprise Server arrive sans identifiant.
 
 **Notes** : texte libre, comme les conditions de licence ou les dates de renouvellement.
 

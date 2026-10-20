@@ -64,7 +64,7 @@ Was die beiden Supportdaten bedeuten, hängt vom Hersteller ab:
 
 Jede Technologie kann ein Betriebssystem sein: Ordnen Sie VMware ESXi oder FortiOS der Familie **Betriebssystem** zu, dann kann sie das Betriebssystem eines Hosts oder einer Firewall sein.
 
-Die Betriebssysteme des Katalogs haben noch keine CPE-Produktkennungen, daher gleicht KANAP sie nicht mit Schwachstellen ab.
+Die Betriebssysteme des Katalogs haben CPE-Produktkennungen, und KANAP gleicht sie mit veröffentlichten Schwachstellen ab. SUSE Linux Enterprise Server hat keine: die NVD führt das Service Pack neben der Version, und der Abgleich liest die Version.
 
 Installationen, die von einer früheren Version aktualisiert wurden, behalten ihre Daten: Die von den Servern genutzten Betriebssysteme und die Einträge, die der früheren Betriebssystemliste der Einstellungen hinzugefügt wurden, sind zu Technologien geworden, mit ihren Versionen und Daten.
 
@@ -153,7 +153,7 @@ Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine
 
 Die Prüfung fügt die neuen Versionen und CPE-Produktkennungen des Produkts hinzu und aktualisiert die Supportende-Daten und Kennungen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version oder Kennung wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Katalogeinträge bringen ihre Kennungen mit, außer den Betriebssystemen.
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab: Eine Technologie ohne Kennung erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Katalogeinträge bringen ihre Kennungen mit, einschließlich der Betriebssysteme. SUSE Linux Enterprise Server kommt ohne Kennung.
 
 **Notizen**: Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
 
