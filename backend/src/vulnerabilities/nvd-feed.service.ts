@@ -501,6 +501,7 @@ export class NvdFeedService implements OnModuleInit {
       if (done) collected.push(product);
       if (serviceDown) break;
     }
+    // The CVE just cached take the signals already downloaded before the rematch reads them.
     await this.applyKnownSignals();
     this.noteRematch(tenantId, collected);
   }
