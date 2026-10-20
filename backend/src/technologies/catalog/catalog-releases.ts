@@ -359,17 +359,39 @@ export type CatalogVersionValues = {
   cpe_version: string | null;
 };
 
+/** Identifiers compared and stored without case, once each, in order. */
+export function lowerSorted(ids: readonly string[]): string[] {
+  return Array.from(new Set(ids.map((id) => id.toLowerCase()))).sort();
+}
+
 /**
  * `technologies.catalog_state`: what the catalog has given a technology. `cpe_products`: the
- * identifiers it offered (one the tenant removed is not offered again). `versions`: per version
- * key, the values it last wrote; a key present was offered once (a version the tenant deleted is
- * not created again). `description`: the short description the catalog wrote on the technology;
- * absent or null while it wrote none, so an empty description is filled once and never again.
+ * identifiers it offers, including one the cache added. One the tenant removed stays here until
+ * it has been seen leaving the shipped file, so it is not offered again. One the shipped file
+ * withdrew leaves, and is added again if the catalog offers it later. `shipped_cpe`: the
+ * identifiers the shipped file listed at the last pass, in lower case. Absent on a state written
+ * before that field: the next pass records the current shipped file and withdraws nothing.
+ * `cpe_written`: the identifiers the catalog itself wrote and the tenant still holds, lower case.
+ * Absent: none, so nothing is withdrawn until the catalog writes one. An identifier the tenant
+ * typed first, or held before an adoption, is not in this list.
+ * `versions`: per version key, the values it last wrote; a key present was offered once (a
+ * version the tenant deleted is not created again). `description`: the short description the
+ * catalog last wrote; absent or null while it wrote none. `description_language`: the language of
+ * that text. A description follows the catalog when the text in that same language changes and the
+ * technology still holds the same characters. The state records the new text only when the update
+ * changes the row. A change of the tenant's language rewrites nothing. Absent: the language whose
+ * catalog text equals `description` is recorded, and nothing is rewritten when none equals it.
  */
 export type CatalogState = {
   cpe_products: string[];
   versions: Record<string, CatalogVersionValues>;
   description?: string | null;
+  /** Language of `description`. Absent: inferred from the catalog text, or left alone. */
+  description_language?: 'en' | 'fr' | 'de' | 'es';
+  /** Identifiers of the shipped file at the last pass, lower case. Absent: not known yet. */
+  shipped_cpe?: string[];
+  /** Identifiers the catalog wrote and the tenant still holds, lower case. Absent: none. */
+  cpe_written?: string[];
 };
 
 export function valuesOf(version: CatalogVersion): CatalogVersionValues {

@@ -9,16 +9,18 @@ import { Features } from '../../config/features';
 import { assert, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { TechnologyCatalogSyncService, type CatalogRuntime, type TenantSyncResult } from '../catalog/technology-catalog-sync.service';
 import { mergeProduct, versionsOfReleases } from '../catalog/catalog-releases';
-import type { CatalogProduct, CatalogVersion } from '../catalog/technology-catalog.service';
+import type { CatalogLanguage, CatalogProduct, CatalogVersion } from '../catalog/technology-catalog.service';
 import * as shippedFile from '../catalog/technologies.catalog.json';
-import { services, type AuditEntry } from './technologies.fixtures';
+import { VulnerabilityMatchService } from '../../vulnerabilities/vulnerability-match.service';
+import { asset, installed, services, technology, type AuditEntry } from './technologies.fixtures';
 
-// The living catalog (lot C4): the sync of a tenant's adopted technologies (new version added, a
-// date that follows the catalog, a value the tenant typed kept, a version the tenant deleted not
-// created again, CPE identifiers, a technology adopted before the living catalog, the other
-// tenant untouched), then the scheduled run against a fake endoflife.date served on 127.0.0.1
-// (cache, cadence, retries, a product read less than 20 hours ago skipped) and with the gate off.
-// The cache rows of the run are committed: `postgresql` and `nginx`, deleted before and after.
+// The living catalog (lot C4, withdrawals and description corrections in lot C5): the sync of a
+// tenant's adopted technologies (new version added, a date that follows the catalog, a value the
+// tenant typed kept, a version the tenant deleted not created again, CPE identifiers added and
+// withdrawn, a description that follows or stays, a technology adopted before the living catalog,
+// the other tenant untouched), then the scheduled run against a fake endoflife.date served on
+// 127.0.0.1 (cache, cadence, retries, a product read less than 20 hours ago skipped) and with the
+// gate off. The cache rows of the run are committed: `postgresql` and `nginx`, deleted before and after.
 
 const KEYS = ['postgresql', 'nginx'];
 const HOUR = 60 * 60 * 1000;
@@ -32,10 +34,22 @@ function shippedDay(offset: number): string {
   return new Date(Date.parse(`${RETRIEVED_ON}T00:00:00.000Z`) + offset * 24 * HOUR).toISOString().slice(0, 10);
 }
 
-function syncService(audit: AuditEntry[] = []) {
+function syncService(audit: AuditEntry[] = [], events?: { emit: (event: { technologyId: string; products: string[] }) => Promise<void> }) {
   const { catalog } = services(audit);
   const auditLog = { log: async (entry: AuditEntry) => void audit.push(entry) };
-  return { catalog, sync: new TechnologyCatalogSyncService(dataSource, { register: () => undefined } as any, catalog, auditLog as any) };
+  return { catalog, sync: new TechnologyCatalogSyncService(dataSource, { register: () => undefined } as any, catalog, auditLog as any, events as any) };
+}
+
+function withoutCpe(product: CatalogProduct, dropped: string[]): CatalogProduct {
+  const gone = new Set(dropped.map((p) => p.toLowerCase()));
+  return { ...product, cpe_products: product.cpe_products.filter((p) => !gone.has(p.toLowerCase())) };
+}
+
+/** `shippedProduct` answers `product` for `key` until the returned function puts the real one back. */
+function stubShipped(catalog: { shippedProduct: (key: string) => CatalogProduct | undefined }, key: string, product: CatalogProduct | undefined) {
+  const real = catalog.shippedProduct.bind(catalog);
+  catalog.shippedProduct = (asked: string) => (asked === key ? product : real(asked));
+  return () => { catalog.shippedProduct = real; };
 }
 
 function counts(result: TenantSyncResult) {
@@ -101,7 +115,7 @@ async function testSyncOfATenant() {
     const shipped = catalog.shippedProduct('postgresql')!;
     const products = new Map([['postgresql', livingPostgres(shipped, ['a:kanapspec:postgres'])]]);
     const result = await sync.syncTenant(runner.manager, tenantId, products);
-    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, versions_attached: 0, errors: [] });
+    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] });
 
     const after = await versionsOf(runner, technology.id);
     assert.deepEqual(after.get('99'), { label: '99', standard_support_end: '2031-11-13', extended_support_end: null, catalog_key: 'postgresql:99' },
@@ -115,7 +129,7 @@ async function testSyncOfATenant() {
 
     const statements: string[] = [];
     const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
-    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, versions_attached: 0, errors: [] },
+    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] },
       'a second sync changes nothing');
     assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)),
       'nor writes anything: the state read back in another key order is the same');
@@ -287,13 +301,14 @@ async function testDescriptionFilled() {
     await runner.query(`UPDATE tenants SET metadata = '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
     const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
     const shipped = catalog.shippedProduct('postgresql')!;
+    const english = catalog.description('postgresql', 'en')!;
     const french = catalog.description('postgresql', 'fr')!;
-    assert.ok(french && french !== catalog.description('postgresql', 'en'));
+    assert.ok(french && french !== english);
     const read = async () => (await runner.query(`SELECT description FROM technologies WHERE id = $1`, [technology.id]))[0].description;
 
-    assert.notEqual(await read(), french, 'adopted with a description: the sync leaves it');
+    assert.equal(await read(), english, 'adopted in English');
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
-    assert.equal(await read(), catalog.description('postgresql', 'en'));
+    assert.equal(await read(), english, 'a tenant language does not rewrite a description the catalog did not change');
 
     // Adopted before the catalog had descriptions: empty, no state.
     await runner.query(`UPDATE technologies SET description = '  ', catalog_state = NULL WHERE id = $1`, [technology.id]);
@@ -309,6 +324,10 @@ async function testDescriptionFilled() {
     await runner.query(`UPDATE technologies SET description = NULL WHERE id = $1`, [technology.id]);
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
     assert.equal(await read(), null, 'a description the tenant emptied stays empty');
+
+    await runner.query(`UPDATE technologies SET description = E'\\n', catalog_state = catalog_state - 'description' WHERE id = $1`, [technology.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(await read(), '\n', 'a line break is a description, so it is not filled');
   });
 }
 
@@ -330,6 +349,521 @@ async function testDescriptionInUsersLanguage() {
     await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', catalog.shippedProduct('postgresql')!]]));
     const [{ description }] = await runner.query(`SELECT description FROM technologies WHERE id = $1`, [technology.id]);
     assert.equal(description, catalog.description('postgresql', 'fr'), 'French, as most enabled users (disabled ones do not count)');
+  });
+}
+
+/**
+ * C5: an identifier the shipped catalog withdraws, still held (without case), is removed, audited
+ * and matched again. One the tenant added stays. A second pass writes nothing.
+ */
+async function testShippedIdentifierWithdrawn() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const emitted: Array<{ technologyId: string; products: string[] }> = [];
+    const { catalog, sync } = syncService(audit, { emit: async (event) => { emitted.push({ technologyId: event.technologyId, products: [...event.products] }); } });
+    const tenantId = await seedTenant(runner, 'cat-sync-drop');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const dropped = shipped.cpe_products[0];
+    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [technology.id, ['A:PostgreSQL:PostgreSQL', 'a:tenant:own']]);
+    const versionId = (await runner.query(`SELECT id FROM technology_versions WHERE technology_id = $1 AND label = '16'`, [technology.id]))[0].id;
+    await installed(runner, tenantId, await asset(runner, tenantId, 'SRV-PG'), technology.id, versionId);
+    const cveDropped = 'CVE-2099-45055';
+    const cveKept = 'CVE-2099-45056';
+    await runner.query(
+      `INSERT INTO vulnerability_cves (cve_id, summary, severity, nvd_status) VALUES ($1, 'Dropped product', 'high', 'Analyzed'), ($2, 'Kept product', 'medium', 'Analyzed')`,
+      [cveDropped, cveKept],
+    );
+    await runner.query(
+      `INSERT INTO vulnerability_cve_matches (cve_id, product, criteria, vulnerable) VALUES ($1, $2, 'cpe:2.3:' || $2 || ':*', true), ($3, $4, 'cpe:2.3:' || $4 || ':*', true)`,
+      [cveDropped, dropped, cveKept, 'a:tenant:own'],
+    );
+    const matcher = new VulnerabilityMatchService();
+    assert.equal((await matcher.matchTenant(runner.manager, tenantId, technology.id)).added, 2, 'both products match the version in use');
+
+    // PostgreSQL publishes one identifier: emptying the list is an intentional withdrawal, so the
+    // stub says `noCpe`. An empty list without that mark withdraws nothing.
+    const withdrawn = { ...withoutCpe(shipped, [dropped]), noCpe: 'The shipped entry withdraws its identifier.' as const };
+    const restore = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+      const [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.deepEqual(tech.cpe_products, ['a:tenant:own'], 'the shipped identifier is removed, the one the tenant added stays');
+      assert.deepEqual(tech.catalog_state.cpe_products, [], 'the state lists what is still offered');
+      const row = audit.find((entry) => (entry.after as any)?.catalog_sync?.cpe_products_removed?.length);
+      assert.deepEqual((row?.after as any).catalog_sync.cpe_products_removed, [dropped]);
+      assert.equal((row as any)?.source, 'system');
+      assert.equal((row as any)?.sourceRef, 'technology-catalog');
+      assert.deepEqual(emitted, [{ technologyId: technology.id, products: [] }], 'matched again, with nothing new to collect');
+      assert.equal((await matcher.matchTenant(runner.manager, tenantId, technology.id)).removed, 1, 'the row of the removed product disappears');
+      const left = await runner.query(`SELECT cve_id FROM technology_vulnerabilities WHERE technology_id = $1`, [technology.id]);
+      assert.deepEqual(left.map((r: { cve_id: string }) => r.cve_id), [cveKept]);
+
+      const statements: string[] = [];
+      const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
+      const before = audit.length;
+      await sync.syncTenant(watched as any, tenantId, new Map([['postgresql', withdrawn]]));
+      assert.equal(audit.length, before, 'a second pass writes no audit');
+      assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)), 'a second pass writes nothing');
+    } finally {
+      restore();
+    }
+  });
+}
+
+/**
+ * C5: an identifier the catalog wrote and the tenant still holds is withdrawn with the shipped
+ * file, offered again later, and replaced. One the tenant removed stays out. One the tenant types
+ * again after that removal is the tenant's: a later shipped withdrawal leaves it.
+ */
+async function testCpeRemovalRules() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-rules');
+    const { technology: adopted } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const dropped = shipped.cpe_products[0];
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [adopted.id]))[0];
+    const withdrawn = { ...withoutCpe(shipped, [dropped]), noCpe: 'The shipped entry withdraws its identifier.' as const };
+
+    const restore = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+    } finally {
+      restore();
+    }
+    let tech = await read();
+    assert.deepEqual(tech.cpe_products, [], 'the shipped catalog withdrew the identifier it wrote');
+    assert.ok(!tech.catalog_state.cpe_products.includes(dropped), 'it leaves the state');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [dropped], 'offered again later, it comes back');
+    assert.ok(tech.catalog_state.cpe_products.includes(dropped));
+    assert.ok(tech.catalog_state.cpe_written.includes(dropped), 'coming back counts as written by the catalog');
+
+    const replacement = 'a:postgresql:postgresql_server';
+    const replaced = { ...shipped, cpe_products: [replacement] };
+    const restoreReplaced = stubShipped(catalog, 'postgresql', replaced);
+    try {
+      const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', replaced]]));
+      assert.deepEqual([result.cpe_added, result.cpe_removed], [1, 1]);
+    } finally {
+      restoreReplaced();
+    }
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [replacement], 'a correction replaces the identifier');
+    assert.deepEqual(tech.catalog_state.cpe_products, [replacement]);
+    const row = [...audit].reverse().find((entry) => (entry.after as any)?.catalog_sync?.cpe_products_added?.length);
+    assert.deepEqual((row?.after as any).catalog_sync.cpe_products_removed, [dropped]);
+    assert.deepEqual((row?.after as any).catalog_sync.cpe_products_added, [replacement]);
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    await runner.query(`UPDATE technologies SET cpe_products = '{}' WHERE id = $1`, [adopted.id]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [], 'an identifier the tenant removed does not come back');
+    assert.ok(tech.catalog_state.cpe_products.includes(dropped), 'it stays in the state while the catalog offers it');
+    assert.ok(!tech.catalog_state.cpe_written.includes(dropped), 'a tenant removal leaves the written list');
+
+    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [adopted.id, [dropped]]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withoutCpe(shipped, [dropped])]]));
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [dropped], 'an endoflife.date answer without the identifier removes nothing');
+
+    const restoreAgain = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+    } finally {
+      restoreAgain();
+    }
+    tech = await read();
+    assert.deepEqual(tech.cpe_products, [dropped], 'typed again by the tenant, a shipped withdrawal leaves it');
+  });
+}
+
+/** C5 review P3: an identifier the tenant typed, then one held before adoption, is never withdrawn. */
+async function testTenantTypedIdentifierIsNotWithdrawn() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-typed');
+    const { technology: adopted } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const own = 'a:kanapreview:pg_extension';
+    await runner.query(`UPDATE technologies SET cpe_products = cpe_products || $2::text[] WHERE id = $1`, [adopted.id, [own]]);
+    const offering = { ...shipped, cpe_products: [...shipped.cpe_products, own] };
+    const restoreOffer = stubShipped(catalog, 'postgresql', offering);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', offering]]));
+    } finally {
+      restoreOffer();
+    }
+    const [mid] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [adopted.id]);
+    assert.ok(!mid.catalog_state.cpe_written.includes(own), 'an identifier the tenant already held is not a catalog write');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [adopted.id]);
+    assert.ok(tech.cpe_products.includes(own), 'the shipped file dropping an identifier the tenant typed leaves it');
+    assert.ok(tech.cpe_products.includes(shipped.cpe_products[0]), 'the identifier the catalog wrote stays while the file still lists it');
+  });
+
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-preheld');
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const held = shipped.cpe_products[0];
+    const id = await technology(runner, tenantId, 1, 'PostgreSQL', 'database');
+    await runner.query(`UPDATE technologies SET cpe_products = $2 WHERE id = $1`, [id, [held, 'a:tenant:own']]);
+    const adopted = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    assert.equal(adopted.technology.id, id, 'adoption attaches the catalog to the technology of the same name');
+    const [row] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [id]);
+    assert.deepEqual(row.catalog_state.cpe_written, [], 'identifiers already held are not catalog writes');
+    const withdrawn = { ...withoutCpe(shipped, [held]), noCpe: 'The shipped entry withdraws its identifier.' as const };
+    const restore = stubShipped(catalog, 'postgresql', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+    } finally {
+      restore();
+    }
+    const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [id]);
+    assert.ok(tech.cpe_products.includes(held), 'an identifier held before adoption is not withdrawn');
+    assert.ok(tech.cpe_products.includes('a:tenant:own'), 'an identifier the tenant added stays');
+  });
+}
+
+/**
+ * C5: without a usable state, nothing is removed. The state written on that pass does not record
+ * an identifier the shipped file no longer lists, so a later pass does not remove it either: a
+ * missing state cannot tell it from an identifier the tenant added.
+ */
+async function testNoUsableStateRemovesNothing() {
+  for (const raw of [null, '[]']) {
+    await inRolledBackTransaction(async (runner) => {
+      const { catalog, sync } = syncService();
+      const tenantId = await seedTenant(runner, 'cat-sync-nostate');
+      const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+      const shipped = catalog.shippedProduct('postgresql')!;
+      const held = ['A:PostgreSQL:PostgreSQL', 'a:tenant:own'];
+      await runner.query(`UPDATE technologies SET cpe_products = $2, catalog_state = $3::jsonb WHERE id = $1`, [technology.id, held, raw]);
+      const withdrawn = withoutCpe(shipped, [shipped.cpe_products[0]]);
+      const restore = stubShipped(catalog, 'postgresql', withdrawn);
+      try {
+        await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+        await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withdrawn]]));
+      } finally {
+        restore();
+      }
+      const [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
+      assert.deepEqual(tech.cpe_products, held, `${raw === null ? 'no state' : raw}: nothing is removed`);
+    });
+  }
+}
+
+/**
+ * C5 review P1 and P2: an identifier the cache added (a release product) stays when the cache is
+ * missing or empty, and one the tenant then removed does not come back when the cache returns.
+ */
+async function testCacheIdentifierIsNotWithdrawnByAMissingCache() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-cache');
+    const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('mssqlserver')!;
+    const live = versionsOfReleases([{ name: '18.0', label: '2028', releaseDate: '2026-10-01', eolFrom: '2034-01-01' }], shippedDay(1), 'mssqlserver');
+    const year = 'a:microsoft:sql_server_2028';
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+    const holds = async () => (await read()).cpe_products.includes(year);
+    const removed = () => audit.some((entry) => (entry.after as { catalog_sync?: { cpe_products_removed?: string[] } })?.catalog_sync?.cpe_products_removed?.includes(year));
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), true, 'the cache adds the release identifier');
+    assert.ok(!(await read()).catalog_state.shipped_cpe.includes(year), 'the shipped file did not list it');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, null)]]));
+    assert.equal(await holds(), true, 'a missing cache removes nothing');
+    assert.equal(removed(), false, 'the audit records no removal');
+    assert.ok((await read()).catalog_state.cpe_products.includes(year), 'the identifier stays in the state');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, [])]]));
+    assert.equal(await holds(), true, 'an empty endoflife.date release list removes nothing');
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    await runner.query(`UPDATE technologies SET cpe_products = array_remove(cpe_products, $2) WHERE id = $1`, [technology.id, year]);
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), false, 'an identifier the tenant removed stays out while the cache offers it');
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, null)]]));
+    await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', mergeProduct(shipped, live)]]));
+    assert.equal(await holds(), false, 'a missing cache does not undo the tenant removal when the cache returns');
+  });
+}
+
+/** C5 review B1: a readable state from before `shipped_cpe` withdraws nothing and records the shipped file. */
+async function testStateWithoutShippedCpeRemovesNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-c4');
+    const { technology } = await catalog.adopt('mssqlserver', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('mssqlserver')!;
+    const dropped = shipped.cpe_products[0];
+    const [{ catalog_state: state }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    delete state.shipped_cpe;
+    await runner.query(`UPDATE technologies SET catalog_state = $2::jsonb WHERE id = $1`, [technology.id, JSON.stringify(state)]);
+    const withdrawn = withoutCpe(shipped, [dropped]);
+    const restore = stubShipped(catalog, 'mssqlserver', withdrawn);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', withdrawn]]));
+      let [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.ok(tech.cpe_products.includes(dropped), 'a state without shipped_cpe withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, [...withdrawn.cpe_products].sort(), 'the pass records the shipped file as it is now');
+      await sync.syncTenant(runner.manager, tenantId, new Map([['mssqlserver', withdrawn]]));
+      [tech] = await runner.query(`SELECT cpe_products FROM technologies WHERE id = $1`, [technology.id]);
+      assert.ok(tech.cpe_products.includes(dropped), 'the following pass does not withdraw it either');
+    } finally {
+      restore();
+    }
+  });
+}
+
+/** C5 review B1: a shipped file that loses every identifier, and is not marked `noCpe`, withdraws nothing. */
+async function testEmptyShippedFileWithdrawsNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const warnings: string[] = [];
+    const logger = (sync as unknown as { logger: { warn: (message: string) => void } }).logger;
+    const warn = logger.warn.bind(logger);
+    logger.warn = (message: string) => { warnings.push(message); warn(message); };
+    const tenantId = await seedTenant(runner, 'cat-sync-empty');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const read = async () => (await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+    const before = (await read()).catalog_state.shipped_cpe;
+
+    const emptied = { ...shipped, cpe_products: [] as string[] };
+    const restore = stubShipped(catalog, 'postgresql', emptied);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', emptied]]));
+      const tech = await read();
+      assert.deepEqual(tech.cpe_products, shipped.cpe_products, 'an emptied shipped file withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, before, 'the previous shipped identifiers stay recorded');
+      assert.ok(warnings.some((line) => line.includes('postgresql') && line.includes('noCpe')), 'the pass logs it');
+    } finally {
+      restore();
+    }
+
+    const marked = { ...emptied, noCpe: 'The entry no longer has a CPE identifier.' as const };
+    const restoreMarked = stubShipped(catalog, 'postgresql', marked);
+    try {
+      await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', marked]]));
+      const tech = await read();
+      assert.deepEqual(tech.cpe_products, [], 'an entry marked noCpe withdraws the identifiers it listed');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, [], 'the empty shipped file is recorded once it is explicit');
+    } finally {
+      restoreMarked();
+    }
+  });
+}
+
+/**
+ * A key the shipped file no longer lists is not a withdrawal. The living product does not
+ * stand in for the file: identifiers stay, `shipped_cpe` stays, and versions still follow.
+ */
+async function testMissingShippedProductWithdrawsNothing() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-sync-noship');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const [{ catalog_state: before }] = await runner.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    const living = livingPostgres(shipped);
+    living.cpe_products = [];
+    const restore = stubShipped(catalog, 'postgresql', undefined);
+    try {
+      const result = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', living]]));
+      assert.equal(result.cpe_removed, 0);
+      const [tech] = await runner.query(`SELECT cpe_products, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+      assert.deepEqual(tech.cpe_products, shipped.cpe_products, 'a missing shipped entry withdraws nothing');
+      assert.deepEqual(tech.catalog_state.shipped_cpe, before.shipped_cpe, 'shipped_cpe is not taken from the living product');
+      const versions = await versionsOf(runner, technology.id);
+      const moved = living.versions.find((version) => version.key === '18')!;
+      assert.equal(versions.get('18')!.standard_support_end, moved.standard_support_end, 'versions still follow the living product');
+    } finally {
+      restore();
+    }
+  });
+}
+
+/**
+ * C5 review P4: a description follows the catalog in the language it was written in.
+ * An English adoption on a French tenant stays English the next night. Without
+ * `description_language`, the language whose catalog text equals the remembered description
+ * is recorded, and nothing is rewritten when none equals it.
+ */
+async function testDescriptionLanguageStays() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-lang');
+    await runner.query(`UPDATE tenants SET metadata = '{"language":"fr"}'::jsonb WHERE id = $1`, [tenantId]);
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const english = catalog.description('postgresql', 'en')!;
+    const french = catalog.description('postgresql', 'fr')!;
+    assert.notEqual(english, french);
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const read = async () => (await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    let row = await read();
+    assert.equal(row.description, english, 'adopted in English on a French tenant: the next night leaves it');
+    assert.equal(row.catalog_state.description_language, 'en');
+    assert.equal(row.catalog_state.description, english);
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+
+    await runner.query(`UPDATE technologies SET catalog_state = catalog_state - 'description_language' WHERE id = $1`, [technology.id]);
+    const originalText = catalog.textIn.bind(catalog);
+    const texts: Partial<Record<CatalogLanguage, string>> = {};
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' && texts[language] !== undefined ? texts[language]! : originalText(key, language));
+    texts.fr = 'Texte français révisé.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, english, 'a French revision does not rewrite an English description');
+    assert.equal(row.catalog_state.description_language, 'en', 'the language is the one whose catalog text equals the remembered description');
+    assert.equal(row.catalog_state.description, english);
+
+    texts.en = 'A revised English description.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, texts.en, 'the catalog text in the recorded language replaces it');
+    assert.equal(row.catalog_state.description, texts.en);
+    assert.equal(row.catalog_state.description_language, 'en');
+
+    await runner.query(
+      `UPDATE technologies SET description = 'Hand written', catalog_state = jsonb_set(catalog_state, '{description}', '"Hand written"') - 'description_language' WHERE id = $1`,
+      [technology.id],
+    );
+    texts.en = 'Brand new English.';
+    texts.fr = 'Texte français encore révisé.';
+    const before = audit.length;
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, 'Hand written', 'a remembered text that equals no catalog language stays');
+    assert.equal(row.catalog_state.description, 'Hand written');
+    assert.equal(row.catalog_state.description_language ?? null, null);
+    assert.equal(audit.length, before, 'nothing is audited when the description stays');
+  });
+}
+
+/** C5 review P5: a trailing line break is the tenant's text. Nothing follows, and the state stays. */
+async function testDescriptionNewlineStays() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-nl');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
+    const english = original('postgresql', 'en')!;
+    let next: string | null = english;
+    catalog.description = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, `${english}\n`]);
+    next = 'A revised catalog description.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', catalog.shippedProduct('postgresql')!]]));
+    const [tech] = await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]);
+    assert.equal(tech.description, `${english}\n`, 'a trailing line break keeps the description');
+    assert.equal(tech.catalog_state.description, english, 'the state keeps the text the catalog wrote');
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+  });
+}
+
+/** C5: a description the tenant left unchanged follows the catalog; one the tenant changed stays. */
+async function testDescriptionFollows() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const { catalog, sync } = syncService(audit);
+    const tenantId = await seedTenant(runner, 'cat-sync-follow');
+    const { technology } = await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' });
+    const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
+    const english = original('postgresql', 'en')!;
+    let next: string | null = english;
+    // The follow reads `textIn` (that language only). Stub both, or the English fallback of
+    // `description` would hide a missing translation.
+    const revised = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.description = revised;
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
+    const shipped = catalog.shippedProduct('postgresql')!;
+    const read = async () => (await runner.query(`SELECT description, catalog_state FROM technologies WHERE id = $1`, [technology.id]))[0];
+
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, `  ${english}  `]);
+    next = 'A revised catalog description.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    let row = await read();
+    assert.equal(row.description, `  ${english}  `, 'a space the tenant added keeps the description');
+    assert.equal(row.catalog_state.description, english, 'the state keeps the text the catalog wrote');
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 0);
+
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, english]);
+    const followed = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(followed.descriptions_updated, 1, 'the summary counts a description the catalog replaced');
+    row = await read();
+    assert.equal(row.description, next, 'the same text follows the catalog');
+    assert.equal(row.catalog_state.description, next);
+    assert.equal(audit.filter((entry) => (entry.after as any)?.catalog_sync?.description_updated === true).length, 1);
+
+    const statements: string[] = [];
+    const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
+    const before = audit.length;
+    await sync.syncTenant(watched as any, tenantId, new Map([['postgresql', shipped]]));
+    assert.equal(audit.length, before, 'a second pass writes no audit');
+    assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)), 'a second pass writes nothing');
+
+    await runner.query(`UPDATE technologies SET description = 'Kept by the tenant' WHERE id = $1`, [technology.id]);
+    next = 'Another catalog revision.';
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, 'Kept by the tenant', 'a description the tenant changed stays');
+    assert.equal(row.catalog_state.description, 'A revised catalog description.');
+
+    await runner.query(`UPDATE technologies SET description = $2 WHERE id = $1`, [technology.id, row.catalog_state.description]);
+    next = null;
+    await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', shipped]]));
+    row = await read();
+    assert.equal(row.description, 'A revised catalog description.', 'a description the catalog withdraws leaves the text');
+  });
+}
+
+/** C5: of two tenants, the one that changed the description keeps it; the other follows the catalog. */
+async function testTwoTenantsOneFollows() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const original = catalog.description.bind(catalog);
+    const originalText = catalog.textIn.bind(catalog);
+    let next: string | null = original('postgresql', 'en');
+    catalog.description = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : original(key, language));
+    catalog.textIn = (key: string, language: CatalogLanguage) => (key === 'postgresql' ? next : originalText(key, language));
+    const left = await seedTenant(runner, 'cat-sync-left');
+    const right = await seedTenant(runner, 'cat-sync-right');
+    const adopted = async (tenantId: string) => {
+      await setTenant(runner, tenantId);
+      return (await catalog.adopt('postgresql', { manager: runner.manager, tenantId, language: 'en' })).technology.id;
+    };
+    const a = await adopted(left);
+    const b = await adopted(right);
+    await setTenant(runner, left);
+    await runner.query(`UPDATE technologies SET description = 'Ours' WHERE id = $1`, [a]);
+    next = 'Shared catalog text.';
+    const shipped = catalog.shippedProduct('postgresql')!;
+    await sync.syncTenant(runner.manager, left, new Map([['postgresql', shipped]]));
+    await setTenant(runner, right);
+    await sync.syncTenant(runner.manager, right, new Map([['postgresql', shipped]]));
+    await setTenant(runner, left);
+    const [leftRow] = await runner.query(`SELECT description FROM technologies WHERE id = $1`, [a]);
+    await setTenant(runner, right);
+    const [rightRow] = await runner.query(`SELECT description FROM technologies WHERE id = $1`, [b]);
+    assert.equal(leftRow.description, 'Ours', 'the tenant that changed the description keeps it');
+    assert.equal(rightRow.description, 'Shared catalog text.', 'the other tenant follows the catalog');
   });
 }
 
@@ -466,7 +1000,7 @@ async function testGateOff() {
       requests.length = 0;
       await withTenant(dataSource, tenantId, (mg) => mg.query(`UPDATE technologies SET catalog_state = NULL WHERE tenant_id = $1`, [tenantId]));
       const summary = await sync.run({ ...runtime(), fetch: async () => { throw new Error('no request leaves with the gate off'); } });
-      assert.deepEqual([requests.length, summary.requests, summary.refresh_enabled, summary.tenants_synced], [0, 0, false, 1]);
+      assert.deepEqual([requests.length, summary.requests, summary.refresh_enabled, summary.tenants_synced, summary.cpe_removed, summary.descriptions_updated], [0, 0, false, 1, 0, 0]);
       const [row] = await withTenant(dataSource, tenantId, (mg) => mg.query(`SELECT catalog_state FROM technologies WHERE id = $1`, [ids.postgresql]));
       assert.ok(row.catalog_state?.versions?.['18'], 'the shipped catalog is still synced');
     });
@@ -610,6 +1144,18 @@ async function main() {
       ['version typed before the catalog had it', testTypedVersionIsAttached],
       ['a SQL Server release brings its CPE product', testReleaseProduct],
       ['empty description filled once', testDescriptionFilled],
+      ['shipped identifier withdrawn and matched again', testShippedIdentifierWithdrawn],
+      ['CPE removal rules', testCpeRemovalRules],
+      ['tenant-typed identifier is not withdrawn', testTenantTypedIdentifierIsNotWithdrawn],
+      ['no usable state removes nothing', testNoUsableStateRemovesNothing],
+      ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],
+      ['state without shipped_cpe removes nothing', testStateWithoutShippedCpeRemovesNothing],
+      ['empty shipped file withdraws nothing', testEmptyShippedFileWithdrawsNothing],
+      ['missing shipped entry withdraws nothing', testMissingShippedProductWithdrawsNothing],
+      ['description stays in the language it was written', testDescriptionLanguageStays],
+      ['description with a trailing line break stays', testDescriptionNewlineStays],
+      ['description follows the catalog', testDescriptionFollows],
+      ['two tenants, one follows', testTwoTenantsOneFollows],
       ['description in the users\' language', testDescriptionInUsersLanguage],
       ['scheduled run: refresh then sync', testRunRefreshesThenSyncs],
       ['gate off: no request, shipped catalog synced', testGateOff],
