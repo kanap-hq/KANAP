@@ -6,7 +6,7 @@ import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { CveListFeedService, type CveListSummary } from './cve-list-feed.service';
-import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
+import { VulnerabilityMatchService } from './vulnerability-match.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 import { VulnerabilitySignalsService } from './vulnerability-signals.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
@@ -208,7 +208,8 @@ function serviceFailure(error: unknown): boolean {
  *   at the run that follows its analysis, when its `lastModified` brings it back.
  * Scheduled task `vulnerability-feed` (model: `cleanup/lifecycle-status-sync.service.ts`),
  * registered only while `VULNERABILITY_FEED_ENABLED`. The same pass reads the CVE.org list
- * (`CveListFeedService`) after the NVD and before the workspaces are matched. A failure of
+ * (`CveListFeedService`) after the NVD and before the workspaces are matched. Every workspace is
+ * matched, then the signals already downloaded are stamped, then the owners are told. A failure of
  * CVE.org is named in the summary and does not stop the NVD collection or the matching.
  * The scheduler awaits the handler and records a failure; nothing here is started without being awaited.
  */
@@ -295,7 +296,7 @@ export class NvdFeedService implements OnModuleInit {
     return new Set(rows.map((r) => r.id));
   }
 
-  /** The scheduled run: collect the NVD, then CVE.org, then match every tenant and tell the owners what is new. */
+  /** The scheduled run: collect the NVD, then CVE.org, match every tenant, stamp the signals, then tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
@@ -312,22 +313,25 @@ export class NvdFeedService implements OnModuleInit {
     } catch (error: any) {
       summary.errors.push(`CVE.org: ${String(error?.message ?? error).slice(0, 300)}`);
     }
-    // The CVE just cached carry the exploitation signals before they are matched and announced:
-    // a new medium CVE already exploited is announced at this run, not left to the signals task.
-    await this.applyKnownSignals();
     const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
+    const matched: string[] = [];
     for (const tenantId of await this.tenantIds()) {
-      let result: MatchResult;
       try {
-        result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+        const result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
         summary.tenants_matched += 1;
         summary.rows_added += result.added;
         summary.rows_removed += result.removed;
+        matched.push(tenantId);
       } catch (error: any) {
         summary.errors.push(`Matching of tenant ${tenantId}: ${error?.message ?? error}`);
-        continue;
       }
+    }
+    // After every match: a CVE only CVE.org put in the cache receives the signals already
+    // downloaded, before the mails read them. A new medium CVE already exploited is announced
+    // at this run, not left to the signals task.
+    await this.applyKnownSignals();
+    for (const tenantId of matched) {
       if (!notified.has(tenantId)) continue;
       try {
         // Claimed once the matching has committed, in its own transaction; sent without awaiting.
@@ -578,8 +582,10 @@ export class NvdFeedService implements OnModuleInit {
   }
 
   /**
-   * The CVE just cached take the signals already downloaded, without a second fetch. A failure
-   * does not fail the collection: the next signals run stamps them.
+   * The CVE just cached take the signals already downloaded, without a second fetch. The scheduled
+   * run calls this after matching every tenant and before the mails, so a CVE only CVE.org put in
+   * the cache is flagged before it is announced. A collection on demand still calls it before the
+   * rematch. A failure does not fail the collection: the next signals run stamps them.
    */
   private async applyKnownSignals(): Promise<void> {
     try {
