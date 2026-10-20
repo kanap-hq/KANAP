@@ -1,4 +1,4 @@
-import { Injectable } from '@nestjs/common';
+import { Injectable, Logger } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { Tenant } from '../tenants/tenant.entity';
@@ -10,6 +10,10 @@ export function normalizeCurrencyCode(code?: string | null, fallback = 'EUR'): s
   if (!code || typeof code !== 'string') return fallback;
   const trimmed = code.trim().toUpperCase();
   return trimmed.length === 3 ? trimmed : fallback;
+}
+
+function isIsoCurrency(code: string): boolean {
+  return Object.prototype.hasOwnProperty.call(ISO_CURRENCIES, code);
 }
 
 /** The tenant's reporting currency, as `getSettings` reads it, in one query. */
@@ -34,6 +38,8 @@ type MetadataShape = {
 
 @Injectable()
 export class CurrencySettingsService {
+  private readonly logger = new Logger(CurrencySettingsService.name);
+
   constructor(
     @InjectRepository(Tenant)
     private readonly tenants: Repository<Tenant>,
@@ -64,16 +70,30 @@ export class CurrencySettingsService {
     return normalizeCurrencyCode(code, fallback);
   }
 
-  private normalizeList(list?: string[] | null): string[] | null {
+  /**
+   * Codes outside the ISO list are left out. The settings save refuses them since the
+   * exchange-rate quality pass, but an installation may have stored some before (XTS):
+   * reading them back would make every later save fail until someone removed them by hand.
+   */
+  private normalizeList(list?: string[] | null, tenantId?: string): string[] | null {
     if (!Array.isArray(list)) return null;
-    const normalized = Array.from(
-      new Set(
-        list
-          .map((code) => (typeof code === 'string' ? code.trim().toUpperCase() : ''))
-          .filter((code) => code.length === 3),
-      ),
-    );
+    const codes = list
+      .map((code) => (typeof code === 'string' ? code.trim().toUpperCase() : ''))
+      .filter((code) => code.length === 3);
+    const unknown = codes.filter((code) => !isIsoCurrency(code));
+    if (unknown.length && tenantId) {
+      this.logger.warn(`Allowed currencies outside the ISO list ignored for tenant ${tenantId}: ${Array.from(new Set(unknown)).join(', ')}`);
+    }
+    const normalized = Array.from(new Set(codes.filter(isIsoCurrency)));
     return normalized.length ? normalized : null;
+  }
+
+  /** A stored default outside the ISO list falls back to the reporting currency, for the same reason. */
+  private normalizeDefault(code: string | undefined | null, reportingCurrency: string, tenantId: string): string {
+    const normalized = this.normalizeCode(code, reportingCurrency);
+    if (isIsoCurrency(normalized)) return normalized;
+    this.logger.warn(`Default currency ${normalized} outside the ISO list replaced by ${reportingCurrency} for tenant ${tenantId}`);
+    return reportingCurrency;
   }
 
   private repo(manager?: EntityManager) {
@@ -88,9 +108,9 @@ export class CurrencySettingsService {
     }
     const metadata = (tenant.metadata as MetadataShape | undefined) ?? {};
     const reportingCurrency = this.normalizeCode(metadata.reporting_currency);
-    const defaultSpendCurrency = this.normalizeCode(metadata.default_spend_currency, reportingCurrency);
-    const defaultCapexCurrency = this.normalizeCode(metadata.default_capex_currency, reportingCurrency);
-    const allowedCurrencies = this.normalizeList(metadata.allowed_currencies);
+    const defaultSpendCurrency = this.normalizeDefault(metadata.default_spend_currency, reportingCurrency, tenantId);
+    const defaultCapexCurrency = this.normalizeDefault(metadata.default_capex_currency, reportingCurrency, tenantId);
+    const allowedCurrencies = this.normalizeList(metadata.allowed_currencies, tenantId);
     // A read writes nothing: the currency rows are ensured where these settings are saved
     // (updateSettings, the only writer of this metadata) and by the FX refresh.
     return { reportingCurrency, defaultSpendCurrency, defaultCapexCurrency, allowedCurrencies };
