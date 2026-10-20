@@ -413,6 +413,21 @@ The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or t
 | `frontend/src/pages/settings/NotificationsTab.tsx` | 508 | Technologies group of the notification preferences | Hidden when off |
 | `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | 41 | Vulnerabilities section of the technology record | Renders nothing and reads nothing when off |
 
+#### CVE.org names (`Features.CVE_LIST_FEED_ENABLED`)
+
+The CVE.org list (cvelistV5) fills the platform cache of published records. `CVE_LIST_FEED_ENABLED` defaults to the vulnerability feed; a value set either way wins. `cveListEnabled()` is the two switches together, so the collector and the name routes stay idle while the vulnerability feed is off. With the list off and the feed on, `GET /vulnerabilities/cve-names` and `GET /technologies/:id/cve-names/suggestions` answer 403 `FEATURE_DISABLED` for `cveNames`. With the vulnerability feed off, the vulnerabilities controller answers for `vulnerabilityFeed` before the directory handler; the suggestions route answers for `cveNames`. The screen that reads `features.cveNames` is Technologies › Overview, section CVE.org names, and arrives in the following run.
+
+| File | Line | What | Behavior |
+|------|------|------|----------|
+| `config/features.ts` | 31 | `CVE_LIST_FEED_ENABLED` | Env value when set, otherwise the vulnerability feed |
+| `vulnerabilities/cve-list-feed.service.ts` | 101 | `cveListEnabled()` | True when the vulnerability feed and the CVE.org list are both on |
+| `vulnerabilities/cve-list-feed.service.ts` | 132 | `collect` inside the 6-hour vulnerability pass | Returns a disabled summary and fetches nothing when `cveListEnabled()` is false |
+| `vulnerabilities/cve-names.service.ts` | 42 | Directory and suggestions | 403 `FEATURE_DISABLED` (`cveNames`) when `cveListEnabled()` is false |
+| `vulnerabilities/vulnerabilities.controller.ts` | 85 | `GET /vulnerabilities/cve-names` | `infrastructure:reader`. The feed guard answers first when the vulnerability feed is off |
+| `technologies/technologies.controller.ts` | 301 | `GET /technologies/:id/cve-names/suggestions` | `infrastructure:reader`, the same right as reading the technology |
+| `config/config.controller.ts` | 29 | `cveNames` | `cveListEnabled()` in `GET /config/public`, beside `vulnerabilityFeed` |
+| `frontend/src/config/FeaturesContext.tsx` | 21 | `features.cveNames` | False until `GET /config/public` says otherwise. Technologies › Overview, section CVE.org names, arrives in the following run |
+
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 
 Shared by every tenant-supplied outbound URL: Netbox, PRTG and GLPI. Not a `Features` flag of its own, but mode-dependent.
