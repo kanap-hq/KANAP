@@ -115,7 +115,7 @@ async function testSyncOfATenant() {
     const shipped = catalog.shippedProduct('postgresql')!;
     const products = new Map([['postgresql', livingPostgres(shipped, ['a:kanapspec:postgres'])]]);
     const result = await sync.syncTenant(runner.manager, tenantId, products);
-    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] });
+    assert.deepEqual(counts(result), { technologies: 1, versions_added: 1, versions_updated: 6, cpe_added: 1, cpe_removed: 0, cve_names_added: 0, cve_names_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] });
 
     const after = await versionsOf(runner, technology.id);
     assert.deepEqual(after.get('99'), { label: '99', standard_support_end: '2031-11-13', extended_support_end: null, catalog_key: 'postgresql:99' },
@@ -129,7 +129,7 @@ async function testSyncOfATenant() {
 
     const statements: string[] = [];
     const watched = { query: (sql: string, params?: unknown[]) => { statements.push(sql); return runner.manager.query(sql, params); } };
-    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] },
+    assert.deepEqual(counts(await sync.syncTenant(watched as any, tenantId, products)), { technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, cve_names_added: 0, cve_names_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [] },
       'a second sync changes nothing');
     assert.ok(!statements.some((sql) => /UPDATE technologies|INSERT INTO technology_versions|UPDATE technology_versions/.test(sql)),
       'nor writes anything: the state read back in another key order is the same');
@@ -1130,6 +1130,123 @@ async function testStaleCache() {
   }
 }
 
+/**
+ * CVE.org names follow the CPE rules. A new technology receives the catalog's names. A technology
+ * of the same name keeps a name it already holds (its own text) and gains the others. The sync
+ * adds a name the catalog gains, leaves a name the tenant removed, removes a name only when the
+ * catalog wrote it and the shipped file dropped it, and removes nothing from a state without the
+ * name keys. An empty name list does withdraw.
+ */
+async function testCveNames() {
+  await inRolledBackTransaction(async (runner) => {
+    const audit: AuditEntry[] = [];
+    const emitted: Array<{ technologyId: string; products: string[] }> = [];
+    const { catalog, sync } = syncService(audit, { emit: async (event) => { emitted.push({ technologyId: event.technologyId, products: [...event.products] }); } });
+    const entry = catalog.shippedProduct('postgresql')!;
+    const previous = entry.cve_names;
+    const alpha = { vendor: 'PostgreSQL', product: 'PostgreSQL', version: null as string | null };
+    const beta = { vendor: 'PostgreSQL', product: 'PostgreSQL Global Development Group', version: null as string | null };
+    const gamma = { vendor: 'PostgreSQL', product: 'libpq', version: '16' };
+    entry.cve_names = [beta, alpha];
+    const read = async (id: string) => (await runner.query(`SELECT cve_names, catalog_state FROM technologies WHERE id = $1`, [id]))[0];
+    try {
+      const tenantId = await seedTenant(runner, 'cat-cve-names');
+      const created = await catalog.adopt('postgresql', { manager: runner.manager, tenantId });
+      let row = await read(created.technology.id);
+      assert.deepEqual(row.cve_names, [alpha, beta], 'a new technology receives the names, sorted');
+      assert.deepEqual(row.catalog_state.cve_names, [alpha, beta]);
+      assert.deepEqual(row.catalog_state.shipped_cve_names, [alpha, beta]);
+      assert.deepEqual(row.catalog_state.cve_names_written, [alpha, beta]);
+      assert.equal((await catalog.adopt('postgresql', { manager: runner.manager, tenantId })).created, false, 'adopting again adds nothing');
+
+      const other = await seedTenant(runner, 'cat-cve-names-held');
+      const heldId = await technology(runner, other, 4, 'PostgreSQL');
+      await runner.query(`UPDATE technologies SET cve_names = $2::jsonb WHERE tenant_id = $1 AND id = $3`, [other, JSON.stringify([
+        { vendor: 'postgresql', product: 'POSTGRESQL', version: null },
+        { vendor: 'Tenant', product: 'Own', version: null },
+      ]), heldId]);
+      const linked = await catalog.adopt('postgresql', { manager: runner.manager, tenantId: other });
+      assert.equal(linked.created, false);
+      assert.equal(linked.technology.id, heldId);
+      row = await read(heldId);
+      assert.deepEqual(row.cve_names, [
+        { vendor: 'postgresql', product: 'POSTGRESQL', version: null },
+        beta,
+        { vendor: 'Tenant', product: 'Own', version: null },
+      ], 'a name already held stays, with its text');
+      assert.deepEqual(row.catalog_state.cve_names_written, [beta], 'only the name this adoption added counts as written');
+
+      await setTenant(runner, tenantId);
+      const id = created.technology.id;
+      const gained = { ...entry, cve_names: [alpha, beta, gamma] };
+      const added = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', gained]]));
+      assert.deepEqual([added.cve_names_added, added.cve_names_removed], [1, 0]);
+      row = await read(id);
+      assert.deepEqual(row.cve_names, [gamma, alpha, beta], 'a name the catalog gains is added');
+      assert.deepEqual(emitted, [{ technologyId: id, products: [] }], 'a name change is matched again, with nothing new to collect');
+      const synced = audit.filter((item) => item.recordId === id && (item.after as { catalog_sync?: { cve_names_added?: unknown } }).catalog_sync?.cve_names_added);
+      assert.deepEqual((synced.at(-1)?.after as { catalog_sync: { cve_names_added: unknown } }).catalog_sync.cve_names_added, [gamma]);
+
+      await runner.query(`UPDATE technologies SET cve_names = $2::jsonb WHERE id = $1`, [id, JSON.stringify([gamma, alpha])]);
+      emitted.length = 0;
+      const kept = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', gained]]));
+      assert.deepEqual([kept.cve_names_added, kept.cve_names_removed], [0, 0]);
+      row = await read(id);
+      assert.deepEqual(row.cve_names, [gamma, alpha], 'a name the tenant removed stays removed');
+      assert.ok(row.catalog_state.cve_names.some((item: { product: string }) => item.product === beta.product), 'it stays offered');
+      assert.deepEqual(emitted, [], 'nothing changed, so nothing is matched again');
+
+      const dropped = { ...entry, cve_names: [beta] };
+      const restoreDropped = stubShipped(catalog, 'postgresql', dropped);
+      try {
+        emitted.length = 0;
+        const withdrawn = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', dropped]]));
+        assert.equal(withdrawn.cve_names_removed, 1);
+        row = await read(id);
+        assert.deepEqual(row.cve_names, [gamma], 'a name the catalog wrote is removed when the shipped file drops it');
+        assert.deepEqual(emitted, [{ technologyId: id, products: [] }]);
+      } finally {
+        restoreDropped();
+      }
+
+      await runner.query(`UPDATE technologies SET cve_names = $2::jsonb WHERE id = $1`, [id, JSON.stringify([gamma, alpha])]);
+      row = await read(id);
+      delete row.catalog_state.shipped_cve_names;
+      delete row.catalog_state.cve_names_written;
+      await runner.query(`UPDATE technologies SET catalog_state = $2::jsonb WHERE id = $1`, [id, JSON.stringify(row.catalog_state)]);
+      const withoutAlpha = { ...entry, cve_names: [beta] };
+      const restoreBare = stubShipped(catalog, 'postgresql', withoutAlpha);
+      try {
+        const bare = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', withoutAlpha]]));
+        assert.equal(bare.cve_names_removed, 0);
+        row = await read(id);
+        assert.deepEqual(row.cve_names, [gamma, alpha], 'a state without the name keys removes nothing');
+        assert.deepEqual(row.catalog_state.shipped_cve_names, [beta]);
+      } finally {
+        restoreBare();
+      }
+
+      const known = { ...row.catalog_state, cve_names: [alpha], shipped_cve_names: [alpha], cve_names_written: [alpha] };
+      await runner.query(
+        `UPDATE technologies SET cve_names = $2::jsonb, catalog_state = $3::jsonb WHERE id = $1`,
+        [id, JSON.stringify([alpha]), JSON.stringify(known)],
+      );
+      const emptied = { ...entry, cve_names: [] as NonNullable<CatalogProduct['cve_names']> };
+      const restoreEmpty = stubShipped(catalog, 'postgresql', emptied);
+      try {
+        const gone = await sync.syncTenant(runner.manager, tenantId, new Map([['postgresql', emptied]]));
+        assert.equal(gone.cve_names_removed, 1, 'an empty name list withdraws a name the catalog wrote');
+        assert.deepEqual((await read(id)).cve_names, []);
+      } finally {
+        restoreEmpty();
+      }
+    } finally {
+      if (previous === undefined) delete entry.cve_names;
+      else entry.cve_names = previous;
+    }
+  });
+}
+
 async function main() {
   const fake = await serve();
   baseUrl = fake.baseUrl;
@@ -1146,6 +1263,7 @@ async function main() {
       ['empty description filled once', testDescriptionFilled],
       ['shipped identifier withdrawn and matched again', testShippedIdentifierWithdrawn],
       ['CPE removal rules', testCpeRemovalRules],
+      ['CVE.org names', testCveNames],
       ['tenant-typed identifier is not withdrawn', testTenantTypedIdentifierIsNotWithdrawn],
       ['no usable state removes nothing', testNoUsableStateRemovesNothing],
       ['cache identifier survives a missing cache', testCacheIdentifierIsNotWithdrawnByAMissingCache],

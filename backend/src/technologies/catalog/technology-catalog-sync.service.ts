@@ -14,6 +14,7 @@ import {
 } from './catalog-releases';
 import { TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../../analytics/recommended-dimensions.seed';
 import { TechnologyCpeEvents } from '../technology-cpe-events';
+import { catalogCveNames, cveNameIdentity, sortCveNames, type CveName } from '../../vulnerabilities/cve-affected-rules';
 import { TechnologyCatalogService, type CatalogLanguage, type CatalogProduct } from './technology-catalog.service';
 
 export const CATALOG_SYNC_TASK_NAME = 'technology-catalog';
@@ -54,6 +55,10 @@ export type CatalogSyncSummary = {
   cpe_added: number;
   /** CPE identifiers removed because the shipped file dropped them. */
   cpe_removed: number;
+  /** CVE.org names added because the catalog gained them. */
+  cve_names_added: number;
+  /** CVE.org names removed because the shipped file dropped them. */
+  cve_names_removed: number;
   /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
   descriptions_updated: number;
   /** Versions where a catalog date was not applied because it would contradict the other one (logged). */
@@ -69,6 +74,10 @@ export type TenantSyncResult = {
   cpe_added: number;
   /** CPE identifiers removed because the shipped file dropped them. */
   cpe_removed: number;
+  /** CVE.org names added because the catalog gained them. */
+  cve_names_added: number;
+  /** CVE.org names removed because the shipped file dropped them. */
+  cve_names_removed: number;
   /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
   descriptions_updated: number;
   /** Versions typed with a catalog label before the catalog had them, now attached to it. */
@@ -82,7 +91,7 @@ export type TenantSyncResult = {
 };
 
 const emptyResult = (): TenantSyncResult => ({
-  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
+  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, cve_names_added: 0, cve_names_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
 });
 
 function addResult(total: TenantSyncResult, one: TenantSyncResult) {
@@ -91,6 +100,8 @@ function addResult(total: TenantSyncResult, one: TenantSyncResult) {
   total.versions_updated += one.versions_updated;
   total.cpe_added += one.cpe_added;
   total.cpe_removed += one.cpe_removed;
+  total.cve_names_added += one.cve_names_added;
+  total.cve_names_removed += one.cve_names_removed;
   total.descriptions_updated += one.descriptions_updated;
   total.versions_attached += one.versions_attached;
   total.errors.push(...one.errors);
@@ -137,6 +148,22 @@ function optionalIdentifiers(raw: Record<string, unknown>, key: string): string[
   return lowerSorted(value);
 }
 
+/** A CVE.org name list. Null when the value is not one: the caller leaves the column alone. */
+function nameList(raw: unknown): CveName[] | null {
+  if (raw == null) return [];
+  try {
+    return catalogCveNames(raw);
+  } catch {
+    return null;
+  }
+}
+
+/** A name list on `catalog_state`. Absent or null: unknown. A bad shape: unreadable. */
+function optionalNameList(raw: Record<string, unknown>, key: string): CveName[] | undefined | null {
+  if (!Object.prototype.hasOwnProperty.call(raw, key) || raw[key] == null) return undefined;
+  return nameList(raw[key]);
+}
+
 /** Empty the way PostgreSQL `btrim` sees it: null, or only spaces (U+0020). A line break is a text. */
 function spaceBlank(value: string | null | undefined): boolean {
   return value == null || /^ *$/.test(value);
@@ -148,7 +175,7 @@ function spaceBlank(value: string | null | undefined): boolean {
  * their values), all counted as offered. The caller removes nothing from it: this state cannot
  * tell an identifier the shipped catalog withdrew from one the tenant added.
  */
-function startingState(shipped: CatalogProduct | undefined, product: CatalogProduct, cpeProducts: string[], rows: VersionRow[]): CatalogState {
+function startingState(shipped: CatalogProduct | undefined, product: CatalogProduct, cpeProducts: string[], heldNames: readonly CveName[], rows: VersionRow[]): CatalogState {
   const held = new Set(cpeProducts.map((p) => p.toLowerCase()));
   const versions: Record<string, CatalogVersionValues> = Object.fromEntries((shipped?.versions ?? []).map((v) => [v.key, valuesOf(v)]));
   const prefix = `${product.key}:`;
@@ -158,12 +185,83 @@ function startingState(shipped: CatalogProduct | undefined, product: CatalogProd
     if (!versions[key]) versions[key] = rowValues(row);
   }
   const shippedIds = shipped?.cpe_products ?? [];
+  const shippedNames = shipped ? catalogCveNames(shipped.cve_names ?? null) : [];
+  const heldIds = new Set(heldNames.map((name) => cveNameIdentity(name)));
+  const offered = new Map<string, CveName>();
+  for (const name of shippedNames) offered.set(cveNameIdentity(name), name);
+  for (const name of catalogCveNames(product.cve_names ?? null)) {
+    const id = cveNameIdentity(name);
+    if (heldIds.has(id)) offered.set(id, name);
+  }
   return {
     cpe_products: Array.from(new Set([...shippedIds, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
+    cve_names: sortCveNames([...offered.values()]),
     versions,
     // No shipped entry: do not record the living product as the file. The next pass withdraws nothing.
-    ...(shipped ? { shipped_cpe: lowerSorted(shipped.cpe_products) } : {}),
+    ...(shipped ? { shipped_cpe: lowerSorted(shipped.cpe_products), shipped_cve_names: shippedNames } : {}),
   };
+}
+
+/**
+ * Names the catalog gained are added. A name the tenant removed stays out. A name is removed
+ * only when the previous shipped file listed it, the catalog wrote it, the shipped file no
+ * longer lists it, and the technology still holds it. An empty name list does withdraw.
+ * A state without `shipped_cve_names`, or this bootstrap pass, withdraws nothing. The column
+ * is left as it is when nothing is added or removed, so a tenant's order stays.
+ */
+function syncCveNames(
+  state: CatalogState,
+  shipped: CatalogProduct | undefined,
+  product: CatalogProduct,
+  held: readonly CveName[],
+  bootstrap: boolean,
+): { added: CveName[]; removed: CveName[]; column: CveName[] | null } {
+  const heldById = new Map(held.map((name) => [cveNameIdentity(name), name]));
+  const offeredBefore = new Set((state.cve_names ?? []).map((name) => cveNameIdentity(name)));
+  const shippedNow = shipped ? catalogCveNames(shipped.cve_names ?? null) : [];
+  const shippedNowIds = new Set(shippedNow.map((name) => cveNameIdentity(name)));
+  const shippedKnown = Array.isArray(state.shipped_cve_names);
+  const shippedBefore = state.shipped_cve_names ?? [];
+  const productNames = catalogCveNames(product.cve_names ?? null);
+  const added = productNames.filter((name) => {
+    const id = cveNameIdentity(name);
+    return !offeredBefore.has(id) && !heldById.has(id);
+  });
+  let removed: CveName[] = [];
+  let recordShipped = true;
+  if (bootstrap || !shippedKnown || !shipped) {
+    if (!shipped) recordShipped = false;
+  } else {
+    const written = new Set((state.cve_names_written ?? []).map((name) => cveNameIdentity(name)));
+    removed = shippedBefore.filter((name) => {
+      const id = cveNameIdentity(name);
+      return !shippedNowIds.has(id) && heldById.has(id) && written.has(id);
+    });
+  }
+  const removedIds = new Set(removed.map((name) => cveNameIdentity(name)));
+  const stillHeld = new Set([...heldById.keys()].filter((id) => !removedIds.has(id)));
+  state.cve_names_written = sortCveNames([
+    ...(state.cve_names_written ?? []).filter((name) => stillHeld.has(cveNameIdentity(name))),
+    ...added,
+  ]);
+  const seenWithdrawn = recordShipped && shippedKnown && !bootstrap
+    ? new Set(shippedBefore.map((name) => cveNameIdentity(name)).filter((id) => !shippedNowIds.has(id)))
+    : new Set<string>();
+  const offered = new Map<string, CveName>();
+  for (const name of state.cve_names ?? []) {
+    const id = cveNameIdentity(name);
+    if (!seenWithdrawn.has(id)) offered.set(id, name);
+  }
+  for (const name of [...shippedNow, ...productNames]) {
+    const id = cveNameIdentity(name);
+    if (!seenWithdrawn.has(id)) offered.set(id, name);
+  }
+  state.cve_names = sortCveNames([...offered.values()]);
+  if (recordShipped) state.shipped_cve_names = shippedNow;
+  if (!added.length && !removed.length) return { added, removed, column: null };
+  for (const id of removedIds) heldById.delete(id);
+  for (const name of added) heldById.set(cveNameIdentity(name), name);
+  return { added, removed, column: sortCveNames([...heldById.values()]) };
 }
 
 /** `technologies.catalog_state` when it has the expected shape; null when absent or unreadable. */
@@ -181,12 +279,21 @@ export function readState(raw: unknown): CatalogState | null {
   if (cpeWritten === null) return null;
   const descriptionLanguage = record.description_language;
   if (descriptionLanguage != null && (typeof descriptionLanguage !== 'string' || !['en', 'fr', 'de', 'es'].includes(descriptionLanguage))) return null;
+  const cveNames = optionalNameList(record, 'cve_names');
+  if (cveNames === null) return null;
+  const shippedCveNames = optionalNameList(record, 'shipped_cve_names');
+  if (shippedCveNames === null) return null;
+  const cveNamesWritten = optionalNameList(record, 'cve_names_written');
+  if (cveNamesWritten === null) return null;
   const out: CatalogState = {
     cpe_products: [...cpe],
     versions: {},
     ...(typeof description === 'string' ? { description } : {}),
     ...(shippedCpe !== undefined ? { shipped_cpe: shippedCpe } : {}),
     ...(cpeWritten !== undefined ? { cpe_written: cpeWritten } : {}),
+    ...(cveNames !== undefined ? { cve_names: cveNames } : {}),
+    ...(shippedCveNames !== undefined ? { shipped_cve_names: shippedCveNames } : {}),
+    ...(cveNamesWritten !== undefined ? { cve_names_written: cveNamesWritten } : {}),
     ...(typeof descriptionLanguage === 'string' ? { description_language: descriptionLanguage as CatalogState['description_language'] } : {}),
   };
   for (const [key, value] of Object.entries(versions as Record<string, unknown>)) {
@@ -250,11 +357,15 @@ function serviceFailure(error: unknown): boolean {
 
 class BadAnswer extends Error {}
 
-type TechnologyRow = { id: string; catalog_key: string; cpe_products: string[]; description: string | null; catalog_state: CatalogState | null };
+type TechnologyRow = { id: string; catalog_key: string; cpe_products: string[]; cve_names: unknown; description: string | null; catalog_state: CatalogState | null };
 type TechnologyUpdate = {
   id: string;
   cpe_added: string[];
   cpe_removed: string[];
+  /** The name list to write. Null leaves the column as it is. */
+  cve_names: CveName[] | null;
+  names_added: CveName[];
+  names_removed: CveName[];
   description: string | null;
   description_mode: 'fill' | 'update' | null;
   description_seen: string | null;
@@ -327,7 +438,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
   onModuleInit() {
     this.scheduledTasks.register({
       name: CATALOG_SYNC_TASK_NAME,
-      description: 'Keeps the versions, end-of-support dates and product identifiers of the technologies adopted from the catalog up to date, including identifiers and descriptions the shipped catalog corrects',
+      description: 'Keeps the versions, end-of-support dates, product identifiers and CVE.org names of the technologies adopted from the catalog up to date, including identifiers, names and descriptions the shipped catalog corrects',
       defaultCron: '40 4 * * *',
       handler: () => this.run(),
       runOnStartup: true,
@@ -360,7 +471,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     const summary: CatalogSyncSummary = {
       refresh_enabled: Features.TECHNOLOGY_CATALOG_SYNC_ENABLED,
       products: 0, requests: 0, refreshed: 0, failed_products: [], rejected_releases: 0, errors: [],
-      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0,
+      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0, cpe_removed: 0, cve_names_added: 0, cve_names_removed: 0, descriptions_updated: 0,
       dates_kept: [], malformed_states: 0,
     };
     if (Features.TECHNOLOGY_CATALOG_SYNC_ENABLED) await this.refresh(runtime, summary);
@@ -374,6 +485,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         summary.versions_updated += result.versions_updated;
         summary.cpe_added += result.cpe_added;
         summary.cpe_removed += result.cpe_removed;
+        summary.cve_names_added += result.cve_names_added;
+        summary.cve_names_removed += result.cve_names_removed;
         summary.descriptions_updated += result.descriptions_updated;
         summary.versions_attached += result.versions_attached;
         summary.dates_kept.push(...result.dates_kept.map((line) => `${tenantId} ${line}`));
@@ -521,6 +634,12 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    *   the catalog offers it later. One the tenant added, absent from the state, stays. A shipped
    *   file that lists no identifier, and is not marked `noCpe`, withdraws nothing: the pass logs
    *   it and keeps the previous `shipped_cpe`;
+   * - a CVE.org name the catalog gained is added. One the tenant removed is not. One is removed
+   *   only when `shipped_cve_names` listed it, the shipped file no longer lists it,
+   *   `cve_names_written` lists it, and the technology still holds it (normalized vendor, product
+   *   and version). A state without `shipped_cve_names` withdraws nothing and records the current
+   *   file. A state without `cve_names_written` withdraws nothing. An empty name list does
+   *   withdraw. The column is rewritten only when a name is added or removed;
    * - an empty description the catalog never filled receives the catalog's short description, in
    *   the tenant's language (`tenantLanguage`), and `description_language` records that language.
    *   One the catalog wrote (`catalog_state.description`) and the tenant left unchanged (the same
@@ -537,10 +656,11 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    * `shipped_cpe` records the shipped file as it is now, so an identifier that file no longer lists
    * is not removed on a later pass either.
    * One audit row per technology changed (`system`, `technology-catalog`), including
-   * `cpe_products_removed` and `description_updated`. The scheduled task summary counts the
-   * identifiers removed (`cpe_removed`) and the descriptions replaced (`descriptions_updated`;
-   * a description filled while empty is not counted). A technology whose CPE identifiers changed
-   * is matched again with the vulnerabilities once the transaction commits. A technology whose
+   * `cpe_products_removed`, `cve_names_added`, `cve_names_removed` and `description_updated`. The scheduled task summary counts the
+   * identifiers removed (`cpe_removed`), the names added and removed (`cve_names_added`,
+   * `cve_names_removed`) and the descriptions replaced (`descriptions_updated`;
+   * a description filled while empty is not counted). A technology whose CPE identifiers or
+   * CVE.org names changed is matched again with the vulnerabilities once the transaction commits. A technology whose
    * writes fail is left as it was and named in `errors`; the others are synced.
    */
   async syncTenant(mg: EntityManager, tenantId: string, products: Map<string, CatalogProduct>): Promise<TenantSyncResult> {
@@ -550,7 +670,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     // Two processes starting at once sync one after the other; an adoption waits on the row locks.
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-catalog-sync:${tenantId}`]);
     const technologies: TechnologyRow[] = await mg.query(
-      `SELECT id, catalog_key, cpe_products, description, catalog_state FROM technologies
+      `SELECT id, catalog_key, cpe_products, cve_names, description, catalog_state FROM technologies
         WHERE tenant_id = $1 AND catalog_key = ANY($2::text[]) ORDER BY id FOR UPDATE`,
       [tenantId, keys],
     );
@@ -623,8 +743,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     const inserts: Array<Record<string, unknown>> = [];
     const updates: Array<Record<string, unknown>> = [];
     const techUpdates: TechnologyUpdate[] = [];
-    const changes = new Map<string, { label: string[]; updated: string[]; attached: string[]; cpe: string[]; removed: string[]; description: boolean; descriptionUpdated: boolean }>();
-    const changeOf = (id: string) => changes.get(id) ?? changes.set(id, { label: [], updated: [], attached: [], cpe: [], removed: [], description: false, descriptionUpdated: false }).get(id)!;
+    const changes = new Map<string, { label: string[]; updated: string[]; attached: string[]; cpe: string[]; removed: string[]; namesAdded: CveName[]; namesRemoved: CveName[]; description: boolean; descriptionUpdated: boolean }>();
+    const changeOf = (id: string) => changes.get(id) ?? changes.set(id, { label: [], updated: [], attached: [], cpe: [], removed: [], namesAdded: [], namesRemoved: [], description: false, descriptionUpdated: false }).get(id)!;
 
     for (const tech of technologies) {
       const product = products.get(tech.catalog_key)!;
@@ -639,7 +759,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       // offers and what the technology holds of the catalog count as offered, so nothing the tenant
       // deleted comes back; an empty value on a version counts as the catalog's and is completed.
       const bootstrap = !parsed;
-      const state: CatalogState = parsed ?? startingState(shipped, product, tech.cpe_products, rows);
+      const heldNames = nameList(tech.cve_names);
+      const state: CatalogState = parsed ?? startingState(shipped, product, tech.cpe_products, heldNames ?? [], rows);
 
       const has = new Set(tech.cpe_products.map((p) => p.toLowerCase()));
       const offeredBefore = new Set(state.cpe_products.map((p) => p.toLowerCase()));
@@ -686,6 +807,11 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       if (recordShipped) state.shipped_cpe = shippedNowList;
       if (cpeAdded.length) changeOf(tech.id).cpe.push(...cpeAdded);
       if (cpeRemoved.length) changeOf(tech.id).removed.push(...cpeRemoved);
+      const names = heldNames === null
+        ? { added: [] as CveName[], removed: [] as CveName[], column: null as CveName[] | null }
+        : syncCveNames(state, shipped, product, heldNames, bootstrap);
+      if (names.added.length) changeOf(tech.id).namesAdded.push(...names.added);
+      if (names.removed.length) changeOf(tech.id).namesRemoved.push(...names.removed);
       const loose = new Map(rows.filter((r) => !r.catalog_key).map((r) => [r.label.toLowerCase(), r]));
 
       for (const version of product.versions) {
@@ -784,7 +910,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         writtenLanguage = descriptionLanguage;
       }
       techUpdates.push({
-        id: tech.id, cpe_added: cpeAdded, cpe_removed: cpeRemoved, description,
+        id: tech.id, cpe_added: cpeAdded, cpe_removed: cpeRemoved, cve_names: names.column,
+        names_added: names.added, names_removed: names.removed, description,
         description_mode: descriptionMode, description_seen: descriptionSeen,
         description_language: writtenLanguage, state,
       });
@@ -835,7 +962,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     }
     const written = techUpdates.filter((tech) => {
       const original = technologies.find((t) => t.id === tech.id)!;
-      return tech.cpe_added.length > 0 || tech.cpe_removed.length > 0 || tech.description !== null || canonical(original.catalog_state) !== canonical(tech.state);
+      return tech.cpe_added.length > 0 || tech.cpe_removed.length > 0 || tech.cve_names !== null || tech.description !== null || canonical(original.catalog_state) !== canonical(tech.state);
     });
     if (written.length) {
       // The description flag is computed on the row as it stands, then the update applies it.
@@ -859,8 +986,10 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
                      ORDER BY 1)
                   END,
                 description = CASE WHEN u.description_applied THEN u.description ELSE t.description END,
+                cve_names = CASE WHEN u.cve_names IS NULL THEN t.cve_names ELSE u.cve_names END,
                 updated_at = CASE
                   WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0
+                   AND u.cve_names IS NULL
                    AND NOT u.description_applied AND u.state = t.catalog_state THEN t.updated_at
                   ELSE now()
                   END
@@ -870,7 +999,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
                        (u.description_mode = 'fill' AND NULLIF(btrim(t2.description), '') IS NULL)
                        OR (u.description_mode = 'update' AND t2.description IS NOT DISTINCT FROM u.description_seen)
                     )) AS description_applied
-               FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, cpe_removed jsonb, description text,
+               FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, cpe_removed jsonb, cve_names jsonb, description text,
                                                        description_mode text, description_seen text, description_language text, state jsonb)
                JOIN technologies t2 ON t2.tenant_id = $1 AND t2.id = u.id
            ) AS u
@@ -887,10 +1016,12 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       }
       result.cpe_added = written.reduce((sum, tech) => sum + tech.cpe_added.length, 0);
       result.cpe_removed = written.reduce((sum, tech) => sum + tech.cpe_removed.length, 0);
+      result.cve_names_added = written.reduce((sum, tech) => sum + tech.names_added.length, 0);
+      result.cve_names_removed = written.reduce((sum, tech) => sum + tech.names_removed.length, 0);
       result.descriptions_updated = described.filter((row) => row.description_applied && row.description_mode === 'update').length;
     }
     for (const [technologyId, change] of changes) {
-      if (!change.label.length && !change.updated.length && !change.attached.length && !change.cpe.length && !change.removed.length && !change.description && !change.descriptionUpdated) continue;
+      if (!change.label.length && !change.updated.length && !change.attached.length && !change.cpe.length && !change.removed.length && !change.namesAdded.length && !change.namesRemoved.length && !change.description && !change.descriptionUpdated) continue;
       result.technologies += 1;
       await this.audit.log({
         table: 'technologies', recordId: technologyId, action: 'update', before: null,
@@ -898,6 +1029,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
           catalog_sync: {
             versions_added: change.label, versions_updated: change.updated, versions_attached: change.attached,
             cpe_products_added: change.cpe, cpe_products_removed: change.removed,
+            cve_names_added: change.namesAdded, cve_names_removed: change.namesRemoved,
             description_filled: change.description, description_updated: change.descriptionUpdated,
           },
         },
@@ -905,9 +1037,10 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       }, { manager: mg });
     }
     for (const tech of written) {
-      if (tech.cpe_added.length === 0 && tech.cpe_removed.length === 0) continue;
+      if (tech.cpe_added.length === 0 && tech.cpe_removed.length === 0 && tech.cve_names === null) continue;
       // Same bridge as a manual edit: after commit, the feed matches this technology again
       // (rows of a removed product disappear) and collects an identifier it has never seen.
+      // A name change with no new identifier still matches again (`products` empty).
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: tech.cpe_added });
     }
     return result;

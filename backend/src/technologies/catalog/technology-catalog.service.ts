@@ -6,6 +6,7 @@ import { Features } from '../../config/features';
 import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { catalogCveNames, cveNameIdentity, sortCveNames, type CveName } from '../../vulnerabilities/cve-affected-rules';
 import { defaultVulnerabilityAlerts } from '../../vulnerabilities/vulnerability-alerts';
 import { hostingTypeOfMode, isCloudHostingType, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
@@ -35,6 +36,11 @@ export type CatalogProduct = {
   /** A code of the default hosting types, when the entry names one: it wins over `mode`. */
   hosting_type?: string;
   cpe_products: string[];
+  /**
+   * CVE.org names the publisher writes, copied onto an adopted technology and kept by the sync
+   * the same way as `cpe_products`. Absent: the entry names none.
+   */
+  cve_names?: CveName[];
   /**
    * Set when the entry has no CPE identifier on purpose (the reason). An empty `cpe_products`
    * without it is not a withdrawal: the sync keeps the identifiers and logs the pass.
@@ -171,15 +177,17 @@ export class TechnologyCatalogService {
   /**
    * Adopt the entry `key` of the living catalog: the technology with its catalog key, editor,
    * family (`other` when the tenant's catalog no longer has it), hosting type (the entry's, else the
-   * one its mode stands for, resolved against the tenant's hosting types), CPE identifiers and short
-   * description, and its versions with their dates; `catalog_state` records what was offered, for
-   * the sync that follows (`technology-catalog-sync.service.ts`), including `shipped_cpe`, the
-   * identifiers this adoption actually added (`cpe_written`), and `description_language` (the
+   * one its mode stands for, resolved against the tenant's hosting types), CPE identifiers, CVE.org
+   * names and short description, and its versions with their dates; `catalog_state` records what was
+   * offered, for the sync that follows (`technology-catalog-sync.service.ts`), including `shipped_cpe`,
+   * the identifiers this adoption actually added (`cpe_written`), `shipped_cve_names`, the names this
+   * adoption actually added (`cve_names_written`), and `description_language` (the
    * language of the description this adoption writes). The description is in `opts.language`, failing that the user's
    * stored language, failing that English. Idempotent: an entry already adopted returns its
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
-   * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
-   * the description when it has none. A new technology takes the default alert setting
+   * same name (typed before) receives the key, the identifiers it lacks, the CVE.org names it lacks
+   * (a name already held, by normalized vendor, product and version, stays, including its text),
+   * the missing versions, and the description when it has none. A new technology takes the default alert setting
    * (`defaultVulnerabilityAlerts`: an operating system or a cloud service, an entry of mode
    * `subscribed` or a hosting type of the cloud category, starts excluded); a technology of the
    * same name that receives the key of an operating system is excluded from vulnerability alerts,
@@ -196,16 +204,26 @@ export class TechnologyCatalogService {
     const description = this.description(product.key, descriptionLanguage);
     // `shipped_cpe` is the file, not the cache. `cpe_written` is only what this adoption adds:
     // an identifier the technology already holds stays the tenant's and is never withdrawn.
-    // `description_language` is the language of the text this adoption writes.
-    const stateFor = (heldBefore: readonly string[]) => {
+    // CVE.org names follow the same split: `shipped_cve_names` is the file, `cve_names_written`
+    // is only a name this adoption adds. `description_language` is the language of the text this adoption writes.
+    const catalogNames = catalogCveNames(product.cve_names ?? null);
+    const stateFor = (heldBefore: readonly string[], heldNames: readonly CveName[]) => {
       const held = new Set(heldBefore.map((id) => id.toLowerCase()));
+      const heldNameIds = new Set(heldNames.map((name) => cveNameIdentity(name)));
       return JSON.stringify({
         ...offeredState(product),
         shipped_cpe: lowerSorted(shippedEntry.cpe_products),
         cpe_written: lowerSorted(product.cpe_products.filter((id) => !held.has(id.toLowerCase()))),
+        shipped_cve_names: catalogCveNames(shippedEntry.cve_names ?? null),
+        cve_names_written: catalogNames.filter((name) => !heldNameIds.has(cveNameIdentity(name))),
         description,
         description_language: descriptionLanguage,
       });
+    };
+    const mergedNames = (held: unknown) => {
+      const current = catalogCveNames(Array.isArray(held) ? held : []);
+      const have = new Set(current.map((name) => cveNameIdentity(name)));
+      return sortCveNames([...current, ...catalogNames.filter((name) => !have.has(cveNameIdentity(name)))]);
     };
     await mg.query(`SELECT pg_advisory_xact_lock(hashtext($1))`, [`technology-adopt:${tenantId}:${product.key}`]);
 
@@ -227,15 +245,17 @@ export class TechnologyCatalogService {
       if (before.catalog_key && before.catalog_key !== product.key) {
         throw new BadRequestException('A technology of this name is already linked to another catalog entry.');
       }
+      const heldNames = catalogCveNames(Array.isArray(before.cve_names) ? before.cve_names : []);
       await mg.query(
         `UPDATE technologies
             SET catalog_key = $3,
                 cpe_products = ARRAY(SELECT DISTINCT unnest(cpe_products || $4::text[]) ORDER BY 1),
-                editor = COALESCE(editor, $5),
-                description = COALESCE(NULLIF(btrim(description), ''), $6), catalog_state = $7::jsonb,
-                vulnerability_alerts = vulnerability_alerts AND $8::boolean, updated_at = now()
+                cve_names = $5::jsonb,
+                editor = COALESCE(editor, $6),
+                description = COALESCE(NULLIF(btrim(description), ''), $7), catalog_state = $8::jsonb,
+                vulnerability_alerts = vulnerability_alerts AND $9::boolean, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
-        [tenantId, technologyId, product.key, product.cpe_products, product.editor, description, stateFor(before.cpe_products),
+        [tenantId, technologyId, product.key, product.cpe_products, JSON.stringify(mergedNames(before.cve_names)), product.editor, description, stateFor(before.cpe_products, heldNames),
           defaultVulnerabilityAlerts({ catalogKey: product.key })],
       );
       const after = await readTechnology(mg, tenantId, technologyId);
@@ -247,9 +267,9 @@ export class TechnologyCatalogService {
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(
-        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state, vulnerability_alerts)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, stateFor([]),
+        `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, cve_names, description, catalog_state, vulnerability_alerts)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9::jsonb, $10, $11::jsonb, $12) RETURNING id`,
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, JSON.stringify(mergedNames([])), description, stateFor([], []),
           defaultVulnerabilityAlerts({
             family,
             catalogKey: product.key,

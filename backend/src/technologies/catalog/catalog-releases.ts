@@ -1,3 +1,4 @@
+import { catalogCveNames, type CveName } from '../../vulnerabilities/cve-affected-rules';
 import type { CatalogProduct, CatalogVersion } from './technology-catalog.service';
 
 /**
@@ -399,7 +400,11 @@ export function lowerSorted(ids: readonly string[]): string[] {
  * `cpe_written`: the identifiers the catalog itself wrote and the tenant still holds, lower case.
  * Absent: none, so nothing is withdrawn until the catalog writes one. An identifier the tenant
  * typed first, or held before an adoption, is not in this list.
- * `versions`: per version key, the values it last wrote; a key present was offered once (a
+ * `cve_names`, `shipped_cve_names` and `cve_names_written` follow the same rules for CVE.org
+ * names, compared by normalized vendor, product and version. A state without `shipped_cve_names`
+ * records the current shipped file and withdraws nothing. A state without `cve_names_written`
+ * withdraws nothing. An empty name list is a normal file and does withdraw the names that rule
+ * names. `versions`: per version key, the values it last wrote; a key present was offered once (a
  * version the tenant deleted is not created again). `description`: the short description the
  * catalog last wrote; absent or null while it wrote none. `description_language`: the language of
  * that text. A description follows the catalog when the text in that same language changes and the
@@ -417,6 +422,12 @@ export type CatalogState = {
   shipped_cpe?: string[];
   /** Identifiers the catalog wrote and the tenant still holds, lower case. Absent: none. */
   cpe_written?: string[];
+  /** CVE.org names the catalog offers. Absent on a state written before the field. */
+  cve_names?: CveName[];
+  /** Names of the shipped file at the last pass. Absent: the next pass withdraws nothing. */
+  shipped_cve_names?: CveName[];
+  /** Names the catalog wrote and the tenant still holds. Absent: nothing is withdrawn. */
+  cve_names_written?: CveName[];
 };
 
 export function valuesOf(version: CatalogVersion): CatalogVersionValues {
@@ -431,6 +442,7 @@ export function valuesOf(version: CatalogVersion): CatalogVersionValues {
 export function offeredState(product: CatalogProduct): CatalogState {
   return {
     cpe_products: [...product.cpe_products].sort(),
+    cve_names: catalogCveNames(product.cve_names ?? null),
     versions: Object.fromEntries(product.versions.map((v) => [v.key, valuesOf(v)])),
   };
 }
