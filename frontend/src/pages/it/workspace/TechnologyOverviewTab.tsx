@@ -33,6 +33,7 @@ import DateEUField from '../../../components/fields/DateEUField';
 import TeamMemberMultiSelect from '../../../components/fields/TeamMemberMultiSelect';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { useLookupPicker } from '../../../hooks/useLookupPicker';
+import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
 import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
@@ -498,6 +499,9 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   const theme = useTheme();
   const locale = useLocale();
   const dialogs = useKanapDialogs();
+  // No vulnerability feed (on-premise without it): nothing about vulnerabilities is shown, the alerts column neither.
+  const { config } = useFeatures();
+  const showAlerts = config.features.vulnerabilityFeed === true;
   const queryClient = useQueryClient();
   const [editing, setEditing] = React.useState<string | null>(null);
   const [draft, setDraft] = React.useState<VersionDraft>({ label: '', standard_support_end: '', extended_support_end: '' });
@@ -635,7 +639,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
       <TableCell>
         <DateEUField label="" hideLabel size="small" valueYmd={draft.extended_support_end} onChangeYmd={(value) => setDraft((prev) => ({ ...prev, extended_support_end: value }))} />
       </TableCell>
-      <TableCell colSpan={3} align="right">
+      <TableCell colSpan={showAlerts ? 3 : 2} align="right">
         <Stack direction="row" spacing={0.5} justifyContent="flex-end">
           <Button variant="action" size="small" onClick={() => setEditing(null)}>{t('common:buttons.cancel')}</Button>
           <Button variant="action-primary" size="small" disabled={!draft.label.trim() || saving} onClick={() => { void save(); }}>
@@ -687,14 +691,14 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.standardEnd')}</TableCell>
             <TableCell sx={{ width: 170 }}>{t('workspace.technology.versions.extendedEnd')}</TableCell>
             <TableCell sx={{ width: 150 }}>{t('workspace.technology.versions.statusHeader')}</TableCell>
-            {alertsHeader}
+            {showAlerts && alertsHeader}
             {canManage && <TableCell sx={{ width: 64 }} />}
           </TableRow>
         </TableHead>
         <TableBody>
           {technology.versions.length === 0 && editing !== 'new' && (
             <TableRow>
-              <TableCell colSpan={canManage ? 6 : 5} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
+              <TableCell colSpan={(canManage ? 6 : 5) - (showAlerts ? 0 : 1)} sx={(th) => ({ color: `${th.palette.kanap.text.tertiary} !important` })}>
                 {t('workspace.technology.versions.empty')}
               </TableCell>
             </TableRow>
@@ -722,7 +726,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                     {statusLabel(status, t)}
                   </Box>
                 </TableCell>
-                <TableCell sx={ALERTS_COLUMN_SX} align="center">
+                {showAlerts && <TableCell sx={ALERTS_COLUMN_SX} align="center">
                   <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
                     <AlertSwitch
                       checked={version.vulnerability_alerts_effective ?? technologyAlerts}
@@ -732,7 +736,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                     />
                     <OwnSettingMark visible={version.vulnerability_alerts != null} />
                   </Box>
-                </TableCell>
+                </TableCell>}
                 {canManage && (
                   <TableCell align="right">
                     <Box className="hover-actions" sx={{ display: 'inline-flex' }}>

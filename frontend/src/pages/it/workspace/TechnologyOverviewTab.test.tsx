@@ -8,6 +8,9 @@ import { KanapDialogProvider } from '../../../components/design';
 import { createAppTheme } from '../../../config/ThemeContext';
 import TechnologyOverviewTab, { type TechnologyDetail } from './TechnologyOverviewTab';
 
+const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
+vi.mock('../../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
+
 vi.mock('../../../api', () => ({
   default: { get: vi.fn(async () => ({ data: { items: [] } })), post: vi.fn(), put: vi.fn(), patch: vi.fn(), delete: vi.fn() },
 }));
@@ -230,6 +233,17 @@ describe('TechnologyOverviewTab', () => {
     expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 15' })).toBeDisabled();
     expect(screen.getByRole('img', { name: 'Own setting for this version' })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: 'Delete version 15' })).not.toBeInTheDocument();
+  });
+
+  it('shows no alerts column without the vulnerability feed', () => {
+    features.vulnerabilityFeed = false;
+    try {
+      renderTab(TECHNOLOGY);
+      expect(screen.queryByRole('switch')).toBeNull();
+      expect(screen.getByText('19')).toBeInTheDocument();
+    } finally {
+      features.vulnerabilityFeed = true;
+    }
   });
 
   it('keeps the technology alert switch when there is no version', () => {
