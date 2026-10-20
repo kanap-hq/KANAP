@@ -69,7 +69,7 @@
     },
     "technologies": {
       "title": "Technology notifications",
-      "vulnerabilities": "Critical or high vulnerabilities found on technologies I own for IT"
+      "vulnerabilities": "Vulnerabilities found on technologies I own for IT: critical or high, or known to be exploited"
     },
     "weeklyReview": {
       "title": "Weekly review email",

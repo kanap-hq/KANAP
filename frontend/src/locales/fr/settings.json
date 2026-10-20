@@ -69,7 +69,7 @@
     },
     "technologies": {
       "title": "Notifications des technologies",
-      "vulnerabilities": "Vulnérabilités critiques ou élevées trouvées sur les technologies dont je suis responsable IT"
+      "vulnerabilities": "Vulnérabilités trouvées sur les technologies dont je suis responsable IT : critiques ou élevées, ou connues comme exploitées"
     },
     "weeklyReview": {
       "title": "E-mail de revue hebdomadaire",

@@ -113,11 +113,16 @@ export const de: EmailStrings = {
     vulnerabilities: {
       subject: 'Neue Schwachstellen in Ihren Technologien ({{count}})',
       heading: 'Neue Schwachstellen in Ihren Technologien',
-      intro: 'KANAP hat kritische oder hohe Schwachstellen in Technologien gefunden, für die Sie IT-verantwortlich sind ({{count}}). Prüfen Sie sie und legen Sie ihren Status fest.',
+      intro: 'KANAP hat Schwachstellen in Technologien gefunden, für die Sie IT-verantwortlich sind ({{count}}): kritische oder hohe, oder bekanntermaßen ausgenutzt. Prüfen Sie sie und legen Sie ihren Status fest.',
       severities: {
         critical: 'Kritisch',
         high: 'Hoch',
+        medium: 'Mittel',
+        low: 'Niedrig',
+        none: 'Keine',
+        unknown: 'Nicht bewertet',
       },
+      exploited: 'Bekannt ausgenutzt',
       versions: 'Versionen: {{versions}}',
       unknownVersion: 'Version nicht erfasst (möglicherweise betroffen)',
       view: 'Schwachstellen öffnen',

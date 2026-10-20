@@ -1020,7 +1020,9 @@ export function buildExpirationWarningEmail(params: {
 /** One CVE found on one technology, for the vulnerability notification (lot T6b). */
 export type VulnerabilityDigestItem = {
   cveId: string;
-  severity: 'critical' | 'high';
+  severity: 'critical' | 'high' | 'medium' | 'low' | 'none' | null;
+  /** Known to be exploited (CISA KEV or EU KEV), whatever the severity. */
+  exploited?: boolean;
   score: number | null;
   summary: string | null;
   technologyName: string;
@@ -1033,9 +1035,10 @@ export type VulnerabilityDigestItem = {
 export const VULNERABILITY_DIGEST_MAX_ITEMS = 25;
 
 /**
- * The critical or high vulnerabilities newly found on the technologies a user owns for IT: one
- * email per recipient and per run of the feed, every CVE listed once per technology, at most
- * `VULNERABILITY_DIGEST_MAX_ITEMS` lines then "and N more" (the button comes before the list).
+ * The vulnerabilities newly found on the technologies a user owns for IT (critical or high, or
+ * known to be exploited): one email per recipient and per run of the feed, every CVE listed once
+ * per technology, at most `VULNERABILITY_DIGEST_MAX_ITEMS` lines then "and N more" (the button
+ * comes before the list).
  */
 export function buildVulnerabilityDigestEmail(params: {
   items: VulnerabilityDigestItem[];
@@ -1050,8 +1053,11 @@ export function buildVulnerabilityDigestEmail(params: {
   const preferencesUrl = getBaseUrl(params.pageUrl) + '/settings/notifications';
   const versionsOf = (item: VulnerabilityDigestItem) =>
     interpolate(s.versions, { versions: item.versions.map((v) => v ?? s.unknownVersion).join(', ') });
-  const severityOf = (item: VulnerabilityDigestItem) =>
-    `${s.severities[item.severity]}${item.score != null ? ` ${item.score.toFixed(1)}` : ''}`;
+  const severityOf = (item: VulnerabilityDigestItem) => {
+    const name = item.severity && item.severity in s.severities ? item.severity : 'unknown';
+    const label = `${s.severities[name]}${item.score != null ? ` ${item.score.toFixed(1)}` : ''}`;
+    return item.exploited ? `${label} · ${s.exploited}` : label;
+  };
   const shortSummary = (summary: string | null) => {
     const text = (summary ?? '').trim();
     return text.length > 220 ? `${text.slice(0, 219)}…` : text;
