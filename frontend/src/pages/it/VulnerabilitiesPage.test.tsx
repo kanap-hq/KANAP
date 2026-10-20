@@ -382,6 +382,18 @@ describe('VulnerabilitiesPage', () => {
     await waitFor(() => expect(screen.queryByTestId('vulnerability-detail')).toBeNull());
   });
 
+  it('places the drawer under the application bar and closes it on escape', async () => {
+    renderPage();
+    act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+    await screen.findByTestId('vulnerability-detail');
+    const paper = document.querySelector('.MuiDrawer-paper') as HTMLElement;
+    expect(getComputedStyle(paper).top).toBe('48px');
+    const note = screen.getByRole('textbox', { name: 'Note on 9.0.80' });
+    act(() => { note.focus(); });
+    fireEvent.keyDown(note, { key: 'Escape' });
+    await waitFor(() => expect(screen.queryByRole('region', { name: CVE })).toBeNull());
+  });
+
   it('names how many servers and applications raise an alert, and dims the others', async () => {
     getMock.mockImplementation(async (url: string) => {
       if (url === `/vulnerabilities/${CVE}`) {
@@ -837,7 +849,9 @@ describe('VulnerabilitiesPage', () => {
     renderPage();
     act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
     const detail = await screen.findByTestId('vulnerability-detail');
-    expect(within(detail).getByRole('img', { name: `Actively exploited: CISA, European Union ${RANSOM}` })).toBeTruthy();
+    const region = screen.getByRole('region', { name: CVE });
+    expect(within(region).getByRole('heading', { name: CVE })).toBeTruthy();
+    expect(within(region).getByRole('img', { name: `Actively exploited: CISA, European Union ${RANSOM}` })).toBeTruthy();
     expect(within(detail).getByText('Exploitation')).toBeTruthy();
     expect(detail.textContent).toContain('Sources CISA, European Union');
     expect(detail.textContent).toContain(`Added to the CISA list ${added}`);
@@ -847,6 +861,7 @@ describe('VulnerabilitiesPage', () => {
     expect(first.getAttribute('href')).toBe('https://www.first.org/epss');
     expect(first.getAttribute('target')).toBe('_blank');
     expect(first.getAttribute('rel')).toBe('noopener noreferrer');
+    expect(first.className).toContain('MuiLink-underlineHover');
     expect(detail.textContent).toContain('EUVD-2024-1234');
     const euvd = within(detail).getByRole('link', { name: 'See on the European vulnerability database (ENISA)' });
     expect(euvd.getAttribute('href')).toBe('https://euvd.enisa.europa.eu/vulnerability/EUVD-2024-1234');
