@@ -13,7 +13,7 @@ import {
   splitOperatingSystemLabel,
   type OperatingSystemCode,
 } from './operating-system-codes';
-import { vulnerabilityAlertsForFamily } from '../vulnerabilities/vulnerability-alerts';
+import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
 import { readTechnology, resolveVersionLabel, UUID_RE } from './technology-rows';
 
 /**
@@ -467,7 +467,7 @@ export class OperatingSystemService {
        VALUES ($1, $2, $3, $4, $5, $6)
        ON CONFLICT (tenant_id, lower(name)) DO NOTHING
        RETURNING id`,
-      [tenantId, itemNumber, name, family, hostingType, vulnerabilityAlertsForFamily(family)],
+      [tenantId, itemNumber, name, family, hostingType, defaultVulnerabilityAlerts({ family })],
     );
     const id = inserted[0]?.id ?? (await mg.query(
       `SELECT id FROM technologies WHERE tenant_id = $1 AND lower(name) = lower($2)`,

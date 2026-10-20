@@ -14,7 +14,7 @@ import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
-import { vulnerabilityAlertsForFamily, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
+import { defaultVulnerabilityAlerts, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -304,7 +304,7 @@ export class TechnologiesService {
       }
       values.vulnerability_alerts = body.vulnerability_alerts;
     } else {
-      values.vulnerability_alerts = vulnerabilityAlertsForFamily(typeof values.family === 'string' ? values.family : 'other');
+      values.vulnerability_alerts = defaultVulnerabilityAlerts({ family: typeof values.family === 'string' ? values.family : 'other' });
     }
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];
