@@ -695,6 +695,10 @@
     },
     "settings": {
       "title": "Paramètres de la cartographie SI",
+      "tabs": {
+        "lists": "Listes",
+        "netbox": "Netbox"
+      },
       "description": "Configurez les listes réutilisables pour la classification des données, le catalogue de serveurs et les protocoles d'interface utilisés dans l'espace Cartographie SI.",
       "loadFailed": "Échec du chargement des paramètres de la cartographie SI.",
       "updateSuccess": "Paramètres de la cartographie SI mis à jour avec succès",

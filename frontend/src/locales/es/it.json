@@ -695,6 +695,10 @@
     },
     "settings": {
       "title": "Configuración del panorama IT",
+      "tabs": {
+        "lists": "Listas",
+        "netbox": "Netbox"
+      },
       "description": "Configure listas reutilizables para clasificación de datos, catálogo de servidores y protocolos de interfaz utilizados en el espacio Panorama IT.",
       "loadFailed": "Error al cargar la configuración del panorama IT.",
       "updateSuccess": "Configuración del panorama IT actualizada correctamente",
