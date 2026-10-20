@@ -160,10 +160,10 @@ describe('VulnerabilitiesPage', () => {
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
     // EPSS is shown as a percentage only. The exploited column stays hidden: the icon next to the severity carries that signal.
-    // The default set is then 1,279 px, past the old 1,100 px budget. The summary still takes the rest.
+    // The default set is then 1,219 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
     expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1279);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1219);
     expect(column('exploited').defaultHidden).toBe(true);
     expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
