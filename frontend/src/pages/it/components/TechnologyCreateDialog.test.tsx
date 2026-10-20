@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -55,22 +55,54 @@ describe('TechnologyCreateDialog', () => {
     });
   });
 
+  it('puts the focus in the search field once the dialog is shown', async () => {
+    renderDialog();
+    await waitFor(() => expect(screen.getByLabelText('pages.technologies.create.searchLabel')).toHaveFocus());
+  });
+
   it('adopts a catalog entry and opens the new technology', async () => {
     post.mockResolvedValueOnce({ data: { ok: true, created: true, technology: { id: 'u1', name: 'Microsoft SQL Server', reference: 'TEC-4' } } });
     const onCreated = renderDialog();
     fireEvent.change(screen.getByLabelText('pages.technologies.create.searchLabel'), { target: { value: 'sql' } });
     await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/catalog', { params: { q: 'sql', language: 'en' } }));
-    const description = await screen.findByText('Microsoft relational database.');
-    expect(description.getAttribute('title')).toBe('Microsoft relational database.');
-    // Two levels: the name and its facts on top, the description below across the row.
-    const row = description.closest('[role="listitem"]')!;
-    const top = row.firstElementChild!;
-    expect(top.textContent).toBe('Microsoft SQL ServerMicrosoft · Database · On-prem');
-    expect(row.lastElementChild).toBe(description);
-    fireEvent.click(await screen.findByText('Microsoft SQL Server'));
+    const row = await screen.findByRole('listitem');
+    // Name, then the family on that line; the editor under it. No description, no hosting type.
+    const name = within(row).getByText('Microsoft SQL Server');
+    const family = within(row).getByText('Database');
+    const editor = within(row).getByText('Microsoft', { exact: true });
+    expect(name.parentElement).toBe(family.parentElement);
+    expect(editor.parentElement).toBe(row);
+    expect(name.compareDocumentPosition(editor) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(row).queryByText('On-prem')).toBeNull();
+    expect(screen.getByText('Microsoft relational database.')).not.toBeVisible();
+    expect(row).toHaveAccessibleDescription('Microsoft relational database.');
+    expect(getComputedStyle(family).whiteSpace).toBe('nowrap');
+    expect(getComputedStyle(name).whiteSpace).toBe('nowrap');
+    fireEvent.mouseOver(row);
+    expect(await screen.findByRole('tooltip', {}, { timeout: 2000 })).toHaveTextContent('Microsoft relational database.');
+    fireEvent.click(name);
     await waitFor(() => expect(onCreated).toHaveBeenCalledWith('TEC-4'));
     expect(post).toHaveBeenCalledWith('/technologies/adopt', { catalog_key: 'mssqlserver', language: 'en' });
-    expect(screen.getByText('Microsoft · Database · On-prem')).toBeTruthy();
+  });
+
+  it('keeps a product without a description on the same two lines, with no tooltip', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/catalog') {
+        return { data: { items: [{ key: 'nginx', name: 'Nginx', editor: null, family: 'database', hosting_type: 'saas', versions: 1, latest_version: '1.24', description: '  ' }] } };
+      }
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const row = await screen.findByRole('listitem');
+    expect(within(row).getByText('Nginx')).toBeTruthy();
+    expect(within(row).getByText('Database')).toBeTruthy();
+    expect(within(row).queryByText('SaaS')).toBeNull();
+    expect(row).not.toHaveAttribute('aria-describedby');
+    // The editor line stays, empty, so the row does not collapse to one line.
+    expect(row.querySelectorAll('.kanap-autocomplete-option-secondary').length).toBe(2);
+    fireEvent.mouseOver(row);
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 900)); });
+    expect(screen.queryByRole('tooltip')).toBeNull();
   });
 
   it('creates a technology missing from the catalog', async () => {
