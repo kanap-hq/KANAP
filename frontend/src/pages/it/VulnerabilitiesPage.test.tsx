@@ -10,7 +10,7 @@ import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { formatShortDate } from '../../lib/dateFormat';
 import VulnerabilitiesPage, { filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
-import { formatEpssCell, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
+import { formatEpssCell, formatEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() } }));
 const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'none' }));
@@ -155,11 +155,11 @@ describe('VulnerabilitiesPage', () => {
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
-    // EPSS is shown. The exploited column stays hidden: the badge next to the severity carries that signal.
-    // The default set is then 1,427 px, past the old 1,100 px budget. The summary still takes the rest.
+    // EPSS is shown as a percentage only. The exploited column stays hidden: the badge next to the severity carries that signal.
+    // The default set is then 1,347 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
     expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1427);
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1347);
     expect(column('exploited').defaultHidden).toBe(true);
     expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
@@ -718,7 +718,7 @@ describe('VulnerabilitiesPage', () => {
     expect((await screen.findByRole('tooltip')).textContent).toBe(`${TIP} ${RANSOM}`);
   });
 
-  it('formats EPSS as a percentage and a percentile, and filters on a minimum probability', async () => {
+  it('formats the EPSS cell as a percentage, and keeps the percentile for the detail', async () => {
     renderPage();
     const epss = column('epss');
     expect(epss.defaultHidden).toBeFalsy();
@@ -732,9 +732,12 @@ describe('VulnerabilitiesPage', () => {
       defaultOption: 'greaterThanOrEqual',
     });
     expect(epss.headerTooltip).toBe('Minimum probability, from 0 to 1');
-    expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: 0.92 } })).toBe('15.3% (92nd percentile)');
+    // The grid omits the percentile even when the row has one. The drawer keeps it (formatEpssCell).
+    expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: 0.92 } })).toBe('15.3%');
+    expect(epss.valueFormatter({ value: 0.142, data: { epss: 0.142, epss_percentile: 0.5 } })).toBe('14.2%');
     expect(epss.valueFormatter({ value: 0.153, data: { epss: 0.153, epss_percentile: null } })).toBe('15.3%');
     expect(epss.valueFormatter({ value: null, data: { epss: null } })).toBe('');
+    expect(formatEpssPercent(0.142, 'fr')).toBe('14,2\u00a0%');
     expect((await column('exploited').filterParams.getValues({})).map((value: { value: string }) => value.value)).toEqual(['yes', 'no']);
     const t = (key: string, options?: Record<string, unknown>) => String(i18n.t(key, { ...options, lng: 'fr', ns: 'it' }));
     expect(formatEpssCell(0.153, 0.92, 'fr', t)).toBe('15,3\u00a0% (92e centile)');

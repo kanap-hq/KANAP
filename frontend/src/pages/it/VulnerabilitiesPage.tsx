@@ -35,6 +35,7 @@ import {
   VulnerabilityStateCell,
   exploitationSources,
   formatEpssCell,
+  formatEpssPercent,
   hasExploitationData,
   versionText,
   type VulnerabilityDetail,
@@ -791,12 +792,16 @@ export default function VulnerabilitiesPage() {
     {
       headerName: t('pages.vulnerabilities.columns.epss'),
       field: 'epss',
-      width: 200,
+      // The cell is the probability only (`15.3%`). The percentile stays in the detail drawer.
+      width: 120,
       type: 'rightAligned',
       headerTooltip: t('pages.vulnerabilities.epss.minimumHint'),
       filter: 'agNumberColumnFilter',
       filterParams: EPSS_FILTER_PARAMS,
-      valueFormatter: (p: { value?: number | null; data?: VulnerabilityRow }) => formatEpssCell(p.data?.epss ?? p.value, p.data?.epss_percentile, locale, t),
+      valueFormatter: (p: { value?: number | null; data?: VulnerabilityRow }) => {
+        const value = p.data?.epss ?? p.value;
+        return value == null || !Number.isFinite(Number(value)) ? '' : formatEpssPercent(Number(value), locale);
+      },
     },
     { headerName: t('pages.vulnerabilities.columns.summary'), field: 'summary', minWidth: 115, flex: 1, sortable: false, tooltipField: 'summary' },
     {
