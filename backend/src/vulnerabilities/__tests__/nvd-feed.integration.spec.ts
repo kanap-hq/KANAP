@@ -277,6 +277,124 @@ async function testOnDemand() {
   }
 }
 
+/**
+ * A technology gains three products the feed never collected (what `drain` asks of `collectNew`
+ * after the catalog sync's `TechnologyCpeEvents`). Once the queue is idle, its rows cover the CVE
+ * of the three products. A second workspace that carries the same products, queued behind the
+ * first, is matched too, and so is one that asks after the collection has finished. No email is
+ * prepared: the technology was already matched on another product, and a product just added stays
+ * a silent baseline.
+ */
+async function testRematchAfterFirstCollection() {
+  reset();
+  const OLD = 'a:kanapspec:fresh0';
+  const PRODUCTS = ['a:kanapspec:fresh1', 'a:kanapspec:fresh2', 'a:kanapspec:fresh3'];
+  const CVE: Record<string, string> = {
+    [PRODUCTS[0]]: 'CVE-2098-71001',
+    [PRODUCTS[1]]: 'CVE-2098-71002',
+    [PRODUCTS[2]]: 'CVE-2098-71003',
+  };
+  const OLD_CVE = 'CVE-2098-70001';
+  handler = (s) => {
+    const id = CVE[s.product];
+    return id
+      ? { status: 200, body: { totalResults: 1, vulnerabilities: [cveItem(id, s.product, '2.0')] } }
+      : { status: 200, body: { totalResults: 0, vulnerabilities: [] } };
+  };
+  const calls = { claim: 0, send: 0 };
+  const notifier = {
+    claim: async () => { calls.claim += 1; return []; },
+    send: async () => { calls.send += 1; },
+  };
+  const service = new NvdFeedService(dataSource, { register: () => false } as any, new VulnerabilityMatchService(), notifier as any);
+  const saved = Features.VULNERABILITY_FEED_ENABLED;
+  const tenants: string[] = [];
+  const insertTenant = async (tag: string, products: string[]) => {
+    const [tenant] = await dataSource.query(
+      `INSERT INTO tenants (slug, name, status, metadata, branding, created_at, updated_at)
+       VALUES ('nvd-fresh-' || $1 || '-' || substr(md5(random()::text), 1, 8), 'Fresh collection', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())
+       RETURNING id`,
+      [tag],
+    );
+    tenants.push(tenant.id);
+    const technologyId = await withTenant(dataSource, tenant.id, async (mg) => {
+      const [tech] = await mg.query(
+        `INSERT INTO technologies (tenant_id, item_number, name, cpe_products) VALUES ($1, 1, $2, $3::text[]) RETURNING id`,
+        [tenant.id, tag, products],
+      );
+      const [version] = await mg.query(
+        `INSERT INTO technology_versions (tenant_id, technology_id, label) VALUES ($1, $2, '1.4') RETURNING id`,
+        [tenant.id, tech.id],
+      );
+      const [server] = await mg.query(
+        `INSERT INTO assets (tenant_id, name, kind, environment) VALUES ($1, $2, 'vm', 'prod') RETURNING id`,
+        [tenant.id, `${tag} server`],
+      );
+      await mg.query(
+        `INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id) VALUES ($1, $2, $3, $4)`,
+        [tenant.id, server.id, tech.id, version.id],
+      );
+      return { technologyId: tech.id as string, versionId: version.id as string };
+    });
+    return { tenantId: tenant.id as string, ...technologyId };
+  };
+  const cveIds = async (tenantId: string, technologyId: string) => withTenant(dataSource, tenantId, (mg) => mg.query(
+    `SELECT cve_id FROM technology_vulnerabilities WHERE tenant_id = $1 AND technology_id = $2 ORDER BY cve_id`,
+    [tenantId, technologyId],
+  )) as Promise<Array<{ cve_id: string }>>;
+  try {
+    (Features as any).VULNERABILITY_FEED_ENABLED = true;
+    await dataSource.query(
+      `INSERT INTO vulnerability_cves (cve_id, summary, cvss_score, severity, cvss_version, published_at, nvd_status)
+       VALUES ($1, 'Already matched', 9.1, 'critical', '3.1', now(), 'Analyzed')`,
+      [OLD_CVE],
+    );
+    await dataSource.query(
+      `INSERT INTO vulnerability_cve_matches (cve_id, product, criteria, version_end, end_including, vulnerable)
+       VALUES ($1, $2, 'cpe:2.3:' || $2 || ':*', '2.0', false, true)`,
+      [OLD_CVE, OLD],
+    );
+    await dataSource.query(
+      `INSERT INTO vulnerability_feed_products (product, last_success_at) VALUES ($1, now()) ON CONFLICT (product) DO UPDATE SET last_success_at = now()`,
+      [OLD],
+    );
+    const first = await insertTenant('alpha', [OLD, ...PRODUCTS]);
+    await withTenant(dataSource, first.tenantId, (mg) => mg.query(
+      `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, technology_version_id, cve_id, match_basis)
+       VALUES ($1, $2, $3, $4, 'version_in_range')`,
+      [first.tenantId, first.technologyId, first.versionId, OLD_CVE],
+    ));
+    const second = await insertTenant('beta', PRODUCTS);
+    // Queued together, as the catalog sync does: one workspace per technology, before any page returns.
+    await Promise.all([
+      service.collectNew(first.tenantId, PRODUCTS, runtime()),
+      service.collectNew(second.tenantId, PRODUCTS, runtime()),
+    ]);
+    assert.deepEqual(seen.map((s) => s.product), PRODUCTS, 'the three products, once');
+    assert.deepEqual((await cveIds(first.tenantId, first.technologyId)).map((r) => r.cve_id), [OLD_CVE, ...Object.values(CVE)].sort(),
+      'the technology already matched keeps its row and gains the CVE of the three products');
+    assert.deepEqual((await cveIds(second.tenantId, second.technologyId)).map((r) => r.cve_id), Object.values(CVE).sort(),
+      'the other workspace that carries the products is matched too');
+    assert.deepEqual(calls, { claim: 0, send: 0 }, 'no email is prepared');
+
+    const third = await insertTenant('gamma', [PRODUCTS[0]]);
+    await service.collectNew(third.tenantId, [PRODUCTS[0]], runtime());
+    assert.deepEqual(seen.map((s) => s.product), PRODUCTS, 'a product already collected is not asked again');
+    assert.deepEqual((await cveIds(third.tenantId, third.technologyId)).map((r) => r.cve_id), [CVE[PRODUCTS[0]]],
+      'a workspace that asks after the collection is matched');
+    assert.deepEqual(calls, { claim: 0, send: 0 }, 'still no email');
+  } finally {
+    (Features as any).VULNERABILITY_FEED_ENABLED = saved;
+    for (const tenantId of tenants) {
+      await withTenant(dataSource, tenantId, async (mg) => {
+        await mg.query(`DELETE FROM technologies WHERE tenant_id = $1`, [tenantId]);
+        await mg.query(`DELETE FROM assets WHERE tenant_id = $1`, [tenantId]);
+      });
+      await dataSource.query(`DELETE FROM tenants WHERE id = $1`, [tenantId]);
+    }
+  }
+}
+
 /** The review's P8: a second tenant that asks for the same new product, collected by the first request, is matched too. */
 async function testSecondTenantMatched() {
   reset();
@@ -365,6 +483,7 @@ async function main() {
       ['windows of at most 120 days', testLongGap],
       ['matching after a run', testRunMatchesTenants],
       ['collection on demand', testOnDemand],
+      ['rematch after the first collection of new products', testRematchAfterFirstCollection],
       ['a second tenant asking for the same product is matched', testSecondTenantMatched],
       ['collection on demand: lock, circuit and quota', testOnDemandLimits],
       ['clean end', cleanup],
