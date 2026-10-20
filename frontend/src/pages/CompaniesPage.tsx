@@ -498,19 +498,20 @@ export default function CompaniesPage() {
         requiredColumns={['name']}
         defaultHiddenColumns={['city', 'postal_code', 'address1', 'address2', 'state', 'notes', 'created_at']}
         statusScopeConfig={{ defaultScope: 'enabled' }}
+        // In the grid's measured footer, as on the contracts list: below the grid it fell off a 1080 px screen.
+        footer={turnoverFxMissing.length > 0 ? (
+          <FxMissingNotice
+            message={companyTurnoverFxNotice(t, turnoverFxMissing)}
+            items={turnoverFxMissing.map((item) => ({ currency: item.currency, year: item.year, lines: item.companies }))}
+            wrap
+          />
+        ) : undefined}
         onQueryStateChange={(state) => {
           const statusScope = state.statusScope ?? 'enabled';
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {}, statusScope };
           updateTotals({ q: state.q || '', filterModel: state.filterModel || {}, statusScope });
         }}
       />
-      {turnoverFxMissing.length > 0 && (
-        <FxMissingNotice
-          message={companyTurnoverFxNotice(t, turnoverFxMissing)}
-          items={turnoverFxMissing.map((item) => ({ currency: item.currency, year: item.year, lines: item.companies }))}
-          sx={{ mt: 1 }}
-        />
-      )}
 
       <CsvExportDialog listRequest={listRequest} entity="companies"
         open={exportOpen}

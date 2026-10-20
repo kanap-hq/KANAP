@@ -24,7 +24,7 @@ vi.mock('../lib/listContext', () => ({
 vi.mock('../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
     grid.props = props;
-    return null;
+    return props.footer ?? null;
   },
 }));
 vi.mock('../components/csv/CsvExportDialog', () => ({ default: () => null }));
