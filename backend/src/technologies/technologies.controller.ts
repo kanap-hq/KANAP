@@ -13,6 +13,7 @@ import { languageOf, type CsvLanguage } from '../common/csv-sheet';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { CveNamesService } from '../vulnerabilities/cve-names.service';
 import { TechnologiesService, type Opts } from './technologies.service';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService, technologyRelationKindOrThrow, type TechnologyRelationsContext } from './technologies-relations.service';
@@ -65,6 +66,7 @@ export class TechnologiesController {
     private readonly catalog: TechnologyCatalogService,
     private readonly storage: StorageService,
     private readonly linkFiles: TechnologyLinksCsvService,
+    private readonly cveNames: CveNamesService,
   ) {}
 
   private opts(ctx: TenantRequest): Opts {
@@ -291,6 +293,14 @@ export class TechnologiesController {
   @Get(':id')
   get(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
     return this.svc.get(id, this.opts(ctx));
+  }
+
+  /** CVE.org names seen on the CVE of this technology's CPE products. Same right as reading the technology. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get(':id/cve-names/suggestions')
+  cveNameSuggestions(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.cveNames.suggestions(requireManager(ctx.manager), ctx.tenantId, id);
   }
 
   @UseGuards(PermissionGuard)

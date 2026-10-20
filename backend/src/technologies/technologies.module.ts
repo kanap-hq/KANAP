@@ -8,6 +8,7 @@ import { IncidentsModule } from '../incidents/incidents.module';
 import { ItOpsSettingsModule } from '../it-ops-settings/it-ops-settings.module';
 import { PermissionsModule } from '../permissions/permissions.module';
 import { UsersModule } from '../users/users.module';
+import { CveNamesService } from '../vulnerabilities/cve-names.service';
 import { ApplicationConversionController } from './application-conversion.controller';
 import { ApplicationConversionService } from './application-conversion.service';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
@@ -46,10 +47,11 @@ import { EndOfSupportService } from './reports/end-of-support.service';
     TechnologiesDeleteService,
     TechnologyCatalogService,
     TechnologyCpeEvents,
+    CveNamesService,
     TechnologyCatalogSyncService,
     EndOfSupportService,
     ApplicationConversionService,
   ],
-  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents],
+  exports: [TechnologiesService, TechnologyLinksService, OperatingSystemService, TechnologyReachService, TechnologyCatalogService, TechnologyCpeEvents, CveNamesService],
 })
 export class TechnologiesModule {}

@@ -10,6 +10,7 @@ import { throwFeatureDisabled } from '../common/feature-gates';
 import { Features } from '../config/features';
 import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
+import { CveNamesService } from './cve-names.service';
 import { VulnerabilitiesService, type ApplicationsAccess, type VulnerabilityFilters, type VulnOpts } from './vulnerabilities.service';
 
 /** Every vulnerability route answers 403 `FEATURE_DISABLED` while `VULNERABILITY_FEED_ENABLED` is off. */
@@ -36,11 +37,14 @@ async function applicationsAccess(ctx: TenantRequest): Promise<ApplicationsAcces
   return { scope };
 }
 
-/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export` and `filter-values` before `:cveId`. */
+/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export`, `filter-values` and `cve-names` before `:cveId`. */
 @UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
-  constructor(private readonly svc: VulnerabilitiesService) {}
+  constructor(
+    private readonly svc: VulnerabilitiesService,
+    private readonly cveNames: CveNamesService,
+  ) {}
 
   @RequireLevel('infrastructure', 'reader')
   @Get()
@@ -74,6 +78,13 @@ export class VulnerabilitiesController {
   @Post('bulk-state')
   async bulkState(@Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
     return this.svc.bulkState(body ?? {}, opts(ctx));
+  }
+
+  /** Published CVE.org vendor and product names. A static path, declared before `:cveId`. */
+  @RequireLevel('infrastructure', 'reader')
+  @Get('cve-names')
+  cveNameDirectory(@Query('q') q: string | undefined, @Query('vendor') vendor: string | undefined, @Tenant() ctx: TenantRequest) {
+    return this.cveNames.directory(requireManager(ctx.manager), q, vendor);
   }
 
   @RequireLevel('infrastructure', 'reader')
