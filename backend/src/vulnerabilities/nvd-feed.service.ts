@@ -17,8 +17,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const NVD_MAX_WINDOW_MS = 120 * DAY_MS - 60_000;
 /** An incremental window starts this much before the last success: a CVE indexed late is not missed. */
 const OVERLAP_MS = 60 * 60 * 1000;
-/** NVD maximum and recommended page size. */
-const PAGE_SIZE = 2000;
+/**
+ * CVE asked per page. The NVD allows 2000; a Windows page of that size is about 18.6 MB and about
+ * 68 s, and one of 500 is about 4.7 MB and about 6 s.
+ */
+export const NVD_PAGE_SIZE = 500;
 /** Rolling 30 s window: 5 requests without a key, 50 with one (NVD "Rate Limits"). */
 const RATE_WINDOW_MS = 30_000;
 const ATTEMPTS = 3;
@@ -546,7 +549,7 @@ export class NvdFeedService implements OnModuleInit {
         url.searchParams.set('lastModStartDate', from.toISOString());
         url.searchParams.set('lastModEndDate', to.toISOString());
       }
-      url.searchParams.set('resultsPerPage', String(PAGE_SIZE));
+      url.searchParams.set('resultsPerPage', String(NVD_PAGE_SIZE));
       url.searchParams.set('startIndex', String(startIndex));
       const page = await this.request(url, runtime, summary);
       const items: any[] = Array.isArray(page?.vulnerabilities) ? page.vulnerabilities : [];

@@ -5,7 +5,7 @@ import type { AddressInfo } from 'node:net';
 import dataSource from '../../data-source';
 import { withTenant } from '../../common/tenant-runner';
 import { assert, runSpecs } from '../../spend/__tests__/round-inputs.fixtures';
-import { NVD_MAX_WINDOW_MS, NvdFeedService, type FeedRuntime } from '../nvd-feed.service';
+import { NVD_MAX_WINDOW_MS, NVD_PAGE_SIZE, NvdFeedService, type FeedRuntime } from '../nvd-feed.service';
 import { VulnerabilityMatchService } from '../vulnerability-match.service';
 import { Features } from '../../config/features';
 
@@ -110,7 +110,8 @@ async function testFirstPassPagination() {
   const summary = await feed().collect(runtime());
   assert.equal(summary.requests, 3, 'two pages for alpha, one for beta');
   assert.deepEqual(seen.map((s) => [s.product, s.startIndex]), [[ALPHA, 0], [ALPHA, 2], [BETA, 0]]);
-  assert.equal(seen[0].perPage, '2000');
+  assert.equal(NVD_PAGE_SIZE, 500);
+  assert.ok(seen.every((s) => s.perPage === '500'), 'every page asks for 500 CVE');
   assert.equal(seen[0].apiKey, 'spec-key', 'the key goes in the apiKey header');
   assert.ok(Number.isNaN(seen[0].start) && Number.isNaN(seen[0].end), 'first pass: every CVE of the product, no dates');
   assert.ok(NVD_MAX_WINDOW_MS <= 120 * DAY);
