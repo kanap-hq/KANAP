@@ -95,7 +95,7 @@ describe('TechnologyComplianceTab', () => {
         cves: 1,
         versions: [{
           version_id: 'v-1', label: '16', alerts: true, servers: 2,
-          open: { critical: 1, high: 0, medium: 0, low: 0, none: 0 }, total: 1,
+          open: { critical: 1, high: 0, medium: 0, low: 0, none: 0, unknown: 0 }, total: 1,
         }],
       },
     } as never);

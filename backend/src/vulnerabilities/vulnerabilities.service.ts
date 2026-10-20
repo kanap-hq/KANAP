@@ -644,7 +644,7 @@ export class VulnerabilitiesService {
    * versions table, plus the unknown version when a link names none. `installed` follows
    * `versionInUseSql` (for the unknown version: a link that names no version is in use). A version
    * that is not installed has `servers` and every count at 0. `open` counts distinct CVE still to
-   * review, `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
+   * review by severity, `unknown` for a CVE the NVD has not scored yet (`severity` null), `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
    * `versions_excluded` and `versions_included` count every version.
    */
   async summary(idOrRef: string, opts: VulnOpts) {
@@ -665,6 +665,7 @@ export class VulnerabilitiesService {
       medium: number | null;
       low: number | null;
       none: number | null;
+      unknown: number | null;
       total: number | null;
       cves: number;
     }> = await withoutJit(mg,
@@ -680,7 +681,8 @@ export class VulnerabilitiesService {
                 count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'high')::int AS high,
                 count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'medium')::int AS medium,
                 count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'low')::int AS low,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity IS DISTINCT FROM 'critical' AND c.severity IS DISTINCT FROM 'high' AND c.severity IS DISTINCT FROM 'medium' AND c.severity IS DISTINCT FROM 'low')::int AS none,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'none')::int AS none,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity IS NULL)::int AS unknown,
                 count(DISTINCT tv.cve_id)::int AS total
            FROM technology_vulnerabilities tv
            LEFT JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
@@ -718,6 +720,7 @@ export class VulnerabilitiesService {
                 COALESCE(a.medium, 0)::int AS medium,
                 COALESCE(a.low, 0)::int AS low,
                 COALESCE(a.none, 0)::int AS none,
+                COALESCE(a.unknown, 0)::int AS unknown,
                 COALESCE(a.total, 0)::int AS total
            FROM versions v
            LEFT JOIN servers s ON s.technology_version_id = v.technology_version_id
@@ -730,6 +733,7 @@ export class VulnerabilitiesService {
                 COALESCE(a.medium, 0)::int,
                 COALESCE(a.low, 0)::int,
                 COALESCE(a.none, 0)::int,
+                COALESCE(a.unknown, 0)::int,
                 COALESCE(a.total, 0)::int
            FROM unknown u
            LEFT JOIN servers s ON s.technology_version_id IS NULL
@@ -747,6 +751,7 @@ export class VulnerabilitiesService {
               (CASE WHEN l.installed THEN l.medium ELSE 0 END)::int AS medium,
               (CASE WHEN l.installed THEN l.low ELSE 0 END)::int AS low,
               (CASE WHEN l.installed THEN l.none ELSE 0 END)::int AS none,
+              (CASE WHEN l.installed THEN l.unknown ELSE 0 END)::int AS unknown,
               (CASE WHEN l.installed THEN l.total ELSE 0 END)::int AS total,
               t.cves
          FROM totals t
@@ -760,6 +765,7 @@ export class VulnerabilitiesService {
       medium: Number(row.medium),
       low: Number(row.low),
       none: Number(row.none),
+      unknown: Number(row.unknown),
     });
     return {
       technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },

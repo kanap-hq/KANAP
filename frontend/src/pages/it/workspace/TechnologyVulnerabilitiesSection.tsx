@@ -10,8 +10,11 @@ import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn 
 import { SEVERITIES, SeverityCell, versionText } from '../vulnerabilities/vulnerabilityTypes';
 import { TECHNOLOGY_VERSIONS_ANCHOR } from './TechnologyOverviewTab';
 
-/** Open CVE still to review, by severity. A missing severity counts as `none`. */
-export type VulnerabilityOpenCounts = { critical: number; high: number; medium: number; low: number; none: number };
+/** Open CVE still to review, by severity. `unknown`: no severity yet (the NVD has not scored the CVE). */
+export type VulnerabilityOpenCounts = { critical: number; high: number; medium: number; low: number; none: number; unknown: number };
+
+/** The order of the open counts: the severities, then the CVE not rated yet ("Not rated", as on the Vulnerabilities page). */
+const OPEN_KEYS = [...SEVERITIES, 'unknown'] as const;
 
 /** One version of `GET /technologies/:id/vulnerabilities/summary`. */
 export type TechnologyVulnerabilityVersion = {
@@ -148,11 +151,13 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       header: t('pages.vulnerabilities.section.columns.open'),
       render: (row) => {
         if (!row.installed) return null;
-        const open = SEVERITIES.filter((severity) => row.open[severity] > 0);
+        const open = OPEN_KEYS.filter((key) => (row.open[key] ?? 0) > 0);
         if (open.length === 0) return <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>0</Box>;
         return (
           <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, whiteSpace: 'normal' }}>
-            {open.map((severity) => <SeverityCell key={severity} severity={severity} score={null} count={row.open[severity]} />)}
+            {open.map((key) => (
+              <SeverityCell key={key} severity={key === 'unknown' ? null : key} score={null} count={row.open[key]} />
+            ))}
           </Box>
         );
       },

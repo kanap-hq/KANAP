@@ -23,7 +23,7 @@ const postMock = vi.mocked(api.post);
 
 const version = (over: Partial<TechnologyVulnerabilityVersion>): TechnologyVulnerabilityVersion => ({
   version_id: 'v-1', label: '10.1', alerts: true, installed: true, servers: 4,
-  open: { critical: 2, high: 0, medium: 1, low: 0, none: 0 }, total: 5, ...over,
+  open: { critical: 2, high: 0, medium: 1, low: 0, none: 0, unknown: 0 }, total: 5, ...over,
 });
 
 const summary = (over: Record<string, unknown> = {}) => ({
@@ -36,8 +36,8 @@ const summary = (over: Record<string, unknown> = {}) => ({
   cves: 3,
   versions: [
     version({}),
-    version({ version_id: 'v-2', label: '9.0', alerts: false, servers: 1, open: { critical: 0, high: 1, medium: 0, low: 0, none: 0 }, total: 1 }),
-    version({ version_id: null, label: null, alerts: true, servers: 0, open: { critical: 0, high: 0, medium: 0, low: 0, none: 0 }, total: 2 }),
+    version({ version_id: 'v-2', label: '9.0', alerts: false, servers: 1, open: { critical: 0, high: 1, medium: 0, low: 0, none: 0, unknown: 0 }, total: 1 }),
+    version({ version_id: null, label: null, alerts: true, servers: 0, open: { critical: 0, high: 0, medium: 0, low: 0, none: 0, unknown: 0 }, total: 2 }),
   ],
   ...over,
 });
@@ -87,6 +87,20 @@ describe('TechnologyVulnerabilitiesSection', () => {
       .toBe('/it/vulnerabilities?technology=TEC-7&alerts=all');
     expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
+  });
+
+  it('shows a CVE with no severity yet as Not rated, after None', async () => {
+    getMock.mockResolvedValue({
+      data: summary({
+        versions: [version({ open: { critical: 0, high: 1, medium: 0, low: 0, none: 1, unknown: 2 }, total: 4 })],
+      }),
+    } as any);
+    renderSection(false);
+    const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
+    const row = within(table).getAllByRole('row')[1];
+    expect(row.textContent).toBe('10.14High1None1Not rated24See');
+    expect(Array.from(row.querySelectorAll('[data-severity]')).map((el) => el.getAttribute('data-severity')))
+      .toEqual(['high', 'none', 'unknown']);
   });
 
   it('dims a version that stays out of the alerts', async () => {
@@ -174,7 +188,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
         cves: 3,
         versions: [version({
           version_id: 'v-empty', label: '8.0', servers: 2,
-          open: { critical: 0, high: 0, medium: 0, low: 0, none: 0 }, total: 0,
+          open: { critical: 0, high: 0, medium: 0, low: 0, none: 0, unknown: 0 }, total: 0,
         })],
       }),
     } as any);
@@ -195,7 +209,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
         versions: [
           version({
             version_id: 'v-2025', label: '2025', alerts: true, installed: false, servers: 9,
-            open: { critical: 3, high: 1, medium: 0, low: 0, none: 0 }, total: 4,
+            open: { critical: 3, high: 1, medium: 0, low: 0, none: 0, unknown: 0 }, total: 4,
           }),
           version({ version_id: 'v-2019', label: '2019', alerts: false, installed: false, servers: 2, total: 1 }),
         ],
