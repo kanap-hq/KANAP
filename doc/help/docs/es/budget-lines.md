@@ -158,9 +158,9 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 **Importes sin tipo de cambio**:
 
 - Cuando la moneda de una línea no tiene tipo de cambio para un año, su importe de ese año aparece en su propia moneda con una pequeña marca naranja. Pase el cursor sobre la marca para leer, por ejemplo, «Sin tipo de cambio de USD para 2026: excluido de los totales.»
-- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas.
+- Los totales excluyen estos importes, y un aviso de una línea bajo la lista los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente.
 - En una columna ordenada, estas líneas van al final. Un filtro de importe nunca las conserva.
-- Vea [Tasas manuales](currencies.md#tasas-manuales) para introducir usted mismo la tasa que falta.
+- Vea [Tipos manuales](currencies.md#tipos-manuales) para introducir usted mismo el tipo que falta.
 
 **Enlace directo**:
 
@@ -527,7 +527,8 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 **Facturación en varias monedas**:
 
 - Cada empresa introduce su facturación en millones de su moneda base. Antes del reparto, KANAP convierte cada facturación a la moneda de reporte, a los tipos de la versión presupuestaria del año: los tipos fijados al congelar su columna por defecto, si no los tipos actuales del año. Consulte [Configuración de monedas](currencies.md)
-- Cuando una moneda aún no tiene tipo, sus facturaciones se cuentan sin convertir y aparece un aviso sobre la tabla, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos, y el reparto se corrige solo
+- Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera del reparto: no reciben ninguna parte, y las demás empresas se reparten el 100 %. Un aviso sobre la tabla nombra cada empresa excluida. KANAP obtiene el tipo que falta en segundo plano, y el reparto se corrige solo en cuanto el tipo está disponible. Un [tipo manual](currencies.md#tipos-manuales) lo corrige al momento
+- Con **Manual por empresa** y el inductor Facturación, cuando ninguna de las empresas seleccionadas tiene tipo, la asignación se rechaza con un mensaje que cita las monedas y el año. Introduzca el tipo o elija otro inductor
 
 **Cómo usarlo**:
 

@@ -8,9 +8,11 @@ import { useLocale } from '../../../i18n/useLocale';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 
-/** Deep link into the Netbox page with the records filter already applied. */
+const NETBOX_PAGE = '/it/settings?tab=netbox';
+
+/** Deep link into the Netbox tab with the records filter already applied. */
 function recordsPath(state: NetboxRecordState): string {
-  return `/it/netbox?state=${state}`;
+  return `${NETBOX_PAGE}&state=${state}`;
 }
 
 /**
@@ -35,7 +37,7 @@ export default function NetboxSyncTile() {
       key: 'failed',
       count: data.sync.status === 'failure' ? 1 : 0,
       label: t('dashboard.tiles.netboxLastRunFailed'),
-      to: '/it/netbox',
+      to: NETBOX_PAGE,
     },
     {
       key: 'ambiguous',
@@ -64,7 +66,7 @@ export default function NetboxSyncTile() {
       isLoading={isLoading}
       isError={isError}
       onRetry={() => { void refetch(); }}
-      action={<Button size="small" onClick={() => navigate('/it/netbox')}>{t('buttons.viewAll')}</Button>}
+      action={<Button size="small" onClick={() => navigate(NETBOX_PAGE)}>{t('buttons.viewAll')}</Button>}
     >
       {!data || !data.configured ? (
         <TileEmptyState

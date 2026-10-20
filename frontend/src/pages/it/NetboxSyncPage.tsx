@@ -1338,10 +1338,13 @@ function MappingsSection({ onError }: { onError: (message: string) => void }) {
 }
 
 /**
- * Netbox synchronisation: what the last run did, a preview before anything is written,
+ * Netbox synchronisation, without the page title: the settings page keeps its own header and
+ * draws this on the Netbox tab. What the last run did, a preview before anything is written,
  * the objects that need a decision, and the role/site mapping that decides what is imported.
+ * `state` in the address selects a record filter. The two inner tabs stay in component state,
+ * so they do not use the page's `tab` parameter.
  */
-export default function NetboxSyncPage() {
+export function NetboxSyncPanel() {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
@@ -1493,8 +1496,6 @@ export default function NetboxSyncPage() {
 
   return (
     <Box sx={pageSx}>
-      <PageHeader title={t('pages.netbox.title')} />
-
       {status && !status.configured ? (
         <Typography variant="body2" color="text.secondary">
           {t('pages.netbox.notConfigured')}{' '}
@@ -1668,5 +1669,18 @@ export default function NetboxSyncPage() {
         onOpenMappings={() => { setPreviewOpen(false); setTab('mappings'); }}
       />
     </Box>
+  );
+}
+
+/** The old page. The route redirects to settings; tests still render this with its title. */
+export default function NetboxSyncPage() {
+  const { t } = useTranslation(['it', 'common']);
+  const { hasLevel } = useAuth();
+  if (!hasLevel('infrastructure', 'admin')) return <ForbiddenPage />;
+  return (
+    <>
+      <PageHeader title={t('pages.netbox.title')} />
+      <NetboxSyncPanel />
+    </>
   );
 }

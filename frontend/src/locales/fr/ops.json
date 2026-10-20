@@ -983,9 +983,6 @@
       "subtitle": "Configurez les devises de reporting et par défaut utilisées dans les workflows OPEX et CAPEX. Toutes les valeurs sont enregistrées sous forme de codes ISO à trois lettres.",
       "loadError": "Impossible de charger les paramètres de devise actuels.",
       "saveSuccess": "Paramètres de devise mis à jour avec succès",
-      "fxSyncRunning": "La synchronisation des taux de change est déjà en cours en arrière-plan.",
-      "fxSyncStarted": "Synchronisation des taux de change lancée pour les exercices fiscaux {{years}}. Les taux seront mis à jour sous peu.",
-      "refreshingFx": "Actualisation des taux de change…",
       "failedToRefreshFx": "Impossible d'actualiser les taux de change",
       "failedToUpdate": "Impossible de mettre à jour les paramètres",
       "reportingCurrency": "Devise de reporting",
@@ -1020,14 +1017,41 @@
       "editRate": "Modifier le taux pour {{currency}} en {{year}}",
       "manualDialogTitle": "Taux de change manuel",
       "manualRateLabel": "Taux en {{reporting}} pour 1 {{currency}}",
-      "manualRatePlaceholder": "1,05",
       "manualRateHint": "Utilisez le taux moyen de l'année publié par votre banque centrale ou votre trésorerie.",
+      "automaticRateHint": "Taux automatique {{year}} : {{rate}}",
       "manualRateReplaces": "Un taux manuel remplace le taux automatique pour cette année jusqu'à ce que vous le retiriez.",
+      "manualRateEmpty": "Saisissez un taux.",
+      "manualRateNotANumber": "Saisissez un nombre.",
       "manualRateInvalid": "Saisissez un taux supérieur à 0.",
+      "manualRateTooLarge": "Le taux ne peut pas dépasser {{max}}.",
+      "manualRateTooSmall": "Arrondi à 6 décimales, ce taux vaut 0.",
       "removeManualRate": "Retirer le taux manuel",
       "manualRateRemoved": "Le taux automatique sera de nouveau récupéré.",
       "failedToSaveManualRate": "Le taux n'a pas pu être enregistré.",
-      "failedToRemoveManualRate": "Le taux manuel n'a pas pu être retiré."
+      "failedToRemoveManualRate": "Le taux manuel n'a pas pu être retiré.",
+      "frozenVersionsKept_one": "La version gelée de {{year}} garde le taux de son gel.",
+      "frozenVersionsKept_other": "Les {{count}} versions gelées de {{year}} gardent le taux de leur gel.",
+      "syncFetched_one": "{{count}} taux récupéré.",
+      "syncFetched_other": "{{count}} taux récupérés.",
+      "syncStillMissing": "Toujours manquants : {{pairs}}.",
+      "syncContinues": "La synchronisation continue en arrière-plan.",
+      "syncSourceUnreachable": "La source des taux de change n'a pas répondu. Réessayez plus tard ou saisissez les taux manquants.",
+      "changeReportingTitle": "Changer la devise de reporting en {{currency}} ?",
+      "changeReportingEffect": "Chaque montant est converti en {{currency}} au taux de son année. Les taux sont récupérés pour les années utilisées.",
+      "changeReportingManual": "Ces taux saisis manuellement ne s'appliquent plus. Ils s'appliquent de nouveau si vous choisissez à nouveau {{previous}}.",
+      "changeReportingManualItem": "{{currency}} {{year}} : {{rate}}",
+      "changeReportingFrozen_one": "La version gelée de {{year}} garde les taux de son gel, convertis en {{currency}} au taux de l'année.",
+      "changeReportingFrozen_other": "Les versions gelées de {{year}} ({{count}}) gardent les taux de leur gel, convertis en {{currency}} au taux de l'année.",
+      "changeReportingAllowed": "{{currency}} sera ajoutée aux devises autorisées.",
+      "changeReportingConfirm": "Changer la devise",
+      "errors": {
+        "currency_invalid": "La devise doit être un code ISO à trois lettres.",
+        "currency_reporting": "Un taux manuel ne peut pas être saisi pour la devise de reporting.",
+        "year_out_of_range": "L'année doit être un entier entre 1990 et 2100.",
+        "rate_out_of_range": "Le taux doit être supérieur à 0 et d'au plus 1 000 000 000.",
+        "rate_too_small": "Ce taux est trop petit : arrondi à 6 décimales, il vaut 0.",
+        "manual_rate_not_found": "Ce taux manuel est introuvable."
+      }
     },
     "budgetColumns": {
       "budget": "Budget",
@@ -1268,8 +1292,8 @@
       }
     },
     "allocationWarnings": {
-      "turnoverFxMissing": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans ces devises est compté sans conversion jusqu'à ce que les taux soient disponibles.",
-      "turnoverFxMissing_one": "Pas encore de taux de change {{currencies}} vers {{reportingCurrency}} pour {{year}} : le chiffre d'affaires des sociétés dans cette devise est compté sans conversion jusqu'à ce que le taux soit disponible."
+      "turnoverFxMissing": "{{company}} est exclue de la répartition : pas de taux de change {{currency}} vers {{reportingCurrency}} pour {{year}}.",
+      "turnoverFxMissing_one": "{{company}} est exclue de la répartition : pas de taux de change {{currency}} vers {{reportingCurrency}} pour {{year}}."
     },
     "fxMissing": {
       "excluding_one": "{{count}} ligne sans taux de change exclue : {{pairs}}.",

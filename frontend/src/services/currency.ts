@@ -7,11 +7,41 @@ export type CurrencySettings = {
   allowedCurrencies: string[] | null;
 };
 
-export type RefreshCurrencyRatesResponse = {
-  ok: boolean;
-  queued: boolean;
-  alreadyQueued: boolean;
+/** One currency and year that still has no usable rate after a sync. */
+export type MissingRatePair = {
+  currency: string;
+  year: number;
+};
+
+/** `POST /currency/rates/refresh` once the fetch has finished. `failed` means the source answered nothing. */
+export type RateSyncCompleted = {
+  completed: true;
+  failed?: boolean;
   years: number[];
+  fetched: number;
+  stillMissing: MissingRatePair[];
+};
+
+/** The same endpoints when the fetch is still running. There is no `queued` flag. */
+export type RateSyncPending = {
+  completed: false;
+  years: number[];
+};
+
+export type RateSyncOutcome = RateSyncCompleted | RateSyncPending;
+
+export type RefreshCurrencyRatesResponse = RateSyncOutcome & { ok: true };
+
+/** A settings save. `refreshYears` is the years whose rates the page then fetches. */
+export type CurrencySettingsUpdate = CurrencySettings & {
+  refreshYears?: number[];
+};
+
+/** `GET /currency/reporting-change-impact`. What a new reporting currency does to manual rates, frozen versions and the allowed list. */
+export type ReportingChangeImpact = {
+  manualRates: Array<{ currency: string; year: number; rate: number }>;
+  frozenVersions: Array<{ year: number; count: number }>;
+  allowedAdded: boolean;
 };
 
 export async function fetchCurrencySettings(): Promise<CurrencySettings> {
@@ -19,9 +49,19 @@ export async function fetchCurrencySettings(): Promise<CurrencySettings> {
   return res.data as CurrencySettings;
 }
 
-export async function updateCurrencySettings(payload: Partial<CurrencySettings>): Promise<CurrencySettings> {
+export async function updateCurrencySettings(payload: Partial<CurrencySettings>): Promise<CurrencySettingsUpdate> {
   const res = await api.patch('/currency/settings', payload);
-  return res.data as CurrencySettings;
+  return res.data as CurrencySettingsUpdate;
+}
+
+export async function fetchReportingChangeImpact(to: string): Promise<ReportingChangeImpact> {
+  const res = await api.get<ReportingChangeImpact>('/currency/reporting-change-impact', { params: { to } });
+  const data = res.data;
+  return {
+    manualRates: Array.isArray(data?.manualRates) ? data.manualRates : [],
+    frozenVersions: Array.isArray(data?.frozenVersions) ? data.frozenVersions : [],
+    allowedAdded: Boolean(data?.allowedAdded),
+  };
 }
 
 export async function refreshCurrencyRates(payload?: { years?: number[]; year?: number }): Promise<RefreshCurrencyRatesResponse> {
@@ -36,13 +76,17 @@ export type CurrencyRateRow = {
   rates: Record<string, number | null>;
   /** Per currency: `world-bank-annual`, `exchangerateapi-spot`, `world-bank-forward`, `estimate`, `identity` or `manual`. */
   rateSources: Record<string, string>;
-  capturedAt: string;
-  source: string;
+  capturedAt: string | null;
+  source: string | null;
 };
 
-export type MissingRatePair = {
-  currency: string;
-  year: number;
+/**
+ * `GET /currency/rates`. `currencies` is the row order (reporting currency first).
+ * `rates` holds one set per year, and only for that reporting currency.
+ */
+export type CurrencyRateMatrix = {
+  currencies: string[];
+  rates: CurrencyRateRow[];
 };
 
 export type ManualRateInput = {
@@ -51,14 +95,26 @@ export type ManualRateInput = {
   rate: number;
 };
 
+export type ManualRateResult = CurrencyRateRow & {
+  /** Frozen budget versions of that year. They keep the rate from when they were frozen. */
+  frozenVersions: number;
+};
+
 export type RemoveManualRateResult = {
   ok: boolean;
   refreshQueued: boolean;
+  frozenVersions: number;
 };
 
-export async function fetchCurrencyRates(): Promise<CurrencyRateRow[]> {
-  const res = await api.get<CurrencyRateRow[]>('/currency/rates');
-  return res.data;
+export async function fetchCurrencyRates(): Promise<CurrencyRateMatrix> {
+  const res = await api.get<CurrencyRateMatrix>('/currency/rates');
+  const data = res.data;
+  return {
+    currencies: Array.isArray(data?.currencies)
+      ? data.currencies.map((code) => String(code ?? '').trim().toUpperCase()).filter((code) => code.length > 0)
+      : [],
+    rates: Array.isArray(data?.rates) ? data.rates : [],
+  };
 }
 
 /** Currency and year pairs in use that have no rate. */
@@ -71,8 +127,8 @@ export async function fetchMissingRates(): Promise<MissingRatePair[]> {
 }
 
 /** Stores a manual rate. It wins over the automatic sources until it is removed. */
-export async function setManualRate(payload: ManualRateInput): Promise<CurrencyRateRow> {
-  const res = await api.put<CurrencyRateRow>('/currency/rates/manual', payload);
+export async function setManualRate(payload: ManualRateInput): Promise<ManualRateResult> {
+  const res = await api.put<ManualRateResult>('/currency/rates/manual', payload);
   return res.data;
 }
 

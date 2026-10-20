@@ -88,7 +88,7 @@ Cómo funcionan:
 
 ### Importes sin tipo de cambio
 
-Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas. El aviso no se imprime. Vea [Tasas manuales](currencies.md#tasas-manuales).
+Cuando la moneda de una línea no tiene tipo de cambio para un año, los informes presupuestarios, **Plantilla por mes** y **Coste por ETC** excluyen de sus cifras los importes de esa línea para el año. Un aviso de una línea en la parte superior del informe los indica, por ejemplo «Se excluyen 3 líneas sin tipo de cambio: USD 2026.» Los usuarios de la administración presupuestaria con nivel de administrador ven además **Introducir un tipo**, que abre los ajustes de monedas en el tipo faltante. Cuando el aviso solo cita una moneda y un año, el diálogo del tipo manual se abre directamente. El aviso no se imprime. Vea [Tipos manuales](currencies.md#tipos-manuales).
 
 Los dos informes de contracargo excluyen estos importes de todas sus cifras: pagado, consumido, departamentos y flujos intercompañía. Cada informe queda equilibrado sobre lo que cuenta. El mismo aviso aparece encima del informe.
 
@@ -190,7 +190,7 @@ Profundice en las asignaciones de contracargo de una empresa entre departamentos
 
 **Tarjeta resumen de la empresa**: Nombre de la empresa, importe total, moneda de reporte, plantilla, usuarios IT, coste por usuario, coste por usuario IT y costes IT vs facturación.
 
-**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda aún no tiene tipo para el año, sus facturaciones se cuentan sin convertir y el informe muestra un aviso, por ejemplo «Aún no hay tipo de cambio de BRL a EUR para 2026: la facturación de las empresas en esta moneda se cuenta sin convertir hasta que el tipo esté disponible.» KANAP busca el tipo que falta en la próxima actualización de los tipos.
+**Facturación en los informes de contracargo**: cada empresa introduce su facturación en millones de su moneda base. Los dos informes de contracargo la convierten a la moneda de reporte, a los tipos de la versión presupuestaria del año, como los importes. La facturación, el ratio costes IT vs facturación y la facturación global de las tablas de KPI usan el valor convertido. Cuando una moneda no tiene tipo para el año, las empresas en esa moneda quedan fuera de los indicadores de facturación, y un aviso en la parte superior del informe nombra cada una de ellas. El ratio global costes IT vs facturación se calcula entonces solo sobre las empresas cuya facturación se ha convertido, tanto para los costes como para la facturación. KANAP obtiene el tipo que falta en segundo plano.
 
 **Totales por departamento** (cuando está habilitado):
 

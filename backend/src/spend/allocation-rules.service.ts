@@ -12,6 +12,7 @@ import {
   toDefaultResolution,
 } from './allocation-rule-resolver';
 import {
+  AllocationSplitError,
   TurnoverFxMissingWarning,
   assertCompanySelection,
   computeCompanySharesWithFx,
@@ -39,7 +40,7 @@ export type AllocationRuleResolution = {
   shares: AllocationRuleShare[];
   /** Why the effective selection cannot be computed (missing metric, disabled company…). */
   preview_error: string | null;
-  /** The split is computed, but turnovers lacking an exchange rate for the year were counted unconverted. */
+  /** Companies left out of the split: their turnover has no rate for the year. */
   preview_warning: TurnoverFxMissingWarning | null;
 };
 
@@ -105,11 +106,15 @@ export class AllocationRulesService {
         .map(([company_id, allocation_pct]) => ({ company_id, allocation_pct }))
         .sort((a, b) => b.allocation_pct - a.allocation_pct || a.company_id.localeCompare(b.company_id));
       const warning = computed.reportingCurrency
-        ? turnoverFxMissingWarning(computed.fxMissing, year, computed.reportingCurrency)
+        ? turnoverFxMissingWarning(computed.fxMissing, computed.reportingCurrency)
         : null;
       return { shares, error: null, warning };
     } catch (err) {
-      return { shares: [], error: err instanceof Error ? err.message : String(err), warning: null };
+      return {
+        shares: [],
+        error: err instanceof Error ? err.message : String(err),
+        warning: err instanceof AllocationSplitError ? err.warning : null,
+      };
     }
   }
 

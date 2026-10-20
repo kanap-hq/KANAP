@@ -123,7 +123,9 @@
       "turnoverYear": "Turnover ({{year}})"
     },
     "pinnedTotal": "Total",
-    "turnoverTotalFxMissing": "{{value}} (no rate yet for {{currencies}}, counted unconverted)",
+    "turnoverFxExcluded": "Turnover with no exchange rate left out of the total: {{pairs}}.",
+    "turnoverFxExcludedPair_one": "{{currency}} {{year}} ({{count}} company)",
+    "turnoverFxExcludedPair_other": "{{currency}} {{year}} ({{count}} companies)",
     "export": "Export companies",
     "import": "Import companies",
     "importHint": "Metrics read: {{years}}, from the year of the list. Each year is optional. Accepted status values: enabled or disabled.",

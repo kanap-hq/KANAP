@@ -107,23 +107,30 @@ export function memoizeTurnoverRates(fxRates: TurnoverFxRates | undefined, curre
   };
 }
 
+/** A company whose turnover has no rate for the year: left out of `values`. */
+export type TurnoverMissing = { companyId: string; currency: string };
+
 export type TurnoverConversion = {
   reportingCurrency: string;
-  /** Company id → its turnover in the reporting currency (null when it has none). */
+  /**
+   * Company id → its turnover in the reporting currency (null when it has none).
+   * A company whose currency has no rate for the year is absent.
+   */
   values: Map<string, number | null>;
   /**
-   * The currencies without a rate for the year: their turnover is counted unconverted (rate 1),
-   * as the version amounts are, and `resolveRates` has the missing year fetched.
+   * Companies left out because their currency has no rate for the year.
+   * `resolveRates` has still been called, so the missing year is fetched.
    */
-  missingCurrencies: string[];
+  missing: TurnoverMissing[];
 };
 
 /**
  * Turnovers entered in each company's base currency, converted into the tenant's reporting
  * currency at the rate of the year, with the rule of the version amounts: the version's
  * frozen rate set (`rateSetId`), else the latest live set of the year. A company in the
- * reporting currency, or without a base currency, is not converted. No rate is read when
- * no entry carries a turnover.
+ * reporting currency, or without a base currency, is not converted. A company whose
+ * currency has no rate is left out of `values`. No rate is read when no entry carries
+ * a turnover.
  */
 export async function convertTurnovers(args: {
   fxRates: TurnoverFxRates | undefined;
@@ -147,7 +154,7 @@ export async function convertTurnovers(args: {
   const fx = await fxRates.resolveRates(tenantId, lookups, { manager });
   const reportingCurrency = String(fx.settings.reportingCurrency || 'EUR').toUpperCase();
 
-  const missing = new Set<string>();
+  const missing: TurnoverMissing[] = [];
   const values = new Map<string, number | null>();
   for (const entry of normalized) {
     if (entry.turnover == null) {
@@ -160,27 +167,48 @@ export async function convertTurnovers(args: {
     }
     const rate = fx.map.get(`${rateSetId || 'live'}:${fiscalYear}:${entry.currency}`);
     if (!rate || rate.source === 'missing' || !Number.isFinite(rate.rate) || rate.rate <= 0) {
-      missing.add(entry.currency);
-      values.set(entry.companyId, entry.turnover);
+      missing.push({ companyId: entry.companyId, currency: entry.currency });
       continue;
     }
     // Not `convertValue`: it rounds to cents, and a turnover is entered in millions.
     values.set(entry.companyId, entry.turnover * rate.rate);
   }
-  return { reportingCurrency, values, missingCurrencies: Array.from(missing).sort() };
+  missing.sort((a, b) => a.currency.localeCompare(b.currency) || a.companyId.localeCompare(b.companyId));
+  return { reportingCurrency, values, missing };
 }
 
+/** One company left out of a turnover split or total. */
+export type TurnoverFxMissingItem = {
+  companyId: string;
+  companyName: string;
+  currency: string;
+  year: number;
+};
+
 /**
- * A split computed with a reservation: the turnovers in `currencies` had no rate into
- * `reportingCurrency` for `year` and were counted unconverted. Data, not a sentence: each
- * screen words it in the user's language (`ops:shared.allocationWarnings`).
+ * A split or a total that left turnovers out: each company in `items` had no rate into
+ * `reportingCurrency` for `items[].year`. Data, not a sentence: each screen words it in
+ * the user's language (`ops:shared.allocationWarnings`).
  */
 export type TurnoverFxMissingWarning = {
   code: 'turnover_fx_missing';
-  currencies: string[];
-  year: number;
+  items: TurnoverFxMissingItem[];
   reportingCurrency: string;
 };
+
+/** Names for `turnoverFxMissingWarning`, from the companies the conversion just read. */
+export function turnoverMissingItems(
+  missing: TurnoverMissing[],
+  year: number,
+  companies: ReadonlyArray<{ id: string; name?: string | null }>,
+): TurnoverFxMissingItem[] {
+  return missing.map((item) => ({
+    companyId: item.companyId,
+    companyName: companies.find((company) => company.id === item.companyId)?.name ?? '',
+    currency: item.currency,
+    year,
+  }));
+}
 
 /**
  * The rate set a budget year is frozen at: the set the freeze pinned on the year's versions
@@ -201,10 +229,46 @@ export async function yearRateSetId(manager: EntityManager, tenantId: string, fi
   return rows[0]?.id ?? null;
 }
 
-/** The warning of a split whose turnovers lack a rate (counted unconverted), or null. */
-export function turnoverFxMissingWarning(missingCurrencies: string[], fiscalYear: number, reportingCurrency: string): TurnoverFxMissingWarning | null {
-  if (missingCurrencies.length === 0) return null;
-  return { code: 'turnover_fx_missing', currencies: [...missingCurrencies], year: fiscalYear, reportingCurrency };
+/** The warning of turnovers left out for lack of a rate, or null. */
+export function turnoverFxMissingWarning(
+  items: TurnoverFxMissingItem[],
+  reportingCurrency: string,
+): TurnoverFxMissingWarning | null {
+  if (items.length === 0) return null;
+  const sorted = [...items].sort((a, b) => a.year - b.year
+    || a.currency.localeCompare(b.currency)
+    || a.companyName.localeCompare(b.companyName)
+    || a.companyId.localeCompare(b.companyId));
+  return {
+    code: 'turnover_fx_missing',
+    items: sorted.map((item) => ({ ...item })),
+    reportingCurrency,
+  };
+}
+
+/**
+ * A split that cannot be weighted. `warning` is the turnovers left out for lack of a
+ * rate, so a caller that turns the error into an empty split still names them.
+ */
+export class AllocationSplitError extends BadRequestException {
+  readonly warning: TurnoverFxMissingWarning;
+
+  /** `code`, when given, goes into the 400 body beside the message. */
+  constructor(message: string, warning: TurnoverFxMissingWarning, code?: string) {
+    super(code ? { statusCode: 400, error: 'Bad Request', code, message } : message);
+    this.warning = warning;
+  }
+}
+
+/** Every company of a turnover split lacks a rate into the reporting currency. */
+export const TURNOVER_FX_MISSING_ALL_CODE = 'turnover_fx_missing_all';
+
+/** The 400 message of `TURNOVER_FX_MISSING_ALL_CODE`: the currencies and the year without a rate. */
+export function turnoverFxMissingAllMessage(warning: TurnoverFxMissingWarning): string {
+  const currencies = Array.from(new Set(warning.items.map((item) => item.currency))).sort();
+  const years = Array.from(new Set(warning.items.map((item) => item.year))).sort((a, b) => a - b);
+  return `No exchange rate from ${currencies.join(', ')} to ${warning.reportingCurrency} for ${years.join(', ')}: `
+    + 'the turnover of the selected companies cannot be compared. Enter the rate, or choose another allocation driver.';
 }
 
 /**
@@ -241,14 +305,22 @@ export function describeAllocationWarning(warning: AllocationWarning): string {
     return `No ${warning.reportingCurrency} exchange rate for ${pairs}: `
       + 'the amounts of those lines are left out of the totals until the rate is available.';
   }
-  return `No ${warning.reportingCurrency} exchange rate for ${warning.currencies.join(', ')} in ${warning.year}: `
-    + 'the turnover of the companies in that currency is counted unconverted until the rate is available.';
+  const seen = new Set<string>();
+  const pairs: string[] = [];
+  for (const item of warning.items) {
+    const label = `${item.currency} in ${item.year}`;
+    if (seen.has(label)) continue;
+    seen.add(label);
+    pairs.push(label);
+  }
+  return `No ${warning.reportingCurrency} exchange rate for ${pairs.join(', ')}: `
+    + 'the turnover of those companies is left out of the totals until the rate is available.';
 }
 
 export type CompanySharesResult = {
   shares: Map<string, number>;
-  /** Set for the turnover driver only (see `convertTurnovers`). */
-  fxMissing: string[];
+  /** Companies left out of a turnover split (see `convertTurnovers`). Empty for the other drivers. */
+  fxMissing: TurnoverFxMissingItem[];
   reportingCurrency: string | null;
 };
 
@@ -302,9 +374,8 @@ function enteredDriverValues(companyIds: string[], metrics: CompanyMetric[], dri
 }
 
 /**
- * Checks that a manual selection can be split (`computeCompanySharesWithFx` would throw the
- * same error), without reading any rate: a rate is positive and a missing one counts 1, so a
- * converted turnover is positive exactly when the turnover entered is.
+ * Checks that a manual selection can be split on the values entered, without reading any rate.
+ * A turnover without a rate is left out when the split is computed (`computeCompanySharesWithFx`).
  */
 export async function assertCompanySelection(args: CompanySelectionArgs): Promise<void> {
   const { metrics } = await readCompanySelection(args);
@@ -327,9 +398,12 @@ export async function computeCompanySharesWithFx(args: CompanySelectionArgs & {
   const { manager, tenantId, fiscalYear, companyIds, driver } = args;
   const { companies, metrics } = await readCompanySelection(args);
 
-  let fxMissing: string[] = [];
+  let fxMissing: TurnoverFxMissingItem[] = [];
   let reportingCurrency: string | null = null;
   let driverValueByCompany = enteredDriverValues(companyIds, metrics, driver);
+  // A company whose turnover has no rate is left out. A company with no turnover entered stays,
+  // so the existing "provide a value" check still applies to it.
+  let weightedIds = companyIds;
   if (driver === 'turnover' && companyIds.length > 1) {
     const converted = await convertTurnovers({
       fxRates: args.fxRates,
@@ -343,12 +417,25 @@ export async function computeCompanySharesWithFx(args: CompanySelectionArgs & {
         turnover: driverValueByCompany.get(companyId),
       })),
     });
-    fxMissing = converted.missingCurrencies;
+    fxMissing = turnoverMissingItems(converted.missing, fiscalYear, companies);
     reportingCurrency = converted.reportingCurrency;
-    driverValueByCompany = new Map(companyIds.map((companyId) => [companyId, converted.values.get(companyId) ?? null]));
+    const missingIds = new Set(converted.missing.map((item) => item.companyId));
+    weightedIds = companyIds.filter((companyId) => !missingIds.has(companyId));
+    driverValueByCompany = new Map(weightedIds.map((companyId) => [companyId, converted.values.get(companyId) ?? null]));
   }
 
-  const distribution = normalizeWeights(buildCompanyWeights(companyIds, driverValueByCompany, driver));
+  const warning = reportingCurrency ? turnoverFxMissingWarning(fxMissing, reportingCurrency) : null;
+  if (weightedIds.length === 0) {
+    if (warning) throw new AllocationSplitError(turnoverFxMissingAllMessage(warning), warning, TURNOVER_FX_MISSING_ALL_CODE);
+    throw new BadRequestException('Allocation source values must sum to a positive amount.');
+  }
+  let distribution: Array<{ id: string; pct: number }>;
+  try {
+    distribution = normalizeWeights(buildCompanyWeights(weightedIds, driverValueByCompany, driver));
+  } catch (err) {
+    if (warning && err instanceof BadRequestException) throw new AllocationSplitError(err.message, warning);
+    throw err;
+  }
   const shares = new Map<string, number>();
   distribution.forEach(({ id, pct }) => shares.set(id, pct));
   return { shares, fxMissing, reportingCurrency };

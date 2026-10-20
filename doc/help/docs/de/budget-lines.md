@@ -158,7 +158,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 **Beträge ohne Wechselkurs**:
 
 - Hat die Währung einer Zeile für ein Jahr keinen Wechselkurs, erscheint ihr Betrag für dieses Jahr in seiner eigenen Währung mit einer kleinen orangefarbenen Markierung. Fahren Sie mit der Maus über die Markierung, um zum Beispiel „Kein Wechselkurs für USD im Jahr 2026: nicht in den Summen enthalten.“ zu lesen.
-- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen öffnet.
+- Die Summen lassen diese Beträge aus, und ein einzeiliger Hinweis unter der Liste nennt sie, zum Beispiel „3 Zeilen ohne Wechselkurs ausgeschlossen: USD 2026.“ Benutzer der Budgetadministration auf Administratorebene sehen außerdem **Kurs eingeben**, das die Währungseinstellungen beim fehlenden Kurs öffnet. Nennt der Hinweis nur eine Währung und ein Jahr, öffnet sich direkt der Dialog für den manuellen Kurs.
 - In einer sortierten Spalte stehen diese Zeilen am Ende. Ein Betragsfilter behält sie nie.
 - Unter [Manuelle Kurse](currencies.md#manuelle-kurse) können Sie den fehlenden Kurs selbst eingeben.
 
@@ -527,7 +527,8 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 **Umsatz in mehreren Währungen**:
 
 - Jedes Unternehmen erfasst seinen Umsatz in Millionen seiner Basiswährung. Vor der Aufteilung rechnet KANAP jeden Umsatz in die Berichtswährung um, zu den Kursen der Budgetversion des Jahres: den beim Einfrieren ihrer Standardspalte festgeschriebenen Kursen, sonst den aktuellen Kursen des Jahres. Siehe [Währungseinstellungen](currencies.md)
-- Hat eine Währung noch keinen Kurs, werden ihre Umsätze ohne Umrechnung gezählt, und über der Tabelle erscheint eine Warnung, zum Beispiel „Noch kein Wechselkurs von BRL nach EUR für 2026: Der Umsatz der Unternehmen in dieser Währung wird ohne Umrechnung gezählt, bis der Kurs verfügbar ist.“ KANAP holt den fehlenden Kurs bei der nächsten Aktualisierung der Kurse, und die Aufteilung korrigiert sich von selbst
+- Hat eine Währung für das Jahr keinen Kurs, bleiben die Unternehmen in dieser Währung aus der Aufteilung heraus: Sie erhalten keinen Anteil, und die übrigen Unternehmen teilen sich 100 %. Eine Warnung über der Tabelle nennt jedes ausgelassene Unternehmen. KANAP ruft den fehlenden Kurs im Hintergrund ab, und die Aufteilung korrigiert sich von selbst, sobald der Kurs verfügbar ist. Ein [manueller Kurs](currencies.md#manuelle-kurse) behebt es sofort
+- Bei **Manuell nach Unternehmen** mit dem Treiber Umsatz wird die Zuordnung abgelehnt, wenn keines der ausgewählten Unternehmen einen Kurs hat. Die Meldung nennt die Währungen und das Jahr. Geben Sie den Kurs ein oder wählen Sie einen anderen Treiber
 
 **So verwenden Sie ihn**:
 

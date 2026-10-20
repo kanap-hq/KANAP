@@ -8,7 +8,13 @@ import { Tenant } from '../../tenants/tenant.entity';
 import { CurrencyRateSet } from '../currency-rate-set.entity';
 import { CurrencySettingsService } from '../currency-settings.service';
 import { FxRateService } from '../fx-rate.service';
-import { MANUAL_RATE_REPORTING_MESSAGE, ManualRatesService } from '../manual-rates.service';
+import { FxIngestionService } from '../fx-ingestion.service';
+import {
+  MANUAL_RATE_NOT_FOUND_CODE,
+  MANUAL_RATE_REPORTING_CODE,
+  MANUAL_RATE_REPORTING_MESSAGE,
+  ManualRatesService,
+} from '../manual-rates.service';
 
 // @database-spec: seeds its own tenants, sets app.current_tenant, and rolls the transaction back.
 // It runs on a CI database lane (or the throwaway appdb_fx), never on the dev appdb.
@@ -81,11 +87,14 @@ async function insertMetric(runner: QueryRunner, tenantId: string, companyId: st
   );
 }
 
-function httpError(error: unknown): { status?: number; message: string } {
-  const candidate = error as { getStatus?: () => number; message?: string };
+function httpError(error: unknown): { status?: number; message: string; code?: string } {
+  const candidate = error as { getStatus?: () => number; getResponse?: () => unknown; message?: string };
+  const response = typeof candidate.getResponse === 'function' ? candidate.getResponse() : undefined;
+  const body = response && typeof response === 'object' ? (response as { code?: string }) : {};
   return {
     status: typeof candidate.getStatus === 'function' ? candidate.getStatus() : undefined,
     message: candidate.message ?? '',
+    code: body.code,
   };
 }
 
@@ -130,7 +139,7 @@ async function main() {
          ('JPY', 'Japanese Yen'),
          ('MXN', 'Mexican Peso'),
          ('NOK', 'Norwegian Krone'),
-         ('XTS', 'XTS')
+         ('XPF', 'CFP Franc')
        ON CONFLICT (code) DO NOTHING`,
     );
 
@@ -169,6 +178,12 @@ async function main() {
               ($1, 'Home licence', $2, $3, '2024-01-01', 'EUR')`,
       [tenantA, eurCompany, supplier.id],
     );
+    // Ended in 2015: no year the contract pages read.
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, duration_months, auto_renewal, currency)
+       VALUES ($1, 'Ended licence', $2, $3, '2015-01-01', 12, false, 'NOK')`,
+      [tenantA, eurCompany, supplier.id],
+    );
 
     await setTenant(runner, tenantB);
     await insertLine(runner, tenantB, { nature: 'opex', currency: 'JPY', year: 2019, itemNumber: 1 });
@@ -192,7 +207,7 @@ async function main() {
     const reported: number[][] = [];
     fxRates.onMissingRates((_tenantId, years) => reported.push([...years]));
     const queued: Array<{ years: unknown; label?: string }> = [];
-    let queueStatus: 'queued' | 'skipped' = 'queued';
+    let queueStatus: 'queued' | 'merged' = 'queued';
     const ingestion = {
       queueManualRefresh: async (_tenantId: string, years: unknown, opts?: { label?: string }) => {
         queued.push({ years, label: opts?.label });
@@ -201,7 +216,9 @@ async function main() {
     };
     const manual = new ManualRatesService(settings, fxRates, ingestion as any, audit);
 
-    const contractYears = Array.from(new Set([2022, 2023, 2024, CURRENT_YEAR])).sort((a, b) => a - b);
+    // Only the years the contract pages read (the current one and the two after; the year
+    // before has no budget line), and among them only those the contract runs in.
+    const contractYears = [CURRENT_YEAR, CURRENT_YEAR + 1, CURRENT_YEAR + 2];
     const expected = sortPairs([
       { currency: 'CHF', year: 2020 },
       { currency: 'CHF', year: 2021 },
@@ -211,12 +228,59 @@ async function main() {
     ]);
     const missing = await manual.listMissingPairs(tenantA, runner.manager);
     assert.deepEqual(missing, expected);
+    const [{ versions }] = await runner.query(
+      `SELECT count(*)::int AS versions FROM spend_versions WHERE tenant_id = $1 AND budget_year = $2`,
+      [tenantA, CURRENT_YEAR + 2],
+    );
+    assert.equal(versions, 0, 'the later contract year has no budget version');
+    assert.ok(missing.some((pair) => pair.currency === 'SEK' && pair.year === CURRENT_YEAR + 2));
     assert.ok(!missing.some((pair) => pair.currency === 'EUR'), 'the reporting currency is excluded');
     assert.ok(!missing.some((pair) => pair.currency === 'USD'), 'a usable stored rate is not missing');
     assert.ok(!missing.some((pair) => pair.currency === 'JPY' || pair.currency === 'NOK'), 'another tenant is excluded');
     assert.ok(!missing.some((pair) => pair.currency === 'MXN'), 'a company year without turnover is excluded');
     assert.deepEqual(reported[0], Array.from(new Set(expected.map((pair) => pair.year))).sort((a, b) => a - b));
+    assert.ok(!missing.some((pair) => pair.currency === 'SEK' && pair.year < CURRENT_YEAR), 'a contract has no pair for an older version year');
     console.log('ok - missing pairs come from budget lines, companies and contracts');
+
+    // A blank contract currency converts as EUR: with a USD reporting currency it needs EUR.
+    await runner.query(
+      `UPDATE tenants SET metadata = '{"reporting_currency":"USD"}'::jsonb WHERE id = $1`,
+      [tenantB],
+    );
+    await setTenant(runner, tenantB);
+    await runner.query(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date, currency)
+       VALUES ($1, 'Blank licence', $2, $3, '2024-01-01', '   ')`,
+      [tenantB, otherCompany, otherSupplier.id],
+    );
+    // Its 2019 version stays pinned to a set of an older base (XPF): that base is in use.
+    const [oldBaseSet] = await runner.query(
+      `INSERT INTO currency_rate_sets (tenant_id, fiscal_year, base_currency, rates, source, rate_basis)
+       VALUES ($1, 2019, 'XPF', '{"XPF":1,"JPY":1.2}'::jsonb, 'manual', 'manual') RETURNING id`,
+      [tenantB],
+    );
+    await runner.query(
+      `UPDATE spend_versions SET fx_rate_set_id = $2 WHERE tenant_id = $1 AND budget_year = 2019`,
+      [tenantB, oldBaseSet.id],
+    );
+    const missingB = await manual.listMissingPairs(tenantB, runner.manager, { report: false });
+    assert.deepEqual(missingB, sortPairs([
+      { currency: 'JPY', year: 2019 },
+      { currency: 'XPF', year: 2019 },
+      ...contractYears.flatMap((year) => [{ currency: 'EUR', year }, { currency: 'NOK', year }]),
+    ]));
+    const ingestionB = new FxIngestionService(
+      dataSource.getRepository(CurrencyRateSet),
+      dataSource.getRepository(Tenant),
+      settings,
+      fxRates,
+      {} as any,
+    );
+    const contextB = await (ingestionB as any).buildTenantContext(tenantB, runner.manager);
+    assert.ok(contextB.currencies.includes('XPF'), 'the refresh fetches the old base of a pinned set');
+    await setTenant(runner, tenantA);
+    console.log('ok - a contract with a blank currency needs the EUR rate of each year it runs in');
+    console.log('ok - the old base of a pinned set is listed as missing and fetched');
 
     await assert.rejects(
       () => manual.setManualRate(tenantA, { currency: 'EUR', year: 2024, rate: 1.2 }, userId, runner.manager),
@@ -224,23 +288,24 @@ async function main() {
         const http = httpError(error);
         assert.equal(http.status, 400);
         assert.equal(http.message, MANUAL_RATE_REPORTING_MESSAGE);
+        assert.equal(http.code, MANUAL_RATE_REPORTING_CODE);
         return true;
       },
     );
     console.log('ok - the reporting currency is rejected');
 
-    const [{ xtsBefore }] = await runner.query(`SELECT count(*)::int AS "xtsBefore" FROM currencies WHERE TRIM(code) = 'XTS'`);
-    const created = await manual.setManualRate(tenantA, { currency: 'xts', year: 2050, rate: 1.5 }, userId, runner.manager);
+    const [{ xpfBefore }] = await runner.query(`SELECT count(*)::int AS "xpfBefore" FROM currencies WHERE TRIM(code) = 'XPF'`);
+    const created = await manual.setManualRate(tenantA, { currency: 'xpf', year: 2050, rate: 1.5 }, userId, runner.manager);
     const createdRow = await latestSet(runner, tenantA, 2050);
     assert.equal(createdRow.id, created.id);
     assert.equal(createdRow.base_currency, 'EUR');
-    assert.deepEqual(createdRow.rates, { EUR: 1, XTS: 1.5 });
-    assert.deepEqual(createdRow.rate_sources, { EUR: 'identity', XTS: 'manual' });
+    assert.deepEqual(createdRow.rates, { EUR: 1, XPF: 1.5 });
+    assert.deepEqual(createdRow.rate_sources, { EUR: 'identity', XPF: 'manual' });
     assert.equal(createdRow.source, 'manual');
     assert.equal(createdRow.rate_basis, 'manual');
-    const [{ xtsAfter }] = await runner.query(`SELECT count(*)::int AS "xtsAfter" FROM currencies WHERE TRIM(code) = 'XTS'`);
-    assert.equal(xtsAfter, 1);
-    assert.ok(xtsAfter >= xtsBefore);
+    const [{ xpfAfter }] = await runner.query(`SELECT count(*)::int AS "xpfAfter" FROM currencies WHERE TRIM(code) = 'XPF'`);
+    assert.equal(xpfAfter, 1);
+    assert.ok(xpfAfter >= xpfBefore);
     console.log('ok - a year with no set stores a manual set');
 
     const [sets2022Before] = await runner.query(
@@ -288,20 +353,22 @@ async function main() {
         const http = httpError(error);
         assert.equal(http.status, 404);
         assert.equal(http.message, 'No manual rate is stored for CHF in 2021.');
+        assert.equal(http.code, MANUAL_RATE_NOT_FOUND_CODE);
         return true;
       },
     );
     console.log('ok - a currency that is not manual answers 404');
 
-    queueStatus = 'skipped';
-    const skipped = await manual.removeManualRate(tenantA, { currency: 'USD', year: 2022 }, userId, runner.manager);
-    assert.deepEqual(skipped, { ok: true, refreshQueued: false });
+    queueStatus = 'merged';
+    const reportedBefore = reported.length;
+    const merged = await manual.removeManualRate(tenantA, { currency: 'USD', year: 2022 }, userId, runner.manager);
+    assert.deepEqual(merged, { ok: true, refreshQueued: true });
     assert.deepEqual(queued[1], { years: [2022], label: 'manual-rate-removed' });
-    assert.deepEqual(reported[reported.length - 1], [2022]);
+    assert.equal(reported.length, reportedBefore, 'the next run takes the year: nothing to report');
     const usdRow = await latestSet(runner, tenantA, 2022);
     assert.equal(usdRow.rates.USD, null);
     assert.equal(usdRow.rate_sources?.USD, undefined);
-    console.log('ok - a refresh already running is reported as a missing year');
+    console.log('ok - a refresh already running takes the removed year into its next run');
 
     const audits = await runner.query(
       `SELECT action, record_id, before_json, after_json, user_id::text AS user_id
@@ -319,8 +386,8 @@ async function main() {
         { action: 'delete', record_id: usdRow.id },
       ],
     );
-    assert.deepEqual(audits[0].before_json, { fiscal_year: 2050, currency: 'XTS', rate: null, source: null });
-    assert.deepEqual(audits[0].after_json, { fiscal_year: 2050, currency: 'XTS', rate: 1.5, source: 'manual' });
+    assert.deepEqual(audits[0].before_json, { fiscal_year: 2050, currency: 'XPF', rate: null, source: null });
+    assert.deepEqual(audits[0].after_json, { fiscal_year: 2050, currency: 'XPF', rate: 1.5, source: 'manual' });
     assert.deepEqual(audits[1].before_json, { fiscal_year: 2022, currency: 'USD', rate: 0.92, source: 'world-bank-annual' });
     assert.deepEqual(audits[1].after_json, { fiscal_year: 2022, currency: 'USD', rate: 1.1, source: 'manual' });
     assert.deepEqual(audits[3].before_json, { fiscal_year: 2023, currency: 'GBP', rate: 1.234568, source: 'manual' });

@@ -1,5 +1,6 @@
 import * as assert from 'node:assert/strict';
 import { EntityManager } from 'typeorm';
+import { AllocationSplitError } from '../allocation-distribution';
 import { AllocationCalculatorService } from '../allocation-calculator.service';
 import { AllocationRule } from '../allocation-rule.entity';
 import { SpendAllocation } from '../spend-allocation.entity';
@@ -58,8 +59,8 @@ function fakeFx(reportingCurrency: string, rates: Record<string, number>) {
 }
 
 const companies = [
-  { id: 'paris', tenant_id: TENANT, base_currency: 'EUR', disabled_at: null },
-  { id: 'newyork', tenant_id: TENANT, base_currency: 'USD', disabled_at: null },
+  { id: 'paris', name: 'Paris', tenant_id: TENANT, base_currency: 'EUR', disabled_at: null },
+  { id: 'newyork', name: 'New York', tenant_id: TENANT, base_currency: 'USD', disabled_at: null },
 ];
 const metrics = [
   { company_id: 'paris', fiscal_year: 2026, headcount: 100, it_users: 80, turnover: '70' },
@@ -117,15 +118,63 @@ async function testSameCurrencyNeedsNoRate() {
   assert.equal(result.get('v')!.warning, null);
 }
 
-async function testMissingRateCountsUnconvertedWithAWarning() {
+async function testMissingRateLeavesTheCompanyOutWithAWarning() {
   const fx = fakeFx('EUR', {});
   const result = await calculator(fx).computeForVersions([version('v')], { manager: fakeManager({ companies, metrics }), tenantId: TENANT });
   const v = result.get('v')!;
-  // As the version amounts: rate 1 (resolveRates has the year fetched), and the user is told.
-  assert.deepEqual(pct(v.shares), { paris: 66.6667, newyork: 33.3333 });
+  // Paris keeps the whole split. New York is left out, and the user is told.
+  assert.deepEqual(pct(v.shares), { paris: 100 });
   assert.equal(v.error, null);
-  // Structured, so each screen words it in the user's language.
-  assert.deepEqual(v.warning, { code: 'turnover_fx_missing', currencies: ['USD'], year: 2026, reportingCurrency: 'EUR' });
+  assert.deepEqual(v.warning, {
+    code: 'turnover_fx_missing',
+    items: [{ companyId: 'newyork', companyName: 'New York', currency: 'USD', year: 2026 }],
+    reportingCurrency: 'EUR',
+  });
+}
+
+/** No company of the split has a rate: the driver total is 0, so the split is even, and the warning stays. */
+async function testAllMissingRatesSplitEvenly() {
+  const fx = fakeFx('EUR', {});
+  const both = [
+    { ...companies[0], base_currency: 'JPY' },
+    companies[1],
+  ];
+  const result = await calculator(fx).computeForVersions([version('v')], { manager: fakeManager({ companies: both, metrics }), tenantId: TENANT });
+  const v = result.get('v')!;
+  assert.deepEqual(pct(v.shares), { paris: 50, newyork: 50 });
+  assert.deepEqual(v.warning?.items.map((item) => [item.companyId, item.currency]), [['paris', 'JPY'], ['newyork', 'USD']]);
+}
+
+async function testManualSelectionDropsTheCompanyWithoutARate() {
+  const fx = fakeFx('EUR', {});
+  const allocations = [
+    { id: 'r1', tenant_id: TENANT, version_id: 'manual', company_id: 'paris', department_id: null, allocation_pct: '50', is_system_generated: false },
+    { id: 'r2', tenant_id: TENANT, version_id: 'manual', company_id: 'newyork', department_id: null, allocation_pct: '50', is_system_generated: false },
+  ];
+  const result = await calculator(fx).computeForVersions(
+    [version('manual', { allocation_method: 'manual_company', allocation_driver: 'turnover' })],
+    { manager: fakeManager({ companies, metrics, allocations }), tenantId: TENANT },
+  );
+  assert.deepEqual(pct(result.get('manual')!.shares), { paris: 100, newyork: 0 });
+  assert.equal(result.get('manual')!.warning?.items[0].companyId, 'newyork');
+
+  const bothUsd = companies.map((company) => ({ ...company, base_currency: 'USD' }));
+  await assert.rejects(
+    () => calculator(fx).computeForVersions(
+      [version('manual', { allocation_method: 'manual_company', allocation_driver: 'turnover' })],
+      { manager: fakeManager({ companies: bothUsd, metrics, allocations }), tenantId: TENANT },
+    ),
+    (err: unknown) => err instanceof AllocationSplitError
+      && (err.getResponse() as { code?: string }).code === 'turnover_fx_missing_all'
+      && /No exchange rate from USD to EUR/.test(err.message)
+      && err.warning.items.length === 2,
+  );
+  const suppressed = await calculator(fx).computeForVersions(
+    [version('manual', { allocation_method: 'manual_company', allocation_driver: 'turnover' })],
+    { manager: fakeManager({ companies: bothUsd, metrics, allocations }), tenantId: TENANT, suppressErrors: true },
+  );
+  assert.match(suppressed.get('manual')!.error ?? '', /No exchange rate from USD to EUR/);
+  assert.equal(suppressed.get('manual')!.warning?.items.length, 2);
 }
 
 async function testOtherDriversReadNoRate() {
@@ -174,7 +223,9 @@ Promise.resolve()
   .then(testTurnoverSharesUseTheReportingCurrency)
   .then(testManualCompanySelectionConvertsToo)
   .then(testSameCurrencyNeedsNoRate)
-  .then(testMissingRateCountsUnconvertedWithAWarning)
+  .then(testMissingRateLeavesTheCompanyOutWithAWarning)
+  .then(testAllMissingRatesSplitEvenly)
+  .then(testManualSelectionDropsTheCompanyWithoutARate)
   .then(testOtherDriversReadNoRate)
   .then(() => console.log('allocation-calculator-turnover-fx: ok'))
   .catch((err) => {

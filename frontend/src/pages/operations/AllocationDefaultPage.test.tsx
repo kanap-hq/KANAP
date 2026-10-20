@@ -18,7 +18,7 @@ const mocked = api as unknown as { get: ReturnType<typeof vi.fn> };
 const YEAR = new Date().getFullYear();
 
 // The default split by turnover is computed in the reporting currency: the preview names each
-// company's base currency next to its turnover, and says when a currency had no rate yet.
+// company's base currency next to its turnover, and names each company left out for lack of a rate.
 function serve(previewWarning: unknown) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/allocation-rules/active') {
@@ -68,9 +68,16 @@ describe('AllocationDefaultPage by turnover', () => {
     expect(screen.queryByText(/exchange rate/)).toBeNull();
   });
 
-  it('says when a turnover was counted without a rate', async () => {
-    serve({ code: 'turnover_fx_missing', currencies: ['USD'], year: YEAR, reportingCurrency: 'EUR' });
+  it('says which company is left out when its turnover has no rate', async () => {
+    serve({
+      code: 'turnover_fx_missing',
+      items: [{ companyId: 'ny', companyName: 'New York', currency: 'USD', year: YEAR }],
+      reportingCurrency: 'EUR',
+    });
     await renderPage();
-    expect(await screen.findByText(`No EUR exchange rate for USD in ${YEAR} yet`, { exact: false })).toBeInTheDocument();
+    expect(await screen.findByText(
+      `New York is left out of the allocation: no exchange rate from USD to EUR for ${YEAR}.`,
+      { exact: false },
+    )).toBeInTheDocument();
   });
 });

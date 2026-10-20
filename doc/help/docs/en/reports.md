@@ -88,7 +88,7 @@ How they work:
 
 ### Amounts without an exchange rate
 
-When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings. The warning does not print. See [Manual rates](currencies.md#manual-rates).
+When a line's currency has no exchange rate for a year, the budget reports, **Staffing by month** and **Cost per FTE** leave that line's amounts for the year out of their figures. A one-line warning at the top of the report names them, for example "Excluding 3 lines with no exchange rate: USD 2026." Budget administration users at admin level also see **Enter a rate**, which opens the currency settings on the missing rate. When the warning names a single currency and year, the manual rate dialog opens directly. The warning does not print. See [Manual rates](currencies.md#manual-rates).
 
 The two chargeback reports leave these amounts out of every figure: paid, consumed, departments and intercompany flows. Each report stays balanced on what it counts. The same warning shows above the report.
 
@@ -190,7 +190,7 @@ Drill down into a single company's chargeback allocations across departments, bu
 
 **Company summary card**: Company name, total amount, reporting currency, headcount, IT users, cost per user, cost per IT user, and IT costs vs turnover.
 
-**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate yet for the year, its turnovers are counted without conversion and the report lists a warning, for example "No EUR exchange rate for BRL in 2026 yet: the turnover of the companies in this currency is counted unconverted until the rate is available." KANAP fetches the missing rate with the next rate refresh.
+**Turnover in the chargeback reports**: each company enters its turnover in millions of its base currency. Both chargeback reports convert it to the reporting currency, at the rates of the year's budget version, like the amounts. The turnover, the IT costs vs turnover ratio and the global turnover of the KPI tables use the converted value. When a currency has no rate for the year, the companies in that currency are left out of the turnover figures, and a warning at the top of the report names each of them. The global IT costs vs turnover ratio is then computed on the companies whose turnover was converted, on both sides: their costs and their turnover. KANAP fetches the missing rate in the background.
 
 **Department totals** (when enabled):
 

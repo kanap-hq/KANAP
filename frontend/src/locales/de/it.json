@@ -716,6 +716,10 @@
     },
     "settings": {
       "title": "IT-Landschaft Einstellungen",
+      "tabs": {
+        "lists": "Listen",
+        "netbox": "Netbox"
+      },
       "description": "Konfigurieren Sie wiederverwendbare Listen für Datenklassifizierung, Serverkatalog und Schnittstellenprotokolle in der IT-Landschaft.",
       "loadFailed": "Fehler beim Laden der IT-Landschaft-Einstellungen.",
       "updateSuccess": "IT-Landschaft-Einstellungen erfolgreich aktualisiert",

@@ -1,4 +1,5 @@
 import { z } from 'zod';
+import { EffectiveStartSchema } from './effective-start';
 
 /**
  * Zod schema for creating a spend item.
@@ -14,7 +15,7 @@ export const CreateSpendItemSchema = z.object({
   currency: z.string().length(3, 'Currency must be a 3-character code'),
 
   /** Effective start date (YYYY-MM-DD) */
-  effective_start: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format'),
+  effective_start: EffectiveStartSchema,
 
   /** @deprecated Alias of disabled_at for one release: fills an empty end of validity (YYYY-MM-DD), never stored. */
   effective_end: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, 'Date must be in YYYY-MM-DD format').nullable().optional(),

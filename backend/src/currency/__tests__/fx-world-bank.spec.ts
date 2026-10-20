@@ -165,7 +165,7 @@ async function testManualQueueDeduplication() {
   const first = await service.queueManualRefresh('tenant', [2024]);
   assert.equal(first, 'queued');
   const second = await service.queueManualRefresh('tenant', [2024]);
-  assert.equal(second, 'skipped');
+  assert.equal(second, 'merged', 'the running refresh covers the same year');
   assert.equal(calls, 1);
 
   resolvers.shift()?.();
@@ -182,7 +182,7 @@ async function testManualQueueDeduplication() {
 /**
  * The refresh covers the base currencies of the tenant's companies: their turnovers are
  * converted at the year's rates (`convertTurnovers`), and a currency no set rates would stay
- * counted unconverted for good.
+ * left out of the totals for good.
  */
 async function testTenantContextCoversCompanyCurrencies() {
   const queries: Array<{ sql: string; params: unknown[] }> = [];

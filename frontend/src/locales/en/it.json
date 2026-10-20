@@ -716,6 +716,10 @@
     },
     "settings": {
       "title": "IT landscape settings",
+      "tabs": {
+        "lists": "Lists",
+        "netbox": "Netbox"
+      },
       "description": "Configure reusable lists for data classification, server catalog, and interface protocols used across the IT landscape workspace.",
       "loadFailed": "Failed to load IT landscape settings.",
       "updateSuccess": "IT landscape settings updated successfully",
