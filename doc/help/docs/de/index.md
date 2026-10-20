@@ -46,7 +46,7 @@ Wenn Sie schnellstmöglich produktiv werden möchten, beginnen Sie mit den Fast-
 - [Verbindungskarte](connection-map.md) - Verbindungstopologie visualisieren
 - [Administrationszonen](administration-view.md) - Sehen, wer was verwaltet: Zonen, Kontrollpunkte, Domänen und Domänencontroller
 
-**Stammdaten**
+**Referenzdaten**
 
 - [Standorte](locations.md) - Rechenzentren und Cloud-Regionen verfolgen
 - [Technologien](technologies.md) - Die Produkte verfolgen, auf denen Ihre Anwendungen laufen, mit Versionen und Supportende

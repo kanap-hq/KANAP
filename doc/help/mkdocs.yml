@@ -217,7 +217,7 @@ plugins:
             "Budget data model": "Datenmodell des Budgets"
             Reports: Berichte
             Master Data: Stammdaten
-            Reference data: Stammdaten
+            Reference data: Referenzdaten
             Organization: Organisation
             Companies: Unternehmen
             Departments: Abteilungen
