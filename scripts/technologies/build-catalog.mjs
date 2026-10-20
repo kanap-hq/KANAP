@@ -275,6 +275,196 @@ const PRODUCTS = [
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
 ];
 
+/**
+ * Names the publishers write in their CVE Records (`affected` vendor and product), by catalog key,
+ * copied into `cve_names` of PRODUCTS. Read on the CVE.org records of the last 24 months (October 2026):
+ * the pairs that the NVD filed under the entry's CPE identifiers, kept by hand. A name that carries a
+ * release has its `version` (`Windows Server 2019` for the versions labelled `2019`). Red Hat entries
+ * have none: Red Hat records carry CPE identifiers. Terms: backend/src/technologies/catalog/LICENSE-cve.txt.
+ */
+const CVE_NAMES = {
+  "windows-server": [
+    { vendor: "Microsoft", product: "Windows Server 2025", version: "2025" },
+    { vendor: "Microsoft", product: "Windows Server 2025 (Server Core installation)", version: "2025" },
+    { vendor: "Microsoft", product: "Windows Server 2022", version: "2022" },
+    { vendor: "Microsoft", product: "Windows Server 2022, 23H2 Edition (Server Core installation)", version: "2022" },
+    { vendor: "Microsoft", product: "Windows Server 2019", version: "2019" },
+    { vendor: "Microsoft", product: "Windows Server 2019 (Server Core installation)", version: "2019" },
+    { vendor: "Microsoft", product: "Windows Server 2016", version: "2016" },
+    { vendor: "Microsoft", product: "Windows Server 2016 (Server Core installation)", version: "2016" },
+    { vendor: "Microsoft", product: "Windows Server 2012 R2", version: "2012 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2012 R2 (Server Core installation)", version: "2012 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2012", version: "2012" },
+    { vendor: "Microsoft", product: "Windows Server 2012 (Server Core installation)", version: "2012" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1 (Server Core installation)", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2", version: "2008" },
+    { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2 (Server Core installation)", version: "2008" },
+  ],
+  mssqlserver: [
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2025 for x64-based Systems (GDR)", version: "2025" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2025 (CU8)", version: "2025" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2022 (GDR)", version: "2022" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2022 (CU 26)", version: "2022" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (GDR)", version: "2019" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (CU 32)", version: "2019" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (GDR)", version: "2017" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (CU 31)", version: "2017" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 (GDR)", version: "2016" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 Azure Connect Feature Pack", version: "2016" },
+  ],
+  msexchange: [
+    { vendor: "Microsoft", product: "Microsoft Exchange Server Subscription Edition RTM", version: "Subscription Edition" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2019 Cumulative Update 15", version: "2019 CU15" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2019 Cumulative Update 14", version: "2019 CU14" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2016 Cumulative Update 23", version: "2016 CU23" },
+  ],
+  dotnet: [
+    { vendor: "Microsoft", product: ".NET 10.0", version: "10" },
+    { vendor: "Microsoft", product: ".NET 9.0", version: "9" },
+    { vendor: "Microsoft", product: ".NET 8.0", version: "8" },
+    { vendor: "Microsoft", product: ".NET 6.0", version: "6" },
+  ],
+  powershell: [
+    { vendor: "Microsoft", product: "PowerShell 7.6", version: "7.6" },
+    { vendor: "Microsoft", product: "PowerShell 7.5", version: "7.5" },
+    { vendor: "Microsoft", product: "PowerShell 7.4", version: "7.4" },
+  ],
+  "entra-id": [
+    { vendor: "Microsoft", product: "Microsoft Entra" },
+  ],
+  "azure-kubernetes-service": [
+    { vendor: "Microsoft", product: "Azure Kubernetes Service" },
+  ],
+  jenkins: [
+    { vendor: "Jenkins Project", product: "Jenkins" },
+  ],
+  tomcat: [
+    { vendor: "Apache Software Foundation", product: "Apache Tomcat" },
+  ],
+  "eclipse-jetty": [
+    { vendor: "Eclipse Foundation", product: "Eclipse Jetty" },
+    { vendor: "Eclipse Foundation", product: "Jetty" },
+  ],
+  commvault: [
+    { vendor: "Commvault", product: "Commvault Cloud" },
+  ],
+  "veeam-backup-and-replication": [
+    { vendor: "Veeam", product: "Backup and Replication" },
+    { vendor: "Veeam", product: "Backup & Replication" },
+  ],
+  containerd: [
+    { vendor: "containerd", product: "containerd" },
+  ],
+  podman: [
+    { vendor: "podman-container-tools", product: "podman" },
+  ],
+  "apache-cassandra": [
+    { vendor: "Apache Software Foundation", product: "Apache Cassandra" },
+  ],
+  elasticsearch: [
+    { vendor: "Elastic", product: "Elasticsearch" },
+  ],
+  "ibm-db2": [
+    { vendor: "IBM", product: "Db2" },
+    { vendor: "IBM", product: "Db2 for Linux, UNIX and Windows" },
+  ],
+  memcached: [
+    { vendor: "memcached", product: "memcached" },
+  ],
+  mongodb: [
+    { vendor: "MongoDB", product: "MongoDB Server" },
+    { vendor: "MongoDB Inc", product: "MongoDB Server" },
+  ],
+  postgresql: [
+    { vendor: "n/a", product: "PostgreSQL" },
+  ],
+  redis: [
+    { vendor: "redis", product: "redis" },
+  ],
+  valkey: [
+    { vendor: "valkey-io", product: "valkey" },
+  ],
+  authentik: [
+    { vendor: "goauthentik", product: "authentik" },
+  ],
+  "apache-apisix": [
+    { vendor: "Apache Software Foundation", product: "Apache APISIX" },
+  ],
+  "apache-nifi": [
+    { vendor: "Apache Software Foundation", product: "Apache NiFi" },
+  ],
+  "apache-activemq": [
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ" },
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ All" },
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Broker" },
+  ],
+  "apache-artemis": [
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Artemis" },
+  ],
+  "apache-kafka": [
+    { vendor: "Apache Software Foundation", product: "Apache Kafka" },
+  ],
+  dovecot: [
+    { vendor: "Open-Xchange GmbH", product: "OX Dovecot Pro" },
+  ],
+  rabbitmq: [
+    { vendor: "rabbitmq", product: "rabbitmq-server" },
+  ],
+  checkmk: [
+    { vendor: "Checkmk GmbH", product: "Checkmk" },
+  ],
+  grafana: [
+    { vendor: "Grafana", product: "Grafana OSS" },
+    { vendor: "Grafana", product: "Grafana" },
+    { vendor: "Grafana", product: "Grafana Enterprise" },
+  ],
+  prometheus: [
+    { vendor: "prometheus", product: "prometheus" },
+  ],
+  splunk: [
+    { vendor: "Splunk", product: "Splunk Enterprise" },
+  ],
+  zabbix: [
+    { vendor: "Zabbix", product: "Zabbix" },
+  ],
+  "bind-9": [
+    { vendor: "ISC", product: "BIND 9" },
+  ],
+  "hashicorp-vault": [
+    { vendor: "HashiCorp", product: "Vault" },
+    { vendor: "HashiCorp", product: "Vault Enterprise" },
+  ],
+  "oracle-linux": [
+    { vendor: "Oracle Corporation", product: "Oracle Linux" },
+  ],
+  nodejs: [
+    { vendor: "nodejs", product: "node" },
+  ],
+  php: [
+    { vendor: "PHP Group", product: "PHP" },
+  ],
+  python: [
+    { vendor: "Python Software Foundation", product: "CPython" },
+  ],
+  "apache-http-server": [
+    { vendor: "Apache Software Foundation", product: "Apache HTTP Server" },
+  ],
+  caddy: [
+    { vendor: "caddyserver", product: "caddy" },
+  ],
+  haproxy: [
+    { vendor: "HAProxy", product: "HAProxy" },
+  ],
+  squid: [
+    { vendor: "squid-cache", product: "squid" },
+  ],
+  traefik: [
+    { vendor: "traefik", product: "traefik" },
+  ],
+};
+for (const entry of PRODUCTS) if (CVE_NAMES[entry.key]) entry.cve_names = CVE_NAMES[entry.key];
+
 function argValue(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
