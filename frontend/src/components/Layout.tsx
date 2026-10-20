@@ -179,7 +179,7 @@ export default function Layout() {
     { to: '/master-data/business-processes', label: t('nav:sidebar.masterData.businessProcesses'), icon: <WorkOutlineIcon />, resource: 'business_processes' },
   ];
 
-  const itOperations: NavEntry[] = [
+  const itMenu: NavEntry[] = [
     { divider: t('nav:sidebar.it.sections.applications') },
     { to: '/it/applications', label: t('nav:sidebar.it.applications'), icon: <WorkOutlineIcon />, resource: 'applications' },
     { to: '/it/interfaces', label: t('nav:sidebar.it.interfaces'), icon: <HubIcon />, resource: 'applications' },
@@ -206,7 +206,9 @@ export default function Layout() {
       icon: <SettingsIcon />,
       anyOf: [{ resource: 'settings' }, { resource: 'infrastructure', level: 'admin' }],
     },
-  ].filter((entry) => (
+  ];
+
+  const itOperations = itMenu.filter((entry) => (
     !hasScopedApplicationReaderAccess
     || !isNavItem(entry)
     || (
