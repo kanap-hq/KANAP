@@ -67,7 +67,7 @@ Si votre instance KANAP ne dispose pas d'un coffre à secrets configuré, un tex
 
 Cette connexion est indépendante des fonctionnalités d'IA. Elle demande `infrastructure:admin`, fonctionne dans l'édition cloud comme dans l'édition on-premise, et reste disponible quand l'IA est désactivée.
 
-Configurez la connexion ici, puis rendez-vous dans **Cartographie SI > Netbox** pour choisir ce qui est importé et lancer la synchronisation. La procédure complète, les règles de rapprochement et le tableau de résolution des problèmes figurent sur [Synchronisation Netbox](netbox.md).
+Configurez la connexion ici, puis ouvrez l'onglet **Netbox** de **Cartographie SI > Paramètres** pour choisir ce qui est importé et lancer la synchronisation. La procédure complète, les règles de rapprochement et le tableau de résolution des problèmes figurent sur [Synchronisation Netbox](netbox.md).
 
 ---
 

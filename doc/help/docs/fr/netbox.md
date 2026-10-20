@@ -7,10 +7,10 @@ Le partage des rôles est volontaire. Netbox reste la référence pour les équi
 ## Où le trouver
 
 - Espace : **Cartographie SI**
-- Chemin : **Cartographie SI > Netbox**
-- Route : `/it/netbox`
+- Chemin : **Cartographie SI > Paramètres**, onglet **Netbox**
+- Route : `/it/settings?tab=netbox`. L'ancienne adresse `/it/netbox` ouvre le même onglet.
 - Paramètres de connexion : **Administration > Intégrations**
-- Permission : `infrastructure:admin`, pour la carte de connexion comme pour la page de synchronisation
+- Permission : `infrastructure:admin`, pour la carte de connexion comme pour l'onglet **Netbox**. Avec cette permission, l'entrée **Paramètres** du menu de la Cartographie SI apparaît même si vous ne voyez pas les listes de l'onglet **Listes**.
 - Disponible dans l'édition cloud et dans l'édition on-premise. Aucun indicateur de fonctionnalité à activer.
 
 ---
@@ -39,13 +39,13 @@ Ouvrez **Administration > Intégrations**, puis la carte **Inventaire Netbox**.
 | **Synchronisation automatique** | S'exécute toutes les heures et applique les changements automatiquement. Laissez-la désactivée tant que votre première exécution ne vous convient pas. |
 | **Environnement des nouveaux actifs** | Appliqué aux actifs créés par cette intégration. Il n'est jamais modifié ensuite. |
 
-**Tester la connexion** effectue un appel en lecture seule et indique la version de Netbox trouvée, ou la raison de l'échec. Lancez-le après chaque changement d'adresse ou de jeton. Une fois les paramètres enregistrés, la carte propose un lien **Configurer la synchronisation**, qui mène à **Cartographie SI > Netbox**.
+**Tester la connexion** effectue un appel en lecture seule et indique la version de Netbox trouvée, ou la raison de l'échec. Lancez-le après chaque changement d'adresse ou de jeton. Une fois les paramètres enregistrés, la carte propose un lien **Configurer la synchronisation**, qui mène à l'onglet **Netbox** de **Cartographie SI > Paramètres**.
 
 ---
 
 ## Choisir ce qui est importé
 
-Ouvrez l'onglet **Correspondances** de la page Netbox. Quatre tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
+Dans l'onglet **Netbox**, ouvrez **Correspondances**. Quatre tableaux s'y trouvent. Les deux premiers déterminent tout le périmètre de l'import.
 
 - **Rôles Netbox > Type d'actif KANAP**. Chaque rôle d'équipement connu de Netbox reçoit un type d'actif, ou **Ne pas importer**.
 - **Sites Netbox > Site KANAP**. Chaque site Netbox reçoit l'un de vos sites, ou **Ne pas importer**.
@@ -231,9 +231,9 @@ Une exécution manuelle et une exécution automatique ne se chevauchent pas : si
 
 ---
 
-## La page de gestion
+## L'onglet Netbox
 
-**Cartographie SI > Netbox** est l'endroit où tout se passe une fois la connexion établie. Le bandeau du haut résume la dernière exécution : quand elle a eu lieu, si elle a été lancée à la main ou automatiquement, sa durée, son résultat, et le nombre d'objets liés ou à regarder.
+L'onglet **Netbox** de **Cartographie SI > Paramètres** est l'endroit où tout se passe une fois la connexion établie. Le bandeau du haut résume la dernière exécution : quand elle a eu lieu, si elle a été lancée à la main ou automatiquement, sa durée, son résultat, et le nombre d'objets liés ou à regarder.
 
 En dessous, l'onglet **Objets** liste tous les objets Netbox du périmètre, filtrés par état.
 

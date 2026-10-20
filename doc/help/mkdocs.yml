@@ -131,6 +131,7 @@ plugins:
             "Budget data model": "Modèle de données du budget"
             Reports: Rapports
             Master Data: Données de référence
+            Reference data: Référentiels
             Organization: Organisation
             Companies: Sociétés
             Departments: Départements
@@ -216,6 +217,7 @@ plugins:
             "Budget data model": "Datenmodell des Budgets"
             Reports: Berichte
             Master Data: Stammdaten
+            Reference data: Stammdaten
             Organization: Organisation
             Companies: Unternehmen
             Departments: Abteilungen
@@ -301,6 +303,7 @@ plugins:
             "Budget data model": "Modelo de datos del presupuesto"
             Reports: Informes
             Master Data: Datos maestros
+            Reference data: Datos de referencia
             Organization: Organización
             Companies: Empresas
             Departments: Departamentos
@@ -364,22 +367,23 @@ nav:
     - Settings: portfolio-settings.md
 
   - IT Landscape:
-    - Infrastructure:
-      - Locations: locations.md
-      - Assets: assets.md
-      - Technologies: technologies.md
-      - Connections: connections.md
-      - Connection Map: connection-map.md
-      - Administration zones: administration-view.md
-      - "Netbox synchronisation": netbox.md
     - Applications:
       - Applications: applications.md
       - Interfaces: interfaces.md
       - Interface Map: interface-map.md
+    - Infrastructure:
+      - Assets: assets.md
+      - Connections: connections.md
+      - Connection Map: connection-map.md
+      - Administration zones: administration-view.md
+    - Reference data:
+      - Locations: locations.md
+      - Technologies: technologies.md
     - Incidents: incidents.md
     - End of support: end-of-support.md
     - Vulnerabilities: vulnerabilities.md
     - Settings: it-ops-settings.md
+    - "Netbox synchronisation": netbox.md
 
   - Knowledge:
     - Knowledge: knowledge.md

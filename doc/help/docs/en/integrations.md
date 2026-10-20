@@ -67,7 +67,7 @@ If your KANAP instance does not have a configured secret store, a helper text ap
 
 This connection is independent of the AI features. It needs `infrastructure:admin`, it works in the cloud and in the on-premise edition, and it stays available when AI is turned off.
 
-Configure the connection here, then go to **IT Landscape > Netbox** to choose what is imported and run the synchronisation. The full procedure, the matching rules and the troubleshooting table are on [Netbox synchronisation](netbox.md).
+Configure the connection here, then open the **Netbox** tab of **IT Landscape > Settings** to choose what is imported and run the synchronisation. The full procedure, the matching rules and the troubleshooting table are on [Netbox synchronisation](netbox.md).
 
 ---
 
