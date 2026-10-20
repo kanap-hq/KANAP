@@ -440,12 +440,15 @@ function AlertsColumnHeader() {
   const hint = t('workspace.technology.versions.alertsColumnHint');
   return (
     <TableCell sx={ALERTS_COLUMN_SX}>
-      <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>
-        {t('workspace.technology.versions.alertsColumn')}
+      {/* Packed to the trailing edge, as the switches below it. */}
+      <Box sx={{ ...ALERTS_ROW_SX, gap: 0.5 }}>
+        <Box component="span" sx={{ fontSize: 'inherit', fontWeight: 'inherit', lineHeight: 'inherit', color: 'inherit' }}>
+          {t('workspace.technology.versions.alertsColumn')}
+        </Box>
+        <Tooltip title={hint}>
+          <InfoOutlinedIcon tabIndex={0} role="img" aria-hidden={false} aria-label={hint} sx={{ fontSize: 13, color: 'kanap.text.tertiary' }} />
+        </Tooltip>
       </Box>
-      <Tooltip title={hint}>
-        <InfoOutlinedIcon tabIndex={0} role="img" aria-hidden={false} aria-label={hint} sx={{ fontSize: 13, color: 'kanap.text.tertiary', ml: 0.5, verticalAlign: 'middle' }} />
-      </Tooltip>
     </TableCell>
   );
 }
@@ -691,6 +694,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
         checked={technologyAlerts}
         disabled={!canManage || alertsBusy}
         label={includeLabel}
+        tooltip={t('workspace.technology.versions.alertsHint')}
         onChange={(next) => { void setTechnologyAlerts(next); }}
       />
       {includeLabel}

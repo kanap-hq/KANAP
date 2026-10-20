@@ -106,15 +106,17 @@ function shiftUtcDay(day: string, days: number, years = 0): string {
 }
 
 /**
- * Inclusive `from` and `to` for the publication date (`GET /vulnerabilities`), from the UTC day of
- * `now`. Less than 7, 30 or 90 days, or a year, runs through today. More than a year stops the day
- * before the anniversary and sends no `from`. All sends neither.
+ * Inclusive `from` and `to` for the publication date (`GET /vulnerabilities` keeps both days), from
+ * the UTC day of `now`. Less than N days covers exactly N days, today included (`from` is N - 1 days
+ * back). Less than a year starts the day after the anniversary; more than a year stops on it and
+ * sends no `from`, so the two share no day and miss none. All sends neither.
  */
 export function publishedRange(period: PublishedPeriod, now = new Date()): { from?: string; to?: string } {
   if (period === 'all') return {};
   const today = utcDay(now);
-  if (period === 'older1y') return { to: shiftUtcDay(shiftUtcDay(today, 0, -1), -1) };
-  const from = period === '1y' ? shiftUtcDay(today, 0, -1) : shiftUtcDay(today, -Number(period.slice(0, -1)));
+  const anniversary = shiftUtcDay(today, 0, -1);
+  if (period === 'older1y') return { to: anniversary };
+  const from = period === '1y' ? shiftUtcDay(anniversary, 1) : shiftUtcDay(today, 1 - Number(period.slice(0, -1)));
   return { from, to: today };
 }
 

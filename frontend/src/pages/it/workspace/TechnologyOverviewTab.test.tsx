@@ -167,6 +167,19 @@ describe('TechnologyOverviewTab', () => {
     expect(onVersionsChanged).toHaveBeenCalledTimes(1);
   });
 
+  it('explains the technology switch and packs the Alerts title to the switches edge', async () => {
+    renderTab();
+    const title = screen.getByRole('heading', { name: 'Versions' }).parentElement!;
+    const header = within(title).getByRole('switch', { name: 'Include in vulnerability alerts' });
+    fireEvent.mouseOver(header);
+    expect(await screen.findByRole('tooltip')).toHaveTextContent(
+      'Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.',
+    );
+    const column = within(screen.getByRole('table', { name: 'Versions' })).getByRole('columnheader', { name: /Alerts/ });
+    const info = within(column).getByRole('img');
+    expect(getComputedStyle(info.parentElement!).justifyContent).toBe('flex-end');
+  });
+
   it('asks before replacing version settings and writes only after confirmation', async () => {
     vi.mocked(api.put).mockReset();
     vi.mocked(api.put).mockResolvedValue({ data: { versions_reset: 2, enabled: false } });

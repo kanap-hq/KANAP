@@ -582,11 +582,17 @@ describe('VulnerabilitiesPage', () => {
     try {
       vi.setSystemTime(new Date('2026-10-20T00:30:00Z'));
       expect(publishedRange('all')).toEqual({});
-      expect(publishedRange('7d')).toEqual({ from: '2026-10-13', to: '2026-10-20' });
-      expect(publishedRange('30d')).toEqual({ from: '2026-09-20', to: '2026-10-20' });
-      expect(publishedRange('90d')).toEqual({ from: '2026-07-22', to: '2026-10-20' });
-      expect(publishedRange('1y')).toEqual({ from: '2025-10-20', to: '2026-10-20' });
-      expect(publishedRange('older1y')).toEqual({ to: '2025-10-19' });
+      // Exactly N days, today included: 14 to 20 October is 7 days.
+      expect(publishedRange('7d')).toEqual({ from: '2026-10-14', to: '2026-10-20' });
+      expect(publishedRange('30d')).toEqual({ from: '2026-09-21', to: '2026-10-20' });
+      expect(publishedRange('90d')).toEqual({ from: '2026-07-23', to: '2026-10-20' });
+      expect(publishedRange('1y')).toEqual({ from: '2025-10-21', to: '2026-10-20' });
+      expect(publishedRange('older1y')).toEqual({ to: '2025-10-20' });
+      // A leap day: the year before has no 29 February, the two windows still meet without a gap.
+      vi.setSystemTime(new Date('2028-02-29T12:00:00Z'));
+      expect(publishedRange('1y')).toEqual({ from: '2027-03-02', to: '2028-02-29' });
+      expect(publishedRange('older1y')).toEqual({ to: '2027-03-01' });
+      expect(publishedRange('7d')).toEqual({ from: '2028-02-23', to: '2028-02-29' });
       expect(publishedFromSearch('')).toBe('all');
       expect(publishedFromSearch('?published=nope')).toBe('all');
       expect(publishedFromSearch('?published=30d')).toBe('30d');
@@ -600,7 +606,7 @@ describe('VulnerabilitiesPage', () => {
     try {
       vi.setSystemTime(new Date('2026-10-20T00:30:00Z'));
       renderPage('/it/vulnerabilities?technology=TEC-1&published=30d', true);
-      expect(grid.props!.extraParams).toEqual({ alerts: 'included', from: '2026-09-20', to: '2026-10-20' });
+      expect(grid.props!.extraParams).toEqual({ alerts: 'included', from: '2026-09-21', to: '2026-10-20' });
       expect(grid.props!.extraNarrows).toBe(true);
       render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
       expect(screen.getByTestId('vulnerabilities-empty').textContent).toBe('No vulnerability matches these filters.');
@@ -613,13 +619,13 @@ describe('VulnerabilitiesPage', () => {
       let view = openPublished();
       fireEvent.click(await screen.findByRole('option', { name: 'Less than 7 days' }));
       await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&published=7d'));
-      expect(grid.props!.extraParams).toEqual({ alerts: 'included', from: '2026-10-13', to: '2026-10-20' });
+      expect(grid.props!.extraParams).toEqual({ alerts: 'included', from: '2026-10-14', to: '2026-10-20' });
       view.unmount();
 
       view = openPublished();
       fireEvent.click(await screen.findByRole('option', { name: 'More than a year' }));
       await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&published=older1y'));
-      expect(grid.props!.extraParams).toEqual({ alerts: 'included', to: '2025-10-19' });
+      expect(grid.props!.extraParams).toEqual({ alerts: 'included', to: '2025-10-20' });
       view.unmount();
 
       // Changing the alerts keeps the relative period.
@@ -631,7 +637,7 @@ describe('VulnerabilitiesPage', () => {
 
       await column('version').filterParams.getValues({ context: { getQueryState: () => ({ filters: {} }) } });
       expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({
-        params: { fields: 'version', alerts: 'excluded', to: '2025-10-19' },
+        params: { fields: 'version', alerts: 'excluded', to: '2025-10-20' },
       }));
 
       getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
@@ -644,13 +650,13 @@ describe('VulnerabilitiesPage', () => {
       }));
       fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
       await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
-        params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-19' },
+        params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-20' },
         responseType: 'blob',
       })));
       fireEvent.click(box(ALL_BOX));
       fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
       await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
-        state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-19' }, dry_run: true,
+        state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded', to: '2025-10-20' }, dry_run: true,
       }));
 
       act(() => grid.props!.onResetFilters());

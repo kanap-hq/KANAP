@@ -2072,7 +2072,6 @@
         "alertsColumn": "Warnungen",
         "alertsColumnHint": "Nimmt diese Version in die Schwachstellenwarnungen auf: die Seite Schwachstellen, die Zähler und die E-Mail mit der Zusammenfassung. Jede Version folgt der Einstellung der Technologie, außer ein Punkt kennzeichnet eine eigene Einstellung.",
         "includeInAlerts": "In Schwachstellenwarnungen aufnehmen",
-        "alertsLabel": "Warnungen zu Schwachstellen",
         "alertsFor": "Warnungen zu Schwachstellen für {{label}}",
         "alertsHint": "Einstellung der Technologie: gilt für Versionen ohne eigene Einstellung, für spätere Versionen und für Verknüpfungen ohne Version.",
         "alertsOwn": "Eigene Einstellung dieser Version",
