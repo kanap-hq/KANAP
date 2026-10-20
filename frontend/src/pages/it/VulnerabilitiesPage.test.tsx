@@ -1,4 +1,5 @@
 import '../../i18n';
+import { Children, type ReactElement, type ReactNode } from 'react';
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -282,7 +283,8 @@ describe('VulnerabilitiesPage', () => {
     renderPage('/it/vulnerabilities?state=all', true);
     act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', alerts: 'included' }, total: 0 }));
     await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities', { params: { alerts: 'excluded', page: 1, limit: 1 } }));
-    await act(async () => undefined);
+    // The page builds the line again once the count is in: the line and its button.
+    await waitFor(() => expect(Children.count((grid.props!.emptyState as ReactElement<{ children: ReactNode }>).props.children)).toBe(2));
     render(<ThemeProvider theme={createAppTheme('light')}>{grid.props!.emptyState}</ThemeProvider>);
     expect(screen.getByTestId('vulnerabilities-empty').textContent).toContain('No vulnerability is in the alerts.');
     fireEvent.click(screen.getByRole('button', { name: 'Show the excluded ones' }));
