@@ -7,9 +7,11 @@ import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
 import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
-import { TechnologyReachService } from '../technologies/technology-reach.service';
+import { versionInUseSql } from '../technologies/reports/version-support';
+import { assetInServiceSql, inServiceSql, REACH_FROM_TECHNOLOGIES, TechnologyReachService, withoutJit } from '../technologies/technology-reach.service';
 import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { vulnerabilityAlertsSql } from './vulnerability-alerts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
 export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -30,6 +32,11 @@ export type VulnerabilityFilters = {
   filters?: unknown;
   sort?: unknown;
   page?: unknown;
+  /**
+   * Which rows the list, the export, the filter values and a bulk `all` reach (lot V1).
+   * `included` (default): the rows that alert. `excluded`: the others. `all`: both.
+   */
+  alerts?: unknown;
 };
 
 /** At most this many rows (technology version and CVE) in one change of state in bulk. */
@@ -107,6 +114,8 @@ type Row = {
   technology_item_number: number;
   editor: string | null;
   version_label: string | null;
+  /** Whether this row alerts: the version's exception, or the technology's setting. */
+  alerts: boolean;
 };
 
 /** A row of the list grid: the row, with its CVE. */
@@ -163,6 +172,7 @@ function presentRow(r: Row) {
     state_changed_at: r.state_changed_at,
     state_changed_by_name: r.state_changed_by_name,
     detected_at: r.detected_at,
+    alerts: r.alerts,
   };
 }
 
@@ -252,7 +262,23 @@ export class VulnerabilitiesService {
       where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
     }
     where.push(...this.gridClauses(filters.filters, push));
+    const alerts = this.alertsClause(filters);
+    if (alerts) where.push(alerts);
     return where.length ? `AND ${where.join(' AND ')}` : '';
+  }
+
+  /**
+   * Rows that alert, the others, or both. Empty is `included`. A row alerts when
+   * `COALESCE(version.vulnerability_alerts, technology.vulnerability_alerts)` is true.
+   */
+  private alertsClause(filters: VulnerabilityFilters): string {
+    const raw = String(filters.alerts ?? '').trim().toLowerCase();
+    const mode = raw === '' ? 'included' : raw;
+    const alerts = vulnerabilityAlertsSql('v', 't');
+    if (mode === 'all') return '';
+    if (mode === 'excluded') return `NOT ${alerts}`;
+    if (mode === 'included') return alerts;
+    throw new BadRequestException('alerts must be included, excluded or all.');
   }
 
   /**
@@ -325,7 +351,8 @@ export class VulnerabilitiesService {
   private readonly rowColumns = `tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.match_basis, tv.matching,
     tv.detected_at, tv.state_changed_at,
     NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS state_changed_by_name,
-    t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label`;
+    t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label,
+    ${vulnerabilityAlertsSql('v', 't')} AS alerts`;
 
   private readonly usersJoin = `LEFT JOIN users u ON u.tenant_id = tv.tenant_id AND u.id = tv.state_changed_by`;
 
@@ -479,6 +506,7 @@ export class VulnerabilitiesService {
       state_changed_at: r.state_changed_at,
       state_changed_by_name: r.state_changed_by_name,
       detected_at: r.detected_at,
+      alerts: r.alerts,
       // The servers and applications of this version.
       ...this.counts([r], reach),
     }));
@@ -515,7 +543,12 @@ export class VulnerabilitiesService {
     return out;
   }
 
-  /** One CVE: its record, the technologies and versions it concerns, the servers and applications reached. */
+  /**
+   * One CVE: its record, the technologies and versions it concerns, the servers and applications
+   * reached. Every row is kept, alerting or not (lot V1): each version, server and application
+   * carries `alerts`, the effective setting of its row. `servers` and `applications` count them
+   * all; `alerting` counts those of the rows that alert, as the page does.
+   */
   async detail(cveIdRaw: string, opts: VulnOpts, applications: ApplicationsAccess) {
     const { manager: mg, tenantId } = opts;
     const cveId = cveIdOrThrow(cveIdRaw);
@@ -543,6 +576,7 @@ export class VulnerabilitiesService {
         technology_name: row.technology_name,
         version_label: row.version_label,
         via_asset_name: a.via_asset_id ? assetsById.get(a.via_asset_id)?.name ?? null : null,
+        alerts: row.alerts,
       };
     }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
 
@@ -568,6 +602,7 @@ export class VulnerabilitiesService {
           technology_id: a.technology_id,
           technology_name: row.technology_name,
           version_label: row.version_label,
+          alerts: row.alerts,
         };
       }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
     }
@@ -577,6 +612,7 @@ export class VulnerabilitiesService {
       reference_urls: cve.reference_urls ?? [],
       technologies: groupByTechnology(rows),
       ...this.counts(rows, reach),
+      alerting: this.counts(rows.filter((r) => r.alerts), reach),
       servers_list: servers,
       applications_list: apps,
     };
@@ -593,11 +629,177 @@ export class VulnerabilitiesService {
       .sort((a, b) => (rank[b.severity ?? ''] ?? 0) - (rank[a.severity ?? ''] ?? 0)
         || (b.cvss_score ?? -1) - (a.cvss_score ?? -1)
         || b.cve_id.localeCompare(a.cve_id));
+    const counts = await this.versionAlertCounts(mg, tenantId, tech.id);
     return {
       technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      technology_alerts: tech.vulnerability_alerts,
+      ...counts,
       products: await this.productStates(mg, tech.cpe_products),
       items,
     };
+  }
+
+  /**
+   * The vulnerabilities of one technology, one row per version (lot V4b), in the order of the
+   * versions table, plus the unknown version when a link names none. `installed` follows
+   * `versionInUseSql` (for the unknown version: a link that names no version is in use). A version
+   * that is not installed has `servers` and every count at 0. `open` counts distinct CVE still to
+   * review by severity, `unknown` for a CVE the NVD has not scored yet (`severity` null), `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
+   * `versions_excluded` and `versions_included` count every version.
+   */
+  async summary(idOrRef: string, opts: VulnOpts) {
+    const { manager: mg, tenantId } = opts;
+    const tech = await readTechnology(mg, tenantId, idOrRef);
+    const counts = await this.versionAlertCounts(mg, tenantId, tech.id);
+    const products = await this.productStates(mg, tech.cpe_products);
+    // One statement: the reach ($1 tenant, $2 this technology) and the rows ($3). A technology with
+    // no version and no link still returns `cves` through the left join (the pad row has a null `installed`).
+    // The rows are grouped by version first (`agg`), and the servers counted once per version
+    // (`servers`, materialized), then both are joined to the few version lines: the reach is never
+    // aggregated again for each match row.
+    const rows: Array<{
+      technology_version_id: string | null;
+      label: string | null;
+      alerts: boolean | null;
+      installed: boolean | null;
+      servers: number | null;
+      critical: number | null;
+      high: number | null;
+      medium: number | null;
+      low: number | null;
+      none: number | null;
+      unknown: number | null;
+      total: number | null;
+      cves: number;
+    }> = await withoutJit(mg,
+      `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       servers AS MATERIALIZED (
+         SELECT technology_version_id, count(DISTINCT asset_id)::int AS servers
+           FROM reach
+          GROUP BY technology_version_id
+       ),
+       agg AS (
+         SELECT tv.technology_version_id,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'critical')::int AS critical,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'high')::int AS high,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'medium')::int AS medium,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'low')::int AS low,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'none')::int AS none,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity IS NULL)::int AS unknown,
+                count(DISTINCT tv.cve_id)::int AS total
+           FROM technology_vulnerabilities tv
+           LEFT JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+          WHERE tv.tenant_id = $1 AND tv.technology_id = $3
+          GROUP BY tv.technology_version_id
+       ),
+       versions AS (
+         SELECT v.id AS technology_version_id, v.label,
+                ${vulnerabilityAlertsSql('v', 't')} AS alerts,
+                ${versionInUseSql('v')} AS installed
+           FROM technology_versions v
+           JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+          WHERE v.tenant_id = $1 AND v.technology_id = $3
+       ),
+       unknown AS (
+         SELECT t.vulnerability_alerts AS alerts,
+                (EXISTS (SELECT 1 FROM asset_technologies uat
+                           JOIN assets ua ON ua.tenant_id = uat.tenant_id AND ua.id = uat.asset_id AND ${assetInServiceSql('ua')}
+                          WHERE uat.tenant_id = $1 AND uat.technology_id = $3 AND uat.technology_version_id IS NULL)
+              OR EXISTS (SELECT 1 FROM application_technologies ud
+                           JOIN applications uap ON uap.tenant_id = ud.tenant_id AND uap.id = ud.application_id AND ${inServiceSql('uap')}
+                          WHERE ud.tenant_id = $1 AND ud.technology_id = $3 AND ud.technology_version_id IS NULL)) AS installed
+           FROM technologies t
+          WHERE t.tenant_id = $1 AND t.id = $3
+            AND (EXISTS (SELECT 1 FROM asset_technologies at
+                          WHERE at.tenant_id = $1 AND at.technology_id = $3 AND at.technology_version_id IS NULL)
+              OR EXISTS (SELECT 1 FROM application_technologies ad
+                          WHERE ad.tenant_id = $1 AND ad.technology_id = $3 AND ad.technology_version_id IS NULL))
+       ),
+       lines AS (
+         SELECT v.technology_version_id, v.label, v.alerts, v.installed,
+                COALESCE(s.servers, 0)::int AS servers,
+                COALESCE(a.critical, 0)::int AS critical,
+                COALESCE(a.high, 0)::int AS high,
+                COALESCE(a.medium, 0)::int AS medium,
+                COALESCE(a.low, 0)::int AS low,
+                COALESCE(a.none, 0)::int AS none,
+                COALESCE(a.unknown, 0)::int AS unknown,
+                COALESCE(a.total, 0)::int AS total
+           FROM versions v
+           LEFT JOIN servers s ON s.technology_version_id = v.technology_version_id
+           LEFT JOIN agg a ON a.technology_version_id = v.technology_version_id
+         UNION ALL
+         SELECT NULL::uuid, NULL::text, u.alerts, u.installed,
+                COALESCE(s.servers, 0)::int,
+                COALESCE(a.critical, 0)::int,
+                COALESCE(a.high, 0)::int,
+                COALESCE(a.medium, 0)::int,
+                COALESCE(a.low, 0)::int,
+                COALESCE(a.none, 0)::int,
+                COALESCE(a.unknown, 0)::int,
+                COALESCE(a.total, 0)::int
+           FROM unknown u
+           LEFT JOIN servers s ON s.technology_version_id IS NULL
+           LEFT JOIN agg a ON a.technology_version_id IS NULL
+       ),
+       totals AS (
+         SELECT count(DISTINCT cve_id)::int AS cves
+           FROM technology_vulnerabilities
+          WHERE tenant_id = $1 AND technology_id = $3
+       )
+       SELECT l.technology_version_id, l.label, l.alerts, l.installed,
+              (CASE WHEN l.installed THEN l.servers ELSE 0 END)::int AS servers,
+              (CASE WHEN l.installed THEN l.critical ELSE 0 END)::int AS critical,
+              (CASE WHEN l.installed THEN l.high ELSE 0 END)::int AS high,
+              (CASE WHEN l.installed THEN l.medium ELSE 0 END)::int AS medium,
+              (CASE WHEN l.installed THEN l.low ELSE 0 END)::int AS low,
+              (CASE WHEN l.installed THEN l.none ELSE 0 END)::int AS none,
+              (CASE WHEN l.installed THEN l.unknown ELSE 0 END)::int AS unknown,
+              (CASE WHEN l.installed THEN l.total ELSE 0 END)::int AS total,
+              t.cves
+         FROM totals t
+         LEFT JOIN lines l ON true
+        ORDER BY ${versionOrderSql('l.label')}`,
+      [tenantId, [tech.id], tech.id],
+    );
+    const openOf = (row: (typeof rows)[number]) => ({
+      critical: Number(row.critical),
+      high: Number(row.high),
+      medium: Number(row.medium),
+      low: Number(row.low),
+      none: Number(row.none),
+      unknown: Number(row.unknown),
+    });
+    return {
+      technology: { id: tech.id, name: tech.name, reference: technologyReference(tech.item_number) },
+      technology_alerts: tech.vulnerability_alerts,
+      ...counts,
+      collecting: products.some((product) => product.status === 'pending'),
+      products,
+      cves: Number(rows[0]?.cves ?? 0),
+      versions: rows.filter((row) => row.installed != null).map((row) => ({
+        version_id: row.technology_version_id,
+        label: row.label,
+        installed: row.installed === true,
+        alerts: row.alerts === true,
+        servers: Number(row.servers ?? 0),
+        open: openOf(row),
+        total: Number(row.total),
+      })),
+    };
+  }
+
+  /** Every version of the technology, by its effective alert setting (a version with no match included). */
+  private async versionAlertCounts(mg: EntityManager, tenantId: string, technologyId: string) {
+    const [{ versions_excluded, versions_included }] = await mg.query(
+      `SELECT count(*) FILTER (WHERE NOT ${vulnerabilityAlertsSql('v', 't')})::int AS versions_excluded,
+              count(*) FILTER (WHERE ${vulnerabilityAlertsSql('v', 't')})::int AS versions_included
+         FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2`,
+      [tenantId, technologyId],
+    );
+    return { versions_excluded: Number(versions_excluded), versions_included: Number(versions_included) };
   }
 
   /**
@@ -835,7 +1037,7 @@ export class VulnerabilitiesService {
   /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
     const { items } = await this.listRows(filters, opts, applications, false);
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications'];
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications', 'Alerts'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
@@ -856,6 +1058,7 @@ export class VulnerabilitiesService {
       item.note ?? '',
       String(item.servers),
       item.applications == null ? '' : String(item.applications),
+      item.alerts ? 'yes' : 'no',
     ]);
     const content = writeCsv({ language: await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, language), headers, rows: lines });
     return { filename: 'vulnerabilities.csv', content };

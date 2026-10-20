@@ -210,6 +210,7 @@ async function testPreviewAndConvert() {
     assert.equal(tech.editor, 'VMware');
     assert.equal(tech.family, 'hypervisor');
     assert.equal(tech.hosting_type, 'on_prem');
+    assert.equal(tech.vulnerability_alerts, true, 'a technology on premises starts in the vulnerability alerts');
     assert.equal(tech.description, 'Virtualisation platform');
     assert.deepEqual([tech.rto_minutes, tech.rpo_minutes], [240, 60]);
     assert.equal(tech.support_notes, 'Call Broadcom first.');
@@ -290,8 +291,9 @@ async function testSubscribedWithoutServers() {
     assert.equal((await svc.preview(app, opts)).hosting_type, 'saas');
     await assert.rejects(svc.convert(app, {}, opts), /Family is required/);
     const { technology } = await svc.convert(app, { family: 'directory' }, opts);
-    const [row] = await runner.query(`SELECT hosting_type FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
+    const [row] = await runner.query(`SELECT hosting_type, vulnerability_alerts FROM technologies WHERE tenant_id = $1 AND id = $2`, [tenantId, technology.id]);
     assert.equal(row.hosting_type, 'saas');
+    assert.equal(row.vulnerability_alerts, false, 'a cloud service starts out of the vulnerability alerts');
   });
 }
 

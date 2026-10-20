@@ -25,6 +25,7 @@ vi.mock('../../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => (RANK[auth.levels[resource] ?? 'member'] ?? 0) >= RANK[level] }),
 }));
 vi.mock('../../../hooks/useBudgetColumns', () => ({ default: () => ({ label: (key: string) => `column:${key}` }) }));
+vi.mock('../../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features: { vulnerabilityFeed: true } } }) }));
 
 const mocked = vi.mocked(api);
 
@@ -101,6 +102,7 @@ describe('TechnologyRelationsTab', () => {
     const link = screen.getByRole('link', { name: 'Lifecycle policy' });
     expect(link.getAttribute('href')).toBe('https://learn.microsoft.com/lifecycle');
     expect(link.getAttribute('target')).toBe('_blank');
+    expect(screen.queryByRole('region', { name: 'pages.vulnerabilities.section.title' })).toBeNull();
   });
 
   it('opens the object when a row is clicked', async () => {
@@ -115,6 +117,7 @@ describe('TechnologyRelationsTab', () => {
     expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.budgetLines' })).toBeNull();
     expect(screen.queryByRole('region', { name: 'components.incidentRelations.title' })).toBeNull();
     expect(screen.getByRole('region', { name: 'workspace.application.relations.sections.contracts' })).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'pages.vulnerabilities.section.title' })).toBeNull();
   });
 
   it('links a contract from a server search, without the linked ones, and saves it at once', async () => {

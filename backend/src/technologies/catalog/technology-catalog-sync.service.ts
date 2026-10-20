@@ -1,4 +1,4 @@
-import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit, Optional } from '@nestjs/common';
 import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../../admin/scheduled-tasks/scheduled-tasks.service';
 import { AuditService } from '../../audit/audit.service';
@@ -6,12 +6,14 @@ import { withTenant } from '../../common/tenant-runner';
 import { Features } from '../../config/features';
 import {
   endoflifeSlug,
+  lowerSorted,
   valuesOf,
   versionsOfReleases,
   type CatalogState,
   type CatalogVersionValues,
 } from './catalog-releases';
 import { TENANT_LANGUAGE_METADATA_KEY, tenantSeedLanguage } from '../../analytics/recommended-dimensions.seed';
+import { TechnologyCpeEvents } from '../technology-cpe-events';
 import { TechnologyCatalogService, type CatalogLanguage, type CatalogProduct } from './technology-catalog.service';
 
 export const CATALOG_SYNC_TASK_NAME = 'technology-catalog';
@@ -50,6 +52,10 @@ export type CatalogSyncSummary = {
   versions_updated: number;
   versions_attached: number;
   cpe_added: number;
+  /** CPE identifiers removed because the shipped file dropped them. */
+  cpe_removed: number;
+  /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
+  descriptions_updated: number;
   /** Versions where a catalog date was not applied because it would contradict the other one (logged). */
   dates_kept: string[];
   /** Technologies whose unreadable `catalog_state` was rebuilt (logged). */
@@ -61,6 +67,10 @@ export type TenantSyncResult = {
   versions_added: number;
   versions_updated: number;
   cpe_added: number;
+  /** CPE identifiers removed because the shipped file dropped them. */
+  cpe_removed: number;
+  /** Descriptions replaced with the catalog's new text. A description filled while empty is not counted. */
+  descriptions_updated: number;
   /** Versions typed with a catalog label before the catalog had them, now attached to it. */
   versions_attached: number;
   /** One line per technology whose sync failed: its changes are undone, the others are kept. */
@@ -72,7 +82,7 @@ export type TenantSyncResult = {
 };
 
 const emptyResult = (): TenantSyncResult => ({
-  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
+  technologies: 0, versions_added: 0, versions_updated: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0, versions_attached: 0, errors: [], dates_kept: [], malformed_states: [],
 });
 
 function addResult(total: TenantSyncResult, one: TenantSyncResult) {
@@ -80,6 +90,8 @@ function addResult(total: TenantSyncResult, one: TenantSyncResult) {
   total.versions_added += one.versions_added;
   total.versions_updated += one.versions_updated;
   total.cpe_added += one.cpe_added;
+  total.cpe_removed += one.cpe_removed;
+  total.descriptions_updated += one.descriptions_updated;
   total.versions_attached += one.versions_attached;
   total.errors.push(...one.errors);
   total.dates_kept.push(...one.dates_kept);
@@ -111,23 +123,46 @@ function keepConsistent(target: CatalogVersionValues, current: CatalogVersionVal
   return moved;
 }
 
+/** An entry marked `noCpe` publishes an empty identifier list on purpose. */
+function markedNoCpe(product: CatalogProduct): boolean {
+  const flag = product.noCpe;
+  return flag === true || (typeof flag === 'string' && flag.trim().length > 0);
+}
+
+/** A string list stored on `catalog_state`, lower case. Absent or null: unknown. A bad shape: unreadable. */
+function optionalIdentifiers(raw: Record<string, unknown>, key: string): string[] | undefined | null {
+  if (!Object.prototype.hasOwnProperty.call(raw, key) || raw[key] == null) return undefined;
+  const value = raw[key];
+  if (!Array.isArray(value) || !value.every((item) => typeof item === 'string')) return null;
+  return lowerSorted(value);
+}
+
+/** Empty the way PostgreSQL `btrim` sees it: null, or only spaces (U+0020). A line break is a text. */
+function spaceBlank(value: string | null | undefined): boolean {
+  return value == null || /^ *$/.test(value);
+}
+
 /**
  * The state of a technology without a usable one: the identifiers and versions of the shipped
  * file, the identifiers of the entry it holds, and the versions of the catalog it holds (with
- * their values), all counted as offered.
+ * their values), all counted as offered. The caller removes nothing from it: this state cannot
+ * tell an identifier the shipped catalog withdrew from one the tenant added.
  */
-function startingState(shipped: CatalogProduct, product: CatalogProduct, cpeProducts: string[], rows: VersionRow[]): CatalogState {
+function startingState(shipped: CatalogProduct | undefined, product: CatalogProduct, cpeProducts: string[], rows: VersionRow[]): CatalogState {
   const held = new Set(cpeProducts.map((p) => p.toLowerCase()));
-  const versions: Record<string, CatalogVersionValues> = Object.fromEntries(shipped.versions.map((v) => [v.key, valuesOf(v)]));
+  const versions: Record<string, CatalogVersionValues> = Object.fromEntries((shipped?.versions ?? []).map((v) => [v.key, valuesOf(v)]));
   const prefix = `${product.key}:`;
   for (const row of rows) {
     if (!row.catalog_key?.startsWith(prefix)) continue;
     const key = row.catalog_key.slice(prefix.length);
     if (!versions[key]) versions[key] = rowValues(row);
   }
+  const shippedIds = shipped?.cpe_products ?? [];
   return {
-    cpe_products: Array.from(new Set([...shipped.cpe_products, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
+    cpe_products: Array.from(new Set([...shippedIds, ...product.cpe_products.filter((p) => held.has(p))])).sort(),
     versions,
+    // No shipped entry: do not record the living product as the file. The next pass withdraws nothing.
+    ...(shipped ? { shipped_cpe: lowerSorted(shipped.cpe_products) } : {}),
   };
 }
 
@@ -137,9 +172,23 @@ export function readState(raw: unknown): CatalogState | null {
   const { cpe_products: cpe, versions } = raw as Record<string, unknown>;
   if (!Array.isArray(cpe) || !cpe.every((p) => typeof p === 'string')) return null;
   if (!versions || typeof versions !== 'object' || Array.isArray(versions)) return null;
-  const description = (raw as Record<string, unknown>).description;
+  const record = raw as Record<string, unknown>;
+  const description = record.description;
   if (description !== undefined && description !== null && typeof description !== 'string') return null;
-  const out: CatalogState = { cpe_products: [...cpe], versions: {}, ...(typeof description === 'string' ? { description } : {}) };
+  const shippedCpe = optionalIdentifiers(record, 'shipped_cpe');
+  if (shippedCpe === null) return null;
+  const cpeWritten = optionalIdentifiers(record, 'cpe_written');
+  if (cpeWritten === null) return null;
+  const descriptionLanguage = record.description_language;
+  if (descriptionLanguage != null && (typeof descriptionLanguage !== 'string' || !['en', 'fr', 'de', 'es'].includes(descriptionLanguage))) return null;
+  const out: CatalogState = {
+    cpe_products: [...cpe],
+    versions: {},
+    ...(typeof description === 'string' ? { description } : {}),
+    ...(shippedCpe !== undefined ? { shipped_cpe: shippedCpe } : {}),
+    ...(cpeWritten !== undefined ? { cpe_written: cpeWritten } : {}),
+    ...(typeof descriptionLanguage === 'string' ? { description_language: descriptionLanguage as CatalogState['description_language'] } : {}),
+  };
   for (const [key, value] of Object.entries(versions as Record<string, unknown>)) {
     if (!value || typeof value !== 'object' || Array.isArray(value)) return null;
     const v = value as Record<string, unknown>;
@@ -202,6 +251,17 @@ function serviceFailure(error: unknown): boolean {
 class BadAnswer extends Error {}
 
 type TechnologyRow = { id: string; catalog_key: string; cpe_products: string[]; description: string | null; catalog_state: CatalogState | null };
+type TechnologyUpdate = {
+  id: string;
+  cpe_added: string[];
+  cpe_removed: string[];
+  description: string | null;
+  description_mode: 'fill' | 'update' | null;
+  description_seen: string | null;
+  /** Language written into the state only when the description update is applied. */
+  description_language: string | null;
+  state: CatalogState;
+};
 type VersionRow = {
   id: string;
   technology_id: string;
@@ -225,16 +285,24 @@ function canonical(value: unknown): string {
 }
 
 /**
- * The living catalog (lot C4): keeps the technologies adopted from the catalog up to date with
- * the versions, end-of-support dates and CPE identifiers the catalog gains, without ever
- * overwriting what a tenant typed.
+ * The living catalog (lot C4, withdrawals and description corrections in lot C5): keeps the
+ * technologies adopted from the catalog up to date with the versions, end-of-support dates and
+ * CPE identifiers the catalog gains, and with the identifiers and descriptions the shipped
+ * catalog corrects, leaving a value the tenant typed as the tenant left it.
  *
  * - Refresh (only while `TECHNOLOGY_CATALOG_SYNC_ENABLED`): the release cycles of endoflife.date
  *   (API v1, `GET /products/{product}`, `ENDOFLIFE_API_BASE_URL` to use a mirror) for the entries
  *   at least one tenant adopted, read into the platform cache `technology_catalog_products` with
  *   the rules of the shipped catalog (`catalog-releases.ts`). A product read less than 20 hours ago
  *   is skipped; one that fails keeps its last versions and is read again at the next run; after two
- *   failures of the service in a row, the others wait for the next run.
+ *   failures of the service in a row, the others wait for the next run. A remote answer withdraws
+ *   nothing: only the shipped file (`shippedProduct`) drops an identifier, and only one
+ *   `cpe_written` records as written by the catalog. An identifier the cache added stays until
+ *   that file lists it and then drops it. A shipped file that lists no identifier, and is not
+ *   marked `noCpe`, drops nothing. An identifier the tenant typed is never dropped. A description
+ *   follows the catalog in `description_language`, the language it was written in. A change of the
+ *   tenant's language rewrites nothing. A state without that field takes the language whose catalog
+ *   text equals the remembered description, and nothing is rewritten when none does.
  * - Sync, tenant by tenant, after each refresh and at every start (the shipped catalog of a new
  *   KANAP version, in both deployment modes): `syncTenant`.
  *
@@ -252,12 +320,14 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     private readonly scheduledTasks: ScheduledTasksService,
     private readonly catalog: TechnologyCatalogService,
     private readonly audit: AuditService,
+    /** Queues a rematch once the caller's transaction has committed (lot T6b). Absent in some specs. */
+    @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
   ) {}
 
   onModuleInit() {
     this.scheduledTasks.register({
       name: CATALOG_SYNC_TASK_NAME,
-      description: 'Keeps the versions, end-of-support dates and product identifiers of the technologies adopted from the catalog up to date',
+      description: 'Keeps the versions, end-of-support dates and product identifiers of the technologies adopted from the catalog up to date, including identifiers and descriptions the shipped catalog corrects',
       defaultCron: '40 4 * * *',
       handler: () => this.run(),
       runOnStartup: true,
@@ -290,7 +360,7 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     const summary: CatalogSyncSummary = {
       refresh_enabled: Features.TECHNOLOGY_CATALOG_SYNC_ENABLED,
       products: 0, requests: 0, refreshed: 0, failed_products: [], rejected_releases: 0, errors: [],
-      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0,
+      tenants_synced: 0, technologies_updated: 0, versions_added: 0, versions_updated: 0, versions_attached: 0, cpe_added: 0, cpe_removed: 0, descriptions_updated: 0,
       dates_kept: [], malformed_states: 0,
     };
     if (Features.TECHNOLOGY_CATALOG_SYNC_ENABLED) await this.refresh(runtime, summary);
@@ -303,6 +373,8 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         summary.versions_added += result.versions_added;
         summary.versions_updated += result.versions_updated;
         summary.cpe_added += result.cpe_added;
+        summary.cpe_removed += result.cpe_removed;
+        summary.descriptions_updated += result.descriptions_updated;
         summary.versions_attached += result.versions_attached;
         summary.dates_kept.push(...result.dates_kept.map((line) => `${tenantId} ${line}`));
         summary.malformed_states += result.malformed_states.length;
@@ -436,14 +508,40 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
    *   An empty `cpe_version` is always completed. A date the catalog withdraws (null) never erases
    *   one. A catalog date that would contradict the other date (extended before standard) is not
    *   applied, the rest is, and the version is named in `dates_kept`;
-   * - an identifier the catalog gained is added to `cpe_products`; one the tenant removed is not;
+   * - an identifier the catalog gained is added to `cpe_products`; one the tenant removed is not.
+   *   One is removed only when `catalog_state.shipped_cpe` listed it (the shipped file at the
+   *   previous pass), the shipped file no longer lists it, `catalog_state.cpe_written` lists it
+   *   (the catalog wrote it and the tenant still holds it; a state without `cpe_written` withdraws
+   *   nothing until the catalog writes one), and the technology still holds it (without case).
+   *   A state without `shipped_cpe` withdraws nothing and records the current
+   *   shipped file. An identifier the cache added (endoflife.date, one product per release) stays
+   *   in the state while the cache omits it, so a missing cache neither removes it nor offers it
+   *   again. An identifier the tenant removed stays in `cpe_products` until the shipped file has
+   *   been seen to drop it. One the shipped file withdrew leaves the state, and is added again if
+   *   the catalog offers it later. One the tenant added, absent from the state, stays. A shipped
+   *   file that lists no identifier, and is not marked `noCpe`, withdraws nothing: the pass logs
+   *   it and keeps the previous `shipped_cpe`;
    * - an empty description the catalog never filled receives the catalog's short description, in
-   *   the tenant's language (`tenantLanguage`), once.
+   *   the tenant's language (`tenantLanguage`), and `description_language` records that language.
+   *   One the catalog wrote (`catalog_state.description`) and the tenant left unchanged (the same
+   *   characters: `description IS NOT DISTINCT FROM` the remembered text) follows the catalog's
+   *   description in `description_language` when that text changes. The state and the audit record
+   *   the new text only for a row the update changed. A change of the tenant's language rewrites
+   *   nothing. A state without `description_language` takes the language whose catalog text equals
+   *   the remembered description, and is not rewritten when none does. One the tenant changed stays.
+   *   One the catalog withdraws leaves the text in place.
    * A technology without a usable state (adopted before the living catalog, or an unreadable one,
    * named in `malformed_states`) starts from the shipped catalog and from what it holds of the
    * catalog, all counted as offered: what it lacks counts as removed by the tenant, an empty value
-   * on a version is completed, and only later additions reach it. One audit row per technology changed (`system`, `technology-catalog`). A technology
-   * whose writes fail is left as it was and named in `errors`; the others are synced.
+   * on a version is completed, and only later additions reach it. Nothing is removed on that pass.
+   * `shipped_cpe` records the shipped file as it is now, so an identifier that file no longer lists
+   * is not removed on a later pass either.
+   * One audit row per technology changed (`system`, `technology-catalog`), including
+   * `cpe_products_removed` and `description_updated`. The scheduled task summary counts the
+   * identifiers removed (`cpe_removed`) and the descriptions replaced (`descriptions_updated`;
+   * a description filled while empty is not counted). A technology whose CPE identifiers changed
+   * is matched again with the vulnerabilities once the transaction commits. A technology whose
+   * writes fail is left as it was and named in `errors`; the others are synced.
    */
   async syncTenant(mg: EntityManager, tenantId: string, products: Map<string, CatalogProduct>): Promise<TenantSyncResult> {
     const result = emptyResult();
@@ -524,13 +622,16 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
 
     const inserts: Array<Record<string, unknown>> = [];
     const updates: Array<Record<string, unknown>> = [];
-    const techUpdates: Array<{ id: string; cpe_added: string[]; description: string | null; state: CatalogState }> = [];
-    const changes = new Map<string, { label: string[]; updated: string[]; attached: string[]; cpe: string[]; description: boolean }>();
-    const changeOf = (id: string) => changes.get(id) ?? changes.set(id, { label: [], updated: [], attached: [], cpe: [], description: false }).get(id)!;
+    const techUpdates: TechnologyUpdate[] = [];
+    const changes = new Map<string, { label: string[]; updated: string[]; attached: string[]; cpe: string[]; removed: string[]; description: boolean; descriptionUpdated: boolean }>();
+    const changeOf = (id: string) => changes.get(id) ?? changes.set(id, { label: [], updated: [], attached: [], cpe: [], removed: [], description: false, descriptionUpdated: false }).get(id)!;
 
     for (const tech of technologies) {
       const product = products.get(tech.catalog_key)!;
-      const shipped = this.catalog.shippedProduct(tech.catalog_key) ?? product;
+      // The shipped file is the only withdrawal base. A key it no longer lists is not replaced by
+      // the living product (the cache included): nothing is removed, and `shipped_cpe` stays as
+      // recorded. Versions still follow `product`.
+      const shipped = this.catalog.shippedProduct(tech.catalog_key);
       const rows = versions.filter((v) => v.technology_id === tech.id);
       const parsed = readState(tech.catalog_state);
       if (tech.catalog_state !== null && tech.catalog_state !== undefined && !parsed) result.malformed_states.push(tech.catalog_key);
@@ -541,10 +642,50 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
       const state: CatalogState = parsed ?? startingState(shipped, product, tech.cpe_products, rows);
 
       const has = new Set(tech.cpe_products.map((p) => p.toLowerCase()));
-      const offered = new Set(state.cpe_products);
-      const cpeAdded = product.cpe_products.filter((p) => !offered.has(p) && !has.has(p));
-      state.cpe_products = Array.from(new Set([...state.cpe_products, ...product.cpe_products])).sort();
+      const offeredBefore = new Set(state.cpe_products.map((p) => p.toLowerCase()));
+      const shippedNowList = shipped ? lowerSorted(shipped.cpe_products) : [];
+      const shippedNow = new Set(shippedNowList);
+      // Absent `shipped_cpe` (a state from before this field, or none at all): this pass withdraws
+      // nothing and records the shipped file. The cache is not a withdrawal base.
+      const shippedKnown = Array.isArray(state.shipped_cpe);
+      const shippedBefore = new Set((state.shipped_cpe ?? []).map((p) => p.toLowerCase()));
+      const offered = lowerSorted([...(shipped?.cpe_products ?? []), ...product.cpe_products]);
+      const cpeAdded = lowerSorted(product.cpe_products).filter((p) => !offeredBefore.has(p) && !has.has(p));
+      let cpeRemoved: string[] = [];
+      let recordShipped = true;
+      if (bootstrap || !shippedKnown || !shipped) {
+        cpeRemoved = [];
+        if (!shipped) recordShipped = false;
+      } else {
+        const gone = Array.from(shippedBefore).filter((p) => !shippedNow.has(p)).sort();
+        // A file that lost every identifier without saying `noCpe` is a bad build, not a withdrawal.
+        if (shippedNow.size === 0 && gone.length > 0 && !markedNoCpe(shipped)) {
+          cpeRemoved = [];
+          recordShipped = false;
+          this.logger.warn(`[${CATALOG_SYNC_TASK_NAME}] ${tech.catalog_key}: the shipped file lists no CPE identifier and is not marked noCpe; no identifier was withdrawn`);
+        } else {
+          // Only an identifier the catalog wrote. One the tenant typed, or held before adoption, is absent here.
+          const written = new Set((state.cpe_written ?? []).map((p) => p.toLowerCase()));
+          cpeRemoved = gone.filter((p) => has.has(p) && written.has(p));
+        }
+      }
+      const removedNow = new Set(cpeRemoved);
+      const stillHeld = new Set(Array.from(has).filter((p) => !removedNow.has(p)));
+      state.cpe_written = lowerSorted([
+        ...(state.cpe_written ?? []).filter((p) => stillHeld.has(p.toLowerCase())),
+        ...cpeAdded,
+      ]);
+      const seenWithdrawn = recordShipped && shippedKnown && !bootstrap
+        ? new Set(Array.from(shippedBefore).filter((p) => !shippedNow.has(p)))
+        : new Set<string>();
+      // A cache identifier stays until the shipped file itself has listed it and then dropped it.
+      state.cpe_products = lowerSorted([
+        ...state.cpe_products.filter((p) => !seenWithdrawn.has(p.toLowerCase())),
+        ...offered.filter((p) => !seenWithdrawn.has(p)),
+      ]);
+      if (recordShipped) state.shipped_cpe = shippedNowList;
       if (cpeAdded.length) changeOf(tech.id).cpe.push(...cpeAdded);
+      if (cpeRemoved.length) changeOf(tech.id).removed.push(...cpeRemoved);
       const loose = new Map(rows.filter((r) => !r.catalog_key).map((r) => [r.label.toLowerCase(), r]));
 
       for (const version of product.versions) {
@@ -608,17 +749,45 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
         if (!FIELDS.some((field) => target[field] !== current[field])) continue;
         updates.push({ id: row.id, catalog_key: row.catalog_key, ...target, attach: false, seen: { ...current, catalog_key: row.catalog_key } });
       }
-      // An empty description the catalog never filled (adopted before the catalog had descriptions)
-      // receives the catalog's, in the tenant's language; once written, it is the tenant's.
-      let description: string | null = null;
-      if (!tech.description?.trim() && !state.description) {
-        description = this.catalog.description(product.key, language);
-        if (description) {
-          state.description = description;
-          changeOf(tech.id).description = true;
-        }
+      // An empty description the catalog never filled receives the catalog's, in the tenant's
+      // language. One the catalog wrote follows a new text in the language it was written in
+      // (`description_language`) while the tenant still holds the same characters. A space or a
+      // line break the tenant added keeps it. A change of the tenant's language rewrites nothing.
+      // Without a recorded language, the language whose catalog text equals the remembered
+      // description is recorded, and nothing is rewritten when none equals it. One the tenant
+      // changed stays. One the catalog withdraws leaves the text in place. The new text is written
+      // into the state only when the update below changes the row.
+      const catalogLanguages = ['en', 'fr', 'de', 'es'] as const;
+      const remembered = typeof state.description === 'string' ? state.description : null;
+      let descriptionLanguage = state.description_language ?? null;
+      if (remembered && !spaceBlank(remembered) && !descriptionLanguage) {
+        const matches = catalogLanguages.filter((code) => this.catalog.textIn(product.key, code) === remembered);
+        descriptionLanguage = (matches.includes(language) ? language : matches[0]) ?? null;
+        if (descriptionLanguage) state.description_language = descriptionLanguage;
       }
-      techUpdates.push({ id: tech.id, cpe_added: cpeAdded, description, state });
+      const fresh = descriptionLanguage ? this.catalog.textIn(product.key, descriptionLanguage) : null;
+      let description: string | null = null;
+      let descriptionMode: 'fill' | 'update' | null = null;
+      let descriptionSeen: string | null = null;
+      let writtenLanguage: string | null = null;
+      if (spaceBlank(remembered)) {
+        const filled = this.catalog.description(product.key, language);
+        if (spaceBlank(tech.description) && filled) {
+          description = filled;
+          descriptionMode = 'fill';
+          writtenLanguage = language;
+        }
+      } else if (descriptionLanguage && tech.description === remembered && fresh !== null && fresh !== remembered) {
+        description = fresh;
+        descriptionMode = 'update';
+        descriptionSeen = remembered;
+        writtenLanguage = descriptionLanguage;
+      }
+      techUpdates.push({
+        id: tech.id, cpe_added: cpeAdded, cpe_removed: cpeRemoved, description,
+        description_mode: descriptionMode, description_seen: descriptionSeen,
+        description_language: writtenLanguage, state,
+      });
     }
 
     if (inserts.length) {
@@ -666,36 +835,80 @@ export class TechnologyCatalogSyncService implements OnModuleInit {
     }
     const written = techUpdates.filter((tech) => {
       const original = technologies.find((t) => t.id === tech.id)!;
-      return tech.cpe_added.length > 0 || tech.description !== null || canonical(original.catalog_state) !== canonical(tech.state);
+      return tech.cpe_added.length > 0 || tech.cpe_removed.length > 0 || tech.description !== null || canonical(original.catalog_state) !== canonical(tech.state);
     });
     if (written.length) {
-      await mg.query(
-        `UPDATE technologies t
-            SET catalog_state = u.state,
-                cpe_products = CASE WHEN jsonb_array_length(u.cpe_added) = 0 THEN t.cpe_products
-                                    ELSE ARRAY(SELECT DISTINCT p FROM unnest(t.cpe_products || ARRAY(SELECT jsonb_array_elements_text(u.cpe_added))) AS p ORDER BY 1) END,
-                -- Filled only while still empty: a description typed since it was read stays.
-                description = CASE WHEN u.description IS NOT NULL AND NULLIF(btrim(t.description), '') IS NULL THEN u.description ELSE t.description END,
-                updated_at = CASE WHEN jsonb_array_length(u.cpe_added) = 0 AND u.description IS NULL THEN t.updated_at ELSE now() END
-           FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, description text, state jsonb)
-          WHERE t.tenant_id = $1 AND t.id = u.id`,
+      // The description flag is computed on the row as it stands, then the update applies it.
+      // An UPDATE answers [rows, count]: read the rows through the CTE. State and audit move
+      // only for a description the statement changed.
+      const described: Array<{ technology_id: string; description_applied: boolean; description_mode: 'fill' | 'update' | null }> = await mg.query(
+        `WITH changed AS (
+         UPDATE technologies t
+            SET catalog_state = CASE
+                  WHEN u.description_applied THEN u.state || jsonb_strip_nulls(jsonb_build_object(
+                    'description', u.description, 'description_language', u.description_language))
+                  ELSE u.state END,
+                cpe_products = CASE
+                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0 THEN t.cpe_products
+                  ELSE ARRAY(
+                    SELECT DISTINCT id
+                      FROM unnest(t.cpe_products || CASE WHEN jsonb_array_length(u.cpe_added) = 0 THEN '{}'::text[]
+                                                         ELSE ARRAY(SELECT jsonb_array_elements_text(u.cpe_added)) END) AS id
+                     WHERE NOT EXISTS (
+                       SELECT 1 FROM jsonb_array_elements_text(u.cpe_removed) AS x WHERE lower(x) = lower(id))
+                     ORDER BY 1)
+                  END,
+                description = CASE WHEN u.description_applied THEN u.description ELSE t.description END,
+                updated_at = CASE
+                  WHEN jsonb_array_length(u.cpe_added) = 0 AND jsonb_array_length(u.cpe_removed) = 0
+                   AND NOT u.description_applied AND u.state = t.catalog_state THEN t.updated_at
+                  ELSE now()
+                  END
+           FROM (
+             SELECT u.*,
+                    (u.description IS NOT NULL AND (
+                       (u.description_mode = 'fill' AND NULLIF(btrim(t2.description), '') IS NULL)
+                       OR (u.description_mode = 'update' AND t2.description IS NOT DISTINCT FROM u.description_seen)
+                    )) AS description_applied
+               FROM jsonb_to_recordset($2::jsonb) AS u(id uuid, cpe_added jsonb, cpe_removed jsonb, description text,
+                                                       description_mode text, description_seen text, description_language text, state jsonb)
+               JOIN technologies t2 ON t2.tenant_id = $1 AND t2.id = u.id
+           ) AS u
+          WHERE t.tenant_id = $1 AND t.id = u.id
+         RETURNING t.id AS technology_id, u.description_applied, u.description_mode
+         )
+         SELECT technology_id, description_applied, description_mode FROM changed`,
         [tenantId, JSON.stringify(written)],
       );
+      for (const row of described) {
+        if (!row.description_applied) continue;
+        if (row.description_mode === 'fill') changeOf(row.technology_id).description = true;
+        else if (row.description_mode === 'update') changeOf(row.technology_id).descriptionUpdated = true;
+      }
       result.cpe_added = written.reduce((sum, tech) => sum + tech.cpe_added.length, 0);
+      result.cpe_removed = written.reduce((sum, tech) => sum + tech.cpe_removed.length, 0);
+      result.descriptions_updated = described.filter((row) => row.description_applied && row.description_mode === 'update').length;
     }
     for (const [technologyId, change] of changes) {
-      if (!change.label.length && !change.updated.length && !change.attached.length && !change.cpe.length && !change.description) continue;
+      if (!change.label.length && !change.updated.length && !change.attached.length && !change.cpe.length && !change.removed.length && !change.description && !change.descriptionUpdated) continue;
       result.technologies += 1;
       await this.audit.log({
         table: 'technologies', recordId: technologyId, action: 'update', before: null,
         after: {
           catalog_sync: {
-            versions_added: change.label, versions_updated: change.updated, versions_attached: change.attached, cpe_products_added: change.cpe,
-            description_filled: change.description,
+            versions_added: change.label, versions_updated: change.updated, versions_attached: change.attached,
+            cpe_products_added: change.cpe, cpe_products_removed: change.removed,
+            description_filled: change.description, description_updated: change.descriptionUpdated,
           },
         },
         source: 'system', sourceRef: CATALOG_SYNC_TASK_NAME,
       }, { manager: mg });
+    }
+    for (const tech of written) {
+      if (tech.cpe_added.length === 0 && tech.cpe_removed.length === 0) continue;
+      // Same bridge as a manual edit: after commit, the feed matches this technology again
+      // (rows of a removed product disappear) and collects an identifier it has never seen.
+      await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: tech.cpe_added });
     }
     return result;
   }

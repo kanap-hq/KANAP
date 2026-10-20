@@ -440,6 +440,8 @@ function refreshCpeVersions(out) {
     added += cpe.filter((id) => !product.cpe_products.includes(id)).length;
     removed += product.cpe_products.filter((id) => !cpe.includes(id)).length;
     product.cpe_products = cpe;
+    if (entry?.noCpe) product.noCpe = entry.noCpe;
+    else delete product.noCpe;
     for (const version of product.versions) {
       const next = cpeVersionOf(version.label, entry);
       if (next !== version.cpe_version) changed += 1;
@@ -612,6 +614,7 @@ async function main() {
       mode: entry.mode ?? 'installed',
       ...(entry.hosting_type ? { hosting_type: entry.hosting_type } : {}),
       cpe_products: cpe,
+      ...(entry.noCpe ? { noCpe: entry.noCpe } : {}),
       source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
       versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],
     });

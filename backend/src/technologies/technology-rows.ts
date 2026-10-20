@@ -1,5 +1,6 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 
 /**
  * Shared reads and input checks of the technologies module: the row of a technology by id or
@@ -31,6 +32,8 @@ export type TechnologyRow = {
   rpo_minutes: number | null;
   /** Code of the tenant's "Administration zones" catalog (lot A1a), null when not placed. */
   admin_zone: string | null;
+  /** Whether this technology raises vulnerability alerts. Versions without their own setting follow it. */
+  vulnerability_alerts: boolean;
   created_at: Date;
   updated_at: Date;
 };
@@ -45,15 +48,21 @@ export type TechnologyVersionRow = {
   extended_support_end: string | null;
   notes: string | null;
   catalog_key: string | null;
+  /** null: follows the technology. true or false: an exception for this version. */
+  vulnerability_alerts: boolean | null;
+  /** The setting that applies: the version's exception, or the technology's setting. */
+  vulnerability_alerts_effective: boolean;
 };
 
 export const TECHNOLOGY_COLUMNS = `t.id, t.tenant_id, t.item_number, t.name, t.editor, t.family, t.hosting_type, t.lifecycle, t.description, t.notes,
   t.support_notes, t.catalog_key, t.cpe_products, t.replaced_by_id, t.cyber_criticality, t.recovery_wave, t.rto_minutes, t.rpo_minutes,
-  t.admin_zone, t.created_at, t.updated_at`;
+  t.admin_zone, t.vulnerability_alerts, t.created_at, t.updated_at`;
 
+/** Needs the technology joined as `t` (`vulnerability_alerts_effective` follows it). */
 export const VERSION_COLUMNS = `v.id, v.technology_id, v.label, v.cpe_version, v.build_prefixes,
   to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end,
-  to_char(v.extended_support_end, 'YYYY-MM-DD') AS extended_support_end, v.notes, v.catalog_key`;
+  to_char(v.extended_support_end, 'YYYY-MM-DD') AS extended_support_end, v.notes, v.catalog_key,
+  v.vulnerability_alerts, ${vulnerabilityAlertsSql('v', 't')} AS vulnerability_alerts_effective`;
 
 export function technologyReference(itemNumber: number | null | undefined): string | null {
   return itemNumber == null ? null : `TEC-${itemNumber}`;

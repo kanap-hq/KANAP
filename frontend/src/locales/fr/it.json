@@ -383,7 +383,9 @@
       "versionNoneHint": "Aucune version renseignée : potentiellement concernée",
       "empty": {
         "none": "Aucune vulnérabilité à traiter. Les vulnérabilités s'affichent pour les technologies qui indiquent leurs identifiants CPE : renseignez-les sur une technologie, ou adoptez-la depuis le catalogue.",
-        "filtered": "Aucune vulnérabilité ne correspond à ces filtres."
+        "filtered": "Aucune vulnérabilité ne correspond à ces filtres.",
+        "noneInAlerts": "Aucune vulnérabilité n'est dans les alertes.",
+        "showExcluded": "Afficher les exclues"
       },
       "columns": {
         "cve": "CVE",
@@ -423,16 +425,52 @@
         "via": "via {{name}}",
         "stateOf": "État de {{version}}",
         "noteOf": "Note sur {{version}}",
-        "notePlaceholder": "ex. corrigé le 12 mars"
+        "notePlaceholder": "ex. corrigé le 12 mars",
+        "serversInAlerts_one": "{{count}} serveur, dont {{alerting}} dans les alertes",
+        "serversInAlerts_other": "{{count}} serveurs, dont {{alerting}} dans les alertes",
+        "applicationsInAlerts_one": "{{count}} application, dont {{alerting}} dans les alertes",
+        "applicationsInAlerts_other": "{{count}} applications, dont {{alerting}} dans les alertes"
       },
       "section": {
         "title": "Vulnérabilités",
         "empty": "Aucune vulnérabilité connue ne concerne cette technologie.",
         "searching": "Recherche des vulnérabilités en cours…",
         "loadFailed": "Les vulnérabilités n'ont pas pu être chargées.",
-        "rematch": "Rapprocher à nouveau",
+        "rematch": "Actualiser",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
-        "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez."
+        "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez.",
+        "noLongerMatches": "Ne correspond plus",
+        "see": "Voir",
+        "seeAll": "Tout voir dans la page Vulnérabilités",
+        "notInstalled": "Non installée",
+        "notInstalledHint": "KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.",
+        "columns": {
+          "open": "À traiter",
+          "total": "Total"
+        },
+        "alerts": {
+          "excluded": "Exclue des alertes",
+          "excludedExcept_one": "Exclue des alertes, sauf {{count}} version",
+          "excludedExcept_other": "Exclue des alertes, sauf {{count}} versions",
+          "versionsExcluded_one": "{{count}} version exclue des alertes",
+          "versionsExcluded_other": "{{count}} versions exclues des alertes",
+          "set": "Modifier"
+        }
+      },
+      "alerts": {
+        "label": "Alertes",
+        "included": "Incluses",
+        "excluded": "Exclues",
+        "all": "Toutes"
+      },
+      "published": {
+        "label": "Publiée",
+        "all": "Toutes",
+        "7d": "Moins de 7 jours",
+        "30d": "Moins de 30 jours",
+        "90d": "Moins de 90 jours",
+        "1y": "Moins d'un an",
+        "older1y": "Plus d'un an"
       }
     },
     "interfaces": {
@@ -2031,6 +2069,16 @@
         "servers_other": "{{count}} serveurs",
         "applications_one": "{{count}} application",
         "applications_other": "{{count}} applications",
+        "alertsColumn": "Alertes",
+        "alertsColumnHint": "Inclut cette version dans les alertes de vulnérabilité : la page Vulnérabilités, les compteurs et le courriel récapitulatif. Chaque version suit le réglage de la technologie, sauf si un point signale un réglage propre.",
+        "includeInAlerts": "Inclure dans les alertes de vulnérabilité",
+        "alertsFor": "Alertes de vulnérabilité pour {{label}}",
+        "alertsHint": "Réglage de la technologie : vaut pour les versions sans réglage propre, les versions à venir et les liens sans version.",
+        "alertsOwn": "Réglage propre à cette version",
+        "alertsConfirmTitle": "Alertes de vulnérabilité",
+        "alertsReset_one": "{{count}} version a un réglage propre, il sera remplacé.",
+        "alertsReset_other": "{{count}} versions ont un réglage propre, ils seront remplacés.",
+        "alertsReplace": "Remplacer",
         "status": {
           "supported": "Supportée",
           "ending_soon": "Fin proche",

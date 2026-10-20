@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { flushSync } from 'react-dom';
 import {
   Box,
   Alert,
@@ -103,6 +104,13 @@ export type ServerDataGridProps<T> = {
   enableSearch?: boolean; // deprecated with floating filters; kept for compatibility
   defaultSort?: { field: string; direction: 'ASC' | 'DESC' };
   extraParams?: Record<string, any>;
+  /**
+   * The page narrows the list through `extraParams` (a control of its own, off its default value):
+   * the list then counts as filtered, for the empty line and for "Reset filters".
+   */
+  extraNarrows?: boolean;
+  /** Called by "Reset filters" and by the empty list's "Clear all": the page resets its own controls. */
+  onResetFilters?: () => void;
   /** Parameters added to a request that carries a search, from its text (`q`). */
   searchParams?: (q: string) => Record<string, unknown>;
   refreshKey?: number | string; // bump to refresh grid after mutations
@@ -163,6 +171,8 @@ export type ServerDataGridProps<T> = {
    * message and its way out.
    */
   emptyState?: React.ReactNode;
+  /** A class for one row, from its data (a muted row when it stays out of the alerts). */
+  getRowClass?: (params: { data?: T }) => string | string[] | undefined;
   /**
    * Under the grid, about its totals (amounts the totals leave out). It wraps, and the grid gives
    * it room within the viewport while it is set; without it the grid keeps its full height.
@@ -518,6 +528,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   setFilterExcludeMode = false,
   emptyState,
   footer,
+  getRowClass,
+  extraNarrows = false,
+  onResetFilters,
 }: ServerDataGridProps<T>) {
   const { t } = useTranslation(['common', 'grid']);
   const { profile } = useAuth();
@@ -686,7 +699,9 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
     statusScopeRef.current = statusScope;
   }, [statusScope]);
   const scopeNarrowsRef = useRef<() => boolean>(() => false);
-  scopeNarrowsRef.current = () => !!statusScopeConfig && statusScopeRef.current !== defaultStatusScope;
+  scopeNarrowsRef.current = () => (!!statusScopeConfig && statusScopeRef.current !== defaultStatusScope) || extraNarrows;
+  const onResetFiltersRef = useRef(onResetFilters);
+  onResetFiltersRef.current = onResetFilters;
 
   // Set once the page requests' column parameters can be compared (see pageParams).
   const pageParamsChangedRef = useRef<() => void>(() => undefined);
@@ -1308,21 +1323,29 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
   }, [abortOtherQueries, adoptStatusFilter, defaultSort, enablePagination, onQueryStateChange, syncFiltersInUrl]);
 
 
+  // The page's own controls first (`onResetFilters`), rendered at once: a page that keeps them in the
+  // address has written it before the grid writes its scope and filters there from `location`.
+  const resetPageControls = useCallback(() => {
+    if (onResetFiltersRef.current) flushSync(() => onResetFiltersRef.current?.());
+  }, []);
+
   // The empty list's one-click way out: no search, no column filter, the default Show scope.
   const clearSearchAndFilters = useCallback(() => {
+    resetPageControls();
     setSearch('');
     searchRef.current = '';
     if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
     gridApiRef.current?.setFilterModel?.(null);
-  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange]);
+  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, resetPageControls]);
 
   // Reset filters: the list as the page opens it (no search, its default filters, the default Show scope).
   const resetFilters = useCallback(() => {
+    resetPageControls();
     setSearch('');
     searchRef.current = '';
     if (statusScopeConfig && statusScopeRef.current !== defaultStatusScope) handleStatusScopeChange(defaultStatusScope);
     gridApiRef.current?.setFilterModel?.(defaultFilterModel ?? null);
-  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, defaultFilterModel]);
+  }, [statusScopeConfig, defaultStatusScope, handleStatusScopeChange, defaultFilterModel, resetPageControls]);
 
   // Reload when the search, extra params, refreshKey, endpoint or status scope change: AG Grid does
   // not see those. It reloads on a sort or filter change by itself.
@@ -1646,6 +1669,7 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
           // Rows scrolled past quickly are not asked for, and a change of query starts one request.
           blockLoadDebounceMillis={150}
           getRowId={agGetRowId}
+          getRowClass={getRowClass}
           onGridReady={(e) => {
             onGridReady(e);
             gridApiRef.current = e.api;
