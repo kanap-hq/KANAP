@@ -7,7 +7,7 @@ import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
 import { CveListFeedService, type CveListSummary } from './cve-list-feed.service';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
-import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
+import { ANNOUNCED_WITHIN_DAYS, VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 import { VulnerabilitySignalsService } from './vulnerability-signals.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
@@ -751,6 +751,8 @@ export class NvdFeedService implements OnModuleInit {
   /**
    * Upserts the CVE of one page and replaces their criteria, in one transaction. Returns the CVE
    * already in the cache whose severity rose to critical or high (lot T6b: announced once).
+   * A row CVE.org wrote (`nvd_status` null) counts only when the CVE was published within
+   * `ANNOUNCED_WITHIN_DAYS`. A row the NVD already wrote keeps the rule at any age.
    */
   async store(mg: EntityManager, cves: ParsedCve[]): Promise<string[]> {
     // In cve_id order: the upsert locks its rows in the order the signals task locks them
@@ -760,7 +762,7 @@ export class NvdFeedService implements OnModuleInit {
     // Every step of the statement reads the same snapshot: `old` holds the severities before the upsert.
     const raised: Array<{ cve_id: string }> = await mg.query(
       `WITH old AS (
-         SELECT cve_id, severity FROM vulnerability_cves
+         SELECT cve_id, severity, nvd_status, published_at FROM vulnerability_cves
           WHERE cve_id IN (SELECT i.cve_id FROM jsonb_to_recordset($1::jsonb) AS i(cve_id text))
        ), up AS (
        INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
@@ -777,15 +779,17 @@ export class NvdFeedService implements OnModuleInit {
          cvss_version = EXCLUDED.cvss_version, cvss_vector = EXCLUDED.cvss_vector, published_at = EXCLUDED.published_at,
          last_modified_at = EXCLUDED.last_modified_at, nvd_status = EXCLUDED.nvd_status,
          reference_urls = EXCLUDED.reference_urls, fetched_at = now()
-       RETURNING c.cve_id, c.severity
+       RETURNING c.cve_id, c.severity, c.published_at
        )
        SELECT up.cve_id FROM up JOIN old ON old.cve_id = up.cve_id
-        WHERE up.severity IN ('critical', 'high') AND (old.severity IS NULL OR old.severity NOT IN ('critical', 'high'))`,
+        WHERE up.severity IN ('critical', 'high') AND (old.severity IS NULL OR old.severity NOT IN ('critical', 'high'))
+          AND (old.nvd_status IS NOT NULL
+               OR COALESCE(up.published_at, old.published_at) >= now() - make_interval(days => $2::int))`,
       [JSON.stringify(unique.map(({ matches: _matches, ...cve }) => ({
         ...cve,
         published_at: utc(cve.published_at),
         last_modified_at: utc(cve.last_modified_at),
-      })))],
+      }))), ANNOUNCED_WITHIN_DAYS],
     );
     await mg.query(`DELETE FROM vulnerability_cve_matches WHERE cve_id = ANY($1::text[])`, [unique.map((c) => c.cve_id)]);
     const matches = unique.flatMap((c) => c.matches.map((m) => ({ cve_id: c.cve_id, ...m })));
