@@ -9,8 +9,8 @@ import { asset, installed, services, technology } from './technologies.fixtures'
 import { VulnerabilityMatchService } from '../../vulnerabilities/vulnerability-match.service';
 
 // An operating system adopted before its CPE identifiers (lot V3): the living catalog adds them,
-// and the matching keeps a simulated CVE on the version the criterion names. `vulnerability_alerts`
-// (lot V1) is asserted only when the column exists.
+// and the matching keeps a simulated CVE on the version the criterion names. When
+// `vulnerability_alerts` exists (lot V1), the fixture sets it false and the sync must leave it.
 
 const UBUNTU_CVE = 'CVE-2099-31001';
 const WINDOWS_CVE = 'CVE-2099-31002';
@@ -82,6 +82,21 @@ async function testAdoptedOperatingSystemGainsCpe() {
     const ubuntuTech = await adoptedBefore(runner, tenantId, 1, ubuntu);
     const windowsTech = await adoptedBefore(runner, tenantId, 2, windows);
     const products = new Map<string, CatalogProduct>([['ubuntu', ubuntu], ['windows-server', windows]]);
+    const osIds = [ubuntuTech.id, windowsTech.id];
+
+    // Lot V1's column is NOT NULL DEFAULT true, and this fixture inserts the row itself, so the
+    // operating-system default never applies. Set the exclusion the migration's backfill sets, and
+    // check the sync leaves it. Without the column (this branch, before V1), skip the assertion.
+    const [column] = await runner.query(
+      `SELECT 1 AS present FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'technologies' AND column_name = 'vulnerability_alerts'`,
+    );
+    if (column) {
+      await runner.query(`UPDATE technologies SET vulnerability_alerts = false WHERE id = ANY($1::uuid[])`, [osIds]);
+    }
+    const alertsBefore = column
+      ? await runner.query(`SELECT vulnerability_alerts FROM technologies WHERE id = ANY($1::uuid[]) ORDER BY item_number`, [osIds])
+      : [];
 
     const result = await sync.syncTenant(runner.manager, tenantId, products);
     assert.equal(result.cpe_added, ubuntu.cpe_products.length + windows.cpe_products.length);
@@ -97,14 +112,13 @@ async function testAdoptedOperatingSystemGainsCpe() {
     const again = await sync.syncTenant(runner.manager, tenantId, products);
     assert.equal(again.cpe_added, 0, 'a second pass adds nothing');
 
-    // Lot V1's per-technology alert switch is not on this branch. Skip the assertion when the column is absent.
-    const [column] = await runner.query(
-      `SELECT 1 AS present FROM information_schema.columns
-        WHERE table_schema = current_schema() AND table_name = 'technologies' AND column_name = 'vulnerability_alerts'`,
-    );
     if (column) {
-      const [alerts] = await runner.query(`SELECT vulnerability_alerts FROM technologies WHERE id = $1`, [ubuntuTech.id]);
-      assert.equal(alerts.vulnerability_alerts, false, 'an operating system stays out of the alerts');
+      const alertsAfter = await runner.query(
+        `SELECT vulnerability_alerts FROM technologies WHERE id = ANY($1::uuid[]) ORDER BY item_number`,
+        [osIds],
+      );
+      assert.deepEqual(alertsBefore.map((row: { vulnerability_alerts: boolean }) => row.vulnerability_alerts), [false, false]);
+      assert.deepEqual(alertsAfter, alertsBefore, 'the sync leaves the operating systems out of the alerts');
     }
 
     const srv2204 = await asset(runner, tenantId, 'ubuntu-2204');
