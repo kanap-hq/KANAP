@@ -119,7 +119,7 @@ Le panneau latéral montre aussi l'identifiant **EUVD** quand la correspondance 
 
 La liste s'ouvre sur les vulnérabilités exploitées activement, puis les plus sévères. **Exploitées seulement**, au-dessus de la grille, garde ces lignes (`?exploited=1`). **Réinitialiser les filtres** l'éteint. L'export et un changement d'état en masse le suivent.
 
-L'e-mail aux responsables IT annonce une vulnérabilité exploitée quelle que soit sa sévérité, sur les versions dans les alertes, avec les mêmes règles qu'une vulnérabilité critique ou élevée : publiée dans les 30 derniers jours, sur un produit auquel la technologie était déjà comparée, encore à traiter. Une vulnérabilité déjà détectée qui rejoint ensuite un catalogue reste sur cette page.
+L'e-mail aux responsables IT annonce une vulnérabilité exploitée quelle que soit sa sévérité, sur les versions dans les alertes, avec les mêmes règles qu'une vulnérabilité critique ou élevée : publiée dans les 30 derniers jours, sur un produit auquel la technologie était déjà comparée, encore à traiter. Une vulnérabilité déjà détectée qui rejoint ensuite un catalogue est annoncée une fois, comme désormais exploitée, si elle est dans les alertes.
 
 ## Export
 
@@ -130,7 +130,7 @@ L'e-mail aux responsables IT annonce une vulnérabilité exploitée quelle que s
 Après chaque vérification, les responsables IT d'une technologie reçoivent un e-mail sur ses nouvelles vulnérabilités encore à traiter, sur les versions dans les alertes. L'e-mail comprend une vulnérabilité critique ou élevée, ou connue comme exploitée quelle que soit sa sévérité :
 
 - **Ce qui est annoncé** : une vulnérabilité publiée dans les 30 derniers jours sur un produit auquel la technologie était déjà comparée, quand elle est critique, élevée ou listée comme exploitée, ou une vulnérabilité connue qui vient de devenir critique ou élevée.
-- **Ce qui ne l'est pas** : la première comparaison d'une technologie, ou d'un identifiant CPE que vous venez d'ajouter, est silencieuse. Ses résultats attendent sur cette page. Une vulnérabilité déjà détectée qui rejoint ensuite un catalogue d'exploitation reste sur cette page.
+- **Ce qui ne l'est pas** : la première comparaison d'une technologie, ou d'un identifiant CPE que vous venez d'ajouter, est silencieuse. Ses résultats attendent sur cette page.
 - **Combien** : 25 lignes au plus, une par technologie et par vulnérabilité, puis un lien vers la page, filtrée sur les vulnérabilités publiées dans les 30 derniers jours.
 - **Combien de fois** : chaque personne entend parler d'une vulnérabilité sur une technologie une seule fois. Une vulnérabilité non annoncée lors de sa vérification ne l'est jamais plus tard.
 

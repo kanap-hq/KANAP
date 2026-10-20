@@ -119,7 +119,7 @@ El panel lateral muestra también el identificador **EUVD** cuando la correspond
 
 La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. **Solo explotadas**, encima de la cuadrícula, conserva esas filas (`?exploited=1`). **Restablecer filtros** lo desactiva. La exportación y un cambio de estado en bloque lo siguen.
 
-El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualquier gravedad, en las versiones en las alertas, con las mismas reglas que una crítica o alta: publicada en los últimos 30 días, sobre un producto con el que la tecnología ya se comparaba, aún por revisar. Una vulnerabilidad ya detectada que entra después en un catálogo permanece en esta página.
+El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualquier gravedad, en las versiones en las alertas, con las mismas reglas que una crítica o alta: publicada en los últimos 30 días, sobre un producto con el que la tecnología ya se comparaba, aún por revisar. Una vulnerabilidad ya detectada que entra después en un catálogo se anuncia una vez, como ahora explotada, si está en las alertas.
 
 ## Exportación
 
@@ -130,7 +130,7 @@ El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualq
 Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades aún por revisar, en las versiones en las alertas. El correo incluye una vulnerabilidad crítica o alta, o con explotación conocida de cualquier gravedad:
 
 - **Qué se anuncia**: una vulnerabilidad publicada en los últimos 30 días sobre un producto con el que la tecnología ya se comparaba, cuando es crítica, alta o está incluida como explotada, o una vulnerabilidad conocida que acaba de pasar a crítica o alta.
-- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página. Una vulnerabilidad ya detectada que entra después en un catálogo de explotación permanece en esta página.
+- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página.
 - **Cuánto**: 25 líneas como máximo, una por tecnología y vulnerabilidad, y después un enlace a la página, filtrada en las vulnerabilidades publicadas en los últimos 30 días.
 - **Cuántas veces**: cada persona recibe aviso de una vulnerabilidad en una tecnología una sola vez. Una vulnerabilidad no anunciada en su comprobación no se anuncia nunca más tarde.
 

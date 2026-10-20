@@ -119,7 +119,7 @@ Der Seitenbereich zeigt auch die Kennung **EUVD**, wenn die europäische Zuordnu
 
 Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. **Nur ausgenutzte** über dem Raster behält diese Zeilen (`?exploited=1`). **Filter zurücksetzen** schaltet es aus. Der Export und eine Statusänderung für mehrere Zeilen folgen ihm.
 
-Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jeden Schweregrads, auf den Versionen in den Warnungen, nach denselben Regeln wie eine kritische oder hohe: in den letzten 30 Tagen veröffentlicht, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, noch zu prüfen. Eine bereits erkannte Schwachstelle, die später in einen Katalog aufgenommen wird, bleibt auf dieser Seite.
+Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jeden Schweregrads, auf den Versionen in den Warnungen, nach denselben Regeln wie eine kritische oder hohe: in den letzten 30 Tagen veröffentlicht, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, noch zu prüfen. Eine bereits erkannte Schwachstelle, die später in einen Katalog aufgenommen wird, wird einmal als jetzt bekannt ausgenutzt gemeldet, wenn sie in den Warnungen ist.
 
 ## Export
 
@@ -130,7 +130,7 @@ Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jede
 Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen Schwachstellen, die noch zu prüfen sind, auf den Versionen in den Warnungen. Die E-Mail umfasst eine kritische oder hohe Schwachstelle, oder eine bekanntermaßen ausgenutzte Schwachstelle jeden Schweregrads:
 
 - **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, wenn sie kritisch, hoch oder als ausgenutzt geführt ist, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
-- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite. Eine bereits erkannte Schwachstelle, die später in einen Ausnutzungskatalog aufgenommen wird, bleibt auf dieser Seite.
+- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite.
 - **Wie viel**: höchstens 25 Zeilen, eine pro Technologie und Schwachstelle, dann ein Link zur Seite, gefiltert auf die in den letzten 30 Tagen veröffentlichten Schwachstellen.
 - **Wie oft**: Jede Person erfährt von einer Schwachstelle einer Technologie einmal. Eine Schwachstelle, die bei ihrer Prüfung nicht gemeldet wurde, wird auch später nicht gemeldet.
 

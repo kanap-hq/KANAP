@@ -119,7 +119,7 @@ The side panel also shows the **EUVD** identifier when the European mapping has 
 
 The list opens with actively exploited vulnerabilities first, then the most severe. **Exploited only**, above the grid, keeps those rows (`?exploited=1`). **Reset filters** turns it off. The export and a change of state in bulk keep it.
 
-The email to the IT owners announces an exploited vulnerability of any severity, on the versions in the alerts, under the same rules as a critical or high one: published within the last 30 days, on a product the technology was already compared on, still to review. A vulnerability already detected that later joins an exploitation catalog stays on this page.
+The email to the IT owners announces an exploited vulnerability of any severity, on the versions in the alerts, under the same rules as a critical or high one: published within the last 30 days, on a product the technology was already compared on, still to review. A vulnerability already detected that later joins an exploitation catalog is announced once, as now known to be exploited, when it is in the alerts.
 
 ## Export
 
@@ -130,7 +130,7 @@ The email to the IT owners announces an exploited vulnerability of any severity,
 After each check, the IT owners of a technology receive one email about its new vulnerabilities still to review, on the versions in the alerts. The email includes a vulnerability that is critical or high, or known to be exploited at any severity:
 
 - **What is announced**: a vulnerability published within the last 30 days on a product the technology was already compared on, when it is critical, high or listed as exploited, or a known vulnerability that has just become critical or high.
-- **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page. A vulnerability already detected that later joins an exploitation catalog stays on this page.
+- **What is not**: the first comparison of a technology, or of a CPE identifier you just added, is silent. Its results wait on this page.
 - **How much**: 25 lines at most, one per technology and vulnerability, then a link to the page, filtered on the vulnerabilities published within the last 30 days.
 - **How often**: each person hears about a vulnerability on a technology once. A vulnerability not announced at its check is never announced later.
 
