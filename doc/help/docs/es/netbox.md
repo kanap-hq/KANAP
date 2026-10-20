@@ -7,10 +7,10 @@ El reparto de responsabilidades es deliberado. Netbox sigue siendo la referencia
 ## Dónde encontrarlo
 
 - Espacio de trabajo: **Panorama IT**
-- Ruta: **Panorama IT > Netbox**
-- Ruta: `/it/netbox`
+- Ruta: **Panorama IT > Configuración**, pestaña **Netbox**
+- Ruta: `/it/settings?tab=netbox`. La dirección anterior `/it/netbox` abre la misma pestaña.
 - Configuración de la conexión: **Administración > Integraciones**
-- Permiso: `infrastructure:admin`, tanto para la tarjeta de conexión como para la página de sincronización
+- Permiso: `infrastructure:admin`, tanto para la tarjeta de conexión como para la pestaña **Netbox**. Con este permiso, la entrada **Configuración** del menú del Panorama IT aparece aunque usted no vea las listas de la pestaña **Listas**.
 - Disponible en la nube y en la edición on-premise. No hay ningún indicador de funcionalidad que activar.
 
 ---
@@ -39,13 +39,13 @@ Vaya a **Administración > Integraciones** y abra la tarjeta **Inventario de Net
 | **Sincronización automática** | Se ejecuta cada hora y aplica los cambios por su cuenta. Déjela desactivada hasta que la primera ejecución le parezca correcta. |
 | **Entorno de los nuevos activos** | Se aplica a los activos que crea esta integración. Después no se cambia nunca. |
 
-**Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a **Panorama IT > Netbox**.
+**Probar conexión** hace una llamada de solo lectura e indica la versión de Netbox encontrada, o el motivo del fallo. Ejecútela después de cada cambio de dirección o de token. Una vez guardada la configuración, la tarjeta ofrece un enlace **Configurar la sincronización**, que lleva a la pestaña **Netbox** de **Panorama IT > Configuración**.
 
 ---
 
 ## Elegir qué se importa
 
-Abra la pestaña **Correspondencias** en la página de Netbox. Ahí hay tres tablas. Las dos primeras deciden todo el alcance de la importación.
+En la pestaña **Netbox**, abra **Correspondencias**. Ahí hay cuatro tablas. Las dos primeras deciden todo el alcance de la importación.
 
 - **Rol de Netbox > Tipo de activo KANAP**. Cada rol de equipo que Netbox conoce recibe un tipo de activo, o **No importar**.
 - **Sitio de Netbox > Ubicación KANAP**. Cada sitio de Netbox recibe una de sus ubicaciones, o **No importar**.
@@ -69,6 +69,22 @@ Las filas vienen rellenadas cuando KANAP ve la respuesta: el mismo nombre, o la 
 Esta tabla no es un filtro. Una plataforma que quede en **Sin correspondencia** nunca deja nada fuera de la importación. El equipo entra y su sistema operativo se queda tal como está en KANAP. Asocie la plataforma más tarde y la siguiente ejecución rellena el campo.
 
 Netbox concede permisos de lectura por tipo de objeto, así que un token autorizado a leer equipos, roles y sitios puede aun así tener vedadas las plataformas. Los roles y los sitios siguen funcionando y la importación no se ve afectada. Solo esta sección queda vacía, y dice por qué.
+
+### Clústeres
+
+La sección **Clústeres** asocia cada clúster de Netbox con un clúster de KANAP: un activo marcado como clúster y en servicio. Cada fila muestra cuántas máquinas virtuales contiene el clúster de Netbox. Se sugiere un clúster de KANAP con el mismo nombre y, como en el resto, una sugerencia solo cuenta cuando pulsa **Guardar correspondencias**.
+
+En la siguiente ejecución, cada máquina virtual de un clúster asociado se añade a las relaciones **Contiene** de su clúster de KANAP. Una tecnología instalada en el clúster llega entonces a la máquina y a las aplicaciones alojadas en ella. Una máquina cuyo único cambio es su clúster aparece en **Por actualizar**, con una línea **Clúster**. Una máquina que crea la ejecución entra en su clúster de inmediato.
+
+La importación solo añade:
+
+- Una máquina que ya está en otro clúster de KANAP se queda ahí. La vista previa lo indica en la fila de la máquina, para que pueda quitar esa relación a mano si está desfasada.
+- Cambiar una correspondencia añade las máquinas al nuevo clúster y las mantiene en el antiguo.
+- Una máquina que saca de su clúster vuelve en la siguiente ejecución, mientras esté en ese clúster de Netbox y la correspondencia exista. Para sacarla de forma definitiva, quite primero la correspondencia y después la relación.
+
+Un clúster de Netbox que quede en **Sin correspondencia** no vincula nada y no bloquea la importación. La vista previa lo menciona una vez. Una correspondencia con un activo eliminado, retirado o que ya no es un clúster tampoco vincula nada, y cada ejecución la señala como aviso. No le impide guardar las demás correspondencias.
+
+Los hosts no se vinculan: los miembros de un clúster los sigue gestionando usted desde la ficha del clúster. Si el token de API no puede leer los clústeres, la sección lo indica y el resto de la pestaña sigue funcionando.
 
 ---
 
@@ -215,9 +231,9 @@ Una ejecución manual y una ejecución programada no pueden solaparse: si ya hay
 
 ---
 
-## La página de gestión
+## La pestaña Netbox
 
-**Panorama IT > Netbox** es donde se trabaja una vez configurada la conexión. La banda superior muestra la última ejecución: cuándo fue, si se inició a mano o de forma automática, cuánto duró, su resultado, y cuántos objetos están vinculados o necesitan atención.
+La pestaña **Netbox** de **Panorama IT > Configuración** es donde se trabaja una vez configurada la conexión. La banda superior muestra la última ejecución: cuándo fue, si se inició a mano o de forma automática, cuánto duró, su resultado, y cuántos objetos están vinculados o necesitan atención.
 
 Debajo, la pestaña **Objetos** enumera todos los objetos de Netbox dentro del alcance, filtrados por estado.
 
@@ -266,6 +282,8 @@ El widget no molesta cuando no hay nada que hacer: una línea que dice que la si
 | La ejecución ha fallado después de unos pocos objetos | Diez objetos seguidos no se han podido guardar, así que la ejecución se ha detenido. La causa suele ser la misma para todos, y los detalles están en el registro del servidor. |
 | «Netbox ha devuelto más páginas de las previstas. Algunos objetos no se han revisado.» | El inventario es más grande de lo que una ejecución lee. Lo leído se aplica, y no se marca nada como ausente. Reduzca el alcance en **Correspondencias** para que la ejecución cubra lo que le importa. |
 | Una sub-ubicación avisa de que su nombre ya está en uso | Dos ubicaciones de Netbox de ese sitio comparten el nombre, o dos sitios asignados apuntan a la misma ubicación de KANAP y cada uno contiene una ubicación con ese nombre. Renombre una de ellas en Netbox, o fusiónelas allí. Los equipos se importan en cualquier caso, sin sub-ubicación. |
+| «Netbox no devolvió sus clústeres» | El token de API no puede leer los clústeres. Déle permiso sobre `virtualization.cluster` en Netbox, o déjelo así: los equipos se siguen importando, y solo la vinculación de las máquinas virtuales a su clúster queda fuera de alcance. |
+| Una máquina virtual no se vinculó a su clúster | Su clúster de Netbox no tiene correspondencia en **Correspondencias > Clústeres**, o la correspondencia apunta a un activo retirado o que ya no es un clúster. Corrija la correspondencia y vuelva a ejecutar. |
 | «Netbox no ha devuelto sus ubicaciones» | El token de API no puede leer las ubicaciones. Déle permiso sobre `dcim.location` en Netbox, o déjelo así: la importación de equipos no se ve afectada. |
 
 ---

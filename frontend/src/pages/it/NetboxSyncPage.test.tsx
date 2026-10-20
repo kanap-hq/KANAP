@@ -1,6 +1,6 @@
 import React from 'react';
 import '../../i18n';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -159,7 +159,7 @@ const MAPPING_OPTIONS_WITH_OS_SUGGESTION = {
   suggested_os_map: { 'debian-12': 'Debian 12 (bookworm)' },
 };
 
-function renderPage(initialPath = '/it/netbox') {
+function renderPage(initialPath = '/it/settings?tab=netbox') {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
@@ -228,14 +228,14 @@ describe('NetboxSyncPage', () => {
   });
 
   it('honours the state query parameter', async () => {
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('AST-9')).toBeInTheDocument();
   });
 
   it('shows the KANAP asset type of a linked object, not the Netbox object type', async () => {
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('par-nas-01')).toBeInTheDocument();
     expect(screen.getByText('Network switch')).toBeInTheDocument();
@@ -349,6 +349,36 @@ describe('NetboxSyncPage', () => {
     fireEvent.click(await screen.findByText('Mappings'));
   }
 
+  it('shows a translated message when the mapping options fail with a server error', async () => {
+    (apiClient.get as any).mockImplementation((url: string) => {
+      if (url === '/netbox/status') return Promise.resolve(STATUS);
+      if (url === '/netbox/mapping-options') {
+        return Promise.reject({ response: { status: 500, data: { message: 'Internal server error', error: 'Internal Server Error' } } });
+      }
+      if (url === '/netbox/records') return Promise.resolve({ items: [], total: 0 });
+      throw new Error(`Unexpected GET ${url}`);
+    });
+
+    renderPage();
+    fireEvent.click(await screen.findByText('Mappings'));
+
+    expect(await screen.findByText('The Netbox roles and sites could not be loaded.')).toBeInTheDocument();
+    expect(screen.queryByText('Internal server error')).not.toBeInTheDocument();
+    expect(screen.queryByText('Internal Server Error')).not.toBeInTheDocument();
+  });
+
+  it('keeps a business error from Netbox as the server wrote it', async () => {
+    await openMappings(MAPPING_OPTIONS);
+    (apiClient.put as any).mockRejectedValue({
+      response: { status: 400, data: { message: 'Set up the Netbox connection first, then save the matches.', error: 'Bad Request' } },
+    });
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+
+    expect(await screen.findByText('Set up the Netbox connection first, then save the matches.')).toBeInTheDocument();
+    expect(screen.queryByText('The mappings could not be saved.')).not.toBeInTheDocument();
+  });
+
   it('matches each Netbox platform with a KANAP operating system, suggestion included', async () => {
     await openMappings(MAPPING_OPTIONS_WITH_OS_SUGGESTION);
 
@@ -405,6 +435,154 @@ describe('NetboxSyncPage', () => {
     expect(screen.getByText('Operating systems')).toBeInTheDocument();
     expect(screen.getByText('Netbox lists no platform, so there is nothing to match here.')).toBeInTheDocument();
     expect(screen.queryByText('Netbox platform')).not.toBeInTheDocument();
+  });
+
+  /** Clusters are matched by Netbox id with a KANAP cluster asset, never by slug. */
+  const MAPPING_OPTIONS_WITH_CLUSTERS = {
+    ...MAPPING_OPTIONS,
+    clusters: [
+      { id: '7', name: 'Paris vSphere', vm_count: 4 },
+      { id: '8', name: 'Gouda vSphere', vm_count: 0 },
+    ],
+    clusters_unavailable: false,
+    kanap_clusters: [
+      { id: 'cl-gouda', name: 'GOU-VSPHERE-CL01' },
+      { id: 'cl-paris', name: 'PAR-VSPHERE-CL01' },
+    ],
+    // Cluster 9 left Netbox; its saved match keeps a row under the stored name.
+    cluster_map: { 7: 'cl-paris', 9: 'cl-gone' },
+    cluster_names: { 9: 'Parma vSphere' },
+    suggested_cluster_map: { 8: 'cl-gouda' },
+  };
+
+  it('matches each Netbox cluster with a KANAP cluster, suggestion included', async () => {
+    await openMappings(MAPPING_OPTIONS_WITH_CLUSTERS);
+
+    expect(await screen.findByText('Clusters')).toBeInTheDocument();
+    expect(screen.getByText(/nothing is removed/)).toBeInTheDocument();
+    expect(screen.getByText('Netbox cluster')).toBeInTheDocument();
+    expect(screen.getByText('KANAP cluster')).toBeInTheDocument();
+    expect(screen.getByText('4 virtual machines')).toBeInTheDocument();
+    expect(screen.getByText('PAR-VSPHERE-CL01')).toBeInTheDocument();
+    expect(screen.getByText('GOU-VSPHERE-CL01')).toBeInTheDocument();
+    // A saved match that no longer names a usable cluster never shows an id.
+    expect(screen.getByText('Parma vSphere')).toBeInTheDocument();
+    expect(screen.getByText('No longer in Netbox')).toBeInTheDocument();
+    expect(screen.getByText('Asset no longer available')).toBeInTheDocument();
+    expect(screen.queryByText('cl-gone')).not.toBeInTheDocument();
+    // One unsaved role match plus one unsaved cluster match.
+    expect(screen.getAllByText('Suggested')).toHaveLength(2);
+    expect(screen.getByText('2 matches are not saved yet. They decide nothing until you save.'))
+      .toBeInTheDocument();
+  });
+
+  it('saves the cluster matches with the Netbox names beside them', async () => {
+    (apiClient.put as any).mockImplementation((url: string, body: any) => {
+      if (url !== '/netbox/mapping') throw new Error(`Unexpected PUT ${url}`);
+      return Promise.resolve(body);
+    });
+
+    await openMappings(MAPPING_OPTIONS_WITH_CLUSTERS);
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    const body = (apiClient.put as any).mock.calls[0][1];
+    expect(body.cluster_map).toEqual({ 7: 'cl-paris', 8: 'cl-gouda', 9: 'cl-gone' });
+    expect(body.cluster_names).toEqual({ 7: 'Paris vSphere', 8: 'Gouda vSphere' });
+  });
+
+  it('says why clusters cannot be matched when Netbox refuses to list them', async () => {
+    await openMappings({ ...MAPPING_OPTIONS_WITH_CLUSTERS, clusters: [], clusters_unavailable: true, cluster_map: {} });
+
+    expect(await screen.findByText('Clusters')).toBeInTheDocument();
+    expect(screen.getByText(/Check that the API token can read clusters/)).toBeInTheDocument();
+    expect(screen.queryByText('Netbox cluster')).not.toBeInTheDocument();
+  });
+
+  it('saves the other matches and leaves the cluster ones alone when Netbox refuses to list its clusters', async () => {
+    (apiClient.put as any).mockImplementation((_url: string, body: any) => Promise.resolve(body));
+    // A saved match on a cluster asset retired since: the backend would refuse it if sent.
+    await openMappings({ ...MAPPING_OPTIONS_WITH_CLUSTERS, clusters: [], clusters_unavailable: true });
+
+    expect(await screen.findByText(/Check that the API token can read clusters/)).toBeInTheDocument();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    const body = (apiClient.put as any).mock.calls[0][1];
+    expect(body).toHaveProperty('role_map');
+    expect(body).not.toHaveProperty('cluster_map');
+    expect(body).not.toHaveProperty('cluster_names');
+  });
+
+  it('keeps a match on a cluster asset no longer available visible, and lets it be removed', async () => {
+    (apiClient.put as any).mockImplementation((_url: string, body: any) => Promise.resolve(body));
+    await openMappings({ ...MAPPING_OPTIONS_WITH_CLUSTERS, cluster_map: { 7: 'cl-retired' }, cluster_names: {} });
+
+    const stale = await screen.findByText('Asset no longer available');
+    fireEvent.mouseDown(stale);
+    fireEvent.click(within(await screen.findByRole('listbox')).getByRole('option', { name: 'No match' }));
+    expect(screen.queryByText('Asset no longer available')).not.toBeInTheDocument();
+
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    // An empty choice is how a match is removed: the server drops it.
+    expect((apiClient.put as any).mock.calls[0][1].cluster_map).toEqual({ 7: '', 8: 'cl-gouda' });
+  });
+
+  it('leaves the cluster matches alone on a server that does not match clusters yet', async () => {
+    (apiClient.put as any).mockImplementation((_url: string, body: any) => Promise.resolve(body));
+    await openMappings(MAPPING_OPTIONS);
+
+    expect(await screen.findByText('Operating systems')).toBeInTheDocument();
+    expect(screen.queryByText('Clusters')).not.toBeInTheDocument();
+    fireEvent.click((await screen.findAllByRole('button', { name: 'Save mappings' }))[0]);
+    await waitFor(() => expect((apiClient.put as any).mock.calls).toHaveLength(1));
+    expect((apiClient.put as any).mock.calls[0][1]).not.toHaveProperty('cluster_map');
+  });
+
+  it('shows the cluster a virtual machine joins and the clusters nobody matched', async () => {
+    (apiClient.post as any).mockImplementation((url: string) => {
+      if (url === '/netbox/sync/preview') {
+        return Promise.resolve({
+          ...PREVIEW,
+          rows: [
+            ...PREVIEW.rows,
+            {
+              external_type: 'vm', external_id: '50', external_name: 'par-app-01',
+              external_url: 'https://netbox.internal/virtualization/virtual-machines/50/',
+              action: 'update', asset: { id: 'asset-50', name: 'par-app-01', asset_reference: 'AST-50' },
+              matched_by: 'link', candidates: [], skip_reason: null,
+              diffs: [{ field: 'cluster', before: 'GOU-VSPHERE-CL01', after: 'PAR-VSPHERE-CL01' }],
+              warnings: [{
+                code: 'cluster_other_present',
+                params: { name: 'par-app-01', value: 'GOU-VSPHERE-CL01' },
+                text: 'other fallback',
+              }],
+            },
+            {
+              external_type: 'vm', external_id: '54', external_name: 'new-app-01',
+              external_url: 'https://netbox.internal/virtualization/virtual-machines/54/',
+              action: 'create', asset: null, matched_by: null, candidates: [], skip_reason: null,
+              diffs: [{ field: 'cluster', before: null, after: 'GOU-VSPHERE-CL01' }],
+              warnings: [],
+            },
+          ],
+          notices: [{ code: 'cluster_not_mapped', params: { value: 'Parma vSphere' }, text: 'unmapped fallback' }],
+        });
+      }
+      throw new Error(`Unexpected POST ${url}`);
+    });
+    await openPreview();
+
+    expect(screen.getByText('Cluster: GOU-VSPHERE-CL01 → PAR-VSPHERE-CL01')).toBeInTheDocument();
+    // A machine the run creates shows the cluster it joins.
+    expect(screen.getByText('new-app-01')).toBeInTheDocument();
+    expect(screen.getByText(/^Cluster: .+ → GOU-VSPHERE-CL01$/)).toBeInTheDocument();
+    expect(screen.getByText(
+      'The Netbox cluster "Parma vSphere" is not matched with a KANAP cluster, so its virtual machines were not attached to one.',
+    )).toBeInTheDocument();
+    expect(screen.getByText(
+      'KANAP also places the virtual machine "par-app-01" in GOU-VSPHERE-CL01. That relation was kept: remove it by hand if it is out of date.',
+    )).toBeInTheDocument();
   });
 
   it('points at the mappings when no match is saved, instead of listing skipped objects', async () => {
@@ -502,7 +680,7 @@ describe('NetboxSyncPage', () => {
       throw new Error(`Unexpected GET ${url}`);
     });
 
-    renderPage('/it/netbox?state=linked');
+    renderPage('/it/settings?tab=netbox&state=linked');
 
     expect(await screen.findByText('Netbox reports this object as failed.')).toBeInTheDocument();
     expect(screen.queryByText(/SHOULD NOT BE SHOWN/)).not.toBeInTheDocument();

@@ -56,13 +56,13 @@ const SearchAllInputSchema = z.object({
 
 const GetEntityContextInputSchema = z.object({
   entity_type: AiContextEntityTypeSchema.describe(`One of ${CONTEXT_ENTITY_TYPE_SUMMARY}.`),
-  entity_id: z.string().trim().min(1).describe('The UUID or reference of the record, such as APP-4, AST-9, PRJ-12, REQ-7 or T-42.'),
+  entity_id: z.string().trim().min(1).describe('The UUID or reference of the record, such as APP-4, AST-9, PRJ-12, REQ-7, T-42 or TEC-3.'),
 });
 
 const GetEntityDetailInputSchema = z.object({
   entity_type: AiQueryEntityTypeSchema.describe('The entity family of the record.'),
   entity_id: z.string().trim().min(1)
-    .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12 or BL-5.'),
+    .describe('The UUID of the record, or its reference where the family has one, such as APP-4, AST-9, PRJ-12, REQ-7, T-42, DOC-3, INC-12, BL-5 or TEC-3.'),
   year: z.number().int().min(1900).max(3000).optional()
     .describe('Optional fiscal or calendar year for year-backed metrics, on companies and departments.'),
 });
@@ -328,7 +328,7 @@ export class AiToolRegistry {
         {
           name: 'query_entities',
           category: 'authoritative',
-          description: 'Lists the records of one entity family with server-side filters, sort and pagination, and returns the exact `total`. Each item carries its created_at and updated_at. `filters_ignored` lists the filters the server could not apply: the items are then not the requested set. `sort` is the order the items are in. `sort_ignored` names a requested sort field that is not supported: the items are then in the default order, and `sortable_fields` lists the fields a new query can sort by, which a question about order (latest, oldest, largest, first) needs. Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), they tie, which a page of one item cannot show. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the returned amounts; an item\'s own `currency` is the one its amounts were entered in.',
+          description: 'Lists the records of one entity family with server-side filters, sort and pagination, and returns the exact `total`. Each item carries its created_at and updated_at. `filters_ignored` lists the filters the server could not apply: the items are then not the requested set. `sort` is the order the items are in. `sort_ignored` names a requested sort field that is not supported: the items are then in the default order, and `sortable_fields` lists the fields a new query can sort by, which a question about order (latest, oldest, largest, first) needs. Items with the same sort value come in no particular order: when the first items share it (for example the same created_at), they tie, which a page of one item cannot show. A limit above the family\'s maximum is reduced and named in `limit_capped`. On budget lines and contracts, `amounts_currency` and `amounts_currency_note` give the currency of the returned amounts; an item\'s own `currency` is the one its amounts were entered in. On technologies, a question about what is out of support filters `support_status` on `out_of_support` (past every end of support, as the End of support report says); `extended_support` is past the standard end only, and `end_of_standard_support` and `end_of_support` date the first and the last end; each item\'s `versions_in_use` names the versions concerned.',
           inputSchema: QueryEntitiesInputSchema,
           inputSummary: fieldDescriptions(QueryEntitiesInputSchema),
           surfaces: ['chat', 'mcp'],
@@ -415,7 +415,7 @@ export class AiToolRegistry {
         {
           name: 'get_entity_context',
           category: 'inspection',
-          description: 'Returns one application, asset, project, request or task with the records linked to it, by UUID or reference (APP-4, AST-9, PRJ-12, REQ-7, T-42). Applications and assets come with their related applications or assets, linked projects and requests; projects with their source requests, tasks, dependencies, linked applications, assets and documents; requests with their resulting projects, dependencies, linked applications and assets; tasks with their project, converted request, linked applications and assets. Every record also lists the knowledge documents linked to it, and projects and tasks their recent activity. `truncated` is true when the recent activity holds more entries than returned.',
+          description: 'Returns one application, asset, project, request, task or technology with the records linked to it, by UUID or reference (APP-4, AST-9, PRJ-12, REQ-7, T-42, TEC-3). Applications and assets come with their related applications or assets, linked projects and requests, and their technologies (an asset: installed on it or carried to it; an application: declared, or deduced from its servers, for a user who reads technologies); technologies with the servers they are installed on and the applications that declare them or are deduced from those servers (for a user who reads applications); projects with their source requests, tasks, dependencies, linked applications, assets and documents; requests with their resulting projects, dependencies, linked applications and assets; tasks with their project, converted request, linked applications and assets. Every record but a technology also lists the knowledge documents linked to it, and projects and tasks their recent activity. A group with a `total` lists at most 25 records; `truncated` is true when a group or the recent activity holds more entries than returned.',
           inputSchema: GetEntityContextInputSchema,
           inputSummary: fieldDescriptions(GetEntityContextInputSchema),
           surfaces: ['chat', 'mcp'],

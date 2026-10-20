@@ -1,8 +1,9 @@
 import React from 'react';
-import { act, fireEvent, render, screen, within } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { describe, expect, it, vi } from 'vitest';
+import api from '../../../api';
 import { KanapDialogProvider } from '../../../components/design';
 import { createAppTheme } from '../../../config/ThemeContext';
 import TechnologyOverviewTab, { type TechnologyDetail } from './TechnologyOverviewTab';
@@ -65,5 +66,48 @@ describe('TechnologyOverviewTab', () => {
     const thisYear = new Date().getFullYear();
     renderTab({ ...TECHNOLOGY, versions: [{ ...TECHNOLOGY.versions[0], standard_support_end: `${thisYear}-11-12` }] });
     expect(screen.getByText(`12 Nov ${thisYear}`)).toBeInTheDocument();
+  });
+
+  it('asks before deleting a version and names the servers and applications that use it', async () => {
+    vi.mocked(api.delete).mockClear();
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION, id: 'v-used', label: '2019 (1809)', standard_support_end: null, catalog_key: null, servers: 2, applications: 1,
+      }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete version 2019 (1809)' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Delete version 2019 (1809)?')).toBeInTheDocument();
+    expect(within(dialog).getByText('Version 2019 (1809) is used by 2 servers and 1 application. They will show "version unknown".')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
+    expect(api.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes an unused version only after confirmation', async () => {
+    vi.mocked(api.delete).mockReset();
+    vi.mocked(api.delete).mockResolvedValue({ data: {} });
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION, id: 'v-free', label: '22.04 LTS', standard_support_end: null, catalog_key: null, servers: 0, applications: 0,
+      }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete version 22.04 LTS' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Version 22.04 LTS is used by no server and no application. This cannot be undone.')).toBeInTheDocument();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith('/technologies/tech-1/versions/v-free'));
+  });
+
+  it('names no count when the detail did not bring one', async () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{ ...VERSION, id: 'v-plain', label: '16.99-c2check', standard_support_end: null, catalog_key: null }],
+    });
+    fireEvent.click(screen.getByRole('button', { name: 'Delete version 16.99-c2check' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('Version 16.99-c2check will be deleted. This cannot be undone.')).toBeInTheDocument();
+    expect(within(dialog).queryByText(/server/)).not.toBeInTheDocument();
   });
 });

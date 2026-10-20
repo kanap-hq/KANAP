@@ -1,5 +1,6 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { validate as isUuid } from 'uuid';
 import { AiSecretCipherService } from '../ai/ai-secret-cipher.service';
 import { AiAdapterConfig } from '../ai/control-plane/providers/adapter-config.entity';
 import { parseCredentialRef } from '../ai/control-plane/providers/adapter-config.service';
@@ -93,7 +94,15 @@ export type NetboxMappingView = {
   site_map: Record<string, string>;
   /** Netbox platform slug -> KANAP operating system code. Not an import filter. */
   os_map: Record<string, string>;
+  /** Netbox cluster id -> KANAP cluster asset id. Not an import filter. */
+  cluster_map: Record<string, string>;
+  /** Netbox cluster id -> its Netbox name when the match was saved, for display only. */
+  cluster_names: Record<string, string>;
 };
+
+const CLUSTER_MAP_SHAPE_MESSAGE = 'Send the cluster matches as a list of matches, or leave them out to keep the saved ones.';
+const CLUSTER_MAP_ID_MESSAGE = 'A cluster match must name an asset of this workspace.';
+const CLUSTER_MAP_MISSING_MESSAGE = 'A cluster match names an asset that is not in this workspace.';
 
 const NEVER_RAN: NetboxSyncStateView = {
   status: 'never',
@@ -245,6 +254,8 @@ export class NetboxConfigService {
       role_map: roleMap,
       site_map: stringMap(metadata?.site_map),
       os_map: stringMap(metadata?.os_map),
+      cluster_map: stringMap(metadata?.cluster_map),
+      cluster_names: stringMap(metadata?.cluster_names),
     };
   }
 
@@ -330,7 +341,7 @@ export class NetboxConfigService {
   async saveMapping(
     manager: EntityManager,
     tenantId: string,
-    input: { role_map?: unknown; site_map?: unknown; os_map?: unknown },
+    input: { role_map?: unknown; site_map?: unknown; os_map?: unknown; cluster_map?: unknown; cluster_names?: unknown },
   ): Promise<NetboxMappingView> {
     const existing = await this.getConfig(manager, tenantId);
     if (!existing) {
@@ -353,10 +364,74 @@ export class NetboxConfigService {
       }
       metadata.os_map = stringMap(input.os_map);
     }
+    // Same rule as the operating systems: a page that does not know about
+    // cluster matches must not wipe the ones already saved. Sent, they replace
+    // the stored map in full. Only a new or changed match has to name a cluster
+    // of this workspace: a saved match whose cluster was retired or deleted
+    // since stays as it is (the run reports it), so it never blocks saving the
+    // other matches, and removing it is always allowed.
+    if (input.cluster_map !== undefined) {
+      if (asRecord(input.cluster_map) == null) {
+        throw new BadRequestException(CLUSTER_MAP_SHAPE_MESSAGE);
+      }
+      const storedMap = stringMap(metadata.cluster_map);
+      const clusterMap: Record<string, string> = {};
+      const changed: Record<string, string> = {};
+      for (const [clusterId, assetId] of Object.entries(stringMap(input.cluster_map))) {
+        const value = assetId.toLowerCase();
+        clusterMap[clusterId] = value;
+        if (storedMap[clusterId]?.toLowerCase() !== value) changed[clusterId] = value;
+      }
+      await this.assertClusterTargets(manager, tenantId, changed);
+      metadata.cluster_map = clusterMap;
+      // The Netbox name is kept next to each match for display. A name the
+      // page did not send keeps the one stored before.
+      const sentNames = stringMap(input.cluster_names);
+      const storedNames = stringMap(metadata.cluster_names);
+      const names: Record<string, string> = {};
+      for (const clusterId of Object.keys(clusterMap)) {
+        const name = sentNames[clusterId] ?? storedNames[clusterId];
+        if (name) names[clusterId] = name.slice(0, 200);
+      }
+      metadata.cluster_names = names;
+    }
     existing.metadata_json = metadata;
     existing.updated_at = new Date();
     await this.repo(manager).save(existing);
     return this.getMapping(existing);
+  }
+
+  /**
+   * Every match given names an asset of this tenant that is a cluster and is
+   * not retired. A miss says nothing about any other workspace.
+   */
+  private async assertClusterTargets(
+    manager: EntityManager,
+    tenantId: string,
+    clusterMap: Record<string, string>,
+  ): Promise<void> {
+    const ids = [...new Set(Object.values(clusterMap))];
+    if (ids.length === 0) return;
+    if (ids.some((id) => !isUuid(id))) {
+      throw new BadRequestException(CLUSTER_MAP_ID_MESSAGE);
+    }
+    const rows: Array<{ id: string; name: string; is_cluster: boolean; status: string | null }> = await manager.query(
+      `SELECT id, name, is_cluster, status
+       FROM assets
+       WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, ids],
+    );
+    const byId = new Map(rows.map((row) => [String(row.id).toLowerCase(), row]));
+    for (const id of ids) {
+      const asset = byId.get(id.toLowerCase());
+      if (!asset) throw new BadRequestException(CLUSTER_MAP_MISSING_MESSAGE);
+      if (asset.is_cluster !== true) {
+        throw new BadRequestException(`"${asset.name}" is not a cluster, so it cannot be matched.`);
+      }
+      if (String(asset.status ?? '').toLowerCase() === 'retired') {
+        throw new BadRequestException(`"${asset.name}" is retired, so it cannot be matched to a Netbox cluster.`);
+      }
+    }
   }
 
   /**

@@ -7,10 +7,10 @@ Die Aufteilung der Zuständigkeiten ist bewusst gewählt. Netbox bleibt die Refe
 ## Wo Sie es finden
 
 - Arbeitsbereich: **IT-Landschaft**
-- Pfad: **IT-Landschaft > Netbox**
-- Route: `/it/netbox`
+- Pfad: **IT-Landschaft > Einstellungen**, Tab **Netbox**
+- Route: `/it/settings?tab=netbox`. Die frühere Adresse `/it/netbox` öffnet denselben Tab.
 - Verbindungseinstellungen: **Administration > Integrationen**
-- Berechtigung: `infrastructure:admin`, sowohl für die Verbindungskarte als auch für die Synchronisierungsseite
+- Berechtigung: `infrastructure:admin`, sowohl für die Verbindungskarte als auch für den Tab **Netbox**. Mit dieser Berechtigung erscheint der Eintrag **Einstellungen** im Menü der IT-Landschaft, auch wenn Sie die Listen des Tabs **Listen** nicht sehen.
 - Verfügbar in der Cloud und in der On-Premise-Edition. Es gibt kein Feature-Flag, das aktiviert werden muss.
 
 ---
@@ -39,13 +39,13 @@ Gehen Sie zu **Administration > Integrationen** und öffnen Sie die Karte **Netb
 | **Automatische Synchronisierung** | Läuft stündlich und wendet die Änderungen selbstständig an. Lassen Sie sie aus, bis Ihr erster Lauf stimmig aussieht. |
 | **Umgebung für neue Assets** | Gilt für die Assets, die diese Integration anlegt. Danach wird sie nie geändert. |
 
-**Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zu **IT-Landschaft > Netbox** führt.
+**Verbindung testen** führt einen reinen Leseaufruf aus und meldet die gefundene Netbox-Version oder den Grund des Fehlschlags. Führen Sie den Test nach jeder Änderung der Adresse oder des Tokens aus. Sind die Einstellungen gespeichert, bietet die Karte den Link **Synchronisierung einrichten** an, der Sie zum Tab **Netbox** unter **IT-Landschaft > Einstellungen** führt.
 
 ---
 
 ## Auswählen, was importiert wird
 
-Öffnen Sie auf der Netbox-Seite den Tab **Zuordnungen**. Dort stehen drei Tabellen. Die ersten beiden bestimmen den gesamten Umfang des Imports.
+Öffnen Sie im Tab **Netbox** den Bereich **Zuordnungen**. Dort stehen vier Tabellen. Die ersten beiden bestimmen den gesamten Umfang des Imports.
 
 - **Netbox-Rolle > KANAP-Asset-Typ**. Jede Geräterolle, die Netbox kennt, erhält einen Asset-Typ oder **Nicht importieren**.
 - **Netbox-Standort > KANAP-Standort**. Jeder Netbox-Standort erhält einen Ihrer Standorte oder **Nicht importieren**.
@@ -69,6 +69,22 @@ Die Zeilen sind vorbelegt, wenn KANAP die Antwort erkennt: derselbe Name oder di
 Diese Tabelle ist kein Filter. Eine Plattform, die auf **Keine Zuordnung** bleibt, hält nie etwas vom Import ab. Das Gerät kommt herein, und sein Betriebssystem bleibt in KANAP genau so, wie es ist. Ordnen Sie die Plattform später zu, und der nächste Lauf füllt das Feld.
 
 Netbox vergibt Leserechte je Objekttyp. Ein Token, das Geräte, Rollen und Standorte lesen darf, kann bei den Plattformen trotzdem abgewiesen werden. Rollen und Standorte funktionieren weiter, und der Import ist davon nicht betroffen. Nur dieser Abschnitt bleibt leer, und er nennt den Grund.
+
+### Cluster
+
+Der Abschnitt **Cluster** ordnet jedem Netbox-Cluster einen KANAP-Cluster zu: ein Asset, das als Cluster markiert und in Betrieb ist. Jede Zeile zeigt, wie viele virtuelle Maschinen der Netbox-Cluster enthält. Ein KANAP-Cluster mit demselben Namen wird vorgeschlagen, und wie überall zählt ein Vorschlag erst, wenn Sie **Zuordnungen speichern** drücken.
+
+Beim nächsten Lauf wird jede virtuelle Maschine eines zugeordneten Clusters zu den Beziehungen **Enthält** ihres KANAP-Clusters hinzugefügt. Eine auf dem Cluster installierte Technologie erreicht dann die Maschine und die darauf gehosteten Anwendungen. Eine Maschine, bei der sich nur der Cluster ändert, erscheint unter **Zu aktualisieren**, mit einer Zeile **Cluster**. Eine Maschine, die der Lauf anlegt, kommt sofort in ihren Cluster.
+
+Der Import fügt nur hinzu:
+
+- Eine Maschine, die bereits in einem anderen KANAP-Cluster ist, bleibt dort. Die Vorschau weist in der Zeile der Maschine darauf hin, damit Sie diese Beziehung von Hand entfernen können, wenn sie veraltet ist.
+- Wenn Sie eine Zuordnung ändern, kommen die Maschinen in den neuen Cluster und bleiben im alten.
+- Eine Maschine, die Sie aus ihrem Cluster nehmen, kommt beim nächsten Lauf zurück, solange sie in diesem Netbox-Cluster ist und die Zuordnung besteht. Um sie dauerhaft herauszunehmen, entfernen Sie zuerst die Zuordnung, dann die Beziehung.
+
+Ein Netbox-Cluster, der auf **Keine Zuordnung** bleibt, ordnet nichts zu und blockiert den Import nicht. Die Vorschau erwähnt ihn einmal. Eine Zuordnung zu einem Asset, das gelöscht, ausgemustert oder kein Cluster mehr ist, ordnet ebenfalls nichts zu, und jeder Lauf meldet sie als Warnung. Sie hindert Sie nicht daran, die anderen Zuordnungen zu speichern.
+
+Die Hosts werden nicht zugeordnet: Die Mitglieder eines Clusters verwalten Sie weiterhin selbst auf der Seite des Clusters. Kann das API-Token keine Cluster lesen, sagt der Abschnitt das, und der Rest des Tabs funktioniert weiter.
 
 ---
 
@@ -215,9 +231,9 @@ Ein manueller und ein geplanter Lauf können sich nicht überschneiden: Läuft b
 
 ---
 
-## Die Verwaltungsseite
+## Der Tab Netbox
 
-Auf **IT-Landschaft > Netbox** findet die Arbeit statt, sobald die Verbindung eingerichtet ist. Der Streifen oben zeigt den letzten Lauf: wann er stattfand, ob er manuell oder automatisch gestartet wurde, wie lange er dauerte, sein Ergebnis und wie viele Objekte verknüpft sind oder geprüft werden müssen.
+Im Tab **Netbox** unter **IT-Landschaft > Einstellungen** findet die Arbeit statt, sobald die Verbindung eingerichtet ist. Der Streifen oben zeigt den letzten Lauf: wann er stattfand, ob er manuell oder automatisch gestartet wurde, wie lange er dauerte, sein Ergebnis und wie viele Objekte verknüpft sind oder geprüft werden müssen.
 
 Darunter listet der Tab **Objekte** jedes Netbox-Objekt im Umfang auf, gefiltert nach Status.
 
@@ -266,6 +282,8 @@ Die Kachel hält sich zurück, wenn es nichts zu tun gibt: eine Zeile, dass die 
 | Der Lauf ist nach einer Handvoll Objekte fehlgeschlagen | Zehn Objekte nacheinander konnten nicht gespeichert werden, deshalb wurde der Lauf abgebrochen. Die Ursache ist meist bei allen dieselbe, die Details stehen im Serverprotokoll. |
 | „Netbox hat mehr Seiten geliefert als erwartet. Einige Objekte wurden nicht geprüft.“ | Das Inventar ist größer, als ein Lauf liest. Was gelesen wurde, wird angewendet, und nichts wird als fehlend markiert. Grenzen Sie den Umfang unter **Zuordnungen** ein, damit der Lauf das abdeckt, was für Sie zählt. |
 | Ein Unterstandort warnt, dass sein Name bereits verwendet wird | Zwei Netbox-Locations dieses Standorts teilen sich den Namen, oder zwei zugeordnete Netbox-Standorte zeigen auf denselben KANAP-Standort und führen jeweils eine Location dieses Namens. Benennen Sie eine davon in Netbox um oder führen Sie sie dort zusammen. Die Geräte werden in jedem Fall importiert, ohne Unterstandort. |
+| „Netbox hat seine Cluster nicht zurückgegeben“ | Das API-Token darf keine Cluster lesen. Geben Sie ihm in Netbox die Berechtigung auf `virtualization.cluster`, oder lassen Sie es: Die Geräte werden weiterhin importiert, nur die Zuordnung virtueller Maschinen zu ihrem Cluster ist nicht möglich. |
+| Eine virtuelle Maschine wurde ihrem Cluster nicht zugeordnet | Ihr Netbox-Cluster hat keine Zuordnung unter **Zuordnungen > Cluster**, oder die Zuordnung zeigt auf ein Asset, das ausgemustert oder kein Cluster mehr ist. Korrigieren Sie die Zuordnung und starten Sie den Lauf erneut. |
 | „Netbox hat seine Locations nicht zurückgegeben“ | Das API-Token darf keine Locations lesen. Geben Sie ihm in Netbox die Berechtigung auf `dcim.location`, oder lassen Sie es: Der Geräteimport ist davon nicht betroffen. |
 
 ---

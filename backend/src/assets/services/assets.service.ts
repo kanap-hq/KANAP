@@ -176,6 +176,17 @@ export class AssetsService {
     return this.relationsService.bulkReplaceRelations(assetId, relations, tenantId, userId, opts);
   }
 
+  addRelation(
+    assetId: string,
+    relatedAssetId: string,
+    relationType: 'contains' | 'depends_on',
+    tenantId: string,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ) {
+    return this.relationsService.addRelation(assetId, relatedAssetId, relationType, tenantId, userId, opts);
+  }
+
   // =========================================================================
   // Financial Links (delegated to AssetsRelationsService)
   // =========================================================================

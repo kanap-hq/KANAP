@@ -3,7 +3,8 @@ import 'dotenv/config';
 import type { QueryRunner } from 'typeorm';
 import { assert, inRolledBackTransaction, runSpecs, seedTenant, setTenant } from '../../spend/__tests__/round-inputs.fixtures';
 import { DEFAULT_HOSTING_TYPES } from '../../it-ops-settings/it-ops-settings.service';
-import { EndOfSupportService, supportState } from '../reports/end-of-support.service';
+import { EndOfSupportService } from '../reports/end-of-support.service';
+import { versionSupportSql } from '../reports/version-support';
 import { TechnologyReachService } from '../technology-reach.service';
 import { application, asset, assign, contains, installed, one, technology, version } from './technologies.fixtures';
 
@@ -147,14 +148,25 @@ function service() {
 
 const ALL = { scope: undefined };
 
+/** The shared rule (`versionSupportSql`) on fixed dates, as the report and the assistant read it. */
 async function testSupportState() {
-  const w = { today: '2026-10-16', until: '2027-10-16' };
-  assert.deepEqual(supportState('2020-01-01', '2025-01-01', w), { state: 'out_of_support', date: '2025-01-01' });
-  assert.deepEqual(supportState('2020-01-01', '2028-01-01', w), { state: 'extended_support', date: '2028-01-01' });
-  assert.deepEqual(supportState('2027-01-01', '2030-01-01', w), { state: 'upcoming', date: '2027-01-01' });
-  assert.equal(supportState('2028-01-01', null, w), null, 'beyond the horizon');
-  assert.deepEqual(supportState(null, '2026-01-01', w), { state: 'out_of_support', date: '2026-01-01' }, 'one date is the end');
-  assert.equal(supportState(null, null, w), null);
+  await inRolledBackTransaction(async (runner) => {
+    const support = versionSupportSql('v', `'2026-10-16'::date`);
+    const at = async (standard: string | null, extended: string | null) => {
+      const [row] = await runner.query(
+        `SELECT ${support.state} AS state, to_char(${support.date}, 'YYYY-MM-DD') AS date, to_char(${support.first}, 'YYYY-MM-DD') AS first
+           FROM (SELECT $1::date AS standard_support_end, $2::date AS extended_support_end) v`,
+        [standard, extended],
+      );
+      return row;
+    };
+    assert.deepEqual(await at('2020-01-01', '2025-01-01'), { state: 'out_of_support', date: '2025-01-01', first: '2020-01-01' });
+    assert.deepEqual(await at('2020-01-01', '2028-01-01'), { state: 'extended_support', date: '2028-01-01', first: '2020-01-01' });
+    assert.deepEqual(await at('2027-01-01', '2030-01-01'), { state: 'supported', date: '2027-01-01', first: '2027-01-01' }, 'dated by the standard end');
+    assert.deepEqual(await at(null, '2026-01-01'), { state: 'out_of_support', date: '2026-01-01', first: '2026-01-01' }, 'one date is the end');
+    assert.deepEqual(await at('2026-01-01', '2025-01-01'), { state: 'out_of_support', date: '2026-01-01', first: '2026-01-01' }, 'an extended end before the standard one is no later end');
+    assert.deepEqual(await at(null, null), { state: null, date: null, first: null });
+  });
 }
 
 async function testDeadlines() {

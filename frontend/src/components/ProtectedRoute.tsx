@@ -272,7 +272,15 @@ export default function ProtectedRoute() {
       requirement = seg ? { resource: opsAliases[seg] || seg, level: 'reader' } : null;
     } else if (path.startsWith('/it/')) {
       const seg = path.split('/')[2] || null;
-      requirement = seg ? { resource: itAliases[seg] || seg, level: 'reader' } : null;
+      // Lists need settings. Netbox, on the same page, needs an infrastructure administrator.
+      if (seg === 'settings') {
+        if (!hasLevel('settings', 'reader') && !hasLevel('infrastructure', 'admin')) {
+          return <Navigate to="/403" replace />;
+        }
+        requirement = null;
+      } else {
+        requirement = seg ? { resource: itAliases[seg] || seg, level: 'reader' } : null;
+      }
     } else if (path.startsWith('/master-data/')) {
       const seg = path.split('/')[2] || null;
       requirement = seg ? { resource: masterDataAliases[seg] || seg, level: 'reader' } : null;

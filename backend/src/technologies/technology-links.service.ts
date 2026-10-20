@@ -17,6 +17,12 @@ import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './
 export type LinkOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 
 /**
+ * `keepExistingProvenance`: an existing link keeps its source, reference and observation date.
+ * The link-file import sets it. The screens omit it, so rewriting a link there still makes it manual.
+ */
+export type LinkWriteOptions = { keepExistingProvenance?: boolean };
+
+/**
  * What a caller may see of the applications: none (`null`: no `applications` read right), or all
  * of them, or, for a Business Contributor, those of its participation scope.
  */
@@ -190,13 +196,22 @@ export class TechnologyLinksService {
   /**
    * Install the technology on an asset, with a version (id, or a label resolved and created when
    * missing) or none. Writing an existing link changes its notes and provenance only.
+   * `keepExistingProvenance` leaves that provenance: omitted or equal notes write nothing, and
+   * different notes replace the notes only.
    */
-  async addAssetLink(idOrRef: string, assetId: string, body: LinkInput, opts: LinkOpts, provenance: LinkProvenance = MANUAL_PROVENANCE) {
+  async addAssetLink(
+    idOrRef: string,
+    assetId: string,
+    body: LinkInput,
+    opts: LinkOpts,
+    provenance: LinkProvenance = MANUAL_PROVENANCE,
+    write: LinkWriteOptions = {},
+  ) {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const asset = await this.readAsset(mg, tenantId, assetId);
     const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
-    return this.upsertLink('asset', tech.id, asset.id, versionId, notesOf(body?.notes), provenance, opts);
+    return this.upsertLink('asset', tech.id, asset.id, versionId, notesOf(body?.notes), provenance, opts, write);
   }
 
   /** Change the version or the notes of an installed link: a person wrote it, it becomes manual. */
@@ -377,7 +392,7 @@ export class TechnologyLinksService {
    * Declare (`add`) or withdraw a technology for an application, from the application's side. A
    * declaration names a version or none; withdrawing removes every declaration of the technology
    * by the application. Locks the technology's row like every other write of these links. The
-   * application's visibility is the caller's check.
+   * application's visibility is the caller's check. `write` as for `addAssetLink`.
    */
   async setApplicationTechnology(
     applicationId: string,
@@ -386,6 +401,7 @@ export class TechnologyLinksService {
     body: LinkInput,
     opts: LinkOpts,
     provenance: LinkProvenance = MANUAL_PROVENANCE,
+    write: LinkWriteOptions = {},
   ): Promise<{ ok: true; changed: boolean; link_id?: string | null }> {
     const { manager: mg, tenantId } = opts;
     const appId = await this.readApplicationId(mg, tenantId, applicationId);
@@ -401,7 +417,7 @@ export class TechnologyLinksService {
       return { ok: true, changed: removed.length > 0 };
     }
     const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
-    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts);
+    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
     return { ok: true, changed: res.changed, link_id: res.link_id };
   }
 
@@ -486,7 +502,9 @@ export class TechnologyLinksService {
   /**
    * Insert a link, or, when the same (subject, technology, version) is linked already, write its
    * notes (when given) and provenance. Audited: `create` for a new link, `update` when an existing
-   * one changes (observation dates aside).
+   * one changes (observation dates aside). With `keepExistingProvenance`, an existing link whose
+   * notes are omitted or unchanged is left as stored (no `updated_at`, no audit), and different
+   * notes replace the notes only.
    */
   private async upsertLink(
     side: LinkSide,
@@ -496,6 +514,7 @@ export class TechnologyLinksService {
     notes: string | null,
     provenance: LinkProvenance,
     opts: LinkOpts,
+    write: LinkWriteOptions = {},
   ): Promise<{ ok: true; link_id: string | null; created: boolean; changed: boolean }> {
     const { manager: mg, tenantId } = opts;
     const table = `${side}_technologies`;
@@ -504,12 +523,19 @@ export class TechnologyLinksService {
         WHERE tenant_id = $1 AND ${side}_id = $2 AND technology_id = $3 AND technology_version_id IS NOT DISTINCT FROM $4`,
       [tenantId, subjectId, technologyId, versionId],
     );
+    const keep = write.keepExistingProvenance === true;
+    if (before && keep && (notes === null || notes === before.notes)) {
+      return { ok: true, link_id: before.id, created: false, changed: false };
+    }
+    // INSERT … ON CONFLICT returns rows directly. A bare UPDATE would come back as [rows, count].
+    const assignments = keep
+      ? `notes = COALESCE(EXCLUDED.notes, ${table}.notes), updated_at = now()`
+      : `notes = COALESCE(EXCLUDED.notes, ${table}.notes), source = EXCLUDED.source, source_ref = EXCLUDED.source_ref, observed_at = EXCLUDED.observed_at, updated_at = now()`;
     const [row]: Array<{ id: string; notes: string | null; source: string; source_ref: string | null }> = await mg.query(
       `INSERT INTO ${table} (tenant_id, ${side}_id, technology_id, technology_version_id, notes, source, source_ref, observed_at)
        VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
        ON CONFLICT ON CONSTRAINT ${table}_key DO UPDATE
-         SET notes = COALESCE(EXCLUDED.notes, ${table}.notes), source = EXCLUDED.source,
-             source_ref = EXCLUDED.source_ref, observed_at = EXCLUDED.observed_at, updated_at = now()
+         SET ${assignments}
        RETURNING id, notes, source, source_ref`,
       [tenantId, subjectId, technologyId, versionId, notes, ...provenanceParams(provenance)],
     );

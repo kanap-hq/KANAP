@@ -48,6 +48,9 @@ const COMMON_READ_TOOLS: AiToolName[] = [
   'aggregate_entities',
   'get_filter_values',
   'get_entity_detail',
+  // The related records of one record (what runs on a server, which applications use a
+  // technology), for a question that names it without a reference.
+  'get_entity_context',
 ];
 
 const ENTITY_INSPECTION_TOOLS: AiToolName[] = [
@@ -247,6 +250,8 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   { pattern: /\bT-\d+\b/i, entityType: 'tasks' },
   { pattern: /\bDOC-\d+\b/i, entityType: 'documents' },
   { pattern: /\bINC-\d+\b/i, entityType: 'incidents' },
+  // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
+  { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
 ];
 
 const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }> = [
@@ -260,6 +265,7 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/it\/connections\//i, entityType: 'connections' },
   { pattern: /\/it\/interfaces\//i, entityType: 'interfaces' },
   { pattern: /\/it\/locations\//i, entityType: 'locations' },
+  { pattern: /\/it\/technologies\//i, entityType: 'technologies' },
   { pattern: /\/ops\/contracts\//i, entityType: 'contracts' },
   { pattern: /\/ops\/capex\//i, entityType: 'capex_items' },
   { pattern: /\/ops\/opex\//i, entityType: 'spend_items' },

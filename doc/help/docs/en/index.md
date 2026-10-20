@@ -33,20 +33,23 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 
 ### IT Landscape
 
-**Infrastructure**
-
-- [Locations](locations.md) - Track datacenters and cloud regions
-- [Assets](assets.md) - Manage infrastructure inventory (servers, VMs, containers, cloud instances)
-- [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
-- [Connections](connections.md) - Track network and system connections
-- [Connection Map](connection-map.md) - Visualize connection topology
-- [Administration zones](administration-view.md) - See who administers what: zones, control points, domains and domain controllers
-
 **Applications**
 
 - [Applications](applications.md) - Document your application landscape
 - [Interfaces](interfaces.md) - Map data flows between applications
 - [Interface Map](interface-map.md) - Visualize interface relationships
+
+**Infrastructure**
+
+- [Assets](assets.md) - Manage infrastructure inventory (servers, VMs, containers, cloud instances)
+- [Connections](connections.md) - Track network and system connections
+- [Connection Map](connection-map.md) - Visualize connection topology
+- [Administration zones](administration-view.md) - See who administers what: zones, control points, domains and domain controllers
+
+**Reference data**
+
+- [Locations](locations.md) - Track datacenters and cloud regions
+- [Technologies](technologies.md) - Track the products your applications run on, their versions and their end of support
 
 **Operations**
 
@@ -57,6 +60,7 @@ If you want the shortest path to productivity, start with the Fast Track guides 
 **Settings**
 
 - [IT Landscape Settings](it-ops-settings.md) - Configure dropdown values and catalogs
+- [Netbox synchronisation](netbox.md) - Keep your assets in step with your Netbox inventory, from the **Netbox** tab of the settings
 
 ### Knowledge
 

@@ -52,7 +52,8 @@ function executors(runner: QueryRunner) {
   );
   const aggregateArgs: any[] = Array.from({ length: 23 }, () => ({}));
   aggregateArgs[7] = companies;
-  aggregateArgs[22] = fxRates;
+  aggregateArgs[22] = undefined; // AiPolicyService, optional
+  aggregateArgs[23] = fxRates;
   const queryArgs: any[] = Array.from({ length: 24 }, () => ({}));
   queryArgs[7] = companies;
   return {

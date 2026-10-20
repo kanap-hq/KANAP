@@ -26,6 +26,7 @@ import { SuppliersModule } from '../suppliers/suppliers.module';
 import { Tenant } from '../tenants/tenant.entity';
 import { TenantsModule } from '../tenants/tenants.module';
 import { TasksModule } from '../tasks/tasks.module';
+import { TechnologiesModule } from '../technologies/technologies.module';
 import { UserRole } from '../users/user-role.entity';
 import { UsersModule } from '../users/users.module';
 import { StorageModule } from '../common/storage/storage.module';
@@ -238,6 +239,7 @@ import { BraveSearchService } from './web-search/brave-search.service';
     SuppliersModule,
     TenantsModule,
     TasksModule,
+    TechnologiesModule,
     UsersModule,
   ],
   controllers: [

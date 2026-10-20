@@ -119,7 +119,10 @@ Plaid can currently read these entity families:
 `business_processes`, `capex_items`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`, `spend_items`,
-`suppliers`, `tasks`, and `users`.
+`suppliers`, `tasks`, `technologies`, and `users`.
+
+`get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
+`tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
 
 The core read tools are:
 
@@ -201,13 +204,69 @@ count) stays out of the registry and only appears in the items' metadata.
 Each item carries `created_at` and `updated_at`. Its `summary` is clipped to 300
 characters; `get_entity_detail` has the full text.
 
-Page size: 25 items by default, at most 50, 30 for `applications`, 15 for
+### Technologies
+
+Technologies (right `infrastructure`) are read through their own statement,
+`listAiTechnologies` (`backend/src/ai/query/ai-technologies.query.ts`), because
+several of their fields are computed at read time and still filter, sort and
+aggregate:
+
+- `server_count`: servers the technology is installed on directly, retired
+  assets left out;
+- `application_count`: applications in service that declare it directly, within
+  the user's application read scope (a Business Contributor's own); null for a
+  user who cannot read applications. It filters and sorts but is no aggregate
+  metric, since an aggregate expression cannot carry that scope;
+- the support fields, over the versions in use (on a server in service or
+  declared by an application in service), each version dated by the rule of the
+  End of support report (`versionSupportSql` and `versionInUseSql` in
+  `backend/src/technologies/reports/version-support.ts`, the report's own SQL).
+  A version's first end is its standard end (its extended end without one), its
+  last end the later of the two. Past its last end it is out of support (dated
+  by the last end), past its first end only it is in extended support (dated by
+  the last end), otherwise it is supported (dated by the first end):
+  - `support_status`: the most severe state among the versions in use,
+    `out_of_support`, `extended_support` or `supported`; `unknown` when no
+    version in use has a date. A question about what is out of support filters
+    `out_of_support`; a version in extended support is not out of support;
+  - `end_of_standard_support`: the earliest first end;
+  - `end_of_support`: the earliest last end, after which that version has no
+    support at all (the filter keeps this name);
+  - `versions_in_use` (no filter, no sort): one line per technology with each
+    version in use, its state and date and its servers in service, the most
+    severe first, at most 10 and the others counted.
+
+  Like the report, they count the declarations of every application, whatever
+  the user's application read scope: a version declared only by an application
+  outside that scope still dates the technology. A spec checks that the
+  versions out of support and in extended support are the report's;
+- `open_vulnerabilities`: CVE still to review, null while the vulnerability
+  feed is off.
+
+The other fields are `reference` (`TEC-n`), `name`, `family`, `publisher`,
+`hosting_type`, `lifecycle` and `admin_zone`. `publisher` filters and groups
+without case. `get_entity_detail` adds the versions (end dates, support state and its date,
+whether in use, servers in service per version), the owners by name and the number of contracts (null for
+a user who cannot read contracts, as on the technology page). `get_entity_context` lists the servers the technology
+is installed on (version, operating system or not), and, for a user who reads
+applications, the applications that declare it and those deduced from the
+servers that carry it (`TechnologyReachService`). The context of an asset lists
+its technologies (installed or carried); the context of an application lists
+its declared and deduced technologies, for a user who reads technologies. These
+groups list at most 25 records (`AI_CONTEXT_GROUP_ITEM_LIMIT`) and carry `total`
+and `truncated`; the technology context reads only those 25 servers and
+applications from the database. The chat's read profile (`read_query`) offers
+`get_entity_context` too, so a question that names a server or a technology
+without its reference can reach its related records.
+
+Page size: 25 items by default, at most 50, 30 for `applications` and
+`technologies`, 15 for
 `spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
 larger `limit` is reduced and the result's `limit` is the one applied. The
 values keep a full page under the MCP response cap (64,000 characters,
 `ai-mcp.controller.ts`): on the demo tenant an OPEX or CAPEX line takes about
-2,800 characters (its yearly amounts), an application about 1,500, any other
-row under 900.
+2,800 characters (its yearly amounts), an application about 1,500, a technology
+up to about 1,500 with ten versions in use, any other row under 900.
 
 ## Write Model
 

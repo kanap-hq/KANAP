@@ -104,6 +104,23 @@ Re-run the fixture against the dev tenant to apply them.
 | Duplicate primary IP | `PAR-DUP-A` and `PAR-DUP-B`, both 10.10.10.90/24 | Both assets created with the IP. See the note below. |
 | Not in Netbox | Assets `AWS-EC2-BOUTIQUE`, `AWS-RDS-BOUTIQUE`, `AWS-ECS-API` | Untouched. Never reported as absent, since no Netbox object ever claimed them. |
 
+## Cluster case table
+
+Netbox runs every virtual machine on one of three vSphere clusters. KANAP has one vSphere cluster
+asset, `PAR-VSPHERE-CL01`, with different names on each side, so the match is made by hand in the
+Mappings tab (Clusters section): match `Paris vSphere` with `PAR-VSPHERE-CL01`, leave the other two
+without a match, and save. The import only adds `contains` relations, from the cluster to the
+machine, and never removes one.
+
+| Case | Netbox object | Expected KANAP result |
+| --- | --- | --- |
+| Machines of a matched cluster | The Paris vSphere VMs (`PAR-ERP-01`, `PAR-DB-01`, `PAR-APP-01`, ...) | Each row shows `Cluster: — → PAR-VSPHERE-CL01` among its changes. After the run, the cluster contains them, and the technologies installed on it reach their applications. |
+| Already in the cluster | VM `PAR-MON-01` | No cluster change: the fixture already put it in `PAR-VSPHERE-CL01`. |
+| Unmatched cluster | `Gouda vSphere`, `Parma vSphere` | One warning per cluster in the preview, and nothing written for their machines. |
+| Machine moved in Netbox | VM `PAR-BKP-01`, on Gouda vSphere in Netbox, contained by `PAR-VSPHERE-CL01` in KANAP | With Gouda unmatched: nothing. Match Gouda with another cluster asset and the row adds it, keeps `PAR-VSPHERE-CL01` and warns that the machine is also there. |
+| New machines | `PAR-LOG-01`, `PAR-CI-01` | Created, then attached to `PAR-VSPHERE-CL01` in the same run. |
+| Hosts | Devices `PAR-ESX-01`, `PAR-ESX-02` | Never touched: host membership of a cluster stays manual. |
+
 ## Sub-location case table
 
 Netbox Locations under a mapped site become sub-locations of the mapped KANAP location. Only

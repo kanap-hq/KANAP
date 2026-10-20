@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Link as MLink, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Button, Link as MLink, Menu, MenuItem, Stack, Typography, useTheme } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -9,6 +9,8 @@ import { LinkCellRenderer } from '../../components/grid/renderers';
 import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import CsvExportDialog from '../../components/csv/CsvExportDialog';
+import CsvImportDialog from '../../components/csv/CsvImportDialog';
 import { useAuth } from '../../auth/AuthContext';
 import { useFeatures } from '../../config/FeaturesContext';
 import api from '../../api';
@@ -95,6 +97,24 @@ function EditorVulnerabilitiesCell({ value }: ICellRendererParams<TechnologyRow,
   );
 }
 
+/** The two files of links: servers and technologies, applications and technologies. */
+type LinkFile = 'asset' | 'application';
+
+/** The import note, once it is an introduction plus one line per rule. A plain string stays a paragraph. */
+function importHintList(value: unknown): { intro: string; items: string[] } | null {
+  if (!value || typeof value !== 'object') return null;
+  const hint = value as { intro?: unknown; items?: unknown };
+  const items = Array.isArray(hint.items)
+    ? hint.items.filter((item): item is string => typeof item === 'string' && item !== '')
+    : [];
+  if (items.length === 0) return null;
+  return { intro: typeof hint.intro === 'string' ? hint.intro : '', items };
+}
+const LINK_FILE_ENDPOINTS: Record<LinkFile, string> = {
+  asset: '/technologies/asset-links',
+  application: '/technologies/application-links',
+};
+
 export default function TechnologiesPage() {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
@@ -112,6 +132,12 @@ export default function TechnologiesPage() {
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
   const canCreate = hasLevel('infrastructure', 'member');
   const canAdmin = hasLevel('infrastructure', 'admin');
+  // The applications file follows the rights of the single application links.
+  const linkFiles: LinkFile[] = hasLevel('applications', 'reader') ? ['asset', 'application'] : ['asset'];
+  const [csvMenu, setCsvMenu] = useState<{ action: 'import' | 'export'; anchor: HTMLElement } | null>(null);
+  const [linkFile, setLinkFile] = useState<LinkFile>('asset');
+  const [importOpen, setImportOpen] = useState(false);
+  const [exportOpen, setExportOpen] = useState(false);
 
   const buildWorkspaceSearch = useCallback(() => {
     const sp = new URLSearchParams();
@@ -250,6 +276,14 @@ export default function TechnologiesPage() {
     return <ForbiddenPage />;
   }
 
+  const openLinkFile = (file: LinkFile) => {
+    const action = csvMenu?.action;
+    setCsvMenu(null);
+    setLinkFile(file);
+    if (action === 'import') setImportOpen(true);
+    if (action === 'export') setExportOpen(true);
+  };
+
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -257,6 +291,14 @@ export default function TechnologiesPage() {
           {t('pages.technologies.newTechnology')}
         </Button>
       )}
+      {canCreate && (
+        <Button variant="action" aria-haspopup="menu" onClick={(event) => setCsvMenu({ action: 'import', anchor: event.currentTarget })}>
+          {t('pages.technologies.importCsv')}
+        </Button>
+      )}
+      <Button variant="action" aria-haspopup="menu" onClick={(event) => setCsvMenu({ action: 'export', anchor: event.currentTarget })}>
+        {t('pages.technologies.exportCsv')}
+      </Button>
       {canAdmin && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
@@ -315,6 +357,36 @@ export default function TechnologiesPage() {
           }}
         />
       )}
+      <Menu
+        anchorEl={csvMenu?.anchor ?? null}
+        open={!!csvMenu}
+        onClose={() => setCsvMenu(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'right' }}
+        transformOrigin={{ vertical: 'top', horizontal: 'right' }}
+      >
+        {linkFiles.map((file) => (
+          <MenuItem key={file} sx={{ fontSize: 13 }} onClick={() => openLinkFile(file)}>
+            {t(`pages.technologies.linkFiles.${file}`)}
+          </MenuItem>
+        ))}
+      </Menu>
+      <CsvImportDialog
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
+        endpoint={LINK_FILE_ENDPOINTS[linkFile]}
+        title={t(`pages.technologies.linkFiles.importTitle.${linkFile}`)}
+        hintList={importHintList(t(`pages.technologies.linkFiles.importHint.${linkFile}`, { returnObjects: true })) ?? undefined}
+        onImported={() => setRefreshKey((k) => k + 1)}
+        flexibleFormat
+      />
+      <CsvExportDialog
+        open={exportOpen}
+        onClose={() => setExportOpen(false)}
+        endpoint={LINK_FILE_ENDPOINTS[linkFile]}
+        title={t(`pages.technologies.linkFiles.exportTitle.${linkFile}`)}
+        note={linkFile === 'application' ? t('pages.technologies.linkFiles.exportNoteApplication') : undefined}
+        flexibleFormat
+      />
       <TechnologyCreateDialog
         open={createOpen}
         onClose={() => setCreateOpen(false)}

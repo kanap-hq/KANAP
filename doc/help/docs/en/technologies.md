@@ -96,6 +96,7 @@ When vulnerabilities are followed, the **Publisher** column also opens the Vulne
 **Actions**:
 
 - **New technology** (`infrastructure:member`).
+- **Import links** (`infrastructure:member`) and **Export links**: load or download the links between technologies and servers or applications as a CSV file. See [Import and export links](#import-and-export-links).
 - **Delete** the selected rows (`infrastructure:admin`). The confirmation counts what goes with them: links to servers and applications, contracts, budget lines, projects, incidents and documents.
 
 ---
@@ -248,6 +249,56 @@ You can record that a server carries a technology from either side:
 - From the server: **Technical** tab of the asset, **Technologies** section, **Add**, then choose the technology and the version. See [Assets](assets.md#technical).
 
 Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, or the members of its cluster, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
+
+---
+
+## Import and export links
+
+The technologies list loads and downloads links in bulk, one link per row of a CSV file. Two files exist:
+
+- **Servers and technologies**: the technologies installed on each server.
+- **Applications and technologies**: the technologies each application declares. Applications hosted on a server that carries a technology are deduced from the servers, so the file leaves them out.
+
+Click **Import links** or **Export links** in the toolbar, then pick the file. The export offers the data or an empty template. The general rules of CSV files apply: encoding, separator, yes and no in four languages, at most 20,000 rows. See [CSV files](csv-files.md).
+
+**Permissions**:
+
+- Export the servers file: `infrastructure:reader`.
+- Import the servers file: `infrastructure:member`.
+- The applications file also needs the right to read applications. A Business Contributor exports and imports links of their own applications only.
+
+### Columns
+
+| Column | Meaning |
+|---|---|
+| `asset_reference`, `asset_name` | The server (servers file). The reference (`AST-12`) is read first. Without it, the name finds the server, and a name shared by two servers is an error. A reference and a name that point to two different servers are an error too |
+| `application_reference`, `application_name` | The application (applications file), by its reference (`APP-4`) first, then by its name |
+| `technology_reference`, `technology_name` | The technology, by its reference (`TEC-3`) first, then by its name |
+| `version` | The version label. An empty cell means the version is unknown |
+| `operating_system` | Servers file only. Whether the technology is the server's operating system: see below |
+| `notes` | Free text about the link |
+| `source` | Where the link comes from: manual entry, import, assistant, agent or Netbox. The export writes it; the import ignores it |
+
+The `operating_system` column takes three values:
+
+- **yes**: the link becomes the server's operating system. The import refuses the row when the technology is not of the **Operating system** family, when the server is a cluster, or when the server already has another operating system.
+- **no**: the link is never marked.
+- **Empty**: a new link follows the rule of the server page. A technology of the **Operating system** family becomes the server's operating system when the server has none yet and is not a cluster. The preview says so on the row.
+
+The import never removes the operating system mark from a link.
+
+### What an import does
+
+**Preflight check** reads the file and lists what the load would do, with any error by row. A file with one error loads nothing.
+
+- A link is a server or an application, a technology and a version: a row with another version adds a second link. The same link twice in one file is an error.
+- Each row adds a link or updates an existing one. Links missing from the file stay as they are: the import never deletes a link.
+- An existing link keeps where it comes from. Its notes change when the `notes` cell holds a different text, and an empty cell leaves them as they are.
+- A new link is marked as coming from an import, with the file name.
+- The technology must already be in your list. Adopt it from the catalog or create it first.
+- A version you do not track yet is created on the technology. The preview names it.
+
+A large file takes some time to load, and holds the links of its technologies until it finishes. Several smaller files are easier on the people working at the same time.
 
 ---
 

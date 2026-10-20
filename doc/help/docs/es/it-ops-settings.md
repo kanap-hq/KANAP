@@ -7,16 +7,22 @@ Para la legibilidad del mapa, las **Entidades** y **Roles de servidor** también
 ## Dónde encontrarla
 
 - Espacio de trabajo: **Panorama IT**
-- Ruta: **Panorama IT > Configuración**
+- Ruta: **Panorama IT > Configuración**, la última entrada del menú
 - Permisos:
-  - Necesita al menos `settings:reader` para ver la página.
+  - Necesita al menos `settings:reader` para ver la pestaña **Listas**.
   - Necesita `settings:admin` para cambiar valores.
+  - Necesita `infrastructure:admin` para ver la pestaña **Netbox**.
 
-Si no ve la entrada **Configuración** en el cajón del Panorama IT, solicite a su administrador que le otorgue los permisos apropiados.
+Solo ve las pestañas que sus permisos permiten. Si no ve la entrada **Configuración** en el cajón del Panorama IT, solicite a su administrador que le otorgue los permisos apropiados. Otras pantallas llaman a esta página la configuración de IT.
 
 ## Cómo está organizada la página
 
-El editor **Clasificaciones y continuidad** está en la parte superior de la página. Debajo, las listas se agrupan en cuatro secciones plegables:
+La página tiene dos pestañas:
+
+- **Listas** contiene los valores desplegables descritos en esta página.
+- **Netbox** contiene la sincronización con su inventario de Netbox. Consulte [Sincronización con Netbox](netbox.md).
+
+En la pestaña **Listas**, el editor **Clasificaciones y continuidad** está en la parte superior. Debajo, las listas se agrupan en cuatro secciones plegables:
 
 1. **Ubicaciones** - Listas utilizadas al crear o editar ubicaciones.
 2. **Servidores y conexiones** - Listas utilizadas para servidores, conexiones y datos de riesgo/endpoint relacionados.

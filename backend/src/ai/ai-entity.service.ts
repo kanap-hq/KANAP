@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, Logger, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, NotFoundException, Optional } from '@nestjs/common';
 import { bilingualDocumentTsQuerySql } from '../common/document-search-tsquery';
 import { resolveToUuid } from '../common/resolve-item-id';
 import { KnowledgeService } from '../knowledge/knowledge.service';
@@ -23,6 +23,8 @@ import {
 import { incidentRelatedLabelSql, incidentRelatedTitleSql, incidentVisibilitySql, resolveIncidentViewer } from '../incidents/incident-visibility';
 import { budgetLineReference } from '../spend/budget-nature';
 import { operatingSystemLabelSql } from '../technologies/operating-system-codes';
+import { TechnologyLinksService } from '../technologies/technology-links.service';
+import { assetInServiceSql, type ReachedApplication, TechnologyReachService } from '../technologies/technology-reach.service';
 import { INCIDENT_REVIEW_SLOT } from '../knowledge/integrated-document.constants';
 import { AiPolicyService } from './ai-policy.service';
 import { entityNotFound, resolveAiEntityReference } from './ai-entity-reference.util';
@@ -32,8 +34,33 @@ import {
   resolveAiDocumentIncidentViewer,
   resolveAiParticipationAccessScope,
 } from './query/ai-query-scope.util';
+import { resolveAiApplicationsReach } from './query/ai-technologies.query';
 
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
+
+/**
+ * The most records a bounded context group lists (the technology sections): the group then names
+ * its `total` and `truncated`. The agent runtime keeps as many per group (`MAX_ENTITY_CONTEXT_GROUP_ITEMS`).
+ */
+export const AI_CONTEXT_GROUP_ITEM_LIMIT = 25;
+
+/** `total`: the records the group stands for, when `items` holds only the first page of them. */
+function boundedGroup(relation: string, label: string, items: AiEntitySummaryDto[], total = items.length): AiEntityRelationshipGroupDto {
+  const shown = items.slice(0, AI_CONTEXT_GROUP_ITEM_LIMIT);
+  return {
+    relation,
+    label,
+    items: shown,
+    total,
+    truncated: total > shown.length,
+  };
+}
+
+/** Distinct non-empty texts, joined; null when none. */
+function joinedDistinct(values: Array<string | null | undefined>): string | null {
+  const distinct = Array.from(new Set(values.filter((value): value is string => !!value)));
+  return distinct.length ? distinct.join(', ') : null;
+}
 
 type SearchRow = {
   id: string;
@@ -465,7 +492,14 @@ export class AiEntityService {
   constructor(
     private readonly knowledge: KnowledgeService,
     private readonly policy: AiPolicyService,
-  ) {}
+    /** The technology sections of the contexts (lot C2b); absent, they are left out. */
+    @Optional() private readonly technologyLinks?: TechnologyLinksService,
+    @Optional() private readonly technologyReach?: TechnologyReachService,
+  ) {
+    // Absent, the technology sections are left out: say so once, at start.
+    if (!technologyLinks) this.logger.warn('TechnologyLinksService is not injected: the asset and application contexts carry no technology section.');
+    if (!technologyReach) this.logger.warn('TechnologyReachService is not injected: the technology context lists no application.');
+  }
 
   private parseNumericRef(query: string): number | null {
     const numericPrefix = this.parseNumericPrefix(query);
@@ -2860,6 +2894,7 @@ export class AiEntityService {
         { relation: 'linked_projects', label: 'Linked Projects', items: projectRows.map((row) => toSummary('projects', row)) },
         { relation: 'related_applications', label: 'Related Applications', items: this.dedupe(relatedApplicationRows.map((row) => toSummary('applications', row))) },
         { relation: 'linked_assets', label: 'Linked Assets', items: this.dedupe(assetRows.map((row) => toSummary('assets', row))) },
+        ...await this.applicationTechnologyGroups(context, applicationId),
       ].filter((group) => group.items.length > 0),
       knowledge: await this.getKnowledgeContext(context, 'applications', applicationId, manager),
     };
@@ -2964,8 +2999,209 @@ export class AiEntityService {
         { relation: 'linked_projects', label: 'Linked Projects', items: projectRows.map((row) => toSummary('projects', row)) },
         { relation: 'related_assets', label: 'Related Assets', items: this.dedupe(relatedAssetRows.map((row) => toSummary('assets', row))) },
         { relation: 'linked_applications', label: 'Linked Applications', items: this.dedupe(applicationRows.map((row) => toSummary('applications', row))) },
+        ...await this.assetTechnologyGroups(context, assetId),
       ].filter((group) => group.items.length > 0),
       knowledge: await this.getKnowledgeContext(context, 'assets', assetId, manager),
+    };
+  }
+
+  /**
+   * The technologies of an asset: installed on it (the operating system marked) and carried to it
+   * through the asset graph (`via` the asset they are installed on). Reading an asset takes the
+   * `infrastructure` right, the technologies' own.
+   */
+  private async assetTechnologyGroups(context: AiExecutionContextWithManager, assetId: string): Promise<AiEntityRelationshipGroupDto[]> {
+    if (!this.technologyLinks) return [];
+    const { items } = await this.technologyLinks.technologiesOfAsset(assetId, { manager: context.manager, tenantId: context.tenantId });
+    return [boundedGroup('technologies', 'Technologies', items.map((item) => toSummary('technologies', {
+      id: item.technology_id,
+      ref: item.technology_reference,
+      label: item.technology_name ?? '',
+      summary: null,
+      status: null,
+      updated_at: null,
+      metadata: {
+        link: item.kind,
+        version: item.version_label,
+        operating_system: item.is_operating_system,
+        via_asset: item.via_asset_name,
+      },
+    })))];
+  }
+
+  /**
+   * The technologies of an application, for a caller who reads them (`infrastructure`; the section
+   * is absent otherwise): declared by the application, and deduced from the servers its instances
+   * run on (installed there or carried to them), with the environments and servers that bring them.
+   */
+  private async applicationTechnologyGroups(context: AiExecutionContextWithManager, applicationId: string): Promise<AiEntityRelationshipGroupDto[]> {
+    if (!this.technologyLinks) return [];
+    if (!(await this.policy.canReadEntityType(context, 'technologies', context.manager))) return [];
+    const { items } = await this.technologyLinks.technologiesOfApplication(applicationId, { manager: context.manager, tenantId: context.tenantId });
+    const declared = items.filter((item) => item.kind === 'declared').map((item) => toSummary('technologies', {
+      id: item.technology_id,
+      ref: item.technology_reference,
+      label: item.technology_name ?? '',
+      summary: null,
+      status: null,
+      updated_at: null,
+      metadata: { version: item.version_label },
+    }));
+    const hosted = new Map<string, typeof items>();
+    for (const item of items) {
+      if (item.kind !== 'hosted') continue;
+      const key = `${item.technology_id}:${item.technology_version_id ?? ''}`;
+      hosted.set(key, [...(hosted.get(key) ?? []), item]);
+    }
+    const deduced = Array.from(hosted.values()).map((rows) => toSummary('technologies', {
+      id: rows[0].technology_id,
+      ref: rows[0].technology_reference,
+      label: rows[0].technology_name ?? '',
+      summary: null,
+      status: null,
+      updated_at: null,
+      metadata: {
+        version: rows[0].version_label,
+        environments: joinedDistinct(rows.map((row) => row.environment)),
+        servers: joinedDistinct(rows.map((row) => row.asset_name)),
+        installed_on: joinedDistinct(rows.map((row) => row.via_asset_name)),
+      },
+    }));
+    return [
+      boundedGroup('declared_technologies', 'Declared Technologies', declared),
+      boundedGroup('deduced_technologies', 'Deduced Technologies (from the servers)', deduced),
+    ];
+  }
+
+  /**
+   * A technology with the servers it is installed on (in service, with the version and whether it
+   * is the server's operating system), and, for a caller who reads applications (a Business
+   * Contributor's own only), the applications that declare it and those deduced from the servers
+   * that carry it (`TechnologyReachService`). Each group reads its first records in SQL and names its total.
+   */
+  private async buildTechnologyContext(context: AiExecutionContextWithManager, technologyId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
+    const { tenantId } = context;
+    const [technology] = await manager.query<any[]>(
+      `SELECT t.id, t.item_number, t.name, t.description, t.lifecycle, t.family, t.editor, t.hosting_type, t.admin_zone, t.updated_at
+       FROM technologies t
+       WHERE t.id = $1
+         AND t.tenant_id = $2`,
+      [technologyId, tenantId],
+    );
+    if (!technology) throw new NotFoundException('Technology not found.');
+
+    // The first servers only, with their total: a technology can sit on thousands of them.
+    const serverRows = await manager.query<Array<SearchRow & { version: string | null; is_operating_system: boolean; total: string }>>(
+      `SELECT a.id, a.asset_reference AS item_ref, a.name AS label, COALESCE(a.fqdn, a.hostname) AS summary, a.status, a.updated_at,
+              v.label AS version, at.is_operating_system, count(*) OVER () AS total
+       FROM asset_technologies at
+       JOIN assets a ON a.id = at.asset_id AND a.tenant_id = at.tenant_id AND ${assetInServiceSql('a')}
+       LEFT JOIN technology_versions v ON v.id = at.technology_version_id AND v.tenant_id = at.tenant_id
+       WHERE at.technology_id = $1
+         AND at.tenant_id = $2
+       ORDER BY lower(a.name), a.id, v.label
+       LIMIT $3`,
+      [technologyId, tenantId, AI_CONTEXT_GROUP_ITEM_LIMIT],
+    );
+    const servers = serverRows.map(({ version, is_operating_system, total: _total, ...row }) => toSummary('assets', {
+      ...row,
+      metadata: { version: version ?? null, operating_system: is_operating_system === true },
+    }));
+
+    const related: AiEntityRelationshipGroupDto[] = [boundedGroup('servers', 'Servers', servers, Number(serverRows[0]?.total ?? 0))];
+    const applications = this.technologyReach ? await resolveAiApplicationsReach(context, this.policy) : null;
+    if (applications && this.technologyReach) {
+      const reached = await this.technologyReach.applicationsOfTechnologies(manager, tenantId, [technologyId]);
+      // The reach rows of each application, by kind, built once.
+      const byApplication = new Map<string, Record<ReachedApplication['kind'], ReachedApplication[]>>();
+      for (const row of reached) {
+        const entry = byApplication.get(row.application_id) ?? { declared: [], hosted: [] };
+        entry[row.kind].push(row);
+        byApplication.set(row.application_id, entry);
+      }
+      // The first applications of a kind within the caller's scope, with their total.
+      const firstApplications = async (kind: ReachedApplication['kind']) => {
+        const ids = Array.from(byApplication).filter(([, rows]) => rows[kind].length > 0).map(([id]) => id);
+        if (!ids.length) return { rows: [] as SearchRow[], total: 0 };
+        const params: unknown[] = [tenantId, ids];
+        const scopeSql = appendParticipationScopeSql('applications', 'a', params, applications.scope);
+        params.push(AI_CONTEXT_GROUP_ITEM_LIMIT);
+        const rows = await manager.query<Array<SearchRow & { total: string }>>(
+          `SELECT a.id, a.sequential_id AS item_ref, a.name AS label, a.description AS summary, a.status, a.updated_at,
+                  count(*) OVER () AS total
+           FROM applications a
+           WHERE a.tenant_id = $1
+             AND a.id = ANY($2::uuid[])
+             ${scopeSql}
+           ORDER BY lower(a.name), a.id
+           LIMIT $${params.length}`,
+          params,
+        );
+        return { rows: rows.map(({ total: _total, ...row }) => row as SearchRow), total: Number(rows[0]?.total ?? 0) };
+      };
+      const declaredApps = await firstApplications('declared');
+      const hostedApps = await firstApplications('hosted');
+
+      // Version labels and server names for the rows of the listed applications only.
+      const listedRows = [
+        ...declaredApps.rows.flatMap((app) => byApplication.get(app.id)?.declared ?? []),
+        ...hostedApps.rows.flatMap((app) => byApplication.get(app.id)?.hosted ?? []),
+      ];
+      const versionIds = Array.from(new Set(listedRows.map((row) => row.technology_version_id).filter((id): id is string => !!id)));
+      const assetIds = Array.from(new Set(listedRows.flatMap((row) => [row.asset_id, row.via_asset_id]).filter((id): id is string => !!id)));
+      const versionLabels = new Map((versionIds.length
+        ? await manager.query<Array<{ id: string; label: string }>>(
+          `SELECT id, label FROM technology_versions WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+          [tenantId, versionIds],
+        )
+        : []).map((row) => [row.id, row.label]));
+      const assetNames = new Map((assetIds.length
+        ? await manager.query<Array<{ id: string; name: string }>>(
+          `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+          [tenantId, assetIds],
+        )
+        : []).map((row) => [row.id, row.name]));
+      const summaries = (kind: ReachedApplication['kind'], apps: SearchRow[]) => apps.map((app) => {
+        const rows = byApplication.get(app.id)?.[kind] ?? [];
+        const versions = joinedDistinct(rows.map((row) => (row.technology_version_id ? versionLabels.get(row.technology_version_id) : null)));
+        return toSummary('applications', {
+          ...app,
+          metadata: kind === 'declared'
+            ? { version: versions }
+            : {
+              version: versions,
+              environments: joinedDistinct(rows.map((row) => row.environment)),
+              servers: joinedDistinct(rows.map((row) => (row.asset_id ? assetNames.get(row.asset_id) : null))),
+              installed_on: joinedDistinct(rows.map((row) => (row.via_asset_id ? assetNames.get(row.via_asset_id) : null))),
+            },
+        });
+      });
+      related.push(
+        boundedGroup('declared_applications', 'Applications declaring it', summaries('declared', declaredApps.rows), declaredApps.total),
+        boundedGroup('deduced_applications', 'Applications deduced from the servers', summaries('hosted', hostedApps.rows), hostedApps.total),
+      );
+    }
+
+    return {
+      entity: {
+        ...toContextEntityBase('technologies', {
+          id: technology.id,
+          item_number: technology.item_number,
+          label: technology.name,
+          summary: technology.description,
+          status: technology.lifecycle,
+          updated_at: technology.updated_at,
+        }),
+        metadata: {
+          family: technology.family,
+          publisher: technology.editor,
+          hosting_type: technology.hosting_type,
+          lifecycle: technology.lifecycle,
+          admin_zone: technology.admin_zone,
+        },
+      },
+      related: related.filter((group) => group.items.length > 0),
+      knowledge: null,
     };
   }
 
@@ -3535,16 +3771,20 @@ export class AiEntityService {
       result = await this.buildProjectContext(context, entityId, context.manager);
     } else if (input.entity_type === 'tasks') {
       result = await this.buildTaskContext(context, entityId, context.manager);
+    } else if (input.entity_type === 'technologies') {
+      result = await this.buildTechnologyContext(context, entityId, context.manager);
     } else {
       throw new BadRequestException('Unsupported entity type.');
     }
 
+    const truncated = result.entity.metadata?.recent_activity_truncated === true
+      || result.related.some((group) => group.truncated === true);
     return {
       ...result,
       total: 1,
       returned: 1,
-      truncated: result.entity.metadata?.recent_activity_truncated === true,
-      complete: result.entity.metadata?.recent_activity_truncated !== true,
+      truncated,
+      complete: !truncated,
     };
   }
 

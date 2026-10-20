@@ -1,6 +1,8 @@
-import { BadRequestException, Injectable, Optional } from '@nestjs/common';
+import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
+import { AiPolicyService } from '../ai-policy.service';
 import { FxRateService } from '../../currency/fx-rate.service';
 import { convertTurnovers, turnoverMissingItems, TurnoverFxMissingItem, yearRateSetId } from '../../spend/allocation-distribution';
+import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
 import { aiAmountsCurrency, aiCompanyTurnoverCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
@@ -109,6 +111,7 @@ type SupportedAggregateEntityType =
   | 'spend_items'
   | 'suppliers'
   | 'tasks'
+  | 'technologies'
   | 'users'
   | 'documents';
 
@@ -490,9 +493,14 @@ export class AiAggregateExecutor {
     private readonly interfaces: InterfacesService,
     private readonly connections: ConnectionsService,
     private readonly incidents: IncidentsService,
+    /** Whether the caller reads applications: a technology filter on `application_count` stays in that scope. */
+    @Optional() private readonly policy?: AiPolicyService,
     /** Live rates for company turnover aggregates. Tests that build the executor by hand omit it. */
     @Optional() private readonly fxRates?: FxRateService,
-  ) {}
+  ) {
+    // Absent, a technology filter on application_count matches nothing: say so once, at start.
+    if (!policy) new Logger(AiAggregateExecutor.name).warn('AiPolicyService is not injected: technology aggregates see no application.');
+  }
 
   private async normalizePersonFilters(
     context: AiExecutionContextWithManager,
@@ -857,6 +865,20 @@ export class AiAggregateExecutor {
         total: typeof result.total === 'number' ? result.total : (result.ids || []).length,
         scope: null,
       };
+    }
+
+    if (entityType === 'technologies') {
+      // "me" and "my_team" do not apply to technologies: refused as for assets.
+      await applyScopeToAiQuery(context, entityType, {}, scope);
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiTechnologies(
+        context.manager,
+        context.tenantId,
+        { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },
+        applications,
+        { idsOnly: true },
+      );
+      return { ids: result.ids, total: result.total, scope: null };
     }
 
     if (entityType === 'interfaces') {

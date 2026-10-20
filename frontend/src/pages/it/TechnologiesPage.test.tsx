@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -14,7 +14,9 @@ const post = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 
-const stableT = (key: string) => key;
+const stableT = (key: string, options?: { returnObjects?: boolean }) => (
+  options?.returnObjects ? { intro: `${key}.intro`, items: [`${key}.a`, `${key}.b`] } : key
+);
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -215,5 +217,70 @@ describe('TechnologiesPage', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.newTechnology' }));
     expect(await screen.findByText('create dialog')).toBeTruthy();
+  });
+
+  describe('link files', () => {
+    const menuItems = () => screen.getAllByRole('menuitem').map((item) => item.textContent);
+
+    it('offers the import to a member, and the applications file to a reader of applications only', () => {
+      auth.levels = { infrastructure: 'member' };
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.importCsv' }));
+      expect(menuItems()).toEqual(['pages.technologies.linkFiles.asset']);
+    });
+
+    it('offers the export without the import to a reader, with both files when applications are readable', () => {
+      auth.levels = { infrastructure: 'reader', applications: 'reader' };
+      renderPage();
+      expect(screen.queryByRole('button', { name: 'pages.technologies.importCsv' })).toBeNull();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.exportCsv' }));
+      expect(menuItems()).toEqual(['pages.technologies.linkFiles.asset', 'pages.technologies.linkFiles.application']);
+    });
+
+    it('shows the import rules as a short list', async () => {
+      auth.levels = { infrastructure: 'member' };
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.importCsv' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'pages.technologies.linkFiles.asset' }));
+      expect(await screen.findByText('pages.technologies.linkFiles.importHint.asset.intro')).toBeTruthy();
+      expect(screen.getAllByRole('listitem').map((item) => item.textContent)).toEqual([
+        'pages.technologies.linkFiles.importHint.asset.a',
+        'pages.technologies.linkFiles.importHint.asset.b',
+      ]);
+    });
+
+    it('checks the applications file with dryRun, then loads it', async () => {
+      auth.levels = { infrastructure: 'member', applications: 'reader' };
+      const report = { ok: true, total: 1, inserted: 1, updated: 0, unchanged: 0, errors: [], warnings: [] };
+      post.mockResolvedValueOnce({ data: { ...report, dryRun: true } }).mockResolvedValueOnce({ data: { ...report, dryRun: false } });
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.importCsv' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'pages.technologies.linkFiles.application' }));
+      expect(await screen.findByText('pages.technologies.linkFiles.importTitle.application')).toBeTruthy();
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      fireEvent.change(input, { target: { files: [new File(['application_reference\n'], 'apps.csv', { type: 'text/csv' })] } });
+      fireEvent.click(screen.getByRole('button', { name: 'csv.preflightCheck' }));
+      await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+      expect(post.mock.calls[0][0]).toBe('/technologies/application-links/import');
+      expect(post.mock.calls[0][2]).toEqual({ params: { language: 'en', dryRun: true } });
+      const load = await screen.findByRole('button', { name: 'csv.load' });
+      await waitFor(() => expect((load as HTMLButtonElement).disabled).toBe(false));
+      fireEvent.click(load);
+      await waitFor(() => expect(post).toHaveBeenCalledTimes(2));
+      expect(post.mock.calls[1][0]).toBe('/technologies/application-links/import');
+      expect(post.mock.calls[1][2]).toEqual({ params: { language: 'en', dryRun: false } });
+    });
+
+    it('exports the servers file from its own route', async () => {
+      auth.levels = { infrastructure: 'reader' };
+      get.mockResolvedValueOnce({ data: 'asset_name\n', headers: {} });
+      const createObjectURL = vi.fn(() => 'blob:x');
+      Object.assign(window.URL, { createObjectURL, revokeObjectURL: vi.fn() });
+      renderPage();
+      fireEvent.click(screen.getByRole('button', { name: 'pages.technologies.exportCsv' }));
+      fireEvent.click(screen.getByRole('menuitem', { name: 'pages.technologies.linkFiles.asset' }));
+      fireEvent.click(await screen.findByRole('button', { name: 'csv.exportData' }));
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/technologies/asset-links/export', { params: { language: 'en', scope: 'data' }, responseType: 'blob' }));
+    });
   });
 });

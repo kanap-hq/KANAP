@@ -165,6 +165,42 @@
       "title": "Technologien",
       "newTechnology": "Neue Technologie",
       "empty": "Noch keine Technologien.",
+      "importCsv": "Verknüpfungen importieren",
+      "exportCsv": "Verknüpfungen exportieren",
+      "linkFiles": {
+        "asset": "Server und Technologien",
+        "application": "Anwendungen und Technologien",
+        "importTitle": {
+          "asset": "Server und Technologien importieren",
+          "application": "Anwendungen und Technologien importieren"
+        },
+        "exportTitle": {
+          "asset": "Server und Technologien exportieren",
+          "application": "Anwendungen und Technologien exportieren"
+        },
+        "importHint": {
+          "asset": {
+            "intro": "Jede Zeile fügt eine Verknüpfung hinzu oder aktualisiert sie.",
+            "items": [
+              "Verknüpfungen, die nicht in der Datei stehen, bleiben unverändert.",
+              "Die Technologie muss bereits in der Liste stehen: Übernehmen Sie sie zuerst aus dem Katalog.",
+              "Der Server wird über seine Referenz (AST-n) gefunden, wenn die Zelle gefüllt ist, sonst über seinen Namen.",
+              "operating_system: „ja“ markiert die Verknüpfung als Betriebssystem des Servers, „nein“ markiert sie nie.",
+              "Der Export schreibt diese Wörter in der Sprache der Datei; der Import liest sie auf Englisch, Französisch, Deutsch oder Spanisch.",
+              "Eine leere Zelle markiert eine neue Verknüpfung der Familie Betriebssystem, wenn der Server noch keines hat, wie auf der Serverseite.",
+              "Der Import entfernt nie eine Markierung."
+            ]
+          },
+          "application": {
+            "intro": "Jede Zeile fügt eine deklarierte Verknüpfung hinzu oder aktualisiert sie.",
+            "items": [
+              "Verknüpfungen, die nicht in der Datei stehen, bleiben unverändert.",
+              "Die Technologie muss bereits in der Liste stehen: Übernehmen Sie sie zuerst aus dem Katalog."
+            ]
+          }
+        },
+        "exportNoteApplication": "Die Datei enthält die deklarierten Verknüpfungen. Über die Server abgeleitete Verknüpfungen sind nicht enthalten."
+      },
       "columns": {
         "reference": "Referenz",
         "family": "Familie",
@@ -659,6 +695,10 @@
     },
     "settings": {
       "title": "IT-Landschaft Einstellungen",
+      "tabs": {
+        "lists": "Listen",
+        "netbox": "Netbox"
+      },
       "description": "Konfigurieren Sie wiederverwendbare Listen für Datenklassifizierung, Serverkatalog und Schnittstellenprotokolle in der IT-Landschaft.",
       "loadFailed": "Fehler beim Laden der IT-Landschaft-Einstellungen.",
       "updateSuccess": "IT-Landschaft-Einstellungen erfolgreich aktualisiert",
@@ -1045,7 +1085,8 @@
         "manufacturer": "Hersteller",
         "model": "Modell",
         "rack_location": "Rack-Position",
-        "rack_unit": "Höheneinheit"
+        "rack_unit": "Höheneinheit",
+        "cluster": "Cluster"
       },
       "mappings": {
         "intro": "Nur zugeordnete Rollen und Standorte werden importiert. Alles, was auf „Nicht importieren“ steht, bleibt außen vor.",
@@ -1069,7 +1110,9 @@
           "assetType": "KANAP-Asset-Typ",
           "netboxPlatform": "Netbox-Plattform",
           "location": "KANAP-Standort",
-          "operatingSystem": "Technologie"
+          "operatingSystem": "Technologie",
+          "netboxCluster": "Netbox-Cluster",
+          "kanapCluster": "KANAP-Cluster"
         },
         "counts": {
           "devices_one": "{{count}} Gerät",
@@ -1081,7 +1124,14 @@
         "reservedRoles": {
           "virtualMachines": "Virtuelle Maschinen"
         },
-        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet."
+        "subLocationsHint": "Innerhalb eines zugeordneten Standorts werden die übergeordneten Netbox-Locations hier zu Unterstandorten. Ein tiefer platziertes Gerät wird dem darüberliegenden Unterstandort der ersten Ebene zugeordnet.",
+        "clusters": "Cluster",
+        "clustersHint": "Wählen Sie für jeden Netbox-Cluster den KANAP-Cluster. Seine virtuellen Maschinen werden dann diesem Cluster hinzugefügt, und nichts wird entfernt: Eine Maschine, die bereits in einem anderen Cluster ist, bleibt dort, auch nachdem Sie eine Zuordnung ändern. Eine Maschine, die Sie aus ihrem Cluster entfernen, kommt beim nächsten Lauf zurück, solange sie in diesem Netbox-Cluster ist. Ein Cluster ohne Zuordnung blockiert den Import nicht.",
+        "clustersUnavailable": "Netbox hat seine Cluster nicht zurückgegeben, daher können virtuelle Maschinen hier keinem Cluster zugewiesen werden. Prüfen Sie, ob das API-Token Cluster lesen darf.",
+        "noClusters": "Netbox listet keinen Cluster, daher gibt es hier nichts zuzuordnen.",
+        "noCluster": "Keine Zuordnung",
+        "clusterUnavailable": "Asset nicht mehr verfügbar",
+        "clusterNotInNetbox": "Nicht mehr in Netbox"
       },
       "retire": {
         "title": "Asset als „Außer Betrieb“ markieren",
@@ -1137,7 +1187,10 @@
         "ip_match_candidates": "Ein Asset nutzt die Adresse {{value}} bereits. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "similar_name_candidates": "Ein Asset hat einen ähnlichen Namen. Entscheiden Sie, ob es dasselbe Gerät ist.",
         "sub_location_name_taken": "Ein Unterstandort mit dem Namen „{{value}}“ existiert an diesem Standort bereits für eine andere Netbox-Location. Der Unterstandort wurde unverändert gelassen.",
-        "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert."
+        "locations_unavailable": "Netbox hat seine Locations nicht zurückgegeben. Die Unterstandorte wurden in diesem Lauf nicht verändert.",
+        "cluster_not_mapped": "Der Netbox-Cluster „{{value}}“ ist keinem KANAP-Cluster zugeordnet, daher wurden seine virtuellen Maschinen keinem Cluster zugewiesen.",
+        "cluster_match_invalid": "Der Netbox-Cluster „{{value}}“ ist einem Asset zugeordnet, das gelöscht, ausgemustert oder kein Cluster mehr ist, daher wurden seine virtuellen Maschinen ihm nicht zugewiesen.",
+        "cluster_other_present": "KANAP ordnet die virtuelle Maschine „{{name}}“ auch {{value}} zu. Diese Beziehung wurde beibehalten: Entfernen Sie sie manuell, wenn sie veraltet ist."
       },
       "netboxStatus": {
         "active": "Aktiv",
@@ -1971,8 +2024,13 @@
         "edit": "Version {{label}} bearbeiten",
         "remove": "Version {{label}} löschen",
         "deleteTitle": "Version {{label}} löschen?",
-        "deleteMessage_one": "{{count}} Server oder Anwendung nennt diese Version: Dort steht dann „Version unbekannt“.",
-        "deleteMessage_other": "{{count}} Server oder Anwendungen nennen diese Version: Dort steht dann „Version unbekannt“.",
+        "deletePlain": "Version {{label}} wird gelöscht. Dies kann nicht rückgängig gemacht werden.",
+        "deleteUnused": "Version {{label}} wird von keinem Server und keiner Anwendung verwendet. Dies kann nicht rückgängig gemacht werden.",
+        "deleteUsed": "Version {{label}} wird von {{servers}} und {{applications}} verwendet. Dort steht dann „Version unbekannt“.",
+        "servers_one": "{{count}} Server",
+        "servers_other": "{{count}} Servern",
+        "applications_one": "{{count}} Anwendung",
+        "applications_other": "{{count}} Anwendungen",
         "status": {
           "supported": "Unterstützt",
           "ending_soon": "Endet bald",

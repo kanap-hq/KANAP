@@ -165,6 +165,42 @@
       "title": "Technologies",
       "newTechnology": "Nouvelle technologie",
       "empty": "Aucune technologie pour l'instant.",
+      "importCsv": "Importer les liens",
+      "exportCsv": "Exporter les liens",
+      "linkFiles": {
+        "asset": "Serveurs et technologies",
+        "application": "Applications et technologies",
+        "importTitle": {
+          "asset": "Importer les serveurs et technologies",
+          "application": "Importer les applications et technologies"
+        },
+        "exportTitle": {
+          "asset": "Exporter les serveurs et technologies",
+          "application": "Exporter les applications et technologies"
+        },
+        "importHint": {
+          "asset": {
+            "intro": "Chaque ligne ajoute ou met à jour un lien.",
+            "items": [
+              "Les liens absents du fichier restent tels quels.",
+              "La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue.",
+              "Le serveur est trouvé par sa référence (AST-n) quand la cellule est remplie, sinon par son nom.",
+              "operating_system : « oui » marque le lien comme système d'exploitation du serveur, « non » ne le marque jamais.",
+              "L'export écrit ces mots dans la langue du fichier ; l'import les lit en anglais, français, allemand ou espagnol.",
+              "Une cellule vide marque un nouveau lien de la famille Système d'exploitation quand le serveur n'en a pas encore, comme sur la fiche du serveur.",
+              "L'import ne retire jamais un marquage."
+            ]
+          },
+          "application": {
+            "intro": "Chaque ligne ajoute ou met à jour un lien déclaré.",
+            "items": [
+              "Les liens absents du fichier restent tels quels.",
+              "La technologie doit déjà figurer dans la liste : adoptez-la d'abord depuis le catalogue."
+            ]
+          }
+        },
+        "exportNoteApplication": "Le fichier contient les liens déclarés. Les liens déduits des serveurs n'y figurent pas."
+      },
       "columns": {
         "reference": "Référence",
         "family": "Famille",
@@ -659,6 +695,10 @@
     },
     "settings": {
       "title": "Paramètres de la cartographie SI",
+      "tabs": {
+        "lists": "Listes",
+        "netbox": "Netbox"
+      },
       "description": "Configurez les listes réutilisables pour la classification des données, le catalogue de serveurs et les protocoles d'interface utilisés dans l'espace Cartographie SI.",
       "loadFailed": "Échec du chargement des paramètres de la cartographie SI.",
       "updateSuccess": "Paramètres de la cartographie SI mis à jour avec succès",
@@ -1045,7 +1085,8 @@
         "manufacturer": "Fabricant",
         "model": "Modèle",
         "rack_location": "Emplacement en baie",
-        "rack_unit": "Unité de baie"
+        "rack_unit": "Unité de baie",
+        "cluster": "Cluster"
       },
       "mappings": {
         "intro": "Seuls les rôles et les sites mis en correspondance sont importés. Tout ce qui reste sur « Ne pas importer » est laissé de côté.",
@@ -1069,7 +1110,9 @@
           "assetType": "Type d'actif KANAP",
           "netboxPlatform": "Plateforme Netbox",
           "location": "Site KANAP",
-          "operatingSystem": "Technologie"
+          "operatingSystem": "Technologie",
+          "netboxCluster": "Cluster Netbox",
+          "kanapCluster": "Cluster KANAP"
         },
         "counts": {
           "devices_one": "{{count}} équipement",
@@ -1081,7 +1124,14 @@
         "reservedRoles": {
           "virtualMachines": "Machines virtuelles"
         },
-        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui."
+        "subLocationsHint": "Dans un site mis en correspondance, les emplacements Netbox de premier niveau deviennent des sous-sites ici. Un équipement placé plus bas est rattaché à l'emplacement de premier niveau au-dessus de lui.",
+        "clusters": "Clusters",
+        "clustersHint": "Choisissez le cluster KANAP de chaque cluster Netbox. Ses machines virtuelles sont alors ajoutées à ce cluster, et rien n'est retiré : une machine déjà dans un autre cluster y reste, même après une correspondance modifiée. Une machine que vous retirez de son cluster y revient à l'exécution suivante tant qu'elle est dans ce cluster Netbox. Un cluster laissé sans correspondance ne bloque pas l'import.",
+        "clustersUnavailable": "Netbox n'a pas renvoyé ses clusters, les machines virtuelles ne peuvent donc pas être rattachées à un cluster ici. Vérifiez que le jeton d'API peut lire les clusters.",
+        "noClusters": "Netbox ne liste aucun cluster, il n'y a donc rien à mettre en correspondance ici.",
+        "noCluster": "Aucune correspondance",
+        "clusterUnavailable": "Actif plus disponible",
+        "clusterNotInNetbox": "Plus dans Netbox"
       },
       "retire": {
         "title": "Passer l'actif en retiré",
@@ -1137,7 +1187,10 @@
         "ip_match_candidates": "Un actif utilise déjà l'adresse {{value}}. Indiquez s'il s'agit du même équipement.",
         "similar_name_candidates": "Un actif porte un nom proche. Indiquez s'il s'agit du même équipement.",
         "sub_location_name_taken": "Un sous-site nommé « {{value}} » existe déjà à ce site pour un autre emplacement Netbox. Le sous-site a été laissé inchangé.",
-        "locations_unavailable": "Netbox n'a pas renvoyé ses emplacements. Les sous-sites n'ont pas été modifiés lors de cette exécution."
+        "locations_unavailable": "Netbox n'a pas renvoyé ses emplacements. Les sous-sites n'ont pas été modifiés lors de cette exécution.",
+        "cluster_not_mapped": "Le cluster Netbox « {{value}} » n'a pas de correspondance avec un cluster KANAP, ses machines virtuelles n'ont donc été rattachées à aucun.",
+        "cluster_match_invalid": "Le cluster Netbox « {{value}} » correspond à un actif supprimé, retiré ou qui n'est plus un cluster, ses machines virtuelles n'y ont donc pas été rattachées.",
+        "cluster_other_present": "KANAP place aussi la machine virtuelle « {{name}} » dans {{value}}. Cette relation a été conservée : retirez-la à la main si elle n'est plus à jour."
       },
       "netboxStatus": {
         "active": "Actif",
@@ -1971,8 +2024,13 @@
         "edit": "Modifier la version {{label}}",
         "remove": "Supprimer la version {{label}}",
         "deleteTitle": "Supprimer la version {{label}} ?",
-        "deleteMessage_one": "{{count}} serveur ou application nomme cette version : il affichera « version inconnue ».",
-        "deleteMessage_other": "{{count}} serveurs ou applications nomment cette version : ils afficheront « version inconnue ».",
+        "deletePlain": "La version {{label}} sera supprimée. Cette action est définitive.",
+        "deleteUnused": "La version {{label}} n'est utilisée par aucun serveur ni aucune application. Cette action est définitive.",
+        "deleteUsed": "La version {{label}} est utilisée par {{servers}} et {{applications}}. Ils afficheront « version inconnue ».",
+        "servers_one": "{{count}} serveur",
+        "servers_other": "{{count}} serveurs",
+        "applications_one": "{{count}} application",
+        "applications_other": "{{count}} applications",
         "status": {
           "supported": "Supportée",
           "ending_soon": "Fin proche",

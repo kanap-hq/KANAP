@@ -7,16 +7,22 @@ For map readability, **Entities** and **Server roles** also include a **Graph ti
 ## Where to find it
 
 - Workspace: **IT Landscape**
-- Path: **IT Landscape → Settings**
+- Path: **IT Landscape → Settings**, the last entry of the menu
 - Permissions:
-  - You need at least `settings:reader` to view the page.
+  - You need at least `settings:reader` to view the **Lists** tab.
   - You need `settings:admin` to change values.
+  - You need `infrastructure:admin` to see the **Netbox** tab.
 
-If you don't see the **Settings** entry in the IT Landscape drawer, ask your administrator to grant you the appropriate permissions. Other screens call this page the IT settings.
+You only see the tabs your permissions allow. If you don't see the **Settings** entry in the IT Landscape drawer, ask your administrator to grant you the appropriate permissions. Other screens call this page the IT settings.
 
 ## How the page is organized
 
-The **Classifications and continuity** editor sits at the top of the page. Below it, lists are grouped into four collapsible sections:
+The page has two tabs:
+
+- **Lists** holds the dropdown values described on this page.
+- **Netbox** holds the synchronisation with your Netbox inventory. See [Netbox synchronisation](netbox.md).
+
+On the **Lists** tab, the **Classifications and continuity** editor sits at the top. Below it, lists are grouped into four collapsible sections:
 
 1. **Locations** - Lists used when creating or editing locations.
 2. **Servers & connections** - Lists used for servers, connections, and related risk/endpoint data.

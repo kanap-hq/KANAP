@@ -14,7 +14,7 @@ import {
   buildMatcherIndex,
   matchNetboxObject,
 } from './netbox-matcher';
-import { NETBOX_LINK_SOURCE, NetboxLocationIndex, NetboxObjectType } from './netbox.types';
+import { NETBOX_LINK_SOURCE, NetboxLocationIndex, NetboxObject, NetboxObjectType } from './netbox.types';
 
 // Pure planner: mapped objects + the tenant's assets and existing links in,
 // one decision per Netbox object out. It diffs against the CURRENT asset
@@ -128,6 +128,11 @@ export type NetboxPlan = {
   subLocations: NetboxSubLocationChange[];
   /** False when Netbox did not return its locations this run. */
   subLocationsAvailable: boolean;
+  /**
+   * One notice per Netbox cluster whose virtual machines cannot be attached:
+   * not matched, or matched with an asset that cannot take them.
+   */
+  clusterNotices: NetboxNotice[];
 };
 
 export type NetboxPlanWrite = {
@@ -136,7 +141,93 @@ export type NetboxPlanWrite = {
   assetId: string | null;
   /** The top-level Location this object belongs in, resolved at apply time. */
   subLocation: NetboxSubLocationTarget | null;
+  /** The KANAP cluster this virtual machine is added to, when it is not in it yet. */
+  cluster?: NetboxClusterTarget | null;
 };
+
+/** A cluster relation to add: the KANAP cluster asset, and the Netbox name for notices. */
+export type NetboxClusterTarget = { assetId: string; netboxName: string };
+
+/** A KANAP asset a saved cluster match names, read in the tenant of the run only. */
+export type NetboxClusterAsset = { id: string; name: string; is_cluster: boolean; status: string | null };
+
+/**
+ * What attaching virtual machines to their cluster needs from the database:
+ * the saved matches, the assets they name, and the clusters that already
+ * contain each virtual machine.
+ */
+export type NetboxClusterContext = {
+  /** Netbox cluster id -> KANAP cluster asset id. */
+  map: Record<string, string>;
+  /** The assets the saved matches name, by id. A missing id is a deleted asset. */
+  targets: Map<string, NetboxClusterAsset>;
+  /** Asset id -> the clusters in service that contain it today (`contains` relations). */
+  containers: Map<string, Array<{ id: string; name: string }>>;
+};
+
+export type NetboxClusterAttachment = {
+  /** The relation to add; null when there is nothing to add. */
+  target: NetboxClusterTarget | null;
+  /** The diff an existing asset shows for it. */
+  diff: NetboxFieldDiff | null;
+  warnings: NetboxNotice[];
+  /** The notice this object's Netbox cluster deserves, once per cluster. */
+  clusterNotice: NetboxNotice | null;
+};
+
+const NO_ATTACHMENT: NetboxClusterAttachment = { target: null, diff: null, warnings: [], clusterNotice: null };
+
+/**
+ * Whether a virtual machine has to be added to its KANAP cluster. Add only: a
+ * `contains` relation from the matched cluster is added when it is missing,
+ * and a relation from another cluster is never removed, only pointed out (a
+ * machine moved in Netbox, or placed by hand). A Netbox cluster without a
+ * match, or matched with an asset that is deleted, retired or no longer a
+ * cluster, attaches nothing and says so once for the whole cluster.
+ *
+ * `assetId` is null for an asset this run creates: the diff shows the cluster
+ * it joins, and the relation is added right after the creation.
+ */
+export function planClusterAttachment(
+  object: NetboxObject,
+  assetId: string | null,
+  context: NetboxClusterContext | null | undefined,
+): NetboxClusterAttachment {
+  if (!context || object.type !== 'vm' || !object.cluster) return NO_ATTACHMENT;
+  const netboxName = object.cluster.name;
+  const targetId = context.map[object.cluster.id];
+  if (!targetId) {
+    return { ...NO_ATTACHMENT, clusterNotice: netboxNotice('cluster_not_mapped', { value: netboxName }) };
+  }
+  const target = context.targets.get(targetId);
+  if (!target || target.is_cluster !== true || String(target.status ?? '').toLowerCase() === 'retired') {
+    return { ...NO_ATTACHMENT, clusterNotice: netboxNotice('cluster_match_invalid', { value: netboxName }) };
+  }
+  // The machine is the cluster itself: nothing to attach.
+  if (assetId === target.id) return NO_ATTACHMENT;
+
+  const current = assetId ? context.containers.get(assetId) ?? [] : [];
+  const others = current.filter((cluster) => cluster.id !== target.id);
+  const warnings = others.length > 0
+    ? [netboxNotice('cluster_other_present', {
+      name: object.name ?? '',
+      value: others.map((cluster) => cluster.name).join(', '),
+    })]
+    : [];
+  if (current.some((cluster) => cluster.id === target.id)) {
+    return { ...NO_ATTACHMENT, warnings };
+  }
+  return {
+    target: { assetId: target.id, netboxName },
+    diff: {
+      field: 'cluster',
+      before: current.length > 0 ? current.map((cluster) => cluster.name).join(', ') : null,
+      after: target.name,
+    },
+    warnings,
+    clusterNotice: null,
+  };
+}
 
 export function externalKey(type: string, id: string): string {
   return `${type}:${id}`;
@@ -436,6 +527,8 @@ export function planNetboxSync(input: {
   locationIndex?: NetboxLocationIndex | null;
   /** Netbox site slug -> KANAP location id, for the upkeep of linked rows. */
   siteMap?: Record<string, string>;
+  /** Saved cluster matches and the current relations; absent, no machine is attached. */
+  clusters?: NetboxClusterContext | null;
 }): NetboxPlan {
   const { mappings, links, assets, catalogs } = input;
   const existingSubLocations = input.subLocations ?? [];
@@ -630,15 +723,27 @@ export function planNetboxSync(input: {
     subLocationsAvailable,
   });
 
+  // One notice per Netbox cluster, however many machines run on it.
+  const clusterNotices = new Map<string, NetboxNotice>();
+
   for (const { key, mapping, base, matcher } of pending) {
     const write = writes.get(key) as NetboxPlanWrite;
     const resolution = resolutions.get(key) ?? null;
     const asset = write.assetId ? assetsById.get(write.assetId) : undefined;
+    const attachment = planClusterAttachment(mapping.object, asset ? asset.id : null, input.clusters);
+    write.cluster = attachment.target;
+    if (attachment.clusterNotice && mapping.object.cluster && !clusterNotices.has(mapping.object.cluster.id)) {
+      clusterNotices.set(mapping.object.cluster.id, attachment.clusterNotice);
+    }
     // The equipment is imported either way; only the sub-location is left
     // alone, and the person has to know why.
-    const warnings = resolution?.kind === 'conflict'
-      ? [...base.warnings, netboxNotice('sub_location_name_taken', { value: mapping.subLocation?.name ?? '' })]
-      : base.warnings;
+    const warnings = [
+      ...base.warnings,
+      ...(resolution?.kind === 'conflict'
+        ? [netboxNotice('sub_location_name_taken', { value: mapping.subLocation?.name ?? '' })]
+        : []),
+      ...attachment.warnings,
+    ];
     // A conflict is settled here, once, by Netbox id. The write must not carry
     // the target any further: the apply step resolves a new asset's target
     // against the database, and rows are applied in the order Netbox listed
@@ -647,7 +752,8 @@ export function planNetboxSync(input: {
     if (resolution?.kind === 'conflict') write.subLocation = null;
 
     if (!write.assetId) {
-      rows.push({ ...base, action: 'create', warnings });
+      // A new machine shows the cluster it joins, its only diff.
+      rows.push({ ...base, action: 'create', diffs: attachment.diff ? [attachment.diff] : base.diffs, warnings });
       counts.create += 1;
       continue;
     }
@@ -660,6 +766,9 @@ export function planNetboxSync(input: {
       locationChanged: Boolean(asset && asset.location_id !== write.asset.location_id),
     };
     const diffs = asset ? diffNetboxMapping(mapping, asset, catalogs, subLocationContext) : [];
+    // A machine whose only change is its cluster is an update, which the hourly
+    // run applies like any other: it only ever adds a relation.
+    if (attachment.diff) diffs.push(attachment.diff);
     const action: NetboxPlanAction = diffs.length > 0 ? 'update' : 'unchanged';
     rows.push({
       ...base,
@@ -689,6 +798,7 @@ export function planNetboxSync(input: {
     writes,
     subLocations: changes,
     subLocationsAvailable,
+    clusterNotices: [...clusterNotices.values()],
   };
 }
 

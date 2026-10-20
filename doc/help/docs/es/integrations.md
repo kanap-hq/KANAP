@@ -67,7 +67,7 @@ Si su instancia de KANAP no tiene un almacén de secretos configurado, aparece u
 
 Esta conexión es independiente de las funcionalidades de IA. Necesita `infrastructure:admin`, funciona en la nube y en la edición on-premise, y sigue disponible cuando la IA está desactivada.
 
-Configure aquí la conexión y vaya después a **Panorama IT > Netbox** para elegir qué se importa y ejecutar la sincronización. El procedimiento completo, las reglas de asociación y la tabla de resolución de problemas están en [Sincronización con Netbox](netbox.md).
+Configure aquí la conexión y abra después la pestaña **Netbox** de **Panorama IT > Configuración** para elegir qué se importa y ejecutar la sincronización. El procedimiento completo, las reglas de asociación y la tabla de resolución de problemas están en [Sincronización con Netbox](netbox.md).
 
 ---
 

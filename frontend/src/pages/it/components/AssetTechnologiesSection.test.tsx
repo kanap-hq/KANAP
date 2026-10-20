@@ -190,4 +190,24 @@ describe('AssetTechnologiesSection', () => {
     fireEvent.click(await waitFor(() => picker().getByText('9.0')));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/sql/assets/l-1', { technology_version_id: 't9' }));
   });
+
+  it('keeps a long version label in the cell title and gives the column room for a common one', async () => {
+    renderSection([
+      {
+        kind: 'installed', removable: true, link_id: 'l-long', technology_id: 'sql', technology_name: 'SQL Server', technology_reference: 'TEC-3',
+        family: 'database', technology_version_id: 'vlong', version_label: '16.99-c2check', via_asset_id: null, via_asset_name: null,
+        standard_support_end: '2029-01-09',
+      },
+      {
+        kind: 'installed', removable: true, link_id: 'l-win', technology_id: 'win', technology_name: 'Windows Server', technology_reference: 'TEC-8',
+        family: 'operating_system', technology_version_id: 'v2019', version_label: '2019 (1809)', via_asset_id: null, via_asset_name: null,
+      },
+    ]);
+    const table = await screen.findByRole('table', { name: `${K}.title` });
+    const long = within(table).getByTitle(/^16\.99-c2check/);
+    expect(long.getAttribute('title')).toMatch(/^16\.99-c2check · /);
+    expect(long.textContent).toBe('16.99-c2check');
+    expect(within(table).getByTitle('2019 (1809)').textContent).toBe('2019 (1809)');
+    expect(table.querySelectorAll('col')[3].style.width).toBe('128px');
+  });
 });

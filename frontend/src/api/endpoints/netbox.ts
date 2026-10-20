@@ -35,6 +35,9 @@ export type NetboxNoticeCode =
   | 'no_ip_address_type'
   | 'sub_location_name_taken'
   | 'locations_unavailable'
+  | 'cluster_not_mapped'
+  | 'cluster_match_invalid'
+  | 'cluster_other_present'
   | 'fetch_incomplete'
   | 'save_failed'
   | 'validation_failed'
@@ -111,6 +114,13 @@ export interface NetboxMappingEntry {
   vm_count: number;
 }
 
+/** One Netbox cluster. Keyed by its Netbox id: a cluster has no slug to match on. */
+export interface NetboxClusterEntry {
+  id: string;
+  name: string;
+  vm_count: number;
+}
+
 export interface NetboxMappingOptions {
   roles: NetboxMappingEntry[];
   sites: NetboxMappingEntry[];
@@ -118,6 +128,12 @@ export interface NetboxMappingOptions {
   platforms?: NetboxMappingEntry[];
   /** The token could not read the platforms; the roles and sites are unaffected. */
   platforms_unavailable?: boolean;
+  /** Netbox clusters. Absent on a server that does not match them yet. */
+  clusters?: NetboxClusterEntry[];
+  /** The token could not read the clusters; the rest of the tab is unaffected. */
+  clusters_unavailable?: boolean;
+  /** The tenant's cluster assets in service, by name: what a Netbox cluster can match. */
+  kanap_clusters?: Array<{ id: string; name: string }>;
   asset_kinds: Array<{ code: string; label: string }>;
   locations: Array<{ id: string; name: string }>;
   /**
@@ -130,10 +146,15 @@ export interface NetboxMappingOptions {
   site_map: Record<string, string>;
   /** Platform slug -> technology label. Never an import filter. */
   os_map?: Record<string, string>;
+  /** Netbox cluster id -> KANAP cluster asset id. Never an import filter. */
+  cluster_map?: Record<string, string>;
+  /** Netbox cluster id -> the Netbox name stored with the match. */
+  cluster_names?: Record<string, string>;
   /** Label-match suggestions, for unmapped entries only. Not saved yet. */
   suggested_role_map: Record<string, string>;
   suggested_site_map: Record<string, string>;
   suggested_os_map?: Record<string, string>;
+  suggested_cluster_map?: Record<string, string>;
 }
 
 /** Full replace of every map the body carries; an absent one keeps its saved value. */
@@ -141,6 +162,9 @@ export interface NetboxMappingSaveInput {
   role_map: Record<string, string>;
   site_map: Record<string, string>;
   os_map?: Record<string, string>;
+  cluster_map?: Record<string, string>;
+  /** Netbox cluster id -> its Netbox name, kept with the match for display. */
+  cluster_names?: Record<string, string>;
 }
 
 export interface NetboxAssetRef {
@@ -237,6 +261,11 @@ export interface NetboxPreviewResult {
    * until they are saved. Optional for the same reason as above.
    */
   saved_matches?: { roles: number; sites: number };
+  /**
+   * Notices about the inventory as a whole, once each: a Netbox cluster whose
+   * virtual machines cannot be attached to a KANAP cluster.
+   */
+  notices?: NetboxNotice[];
 }
 
 /** What a run does to the tenant's sub-locations. */

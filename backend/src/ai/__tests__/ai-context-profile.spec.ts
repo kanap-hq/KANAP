@@ -179,6 +179,21 @@ async function testReadOnlyModifiedDocumentFollowUpKeepsInspectionTools() {
   assert.ok(!profile.toolNames.includes('update_document_content'));
 }
 
+async function testTechnologyReferencesAndRelatedRecords() {
+  const listing = selectAiContextProfile('Which applications use PostgreSQL?');
+  assert.equal(listing.name, 'read_query');
+  assert.ok(listing.toolNames.includes('get_entity_context'), 'a read question can open the related records of a record it names');
+
+  for (const prompt of ['Summarize TEC-3', 'What runs [TEC-3](/it/technologies/0b6f8f2c-1f2a-4c1e-9f55-2f8a3c1d7e01)?']) {
+    const profile = selectAiContextProfile(prompt);
+    assert.equal(profile.name, 'entity_inspection', prompt);
+    assert.ok(profile.toolNames.includes('get_entity_context'), prompt);
+  }
+
+  // Technologies have no write: a write request on one stays generic, never a business write.
+  assert.equal(selectAiContextProfile('Update the lifecycle of TEC-3').name, 'write_general');
+}
+
 async function run() {
   for (const url of ['/ops/budget/BL-127', '/ops/opex/OPX-7', '/ops/capex/CPX-2']) {
     assert.equal(selectAiContextProfile(`Update the notes of [line](${url})`).name, 'write_financial');
@@ -199,6 +214,7 @@ async function run() {
   await testTargetSetCorrectionInheritsWriteRequestProfile();
   await testExplicitNewIntentDoesNotInheritOpenWriteRequestProfile();
   await testReadOnlyModifiedDocumentFollowUpKeepsInspectionTools();
+  await testTechnologyReferencesAndRelatedRecords();
 }
 
 void run();

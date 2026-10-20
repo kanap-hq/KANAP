@@ -61,6 +61,7 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   requests: 'created_at',
   spend_items: 'created_at',
   tasks: 'created_at',
+  technologies: 'name',
   users: 'last_name',
 };
 
@@ -180,6 +181,9 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('incidents', (n, at) => insertId(runner,
     `INSERT INTO incidents (tenant_id, title, item_number, severity, created_at, updated_at) VALUES ($1, $2, $3, 'minor', $4, $4)`,
     [tenantId, `Incident ${n}`, n, at]));
+  await pair('technologies', (n, at) => insertId(runner,
+    `INSERT INTO technologies (tenant_id, name, item_number, editor, created_at, updated_at) VALUES ($1, $2, $3, 'Contract Inc.', $4, $4)`,
+    [tenantId, `Technology ${n}`, n, at]));
 
   return { tenantId, userId, rows };
 }
