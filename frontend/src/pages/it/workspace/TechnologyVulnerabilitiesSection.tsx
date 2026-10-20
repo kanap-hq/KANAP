@@ -3,7 +3,7 @@ import { Box, Button, Link, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
-import { Link as RouterLink } from 'react-router-dom';
+import { Link as RouterLink, useLocation } from 'react-router-dom';
 import api from '../../../api';
 import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
@@ -62,6 +62,7 @@ type Props = {
  */
 export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit }: Props) {
   const { t } = useTranslation('it');
+  const location = useLocation();
   const { config } = useFeatures();
   const enabled = config.features.vulnerabilityFeed === true;
   const queryClient = useQueryClient();
@@ -80,7 +81,8 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   // The page's technology filter takes the reference: a raw id would show in it.
   const technologyRef = query.data?.technology?.reference ?? query.data?.technology?.id ?? technologyId;
   const banner = alertsBanner(query.data, t);
-  const settingsHref = `/it/technologies/${encodeURIComponent(technologyRef)}/overview#${TECHNOLOGY_VERSIONS_ANCHOR}`;
+  // The address keeps the list context of the workspace (its search), as its other links do.
+  const settingsHref = `/it/technologies/${encodeURIComponent(technologyRef)}/overview${location.search}#${TECHNOLOGY_VERSIONS_ANCHOR}`;
 
   const rematch = async () => {
     setBusy(true);
@@ -99,7 +101,24 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const columns: Array<RelationsColumn<TechnologyVulnerabilityRow>> = [
     { key: 'cve', header: t('pages.vulnerabilities.columns.cve'), width: 150, render: (row) => <Box component="span" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 12 }}>{row.cve_id}</Box> },
     { key: 'severity', header: t('pages.vulnerabilities.columns.severity'), width: 130, render: (row) => <SeverityCell severity={row.severity} score={row.cvss_score} /> },
-    { key: 'version', header: t('pages.vulnerabilities.columns.version'), render: (row) => versionText(row, t) },
+    {
+      key: 'version',
+      header: t('pages.vulnerabilities.columns.version'),
+      // A muted row says why: the version no longer matches the CVE, or it stays out of the alerts.
+      render: (row) => {
+        const reason = !row.matching
+          ? t('pages.vulnerabilities.section.noLongerMatches')
+          : row.alerts === false ? t('pages.vulnerabilities.section.alerts.excluded') : null;
+        return (
+          <>
+            {versionText(row, t)}
+            {reason && (
+              <Box component="span" data-muted-reason="" sx={{ ml: 1, fontSize: 11, color: 'kanap.text.tertiary' }}>{reason}</Box>
+            )}
+          </>
+        );
+      },
+    },
     { key: 'state', header: t('pages.vulnerabilities.columns.state'), width: 130, hideOrder: 1, render: (row) => <VulnerabilityStateCell state={row.state} /> },
   ];
 
@@ -110,10 +129,14 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       {banner && (
         <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 0.5 }}>
           <Box component="span">{banner}</Box>
-          {' '}
-          <Link component={RouterLink} to={settingsHref} underline="hover">
-            {t('pages.vulnerabilities.section.alerts.set')}
-          </Link>
+          {canEdit && (
+            <>
+              {' '}
+              <Link component={RouterLink} to={settingsHref} underline="hover">
+                {t('pages.vulnerabilities.section.alerts.set')}
+              </Link>
+            </>
+          )}
         </Typography>
       )}
       {canEdit && (

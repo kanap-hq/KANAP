@@ -169,7 +169,7 @@ describe('TechnologyOverviewTab', () => {
     fireEvent.click(header);
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByRole('heading', { name: 'Vulnerability alerts' })).toBeInTheDocument();
-    expect(within(dialog).getByText('2 versions have their own setting. It will be replaced.')).toBeInTheDocument();
+    expect(within(dialog).getByText('2 versions have their own setting. They will be replaced.')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'Cancel' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
     expect(api.put).toHaveBeenCalledTimes(1);
@@ -254,5 +254,59 @@ describe('TechnologyOverviewTab', () => {
     await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(2));
     expect(invalidate).toHaveBeenCalledTimes(2);
     expect(invalidate).toHaveBeenLastCalledWith({ queryKey: ['vulnerabilities'] });
+  });
+
+  it('reports a failed alert write and leaves the switches usable', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockRejectedValue({ response: { status: 500, data: { message: 'Version write refused' } } });
+    vi.mocked(api.put).mockReset();
+    vi.mocked(api.put).mockRejectedValue({ response: { status: 500, data: { message: 'Preview refused' } } });
+    const { invalidate, onVersionsChanged, onError } = renderTab(ALERT_VERSIONS);
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' }));
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' })).toBeEnabled());
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 16' })).toBeChecked();
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    await waitFor(() => expect(onError).toHaveBeenCalledTimes(2));
+    expect(api.put).toHaveBeenCalledTimes(1);
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeEnabled());
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts' })).toBeChecked();
+    expect(onVersionsChanged).not.toHaveBeenCalled();
+    expect(invalidate).not.toHaveBeenCalled();
+  });
+
+  it('writes once when a switch is clicked twice during the write', async () => {
+    vi.mocked(api.patch).mockReset();
+    let release: (value: { data: object }) => void = () => undefined;
+    vi.mocked(api.patch).mockImplementation(() => new Promise((resolve) => { release = resolve; }));
+    const { onVersionsChanged } = renderTab(ALERT_VERSIONS);
+    const row = screen.getByRole('switch', { name: 'Vulnerability alerts for 16' });
+    fireEvent.click(row);
+    fireEvent.click(row);
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts' }));
+    expect(api.patch).toHaveBeenCalledTimes(1);
+    expect(api.put).not.toHaveBeenCalled();
+    await act(async () => { release({ data: {} }); });
+    await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(1));
+    expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  it('keeps every alert switch at the same place, with or without the own-setting dot', () => {
+    renderTab({
+      ...ALERT_VERSIONS,
+      versions: [
+        ...ALERT_VERSIONS.versions,
+        { ...VERSION, id: 'v-own', label: '15', standard_support_end: null, catalog_key: null, vulnerability_alerts: false, vulnerability_alerts_effective: false },
+      ],
+    });
+    const slots = ['Vulnerability alerts', 'Vulnerability alerts for 16', 'Vulnerability alerts for 15'].map((name) => {
+      const box = screen.getByRole('switch', { name }).closest('td, th')!.firstElementChild!;
+      return box.children.length;
+    });
+    expect(slots).toEqual([2, 2, 2]);
+    expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(1);
   });
 });

@@ -145,6 +145,8 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   const [failed, setFailed] = useState(false);
   useEffect(() => { setNote(version.note ?? ''); }, [version.note]);
   const label = versionText(version, t);
+  // A version out of the alerts reads quieter, as its servers and applications below.
+  const quiet = version.alerts === false;
   const save = async (body: { state?: VulnerabilityState; note?: string | null }) => {
     setFailed(false);
     try {
@@ -156,7 +158,15 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
   };
   return (
     <Box component="li" sx={{ display: 'grid', gridTemplateColumns: '160px 150px 1fr', gap: 1, alignItems: 'center' }}>
-      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', color: version.potential ? 'kanap.text.secondary' : 'kanap.text.primary' }} title={label}>
+      <Box
+        component="span"
+        sx={{
+          overflow: 'hidden',
+          textOverflow: 'ellipsis',
+          color: quiet ? 'kanap.text.tertiary' : version.potential ? 'kanap.text.secondary' : 'kanap.text.primary',
+        }}
+        title={quiet ? `${label} · ${t('pages.vulnerabilities.section.alerts.excluded')}` : label}
+      >
         {label}
       </Box>
       {canEdit ? (
@@ -700,6 +710,12 @@ export default function VulnerabilitiesPage() {
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
   };
 
+  // Muted rows inform only when both kinds are listed: under "Excluded" every row would be muted.
+  const getRowClass = useCallback(
+    ({ data }: { data?: VulnerabilityRow }) => (alerts === 'all' && data?.alerts === false ? 'vulnerability-row-muted' : undefined),
+    [alerts],
+  );
+
   // Nothing alerts, with no search and no column filter: are there rows outside the alerts? The
   // empty line then says so and offers them, rather than telling to fill in CPE identifiers.
   const nothingAlerts = alerts === 'included' && request?.total === 0 && !request.params?.filters && !request.params?.q;
@@ -788,7 +804,7 @@ export default function VulnerabilitiesPage() {
         extraNarrows={alerts !== 'included'}
         onResetFilters={() => setAlerts('included')}
         toolbarExtras={alertsFilter}
-        getRowClass={({ data }) => (alerts !== 'included' && data?.alerts === false ? 'vulnerability-row-muted' : undefined)}
+        getRowClass={getRowClass}
         getRowId={rowId}
         showRowCount
         rowCountText={rowCountText}

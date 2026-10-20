@@ -438,9 +438,16 @@ function AlertSwitch({ checked, disabled, label, tooltip, onChange }: {
 }
 
 /** A version whose setting is its own (`vulnerability_alerts` is true or false). */
-function OwnSettingMark() {
+/**
+ * The "own setting" dot. Its 6 px slot is kept on every row (hidden when the version follows the
+ * technology), so every switch of the column sits at the same place.
+ */
+function OwnSettingMark({ visible }: { visible: boolean }) {
   const { t } = useTranslation('it');
   const label = t('workspace.technology.versions.alertsOwn');
+  if (!visible) {
+    return <Box component="span" aria-hidden sx={{ display: 'inline-block', width: 6, height: 6, flex: '0 0 auto', visibility: 'hidden' }} />;
+  }
   return (
     <Tooltip title={label}>
       <Box
@@ -641,13 +648,16 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
 
   const alertsHeader = (
     <TableCell sx={ALERTS_COLUMN_SX} align="center">
-      <AlertSwitch
-        checked={technologyAlerts}
-        disabled={!canManage || alertsBusy}
-        label={t('workspace.technology.versions.alertsLabel')}
-        tooltip={t('workspace.technology.versions.alertsHint')}
-        onChange={(next) => { void setTechnologyAlerts(next); }}
-      />
+      <Box sx={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', gap: '4px' }}>
+        <AlertSwitch
+          checked={technologyAlerts}
+          disabled={!canManage || alertsBusy}
+          label={t('workspace.technology.versions.alertsLabel')}
+          tooltip={t('workspace.technology.versions.alertsHint')}
+          onChange={(next) => { void setTechnologyAlerts(next); }}
+        />
+        <OwnSettingMark visible={false} />
+      </Box>
     </TableCell>
   );
 
@@ -720,7 +730,7 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
                       label={t('workspace.technology.versions.alertsFor', { label: version.label })}
                       onChange={(next) => { void setVersionAlerts(version, next); }}
                     />
-                    {version.vulnerability_alerts != null && <OwnSettingMark />}
+                    <OwnSettingMark visible={version.vulnerability_alerts != null} />
                   </Box>
                 </TableCell>
                 {canManage && (

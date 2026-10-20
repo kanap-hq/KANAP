@@ -439,13 +439,14 @@
         "rematch": "Erneut abgleichen",
         "rematched": "Erneut abgeglichen: {{added}} neu, {{removed}} entfernt.",
         "rematchFailed": "Der Abgleich konnte nicht ausgeführt werden. Versuchen Sie es erneut.",
+        "noLongerMatches": "Trifft nicht mehr zu",
         "alerts": {
           "excluded": "Von den Warnungen ausgeschlossen",
           "excludedExcept_one": "Von den Warnungen ausgeschlossen, außer {{count}} Version",
           "excludedExcept_other": "Von den Warnungen ausgeschlossen, außer {{count}} Versionen",
           "versionsExcluded_one": "{{count}} Version von den Warnungen ausgeschlossen",
           "versionsExcluded_other": "{{count}} Versionen von den Warnungen ausgeschlossen",
-          "set": "Festlegen"
+          "set": "Ändern"
         }
       },
       "alerts": {
@@ -2053,7 +2054,7 @@
         "alertsOwn": "Eigene Einstellung dieser Version",
         "alertsConfirmTitle": "Warnungen zu Schwachstellen",
         "alertsReset_one": "{{count}} Version hat eine eigene Einstellung. Sie wird ersetzt.",
-        "alertsReset_other": "{{count}} Versionen haben eine eigene Einstellung. Sie wird ersetzt.",
+        "alertsReset_other": "{{count}} Versionen haben eine eigene Einstellung. Sie werden ersetzt.",
         "alertsReplace": "Ersetzen",
         "status": {
           "supported": "Unterstützt",

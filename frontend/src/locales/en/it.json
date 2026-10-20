@@ -426,10 +426,10 @@
         "stateOf": "State of {{version}}",
         "noteOf": "Note on {{version}}",
         "notePlaceholder": "e.g., patched on 12 March",
-        "serversInAlerts_one": "{{count}} server, of which {{alerting}} in the alerts",
-        "serversInAlerts_other": "{{count}} servers, of which {{alerting}} in the alerts",
-        "applicationsInAlerts_one": "{{count}} application, of which {{alerting}} in the alerts",
-        "applicationsInAlerts_other": "{{count}} applications, of which {{alerting}} in the alerts"
+        "serversInAlerts_one": "{{count}} server, {{alerting}} in alerts",
+        "serversInAlerts_other": "{{count}} servers, {{alerting}} in alerts",
+        "applicationsInAlerts_one": "{{count}} application, {{alerting}} in alerts",
+        "applicationsInAlerts_other": "{{count}} applications, {{alerting}} in alerts"
       },
       "section": {
         "title": "Vulnerabilities",
@@ -439,13 +439,14 @@
         "rematch": "Match again",
         "rematched": "Matched again: {{added}} new, {{removed}} removed.",
         "rematchFailed": "The match could not run. Try again.",
+        "noLongerMatches": "No longer matches",
         "alerts": {
           "excluded": "Excluded from alerts",
           "excludedExcept_one": "Excluded from alerts, except {{count}} version",
           "excludedExcept_other": "Excluded from alerts, except {{count}} versions",
           "versionsExcluded_one": "{{count}} version excluded from alerts",
           "versionsExcluded_other": "{{count}} versions excluded from alerts",
-          "set": "Set"
+          "set": "Change"
         }
       },
       "alerts": {
@@ -2053,7 +2054,7 @@
         "alertsOwn": "Own setting for this version",
         "alertsConfirmTitle": "Vulnerability alerts",
         "alertsReset_one": "{{count}} version has its own setting. It will be replaced.",
-        "alertsReset_other": "{{count}} versions have their own setting. It will be replaced.",
+        "alertsReset_other": "{{count}} versions have their own setting. They will be replaced.",
         "alertsReplace": "Replace",
         "status": {
           "supported": "Supported",

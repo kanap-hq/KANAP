@@ -243,7 +243,8 @@ describe('VulnerabilitiesPage', () => {
     fireEvent.click(await screen.findByRole('option', { name: 'Excluded' }));
     await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1&alerts=excluded'));
     expect(grid.props!.extraParams).toEqual({ alerts: 'excluded' });
-    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBe('vulnerability-row-muted');
+    // Every row is out of the alerts here: none is muted.
+    expect(grid.props!.getRowClass({ data: { alerts: false } })).toBeUndefined();
     expect(grid.props!.getRowClass({ data: { alerts: true } })).toBeUndefined();
     view.unmount();
 
@@ -347,6 +348,7 @@ describe('VulnerabilitiesPage', () => {
         return {
           data: {
             ...DETAIL,
+            technologies: [{ ...DETAIL.technologies[0], versions: [{ ...VERSION_980, alerts: true }, { ...VERSION_UNKNOWN, alerts: false }] }],
             servers: 3,
             applications: 2,
             alerting: { servers: 1, applications: 1 },
@@ -368,8 +370,11 @@ describe('VulnerabilitiesPage', () => {
     renderPage();
     act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
     const detail = await screen.findByTestId('vulnerability-detail');
-    expect(detail.textContent).toContain('3 servers, of which 1 in the alerts');
-    expect(detail.textContent).toContain('2 applications, of which 1 in the alerts');
+    expect(detail.textContent).toContain('3 servers, 1 in alerts');
+    expect(detail.textContent).toContain('2 applications, 1 in alerts');
+    const quietVersion = detail.querySelector('[title="Version not recorded (potentially concerned) · Excluded from alerts"]') as HTMLElement;
+    expect(getComputedStyle(quietVersion).color).toBe('rgb(108, 116, 130)');
+    expect(getComputedStyle(detail.querySelector('[title="9.0.80"]') as HTMLElement).color).not.toBe('rgb(108, 116, 130)');
     const quiet = within(detail).getByRole('link', { name: 'SRV-QUIET' });
     const loud = within(detail).getByRole('link', { name: 'SRV-WEB-01' });
     expect(getComputedStyle(quiet).color).toBe('rgb(108, 116, 130)');
@@ -510,6 +515,27 @@ describe('VulnerabilitiesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'Change state (1)' }));
     dialog = await screen.findByRole('dialog');
     expect((within(dialog).getByRole('textbox', { name: 'Common note' }) as HTMLInputElement).value).toBe('');
+  });
+
+  it('exports and changes the rows of the alerts filter on screen', async () => {
+    getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
+    postMock.mockImplementation(async (_url: string, body: any) => ({
+      data: body.dry_run ? { rows: 3, cves: 2, changes: 3, as_of: '2026-10-18T10:00:02.000Z' } : { ok: true, changed: 3 },
+    }) as any);
+    renderPage('/it/vulnerabilities?alerts=excluded');
+    act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, total: 3 }));
+    fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+    await waitFor(() => expect(getMock).toHaveBeenCalledWith(
+      '/vulnerabilities/export',
+      expect.objectContaining({ params: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, responseType: 'blob' }),
+    ));
+    fireEvent.click(box(ALL_BOX));
+    fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
+    const dialog = await screen.findByRole('dialog');
+    await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
+      state: 'handled', all: true, filters: { sort: 'severity:DESC', filters: FILTERS, alerts: 'excluded' }, dry_run: true,
+    }));
+    expect(within(dialog).getByRole('status').textContent).toContain('3 rows');
   });
 
   it('exports the current filters through the list context', async () => {

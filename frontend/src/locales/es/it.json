@@ -439,13 +439,14 @@
         "rematch": "Volver a cotejar",
         "rematched": "Cotejo rehecho: {{added}} nuevas, {{removed}} retiradas.",
         "rematchFailed": "No se pudo realizar el cotejo. Inténtelo de nuevo.",
+        "noLongerMatches": "Ya no coincide",
         "alerts": {
           "excluded": "Excluida de las alertas",
           "excludedExcept_one": "Excluida de las alertas, excepto {{count}} versión",
           "excludedExcept_other": "Excluida de las alertas, excepto {{count}} versiones",
           "versionsExcluded_one": "{{count}} versión excluida de las alertas",
           "versionsExcluded_other": "{{count}} versiones excluidas de las alertas",
-          "set": "Ajustar"
+          "set": "Cambiar"
         }
       },
       "alerts": {
@@ -2053,7 +2054,7 @@
         "alertsOwn": "Ajuste propio de esta versión",
         "alertsConfirmTitle": "Alertas de vulnerabilidad",
         "alertsReset_one": "{{count}} versión tiene un ajuste propio. Se sustituirá.",
-        "alertsReset_other": "{{count}} versiones tienen un ajuste propio. Se sustituirá.",
+        "alertsReset_other": "{{count}} versiones tienen un ajuste propio. Se sustituirán.",
         "alertsReplace": "Sustituir",
         "status": {
           "supported": "Con soporte",

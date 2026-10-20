@@ -439,13 +439,14 @@
         "rematch": "Rapprocher à nouveau",
         "rematched": "Rapprochement refait : {{added}} nouvelles, {{removed}} retirées.",
         "rematchFailed": "Le rapprochement n'a pas pu se faire. Réessayez.",
+        "noLongerMatches": "Ne correspond plus",
         "alerts": {
           "excluded": "Exclue des alertes",
           "excludedExcept_one": "Exclue des alertes, sauf {{count}} version",
           "excludedExcept_other": "Exclue des alertes, sauf {{count}} versions",
           "versionsExcluded_one": "{{count}} version exclue des alertes",
           "versionsExcluded_other": "{{count}} versions exclues des alertes",
-          "set": "Régler"
+          "set": "Modifier"
         }
       },
       "alerts": {
@@ -2053,7 +2054,7 @@
         "alertsOwn": "Réglage propre à cette version",
         "alertsConfirmTitle": "Alertes de vulnérabilité",
         "alertsReset_one": "{{count}} version a un réglage propre, il sera remplacé.",
-        "alertsReset_other": "{{count}} versions ont un réglage propre, il sera remplacé.",
+        "alertsReset_other": "{{count}} versions ont un réglage propre, ils seront remplacés.",
         "alertsReplace": "Remplacer",
         "status": {
           "supported": "Supportée",
