@@ -25,6 +25,7 @@ const access = vi.hoisted(() => ({
   version: 'unknown',
   aiChat: false,
   aiData: undefined as unknown,
+  vulnerabilityFeed: false,
 }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -50,7 +51,7 @@ vi.mock('../config/FeaturesContext', () => ({
   useFeatures: () => ({
     config: {
       deploymentMode: access.deploymentMode,
-      features: { billing: true, aiChat: access.aiChat, aiSettings: false, sso: false, email: false, sampleData: access.sampleData },
+      features: { billing: true, aiChat: access.aiChat, aiSettings: false, sso: false, email: false, sampleData: access.sampleData, vulnerabilityFeed: access.vulnerabilityFeed },
       version: access.version,
     },
     isLoading: false,
@@ -71,12 +72,13 @@ vi.mock('../ai/aiApi', () => ({
 
 vi.mock('../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 
+const applicationVisibility = vi.hoisted(() => ({
+  isLoading: false,
+  hasScopedApplicationReaderAccess: false,
+  shouldHideApplications: false,
+}));
 vi.mock('../hooks/useBusinessContributorApplicationVisibility', () => ({
-  useBusinessContributorApplicationVisibility: () => ({
-    isLoading: false,
-    hasScopedApplicationReaderAccess: false,
-    shouldHideApplications: false,
-  }),
+  useBusinessContributorApplicationVisibility: () => applicationVisibility,
 }));
 
 function shell(client: QueryClient) {
@@ -478,5 +480,141 @@ describe('Layout section tabs scroll arrows', () => {
     } finally {
       width.mockRestore();
     }
+  });
+});
+
+describe('Layout IT menu', () => {
+  afterEach(() => {
+    access.grants = null;
+    access.vulnerabilityFeed = false;
+    applicationVisibility.isLoading = false;
+    applicationVisibility.hasScopedApplicationReaderAccess = false;
+    applicationVisibility.shouldHideApplications = false;
+  });
+
+  function renderIt(path = '/it/assets') {
+    const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    return render(
+      <QueryClientProvider client={client}>
+        <MemoryRouter initialEntries={[path]}>
+          <Routes>
+            <Route element={<Layout />}>
+              <Route path="/it/*" element={<div>it page</div>} />
+            </Route>
+          </Routes>
+        </MemoryRouter>
+      </QueryClientProvider>,
+    );
+  }
+
+  /** Section titles and entries, in the order the drawer draws them. */
+  function navTexts(container: HTMLElement): string[] {
+    const drawer = container.querySelector('.MuiDrawer-paper');
+    if (!drawer) throw new Error('IT drawer missing');
+    return [...drawer.querySelectorAll('.MuiListSubheader-root, a')].map((node) => (node.textContent || '').trim());
+  }
+
+  it('lists applications, infrastructure, reference data, then operations', () => {
+    access.vulnerabilityFeed = true;
+    const { container } = renderIt();
+
+    expect(navTexts(container)).toEqual([
+      'nav:sidebar.it.sections.applications',
+      'nav:sidebar.it.applications',
+      'nav:sidebar.it.interfaces',
+      'nav:sidebar.it.interfaceMap',
+      'nav:sidebar.it.sections.infrastructure',
+      'nav:sidebar.it.assets',
+      'nav:sidebar.it.connections',
+      'nav:sidebar.it.connectionMap',
+      'nav:sidebar.it.administrationView',
+      'nav:sidebar.it.sections.referenceData',
+      'nav:sidebar.it.technologies',
+      'nav:sidebar.it.locations',
+      'nav:sidebar.it.sections.operations',
+      'nav:sidebar.it.incidents',
+      'nav:sidebar.it.endOfSupport',
+      'nav:sidebar.it.vulnerabilities',
+      'nav:sidebar.it.settings',
+    ]);
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.applications' })).toHaveAttribute('href', '/it/applications');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.interfaceMap' })).toHaveAttribute('href', '/it/interface-map');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.assets' })).toHaveAttribute('href', '/it/assets');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.administrationView' })).toHaveAttribute('href', '/it/administration-view');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.technologies' })).toHaveAttribute('href', '/it/technologies');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.locations' })).toHaveAttribute('href', '/it/locations');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.endOfSupport' })).toHaveAttribute('href', '/it/technologies/end-of-support');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.vulnerabilities' })).toHaveAttribute('href', '/it/vulnerabilities');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.settings' })).toHaveAttribute('href', '/it/settings');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.netbox' })).not.toBeInTheDocument();
+  });
+
+  it('hides vulnerabilities while the feed is off, and still has no Netbox entry', () => {
+    renderIt();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.vulnerabilities' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.netbox' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.incidents' })).toBeInTheDocument();
+  });
+
+  it('drops a section title when every entry of that section is hidden', () => {
+    access.grants = { infrastructure: 'reader' };
+    const { container } = renderIt();
+    const texts = navTexts(container);
+
+    expect(texts).not.toContain('nav:sidebar.it.sections.applications');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.applications' })).not.toBeInTheDocument();
+    expect(texts).toContain('nav:sidebar.it.sections.infrastructure');
+    expect(texts).toContain('nav:sidebar.it.sections.referenceData');
+    expect(texts.indexOf('nav:sidebar.it.sections.infrastructure')).toBeLessThan(texts.indexOf('nav:sidebar.it.assets'));
+  });
+
+  it('leaves no section title when the only reachable page is settings', () => {
+    access.grants = { settings: 'reader' };
+    const { container } = renderIt('/it/settings');
+
+    expect(navTexts(container)).toEqual(['nav:sidebar.it.settings']);
+    expect(container.querySelectorAll('.MuiListSubheader-root')).toHaveLength(0);
+  });
+
+  it('hides the applications section when a scoped reader cannot see any of its entries', () => {
+    applicationVisibility.hasScopedApplicationReaderAccess = true;
+    applicationVisibility.shouldHideApplications = true;
+    const { container } = renderIt();
+
+    expect(navTexts(container)).not.toContain('nav:sidebar.it.sections.applications');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.applications' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.interfaces' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.interfaceMap' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.assets' })).toBeInTheDocument();
+  });
+
+  it('keeps Applications when a scoped reader may see that list and not the interface pages', () => {
+    applicationVisibility.hasScopedApplicationReaderAccess = true;
+    const { container } = renderIt('/it/applications');
+    const texts = navTexts(container);
+
+    expect(texts).toContain('nav:sidebar.it.sections.applications');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.applications' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.interfaces' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.interfaceMap' })).not.toBeInTheDocument();
+  });
+
+  it('shows Settings to someone who can open the lists or administer infrastructure', () => {
+    access.grants = { settings: 'reader' };
+    const { unmount } = renderIt('/it/settings');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.settings' })).toBeInTheDocument();
+    unmount();
+
+    access.grants = { infrastructure: 'admin' };
+    renderIt('/it/assets');
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.settings' })).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.netbox' })).not.toBeInTheDocument();
+  });
+
+  it('hides Settings from an infrastructure reader', () => {
+    access.grants = { infrastructure: 'reader' };
+    renderIt('/it/assets');
+    expect(screen.queryByRole('link', { name: 'nav:sidebar.it.settings' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'nav:sidebar.it.assets' })).toBeInTheDocument();
   });
 });
