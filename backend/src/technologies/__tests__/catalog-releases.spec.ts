@@ -1,8 +1,8 @@
 import * as assert from 'node:assert/strict';
 import { ConfigController } from '../../config/config.controller';
 import { Features } from '../../config/features';
-import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, MAX_VERSIONS, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionsOfReleases } from '../catalog/catalog-releases';
-import { versionMatches } from '../../vulnerabilities/vulnerability-rules';
+import { cleanLabel, cpeVersionOf, endoflifeSlug, MAX_RELEASES, MAX_VERSIONS, mergeProduct, mergeVersions, realDay, releaseProduct, SUPPORT_RULES, validCatalogVersion, versionPrecisionOf, versionsOfReleases } from '../catalog/catalog-releases';
+import { VERSION_PRECISION, versionMatches } from '../../vulnerabilities/vulnerability-rules';
 import { TechnologyCatalogService, type CatalogVersion } from '../catalog/technology-catalog.service';
 
 // The living catalog (lot C4) reads endoflife.date with the rules of the script that builds the
@@ -242,6 +242,104 @@ function testOperatingSystemReleases() {
   assert.ok(['10 SP4', '11 SP4', '12', '12 SP5', '15', '15 SP7'].every((label) => shippedLabels('sles').includes(label)));
 }
 
+/**
+ * Operating systems (lot V3). Identifiers checked at the NVD. Windows Server is one product per
+ * long-term release from 2003; a release the living catalog adds receives the next year, and
+ * Windows 2000 does not (`windows_2000` is not `windows_server_2000`). The CPE version stays the
+ * one the labels already gave: null when the label is the version, `22.04` for Ubuntu LTS, the
+ * major for Debian. 2012 and 2012 R2 share `windows_server_2012`.
+ */
+function testOperatingSystemCpe() {
+  const byKey = new Map(shipped.map((p) => [p.key, p]));
+  const ids = (key: string) => byKey.get(key)!.cpe_products;
+  assert.deepEqual(ids('ubuntu'), ['o:canonical:ubuntu_linux']);
+  assert.deepEqual(ids('rhel'), ['o:redhat:enterprise_linux']);
+  assert.deepEqual(ids('debian'), ['o:debian:debian_linux']);
+  assert.deepEqual(ids('almalinux'), ['o:almalinux:almalinux']);
+  assert.deepEqual(ids('oracle-linux'), ['o:oracle:linux']);
+  assert.deepEqual(ids('centos'), ['o:centos:centos']);
+  assert.deepEqual(ids('rocky-linux'), ['o:resf:rocky_linux']);
+  assert.deepEqual(ids('sles'), [], 'the service pack is the CPE update, which the matching does not read');
+  assert.deepEqual(ids('windows-server'), [
+    'o:microsoft:windows_server_2003',
+    'o:microsoft:windows_server_2008',
+    'o:microsoft:windows_server_2012',
+    'o:microsoft:windows_server_2016',
+    'o:microsoft:windows_server_2019',
+    'o:microsoft:windows_server_2022',
+    'o:microsoft:windows_server_2025',
+  ]);
+
+  const windows = byKey.get('windows-server')!;
+  const version = (label: string) => windows.versions.find((v) => v.label === label)!;
+  assert.equal(version('2019').cpe_version, null, 'the NVD build is not stored');
+  assert.equal(version('2025').cpe_version, null);
+  assert.equal(version('2012 R2').cpe_version, '2012');
+  assert.equal(version('2008 R2').cpe_version, '2008');
+  assert.equal(byKey.get('ubuntu')!.versions.find((v) => v.label === '22.04 LTS')!.cpe_version, '22.04');
+  assert.equal(byKey.get('debian')!.versions.find((v) => v.label.startsWith('12 '))!.cpe_version, '12');
+  assert.equal(byKey.get('rhel')!.versions.find((v) => v.label === '9')!.cpe_version, null);
+  for (const shippedVersion of windows.versions) {
+    const product = releaseProduct('windows-server', shippedVersion.label);
+    if (product) assert.ok(windows.cpe_products.includes(product), `${shippedVersion.label} names a shipped product`);
+  }
+  assert.equal(releaseProduct('windows-server', '2000'), null);
+  assert.equal(releaseProduct('windows-server', '2012 R2'), 'o:microsoft:windows_server_2012');
+  assert.equal(releaseProduct('windows-server', '2028'), 'o:microsoft:windows_server_2028');
+
+  const live = versionsOfReleases(
+    [{ name: '2028', label: 'Windows Server 2028 (LTSC)', releaseDate: '2027-11-01', eoasFrom: '2032-11-01', eolFrom: '2037-11-01' }],
+    '2027-11-02',
+    'windows-server',
+  );
+  const merged = mergeProduct(windows, live);
+  assert.deepEqual(merged.cpe_products.filter((p) => !windows.cpe_products.includes(p)), ['o:microsoft:windows_server_2028']);
+  assert.ok(!merged.cpe_products.some((p) => p.endsWith('_2000')));
+  const added = merged.versions.find((v) => v.label === '2028')!;
+  const bound = { version_exact: null, version_start: null, start_including: null, version_end: '10.0.99999.1', end_including: false };
+  assert.equal(versionMatches(added, 'o:microsoft:windows_server_2028', bound), 'in_range');
+  assert.equal(versionMatches(version('2025'), 'o:microsoft:windows_server_2028', bound), 'out');
+
+  // The branch the matching compares is the same number on the catalog entry and on the CPE product.
+  const precision: Array<[string, number]> = [
+    ['rhel', 1], ['debian', 1], ['oracle-linux', 1], ['almalinux', 1], ['rocky-linux', 1], ['centos', 1], ['ubuntu', 2],
+  ];
+  const branched = new Set<string>();
+  for (const [key, segments] of precision) {
+    assert.equal(versionPrecisionOf(key), segments, key);
+    for (const id of ids(key)) {
+      assert.equal(VERSION_PRECISION[id], segments, id);
+      branched.add(id);
+    }
+  }
+  for (const id of Object.keys(VERSION_PRECISION)) assert.ok(branched.has(id), `${id} is a shipped operating-system product`);
+  assert.equal(versionPrecisionOf('windows-server'), null);
+  assert.equal(versionPrecisionOf('mssqlserver'), null);
+  assert.equal(versionPrecisionOf('postgresql'), null);
+}
+
+/**
+ * Services checked again at the NVD (lot V5, 2026-10-20). Azure Kubernetes Service and
+ * Microsoft Entra ID carry identifiers. Entra ID also keeps its former Azure Active Directory
+ * name and the provisioning service. The others still have none. An AKS label is a kubernetes
+ * minor: it needs no `cpe_version`.
+ */
+function testServiceCpe() {
+  const byKey = new Map(shipped.map((p) => [p.key, p]));
+  const ids = (key: string) => byKey.get(key)!.cpe_products;
+  assert.deepEqual(ids('azure-kubernetes-service'), ['a:microsoft:azure_kubernetes_service']);
+  assert.deepEqual(ids('entra-id'), [
+    'a:microsoft:azure_active_directory',
+    'a:microsoft:entra_id',
+    'a:microsoft:entra_provisioning_service',
+  ]);
+  assert.equal(byKey.get('entra-id')!.versions.length, 0);
+  assert.equal(byKey.get('azure-kubernetes-service')!.versions.find((v) => v.label === '1.32')!.cpe_version, null);
+  for (const key of ['amazon-eks', 'google-kubernetes-engine', 'active-directory', 'nutanix-prism', 'nutanix-files', 'veeam-backup-for-microsoft-365']) {
+    assert.deepEqual(ids(key), [], key);
+  }
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
   testVersionsOfReleases();
@@ -253,6 +351,8 @@ function main() {
   testFeatureGate();
   testOperatingSystemSupportDates();
   testOperatingSystemReleases();
+  testOperatingSystemCpe();
+  testServiceCpe();
   console.log('catalog-releases.spec: ok');
 }
 

@@ -12,9 +12,10 @@ In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premis
 
 KANAP liest alle 6 Stunden die von der NVD veröffentlichten Schwachstellen und vergleicht sie mit Ihren Technologien:
 
-- **Produkte**: Eine Technologie wird über ihre CPE-Produktkennungen verglichen (siehe [Technologien](technologies.md#ubersicht)). Eine Technologie ohne Kennung erhält keine Schwachstelle. Die Betriebssysteme des Katalogs haben noch keine, daher werden sie nicht abgeglichen. Außer Betrieb genommene Technologien bleiben außen vor.
+- **Produkte**: Eine Technologie wird über ihre CPE-Produktkennungen verglichen (siehe [Technologien](technologies.md#ubersicht)). Eine Technologie ohne Kennung erhält keine Schwachstelle. Die Betriebssysteme des Katalogs haben sie ebenfalls. SUSE Linux Enterprise Server hat keine: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich. Außer Betrieb genommene Technologien bleiben außen vor.
 - **Versionen**: Nur die Versionen im Einsatz zählen: installiert auf einem Server in Betrieb oder genutzt von einer Anwendung in Betrieb.
 - **Versionsnummern**: Versionen werden über ihre Zahlen verglichen, Teil für Teil. `2016 SP3` zählt als 2016 und `19c` als 19. Eine Version mit weniger als drei Zahlen steht für ihren ganzen Zweig: `9.0` umfasst alle `9.0.x`. Eine Version, die KANAP nicht vergleichen kann, etwa eine Bezeichnung ohne Zahl, gilt als betroffen.
+- **Betriebssysteme**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux und CentOS werden über ihre Hauptversion verglichen, Ubuntu über Jahr und Monat, so wie die NVD sie veröffentlicht: `9.4` erhält die Schwachstellen von `9`, und `22.04.3 LTS` die von `22.04`. Windows Server wird nur über sein Jahr verglichen, da KANAP nicht weiß, welche Updates ein Server hat: Eine Version `2019` ist von jeder Schwachstelle von Windows Server 2019 betroffen, auch von denen, die ein Update bereits behoben hat. 2012 und 2012 R2 werden über ihre Bezeichnung unterschieden, ebenso 2008 und 2008 R2.
 - **Unbekannte Version**: Ein Server oder eine Anwendung ohne Version ist potenziell von jeder Schwachstelle des Produkts betroffen. Die Zeile zeigt in der Spalte **Version** **Nicht erfasst**.
 
 Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispiel Tomcat unter Windows. KANAP zeigt sie für das verwundbare Produkt allein, sodass eine Schwachstelle bei einer Installation erscheinen kann, die sie nicht betrifft. Markieren Sie sie als **Nicht betroffen**.
@@ -127,6 +128,6 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 
 ## Tipps
 
-- **CPE-Kennungen ausfüllen**: Technologien aus dem Katalog bringen sie mit, außer den Betriebssystemen. Für die anderen suchen Sie das Produkt im CPE-Wörterbuch des NIST.
+- **CPE-Kennungen ausfüllen**: Die meisten Technologien aus dem Katalog bringen sie mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server hat keine. Für die anderen suchen Sie das Produkt im CPE-Wörterbuch des NIST.
 - **Versionen erfassen**: Ein Server oder eine Anwendung ohne Version ist potenziell von allem betroffen, was die tatsächliche Gefährdung verdeckt.
 - **Die Notiz schreiben**: Wer die Schwachstelle als Nächstes liest, sieht, was getan wurde.

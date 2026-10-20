@@ -12,9 +12,10 @@ Vulnerabilities are followed by default in the cloud. On an on-premise installat
 
 KANAP reads the vulnerabilities published by the NVD every 6 hours and compares them with your technologies:
 
-- **Products**: a technology is compared through its CPE product identifiers (see [Technologies](technologies.md#overview)). A technology without one gets no vulnerability. The catalog's operating systems have none yet, so they are not matched. Retired technologies are left out.
+- **Products**: a technology is compared through its CPE product identifiers (see [Technologies](technologies.md#overview)). A technology without one gets no vulnerability. The catalog's operating systems have them too. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Retired technologies are left out.
 - **Versions**: only the versions in use count: installed on a server in service, or used by an application in service.
 - **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version KANAP cannot compare, such as a label without a number, counts as concerned.
+- **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. Windows Server compares on its year only, as KANAP does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
 - **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row shows **Not recorded** in the **Version** column.
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
@@ -127,6 +128,6 @@ The recipients are the IT owners of the technology whose account is enabled and 
 
 ## Tips
 
-- **Fill in the CPE identifiers**: catalog technologies come with them, except the operating systems. For the others, search the product in the NIST CPE dictionary.
+- **Fill in the CPE identifiers**: most catalog technologies come with them, operating systems included. SUSE Linux Enterprise Server has none. For the others, search the product in the NIST CPE dictionary.
 - **Record versions**: a server or application without a version is potentially concerned by everything, which hides the real exposure.
 - **Write the note**: the next person to read the vulnerability sees what was done.

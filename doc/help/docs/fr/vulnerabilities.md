@@ -12,9 +12,10 @@ Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installatio
 
 KANAP lit les vulnérabilités publiées par la NVD toutes les 6 heures et les compare à vos technologies :
 
-- **Produits** : une technologie est comparée par ses identifiants CPE produit (voir [Technologies](technologies.md#apercu)). Une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Les systèmes d'exploitation du catalogue n'en ont pas encore : ils ne sont donc pas rapprochés. Les technologies retirées sont écartées.
+- **Produits** : une technologie est comparée par ses identifiants CPE produit (voir [Technologies](technologies.md#apercu)). Une technologie qui n'en a aucun ne reçoit aucune vulnérabilité. Les systèmes d'exploitation du catalogue en ont aussi. SUSE Linux Enterprise Server n'en a pas : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable. Les technologies retirées sont écartées.
 - **Versions** : seules les versions en service comptent : installées sur un serveur en service, ou utilisées par une application en service.
 - **Numéros de version** : les versions se comparent sur leurs nombres, partie par partie. `2016 SP3` compte comme 2016 et `19c` comme 19. Une version de moins de trois nombres vaut pour toute sa branche : `9.0` couvre tous les `9.0.x`. Une version que KANAP ne peut pas comparer, comme un libellé sans nombre, compte comme concernée.
+- **Systèmes d'exploitation** : Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux et CentOS se comparent sur leur version majeure, et Ubuntu sur son année et son mois, comme la NVD les publie : `9.4` reçoit les vulnérabilités de `9`, et `22.04.3 LTS` celles de `22.04`. Windows Server se compare sur son année seule, car KANAP ne sait pas quelles mises à jour un serveur a reçues : une version `2019` est concernée par toutes les vulnérabilités de Windows Server 2019, y compris celles qu'une mise à jour a déjà corrigées. 2012 et 2012 R2 sont distingués par leur libellé, comme 2008 et 2008 R2.
 - **Version inconnue** : un serveur ou une application qui ne nomme aucune version est potentiellement concerné par toutes les vulnérabilités du produit. Sa ligne affiche **Non renseignée** dans la colonne **Version**.
 
 Certaines vulnérabilités ne s'appliquent que lorsque deux produits tournent ensemble, par exemple Tomcat sur Windows. KANAP les montre pour le seul produit vulnérable : l'une d'elles peut donc apparaître pour une installation qu'elle ne touche pas. Marquez-la **Non concernée**.
@@ -127,6 +128,6 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 
 ## Conseils
 
-- **Renseignez les identifiants CPE** : les technologies du catalogue les ont déjà, sauf les systèmes d'exploitation. Pour les autres, cherchez le produit dans le dictionnaire CPE du NIST.
+- **Renseignez les identifiants CPE** : la plupart des technologies du catalogue les ont déjà, systèmes d'exploitation compris. SUSE Linux Enterprise Server n'en a pas. Pour les autres, cherchez le produit dans le dictionnaire CPE du NIST.
 - **Saisissez les versions** : un serveur ou une application sans version est potentiellement concerné par tout, ce qui masque l'exposition réelle.
 - **Écrivez la note** : la personne qui lira la vulnérabilité ensuite voit ce qui a été fait.

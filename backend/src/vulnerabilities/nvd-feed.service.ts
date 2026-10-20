@@ -17,8 +17,11 @@ const DAY_MS = 24 * 60 * 60 * 1000;
 export const NVD_MAX_WINDOW_MS = 120 * DAY_MS - 60_000;
 /** An incremental window starts this much before the last success: a CVE indexed late is not missed. */
 const OVERLAP_MS = 60 * 60 * 1000;
-/** NVD maximum and recommended page size. */
-const PAGE_SIZE = 2000;
+/**
+ * CVE asked per page. The NVD allows 2000; a Windows page of that size is about 18.6 MB and about
+ * 68 s, and one of 500 is about 4.7 MB and about 6 s.
+ */
+export const NVD_PAGE_SIZE = 500;
 /** Rolling 30 s window: 5 requests without a key, 50 with one (NVD "Rate Limits"). */
 const RATE_WINDOW_MS = 30_000;
 const ATTEMPTS = 3;
@@ -211,6 +214,15 @@ export class NvdFeedService implements OnModuleInit {
   private raisedCves = new Set<string>();
   /** The collections on demand of this process, one after the other. */
   private onDemand: Promise<void> = Promise.resolve();
+  /** `collectNew` calls not finished yet, their rematch included (the specs wait for them). */
+  private demandPending = 0;
+  /**
+   * Workspaces to match once the on-demand queue is idle, and the products whose first collection
+   * has succeeded. Several products collected one after another are matched once, with all of them
+   * in the cache (`flushRematch`).
+   */
+  private readonly rematchTenants = new Set<string>();
+  private readonly rematchProducts = new Set<string>();
   /** Technologies to match once the transaction that changed them has committed (`txid`). */
   private afterCommit: Array<{ tenantId: string; technologyId: string; products: string[]; txid: string; queuedAt: number }> = [];
   private draining = false;
@@ -314,8 +326,11 @@ export class NvdFeedService implements OnModuleInit {
    * technology with the transaction's id (`txid_current()`), and a queue outside any request
    * transaction reads that transaction's status (`txid_status`): once `committed`, the technology is
    * matched with the cache from the committed state, then the products the feed never collected are
-   * collected in the background (and the tenant matched again); `aborted`, nothing happens. These
-   * matches send no email: the next runs find their rows already there. Nothing while the feed is off.
+   * collected in the background. Once that queue is idle, every workspace that carries a product
+   * whose first collection succeeded is matched (`flushRematch`), so a product collected after the
+   * first is in the cache by then. `aborted`, nothing happens. These matches send no email: the
+   * first match of a technology, and of a CPE product just added to one already matched, stays a
+   * silent baseline (`vulnerability-notifications.service.ts`). Nothing while the feed is off.
    */
   async onCpeProductsAdded(event: CpeProductsAdded): Promise<void> {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
@@ -326,10 +341,12 @@ export class NvdFeedService implements OnModuleInit {
     void this.drain();
   }
 
-  /** Resolves once the after-commit queue is empty (for the specs). */
+  /** Resolves once the after-commit queue and the collections it started are finished (for the specs). */
   async whenIdle(timeoutMs = 15_000): Promise<void> {
     const until = Date.now() + timeoutMs;
-    while ((this.draining || this.afterCommit.length > 0) && Date.now() < until) await new Promise((r) => setTimeout(r, 25));
+    while ((this.draining || this.afterCommit.length > 0 || this.demandPending > 0) && Date.now() < until) {
+      await new Promise((r) => setTimeout(r, 25));
+    }
   }
 
   /** Works through the after-commit queue; an item waits while its transaction is in progress (10 minutes at most). */
@@ -380,21 +397,33 @@ export class NvdFeedService implements OnModuleInit {
   }
 
   /**
-   * Collects products never collected, now, in the background, then matches the tenant (lot T6b):
-   * the same collection as the scheduled run (cadence, first pass by pages), one request at a time in
-   * this process. It never takes the scheduled task's lock: each product is collected under its own
-   * lock (`vulnerability-feed:product:<product>`, which the run takes too), so a run is never skipped
+   * Collects products never collected, now, in the background (lot T6b): the same collection as the
+   * scheduled run (cadence, first pass by pages), one request at a time in this process. It never
+   * takes the scheduled task's lock: each product is collected under its own lock
+   * (`vulnerability-feed:product:<product>`, which the run takes too), so a run is never skipped
    * and two requests for one product collect it once. A request is tried once, and the first failure
    * of the service stops the collection (the products left wait for the run); a tenant collects
    * `onDemandPerHour` new products an hour at most in this process, the run takes the others.
-   * Never rejects.
+   * When the queue is idle, every workspace that carries a product just collected for the first time
+   * is matched (`flushRematch`). Never rejects, and sends no email.
    */
   @NeverRejects()
   async collectNew(tenantId: string, products: string[], runtime: FeedRuntime = defaultRuntime()): Promise<void> {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
-    const next = this.onDemand.then(() => this.collectNewNow(tenantId, products, { ...runtime, attempts: runtime.attempts ?? 1 }));
-    this.onDemand = next.catch(() => undefined);
-    await next;
+    this.demandPending += 1;
+    try {
+      const job = this.onDemand.then(() => this.collectNewNow(tenantId, products, { ...runtime, attempts: runtime.attempts ?? 1 }));
+      // The last call of the queue matches. One chained behind this one sees a different `onDemand`.
+      let settled: Promise<void> = Promise.resolve();
+      const tail = job.catch(() => undefined).then(() => {
+        if (this.onDemand === settled) return this.flushRematch();
+      });
+      settled = tail.catch(() => undefined);
+      this.onDemand = settled;
+      await tail;
+    } finally {
+      this.demandPending -= 1;
+    }
   }
 
   /** New products a tenant may have collected on demand per hour, in this process. */
@@ -435,26 +464,90 @@ export class NvdFeedService implements OnModuleInit {
 
   private async collectNewNow(tenantId: string, products: string[], runtime: FeedRuntime): Promise<void> {
     const wanted = await this.neverCollected(products);
-    if (wanted.length === 0) return;
+    // Already collected, by the call ahead in this queue or by an earlier one. The workspace is
+    // still matched: it may have gained the product after that collection's match.
+    if (wanted.length === 0) {
+      this.noteRematch(tenantId, products);
+      return;
+    }
     const allowed = wanted.slice(0, this.takeOnDemandQuota(tenantId, wanted.length));
     const summary: FeedSummary = { products: allowed.length, requests: 0, cves: 0, failed_products: [], errors: [], tenants_matched: 0, rows_added: 0, rows_removed: 0 };
+    const collected: string[] = [];
     for (const product of allowed) {
       let serviceDown = false;
+      let done = false;
       await this.withProductLock(product, true, async () => {
-        // Collected by a run or by another request while this one waited: nothing to collect, but
-        // the tenant is still matched below (it asked for these products).
-        if ((await this.neverCollected([product])).length === 0) return;
+        // Collected by a run or by another request while this one waited.
+        if ((await this.neverCollected([product])).length === 0) {
+          done = true;
+          return;
+        }
         try {
           await this.collectProduct(product, runtime, summary);
+          done = true;
         } catch (error: any) {
           await this.recordFailure(product, error);
           serviceDown = serviceFailure(error);
           this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${product} on demand: ${String(error?.message ?? error).slice(0, 300)}`);
         }
       });
+      if (done) collected.push(product);
       if (serviceDown) break;
     }
-    await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+    this.noteRematch(tenantId, collected);
+  }
+
+  /** Remembers a workspace, and products whose first collection succeeded, for `flushRematch`. */
+  private noteRematch(tenantId: string, products: string[]): void {
+    const wanted = Array.from(new Set(products.map((p) => String(p).trim().toLowerCase()).filter(Boolean)));
+    if (wanted.length === 0) return;
+    this.rematchTenants.add(tenantId);
+    for (const product of wanted) this.rematchProducts.add(product);
+  }
+
+  /**
+   * Matches every workspace that asked for the products just collected, and every workspace that
+   * carries one of them, each under its own context. One match for the whole queue: the products
+   * collected one after another are all in the cache. No email (the rows are there before the next
+   * scheduled run, and a product just added is a silent baseline anyway).
+   */
+  private async flushRematch(): Promise<void> {
+    const products = Array.from(this.rematchProducts);
+    const requesters = Array.from(this.rematchTenants);
+    this.rematchProducts.clear();
+    this.rematchTenants.clear();
+    if (products.length === 0) return;
+    let carriers: string[] = [];
+    try {
+      carriers = await this.tenantsCarrying(products);
+    } catch (error: any) {
+      this.logger.warn(`[${NVD_FEED_TASK_NAME}] workspaces carrying a product just collected: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
+    const tenants = Array.from(new Set([...requesters, ...carriers])).sort();
+    for (const tenantId of tenants) {
+      try {
+        await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+      } catch (error: any) {
+        this.logger.warn(`[${NVD_FEED_TASK_NAME}] matching of tenant ${tenantId} after a first collection: ${String(error?.message ?? error).slice(0, 300)}`);
+      }
+    }
+  }
+
+  /** The workspaces in use that carry one of `products` (retired technologies included: their rows are revised). */
+  private async tenantsCarrying(products: string[]): Promise<string[]> {
+    const wanted = Array.from(new Set(products.map((p) => String(p).trim().toLowerCase()).filter(Boolean)));
+    if (wanted.length === 0) return [];
+    const carriers: string[] = [];
+    for (const tenantId of await this.tenantIds()) {
+      const rows: Array<{ ok: number }> = await withTenant(this.dataSource, tenantId, (mg) => mg.query(
+        `SELECT 1 AS ok FROM technologies
+          WHERE tenant_id = $1 AND EXISTS (SELECT 1 FROM unnest(cpe_products) AS p WHERE lower(p) = ANY($2::text[]))
+          LIMIT 1`,
+        [tenantId, wanted],
+      ));
+      if (rows.length > 0) carriers.push(tenantId);
+    }
+    return carriers;
   }
 
   /** A product's failure, kept for the next run and for the technology's section. */
@@ -546,7 +639,7 @@ export class NvdFeedService implements OnModuleInit {
         url.searchParams.set('lastModStartDate', from.toISOString());
         url.searchParams.set('lastModEndDate', to.toISOString());
       }
-      url.searchParams.set('resultsPerPage', String(PAGE_SIZE));
+      url.searchParams.set('resultsPerPage', String(NVD_PAGE_SIZE));
       url.searchParams.set('startIndex', String(startIndex));
       const page = await this.request(url, runtime, summary);
       const items: any[] = Array.isArray(page?.vulnerabilities) ? page.vulnerabilities : [];

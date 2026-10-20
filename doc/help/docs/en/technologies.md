@@ -64,7 +64,7 @@ What the two support dates mean depends on the publisher:
 
 Any technology can be an operating system: put VMware ESXi or FortiOS in the **Operating system** family and it can be the operating system of a host or a firewall.
 
-The catalog's operating systems have no CPE product identifiers yet, so KANAP does not match them with vulnerabilities.
+The catalog's operating systems come with CPE product identifiers, and KANAP matches them with published vulnerabilities. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Operating systems are excluded from alerts by default. The setting is on the technology workspace, in the Vulnerability alerts column of the versions table.
 
 Operating systems are excluded from vulnerability alerts by default. KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities, most of them already patched. This applies to a technology of the **Operating system** family and to an operating system adopted from the catalog, whatever its family. An existing technology that you adopt from the catalog as an operating system becomes excluded too. You can include it again: see [Vulnerability alerts](#vulnerability-alerts).
 
@@ -169,7 +169,7 @@ A version that comes from the catalog shows **Catalog** next to its label, and a
 
 The check adds the new versions and CPE product identifiers of the product, and updates the end of support dates and identifiers the catalog changed. It never overwrites a value you changed, and never brings back a version or an identifier you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Catalog entries come with their identifiers, except the operating systems.
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities, so a technology without one gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included. SUSE Linux Enterprise Server arrives without them: the NVD publishes too few of its vulnerabilities for a reliable match.
 
 **Notes**: free text, such as licensing terms or renewal dates.
 
