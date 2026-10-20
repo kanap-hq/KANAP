@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Box, Button, Link, Typography } from '@mui/material';
+import { Box, Button, Link, Tooltip, Typography } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -19,7 +19,9 @@ export type TechnologyVulnerabilityVersion = {
   label: string | null;
   /** Effective setting: the version's own, or the technology's when it has none. */
   alerts: boolean;
-  /** Servers in service that carry this version. */
+  /** In use: on a server in service, or declared by an application in service. */
+  installed: boolean;
+  /** Servers in service that carry this version. 0 when the version is not installed. */
   servers: number;
   open: VulnerabilityOpenCounts;
   /** Distinct CVE of this version, every state. */
@@ -61,10 +63,11 @@ type Props = {
 };
 
 /**
- * The vulnerabilities of a technology, for its Compliance tab: one line per version that has a
- * match, with the CVE still to review by severity. "See" opens the Vulnerabilities page on that
- * version. The count is of distinct CVE. A member can match the technology again. Renders nothing
- * while the vulnerability feed is off (`features.vulnerabilityFeed`).
+ * The vulnerabilities of a technology, for its Compliance tab: one line per version, with the CVE
+ * still to review by severity. A version that is not in use shows "Not installed" in place of the
+ * server and CVE counts. "See" opens the Vulnerabilities page on an installed version that has a
+ * CVE. The count next to the title is of distinct CVE. A member can match the technology again.
+ * Renders nothing while the vulnerability feed is off (`features.vulnerabilityFeed`).
  */
 export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit }: Props) {
   const { t } = useTranslation('it');
@@ -130,12 +133,21 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       header: t('pages.vulnerabilities.columns.servers'),
       width: 88,
       align: 'right',
-      render: (row) => <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.servers}</Box>,
+      // Servers, to review and total become the one "Not installed" label.
+      span: (row) => (row.installed ? 1 : 3),
+      render: (row) => row.installed
+        ? <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.servers}</Box>
+        : (
+          <Tooltip title={t('pages.vulnerabilities.section.notInstalledHint')}>
+            <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.section.notInstalled')}</Box>
+          </Tooltip>
+        ),
     },
     {
       key: 'open',
       header: t('pages.vulnerabilities.section.columns.open'),
       render: (row) => {
+        if (!row.installed) return null;
         const open = SEVERITIES.filter((severity) => row.open[severity] > 0);
         if (open.length === 0) return <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>0</Box>;
         return (
@@ -150,13 +162,15 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       header: t('pages.vulnerabilities.section.columns.total'),
       width: 72,
       align: 'right',
-      render: (row) => <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.total}</Box>,
+      render: (row) => row.installed
+        ? <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.total}</Box>
+        : null,
     },
     {
       key: 'see',
       header: '',
       width: 88,
-      render: (row) => (
+      render: (row) => row.installed && row.total > 0 ? (
         <Link
           component={RouterLink}
           to={pageOf(row.label ?? 'none')}
@@ -166,7 +180,7 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
         >
           {t('pages.vulnerabilities.section.see')}
         </Link>
-      ),
+      ) : null,
     },
   ];
 

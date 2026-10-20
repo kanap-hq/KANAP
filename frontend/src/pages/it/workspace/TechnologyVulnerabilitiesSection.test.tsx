@@ -6,6 +6,10 @@ import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import api from '../../../api';
 import { createAppTheme } from '../../../config/ThemeContext';
+import en from '../../../locales/en/it.json';
+import fr from '../../../locales/fr/it.json';
+import de from '../../../locales/de/it.json';
+import es from '../../../locales/es/it.json';
 import TechnologyVulnerabilitiesSection, { type TechnologyVulnerabilityVersion } from './TechnologyVulnerabilitiesSection';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn() } }));
@@ -18,7 +22,7 @@ const getMock = vi.mocked(api.get);
 const postMock = vi.mocked(api.post);
 
 const version = (over: Partial<TechnologyVulnerabilityVersion>): TechnologyVulnerabilityVersion => ({
-  version_id: 'v-1', label: '10.1', alerts: true, servers: 4,
+  version_id: 'v-1', label: '10.1', alerts: true, installed: true, servers: 4,
   open: { critical: 2, high: 0, medium: 1, low: 0, none: 0 }, total: 5, ...over,
 });
 
@@ -38,10 +42,10 @@ const summary = (over: Record<string, unknown> = {}) => ({
   ...over,
 });
 
-function renderSection(canEdit: boolean, path = '/it/technologies/TEC-7/compliance') {
+function renderSection(canEdit: boolean, path = '/it/technologies/TEC-7/compliance', mode: 'light' | 'dark' = 'dark') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
-    <ThemeProvider theme={createAppTheme('dark')}>
+    <ThemeProvider theme={createAppTheme(mode)}>
       <QueryClientProvider client={client}>
         <MemoryRouter initialEntries={[path]}><TechnologyVulnerabilitiesSection technologyId="tech-1" canEdit={canEdit} /></MemoryRouter>
       </QueryClientProvider>
@@ -162,5 +166,93 @@ describe('TechnologyVulnerabilitiesSection', () => {
     getMock.mockResolvedValue({ data: summary({ versions: [], cves: 0 }) } as any);
     renderSection(true);
     expect(await screen.findByText('No known vulnerability concerns this technology.')).toBeTruthy();
+  });
+
+  it('shows 0 and no See for an installed version with no vulnerability', async () => {
+    getMock.mockResolvedValue({
+      data: summary({
+        cves: 3,
+        versions: [version({
+          version_id: 'v-empty', label: '8.0', servers: 2,
+          open: { critical: 0, high: 0, medium: 0, low: 0, none: 0 }, total: 0,
+        })],
+      }),
+    } as any);
+    renderSection(false);
+    const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
+    const row = within(table).getAllByRole('row')[1];
+    expect(row.textContent).toBe('8.0200');
+    expect(within(row).queryByRole('link', { name: 'See' })).toBeNull();
+    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities3/);
+    expect(screen.queryByText('Not installed')).toBeNull();
+  });
+
+  it('names a version that is not installed and keeps its alert state', async () => {
+    getMock.mockResolvedValue({
+      data: summary({
+        cves: 4,
+        versions_excluded: 1,
+        versions: [
+          version({
+            version_id: 'v-2025', label: '2025', alerts: true, installed: false, servers: 9,
+            open: { critical: 3, high: 1, medium: 0, low: 0, none: 0 }, total: 4,
+          }),
+          version({ version_id: 'v-2019', label: '2019', alerts: false, installed: false, servers: 2, total: 1 }),
+        ],
+      }),
+    } as any);
+    renderSection(false);
+    const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
+    const rows = within(table).getAllByRole('row').slice(1);
+    expect(rows.map((row) => row.textContent)).toEqual([
+      '2025Not installed',
+      '2019Excluded from alertsNot installed',
+    ]);
+    expect(within(table).queryByRole('link', { name: 'See' })).toBeNull();
+    expect(within(table).getByRole('columnheader', { name: 'Servers' })).toBeTruthy();
+    expect(within(table).getByRole('columnheader', { name: 'To review' })).toBeTruthy();
+    const label = within(rows[0]).getByText('Not installed');
+    expect(label.closest('td')?.getAttribute('colspan')).toBe('3');
+    expect(rows[0].querySelectorAll('td')).toHaveLength(3);
+    expect(getComputedStyle(label).color).toBe('rgb(129, 136, 149)');
+    expect(getComputedStyle(rows[0].querySelectorAll('td')[0]).color).not.toBe('rgb(129, 136, 149)');
+    expect(getComputedStyle(rows[1].querySelectorAll('td')[0]).color).toBe('rgb(129, 136, 149)');
+    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities4/);
+    expect(screen.getByText('1 version excluded from alerts')).toBeTruthy();
+    expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
+    fireEvent.mouseOver(label);
+    expect((await screen.findByRole('tooltip')).textContent).toBe(
+      'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
+    );
+  });
+
+  it('shows Not installed in tertiary text in light mode', async () => {
+    getMock.mockResolvedValue({
+      data: summary({ versions: [version({ version_id: 'v-2025', label: '2025', installed: false })] }),
+    } as any);
+    renderSection(false, '/it/technologies/TEC-7/compliance', 'light');
+    const label = await screen.findByText('Not installed');
+    expect(getComputedStyle(label).color).toBe('rgb(108, 116, 130)');
+    expect(screen.queryByRole('link', { name: 'See' })).toBeNull();
+  });
+
+  it('names a version that is not installed in every language', () => {
+    const section = (tree: { pages: { vulnerabilities: { section: { notInstalled: string; notInstalledHint: string } } } }) => tree.pages.vulnerabilities.section;
+    expect(section(en)).toMatchObject({
+      notInstalled: 'Not installed',
+      notInstalledHint: 'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
+    });
+    expect(section(fr)).toMatchObject({
+      notInstalled: 'Non installée',
+      notInstalledHint: 'KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.',
+    });
+    expect(section(de)).toMatchObject({
+      notInstalled: 'Nicht installiert',
+      notInstalledHint: 'KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.',
+    });
+    expect(section(es)).toMatchObject({
+      notInstalled: 'No instalada',
+      notInstalledHint: 'KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.',
+    });
   });
 });

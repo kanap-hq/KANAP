@@ -442,6 +442,8 @@
         "noLongerMatches": "Trifft nicht mehr zu",
         "see": "Ansehen",
         "seeAll": "Alles auf der Seite Schwachstellen ansehen",
+        "notInstalled": "Nicht installiert",
+        "notInstalledHint": "KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.",
         "columns": {
           "open": "Zu prüfen",
           "total": "Gesamt"

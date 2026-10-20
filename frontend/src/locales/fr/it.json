@@ -442,6 +442,8 @@
         "noLongerMatches": "Ne correspond plus",
         "see": "Voir",
         "seeAll": "Tout voir dans la page Vulnérabilités",
+        "notInstalled": "Non installée",
+        "notInstalledHint": "KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.",
         "columns": {
           "open": "À traiter",
           "total": "Total"
