@@ -7,7 +7,7 @@ import { languageOf } from '../../common/csv-sheet/request-options';
 import { allocateItemNumbers } from '../../common/item-number.service';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { defaultVulnerabilityAlerts } from '../../vulnerabilities/vulnerability-alerts';
-import { hostingTypeOfMode, resolveHostingType } from '../hosting-type';
+import { hostingTypeOfMode, isCloudHostingType, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
 import { mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
@@ -168,9 +168,11 @@ export class TechnologyCatalogService {
    * technology and adds nothing (a version the tenant deleted stays deleted); a technology of the
    * same name (typed before) receives the key, the identifiers it lacks, the missing versions, and
    * the description when it has none. A new technology takes the default alert setting
-   * (`defaultVulnerabilityAlerts`); a technology of the same name that receives the key of an
-   * operating system is excluded from vulnerability alerts, as if it had been created from the
-   * entry (its version exceptions stay). Two
+   * (`defaultVulnerabilityAlerts`: an operating system or a cloud service, an entry of mode
+   * `subscribed` or a hosting type of the cloud category, starts excluded); a technology of the
+   * same name that receives the key of an operating system is excluded from vulnerability alerts,
+   * as if it had been created from the entry (its version exceptions stay). Its hosting type does
+   * not change, so its setting does not follow a `subscribed` entry. Two
    * adoptions of one entry at once run one after the other (transaction-level advisory lock).
    */
   async adopt(key: string, opts: Opts & { language?: unknown }) {
@@ -222,7 +224,12 @@ export class TechnologyCatalogService {
       const [row]: Array<{ id: string }> = await mg.query(
         `INSERT INTO technologies (tenant_id, item_number, name, editor, family, hosting_type, catalog_key, cpe_products, description, catalog_state, vulnerability_alerts)
          VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10::jsonb, $11) RETURNING id`,
-        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state, defaultVulnerabilityAlerts({ family, catalogKey: product.key })],
+        [tenantId, itemNumber, product.name, product.editor, family, hostingType, product.key, product.cpe_products, description, state,
+          defaultVulnerabilityAlerts({
+            family,
+            catalogKey: product.key,
+            cloudService: product.mode === 'subscribed' || isCloudHostingType(settings.hostingTypes, hostingType),
+          })],
       );
       technologyId = row.id;
       created = true;

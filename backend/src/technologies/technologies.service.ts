@@ -13,7 +13,7 @@ import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service
 import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
-import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, resolveHostingType } from './hosting-type';
+import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
 import { defaultVulnerabilityAlerts, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
@@ -292,19 +292,23 @@ export class TechnologiesService {
     const { manager: mg, tenantId } = opts;
     const values = await this.validate(body, null, opts);
     if (!values.name) throw new BadRequestException('Name is required.');
+    const settings = await this.itOps.getSettings(tenantId, { manager: mg });
     if (!('hosting_type' in values)) {
-      const settings = await this.itOps.getSettings(tenantId, { manager: mg });
       values.hosting_type = resolveHostingType(settings.hostingTypes, DEFAULT_TECHNOLOGY_HOSTING_TYPE);
     }
     await this.assertNameFree(mg, tenantId, values.name as string, null);
-    // Explicit true or false wins. Otherwise an operating system starts excluded and every other family included.
+    // Explicit true or false wins. Otherwise an operating system or a cloud service starts excluded,
+    // every other technology included (`defaultVulnerabilityAlerts`).
     if (Object.prototype.hasOwnProperty.call(body, 'vulnerability_alerts') && body.vulnerability_alerts !== undefined) {
       if (body.vulnerability_alerts !== true && body.vulnerability_alerts !== false) {
         throw new BadRequestException('vulnerability_alerts must be true or false.');
       }
       values.vulnerability_alerts = body.vulnerability_alerts;
     } else {
-      values.vulnerability_alerts = defaultVulnerabilityAlerts({ family: typeof values.family === 'string' ? values.family : 'other' });
+      values.vulnerability_alerts = defaultVulnerabilityAlerts({
+        family: typeof values.family === 'string' ? values.family : 'other',
+        cloudService: isCloudHostingType(settings.hostingTypes, values.hosting_type as string | null),
+      });
     }
     const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];

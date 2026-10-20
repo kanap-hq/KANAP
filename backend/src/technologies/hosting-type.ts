@@ -24,6 +24,16 @@ export function hostingCategory(types: ItOpsEnumOption[] | undefined, code: stri
 }
 
 /**
+ * Whether a technology of hosting type `code` is a cloud service: its type is of the `cloud`
+ * category (`hostingCategory`), the "subscribed" side of the former mode (lot H1). A catalog entry
+ * of mode `subscribed` stands for such a type (`saas`, or its own `public_cloud`).
+ */
+export function isCloudHostingType(types: ItOpsEnumOption[] | undefined, code: string | null | undefined): boolean {
+  const normalized = String(code ?? '').trim().toLowerCase();
+  return !!normalized && hostingCategory(types, normalized) === 'cloud';
+}
+
+/**
  * The codes a technology on premises may carry: the tenant's types of the `on_prem` category,
  * retired ones included, and `on_prem` and `colocation` when the catalog lacks them (a code out
  * of the catalog takes the category `hostingCategory` infers).
