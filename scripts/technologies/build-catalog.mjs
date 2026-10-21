@@ -19,13 +19,16 @@
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
 //        (recomputes `cpe_version` in the existing file with `cpeVersionOf`, adds the `cpe`
-//        identifiers of PRODUCTS to `cpe_products` and copies their `hosting_type`, without the network)
+//        identifiers of PRODUCTS to `cpe_products`, copies their `cve_names` and their
+//        `hosting_type`, without the network)
 //        node scripts/technologies/build-catalog.mjs --check-cpe [--nvd [--only k1,k2] [--latest]
 //                                                     [--report <file>]]
 //        (checks the CPE identifiers of the file against PRODUCTS: syntax, and an entry without
-//        any must say why in `noCpe`; and that each entry has its four descriptions in
-//        technologies.descriptions.json; offline by default. With --nvd, asks the CPE dictionary of
-//        the NVD whether each `part:vendor:product` exists and how many CVE name it, --latest
+//        any must say why in `noCpe`; checks `cve_names` the same way a technology does (shape,
+//        lengths, duplicates) and that the file carries the names of PRODUCTS; and that each
+//        entry has its four descriptions in technologies.descriptions.json; offline by default.
+//        With --nvd, asks the CPE dictionary of the NVD whether each `part:vendor:product` exists
+//        and how many CVE name it, --latest
 //        adds the newest CVE; one request every 6.5 s, the rate allowed without an API key)
 //        node scripts/technologies/build-catalog.mjs --nvd-count <a:vendor:product,...> [--latest]
 //        (the same NVD counts for identifiers not in the catalog yet, before adding them)
@@ -77,7 +80,13 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
 /**
  * The products kept, by family (codes of `DEFAULT_TECHNOLOGY_FAMILIES`). `key`: the catalog key
  * stored on an adopted technology (`technologies.catalog_key`). `cpe`: identifiers added to the
- * ones endoflife.date publishes (`part:vendor:product`). `mode`: `subscribed` for a service.
+ * ones endoflife.date publishes (`part:vendor:product`).
+ * `cve_names`: optional names the publisher writes in CVE.org, copied onto an adopted technology
+ * and kept by the sync the same way as `cpe`. Each item is `{ vendor, product, version? }`: the
+ * vendor and the product as published (1 to 200 characters), and a version of at most 50
+ * characters when the name carries one. The texts are stored as the publisher writes them.
+ * No entry lists names yet.
+ * `mode`: `subscribed` for a service.
  * `hosting_type`: a code of the default hosting types (`on_prem`, `colocation`, `public_cloud`,
  * `private_cloud`, `saas`) when `mode` says too little (a managed cloud service is `public_cloud`,
  * where `subscribed` alone gives `saas`); the adoption writes it in place of the one of `mode`.
@@ -266,6 +275,196 @@ const PRODUCTS = [
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
 ];
 
+/**
+ * Names the publishers write in their CVE Records (`affected` vendor and product), by catalog key,
+ * copied into `cve_names` of PRODUCTS. Read on the CVE.org records of the last 24 months (October 2026):
+ * the pairs that the NVD filed under the entry's CPE identifiers, kept by hand. A name that carries a
+ * release has its `version` (`Windows Server 2019` for the versions labelled `2019`). Red Hat entries
+ * have none: Red Hat records carry CPE identifiers. Terms: backend/src/technologies/catalog/LICENSE-cve.txt.
+ */
+const CVE_NAMES = {
+  "windows-server": [
+    { vendor: "Microsoft", product: "Windows Server 2025", version: "2025" },
+    { vendor: "Microsoft", product: "Windows Server 2025 (Server Core installation)", version: "2025" },
+    { vendor: "Microsoft", product: "Windows Server 2022", version: "2022" },
+    { vendor: "Microsoft", product: "Windows Server 2022, 23H2 Edition (Server Core installation)", version: "2022" },
+    { vendor: "Microsoft", product: "Windows Server 2019", version: "2019" },
+    { vendor: "Microsoft", product: "Windows Server 2019 (Server Core installation)", version: "2019" },
+    { vendor: "Microsoft", product: "Windows Server 2016", version: "2016" },
+    { vendor: "Microsoft", product: "Windows Server 2016 (Server Core installation)", version: "2016" },
+    { vendor: "Microsoft", product: "Windows Server 2012 R2", version: "2012 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2012 R2 (Server Core installation)", version: "2012 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2012", version: "2012" },
+    { vendor: "Microsoft", product: "Windows Server 2012 (Server Core installation)", version: "2012" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1 (Server Core installation)", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2", version: "2008" },
+    { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2 (Server Core installation)", version: "2008" },
+  ],
+  mssqlserver: [
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2025 for x64-based Systems (GDR)", version: "2025" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2025 (CU8)", version: "2025" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2022 (GDR)", version: "2022" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2022 (CU 26)", version: "2022" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (GDR)", version: "2019" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (CU 32)", version: "2019" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (GDR)", version: "2017" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (CU 31)", version: "2017" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 (GDR)", version: "2016" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 Azure Connect Feature Pack", version: "2016" },
+  ],
+  msexchange: [
+    { vendor: "Microsoft", product: "Microsoft Exchange Server Subscription Edition RTM", version: "Subscription Edition" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2019 Cumulative Update 15", version: "2019 CU15" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2019 Cumulative Update 14", version: "2019 CU14" },
+    { vendor: "Microsoft", product: "Microsoft Exchange Server 2016 Cumulative Update 23", version: "2016 CU23" },
+  ],
+  dotnet: [
+    { vendor: "Microsoft", product: ".NET 10.0", version: "10" },
+    { vendor: "Microsoft", product: ".NET 9.0", version: "9" },
+    { vendor: "Microsoft", product: ".NET 8.0", version: "8" },
+    { vendor: "Microsoft", product: ".NET 6.0", version: "6" },
+  ],
+  powershell: [
+    { vendor: "Microsoft", product: "PowerShell 7.6", version: "7.6" },
+    { vendor: "Microsoft", product: "PowerShell 7.5", version: "7.5" },
+    { vendor: "Microsoft", product: "PowerShell 7.4", version: "7.4" },
+  ],
+  "entra-id": [
+    { vendor: "Microsoft", product: "Microsoft Entra" },
+  ],
+  "azure-kubernetes-service": [
+    { vendor: "Microsoft", product: "Azure Kubernetes Service" },
+  ],
+  jenkins: [
+    { vendor: "Jenkins Project", product: "Jenkins" },
+  ],
+  tomcat: [
+    { vendor: "Apache Software Foundation", product: "Apache Tomcat" },
+  ],
+  "eclipse-jetty": [
+    { vendor: "Eclipse Foundation", product: "Eclipse Jetty" },
+    { vendor: "Eclipse Foundation", product: "Jetty" },
+  ],
+  commvault: [
+    { vendor: "Commvault", product: "Commvault Cloud" },
+  ],
+  "veeam-backup-and-replication": [
+    { vendor: "Veeam", product: "Backup and Replication" },
+    { vendor: "Veeam", product: "Backup & Replication" },
+  ],
+  containerd: [
+    { vendor: "containerd", product: "containerd" },
+  ],
+  podman: [
+    { vendor: "podman-container-tools", product: "podman" },
+  ],
+  "apache-cassandra": [
+    { vendor: "Apache Software Foundation", product: "Apache Cassandra" },
+  ],
+  elasticsearch: [
+    { vendor: "Elastic", product: "Elasticsearch" },
+  ],
+  "ibm-db2": [
+    { vendor: "IBM", product: "Db2" },
+    { vendor: "IBM", product: "Db2 for Linux, UNIX and Windows" },
+  ],
+  memcached: [
+    { vendor: "memcached", product: "memcached" },
+  ],
+  mongodb: [
+    { vendor: "MongoDB", product: "MongoDB Server" },
+    { vendor: "MongoDB Inc", product: "MongoDB Server" },
+  ],
+  postgresql: [
+    { vendor: "n/a", product: "PostgreSQL" },
+  ],
+  redis: [
+    { vendor: "redis", product: "redis" },
+  ],
+  valkey: [
+    { vendor: "valkey-io", product: "valkey" },
+  ],
+  authentik: [
+    { vendor: "goauthentik", product: "authentik" },
+  ],
+  "apache-apisix": [
+    { vendor: "Apache Software Foundation", product: "Apache APISIX" },
+  ],
+  "apache-nifi": [
+    { vendor: "Apache Software Foundation", product: "Apache NiFi" },
+  ],
+  "apache-activemq": [
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ" },
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ All" },
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Broker" },
+  ],
+  "apache-artemis": [
+    { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Artemis" },
+  ],
+  "apache-kafka": [
+    { vendor: "Apache Software Foundation", product: "Apache Kafka" },
+  ],
+  dovecot: [
+    { vendor: "Open-Xchange GmbH", product: "OX Dovecot Pro" },
+  ],
+  rabbitmq: [
+    { vendor: "rabbitmq", product: "rabbitmq-server" },
+  ],
+  checkmk: [
+    { vendor: "Checkmk GmbH", product: "Checkmk" },
+  ],
+  grafana: [
+    { vendor: "Grafana", product: "Grafana OSS" },
+    { vendor: "Grafana", product: "Grafana" },
+    { vendor: "Grafana", product: "Grafana Enterprise" },
+  ],
+  prometheus: [
+    { vendor: "prometheus", product: "prometheus" },
+  ],
+  splunk: [
+    { vendor: "Splunk", product: "Splunk Enterprise" },
+  ],
+  zabbix: [
+    { vendor: "Zabbix", product: "Zabbix" },
+  ],
+  "bind-9": [
+    { vendor: "ISC", product: "BIND 9" },
+  ],
+  "hashicorp-vault": [
+    { vendor: "HashiCorp", product: "Vault" },
+    { vendor: "HashiCorp", product: "Vault Enterprise" },
+  ],
+  "oracle-linux": [
+    { vendor: "Oracle Corporation", product: "Oracle Linux" },
+  ],
+  nodejs: [
+    { vendor: "nodejs", product: "node" },
+  ],
+  php: [
+    { vendor: "PHP Group", product: "PHP" },
+  ],
+  python: [
+    { vendor: "Python Software Foundation", product: "CPython" },
+  ],
+  "apache-http-server": [
+    { vendor: "Apache Software Foundation", product: "Apache HTTP Server" },
+  ],
+  caddy: [
+    { vendor: "caddyserver", product: "caddy" },
+  ],
+  haproxy: [
+    { vendor: "HAProxy", product: "HAProxy" },
+  ],
+  squid: [
+    { vendor: "squid-cache", product: "squid" },
+  ],
+  traefik: [
+    { vendor: "traefik", product: "traefik" },
+  ],
+};
+for (const entry of PRODUCTS) if (CVE_NAMES[entry.key]) entry.cve_names = CVE_NAMES[entry.key];
+
 function argValue(name) {
   const index = process.argv.indexOf(name);
   return index >= 0 ? process.argv[index + 1] : undefined;
@@ -415,8 +614,61 @@ async function fetchProduct(slug) {
 /**
  * `--refresh-cpe-versions`: the existing file with `cpe_version` recomputed, the `cpe` of PRODUCTS
  * added to `cpe_products` and its `cpeExclude` removed (the endoflife.date identifiers already in
- * the file are kept otherwise), the `hosting_type` of PRODUCTS copied, nothing fetched.
+ * the file are kept otherwise), the `cve_names` and the `hosting_type` of PRODUCTS copied,
+ * nothing fetched.
  */
+
+/** Comparison key of a CVE.org vendor or product. Twin of `cveNameKey` in cve-record.ts. */
+function cveNameKey(text) {
+  return String(text ?? '').normalize('NFKC').toLowerCase().replace(/[^\p{L}\p{N}]+/gu, ' ').trim();
+}
+
+function cveNameIdentity(name) {
+  return `${cveNameKey(name.vendor)}\0${cveNameKey(name.product)}\0${String(name.version ?? '').trim()}`;
+}
+
+function cveNameText(value, key, place, field, max) {
+  if (typeof value !== 'string') throw new Error(`${key}: CVE name ${place} needs a ${field} of 1 to ${max} characters.`);
+  const text = value.trim();
+  if (text.length < 1 || text.length > max) throw new Error(`${key}: CVE name ${place} needs a ${field} of 1 to ${max} characters.`);
+  return text;
+}
+
+/**
+ * `cve_names` of a PRODUCTS entry, sorted, or null when the entry has none. The same checks as
+ * `normalizeCveNames`: an array of at most 50 objects, a vendor and a product of 1 to 200
+ * characters, an optional version of at most 50, and no repeated vendor, product and version.
+ */
+function cveNamesOf(entry) {
+  if (!entry || entry.cve_names == null) return null;
+  const input = entry.cve_names;
+  if (!Array.isArray(input)) throw new Error(`${entry.key}: CVE names must be an array.`);
+  if (input.length > 50) throw new Error(`${entry.key}: a technology carries at most 50 CVE names.`);
+  const seen = new Set();
+  const names = input.map((item, index) => {
+    const place = index + 1;
+    if (!item || typeof item !== 'object' || Array.isArray(item)) throw new Error(`${entry.key}: CVE name ${place} must be an object.`);
+    const vendor = cveNameText(item.vendor, entry.key, place, 'vendor', 200);
+    const product = cveNameText(item.product, entry.key, place, 'product', 200);
+    let version = null;
+    if ('version' in item && item.version != null) {
+      if (typeof item.version !== 'string') throw new Error(`${entry.key}: CVE name ${place} has a version that must be text of at most 50 characters.`);
+      const text = item.version.trim();
+      if (text.length > 50) throw new Error(`${entry.key}: CVE name ${place} has a version longer than 50 characters.`);
+      version = text || null;
+    }
+    const name = { vendor, product, version };
+    const identity = cveNameIdentity(name);
+    if (seen.has(identity)) throw new Error(`${entry.key}: CVE name ${place} repeats a vendor, product and version already listed.`);
+    seen.add(identity);
+    return name;
+  });
+  names.sort((a, b) =>
+    a.vendor.localeCompare(b.vendor, 'en', { sensitivity: 'base' })
+    || a.product.localeCompare(b.product, 'en', { sensitivity: 'base' })
+    || (a.version ?? '').localeCompare(b.version ?? '', 'en', { sensitivity: 'base' }));
+  return names;
+}
 /** The product with `hosting_type` set from its PRODUCTS entry (or removed), right after `mode`. */
 function withHostingType(product, entry) {
   const { hosting_type: _previous, ...rest } = product;
@@ -442,6 +694,9 @@ function refreshCpeVersions(out) {
     product.cpe_products = cpe;
     if (entry?.noCpe) product.noCpe = entry.noCpe;
     else delete product.noCpe;
+    const names = cveNamesOf(entry);
+    if (names) product.cve_names = names;
+    else delete product.cve_names;
     for (const version of product.versions) {
       const next = cpeVersionOf(version.label, entry);
       if (next !== version.cpe_version) changed += 1;
@@ -499,7 +754,8 @@ async function nvdCheck(product, latest) {
 
 /**
  * `--check-cpe`: every entry of the file has well-formed identifiers or a `noCpe` reason, and
- * matches PRODUCTS (no `cpeExclude` left, every `cpe` present). With --nvd, each identifier is
+ * matches PRODUCTS (no `cpeExclude` left, every `cpe` present, and `cve_names` equal to PRODUCTS).
+ * With --nvd, each identifier is
  * looked up in the NVD; one found neither in the CPE dictionary nor in a CVE is reported, and so is
  * an entry none of whose identifiers names a CVE. Exit code 1 on any finding.
  */
@@ -527,6 +783,23 @@ async function checkCpe(out) {
     }
     if (!product.cpe_products.length && !entry?.noCpe) findings.push(`${product.key}: no CPE identifier and no noCpe reason`);
     if (product.cpe_products.length && entry?.noCpe) findings.push(`${product.key}: noCpe set but identifiers present`);
+    let expectedNames = null;
+    let fileNames = null;
+    try {
+      expectedNames = cveNamesOf(entry);
+    } catch (error) {
+      findings.push(error instanceof Error ? error.message : String(error));
+    }
+    if (product.cve_names !== undefined) {
+      try {
+        fileNames = cveNamesOf({ key: product.key, cve_names: product.cve_names });
+      } catch (error) {
+        findings.push(error instanceof Error ? error.message : String(error));
+      }
+    }
+    if (JSON.stringify(expectedNames) !== JSON.stringify(fileNames)) {
+      findings.push(`${product.key}: cve_names differs from PRODUCTS, run --refresh-cpe-versions`);
+    }
     for (const language of ['en', 'fr', 'de', 'es']) {
       if (!descriptions[product.key]?.[language]?.trim()) findings.push(`${product.key}: no ${language} description in ${DESCRIPTIONS}`);
     }
@@ -606,6 +879,7 @@ async function main() {
       if (product) published.push(product);
     }
     const cpe = cpeProductsOf(entry, published);
+    const names = cveNamesOf(entry);
     products.push({
       key: entry.key,
       name: entry.name,
@@ -615,6 +889,7 @@ async function main() {
       ...(entry.hosting_type ? { hosting_type: entry.hosting_type } : {}),
       cpe_products: cpe,
       ...(entry.noCpe ? { noCpe: entry.noCpe } : {}),
+      ...(names ? { cve_names: names } : {}),
       source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
       versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],
     });

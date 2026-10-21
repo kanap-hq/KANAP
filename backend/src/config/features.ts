@@ -3,6 +3,9 @@ import { hasConfiguredEmailTransport } from '../email/email-config';
 
 const deploymentMode = (process.env.DEPLOYMENT_MODE || '').trim().toLowerCase();
 const isSingleTenant = deploymentMode === 'single-tenant';
+const vulnerabilityFeedEnabled = (process.env.VULNERABILITY_FEED_ENABLED ?? '').trim()
+  ? parseBoolean(process.env.VULNERABILITY_FEED_ENABLED)
+  : !isSingleTenant;
 
 export const Features = {
   DEPLOYMENT_MODE: isSingleTenant ? ('single-tenant' as const) : ('multi-tenant' as const),
@@ -22,7 +25,10 @@ export const Features = {
     : !isSingleTenant,
   // The NVD feed needs the way out to the NVD or a mirror (NVD_API_BASE_URL): on by default in the
   // cloud, off by default on-premise. VULNERABILITY_FEED_ENABLED set either way wins.
-  VULNERABILITY_FEED_ENABLED: (process.env.VULNERABILITY_FEED_ENABLED ?? '').trim()
-    ? parseBoolean(process.env.VULNERABILITY_FEED_ENABLED)
-    : !isSingleTenant,
+  VULNERABILITY_FEED_ENABLED: vulnerabilityFeedEnabled,
+  // The CVE.org list (cvelistV5). Defaults to the vulnerability feed; CVE_LIST_FEED_ENABLED set
+  // either way wins. The collector also stays idle while the vulnerability feed itself is off.
+  CVE_LIST_FEED_ENABLED: (process.env.CVE_LIST_FEED_ENABLED ?? '').trim()
+    ? parseBoolean(process.env.CVE_LIST_FEED_ENABLED)
+    : vulnerabilityFeedEnabled,
 };

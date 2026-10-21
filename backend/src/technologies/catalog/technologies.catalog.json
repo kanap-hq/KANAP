@@ -92,6 +92,13 @@
           "standard_support_end": "2025-02-05",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Jenkins Project",
+          "product": "Jenkins",
+          "version": null
+        }
       ]
     },
     {
@@ -325,6 +332,13 @@
           "standard_support_end": "2024-03-31",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Tomcat",
+          "version": null
+        }
       ]
     },
     {
@@ -383,6 +397,18 @@
           "release_date": "2016-12-07",
           "standard_support_end": "2022-06-01",
           "extended_support_end": "2025-08-14"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Eclipse Foundation",
+          "product": "Eclipse Jetty",
+          "version": null
+        },
+        {
+          "vendor": "Eclipse Foundation",
+          "product": "Jetty",
+          "version": null
         }
       ]
     },
@@ -494,6 +520,13 @@
           "release_date": "2023-08-15",
           "standard_support_end": "2026-06-15",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Commvault",
+          "product": "Commvault Cloud",
+          "version": null
         }
       ]
     },
@@ -620,6 +653,18 @@
           "standard_support_end": null,
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Veeam",
+          "product": "Backup & Replication",
+          "version": null
+        },
+        {
+          "vendor": "Veeam",
+          "product": "Backup and Replication",
+          "version": null
+        }
       ]
     },
     {
@@ -676,7 +721,8 @@
           "standard_support_end": "2020-12-03",
           "extended_support_end": "2022-11-26"
         }
-      ]
+      ],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under a Veeam Backup for Microsoft 365 product. a:veeam:backup_for_microsoft_365 and a:veeam:backup_for_microsoft_office_365 do not exist."
     },
     {
       "key": "amazon-eks",
@@ -760,7 +806,8 @@
           "standard_support_end": "2025-07-23",
           "extended_support_end": "2026-07-23"
         }
-      ]
+      ],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon EKS product. a:amazon:eks and a:amazon:elastic_kubernetes_service do not exist, and CVE-2026-86831 (the EKS Network Policy Agent) has no CPE criterion."
     },
     {
       "key": "azure-kubernetes-service",
@@ -846,6 +893,13 @@
           "standard_support_end": "2025-03-31",
           "extended_support_end": "2026-04-30"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Azure Kubernetes Service",
+          "version": null
+        }
       ]
     },
     {
@@ -930,6 +984,13 @@
           "release_date": "2021-05-03",
           "standard_support_end": "2022-08-15",
           "extended_support_end": "2023-02-28"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "containerd",
+          "product": "containerd",
+          "version": null
         }
       ]
     },
@@ -1102,7 +1163,8 @@
           "standard_support_end": "2025-02-28",
           "extended_support_end": "2025-04-12"
         }
-      ]
+      ],
+      "noCpe": "Verified on 2026-10-20: a:google:kubernetes_engine holds CVE-2019-5736 (runc, every version) and CVE-2019-10365 (the Jenkins plugin, up to 0.6.2). a:google:gke does not exist."
     },
     {
       "key": "harbor",
@@ -1357,6 +1419,13 @@
           "standard_support_end": "2025-02-11",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "podman-container-tools",
+          "product": "podman",
+          "version": null
+        }
       ]
     },
     {
@@ -1586,6 +1655,13 @@
           "release_date": "2015-11-09",
           "standard_support_end": "2024-09-05",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Cassandra",
+          "version": null
         }
       ]
     },
@@ -1825,6 +1901,13 @@
           "standard_support_end": "2025-10-23",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Elastic",
+          "product": "Elasticsearch",
+          "version": null
+        }
       ]
     },
     {
@@ -1855,6 +1938,18 @@
           "release_date": "2019-06-25",
           "standard_support_end": "2027-04-30",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "IBM",
+          "product": "Db2",
+          "version": null
+        },
+        {
+          "vendor": "IBM",
+          "product": "Db2 for Linux, UNIX and Windows",
+          "version": null
         }
       ]
     },
@@ -2048,6 +2143,13 @@
           "standard_support_end": null,
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "memcached",
+          "product": "memcached",
+          "version": null
+        }
       ]
     },
     {
@@ -2146,6 +2248,58 @@
           "standard_support_end": "2022-10-11",
           "extended_support_end": "2027-10-12"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2016 Service Pack 3 (GDR)",
+          "version": "2016"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2016 Service Pack 3 Azure Connect Feature Pack",
+          "version": "2016"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2017 (CU 31)",
+          "version": "2017"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2017 (GDR)",
+          "version": "2017"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2019 (CU 32)",
+          "version": "2019"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2019 (GDR)",
+          "version": "2019"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2022 (CU 26)",
+          "version": "2022"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2022 (GDR)",
+          "version": "2022"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2025 (CU8)",
+          "version": "2025"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2025 for x64-based Systems (GDR)",
+          "version": "2025"
+        }
       ]
     },
     {
@@ -2230,6 +2384,18 @@
           "release_date": "2023-10-31",
           "standard_support_end": "2024-01-23",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "MongoDB",
+          "product": "MongoDB Server",
+          "version": null
+        },
+        {
+          "vendor": "MongoDB Inc",
+          "product": "MongoDB Server",
+          "version": null
         }
       ]
     },
@@ -2575,6 +2741,13 @@
           "standard_support_end": "2023-11-09",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "n/a",
+          "product": "PostgreSQL",
+          "version": null
+        }
       ]
     },
     {
@@ -2661,6 +2834,13 @@
           "standard_support_end": "2024-07-29",
           "extended_support_end": "2029-12-01"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "redis",
+          "product": "redis",
+          "version": null
+        }
       ]
     },
     {
@@ -2719,6 +2899,13 @@
           "standard_support_end": "2027-04-16",
           "extended_support_end": "2029-04-16"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "valkey-io",
+          "product": "valkey",
+          "version": null
+        }
       ]
     },
     {
@@ -2729,7 +2916,8 @@
       "mode": "installed",
       "cpe_products": [],
       "source_url": null,
-      "versions": []
+      "versions": [],
+      "noCpe": "Verified on 2026-10-20: its CVE are filed under Windows Server, which carries its identifiers. a:microsoft:active_directory names one vulnerable criterion, CVE-2013-1282; the two 2022 matches are an IBM plug-in. a:microsoft:active_directory_domain_services does not exist."
     },
     {
       "key": "authentik",
@@ -2813,6 +3001,13 @@
           "release_date": "2025-04-29",
           "standard_support_end": "2025-08-20",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "goauthentik",
+          "product": "authentik",
+          "version": null
         }
       ]
     },
@@ -2913,7 +3108,14 @@
         "a:microsoft:entra_provisioning_service"
       ],
       "source_url": null,
-      "versions": []
+      "versions": [],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft Entra",
+          "version": null
+        }
+      ]
     },
     {
       "key": "samba",
@@ -3166,7 +3368,8 @@
           "standard_support_end": "2024-02-29",
           "extended_support_end": "2024-08-31"
         }
-      ]
+      ],
+      "noCpe": "Verified on 2026-10-20: a:nutanix:prism is in the CPE dictionary and names no CVE. CVE-2026-84731 (Prism Element) has no CPE criterion."
     },
     {
       "key": "ovirt",
@@ -3325,6 +3528,13 @@
           "standard_support_end": "2025-06-27",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache APISIX",
+          "version": null
+        }
       ]
     },
     {
@@ -3409,6 +3619,13 @@
           "release_date": "2025-07-22",
           "standard_support_end": "2025-09-21",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache NiFi",
+          "version": null
         }
       ]
     },
@@ -3678,6 +3895,23 @@
           "standard_support_end": "2023-03-18",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache ActiveMQ",
+          "version": null
+        },
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache ActiveMQ All",
+          "version": null
+        },
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache ActiveMQ Broker",
+          "version": null
+        }
       ]
     },
     {
@@ -3762,6 +3996,13 @@
           "release_date": "2026-01-23",
           "standard_support_end": "2026-02-11",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache ActiveMQ Artemis",
+          "version": null
         }
       ]
     },
@@ -3848,6 +4089,13 @@
           "standard_support_end": "2024-02-27",
           "extended_support_end": "2026-02-09"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Kafka",
+          "version": null
+        }
       ]
     },
     {
@@ -3888,6 +4136,13 @@
           "release_date": "2013-04-11",
           "standard_support_end": "2017-12-22",
           "extended_support_end": "2025-01-24"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Open-Xchange GmbH",
+          "product": "OX Dovecot Pro",
+          "version": null
         }
       ]
     },
@@ -4046,6 +4301,28 @@
           "release_date": "1996-06-11",
           "standard_support_end": null,
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft Exchange Server 2016 Cumulative Update 23",
+          "version": "2016 CU23"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft Exchange Server 2019 Cumulative Update 14",
+          "version": "2019 CU14"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft Exchange Server 2019 Cumulative Update 15",
+          "version": "2019 CU15"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft Exchange Server Subscription Edition RTM",
+          "version": "Subscription Edition"
         }
       ]
     },
@@ -4219,6 +4496,13 @@
           "standard_support_end": "2022-09-28",
           "extended_support_end": "2023-12-31"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "rabbitmq",
+          "product": "rabbitmq-server",
+          "version": null
+        }
       ]
     },
     {
@@ -4374,6 +4658,13 @@
           "standard_support_end": "2023-09-09",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Checkmk GmbH",
+          "product": "Checkmk",
+          "version": null
+        }
       ]
     },
     {
@@ -4458,6 +4749,23 @@
           "release_date": "2025-05-05",
           "standard_support_end": "2025-07-22",
           "extended_support_end": "2026-02-05"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Grafana",
+          "product": "Grafana",
+          "version": null
+        },
+        {
+          "vendor": "Grafana",
+          "product": "Grafana Enterprise",
+          "version": null
+        },
+        {
+          "vendor": "Grafana",
+          "product": "Grafana OSS",
+          "version": null
         }
       ]
     },
@@ -4687,6 +4995,13 @@
           "standard_support_end": "2026-01-09",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "prometheus",
+          "product": "prometheus",
+          "version": null
+        }
       ]
     },
     {
@@ -4771,6 +5086,13 @@
           "release_date": "2022-06-14",
           "standard_support_end": "2024-06-14",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Splunk",
+          "product": "Splunk Enterprise",
+          "version": null
         }
       ]
     },
@@ -4943,6 +5265,13 @@
           "standard_support_end": "2021-10-31",
           "extended_support_end": "2023-10-31"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Zabbix",
+          "product": "Zabbix",
+          "version": null
+        }
       ]
     },
     {
@@ -4991,6 +5320,13 @@
           "release_date": "2020-02-12",
           "standard_support_end": "2024-03-31",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "ISC",
+          "product": "BIND 9",
+          "version": null
         }
       ]
     },
@@ -5076,6 +5412,18 @@
           "release_date": "2024-03-25",
           "standard_support_end": "2024-06-10",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "HashiCorp",
+          "product": "Vault",
+          "version": null
+        },
+        {
+          "vendor": "HashiCorp",
+          "product": "Vault Enterprise",
+          "version": null
         }
       ]
     },
@@ -5431,6 +5779,13 @@
           "release_date": "2011-02-12",
           "standard_support_end": "2021-03-31",
           "extended_support_end": "2024-12-31"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Oracle Corporation",
+          "product": "Oracle Linux",
+          "version": null
         }
       ]
     },
@@ -5823,7 +6178,8 @@
           "standard_support_end": "2008-11-30",
           "extended_support_end": "2010-12-31"
         }
-      ]
+      ],
+      "noCpe": "The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE."
     },
     {
       "key": "ubuntu",
@@ -6066,6 +6422,88 @@
           "standard_support_end": "2005-06-30",
           "extended_support_end": "2010-07-13"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 R2 Service Pack 1",
+          "version": "2008 R2"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 R2 Service Pack 1 (Server Core installation)",
+          "version": "2008 R2"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 Service Pack 2",
+          "version": "2008"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 Service Pack 2 (Server Core installation)",
+          "version": "2008"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2012",
+          "version": "2012"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2012 (Server Core installation)",
+          "version": "2012"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2012 R2",
+          "version": "2012 R2"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2012 R2 (Server Core installation)",
+          "version": "2012 R2"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2016",
+          "version": "2016"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2016 (Server Core installation)",
+          "version": "2016"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2019",
+          "version": "2019"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2019 (Server Core installation)",
+          "version": "2019"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2022",
+          "version": "2022"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2022, 23H2 Edition (Server Core installation)",
+          "version": "2022"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2025",
+          "version": "2025"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2025 (Server Core installation)",
+          "version": "2025"
+        }
       ]
     },
     {
@@ -6135,6 +6573,28 @@
           "release_date": "2019-12-03",
           "standard_support_end": "2022-12-13",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": ".NET 10.0",
+          "version": "10"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": ".NET 6.0",
+          "version": "6"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": ".NET 8.0",
+          "version": "8"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": ".NET 9.0",
+          "version": "9"
         }
       ]
     },
@@ -6606,6 +7066,13 @@
           "standard_support_end": "2023-04-01",
           "extended_support_end": "2023-06-01"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "nodejs",
+          "product": "node",
+          "version": null
+        }
       ]
     },
     {
@@ -6769,6 +7236,13 @@
           "standard_support_end": "2021-11-28",
           "extended_support_end": "2022-11-28"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "PHP Group",
+          "product": "PHP",
+          "version": null
+        }
       ]
     },
     {
@@ -6836,6 +7310,23 @@
           "release_date": "2020-03-04",
           "standard_support_end": "2022-12-03",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "PowerShell 7.4",
+          "version": "7.4"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "PowerShell 7.5",
+          "version": "7.5"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "PowerShell 7.6",
+          "version": "7.6"
         }
       ]
     },
@@ -6921,6 +7412,13 @@
           "release_date": "2019-10-14",
           "standard_support_end": "2021-05-03",
           "extended_support_end": "2024-10-07"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Python Software Foundation",
+          "product": "CPython",
+          "version": null
         }
       ]
     },
@@ -7141,7 +7639,8 @@
           "standard_support_end": "2023-07-31",
           "extended_support_end": "2024-04-30"
         }
-      ]
+      ],
+      "noCpe": "Verified on 2026-10-20: a:nutanix:files_storage is in the CPE dictionary and names no CVE. a:nutanix:files does not exist."
     },
     {
       "key": "apache-http-server",
@@ -7162,6 +7661,13 @@
           "release_date": "2012-02-21",
           "standard_support_end": null,
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache HTTP Server",
+          "version": null
         }
       ]
     },
@@ -7185,6 +7691,13 @@
           "release_date": "2020-05-04",
           "standard_support_end": null,
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "caddyserver",
+          "product": "caddy",
+          "version": null
         }
       ]
     },
@@ -7270,6 +7783,13 @@
           "release_date": "2022-12-01",
           "standard_support_end": "2024-04-05",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "HAProxy",
+          "product": "HAProxy",
+          "version": null
         }
       ]
     },
@@ -7396,6 +7916,13 @@
           "standard_support_end": "2023-07-06",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "squid-cache",
+          "product": "squid",
+          "version": null
+        }
       ]
     },
     {
@@ -7481,6 +8008,13 @@
           "release_date": "2024-04-29",
           "standard_support_end": "2024-07-15",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "traefik",
+          "product": "traefik",
+          "version": null
         }
       ]
     }

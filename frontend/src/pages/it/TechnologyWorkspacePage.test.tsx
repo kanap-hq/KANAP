@@ -97,6 +97,11 @@ function renderPage() {
   );
 }
 
+/** The CPE identifiers sit in the identifiers group, folded when the technology has one. */
+async function openIdentifiers() {
+  fireEvent.click(await screen.findByRole('button', { name: /workspace\.technology\.identifiers\.title/ }));
+}
+
 describe('TechnologyWorkspacePage', () => {
   beforeEach(() => {
     auth.level = 'admin';
@@ -190,6 +195,7 @@ describe('TechnologyWorkspacePage', () => {
 
   it('adds a CPE identifier in the part:vendor:product form only', async () => {
     renderPage();
+    await openIdentifiers();
     const field = await screen.findByLabelText('workspace.technology.cpe.add');
     fireEvent.change(field, { target: { value: 'sql server' } });
     fireEvent.keyDown(field, { key: 'Enter' });
@@ -281,6 +287,7 @@ describe('TechnologyWorkspacePage', () => {
 
   it('refuses a CPE identifier the server would refuse', async () => {
     renderPage();
+    await openIdentifiers();
     const field = await screen.findByLabelText('workspace.technology.cpe.add');
     fireEvent.change(field, { target: { value: 'a:vendor:prod+' } });
     fireEvent.keyDown(field, { key: 'Enter' });
@@ -290,6 +297,7 @@ describe('TechnologyWorkspacePage', () => {
 
   it('accepts the punctuation the NVD escapes in its names', async () => {
     renderPage();
+    await openIdentifiers();
     const field = await screen.findByLabelText('workspace.technology.cpe.add');
     fireEvent.change(field, { target: { value: 'a:veeam:veeam_backup_\\&_replication' } });
     fireEvent.keyDown(field, { key: 'Enter' });
@@ -304,6 +312,7 @@ describe('TechnologyWorkspacePage', () => {
     await screen.findByRole('heading', { name: 'Microsoft SQL Server' });
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
     expect(screen.queryByRole('button', { name: 'workspace.technology.versions.add' })).toBeNull();
+    await openIdentifiers();
     expect(screen.queryByLabelText('workspace.technology.cpe.add')).toBeNull();
     expect(screen.queryAllByRole('button', { name: 'workspace.technology.versions.edit' })).toEqual([]);
     expect((screen.getByLabelText('workspace.technology.fields.description') as HTMLTextAreaElement).disabled).toBe(true);

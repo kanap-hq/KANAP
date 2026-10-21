@@ -87,6 +87,8 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
     'Not a reference: the CVE number published by the NVD, primary key of the platform cache.',
   'vulnerability_cves.euvd_id':
     'Not a reference: the ENISA identifier of the same CVE (EUVD-AAAA-NNNNN), stored when the European mapping names one.',
+  'vulnerability_cve_records.cve_id':
+    'Not a reference: the CVE number published by CVE.org, primary key of the platform cache.',
 
   // Identifiers of other systems.
   'ai_api_keys.oauth_client_id': EXTERNAL,

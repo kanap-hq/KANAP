@@ -2080,6 +2080,17 @@
         "cpe": "z. B. a:microsoft:sql_server",
         "noAdminZone": "Keine Zone"
       },
+      "identifiers": {
+        "title": "Schwachstellenkennungen",
+        "cpeCount_one": "{{count, count}} CPE-Kennung",
+        "cpeCount_other": "{{count, count}} CPE-Kennungen",
+        "cveNameCount_one": "{{count, count}} CVE.org-Name",
+        "cveNameCount_other": "{{count, count}} CVE.org-Namen",
+        "missing": "Ohne CPE-Kennung und ohne CVE.org-Namen wird für diese Technologie nach keiner Schwachstelle gesucht.",
+        "missingCpe": "Ohne CPE-Kennung wird für diese Technologie nach keiner Schwachstelle gesucht.",
+        "versionsUnmatched": "Diese Versionen werden keiner Schwachstelle zugeordnet, solange die Technologie keine Kennung hat.",
+        "add": "Kennung hinzufügen"
+      },
       "cpe": {
         "title": "CPE-Produktkennungen",
         "empty": "Noch keine Kennung.",
@@ -2088,6 +2099,34 @@
         "invalid": "Verwenden Sie die Form Teil:Hersteller:Produkt, z. B. a:microsoft:sql_server. Übernehmen Sie die Kennung so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: veeam_backup_\\&_replication.",
         "hint": "Wo Sie diesen Wert finden: Suchen Sie das Produkt im CPE-Wörterbuch des NIST und übernehmen Sie Teil, Hersteller und Produkt.",
         "dictionary": "CPE-Wörterbuch des NIST"
+      },
+      "cveNames": {
+        "title": "CVE.org-Namen",
+        "empty": "Noch kein Name.",
+        "remove": "{{value}} entfernen",
+        "search": "CVE.org-Name",
+        "searchPlaceholder": "z. B. SAP HANA",
+        "version": "Version (optional)",
+        "versionPlaceholder": "z. B. 2019",
+        "duplicate": "Dieser Name ist bereits eingetragen.",
+        "saveFailed": "Der Name konnte nicht gespeichert werden.",
+        "searchFailed": "Die Namen konnten nicht gesucht werden.",
+        "searchTooShort": "Mindestens 2 Zeichen eingeben.",
+        "noMatch": "Kein passender Name.",
+        "optionMeta_one": "{{count, count}} Schwachstelle, die letzte am {{date}}",
+        "optionMeta_other": "{{count, count}} Schwachstellen, die letzte am {{date}}",
+        "optionCount_one": "{{count, count}} Schwachstelle",
+        "optionCount_other": "{{count, count}} Schwachstellen",
+        "suggestions": "Bei den Schwachstellen Ihrer CPE-Kennungen gesehen",
+        "suggestionMeta_one": "{{count, count}} Schwachstelle ({{share}})",
+        "suggestionMeta_other": "{{count, count}} Schwachstellen ({{share}})",
+        "addSuggestion": "{{vendor}} · {{product}} hinzufügen",
+        "seeMore_one": "Den anderen anzeigen",
+        "seeMore_other": "Die {{count}} anderen anzeigen",
+        "suggestionsFailed": "Die Vorschläge konnten nicht geladen werden.",
+        "hint": "Geben Sie einen Teil des Produktnamens ein: Die Liste zeigt die genauen Namen, die die Hersteller in ihren Einträgen schreiben, mit der Zahl ihrer Schwachstellen. Ein Name muss mit dem des Eintrags übereinstimmen, im Abschnitt Product status auf",
+        "site": "cve.org",
+        "versionHint": "Eine Version beschränkt den Namen auf die Versionen der Technologie, deren Bezeichnung damit beginnt, z. B. 2019."
       },
       "versions": {
         "title": "Versionen",

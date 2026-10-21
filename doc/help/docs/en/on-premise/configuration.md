@@ -445,7 +445,7 @@ Each user opens it, confirms, then signs in to KANAP as described in [Connecting
 
 ## Optional: vulnerabilities { #optional-vulnerabilities }
 
-The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads the vulnerabilities published by the NVD (the US National Vulnerability Database) every 6 hours, for the CPE products your technologies name. The same switch reads the exploitation signals: the CISA catalog of known exploited vulnerabilities, ENISA's European vulnerability database (the European catalog and the EUVD identifiers) and the daily EPSS scores.
+The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads two sources every 6 hours: the vulnerabilities published by the NVD (the US National Vulnerability Database), for the CPE products your technologies name, and the CVE.org list, where publishers write the records of their own products. The same switch reads the exploitation signals: the CISA catalog of known exploited vulnerabilities, ENISA's European vulnerability database (the European catalog and the EUVD identifiers) and the daily EPSS scores.
 
 | Variable | Description | Default |
 |----------|-------------|---------|
@@ -455,10 +455,17 @@ The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and t
 | `KEV_FEED_URL` | Address of a mirror of the CISA catalog of known exploited vulnerabilities. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Address of a mirror of the daily EPSS scores. EPSS is described at [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Address of a mirror of ENISA's European vulnerability database (the European catalog and the EUVD mapping). | `https://euvdservices.enisa.europa.eu` |
+| `CVE_LIST_FEED_ENABLED` | Turns the CVE.org list off on its own (`false`), while the other sources keep running. | The value of `VULNERABILITY_FEED_ENABLED` |
+| `CVE_LIST_EXPORT_URL` | A mirror of the CVE.org list: an http(s) address or the absolute path of a file mounted in the `api` container. It names the zip of the full export of cvelistV5: the `*_all_CVEs_at_midnight.zip.zip` file of the GitHub releases, or the zip it contains. KANAP reads the whole file again each time it changes, without daily changes in between. | *unset* |
+| `CVE_LIST_RELEASES_URL` | Address of the GitHub releases API of the CVE.org list. Change it only behind a proxy that rewrites it. | `https://api.github.com/repos/CVEProject/cvelistV5/releases` |
+| `CVE_LIST_DOWNLOAD_URL` | Address the release files are downloaded from. Change it only behind a proxy that rewrites it. | `https://github.com/CVEProject/cvelistV5/releases/download` |
 
 Notes:
 
 - The API needs outbound HTTPS, port 443, to `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` and `euvdservices.enisa.europa.eu`, or to your mirrors (see [Firewall rules](#firewall-rules)).
+- Without a mirror, the CVE.org list comes from the GitHub releases: the full export at the first reading (about 640 MB, read in about a minute), then the daily changes, from 0.5 to 13 MB a day. The API needs outbound HTTPS, port 443, to `api.github.com`, `github.com` and `release-assets.githubusercontent.com`.
+- The CVE.org list takes about 700 MB more in the database. During the first reading, the `api` container needs about 1.4 GB of temporary disk space.
+- A server without network access reads the list from a file: set `CVE_LIST_EXPORT_URL` to its path, and drop a new export there as often as you like. The data are as fresh as the last file dropped.
 - An empty mirror address keeps the public one. A source the server cannot reach leaves its columns as they are and is named in the summary of the task. The other sources continue.
 - The email notifications also need email to be configured (Resend or SMTP).
 - Restart the API after changing these values.
@@ -602,6 +609,8 @@ S3_FORCE_PATH_STYLE=false
 # KEV_FEED_URL=
 # EPSS_FEED_URL=
 # EUVD_BASE_URL=
+# CVE_LIST_FEED_ENABLED=
+# CVE_LIST_EXPORT_URL=
 
 # TECHNOLOGY CATALOG (optional - off by default)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -670,6 +679,7 @@ Only required if the corresponding feature is enabled.
 | `www.cisa.gov`, or your mirror | 443 | CISA catalog of known exploited vulnerabilities | If `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, or your mirror | 443 | Daily EPSS scores | If `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, or your mirror | 443 | European vulnerability database (ENISA): European catalog and EUVD identifiers | If `VULNERABILITY_FEED_ENABLED=true` |
+| `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | The CVE.org list (records written by the publishers) | If `VULNERABILITY_FEED_ENABLED=true`, unless `CVE_LIST_FEED_ENABLED=false` or `CVE_LIST_EXPORT_URL` names a mirror |
 | `endoflife.date`, or your mirror | 443 | Versions and end of support dates of the technology catalog | If `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Annual FX rates | Optional |
 | `open.er-api.com` | 443 | Spot FX rates | Optional |

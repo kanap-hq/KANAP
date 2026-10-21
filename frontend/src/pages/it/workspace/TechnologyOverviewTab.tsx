@@ -23,7 +23,10 @@ import {
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import EditIcon from '@mui/icons-material/Edit';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -37,10 +40,11 @@ import { useLookupPicker } from '../../../hooks/useLookupPicker';
 import { useFeatures } from '../../../config/FeaturesContext';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { useLocale } from '../../../i18n/useLocale';
-import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
+import { drawerAutocompleteListboxSx, drawerFieldValueSx, drawerMenuItemSx, drawerSelectSx, tealLinkSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatSupportDate, supportStateColor, supportStateOf, type SupportState } from '../../../utils/supportState';
 import { EditorField } from '../components/TechnologyCreateDialog';
+import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
 
 export type TechnologyVersion = {
   id: string;
@@ -76,6 +80,8 @@ export type TechnologyDetail = {
   description: string | null;
   notes: string | null;
   cpe_products: string[];
+  /** Publisher and product as CVE.org writes them. A version limits the name to technology versions whose label starts with it. */
+  cve_names?: TechnologyCveName[];
   /** The catalog entry the technology was adopted from; its versions and dates are then kept up to date. */
   catalog_key?: string | null;
   replaced_by_id: string | null;
@@ -92,7 +98,7 @@ export type TechnologyDetail = {
 };
 
 export type TechnologyPatch = Partial<Pick<TechnologyDetail,
-  'name' | 'editor' | 'family' | 'admin_zone' | 'hosting_type' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'replaced_by_id'
+  'name' | 'editor' | 'family' | 'admin_zone' | 'hosting_type' | 'lifecycle' | 'description' | 'notes' | 'cpe_products' | 'cve_names' | 'replaced_by_id'
   | 'cyber_criticality' | 'recovery_wave' | 'rto_minutes' | 'rpo_minutes' | 'support_notes'>>;
 
 /** `part:vendor:product`, the product part of a CPE name (`a:microsoft:sql_server`). */
@@ -526,11 +532,14 @@ function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning:
   };
 }
 
-function VersionsTable({ technology, canManage, onChanged, onError }: {
+function VersionsTable({ technology, canManage, onChanged, onError, unmatched, onAddIdentifier }: {
   technology: TechnologyDetail;
   canManage: boolean;
   onChanged: () => Promise<void>;
   onError: (message: string) => void;
+  /** No identifier: no version is matched to a vulnerability. */
+  unmatched?: boolean;
+  onAddIdentifier?: () => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
   const theme = useTheme();
@@ -715,6 +724,19 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
       >
         {t('workspace.technology.versions.title')}
       </SectionLabel>
+      {unmatched && (
+        <Typography sx={{ mt: -0.5, mb: 1, fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>
+          {t('workspace.technology.identifiers.versionsUnmatched')}
+          {canManage && onAddIdentifier ? (
+            <>
+              {' '}
+              <Box component="button" type="button" onClick={onAddIdentifier} sx={tealLinkSx}>
+                {t('workspace.technology.identifiers.add')}
+              </Box>
+            </>
+          ) : null}
+        </Typography>
+      )}
       <Table
         size="small"
         aria-label={t('workspace.technology.versions.title')}
@@ -816,15 +838,125 @@ function VersionsTable({ technology, canManage, onChanged, onError }: {
   );
 }
 
-/** The Overview tab: description, notes, CPE product identifiers and versions. */
+/** The group of the CPE product identifiers and the CVE.org names, so the Versions section can bring it into view. */
+export const TECHNOLOGY_IDENTIFIERS_ANCHOR = 'technology-vulnerability-identifiers';
+
+/**
+ * The identifiers vulnerabilities are matched on, in one group. Folded by default when the technology
+ * has one; its title then says what it holds. Open with a warning when it has none.
+ */
+function VulnerabilityIdentifiers({ open, onToggle, toggleRef, cpeCount, cveNameCount, cveNamesShown, warn, children }: {
+  open: boolean;
+  onToggle: () => void;
+  toggleRef: React.Ref<HTMLButtonElement>;
+  cpeCount: number;
+  cveNameCount: number;
+  cveNamesShown: boolean;
+  /** The vulnerability feed is on: a missing identifier is worth a warning. */
+  warn: boolean;
+  children: React.ReactNode;
+}) {
+  const { t } = useTranslation('it');
+  const contentId = React.useId();
+  const none = cpeCount + cveNameCount === 0;
+  const summary = [
+    t('workspace.technology.identifiers.cpeCount', { count: cpeCount }),
+    ...(cveNamesShown ? [t('workspace.technology.identifiers.cveNameCount', { count: cveNameCount })] : []),
+  ].join(' · ');
+  return (
+    <Box id={TECHNOLOGY_IDENTIFIERS_ANCHOR} sx={{ scrollMarginTop: 16 }}>
+      <Typography component="h2" sx={{ m: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4 }}>
+        <Box
+          component="button"
+          type="button"
+          ref={toggleRef}
+          aria-expanded={open}
+          aria-controls={contentId}
+          onClick={onToggle}
+          sx={{
+            display: 'flex',
+            alignItems: 'center',
+            gap: 1,
+            width: '100%',
+            p: 0,
+            border: 0,
+            background: 'none',
+            font: 'inherit',
+            textAlign: 'left',
+            color: 'kanap.text.primary',
+            cursor: 'pointer',
+            '&:hover .identifiers-chevron': { color: 'kanap.text.primary' },
+          }}
+        >
+          <Box component="span" sx={{ minWidth: 0 }}>
+            {t('workspace.technology.identifiers.title')}
+            {!none && (
+              <Box component="span" sx={{ fontSize: 13, fontWeight: 400, color: 'kanap.text.tertiary' }}>{` · ${summary}`}</Box>
+            )}
+          </Box>
+          <Box sx={{ flex: 1 }} />
+          {open
+            ? <ExpandLessIcon className="identifiers-chevron" aria-hidden sx={{ fontSize: 16, color: 'kanap.text.tertiary' }} />
+            : <ExpandMoreIcon className="identifiers-chevron" aria-hidden sx={{ fontSize: 16, color: 'kanap.text.tertiary' }} />}
+        </Box>
+      </Typography>
+      {warn && none && (
+        <Typography
+          sx={(theme) => ({
+            display: 'flex',
+            alignItems: 'center',
+            gap: 0.75,
+            mt: 0.5,
+            fontSize: 12,
+            lineHeight: 1.4,
+            color: theme.palette.mode === 'dark' ? theme.palette.warning.main : theme.palette.warning.dark,
+          })}
+        >
+          <WarningAmberOutlined aria-hidden sx={{ fontSize: 14, flex: '0 0 auto' }} />
+          {cveNamesShown ? t('workspace.technology.identifiers.missing') : t('workspace.technology.identifiers.missingCpe')}
+        </Typography>
+      )}
+      {open && (
+        <Stack id={contentId} spacing={3} sx={{ mt: 1.5 }}>
+          {children}
+        </Stack>
+      )}
+    </Box>
+  );
+}
+
+/** The Overview tab: description, notes, CPE product identifiers, CVE.org names and versions. */
 export default function TechnologyOverviewTab({ technology, canManage, onPatch, onVersionsChanged, onError }: {
   technology: TechnologyDetail;
   canManage: boolean;
-  onPatch: (patch: TechnologyPatch) => void;
+  onPatch: (patch: TechnologyPatch) => void | Promise<void>;
   onVersionsChanged: () => Promise<void>;
   onError: (message: string) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const { config } = useFeatures();
+  const cveNamesShown = config.features.cveNames === true;
+  const vulnerabilityFeed = config.features.vulnerabilityFeed === true;
+  const cpeCount = (technology.cpe_products ?? []).length;
+  // Without the CVE.org list, its names match nothing: they do not count as identifiers.
+  const cveNameCount = cveNamesShown ? (technology.cve_names ?? []).length : 0;
+  const hasIdentifiers = cpeCount + cveNameCount > 0;
+  // Folded when the technology has an identifier, open when it has none. The choice is made once per
+  // technology: the group stays open while its first identifier is added.
+  const [openState, setOpenState] = React.useState(() => ({ id: technology.id, open: !hasIdentifiers }));
+  if (openState.id !== technology.id) setOpenState({ id: technology.id, open: !hasIdentifiers });
+  const identifiersOpen = openState.id === technology.id ? openState.open : !hasIdentifiers;
+  const toggleRef = React.useRef<HTMLButtonElement>(null);
+  const [scrollRequest, setScrollRequest] = React.useState(0);
+  React.useEffect(() => {
+    if (scrollRequest === 0) return;
+    document.getElementById(TECHNOLOGY_IDENTIFIERS_ANCHOR)?.scrollIntoView?.({ block: 'start', behavior: 'smooth' });
+    toggleRef.current?.focus({ preventScroll: true });
+  }, [scrollRequest]);
+  const showIdentifiers = () => {
+    setOpenState({ id: technology.id, open: true });
+    setScrollRequest((current) => current + 1);
+  };
   return (
     <Stack spacing={3.5}>
       <Box>
@@ -839,11 +971,37 @@ export default function TechnologyOverviewTab({ technology, canManage, onPatch, 
           placeholder={t('workspace.technology.placeholders.description')}
         />
       </Box>
-      <VersionsTable technology={technology} canManage={canManage} onChanged={onVersionsChanged} onError={onError} />
-      <Box>
-        <SectionLabel>{t('workspace.technology.cpe.title')}</SectionLabel>
-        <CpeProducts values={technology.cpe_products || []} canManage={canManage} onChange={(cpe_products) => onPatch({ cpe_products })} />
-      </Box>
+      <VersionsTable
+        technology={technology}
+        canManage={canManage}
+        onChanged={onVersionsChanged}
+        onError={onError}
+        unmatched={vulnerabilityFeed && !hasIdentifiers}
+        onAddIdentifier={showIdentifiers}
+      />
+      <VulnerabilityIdentifiers
+        open={identifiersOpen}
+        onToggle={() => setOpenState({ id: technology.id, open: !identifiersOpen })}
+        toggleRef={toggleRef}
+        cpeCount={cpeCount}
+        cveNameCount={cveNameCount}
+        cveNamesShown={cveNamesShown}
+        warn={vulnerabilityFeed}
+      >
+        <Box>
+          <SectionLabel>{t('workspace.technology.cpe.title')}</SectionLabel>
+          <CpeProducts values={technology.cpe_products || []} canManage={canManage} onChange={(cpe_products) => onPatch({ cpe_products })} />
+        </Box>
+        {cveNamesShown && (
+          <TechnologyCveNames
+            technologyId={technology.id}
+            names={technology.cve_names ?? []}
+            cpeProducts={technology.cpe_products ?? []}
+            canManage={canManage}
+            onChange={(cve_names) => onPatch({ cve_names })}
+          />
+        )}
+      </VulnerabilityIdentifiers>
       <Box>
         <SectionLabel>{t('workspace.technology.fields.notes')}</SectionLabel>
         <AutosaveText

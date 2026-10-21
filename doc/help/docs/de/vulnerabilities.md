@@ -6,23 +6,32 @@ Die Seite Schwachstellen listet die veröffentlichten Schwachstellen (CVE), die 
 
 ## Verfügbarkeit
 
-In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) oder einen Spiegel davon erreichen. Derselbe Schalter liest auch drei Quellen zur Ausnutzung, oder jeweils einen Spiegel: den Katalog der CISA, die europäische Schwachstellendatenbank der ENISA und die täglichen EPSS-Werte. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
+In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) und die CVE.org-Liste erreichen, oder jeweils einen Spiegel. Derselbe Schalter liest auch drei Quellen zur Ausnutzung, oder jeweils einen Spiegel: den Katalog der CISA, die europäische Schwachstellendatenbank der ENISA und die täglichen EPSS-Werte. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
 
 ## Wie KANAP sie findet
 
-KANAP liest alle 6 Stunden die von der NVD veröffentlichten Schwachstellen und vergleicht sie mit Ihren Technologien:
+KANAP liest alle 6 Stunden zwei Quellen und vergleicht sie mit Ihren Technologien:
 
-- **Produkte**: Eine Technologie wird über ihre CPE-Produktkennungen verglichen (siehe [Technologien](technologies.md#ubersicht)). Eine Technologie ohne Kennung erhält keine Schwachstelle. Die Betriebssysteme des Katalogs haben sie ebenfalls. SUSE Linux Enterprise Server hat keine: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich. Außer Betrieb genommene Technologien bleiben außen vor.
+- **Die NVD**: die Schwachstellen, die die US-amerikanische National Vulnerability Database analysiert hat. Die NVD analysiert nicht jede Schwachstelle. Viele bleiben lange ohne Produktkennung, und manche erhalten nie eine.
+- **Die CVE.org-Liste**: die Einträge, die Hersteller selbst für ihre eigenen Produkte schreiben. Eine Schwachstelle, die ihr Hersteller veröffentlicht hat, erscheint auch dann, wenn die NVD sie nicht analysiert hat.
+
+Diese Einträge stammen aus der CVE-Liste (CVE.org), gemäß den [Nutzungsbedingungen des CVE-Programms](https://www.cve.org/Legal/TermsOfUse).
+
+Jede Technologie wird so verglichen:
+
+- **Produkte**: Eine Technologie wird über ihre CPE-Produktkennungen und ihre CVE.org-Namen verglichen (siehe [Technologien](technologies.md#schwachstellenkennungen)). Die CPE-Kennungen gelten auch für die CVE.org-Einträge, die solche tragen, wie die von Red Hat. Eine Technologie ohne beides erhält keine Schwachstelle. Die Betriebssysteme des Katalogs haben ebenfalls CPE-Kennungen. SUSE Linux Enterprise Server hat keine: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich. Außer Betrieb genommene Technologien bleiben außen vor.
+- **CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen Einträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. Der Vergleich ignoriert Groß- und Kleinschreibung sowie Satzzeichen und verlangt ansonsten den genauen Namen. Ein ähnlicher Name passt nicht, daher wird jede Variante eines Produkts einzeln erfasst. Ein Name kann eine Version tragen: Er gilt dann nur für die Versionen der Technologie, deren Bezeichnung mit dieser Version beginnt, zum Beispiel `2019` für `Windows Server 2019`. Beginnt eine Bezeichnung mit mehreren davon, zählt nur die längste: `2012 R2` trägt `2012` und `2012 R2` und erhält nur den Namen von `2012 R2`.
 - **Versionen**: Nur die Versionen im Einsatz zählen: installiert auf einem Server in Betrieb oder genutzt von einer Anwendung in Betrieb.
 - **Versionsnummern**: Versionen werden über ihre Zahlen verglichen, Teil für Teil. `2016 SP3` zählt als 2016 und `19c` als 19. Eine Version mit weniger als drei Zahlen steht für ihren ganzen Zweig: `9.0` umfasst alle `9.0.x`. Eine Version, die KANAP nicht vergleichen kann, etwa eine Bezeichnung ohne Zahl, gilt als betroffen.
+- **Versionen in Herstellereinträgen**: Dieselben Regeln gelten für die Versionen, die ein CVE.org-Eintrag nennt. Eine Version, die KANAP nicht mit denen des Herstellers vergleichen kann, gilt als betroffen, und die Spalte **Match** des Exports zeigt „Version not comparable“. Das geschieht, wenn Ihre Version nach einem Jahr benannt ist und der Hersteller seine Komponenten nummeriert, zum Beispiel `2021` gegenüber `106`. Prüfen Sie dann im Eintrag des Herstellers, ob Ihre Version betroffen ist.
 - **Betriebssysteme**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux und CentOS werden über ihre Hauptversion verglichen, Ubuntu über Jahr und Monat, so wie die NVD sie veröffentlicht: `9.4` erhält die Schwachstellen von `9`, und `22.04.3 LTS` die von `22.04`. Windows Server wird nur über sein Jahr verglichen, da KANAP nicht weiß, welche Updates ein Server hat: Eine Version `2019` ist von jeder Schwachstelle von Windows Server 2019 betroffen, auch von denen, die ein Update bereits behoben hat. 2012 und 2012 R2 werden über ihre Bezeichnung unterschieden, ebenso 2008 und 2008 R2.
 - **Unbekannte Version**: Ein Server oder eine Anwendung ohne Version ist potenziell von jeder Schwachstelle des Produkts betroffen. Die Zeile zeigt in der Spalte **Version** **Nicht erfasst**.
 
 Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispiel Tomcat unter Windows. KANAP zeigt sie für das verwundbare Produkt allein, sodass eine Schwachstelle bei einer Installation erscheinen kann, die sie nicht betrifft. Markieren Sie sie als **Nicht betroffen**.
 
-Eine Schwachstelle, die die NVD noch nicht analysiert hat, erscheint, sobald sie analysiert ist.
+Eine Zeile entsteht, sobald eine der beiden Quellen sie abgleicht. Wenn die NVD und der Hersteller Unterschiedliches angeben, bleibt die Zeile bestehen. Eine Schwachstelle, die CVE.org oder die NVD zurückweist, wird nicht mehr abgeglichen.
 
-Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
+Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich ein CVE.org-Name, eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
 
 ## Warnungen
 
@@ -30,7 +39,7 @@ Jede Technologie und jede Version ist in den Warnungen zu Schwachstellen oder au
 
 Zwei Arten von Technologien sind standardmäßig außerhalb der Warnungen:
 
-- **Betriebssysteme**: KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden.
+- **Betriebssysteme**: KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden. Die CVE.org-Liste fügt viele weitere hinzu: Die Hersteller von Betriebssystemen führen die ganze Version als betroffen.
 - **Von einem Anbieter betriebene Cloud-Dienste**: eine Technologie in der Public Cloud oder als SaaS, oder ein Katalogeintrag, den der Anbieter betreibt. Der Anbieter patcht einen Online-Dienst, daher verlangen seine Schwachstellen keine Maßnahme von Ihnen. Eine Technologie in einer Private Cloud bleibt in den Warnungen.
 
 Sie können sie bei der Technologie wieder aufnehmen.
@@ -45,7 +54,7 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle. Aktiv ausgenutzte Schwachstellen kommen zuerst, danach die schwersten. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
 
-**Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum bei der NVD: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** bringt die Seite in den Zustand beim Öffnen zurück: die Zeilen **Zu prüfen**, aktiv ausgenutzte Schwachstellen zuerst, **Warnungen** auf **Eingeschlossen**, **Veröffentlicht** auf alle Daten und **Nur ausgenutzte** ausgeschaltet. Der Export und eine Statusänderung für mehrere Zeilen folgen diesen drei Einstellungen.
+**Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** bringt die Seite in den Zustand beim Öffnen zurück: die Zeilen **Zu prüfen**, aktiv ausgenutzte Schwachstellen zuerst, **Warnungen** auf **Eingeschlossen**, **Veröffentlicht** auf alle Daten und **Nur ausgenutzte** ausgeschaltet. Der Export und eine Statusänderung für mehrere Zeilen folgen diesen drei Einstellungen.
 
 **Spalten**:
 
@@ -56,7 +65,7 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 | **Ausgenutzt** | **Ja** oder **Nein**. Standardmäßig ausgeblendet: das Symbol in **Schweregrad** zeigt denselben Sachverhalt |
 | **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
 | **EPSS (%)** | Die Wahrscheinlichkeit einer Ausnutzung innerhalb der nächsten 30 Tage, als Prozentsatz in der Sprache Ihres Bildschirms. Zum Beispiel 15,3 %. Der Seitenbereich ergänzt das Perzentil |
-| **Zusammenfassung** | Die Beschreibung der NVD |
+| **Zusammenfassung** | Die Beschreibung der Schwachstelle |
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
 | **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
@@ -107,7 +116,7 @@ Legen Sie den Status jeder Version fest:
 
 Die Notiz hält fest, wie, zum Beispiel „am 12. März gepatcht, Change CHG-123“. Sie wird gespeichert, wenn Sie das Feld verlassen. Das Audit-Log hält fest, wer einen Status geändert hat und wann.
 
-KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht mehr passt (Sie haben sie aktualisiert, die Technologie wurde außer Betrieb genommen, die NVD hat ihre Daten geändert), verschwindet eine Zeile, die noch **Zu prüfen** ist. Eine geprüfte Zeile bleibt, ausgegraut, mit ihrem Status; sie kehrt unverändert zurück, wenn die Version wieder passt.
+KANAP ändert nie einen Status, den Sie gewählt haben. Wenn eine Version nicht mehr passt (Sie haben sie aktualisiert, die Technologie wurde außer Betrieb genommen, eine Quelle hat ihre Daten geändert), verschwindet eine Zeile, die noch **Zu prüfen** ist. Eine geprüfte Zeile bleibt, ausgegraut, mit ihrem Status; sie kehrt unverändert zurück, wenn die Version wieder passt.
 
 ## Ausnutzung { #exploitation }
 
@@ -130,7 +139,7 @@ Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jede
 Nach jeder Prüfung erhalten die IT-Verantwortlichen einer Technologie eine E-Mail über ihre neuen Schwachstellen, die noch zu prüfen sind, auf den Versionen in den Warnungen. Die E-Mail umfasst eine kritische oder hohe Schwachstelle, oder eine bekanntermaßen ausgenutzte Schwachstelle jeden Schweregrads:
 
 - **Was gemeldet wird**: eine Schwachstelle, die in den letzten 30 Tagen veröffentlicht wurde, zu einem Produkt, mit dem die Technologie bereits verglichen wurde, wenn sie kritisch, hoch oder als ausgenutzt geführt ist, oder eine bekannte Schwachstelle, die gerade kritisch oder hoch geworden ist.
-- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung, bleibt still. Seine Ergebnisse warten auf dieser Seite.
+- **Was nicht**: Der erste Vergleich einer Technologie, oder einer gerade hinzugefügten CPE-Kennung oder eines gerade hinzugefügten CVE.org-Namens, bleibt still. Ebenso der erste Vergleich einer Technologie mit der CVE.org-Liste. Ihre Ergebnisse warten auf dieser Seite.
 - **Wie viel**: höchstens 25 Zeilen, eine pro Technologie und Schwachstelle, dann ein Link zur Seite, gefiltert auf die in den letzten 30 Tagen veröffentlichten Schwachstellen.
 - **Wie oft**: Jede Person erfährt von einer Schwachstelle einer Technologie einmal. Eine Schwachstelle, die bei ihrer Prüfung nicht gemeldet wurde, wird auch später nicht gemeldet.
 
@@ -144,5 +153,6 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 ## Tipps
 
 - **CPE-Kennungen ausfüllen**: Die meisten Technologien aus dem Katalog bringen sie mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server hat keine. Für die anderen suchen Sie das Produkt im CPE-Wörterbuch des NIST.
+- **CVE.org-Namen hinzufügen**: Sie bringen Schwachstellen, die die NVD nicht analysiert hat. Viele Technologien aus dem Katalog bringen sie mit.
 - **Versionen erfassen**: Ein Server oder eine Anwendung ohne Version ist potenziell von allem betroffen, was die tatsächliche Gefährdung verdeckt.
 - **Die Notiz schreiben**: Wer die Schwachstelle als Nächstes liest, sieht, was getan wurde.

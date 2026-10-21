@@ -1,4 +1,5 @@
 import { Controller, Get } from '@nestjs/common';
+import { cveListEnabled } from '../vulnerabilities/cve-list-feed.service';
 import { Features } from './features';
 import { APP_VERSION } from './version';
 const SUPPORTED_LOCALES = ['en', 'fr', 'de', 'es'] as const;
@@ -24,6 +25,8 @@ export class ConfigController {
         technologyCatalogSync: Features.TECHNOLOGY_CATALOG_SYNC_ENABLED,
         // Vulnerabilities (NVD feed): on by default in the cloud, off by default on-premise.
         vulnerabilityFeed: Features.VULNERABILITY_FEED_ENABLED,
+        // CVE.org names (directory and suggestions). Off when the list or the vulnerability feed is off.
+        cveNames: cveListEnabled(),
       },
       version: APP_VERSION,
       supportedLocales: [...SUPPORTED_LOCALES],
