@@ -9,6 +9,7 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { after, describe, it } from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { curatedStaleWarning } from '../release.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const SCRIPT = path.join(HERE, '..', 'release.mjs');
@@ -272,5 +273,36 @@ describe('prepare', () => {
     assert.match(repo.calls(), /^pr create --repo kanap-hq\/KANAP --base main --head release\/v26\.10\.2 --title Release 26\.10\.2 --body-file \S+$/m);
     assert.equal(repo.queued(), 'queue-stack 9\n');
     assert.match(done.output, /Release pull request: https:\/\/github\.com\/kanap-hq\/KANAP\/pull\/9/);
+  });
+});
+
+describe('curated catalog age', () => {
+  // 2026-06-23 is 120 days before 2026-10-21; 2026-06-22 is 121.
+  it('stays quiet at 120 days and names whatever is older', () => {
+    assert.equal(curatedStaleWarning([{ key: 'fresh', checkedOn: '2026-06-23' }], '2026-10-21'), null);
+    assert.equal(curatedStaleWarning([{ key: 'fresh', checkedOn: '2026-10-20' }], '2026-10-21'), null);
+    assert.equal(
+      curatedStaleWarning([
+        { key: 'zeta', checkedOn: '2026-06-22' },
+        { key: 'alpha', checkedOn: '2026-10-20' },
+        { key: 'mid', checkedOn: null },
+      ], '2026-10-21'),
+      'Warning: curated catalog: 2 product(s) checked more than 120 days ago: mid, zeta (run the technology-catalog-curation skill)',
+    );
+    assert.equal(curatedStaleWarning([], '2026-10-21'), null);
+  });
+
+  it('prepare warns from the oldest checked_on and still exits 0', () => {
+    const repo = fixture();
+    const dir = path.join(repo.clone, 'backend/src/technologies/catalog/curated');
+    const today = new Date().toISOString().slice(0, 10);
+    writeJson(path.join(dir, 'old-os.json'), { versions: [{ checked_on: '2020-01-01' }] });
+    writeJson(path.join(dir, 'mixed.json'), { versions: [{ checked_on: today }, { checked_on: '2020-01-02' }] });
+    writeJson(path.join(dir, 'fresh.json'), { versions: [{ checked_on: today }] });
+    writeFileSync(path.join(dir, 'broken.json'), '{');
+    const { status, output } = repo.run('prepare', '26.10.2', '--since', repo.shas.first, '--dry-run');
+    assert.equal(status, 0, output);
+    assert.match(output, /Warning: curated catalog: 3 product\(s\) checked more than 120 days ago: broken, mixed, old-os \(run the technology-catalog-curation skill\)/);
+    assert.equal(existsSync(path.join(repo.base, 'kanap-release')), false);
   });
 });
