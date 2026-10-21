@@ -1,0 +1,354 @@
+{
+  "key": "sophos-firewall",
+  "name": "Sophos Firewall (SFOS)",
+  "editor": "Sophos",
+  "family": "security",
+  "lifecycle_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+  "source_updated": "2026-09-24",
+  "version_grain": "maintenance release as Sophos dates it (20.0 MR1); releases of one train that share the same EOL are grouped under the first one, the others in aliases",
+  "versions": [
+    {
+      "label": "22.0 MR1",
+      "aliases": [
+        "22.0 MR2"
+      ],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor rows \"SFOS 22.0 MR1\" (SUPPORTED) and \"SFOS 22.0 MR2\" (MAINTAINED), EOL \"None declared\". FIPS-certified modules."
+    },
+    {
+      "label": "22.0 GA",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-10-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "FIPS-certified modules."
+    },
+    {
+      "label": "21.5 MR1",
+      "aliases": [
+        "21.5 MR2"
+      ],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor rows \"SFOS 21.5 MR1\" (SUPPORTED) and \"SFOS 21.5 MR2\" (MAINTAINED), EOL \"None declared\". FIPS-certified modules."
+    },
+    {
+      "label": "21.5 GA",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "FIPS-certified modules."
+    },
+    {
+      "label": "21.0 MR1",
+      "aliases": [
+        "21.0 MR2"
+      ],
+      "release_date": null,
+      "standard_support_end": "2026-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 21.0 MR1/MR2\". FIPS-certified modules."
+    },
+    {
+      "label": "21.0 GA",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2025-10-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "FIPS-certified modules."
+    },
+    {
+      "label": "20.0 MR2",
+      "aliases": [
+        "20.0 MR3"
+      ],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor rows \"SFOS 20.0 MR2\" (SUPPORTED) and \"SFOS 20.0 MR3\" (MAINTAINED), EOL \"None declared\". FIPS-certified modules."
+    },
+    {
+      "label": "20.0 MR1",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2025-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "FIPS-certified modules."
+    },
+    {
+      "label": "20.0 GA",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "19.5 MR3",
+      "aliases": [
+        "19.5 MR4"
+      ],
+      "release_date": null,
+      "standard_support_end": "2025-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor rows \"SFOS 19.5 MR3\" and \"SFOS 19.5 MR4\", same EOL."
+    },
+    {
+      "label": "19.5 GA",
+      "aliases": [
+        "19.5 MR1",
+        "19.5 MR2"
+      ],
+      "release_date": null,
+      "standard_support_end": "2024-02-15",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 19.5 GA and MR1/MR2\"."
+    },
+    {
+      "label": "19.0 MR3",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "19.0 MR2",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 19.0 MR2 (CC EAL4+ certified release)\", status SUPPORTED, EOL \"None declared\"."
+    },
+    {
+      "label": "19.0 GA",
+      "aliases": [
+        "19.0 MR1"
+      ],
+      "release_date": null,
+      "standard_support_end": "2023-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 19.0 GA and MR1\"."
+    },
+    {
+      "label": "18.5 MR5",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2025-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor label \"SFOS 18.5 MR5*\"; the asterisk has no matching footnote on the page."
+    },
+    {
+      "label": "18.5 MR4",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "18.5 GA",
+      "aliases": [
+        "18.5 MR1",
+        "18.5 MR1-1",
+        "18.5 MR2",
+        "18.5 MR3"
+      ],
+      "release_date": null,
+      "standard_support_end": "2022-12-07",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 18.5 GA and MR1/MR1-1/MR2/MR3\"."
+    },
+    {
+      "label": "18.0",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "17.0 MR10",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EOL",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor row \"SFOS 17.0 MR10 (OLD CC EAL4+ certified release)\". The rest of SFOS 17 reached EOL on 2020-08-31."
+    }
+  ]
+}

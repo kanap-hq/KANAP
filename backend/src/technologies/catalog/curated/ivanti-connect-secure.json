@@ -1,0 +1,232 @@
+{
+  "key": "ivanti-connect-secure",
+  "name": "Ivanti Connect Secure",
+  "editor": "Ivanti",
+  "family": "security",
+  "lifecycle_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+  "source_updated": "2026-10-02",
+  "version_grain": "gateway release as the vendor names it (22.7, 25.1.2.x, 9.1R18)",
+  "versions": [
+    {
+      "label": "25.1.3.x",
+      "aliases": [],
+      "release_date": "2026-07-31",
+      "standard_support_end": null,
+      "extended_support_end": "2027-04-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": null,
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of Engineering given as \"N-2 Policy\" (no date). Supported only on ISA 6500/8500 hardware and ISA 4500-V/6500-V/8500-V virtual."
+    },
+    {
+      "label": "25.1.2.x",
+      "aliases": [],
+      "release_date": "2026-05-01",
+      "standard_support_end": null,
+      "extended_support_end": "2027-01-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": null,
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of Engineering given as \"N-2 Policy\" (no date). Supported only on ISA 6500 and ISA 8500 hardware."
+    },
+    {
+      "label": "25.1.1.x",
+      "aliases": [],
+      "release_date": "2026-03-16",
+      "standard_support_end": "2026-03-16",
+      "extended_support_end": "2027-01-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of Engineering equals the launch date on the vendor page."
+    },
+    {
+      "label": "25.1.0.x",
+      "aliases": [],
+      "release_date": "2025-09-24",
+      "standard_support_end": "2026-01-31",
+      "extended_support_end": "2027-01-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.8",
+      "aliases": [],
+      "release_date": "2025-07-24",
+      "standard_support_end": "2026-01-31",
+      "extended_support_end": "2027-01-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.7",
+      "aliases": [],
+      "release_date": "2024-05-21",
+      "standard_support_end": "2026-01-31",
+      "extended_support_end": "2027-01-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.6",
+      "aliases": [],
+      "release_date": "2023-10-17",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": "2024-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.5",
+      "aliases": [],
+      "release_date": "2023-07-17",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": "2024-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.4",
+      "aliases": [],
+      "release_date": "2023-04-17",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": "2024-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "22.3",
+      "aliases": [],
+      "release_date": "2022-12-12",
+      "standard_support_end": "2023-11-30",
+      "extended_support_end": "2024-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.1R18",
+      "aliases": [],
+      "release_date": "2023-04-17",
+      "standard_support_end": "2024-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Support",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Classic 9.1 release: the vendor gives a single End of Support date."
+    },
+    {
+      "label": "9.1R17",
+      "aliases": [],
+      "release_date": "2022-12-12",
+      "standard_support_end": "2024-11-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Support",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Classic 9.1 release: the vendor gives a single End of Support date."
+    },
+    {
+      "label": "9.1R14",
+      "aliases": [],
+      "release_date": "2022-01-15",
+      "standard_support_end": "2024-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
+      "source_terms": {
+        "release_date": "Launch Date",
+        "standard_support_end": "End of Support",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Classic 9.1 release, labelled \"9.1R14 (LTS Release)\" by the vendor; single End of Support date."
+    }
+  ]
+}

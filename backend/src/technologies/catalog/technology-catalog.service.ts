@@ -24,6 +24,12 @@ export type CatalogVersion = {
   release_date: string | null;
   standard_support_end: string | null;
   extended_support_end: string | null;
+  /** Page this version's dates were read from. Present on a product maintained by KANAP. */
+  source_url?: string;
+  /** Day those dates were last checked (`YYYY-MM-DD`). Present on a product maintained by KANAP. */
+  checked_on?: string;
+  /** The vendor states there is no planned end of support. Both end dates are then null. */
+  no_planned_end?: boolean;
 };
 
 export type CatalogProduct = {
@@ -47,6 +53,11 @@ export type CatalogProduct = {
    */
   noCpe?: string | true;
   source_url: string | null;
+  /**
+   * Day the vendor last updated the lifecycle page. Present on a product maintained by KANAP,
+   * null when the page states none. Absent on an endoflife.date entry.
+   */
+  source_updated?: string | null;
   versions: CatalogVersion[];
 };
 
@@ -60,8 +71,9 @@ export type CatalogLanguage = 'en' | 'fr' | 'de' | 'es';
 type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
 
 /**
- * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built from
- * endoflife.date by `scripts/technologies/build-catalog.mjs`, MIT license). It is offered, never
+ * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built by
+ * `scripts/technologies/build-catalog.mjs` from endoflife.date and from the KANAP-maintained files
+ * in `curated/`, MIT license for the endoflife.date part). It is offered, never
  * imposed: nothing is written until a tenant adopts an entry, which creates the technology, its
  * versions and its CPE identifiers. The catalog is living (lot C4): the versions endoflife.date
  * published since the shipped file was built come from the platform cache

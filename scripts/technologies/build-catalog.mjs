@@ -6,7 +6,11 @@
 // Source: the open API of endoflife.date (https://endoflife.date/docs/api/v1/), whose data is
 // published under the MIT license (Copyright 2020 endoflife.date contributors; the notice is in
 // backend/src/technologies/catalog/LICENSE-endoflife-date.txt). The products kept are listed below
-// (PRODUCTS); a few have no endoflife.date page and are written from this list only (`slug` null).
+// (PRODUCTS). A product endoflife.date does not cover is maintained by KANAP: one file per product
+// in backend/src/technologies/catalog/curated/ (`slug: null, curated: true`, the key is the file
+// name). Each version keeps the support dates read from the vendor, the page they came from and
+// the day they were checked. Those files are KANAP data. A product with `slug` null and no curated
+// file is written from this list only, with no versions.
 // Operating systems are in this catalog since lot T3. Their version labels are rewritten
 // (`versionLabel`) so they match the former IT settings catalog (`2012 R2`, `22.04 LTS`,
 // `12 (Bookworm)`, `15 SP5`). endoflife.date names a SUSE service pack `15.5`: the label stored
@@ -25,8 +29,10 @@
 //                                                     [--report <file>]]
 //        (checks the CPE identifiers of the file against PRODUCTS: syntax, and an entry without
 //        any must say why in `noCpe`; checks `cve_names` the same way a technology does (shape,
-//        lengths, duplicates) and that the file carries the names of PRODUCTS; and that each
-//        entry has its four descriptions in technologies.descriptions.json; offline by default.
+//        lengths, duplicates) and that the file carries the names of PRODUCTS; that each
+//        entry has its four descriptions in technologies.descriptions.json; and that each file in
+//        curated/ matches a `curated: true` product (required fields, ISO dates, date order,
+//        unique labels, checked_on, no_planned_end); offline by default.
 //        With --nvd, asks the CPE dictionary of the NVD whether each `part:vendor:product` exists
 //        and how many CVE name it, --latest
 //        adds the newest CVE. Set NVD_API_KEY to send it as the `apiKey` header: one request every
@@ -40,7 +46,7 @@
 // Reproducible: the same answers from the API give the same file (sorted keys, no timestamp
 // besides `source.retrieved_on`, the day passed with --today or the current day).
 
-import { readFileSync, writeFileSync } from 'node:fs';
+import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -86,7 +92,13 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * and kept by the sync the same way as `cpe`. Each item is `{ vendor, product, version? }`: the
  * vendor and the product as published (1 to 200 characters), and a version of at most 50
  * characters when the name carries one. The texts are stored as the publisher writes them.
- * No entry lists names yet.
+ * `curated: true` with `slug: null`: the versions come from
+ * `backend/src/technologies/catalog/curated/<key>.json`, in the file's order. The product
+ * `source_url` is the file's `lifecycle_url`, and `source_updated` is copied as published (null
+ * when the page states none). A version keeps `source_url`, `checked_on` and `no_planned_end`.
+ * `note`, `source_terms`, `aliases` and `date_precision` stay in the source file. `build_prefixes`
+ * receives a numeric alias only (`7.3` on the label `7.3 LTS`): the same role as a release name
+ * that differs from its label, a build an observed version can start with.
  * `mode`: `subscribed` for a service.
  * `hosting_type`: a code of the default hosting types (`on_prem`, `colocation`, `public_cloud`,
  * `private_cloud`, `saas`) when `mode` says too little (a managed cloud service is `public_cloud`,
@@ -868,10 +880,157 @@ async function nvdCheck(product, latest) {
   return result;
 }
 
+const CURATED_DIR = resolve(ROOT, 'backend/src/technologies/catalog/curated');
+/** A build an observed version can start with: digits and dots only (`7.3`, `4.0.1.0`). */
+const NUMERIC_PREFIX = /^\d+(\.\d+)*$/;
+const CURATED_DATE_FIELDS = ['release_date', 'standard_support_end', 'extended_support_end'];
+
+/** A real calendar day `YYYY-MM-DD`, the form the curated files store. */
+function isIsoDay(value) {
+  if (typeof value !== 'string') return false;
+  const match = /^(\d{4})-(\d{2})-(\d{2})$/.exec(value);
+  if (!match) return false;
+  const year = Number(match[1]);
+  const month = Number(match[2]);
+  const dayOfMonth = Number(match[3]);
+  const date = new Date(Date.UTC(year, month - 1, dayOfMonth));
+  return date.getUTCFullYear() === year && date.getUTCMonth() === month - 1 && date.getUTCDate() === dayOfMonth;
+}
+
+function isHttpUrl(value) {
+  return typeof value === 'string' && /^https?:\/\/\S+$/.test(value);
+}
+
+function curatedFileNames() {
+  return readdirSync(CURATED_DIR).filter((name) => name.endsWith('.json')).sort();
+}
+
+function readCuratedFile(key) {
+  return JSON.parse(readFileSync(resolve(CURATED_DIR, `${key}.json`), 'utf8'));
+}
+
+/**
+ * Numeric aliases only, in the file's order, never the label itself. `LTS2026`, `R80.30` and
+ * `22.0 MR2` name the same row for a reader; they are not a build prefix.
+ */
+function buildPrefixesOf(label, aliases) {
+  const prefixes = [];
+  for (const alias of Array.isArray(aliases) ? aliases : []) {
+    if (typeof alias !== 'string' || !NUMERIC_PREFIX.test(alias) || alias === label || prefixes.includes(alias)) continue;
+    prefixes.push(alias);
+  }
+  return prefixes;
+}
+
+/** Versions of a KANAP-maintained product, in the file's order. `note` and the other curation fields stay out. */
+function versionsOfCurated(file, entry) {
+  return file.versions.map((version) => {
+    const label = String(version.label);
+    return {
+      key: label,
+      label,
+      release_date: version.release_date ?? null,
+      standard_support_end: version.standard_support_end ?? null,
+      extended_support_end: version.extended_support_end ?? null,
+      cpe_version: cpeVersionOf(label, entry),
+      build_prefixes: buildPrefixesOf(label, version.aliases),
+      source_url: version.source_url,
+      checked_on: version.checked_on,
+      no_planned_end: version.no_planned_end === true,
+    };
+  });
+}
+
+/** One curated file: required fields, ISO dates, date order, unique labels, and `no_planned_end`. */
+function checkCuratedDocument(key, file, findings) {
+  if (!file || typeof file !== 'object' || Array.isArray(file)) {
+    findings.push(`${key}: curated file must be an object`);
+    return;
+  }
+  if (file.key !== key) findings.push(`${key}: file key is ${JSON.stringify(file.key)}`);
+  for (const field of ['name', 'editor', 'family']) {
+    if (typeof file[field] !== 'string' || !file[field].trim()) findings.push(`${key}: ${field} is missing`);
+  }
+  if (!isHttpUrl(file.lifecycle_url)) findings.push(`${key}: lifecycle_url must be an http(s) URL`);
+  if (!('source_updated' in file)) findings.push(`${key}: source_updated is missing`);
+  else if (file.source_updated !== null && !isIsoDay(file.source_updated)) findings.push(`${key}: source_updated must be an ISO date or null`);
+  if (!Array.isArray(file.versions) || file.versions.length === 0) {
+    findings.push(`${key}: versions must be a non-empty array`);
+    return;
+  }
+  const labels = new Set();
+  for (const version of file.versions) {
+    if (!version || typeof version !== 'object' || Array.isArray(version)) {
+      findings.push(`${key}: a version is not an object`);
+      continue;
+    }
+    const label = version.label;
+    const place = typeof label === 'string' && label.trim() ? label : '(no label)';
+    if (typeof label !== 'string' || label.length < 1 || label.length > 100 || label !== label.trim()) {
+      findings.push(`${key}: a version label must be 1 to 100 characters`);
+    } else if (labels.has(label)) {
+      findings.push(`${key}: label ${label} is repeated`);
+    } else {
+      labels.add(label);
+    }
+    for (const field of CURATED_DATE_FIELDS) {
+      if (!(field in version)) findings.push(`${key}: ${place}: ${field} is missing`);
+      else if (version[field] !== null && !isIsoDay(version[field])) findings.push(`${key}: ${place}: ${field} must be an ISO date or null`);
+    }
+    if (!isIsoDay(version.checked_on)) findings.push(`${key}: ${place}: checked_on must be an ISO date`);
+    if (!isHttpUrl(version.source_url)) findings.push(`${key}: ${place}: source_url must be an http(s) URL`);
+    if (typeof version.no_planned_end !== 'boolean') {
+      findings.push(`${key}: ${place}: no_planned_end must be a boolean`);
+    } else if (version.no_planned_end === true && (version.standard_support_end !== null || version.extended_support_end !== null)) {
+      findings.push(`${key}: ${place}: no_planned_end requires both end dates to be null`);
+    }
+    const ordered = CURATED_DATE_FIELDS
+      .map((field) => [field, version[field]])
+      .filter(([, value]) => value != null);
+    for (let index = 1; index < ordered.length; index += 1) {
+      if (ordered[index][1] < ordered[index - 1][1]) {
+        findings.push(`${key}: ${place}: ${ordered[index - 1][0]} ${ordered[index - 1][1]} is after ${ordered[index][0]} ${ordered[index][1]}`);
+      }
+    }
+  }
+}
+
+/**
+ * Each file in `curated/` has a PRODUCTS entry `curated: true` (and the reverse), with the fields
+ * and the date rules the catalog build reads. Offline: nothing is fetched.
+ */
+function checkCurated(findings) {
+  let names;
+  try {
+    names = curatedFileNames();
+  } catch (error) {
+    findings.push(`curated: ${CURATED_DIR} cannot be read (${error instanceof Error ? error.message : error})`);
+    return;
+  }
+  const fileKeys = new Set(names.map((name) => name.slice(0, -'.json'.length)));
+  for (const entry of PRODUCTS) {
+    if (!entry.curated) continue;
+    if (!fileKeys.has(entry.key)) findings.push(`${entry.key}: curated product without a file in curated/`);
+    if (entry.slug) findings.push(`${entry.key}: curated product has slug ${JSON.stringify(entry.slug)}`);
+  }
+  for (const key of fileKeys) {
+    const entry = PRODUCTS.find((product) => product.key === key);
+    if (!entry?.curated) findings.push(`${key}: curated file without a curated: true product`);
+    let file;
+    try {
+      file = readCuratedFile(key);
+    } catch (error) {
+      findings.push(`${key}: curated file is not valid JSON (${error instanceof Error ? error.message : error})`);
+      continue;
+    }
+    checkCuratedDocument(key, file, findings);
+  }
+}
+
 /**
  * `--check-cpe`: every entry of the file has well-formed identifiers or a `noCpe` reason, and
  * matches PRODUCTS (no `cpeExclude` left, every `cpe` present, and `cve_names` equal to PRODUCTS).
- * With --nvd, each identifier is
+ * Each file in `curated/` matches a `curated: true` product. With --nvd, each identifier is
  * looked up in the NVD; one found neither in the CPE dictionary nor in a CVE is reported, and so is
  * an entry none of whose identifiers names a CVE. Exit code 1 on any finding.
  */
@@ -883,6 +1042,7 @@ async function checkCpe(out) {
   const findings = [];
   const report = [];
   const descriptions = JSON.parse(readFileSync(DESCRIPTIONS, 'utf8')).descriptions;
+  checkCurated(findings);
   for (const key of Object.keys(descriptions)) {
     if (!catalog.products.some((product) => product.key === key)) findings.push(`${key}: description of an entry the catalog does not have`);
   }
@@ -987,7 +1147,8 @@ async function main() {
   const today = argValue('--today') ?? new Date().toISOString().slice(0, 10);
   const products = [];
   for (const entry of PRODUCTS) {
-    const remote = entry.slug ? await fetchProduct(entry.slug) : null;
+    const remote = entry.slug && !entry.curated ? await fetchProduct(entry.slug) : null;
+    const curated = entry.curated ? readCuratedFile(entry.key) : null;
     const published = [];
     for (const identifier of remote?.identifiers ?? []) {
       if (identifier.type !== 'cpe') continue;
@@ -1006,8 +1167,9 @@ async function main() {
       cpe_products: cpe,
       ...(entry.noCpe ? { noCpe: entry.noCpe } : {}),
       ...(names ? { cve_names: names } : {}),
-      source_url: entry.slug ? `https://endoflife.date/${entry.slug}` : null,
-      versions: remote ? versionsOf(remote.releases ?? [], today, entry) : [],
+      source_url: curated ? curated.lifecycle_url : (entry.slug ? `https://endoflife.date/${entry.slug}` : null),
+      ...(curated ? { source_updated: curated.source_updated ?? null } : {}),
+      versions: curated ? versionsOfCurated(curated, entry) : (remote ? versionsOf(remote.releases ?? [], today, entry) : []),
     });
     process.stderr.write(`${entry.key}: ${products.at(-1).versions.length} versions, ${cpe.length} CPE\n`);
   }

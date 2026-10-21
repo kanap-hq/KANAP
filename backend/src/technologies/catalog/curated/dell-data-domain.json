@@ -1,0 +1,500 @@
+{
+  "key": "dell-data-domain",
+  "name": "Dell PowerProtect DD (DD OS)",
+  "editor": "Dell Technologies",
+  "family": "backup",
+  "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
+  "source_updated": "2026-10-16",
+  "version_grain": "release family as Dell names it (7.13.1, 8.6.0, 7.9); builds of a family share the end date, split where they differ (7.7.0 and 7.7 LTS2022); LTS name in aliases",
+  "versions": [
+    {
+      "label": "8.9",
+      "aliases": [],
+      "release_date": "2026-08-19",
+      "standard_support_end": "2028-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release. KB 000081247 lists 8.9 as the latest feature release without an end date; the end date comes from the file."
+    },
+    {
+      "label": "8.8",
+      "aliases": [],
+      "release_date": "2026-06-10",
+      "standard_support_end": "2028-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release, single build 8.8.0.0 in the file."
+    },
+    {
+      "label": "8.7",
+      "aliases": [],
+      "release_date": "2026-03-03",
+      "standard_support_end": "2028-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release, single build 8.7.0.0 in the file."
+    },
+    {
+      "label": "8.6.1",
+      "aliases": [
+        "LTS2026"
+      ],
+      "release_date": "2026-04-10",
+      "standard_support_end": "2028-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. LTS2026 release. Release date of 8.6.1.10, the first 8.6.1 build in the file; KB 000081247 gives an LTS Support range starting April 14, 2026. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "8.6.0",
+      "aliases": [],
+      "release_date": "2025-11-12",
+      "standard_support_end": "2027-11-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release, single build 8.6.0.0 in the file."
+    },
+    {
+      "label": "8.5",
+      "aliases": [],
+      "release_date": "2025-08-20",
+      "standard_support_end": "2027-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release, single build 8.5.0.0 in the file."
+    },
+    {
+      "label": "8.4",
+      "aliases": [],
+      "release_date": "2025-06-25",
+      "standard_support_end": "2027-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Feature release, single build 8.4.0.0 in the file."
+    },
+    {
+      "label": "8.3.1",
+      "aliases": [
+        "LTS2025"
+      ],
+      "release_date": "2025-06-30",
+      "standard_support_end": "2027-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. LTS2025 release, builds 8.3.1.0 to 8.3.1.45 in the file. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "8.3.0",
+      "aliases": [],
+      "release_date": "2025-01-29",
+      "standard_support_end": "2028-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 8.3.0.0 to 8.3.0.15. The file gives this feature release a later end date than the 8.3.1 LTS release (2027-06-30), as published."
+    },
+    {
+      "label": "8.1",
+      "aliases": [],
+      "release_date": "2024-07-30",
+      "standard_support_end": "2027-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 8.1.0.0 and 8.1.0.10."
+    },
+    {
+      "label": "8.0",
+      "aliases": [],
+      "release_date": "2024-04-15",
+      "standard_support_end": "2027-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 8.0.0.0 to 8.0.0.20."
+    },
+    {
+      "label": "7.13.1",
+      "aliases": [
+        "LTS2024"
+      ],
+      "release_date": "2024-06-07",
+      "standard_support_end": "2027-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. LTS2024 release. Not compatible with DD9910, DD9410, DD6410 and newer models. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.13.0",
+      "aliases": [],
+      "release_date": "2023-12-13",
+      "standard_support_end": "2026-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. The file lists builds 7.13.0.10 and 7.13.0.20; release date of 7.13.0.10. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.12.0",
+      "aliases": [],
+      "release_date": "2023-07-18",
+      "standard_support_end": "2026-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.11",
+      "aliases": [],
+      "release_date": "2023-03-20",
+      "standard_support_end": "2026-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. KB 000081247 gives March 2022 as the last release date of 7.11.0.0; the file gives RTS 2023-03-20, which fits the release order (7.10.0 in 2022, 7.12.0 in July 2023). File date kept. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.10.1",
+      "aliases": [],
+      "release_date": "2023-04-28",
+      "standard_support_end": "2026-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.10.1.0 to 7.10.1.80. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.10.0",
+      "aliases": [],
+      "release_date": "2022-10-21",
+      "standard_support_end": "2025-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.9",
+      "aliases": [],
+      "release_date": "2022-07-01",
+      "standard_support_end": "2025-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.8",
+      "aliases": [],
+      "release_date": "2022-02-15",
+      "standard_support_end": "2025-02-28",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Same end date in KB 000081247 (PowerProtect DD: Software Versions)."
+    },
+    {
+      "label": "7.7",
+      "aliases": [
+        "LTS2022",
+        "7.7.1",
+        "7.7.2",
+        "7.7.3",
+        "7.7.4",
+        "7.7.5"
+      ],
+      "release_date": "2022-01-28",
+      "standard_support_end": "2025-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. LTS2022 release, builds 7.7.1.0 to 7.7.5.50; release date of 7.7.1.0. KB 000081247 gives this end date to 'LTS2022 7.7.x'; the file gives the earlier 7.7.0.x builds their own end date (see 7.7.0)."
+    },
+    {
+      "label": "7.7.0",
+      "aliases": [],
+      "release_date": "2021-10-06",
+      "standard_support_end": "2024-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.7.0.0 to 7.7.0.7. The file ends them on 2024-10-31; KB 000081247 lists only 'LTS2022 7.7.x' (2025-01-31). The earlier date is kept."
+    },
+    {
+      "label": "7.6",
+      "aliases": [],
+      "release_date": "2021-05-10",
+      "standard_support_end": "2024-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.6.0.5 to 7.6.0.40."
+    },
+    {
+      "label": "7.5",
+      "aliases": [],
+      "release_date": "2021-02-22",
+      "standard_support_end": "2024-02-28",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.5.0.5 and 7.5.0.10."
+    },
+    {
+      "label": "7.4",
+      "aliases": [],
+      "release_date": "2020-12-02",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Single build 7.4.0.5."
+    },
+    {
+      "label": "7.3",
+      "aliases": [],
+      "release_date": "2020-08-17",
+      "standard_support_end": "2023-08-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.3.0.5 and 7.3.0.10."
+    },
+    {
+      "label": "7.2",
+      "aliases": [],
+      "release_date": "2020-05-20",
+      "standard_support_end": "2023-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.2.0.5 to 7.2.0.120; build 7.2.0.120 has an RTS date (2023-10-20) after this end date, as published."
+    },
+    {
+      "label": "7.1",
+      "aliases": [],
+      "release_date": "2020-01-22",
+      "standard_support_end": "2023-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 7.1.0.5 to 7.1.0.40."
+    },
+    {
+      "label": "6.2.1",
+      "aliases": [],
+      "release_date": "2020-05-27",
+      "standard_support_end": "2023-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Data Domain DD OS\"; dates are per build, grouped by release family. Builds 6.2.1.0 to 6.2.1.120; builds 6.2.1.100 to 6.2.1.120 have RTS dates after this end date, as published. The file has a separate row 'Data Domain DD OS for DD2200 Only' that ends 6.2.1 on 2023-12-31 for the DD2200."
+    }
+  ]
+}

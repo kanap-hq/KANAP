@@ -1,0 +1,45 @@
+{
+  "key": "ibm-websphere",
+  "name": "IBM WebSphere Application Server",
+  "editor": "IBM",
+  "family": "application_server",
+  "lifecycle_url": "https://www.ibm.com/support/pages/websphere-application-server-traditional-and-websphere-liberty-support-lifecycle-policy-and-end-ifix-eligibility",
+  "source_updated": "2026-09-09",
+  "version_grain": "version as IBM lifecycle pages name it (9.0.x, 8.5.x); fix packs (9.0.5.x) are not tracked",
+  "versions": [
+    {
+      "label": "9.0.x",
+      "aliases": [],
+      "release_date": "2016-06-24",
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": true,
+      "date_precision": "day",
+      "source_url": "https://www.ibm.com/support/pages/websphere-application-server90x",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "General Availability 24-Jun-2016 (announcement 216-264), same date on the Network Deployment page. IBM states: 'There is no planned end-of-support date for WebSphere Application Server 8.5 and 9.0.' The lifecycle page lists no End of Support date (policy 'Other (O)'). Fix packs are eligible for iFixes for two years after release (see the Recommended updates page). Extended support for Solaris and HP-UX on 8.5.5 and 9.0.5 ran 01-Oct-2022 through 30-Sep-2025."
+    },
+    {
+      "label": "8.5.x",
+      "aliases": [],
+      "release_date": "2012-07-13",
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": true,
+      "date_precision": "day",
+      "source_url": "https://www.ibm.com/support/pages/websphere-application-server85x",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "General Availability 13-Jul-2012 (announcement 212-109) , same date on the Network Deployment 8.5.x page. IBM states: 'There is no planned end-of-support date for WebSphere Application Server 8.5 and 9.0.' The lifecycle page lists no End of Support date (policy 'Other (O)'). Fix packs are eligible for iFixes for two years after release (see the Recommended updates page). Extended support for Solaris and HP-UX on 8.5.5 and 9.0.5 ran 01-Oct-2022 through 30-Sep-2025. Java 7 and 7.1 on 8.5.5 were discontinued after July 2022."
+    }
+  ]
+}
