@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, Typography } from '@mui/material';
+import { Alert, Box, Button, Stack, Typography, useTheme } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
@@ -14,9 +14,12 @@ import { buildItemPath, formatItemRef } from '../../../utils/item-ref';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
-import IncidentRelationsSection from '../editors/IncidentRelationsSection';
+import { StatusDot } from '../../../components/design';
+import type { IncidentRow } from '../../../api/endpoints/incidents';
+import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColors';
+import { isIncidentLocked } from './incidentWorkspace';
 
-export type RelationKind = 'budget_lines' | 'contracts' | 'projects' | 'requests' | 'tasks' | 'technologies' | 'processes';
+export type RelationKind = 'budget_lines' | 'contracts' | 'projects' | 'requests' | 'tasks' | 'technologies' | 'processes' | 'incidents';
 
 type BudgetLineRow = {
   id: string;
@@ -51,7 +54,8 @@ export type TechnologyRow = {
 };
 /** A server the application is deployed on, in service, with the environments and roles it has there. */
 export type DeploymentServer = { asset_id: string; name: string; asset_reference: string | null; environments: string[]; roles: string[] };
-type ProcessRow = { id: string; name: string; status: string | null; owner_name: string | null };
+export type ProcessRow = { id: string; name: string; status: string | null; owner_name: string | null };
+type IncidentLinkRow = { id: string; item_number: number; title: string | null; status: string; severity: string; detected_at: string | null };
 type Suggestion = {
   type: 'budget_line' | 'contract' | 'project';
   id: string;
@@ -70,7 +74,9 @@ export type ApplicationRelationsData = {
   tasks: TaskRow[] | null;
   technologies: TechnologyRow[] | null;
   deployment_servers?: DeploymentServer[] | null;
+  /** Shown in the properties panel of the application (lot R1b). */
   processes: ProcessRow[] | null;
+  incidents: IncidentLinkRow[] | null;
   suggestions: Suggestion[];
   also: { assets: number; interfaces: number; documents: number };
 };
@@ -113,6 +119,11 @@ const PAGE = 30;
 
 export const applicationRelationsKey = (id: string) => ['application-relations', id] as const;
 
+/** The tab in one round trip; the properties panel reads its business processes from the same query. */
+export async function fetchApplicationRelations(id: string): Promise<ApplicationRelationsData> {
+  return (await api.get<ApplicationRelationsData>(`/applications/${id}/relations`)).data;
+}
+
 function todayYmd(): string {
   const now = new Date();
   return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
@@ -130,14 +141,15 @@ type Props = {
 };
 
 /**
- * The linked sections of an application's Relations tab (lot R1, business processes from lot T2a).
- * Technologies are on the Operations tab. One dense table per kind, read in one round trip
+ * The linked sections of an application's Relations tab (lot R1, incidents from lot R1b).
+ * Technologies are on the Operations tab, business processes in the properties panel. One dense table per kind, read in one round trip
  * (`GET /applications/:id/relations`). A row opens its object; managers add by server search and
  * unlink on hover, each saved at once. Then the suggestions and the counts of what is related
  * elsewhere.
  */
 export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenKnowledge }: Props) {
   const { t, i18n } = useTranslation(['it', 'common', 'portfolio', 'ops']);
+  const theme = useTheme();
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('applications', 'manager');
   const queryClient = useQueryClient();
@@ -149,7 +161,7 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
 
   const { data } = useQuery({
     queryKey: key,
-    queryFn: async () => (await api.get<ApplicationRelationsData>(`/applications/${id}/relations`)).data,
+    queryFn: () => fetchApplicationRelations(id),
   });
 
   const refresh = React.useCallback(async () => {
@@ -359,27 +371,40 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     },
   ];
 
-  sections.push(
-    {
-      kind: 'processes',
-      title: t('workspace.application.relations.sections.processes'),
-      empty: t('workspace.application.relations.empty.processes'),
-      searchPlaceholder: t('workspace.application.relations.search.processes'),
-      rows: data ? data.processes : [],
-      href: (row: ProcessRow) => `/master-data/business-processes/${row.id}/overview`,
-      label: (row: ProcessRow) => row.name,
-      muted: (row: ProcessRow) => row.status === 'disabled',
-      editable: hasLevel('business_processes', 'manager'),
-      columns: [
-        { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row: ProcessRow) => row.name },
-        { key: 'owner', header: t('workspace.application.relations.columns.businessOwner'), width: 180, hideOrder: 1, render: (row: ProcessRow) => row.owner_name ?? dash },
-      ],
-      search: async (q, signal) => {
-        const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/business-processes/lookup', { params: { limit: PAGE, ...(q ? { q } : {}) }, signal });
-        return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+  sections.push({
+    kind: 'incidents',
+    title: t('components.incidentRelations.title'),
+    empty: t('workspace.technology.relations.empty.incidents'),
+    searchPlaceholder: t('workspace.technology.relations.search.incidents'),
+    rows: data ? data.incidents : [],
+    href: (row: IncidentLinkRow) => `${buildItemPath('incident', formatItemRef('incident', row.item_number))}/overview`,
+    label: (row: IncidentLinkRow) => row.title ?? formatItemRef('incident', row.item_number),
+    // Linking writes in the incident's journal: it takes the right to edit incidents; a closed incident is frozen.
+    editable: hasLevel('incidents', 'contributor'),
+    removable: (row: IncidentLinkRow) => !isIncidentLocked(row.status as IncidentRow['status']),
+    columns: [
+      { key: 'ref', header: t('components.incidentRelations.columns.reference'), width: 72, render: (row: IncidentLinkRow) => <RelationRef>{formatItemRef('incident', row.item_number)}</RelationRef> },
+      { key: 'title', header: t('components.incidentRelations.columns.title'), render: (row: IncidentLinkRow) => row.title ?? dash },
+      {
+        key: 'severity', header: t('components.incidentRelations.columns.severity'), width: 100, hideOrder: 2,
+        render: (row: IncidentLinkRow) => (
+          <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }}>
+            <StatusDot color={getDotColor(INCIDENT_SEVERITY_COLORS[row.severity] || 'default', theme.palette.mode)} />
+            {t(`enums.incidentSeverity.${row.severity}`, { defaultValue: row.severity })}
+          </Box>
+        ),
       },
+      { key: 'status', header: t('components.incidentRelations.columns.status'), width: 100, render: (row: IncidentLinkRow) => t(`enums.incidentStatus.${row.status}`, { defaultValue: row.status }) },
+      { key: 'detected', header: t('components.incidentRelations.columns.detected'), width: 110, hideOrder: 1, render: (row: IncidentLinkRow) => date(row.detected_at) },
+    ],
+    search: async (q, signal) => {
+      const res = await api.get<{ items: IncidentRow[] }>('/incidents', { params: { page: 1, limit: PAGE, sort: 'detected_at:DESC', ...(q ? { q } : {}) }, signal });
+      // A closed or cancelled incident cannot take a new link.
+      return (res.data?.items || [])
+        .filter((row) => !isIncidentLocked(row.status))
+        .map((row) => ({ id: row.id, label: row.title, ref: formatItemRef('incident', row.item_number) }));
     },
-  );
+  });
 
   const suggestionColumns: Array<RelationsColumn<Suggestion>> = [
     { key: 'type', header: t('workspace.application.relations.columns.type'), width: 130, render: (row) => t(`workspace.application.relations.types.${row.type}`) },
@@ -467,8 +492,6 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
           </RelationsSection>
         );
       })}
-
-      <IncidentRelationsSection applicationId={id} />
 
       {suggestions.length > 0 && (
         <RelationsSection title={t('workspace.application.relations.sections.related')} count={t('workspace.application.relations.suggestions', { count: suggestions.length })}>

@@ -36,6 +36,7 @@ import ContactSelect from '../../components/fields/ContactSelect';
 import CompanySelect from '../../components/fields/CompanySelect';
 import DepartmentMultiSelect from '../../components/fields/DepartmentMultiSelect';
 import TeamMemberMultiSelect from '../../components/fields/TeamMemberMultiSelect';
+import ApplicationProcessesField from './components/ApplicationProcessesField';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useApplicationNav } from '../../hooks/useApplicationNav';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -461,6 +462,7 @@ function ApplicationProperties({
       </PropertyGroup>
 
       <PropertyGroup>
+        <ApplicationProcessesField applicationId={app.id} canManage={canManage} textFieldSx={drawerFieldValueSx} />
         <PropertyRow label={t('workspace.application.ownership.businessOwners')}>
           <TeamMemberMultiSelect
             label={t('workspace.application.ownership.businessOwners')}
@@ -1582,6 +1584,7 @@ export default function ApplicationWorkspacePage() {
             isSuite={!!app.is_suite}
             onRelationsChange={() => {
               void relationsCountQuery.refetch();
+              void incidentsCountQuery.refetch();
             }}
             onOpenKnowledge={openKnowledge}
           />

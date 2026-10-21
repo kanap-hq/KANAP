@@ -1610,7 +1610,9 @@
         "noAudience": "Keine Zielgruppe festgelegt.",
         "addAudience": "+ Zielgruppe hinzufügen",
         "removeAudienceRow": "Zielgruppenzeile entfernen",
-        "usersValue": "Benutzer: {{value}}"
+        "usersValue": "Benutzer: {{value}}",
+        "businessProcesses": "Geschäftsprozesse",
+        "addBusinessProcess": "Geschäftsprozess hinzufügen…"
       },
       "technical": {
         "title": "Technische Informationen",
@@ -1684,15 +1686,8 @@
       "relations": {
         "noChildApps": "Noch keine untergeordneten Anwendungen verknüpft.",
         "searchTasks": "Aufgaben suchen",
-        "relevantWebsites": "Relevante Websites",
-        "addUrl": "URL hinzufügen",
         "noUrls": "Keine URLs verknüpft.",
         "deleteUrl": "URL löschen",
-        "newUrl": "Neue URL",
-        "editUrl": "URL bearbeiten",
-        "attachments": "Anhänge",
-        "dragDrop": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
-        "selectFiles": "Dateien auswählen",
         "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
         "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
         "deleteAttachment": "Anhang „{{name}}“ löschen?",
@@ -1703,7 +1698,6 @@
           "requests": "Anfragen",
           "tasks": "Aufgaben",
           "technologies": "Technologien",
-          "processes": "Geschäftsprozesse",
           "related": "Verwandt"
         },
         "empty": {
@@ -1712,8 +1706,7 @@
           "projects": "Kein Projekt verknüpft.",
           "requests": "Keine Anfrage verknüpft.",
           "tasks": "Keine Aufgabe verknüpft.",
-          "technologies": "Keine Technologie verknüpft.",
-          "processes": "Kein Geschäftsprozess verknüpft."
+          "technologies": "Keine Technologie verknüpft."
         },
         "columns": {
           "ref": "Ref.",
@@ -1735,8 +1728,7 @@
           "family": "Familie",
           "version": "Version",
           "link": "Verknüpfung",
-          "supportEnd": "Supportende",
-          "businessOwner": "Fachverantwortlicher"
+          "supportEnd": "Supportende"
         },
         "renewal": {
           "tacit": "Stillschweigend",
@@ -1746,8 +1738,7 @@
           "contracts": "Verträge suchen",
           "projects": "Projekte suchen",
           "requests": "Anfragen suchen",
-          "technologies": "Technologien suchen",
-          "processes": "Geschäftsprozesse suchen"
+          "technologies": "Technologien suchen"
         },
         "types": {
           "budget_line": "Budgetzeile",

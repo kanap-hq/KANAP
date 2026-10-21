@@ -1610,7 +1610,9 @@
         "noAudience": "Aucune audience définie.",
         "addAudience": "+ Ajouter une audience",
         "removeAudienceRow": "Retirer cette ligne d'audience",
-        "usersValue": "Utilisateurs : {{value}}"
+        "usersValue": "Utilisateurs : {{value}}",
+        "businessProcesses": "Processus métier",
+        "addBusinessProcess": "Ajouter un processus métier…"
       },
       "technical": {
         "title": "Informations techniques",
@@ -1684,15 +1686,8 @@
       "relations": {
         "noChildApps": "Aucune application enfant liée pour le moment.",
         "searchTasks": "Rechercher des tâches",
-        "relevantWebsites": "Sites web pertinents",
-        "addUrl": "Ajouter une URL",
         "noUrls": "Aucune URL liée.",
         "deleteUrl": "Supprimer l'URL",
-        "newUrl": "Nouvelle URL",
-        "editUrl": "Modifier l'URL",
-        "attachments": "Pièces jointes",
-        "dragDrop": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour sélectionner",
-        "selectFiles": "Sélectionner des fichiers",
         "uploadingFiles_one": "Téléversement de {{count}} fichier…",
         "uploadingFiles_other": "Téléversement de {{count}} fichiers…",
         "deleteAttachment": "Supprimer la pièce jointe « {{name}} » ?",
@@ -1703,7 +1698,6 @@
           "requests": "Demandes",
           "tasks": "Tâches",
           "technologies": "Technologies",
-          "processes": "Processus métier",
           "related": "Apparentés"
         },
         "empty": {
@@ -1712,8 +1706,7 @@
           "projects": "Aucun projet lié.",
           "requests": "Aucune demande liée.",
           "tasks": "Aucune tâche liée.",
-          "technologies": "Aucune technologie liée.",
-          "processes": "Aucun processus métier lié."
+          "technologies": "Aucune technologie liée."
         },
         "columns": {
           "ref": "Réf.",
@@ -1735,8 +1728,7 @@
           "family": "Famille",
           "version": "Version",
           "link": "Lien",
-          "supportEnd": "Fin de support",
-          "businessOwner": "Responsable métier"
+          "supportEnd": "Fin de support"
         },
         "renewal": {
           "tacit": "Tacite",
@@ -1746,8 +1738,7 @@
           "contracts": "Rechercher des contrats",
           "projects": "Rechercher des projets",
           "requests": "Rechercher des demandes",
-          "technologies": "Rechercher des technologies",
-          "processes": "Rechercher des processus métier"
+          "technologies": "Rechercher des technologies"
         },
         "types": {
           "budget_line": "Ligne budgétaire",

@@ -34,6 +34,8 @@ type TableProps<T> = {
   rowKey: (row: T) => string;
   /** The page a row opens: the whole row is a link. */
   rowHref?: (row: T) => string | null;
+  /** What a click on a row does when it is not a page of the app (open a web link, download a file). */
+  onRowOpen?: (row: T) => void;
   /** Shown faded (a disabled object stays listed). */
   rowMuted?: (row: T) => boolean;
   /** Hover-revealed unlink action, saved at once (no dialog: the row affects nothing else). */
@@ -143,12 +145,13 @@ function titleCutCell(event: React.MouseEvent) {
  * headers, 13px cells, horizontal borders only, row hover, the whole row opens the object, and an
  * unlink icon revealed on hover. Shared by every object that shows its relations.
  */
-export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
+export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, onRowOpen, rowMuted, onRemove, removeLabel, canRemove, action, totals, ariaLabel }: TableProps<T>) {
   const theme = useTheme();
   const navigate = useNavigate();
   const open = (row: T) => {
     const href = rowHref?.(row);
     if (href) navigate(href);
+    else onRowOpen?.(row);
   };
   const actionWidth = action ? action.width : 0;
   const removeWidth = onRemove ? 40 : 0;
@@ -216,6 +219,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
         <tbody>
           {rows.map((row) => {
             const href = rowHref?.(row) ?? null;
+            const opens = !!href || !!onRowOpen;
             const muted = rowMuted?.(row) ?? false;
             const nameIndex = columns.findIndex((column) => !column.width);
             const cells: React.ReactNode[] = [];
@@ -238,10 +242,10 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             return (
               <tr
                 key={rowKey(row)}
-                data-href={href ?? undefined}
-                tabIndex={href ? 0 : undefined}
-                onClick={href ? () => open(row) : undefined}
-                onKeyDown={href ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
+                data-href={href ?? (onRowOpen ? '' : undefined)}
+                tabIndex={opens ? 0 : undefined}
+                onClick={opens ? () => open(row) : undefined}
+                onKeyDown={opens ? (event) => { if (event.key === 'Enter') open(row); } : undefined}
               >
                 {cells}
                 {action ? (

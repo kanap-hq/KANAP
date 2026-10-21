@@ -1610,7 +1610,9 @@
         "noAudience": "No hay audiencia definida.",
         "addAudience": "+ Añadir audiencia",
         "removeAudienceRow": "Quitar esta fila de audiencia",
-        "usersValue": "Usuarios: {{value}}"
+        "usersValue": "Usuarios: {{value}}",
+        "businessProcesses": "Procesos de negocio",
+        "addBusinessProcess": "Añadir un proceso de negocio…"
       },
       "technical": {
         "title": "Información técnica",
@@ -1684,15 +1686,8 @@
       "relations": {
         "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
         "searchTasks": "Buscar tareas",
-        "relevantWebsites": "Sitios web relevantes",
-        "addUrl": "Agregar URL",
         "noUrls": "No hay URL vinculadas.",
         "deleteUrl": "Eliminar URL",
-        "newUrl": "Nueva URL",
-        "editUrl": "Editar URL",
-        "attachments": "Adjuntos",
-        "dragDrop": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
-        "selectFiles": "Seleccionar archivos",
         "uploadingFiles_one": "Subiendo {{count}} archivo…",
         "uploadingFiles_other": "Subiendo {{count}} archivos…",
         "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?",
@@ -1703,7 +1698,6 @@
           "requests": "Solicitudes",
           "tasks": "Tareas",
           "technologies": "Tecnologías",
-          "processes": "Procesos de negocio",
           "related": "Relacionados"
         },
         "empty": {
@@ -1712,8 +1706,7 @@
           "projects": "Ningún proyecto vinculado.",
           "requests": "Ninguna solicitud vinculada.",
           "tasks": "Ninguna tarea vinculada.",
-          "technologies": "Ninguna tecnología vinculada.",
-          "processes": "Ningún proceso de negocio vinculado."
+          "technologies": "Ninguna tecnología vinculada."
         },
         "columns": {
           "ref": "Ref.",
@@ -1735,8 +1728,7 @@
           "family": "Familia",
           "version": "Versión",
           "link": "Vínculo",
-          "supportEnd": "Fin de soporte",
-          "businessOwner": "Responsable de negocio"
+          "supportEnd": "Fin de soporte"
         },
         "renewal": {
           "tacit": "Tácita",
@@ -1746,8 +1738,7 @@
           "contracts": "Buscar contratos",
           "projects": "Buscar proyectos",
           "requests": "Buscar solicitudes",
-          "technologies": "Buscar tecnologías",
-          "processes": "Buscar procesos de negocio"
+          "technologies": "Buscar tecnologías"
         },
         "types": {
           "budget_line": "Línea presupuestaria",

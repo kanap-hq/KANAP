@@ -20,7 +20,6 @@ vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete:
 const auth = { manager: true, readOnly: [] as string[] };
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => auth.manager && !auth.readOnly.includes(resource) }) }));
 vi.mock('../../../hooks/useBudgetColumns', () => ({ default: () => ({ label: (key: string) => `column:${key}` }) }));
-vi.mock('../editors/IncidentRelationsSection', () => ({ default: () => <div data-testid="incidents" /> }));
 
 const mocked = vi.mocked(api);
 
@@ -53,6 +52,10 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       },
     ],
     processes: [{ id: 'bp-1', name: 'Order to cash', status: 'enabled', owner_name: 'Claire Dubois' }],
+    incidents: [
+      { id: 'inc-5', item_number: 5, title: 'Flux bloqués', status: 'open', severity: 'high', detected_at: '2026-10-12' },
+      { id: 'inc-2', item_number: 2, title: 'Panne du serveur', status: 'closed', severity: 'low', detected_at: '2026-09-01' },
+    ],
     suggestions: [
       { type: 'budget_line', id: 'bl-34', item_number: 34, name: 'Formation Talend', via: { kind: 'same_supplier', label: null } },
     ],
@@ -73,6 +76,13 @@ function renderTab(data: ApplicationRelationsData) {
       return { data: { items: [{ id: 'tec-4', name: 'Java', reference: 'TEC-4', editor: 'Oracle' }, { id: 'tec-1', name: 'SQL Server', reference: 'TEC-1', editor: 'Microsoft' }] } } as never;
     }
     if (url === '/business-processes/lookup') return { data: { items: [{ id: 'bp-1', name: 'Order to cash' }, { id: 'bp-2', name: 'Procure to pay' }] } } as never;
+    if (url === '/incidents') {
+      return { data: { items: [
+        { id: 'inc-5', item_number: 5, title: 'Flux bloqués', status: 'open' },
+        { id: 'inc-8', item_number: 8, title: 'Lenteurs', status: 'investigating' },
+        { id: 'inc-9', item_number: 9, title: 'Incident clos', status: 'closed' },
+      ] } } as never;
+    }
     if (url === '/portfolio/projects') return { data: { items: [{ id: 'prj-9', item_number: 9, name: 'Refonte du datalake' }, { id: 'prj-7', item_number: 7, name: 'Migration Talend Cloud' }] } } as never;
     throw new Error(`unexpected GET ${url}`);
   });
@@ -118,7 +128,7 @@ describe('ApplicationRelationsTab', () => {
     expect(screen.getByText('REQ-23')).toBeTruthy();
     expect(screen.getByText('T-118')).toBeTruthy();
     expect(screen.getByText('Isabelle Moreau')).toBeTruthy();
-    expect(screen.getByTestId('incidents')).toBeTruthy();
+    expect(screen.getByRole('table', { name: 'components.incidentRelations.title' })).toBeTruthy();
 
     // Related elsewhere: assets and interfaces, no zero part.
     expect(screen.getByText('workspace.application.relations.also.assets(count=3)').getAttribute('href')).toBe('/it/applications/app-1/deployments');
@@ -285,39 +295,59 @@ describe('ApplicationRelationsTab', () => {
     expect(screen.queryByText('Java')).toBeNull();
   });
 
-  it('lists the business processes with their owner, and links and unlinks them', async () => {
-    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
-    mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
-    renderTab(relations());
-    const table = await screen.findByRole('table', { name: 'workspace.application.relations.sections.processes' });
-    expect(within(table).getByText('Claire Dubois')).toBeTruthy();
-
-    const section = screen.getByRole('region', { name: 'workspace.application.relations.sections.processes' });
-    fireEvent.click(within(section).getByText('workspace.application.relations.add'));
-    const option = await screen.findByRole('option', { name: /Procure to pay/ });
-    expect(screen.queryByRole('option', { name: /Order to cash/ })).toBeNull();
-    fireEvent.click(option);
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/processes', { id: 'bp-2' }));
-
-    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.remove(name=Order to cash)' }));
-    expect(mocked.delete).toHaveBeenCalledWith('/applications/app-1/relations/processes/bp-1');
-  });
-
-  it('leaves processes read-only without the right to edit their module', async () => {
-    auth.readOnly = ['business_processes'];
+  it('does not list the business processes: they are in the properties panel', async () => {
     renderTab(relations());
     await screen.findByText('Migration Talend Cloud');
-    const processes = screen.getByRole('region', { name: 'workspace.application.relations.sections.processes' });
-    expect(within(processes).queryByText('workspace.application.relations.add')).toBeNull();
-    expect(within(processes).queryByRole('button', { name: /relations\.remove/ })).toBeNull();
+    expect(screen.queryByText('Order to cash')).toBeNull();
+    expect(mocked.get).not.toHaveBeenCalledWith('/business-processes/lookup', expect.anything());
+  });
+
+  it('lists the incidents with their facts, from the tab read only', async () => {
+    renderTab(relations());
+    const table = await screen.findByRole('table', { name: 'components.incidentRelations.title' });
+    expect(within(table).getByText('INC-5')).toBeTruthy();
+    expect(within(table).getByText('Flux bloqués')).toBeTruthy();
+    expect(within(table).getByText('enums.incidentSeverity.high')).toBeTruthy();
+    expect(within(table).getByText('enums.incidentStatus.open')).toBeTruthy();
+    expect(mocked.get).not.toHaveBeenCalledWith('/incidents', expect.objectContaining({ params: expect.objectContaining({ application_id: 'app-1' }) }));
+    fireEvent.click(within(table).getByText('Flux bloqués'));
+    expect(screen.getByTestId('location').textContent).toBe('/it/incidents/INC-5/overview');
+  });
+
+  it('links an incident from a server search, without the linked and closed ones, and unlinks an open one', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    const { onRelationsChange } = renderTab(relations());
+    await screen.findByText('Flux bloqués');
+    const section = screen.getByRole('region', { name: 'components.incidentRelations.title' });
+    fireEvent.click(within(section).getByText('workspace.application.relations.add'));
+    const option = await screen.findByRole('option', { name: /Lenteurs/ });
+    expect(screen.queryByRole('option', { name: /Flux bloqués/ })).toBeNull();
+    expect(screen.queryByRole('option', { name: /Incident clos/ })).toBeNull();
+    fireEvent.click(option);
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/incidents', { id: 'inc-8' }));
+    await waitFor(() => expect(onRelationsChange).toHaveBeenCalled());
+
+    // A closed incident is frozen: no remove action on its row.
+    expect(screen.queryByRole('button', { name: 'workspace.application.relations.remove(name=Panne du serveur)' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.remove(name=Flux bloqués)' }));
+    expect(mocked.delete).toHaveBeenCalledWith('/applications/app-1/relations/incidents/inc-5');
+  });
+
+  it('leaves the incidents read-only without the right to edit incidents', async () => {
+    auth.readOnly = ['incidents'];
+    renderTab(relations());
+    await screen.findByText('Flux bloqués');
+    const section = screen.getByRole('region', { name: 'components.incidentRelations.title' });
+    expect(within(section).queryByText('workspace.application.relations.add')).toBeNull();
+    expect(within(section).queryByRole('button', { name: /relations\.remove/ })).toBeNull();
     const projects = screen.getByRole('region', { name: 'workspace.application.relations.sections.projects' });
     expect(within(projects).getByText('workspace.application.relations.add')).toBeTruthy();
   });
 
-  it('hides the processes the user cannot read', async () => {
-    renderTab(relations({ processes: null }));
+  it('hides the incidents the user cannot read', async () => {
+    renderTab(relations({ incidents: null }));
     await screen.findByText('Migration Talend Cloud');
-    expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.technologies' })).toBeNull();
-    expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.processes' })).toBeNull();
+    expect(screen.queryByRole('region', { name: 'components.incidentRelations.title' })).toBeNull();
   });
 });

@@ -674,7 +674,8 @@
     "department": "Abteilung",
     "departments": "Abteilungen",
     "allDepartments": "Alle Abteilungen",
-    "newCategoryName": "Name der neuen Kategorie"
+    "newCategoryName": "Name der neuen Kategorie",
+    "removeNamed": "{{name}} entfernen"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",
@@ -1175,5 +1176,31 @@
     "name": "Name",
     "empty": "Keine URLs verknüpft.",
     "delete": "URL löschen"
+  },
+  "linksAndFiles": {
+    "title": "Links und Dateien",
+    "addLink": "Link hinzufügen",
+    "attachFile": "Datei anhängen",
+    "empty": "Keine Links oder Dateien.",
+    "uploading_one": "{{count}} Datei wird hochgeladen…",
+    "uploading_other": "{{count}} Dateien werden hochgeladen…",
+    "columns": {
+      "name": "Name",
+      "detail": "Adresse oder Größe",
+      "added": "Hinzugefügt"
+    },
+    "types": {
+      "link": "Link",
+      "file": "Datei"
+    },
+    "url": "URL",
+    "newLink": "Neuer Link",
+    "editLink": "Link bearbeiten",
+    "editLinkNamed": "{{name}} bearbeiten",
+    "removeNamed": "{{name}} entfernen",
+    "placeholders": {
+      "name": "z. B. Herstellerportal",
+      "url": "z. B. https://status.example.com"
+    }
   }
 }

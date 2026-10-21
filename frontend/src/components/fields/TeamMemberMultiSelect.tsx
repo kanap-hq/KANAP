@@ -1,14 +1,14 @@
 import { Fragment, useCallback, useMemo, useState } from 'react';
 import {
-  Autocomplete, CircularProgress, Divider, IconButton, Stack, TextField, Typography,
+  Autocomplete, CircularProgress, Divider, Stack, TextField, Typography,
 } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useLookupPicker } from '../../hooks/useLookupPicker';
 import { formatUserOption, USERS_LOOKUP_ENDPOINT, useMeOption, withMeFirst, type UserOption } from './userLookup';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
+import PickedNameRow from './PickedNameRow';
 
 interface TeamMember {
   user_id: string;
@@ -99,31 +99,14 @@ export default function TeamMemberMultiSelect({
       {value.length > 0 ? (
         <Stack spacing={0.5}>
           {value.map((m) => (
-            <Stack
+            <PickedNameRow
               key={m.user_id}
-              direction="row"
-              alignItems="center"
-              spacing={1}
-              sx={(theme) => ({
-                p: 0.5,
-                bgcolor: 'action.hover',
-                borderRadius: '4px',
-                '&:hover': { bgcolor: theme.palette.kanap.bg.hover },
-              })}
+              onRemove={disabled ? undefined : () => { void handleRemove(m.user_id); }}
+              removeLabel={t('selects.removeNamed', { name: getDisplayName(m) })}
+              removeDisabled={loading}
             >
-              <Typography sx={(theme) => ({ flex: 1, fontSize: 13, color: theme.palette.kanap.text.primary })}>
-                {getDisplayName(m)}
-              </Typography>
-              {!disabled && (
-                <IconButton
-                  size="small"
-                  onClick={() => handleRemove(m.user_id)}
-                  disabled={loading}
-                >
-                  <DeleteIcon fontSize="small" />
-                </IconButton>
-              )}
-            </Stack>
+              {getDisplayName(m)}
+            </PickedNameRow>
           ))}
         </Stack>
       ) : !hideLabel ? (

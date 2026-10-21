@@ -674,7 +674,8 @@
     "department": "Department",
     "departments": "Departments",
     "allDepartments": "All departments",
-    "newCategoryName": "New category name"
+    "newCategoryName": "New category name",
+    "removeNamed": "Remove {{name}}"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -1175,5 +1176,31 @@
     "name": "Name",
     "empty": "No URLs linked.",
     "delete": "Delete URL"
+  },
+  "linksAndFiles": {
+    "title": "Links and files",
+    "addLink": "Add link",
+    "attachFile": "Attach file",
+    "empty": "No links or files.",
+    "uploading_one": "Uploading {{count}} file…",
+    "uploading_other": "Uploading {{count}} files…",
+    "columns": {
+      "name": "Name",
+      "detail": "Address or size",
+      "added": "Added"
+    },
+    "types": {
+      "link": "Link",
+      "file": "File"
+    },
+    "url": "URL",
+    "newLink": "New link",
+    "editLink": "Edit link",
+    "editLinkNamed": "Edit {{name}}",
+    "removeNamed": "Remove {{name}}",
+    "placeholders": {
+      "name": "e.g., Vendor portal",
+      "url": "e.g., https://status.example.com"
+    }
   }
 }
