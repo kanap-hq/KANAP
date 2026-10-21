@@ -4,22 +4,27 @@ import { EntityManager, Repository } from 'typeorm';
 import { Application } from '../application.entity';
 import { ApplicationsBaseService } from './applications-base.service';
 import { ApplicationsInstancesService } from './applications-instances.service';
+import { AuditService } from '../../audit/audit.service';
 import {
   ParticipationAccessScope,
   projectParticipantCondition,
   requestParticipantCondition,
   taskParticipantCondition,
 } from '../../auth/business-contributor-scope';
-import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
-import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget-columns.util';
+import { BUDGET_NATURES, auditTableOf, naturesAnd } from '../../spend/budget-nature';
+import { readRelationsBudgetColumn } from '../../common/relations/relations-budget-column';
+import { setOwnedLink } from '../../common/relations/owned-link';
+import { parseTargetId, UUID_RE } from '../../common/relations/relation-target';
 import {
   binder,
   dateText,
   listRelatedBudgetLines,
   listRelatedContracts,
+  listRelatedIncidents,
   listRelatedProjects,
   type RelatedBudgetLine,
   type RelatedContract,
+  type RelatedIncident,
   type RelatedProject,
 } from '../../common/relations/related-objects';
 import { FxRateService } from '../../currency/fx-rate.service';
@@ -29,9 +34,7 @@ import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
-import type { RelatedIncident } from '../../common/relations/related-objects';
-import { UUID_RE } from '../../common/relations/relation-target';
-import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } from '../../incidents/incident-visibility';
+import { type IncidentViewer } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 
 /** At most this many suggestions per rule. */
@@ -132,6 +135,20 @@ export type ApplicationRelations = {
 const LINE_LINKS = { links: 'application_spend_items', owner: 'application_id' };
 const CONTRACT_LINKS = { links: 'application_contracts', owner: 'application_id' };
 const PROJECT_LINKS = { links: 'application_projects', owner: 'application_id' };
+/** A CAPEX line's audit row keeps the label `application_capex_items`. */
+const LINE_LINK = {
+  table: 'application_spend_items',
+  ownerColumn: 'application_id',
+  targetColumn: 'spend_item_id',
+  notFound: 'Budget line not found.',
+  auditTable: (nature: 'opex' | 'capex') => auditTableOf(nature, 'application_spend_items'),
+} as const;
+const PROJECT_LINK = {
+  table: 'application_projects',
+  ownerColumn: 'application_id',
+  targetColumn: 'project_id',
+  notFound: 'One or more projects were not found.',
+} as const;
 const ACTIVE_LINE = `i.status = 'enabled' AND (i.disabled_at IS NULL OR i.disabled_at > now())`;
 const ACTIVE_CONTRACT = `c.status = 'enabled' AND (c.disabled_at IS NULL OR c.disabled_at > now())`;
 const ACTIVE_PROJECT = `COALESCE(p.status, '') NOT IN ('done', 'cancelled')`;
@@ -148,10 +165,13 @@ const TASK_PROJECT = `COALESCE(
  * counts of what is related elsewhere. Every statement carries `tenant_id` on each table and join
  * besides RLS; each section is one query over the application's ids, never a query per row.
  *
- * The links are written through the services that own them (`ApplicationsInstancesService`,
- * `TasksUnifiedService`, `PortfolioRequestsService`), so their validation and audit apply. A single
- * link or unlink reads the stored set under the application's row lock and replaces it with that
- * set plus or minus one id: a link another user made meanwhile is kept.
+ * Budget lines and projects are one insert or delete under the application's row lock
+ * (`setOwnedLink`), with one audit row. Contracts keep the full replacement in
+ * `ApplicationsInstancesService`: it refuses a missing id with "One or more contracts were not
+ * found.", and only when the stored set would change. Requests, tasks, technologies, processes
+ * and incidents stay with the services that own them. A single link or unlink reads the stored
+ * set under the application's row lock and changes it by one id: a link another user made
+ * meanwhile is kept.
  */
 @Injectable()
 export class ApplicationsRelationsService extends ApplicationsBaseService {
@@ -166,6 +186,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     private readonly requests: PortfolioRequestsService,
     private readonly technologyLinks: TechnologyLinksService,
     private readonly incidentLinks: IncidentRelationsService,
+    private readonly audit: AuditService,
   ) {
     super(appRepo);
   }
@@ -176,15 +197,13 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const mg = ctx.manager;
     const app = await this.ensureApp(appId, mg, ctx.scopes.application);
     const tenantId = app.tenant_id;
-    const year = new Date().getUTCFullYear();
-    const columns = await readBudgetColumns(mg, tenantId);
-    const measure = columns.default_column;
+    const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
 
     // One after the other: the request's single connection runs its queries in turn anyway, and
     // pg refuses a query sent while another one runs (deprecated since pg 8, an error in pg 9).
-    const budgetLines = ctx.access.budget_lines ? await this.listBudgetLines(mg, tenantId, app.id, year, measure) : null;
-    const contracts = ctx.access.contracts ? await this.listContracts(mg, tenantId, app.id) : null;
-    const projects = ctx.access.projects ? await this.listProjects(mg, tenantId, app.id, ctx.scopes.project) : null;
+    const budgetLines = ctx.access.budget_lines ? await listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, app.id, year, measure) : null;
+    const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, app.id) : null;
+    const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
     const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
@@ -194,13 +213,15 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
         .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
       : null;
-    const incidents = ctx.access.incidents ? await this.listIncidents(mg, tenantId, app.id, ctx.incidentViewer) : null;
+    const incidents = ctx.access.incidents
+      ? await listRelatedIncidents(mg, tenantId, { table: 'incident_applications', column: 'application_id' }, app.id, ctx.incidentViewer)
+      : null;
     const suggestions = await this.listSuggestions(mg, tenantId, app.id, app.supplier_id ?? null, ctx);
     const also = await this.countAlso(mg, tenantId, app.id, ctx);
 
     return {
       year,
-      budget_column: { key: measure, label: budgetColumnName(columns, measure) },
+      budget_column,
       budget_lines: budgetLines,
       contracts,
       projects,
@@ -242,18 +263,6 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     ]);
   }
 
-  private listBudgetLines(mg: EntityManager, tenantId: string, appId: string, year: number, measure: string): Promise<RelatedBudgetLine[]> {
-    return listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, appId, year, measure);
-  }
-
-  private listContracts(mg: EntityManager, tenantId: string, appId: string): Promise<RelatedContract[]> {
-    return listRelatedContracts(mg, CONTRACT_LINKS, tenantId, appId);
-  }
-
-  private listProjects(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedProject[]> {
-    return listRelatedProjects(mg, PROJECT_LINKS, tenantId, appId, scope);
-  }
-
   private async listRequests(mg: EntityManager, tenantId: string, appId: string, scope?: ParticipationAccessScope): Promise<RelatedRequest[]> {
     const params: unknown[] = [tenantId, appId];
     const bind = binder(params);
@@ -264,24 +273,6 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
        JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
        WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
        ORDER BY r.target_delivery_date ASC NULLS LAST, lower(r.name), r.id`,
-      params,
-    );
-  }
-
-  /**
-   * Incidents linked to the application that the caller may see: the confidentiality rule of the
-   * register (`incidentVisibilitySql`), and no title for a confidential one, as on a technology.
-   */
-  private async listIncidents(mg: EntityManager, tenantId: string, appId: string, viewer: IncidentViewer): Promise<RelatedIncident[]> {
-    const params: unknown[] = [tenantId, appId];
-    const visible = incidentVisibilitySql('i', viewer, params);
-    return mg.query(
-      `SELECT i.id, i.item_number, ${incidentRelatedTitleSql('i')} AS title, i.status::text AS status, i.severity::text AS severity,
-              ${dateText('i.detected_at')} AS detected_at
-         FROM incident_applications l
-         JOIN incidents i ON i.id = l.incident_id AND i.tenant_id = l.tenant_id
-        WHERE l.tenant_id = $1 AND l.application_id = $2${visible}
-        ORDER BY i.detected_at DESC NULLS LAST, i.item_number DESC`,
       params,
     );
   }
@@ -459,10 +450,10 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
   // ==================== WRITE ====================
 
   /**
-   * Link (`add`) or unlink one object. The application's row is locked first (the lock the
-   * replacements take), the stored set is read, and the owning service replaces it with that set
-   * plus or minus `targetId`: same validation, same audit, and a link made meanwhile by someone
-   * else stays. Linking what is linked, or unlinking what is not, changes nothing. A technology is
+   * Link (`add`) or unlink one object. The application's row is locked first. Budget lines and
+   * projects change by one row (`setOwnedLink`); contracts, requests and tasks replace the stored
+   * set plus or minus `targetId` through the service that owns them, so a link made meanwhile
+   * stays. Linking what is linked, or unlinking what is not, changes nothing. A technology is
    * declared with the version of `body` (`LinkInput`) and recorded on the deployment servers of
    * `body.asset_ids` (`TechnologyLinksService.declareApplicationTechnology`); `servers` then says
    * how many links were added and how many servers already had the technology. Recording on a
@@ -478,9 +469,27 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
   ): Promise<{ ok: true; changed: boolean; servers?: { added: number; skipped: number } }> {
     if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
     if ((kind === 'technologies' || kind === 'processes' || kind === 'incidents') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
-    const id = String(targetId || '').trim().toLowerCase();
-    if (!UUID_RE.test(id)) throw new BadRequestException('Invalid id.');
     const mg = ctx.manager;
+    if (kind === 'budget_lines' || kind === 'projects') {
+      return setOwnedLink({
+        manager: mg,
+        userId: ctx.userId,
+        kind,
+        targetId,
+        add,
+        allowed: ctx.access[kind],
+        loadOwner: async () => {
+          const app = await this.ensureApp(appId, mg, ctx.scopes.application);
+          return { id: app.id, tenantId: app.tenant_id };
+        },
+        owner: { table: 'applications', idColumn: 'id' },
+        ownerNotFound: 'Application not found',
+        link: kind === 'budget_lines' ? LINE_LINK : PROJECT_LINK,
+        projectScope: ctx.scopes.project,
+        audit: this.audit,
+      });
+    }
+    const id = parseTargetId(targetId);
     const app = await this.ensureApp(appId, mg, ctx.scopes.application);
     const tenantId = app.tenant_id;
     await mg.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, app.id]);
@@ -509,37 +518,11 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       return add ? [...current, id] : current.filter((value) => value !== id);
     };
 
-    if (kind === 'budget_lines') {
-      const lines: Array<{ nature: BudgetNature }> = await mg.query(
-        `SELECT nature FROM spend_items WHERE tenant_id = $1 AND id = $2${naturesAnd(null, BUDGET_NATURES)}`,
-        [tenantId, id],
-      );
-      if (!lines[0]) throw new BadRequestException('Budget line not found.');
-      const nature = lines[0].nature;
-      const current = await this.idsOf(mg,
-        `SELECT l.spend_item_id AS id FROM application_spend_items l WHERE l.tenant_id = $1 AND l.application_id = $2${linkedLineOf('l.tenant_id', 'l.spend_item_id', nature)}`,
-        [tenantId, app.id]);
-      const next = apply(current);
-      if (!next) return { ok: true, changed: false };
-      if (nature === 'opex') await this.instances.bulkReplaceLinkedSpendItems(app.id, next, userId, { manager: mg });
-      else await this.instances.bulkReplaceLinkedCapexItems(app.id, next, userId, { manager: mg });
-      return { ok: true, changed: true };
-    }
-
     if (kind === 'contracts') {
       const current = await this.idsOf(mg, `SELECT contract_id AS id FROM application_contracts WHERE tenant_id = $1 AND application_id = $2`, [tenantId, app.id]);
       const next = apply(current);
       if (!next) return { ok: true, changed: false };
       await this.instances.bulkReplaceLinkedContracts(app.id, next, userId, { manager: mg });
-      return { ok: true, changed: true };
-    }
-
-    if (kind === 'projects') {
-      await this.assertProjectVisible(mg, tenantId, id, ctx.scopes.project);
-      const current = await this.idsOf(mg, `SELECT project_id AS id FROM application_projects WHERE tenant_id = $1 AND application_id = $2`, [tenantId, app.id]);
-      const next = apply(current);
-      if (!next) return { ok: true, changed: false };
-      await this.instances.bulkReplaceProjects(app.id, next, userId, { manager: mg });
       return { ok: true, changed: true };
     }
 
@@ -628,14 +611,6 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       else removed += 1;
     }
     return { added, removed };
-  }
-
-  private async assertProjectVisible(mg: EntityManager, tenantId: string, projectId: string, scope?: ParticipationAccessScope) {
-    const params: unknown[] = [tenantId, projectId];
-    const bind = binder(params);
-    const scopeSql = scope ? `AND ${projectParticipantCondition('p', bind(scope.userId))}` : '';
-    const rows = await mg.query(`SELECT 1 FROM portfolio_projects p WHERE p.tenant_id = $1 AND p.id = $2 ${scopeSql}`, params);
-    if (rows.length === 0) throw new BadRequestException('One or more projects were not found.');
   }
 
   private async idsOf(mg: EntityManager, sql: string, params: unknown[]): Promise<string[]> {
