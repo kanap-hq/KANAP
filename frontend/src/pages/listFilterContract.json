@@ -573,6 +573,7 @@
       "summary": "text",
       "technology": "set",
       "version": "set",
+      "source": "set",
       "editor": "set",
       "state": "set",
       "published_at": "date"
@@ -586,6 +587,7 @@
       "summary",
       "technology",
       "version",
+      "match_sources",
       "editor",
       "servers",
       "applications",

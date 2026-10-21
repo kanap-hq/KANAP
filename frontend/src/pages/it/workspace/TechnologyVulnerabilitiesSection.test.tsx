@@ -63,21 +63,34 @@ describe('TechnologyVulnerabilitiesSection', () => {
     getMock.mockResolvedValue({ data: summary() } as any);
   });
 
-  it('summarizes the versions, with the open CVE by severity and a link to the page', async () => {
+  it('summarizes the versions, with the CVE to review by severity in fixed columns and a link to the page', async () => {
     renderSection(false);
     const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
     expect(getMock).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities/summary');
     expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities3/);
+    expect(within(table).getAllByRole('columnheader').map((th) => th.textContent))
+      .toEqual(['Version', 'Servers', 'Critical', 'High', 'Medium', 'Low', 'Not rated', 'Total', '']);
     const rows = within(table).getAllByRole('row').slice(1);
+    // A zero is a tertiary dot; Total counts every state.
     expect(rows.map((row) => row.textContent)).toEqual([
-      '10.14Critical2Medium15See',
-      '9.0Excluded from alerts1High11See',
-      'Version not recorded (potentially concerned)002See',
+      '10.142·1··5See',
+      '9.0Excluded from alerts1·1···1See',
+      'Version not recorded (potentially concerned)0·····2See',
     ]);
-    expect(within(table).getByRole('columnheader', { name: 'To review' })).toBeTruthy();
-    expect(within(table).getByRole('columnheader', { name: 'Total' })).toBeTruthy();
-    // Critical in orange (dark mode), the same dot as the Vulnerabilities page.
-    expect(getComputedStyle(rows[0].querySelector('[data-severity="critical"]') as HTMLElement).color).toBe('rgb(240, 168, 48)');
+    // Every number column is right-aligned, its figures in tabular numbers.
+    const cells = Array.from(rows[0].querySelectorAll('td'));
+    expect(cells.slice(1, 8).every((td) => td.classList.contains('r'))).toBe(true);
+    expect(getComputedStyle(cells[7].firstElementChild as HTMLElement).fontWeight).toBe('500');
+    expect(getComputedStyle(cells[1].firstElementChild as HTMLElement).fontVariantNumeric).toBe('tabular-nums');
+    // Critical in orange (dark mode), the same color as the Vulnerabilities page; Medium stays neutral.
+    expect(getComputedStyle(cells[2].firstElementChild as HTMLElement).color).toBe('rgb(240, 168, 48)');
+    expect(getComputedStyle(cells[4].firstElementChild as HTMLElement).color).not.toBe('rgb(240, 168, 48)');
+    expect(getComputedStyle(cells[3].firstElementChild as HTMLElement).color).toBe('rgb(129, 136, 149)');
+    // Each severity header carries its dot, and a hint that it counts the CVE to review.
+    const critical = within(table).getByRole('columnheader', { name: 'Critical' });
+    expect(critical.querySelector('[data-severity="critical"]')).toBeTruthy();
+    fireEvent.mouseOver(critical.querySelector('[data-severity]') as HTMLElement);
+    expect((await screen.findByRole('tooltip')).textContent).toBe('Critical: CVE still to review. Total counts every state.');
     const links = within(table).getAllByRole('link', { name: 'See' });
     expect(links.map((link) => link.getAttribute('href'))).toEqual([
       '/it/vulnerabilities?technology=TEC-7&version=10.1&alerts=all',
@@ -87,22 +100,21 @@ describe('TechnologyVulnerabilitiesSection', () => {
     ]);
     expect(screen.getByRole('link', { name: 'See everything on the Vulnerabilities page' }).getAttribute('href'))
       .toBe('/it/vulnerabilities?technology=TEC-7&alerts=all&state=all');
+    expect(screen.queryByTestId('vulnerabilities-not-installed')).toBeNull();
     expect(screen.queryByRole('button', { name: 'Refresh' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
   });
 
-  it('shows a CVE with no severity yet as Not rated, after None', async () => {
+  it('counts a CVE rated None with Low, and one with no severity yet as Not rated', async () => {
     getMock.mockResolvedValue({
       data: summary({
-        versions: [version({ open: { critical: 0, high: 1, medium: 0, low: 0, none: 1, unknown: 2 }, total: 4 })],
+        versions: [version({ open: { critical: 0, high: 1, medium: 0, low: 1, none: 1, unknown: 2 }, total: 5 })],
       }),
     } as any);
     renderSection(false);
     const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
     const row = within(table).getAllByRole('row')[1];
-    expect(row.textContent).toBe('10.14High1None1Not rated24See');
-    expect(Array.from(row.querySelectorAll('[data-severity]')).map((el) => el.getAttribute('data-severity')))
-      .toEqual(['high', 'none', 'unknown']);
+    expect(row.textContent).toBe('10.14·1·225See');
   });
 
   it('opens See on every state when the only CVE to review has no severity yet, or on To review', async () => {
@@ -174,13 +186,14 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(screen.getByRole('link', { name: 'Change' })).toBeTruthy();
   });
 
-  it('matches the technology again for a member', async () => {
+  it('matches the technology again for a member, from the title line', async () => {
     postMock.mockResolvedValue({ data: { ok: true, added: 2, updated: 0, removed: 1, unmatched: 0 } } as any);
     renderSection(true);
     await screen.findByRole('table', { name: 'Vulnerabilities' });
-    fireEvent.click(screen.getByRole('button', { name: 'Refresh' }));
+    const titleLine = screen.getByRole('heading', { name: 'Vulnerabilities' }).parentElement!.parentElement as HTMLElement;
+    fireEvent.click(within(titleLine).getByRole('button', { name: 'Refresh' }));
     await waitFor(() => expect(postMock).toHaveBeenCalledWith('/technologies/tech-1/vulnerabilities/rematch'));
-    expect((await screen.findByRole('status')).textContent).toBe('Matched again: 2 new, 1 removed.');
+    expect((await within(titleLine).findByRole('status')).textContent).toBe('Matched again: 2 new, 1 removed.');
     await waitFor(() => expect(getMock).toHaveBeenCalledTimes(2));
   });
 
@@ -207,7 +220,7 @@ describe('TechnologyVulnerabilitiesSection', () => {
     expect(await screen.findByText('No known vulnerability concerns this technology.')).toBeTruthy();
   });
 
-  it('shows 0 and no See for an installed version with no vulnerability', async () => {
+  it('shows dots and no See for an installed version with no vulnerability', async () => {
     getMock.mockResolvedValue({
       data: summary({
         cves: 3,
@@ -220,77 +233,68 @@ describe('TechnologyVulnerabilitiesSection', () => {
     renderSection(false);
     const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
     const row = within(table).getAllByRole('row')[1];
-    expect(row.textContent).toBe('8.0200');
+    expect(row.textContent).toBe('8.02·····0');
     expect(within(row).queryByRole('link', { name: 'See' })).toBeNull();
     expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities3/);
-    expect(screen.queryByText('Not installed')).toBeNull();
+    expect(screen.queryByTestId('vulnerabilities-not-installed')).toBeNull();
   });
 
-  it('names a version that is not installed and keeps its alert state', async () => {
+  it('names the versions that are not installed in one line under the table', async () => {
     getMock.mockResolvedValue({
       data: summary({
         cves: 4,
         versions_excluded: 1,
         versions: [
-          version({
-            version_id: 'v-2025', label: '2025', alerts: true, installed: false, servers: 9,
-            open: { critical: 3, high: 1, medium: 0, low: 0, none: 0, unknown: 0 }, total: 4,
-          }),
-          version({ version_id: 'v-2019', label: '2019', alerts: false, installed: false, servers: 2, total: 1 }),
+          version({}),
+          version({ version_id: 'v-11', label: '11.0', installed: false, servers: 0, total: 0 }),
+          version({ version_id: 'v-2019', label: '8.5', alerts: false, installed: false, servers: 0, total: 0 }),
+          version({ version_id: null, label: null, installed: false, servers: 0, total: 0 }),
         ],
       }),
     } as any);
     renderSection(false);
     const table = await screen.findByRole('table', { name: 'Vulnerabilities' });
-    const rows = within(table).getAllByRole('row').slice(1);
-    expect(rows.map((row) => row.textContent)).toEqual([
-      '2025Not installed',
-      '2019Excluded from alertsNot installed',
-    ]);
-    expect(within(table).queryByRole('link', { name: 'See' })).toBeNull();
-    expect(within(table).getByRole('columnheader', { name: 'Servers' })).toBeTruthy();
-    expect(within(table).getByRole('columnheader', { name: 'To review' })).toBeTruthy();
-    const label = within(rows[0]).getByText('Not installed');
-    expect(label.closest('td')?.getAttribute('colspan')).toBe('3');
-    expect(rows[0].querySelectorAll('td')).toHaveLength(3);
-    expect(getComputedStyle(label).color).toBe('rgb(129, 136, 149)');
-    expect(getComputedStyle(rows[0].querySelectorAll('td')[0]).color).not.toBe('rgb(129, 136, 149)');
-    expect(getComputedStyle(rows[1].querySelectorAll('td')[0]).color).toBe('rgb(129, 136, 149)');
-    expect(screen.getByRole('region', { name: 'Vulnerabilities' }).textContent).toMatch(/^Vulnerabilities4/);
-    expect(screen.getByText('1 version excluded from alerts')).toBeTruthy();
-    expect(screen.queryByRole('link', { name: 'Change' })).toBeNull();
-    fireEvent.mouseOver(label);
+    expect(within(table).getAllByRole('row').slice(1).map((row) => row.textContent)).toEqual(['10.142·1··5See']);
+    const line = screen.getByTestId('vulnerabilities-not-installed');
+    expect(line.textContent).toBe('Not installed: 11.0, 8.5, Version not recorded (potentially concerned)');
+    // Under the table, before the link to the page.
+    const all = screen.getByRole('link', { name: 'See everything on the Vulnerabilities page' });
+    expect(Boolean(table.compareDocumentPosition(line) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    expect(Boolean(line.compareDocumentPosition(all) & Node.DOCUMENT_POSITION_FOLLOWING)).toBe(true);
+    fireEvent.mouseOver(line);
     expect((await screen.findByRole('tooltip')).textContent).toBe(
       'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
     );
   });
 
-  it('shows Not installed in tertiary text in light mode', async () => {
+  it('shows the line alone when no version is installed', async () => {
     getMock.mockResolvedValue({
-      data: summary({ versions: [version({ version_id: 'v-2025', label: '2025', installed: false })] }),
+      data: summary({ cves: 1, versions: [version({ version_id: 'v-2025', label: '2025', installed: false, total: 1 })] }),
     } as any);
     renderSection(false, '/it/technologies/TEC-7/compliance', 'light');
-    const label = await screen.findByText('Not installed');
-    expect(getComputedStyle(label).color).toBe('rgb(108, 116, 130)');
+    expect((await screen.findByTestId('vulnerabilities-not-installed')).textContent).toBe('Not installed: 2025');
+    expect(screen.queryByRole('table', { name: 'Vulnerabilities' })).toBeNull();
     expect(screen.queryByRole('link', { name: 'See' })).toBeNull();
   });
 
-  it('names a version that is not installed in every language', () => {
-    const section = (tree: { pages: { vulnerabilities: { section: { notInstalled: string; notInstalledHint: string } } } }) => tree.pages.vulnerabilities.section;
+  it('names the versions that are not installed in every language', () => {
+    type Section = { notInstalledList_one: string; notInstalledList_other: string; notInstalledHint: string };
+    const section = (tree: unknown) => (tree as { pages: { vulnerabilities: { section: Section } } }).pages.vulnerabilities.section;
     expect(section(en)).toMatchObject({
-      notInstalled: 'Not installed',
+      notInstalledList_other: 'Not installed: {{versions}}',
       notInstalledHint: 'KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.',
     });
     expect(section(fr)).toMatchObject({
-      notInstalled: 'Non installée',
+      notInstalledList_one: 'Non installée : {{versions}}',
+      notInstalledList_other: 'Non installées : {{versions}}',
       notInstalledHint: 'KANAP ne recherche les vulnérabilités que des versions installées sur un serveur ou déclarées par une application.',
     });
     expect(section(de)).toMatchObject({
-      notInstalled: 'Nicht installiert',
+      notInstalledList_other: 'Nicht installiert: {{versions}}',
       notInstalledHint: 'KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.',
     });
     expect(section(es)).toMatchObject({
-      notInstalled: 'No instalada',
+      notInstalledList_other: 'No instaladas: {{versions}}',
       notInstalledHint: 'KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.',
     });
   });

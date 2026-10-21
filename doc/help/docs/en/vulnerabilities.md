@@ -29,7 +29,7 @@ Each technology is compared as follows:
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
-A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. A vulnerability that CVE.org or the NVD rejects no longer matches.
+A row exists as soon as one of the two sources matches it. When the NVD and the publisher disagree, the row stays. The **Source** column of the list says which sources matched it. When the NVD has not scored a vulnerability yet, KANAP shows the score and the severity of the publisher's record. A vulnerability that CVE.org or the NVD rejects no longer matches.
 
 Changes count at once. When you add a technology or a CPE product identifier, KANAP searches the NVD for that product right away; the technology's **Vulnerabilities** section says "Searching for vulnerabilities…" until the search ends. When a CVE.org name, a version, a server or an application of a technology changes, KANAP matches the technology again as soon as the change is saved. **Refresh**, in the technology's **Vulnerabilities** section, does the same by hand.
 
@@ -54,6 +54,8 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 
 The list uses the standard grid: one row per technology, version and vulnerability. Actively exploited vulnerabilities come first, then the most severe. A vulnerability that concerns three versions of SQL Server gives three rows, each with its own state. It opens on the rows **To review** that are in the alerts: clear the filter of the **State** column to see the other states.
 
+A line above the grid says when KANAP last read each source: **Data read**, then the NVD and the publishers (CVE.org), each with the day and time of its last read. A source that is off is left out. A warning follows on the same line when the last read of a source failed, or when a source has not been read for more than 3 days. The data of that source may then be out of date.
+
 **Alerts**, **Published** and **Exploited only** sit above the grid. **Alerts** chooses the rows by their alerts setting: **Included** (the default), **Excluded** or **All**. Under **All**, the rows out of the alerts are greyed. When no row is in the alerts and some are excluded, the empty list offers **Show the excluded ones**. **Published** keeps the vulnerabilities by their publication date: **All** (the default), **Less than 7 days**, **Less than 30 days**, **Less than 90 days**, **Less than a year** or **More than a year**. The period counts back from today, so a saved or shared link keeps showing the latest ones. **Exploited only** keeps the vulnerabilities listed as actively exploited. The address carries `exploited=1`. **Reset filters** brings the page back to how it opens: the rows **To review**, actively exploited vulnerabilities first, **Alerts** on **Included**, **Published** on every date and **Exploited only** off. The export and a change of state in bulk follow these three.
 
 **Columns**:
@@ -61,7 +63,7 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 | Column | What it shows |
 |---|---|
 | **CVE** | The vulnerability's identifier, for example `CVE-2024-1234` |
-| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**. An alert icon follows the name when CISA or the European Union lists the vulnerability. Its tooltip names the catalogs, and ransomware use when CISA records it |
+| **Severity** | **Critical**, **High**, **Medium**, **Low**, **None** or **Not rated**. An alert icon follows the name when CISA or the European Union lists the vulnerability. Its tooltip names the catalogs, and ransomware use when CISA records it. An information icon marks a score released by the publisher: the NVD has not assessed the vulnerability yet |
 | **Exploited** | **Yes** or **No**. Hidden by default: the icon in **Severity** shows the same fact |
 | **Score** | The CVSS score. Hidden by default |
 | **EPSS (%)** | The probability of exploitation within the next 30 days, as a percentage in the language of your screen. For example, 15.3%. The side panel adds the percentile |
@@ -71,11 +73,12 @@ The list uses the standard grid: one row per technology, version and vulnerabili
 | **Publisher** | The technology's publisher. Hidden by default |
 | **Servers** | How many servers carry this version, directly or through the server they run in |
 | **Applications** | How many applications use this version, hosted or declared |
+| **Source** | The sources that matched the row: **NVD**, **Publisher** (the record the publisher released on CVE.org), or both |
 | **State** | **To review**, **Handled** or **Not affected** |
 | **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **Source**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. **Source** offers **NVD**, **Publisher** and **Both**: a row both sources matched stays under **NVD** and under **Publisher**, and **Both** keeps only those rows. The export and a change of state in bulk follow it, as they follow the other column filters. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
 **Sort** by **Exploited**, **Severity**, **Score**, **EPSS (%)**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
 
@@ -96,13 +99,16 @@ For example, to mark every unrecorded version of PostgreSQL as not affected: fil
 
 ## Reviewing a vulnerability
 
-Click a row to open its vulnerability in a side panel. Its header stays in view with the CVE identifier, the severity and the alert icon when the vulnerability is actively exploited. **Close** (the cross) or Escape closes the panel. The panel covers every technology and version the vulnerability concerns. You see:
+Click a row to open its vulnerability in a side panel. Its header stays in view with the CVE identifier, the severity, the information icon when the score comes from the publisher, and the alert icon when the vulnerability is actively exploited. **Close** (the cross) or Escape closes the panel. The panel covers every technology and version the vulnerability concerns. You see, in this order:
 
-- The summary, the CVSS vector and the reference links (publisher advisories, patches).
-- **Technologies and versions**: each concerned version, with its **State** and a note.
-- **Servers**: each server that carries a concerned version, with the technology, the version and the server it runs in.
-- **Applications**: each application that uses a concerned version, with its server.
+- **Technologies and versions**: each concerned version, with its **State** and a note. Under each version, the badges of the sources that matched it. **Why this row** opens the criteria of each source in plain words, for example "CPE identifier a:apache:tomcat: versions before 9.0.99" for the NVD, or "Apache Software Foundation · Apache Tomcat: versions 9.0.0 to 9.0.98 affected" for the publisher.
+- The description, cut at three lines (**See more** shows the rest), the CVSS vector and the reference links (publisher advisories, patches).
+- **Sources**: the state of the vulnerability at the NVD (**analyzed**, **awaiting analysis**, **not analyzed**, **rejected**, or **not linked to this product yet**), with a link to its NVD page. When KANAP has read the publisher's record, a second line gives who released it and when, its last update, and **See on CVE.org**.
 - **Exploitation**, when a catalog, an EPSS score or a European identifier is known. See [Exploitation](#exploitation).
+- **Servers**: each server that carries a concerned version, with the technology and the version. The servers reached through another asset, such as the host of a virtual machine or a cluster, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through.
+- **Applications**: each application that uses a concerned version, listed once per version with its servers (three at most, then "and 2 more"). An application that declares the technology, or is hosted on a server that carries it, comes first. The others sit behind the same kind of button.
+
+When no server or application is directly concerned, the panel says so, and the button still shows the others.
 
 A version out of the alerts is greyed, with its servers and applications. When only some of them are in the alerts, a line above the list says how many, for example "3 servers, 1 in alerts".
 
@@ -132,7 +138,7 @@ The email to the IT owners announces an exploited vulnerability of any severity,
 
 ## Export
 
-**Export CSV** downloads the vulnerabilities that match the filters, one line per row of the grid, in its order, in the language of your screen. Above 10,000 vulnerabilities, narrow the filters first.
+**Export CSV** downloads the vulnerabilities that match the filters, one line per row of the grid, in its order, in the language of your screen. Its **Source** column, after **Match**, gives `NVD`, `CVE.org` or `NVD, CVE.org`. Above 10,000 vulnerabilities, narrow the filters first.
 
 ## Email notifications
 

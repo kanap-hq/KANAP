@@ -258,18 +258,18 @@ Debajo, cuando se siguen las vulnerabilidades, la sección **Vulnerabilidades** 
 
 #### Vulnerabilidades
 
-Un resumen de las vulnerabilidades, una fila por versión de la tecnología, en el orden de la tabla de versiones. El número junto al título es el número de vulnerabilidades distintas, en todos los estados.
+Un resumen de las vulnerabilidades, una fila por versión instalada de la tecnología, en el orden de la tabla de versiones. El número junto al título es el número de vulnerabilidades distintas, en todos los estados.
 
 | Columna | Qué muestra |
 |---|---|
 | **Versión** | La versión. Una versión fuera de las alertas aparece atenuada e indica **Excluida de las alertas**. **Versión no registrada (potencialmente afectada)** agrupa los servidores y aplicaciones que no indican ninguna versión; esta fila solo aparece si los hay |
 | **Servidores** | Cuántos servidores en servicio llevan esta versión |
-| **Por revisar** | Las vulnerabilidades aún por revisar, por gravedad: **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** y **Sin evaluar**. **0** cuando no queda ninguna |
+| **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad de gravedad **Ninguna** cuenta con **Baja**. Un punto indica que no queda ninguna. Pase el cursor por un encabezado para un recordatorio |
 | **Total** | Las vulnerabilidades distintas de esta versión, en todos los estados |
 
 **Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada en la versión: en sus vulnerabilidades por revisar cuando las tiene, en todos los estados si no. **Ver todo en la página Vulnerabilidades**, debajo de la tabla, abre la página en toda la tecnología, en todos los estados.
 
-Una versión que ningún servidor ni ninguna aplicación usa muestra **No instalada** en lugar de los contadores, sin enlace **Ver**. KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.
+Las versiones que ningún servidor ni ninguna aplicación usa no tienen fila. Se nombran juntas debajo de la tabla, por ejemplo «No instaladas: 2016, 2017». KANAP solo busca vulnerabilidades de las versiones instaladas en un servidor o declaradas por una aplicación.
 
 Cuando la tecnología o algunas de sus versiones están fuera de las alertas, una línea al principio de la sección lo indica: **Excluida de las alertas**, **Excluida de las alertas, excepto 2 versiones** o **3 versiones excluidas de las alertas**. Con `infrastructure:member`, **Cambiar** junto a ella abre la tabla de versiones de la pestaña Resumen, donde están los interruptores. Consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 

@@ -29,7 +29,7 @@ Jede Technologie wird so verglichen:
 
 Manche Schwachstellen gelten nur, wenn zwei Produkte zusammen laufen, zum Beispiel Tomcat unter Windows. KANAP zeigt sie für das verwundbare Produkt allein, sodass eine Schwachstelle bei einer Installation erscheinen kann, die sie nicht betrifft. Markieren Sie sie als **Nicht betroffen**.
 
-Eine Zeile entsteht, sobald eine der beiden Quellen sie abgleicht. Wenn die NVD und der Hersteller Unterschiedliches angeben, bleibt die Zeile bestehen. Eine Schwachstelle, die CVE.org oder die NVD zurückweist, wird nicht mehr abgeglichen.
+Eine Zeile entsteht, sobald eine der beiden Quellen sie abgleicht. Wenn die NVD und der Hersteller Unterschiedliches angeben, bleibt die Zeile bestehen. Die Spalte **Quelle** der Liste zeigt, welche Quellen sie abgeglichen haben. Hat die NVD eine Schwachstelle noch nicht bewertet, zeigt KANAP den Score und den Schweregrad aus dem Eintrag des Herstellers. Eine Schwachstelle, die CVE.org oder die NVD zurückweist, wird nicht mehr abgeglichen.
 
 Änderungen zählen sofort. Wenn Sie eine Technologie oder eine CPE-Produktkennung hinzufügen, sucht KANAP dieses Produkt sofort in der NVD; der Abschnitt **Schwachstellen** der Technologie zeigt „Suche nach Schwachstellen läuft…“, bis die Suche endet. Wenn sich ein CVE.org-Name, eine Version, ein Server oder eine Anwendung einer Technologie ändert, gleicht KANAP die Technologie erneut ab, sobald die Änderung gespeichert ist. **Aktualisieren** im Abschnitt **Schwachstellen** der Technologie tut dasselbe von Hand.
 
@@ -54,6 +54,8 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schwachstelle. Aktiv ausgenutzte Schwachstellen kommen zuerst, danach die schwersten. Eine Schwachstelle, die drei Versionen von SQL Server betrifft, ergibt drei Zeilen, jede mit ihrem eigenen Status. Sie öffnet sich mit den Zeilen **Zu prüfen**, die in den Warnungen sind: Leeren Sie den Filter der Spalte **Status**, um die anderen Status zu sehen.
 
+Eine Zeile über dem Raster zeigt, wann KANAP jede Quelle zuletzt gelesen hat: **Gelesene Daten**, dann die NVD und die Hersteller (CVE.org), jeweils mit Tag und Uhrzeit des letzten Lesens. Eine abgeschaltete Quelle fehlt dort. Ein Warnhinweis folgt in derselben Zeile, wenn das letzte Lesen einer Quelle fehlgeschlagen ist oder eine Quelle seit mehr als 3 Tagen nicht gelesen wurde. Die Daten dieser Quelle können dann veraltet sein.
+
 **Warnungen**, **Veröffentlicht** und **Nur ausgenutzte** stehen über dem Raster. **Warnungen** wählt die Zeilen nach ihrer Warnungseinstellung: **Eingeschlossen** (Standard), **Ausgeschlossen** oder **Alle**. Unter **Alle** sind die Zeilen außerhalb der Warnungen ausgegraut. Ist keine Zeile in den Warnungen und sind einige ausgeschlossen, bietet die leere Liste **Ausgeschlossene anzeigen** an. **Veröffentlicht** behält die Schwachstellen nach ihrem Veröffentlichungsdatum: **Alle** (Standard), **Weniger als 7 Tage**, **Weniger als 30 Tage**, **Weniger als 90 Tage**, **Weniger als ein Jahr** oder **Mehr als ein Jahr**. Der Zeitraum zählt ab heute, daher zeigt ein gespeicherter oder geteilter Link weiterhin die neuesten. **Nur ausgenutzte** behält die als aktiv ausgenutzt geführten Schwachstellen. Die Adresse trägt `exploited=1`. **Filter zurücksetzen** bringt die Seite in den Zustand beim Öffnen zurück: die Zeilen **Zu prüfen**, aktiv ausgenutzte Schwachstellen zuerst, **Warnungen** auf **Eingeschlossen**, **Veröffentlicht** auf alle Daten und **Nur ausgenutzte** ausgeschaltet. Der Export und eine Statusänderung für mehrere Zeilen folgen diesen drei Einstellungen.
 
 **Spalten**:
@@ -61,7 +63,7 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 | Spalte | Was sie zeigt |
 |---|---|
 | **CVE** | Die Kennung der Schwachstelle, zum Beispiel `CVE-2024-1234` |
-| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**. Ein Warnsymbol folgt dem Namen, wenn die CISA oder die Europäische Union die Schwachstelle führt. Sein Tooltip nennt die Kataloge und den Einsatz durch Ransomware, wenn die CISA ihn verzeichnet |
+| **Schweregrad** | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** oder **Nicht bewertet**. Ein Warnsymbol folgt dem Namen, wenn die CISA oder die Europäische Union die Schwachstelle führt. Sein Tooltip nennt die Kataloge und den Einsatz durch Ransomware, wenn die CISA ihn verzeichnet. Ein Informationssymbol kennzeichnet einen vom Hersteller veröffentlichten Score: Die NVD hat die Schwachstelle noch nicht bewertet |
 | **Ausgenutzt** | **Ja** oder **Nein**. Standardmäßig ausgeblendet: das Symbol in **Schweregrad** zeigt denselben Sachverhalt |
 | **Score** | Der CVSS-Wert. Standardmäßig ausgeblendet |
 | **EPSS (%)** | Die Wahrscheinlichkeit einer Ausnutzung innerhalb der nächsten 30 Tage, als Prozentsatz in der Sprache Ihres Bildschirms. Zum Beispiel 15,3 %. Der Seitenbereich ergänzt das Perzentil |
@@ -71,11 +73,12 @@ Die Liste nutzt das Standardraster: eine Zeile pro Technologie, Version und Schw
 | **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
 | **Server** | Wie viele Server diese Version tragen, direkt oder über den Server, in dem sie laufen |
 | **Anwendungen** | Wie viele Anwendungen diese Version nutzen, gehostet oder deklariert |
+| **Quelle** | Die Quellen, die die Zeile abgeglichen haben: **NVD**, **Hersteller** (der Eintrag, den der Hersteller auf CVE.org veröffentlicht hat) oder beide |
 | **Status** | **Zu prüfen**, **Behandelt** oder **Nicht betroffen** |
 | **Notiz** | Die Notiz der Zeile. Standardmäßig ausgeblendet |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS (%)** einen Mindestprozentsatz von 0 bis 100, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Quelle**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS (%)** einen Mindestprozentsatz von 0 bis 100, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. **Quelle** bietet **NVD**, **Hersteller** und **Beide**: Eine Zeile, die beide Quellen abgeglichen haben, bleibt unter **NVD** und unter **Hersteller**, und **Beide** behält nur diese Zeilen. Der Export und die Statusänderung in Masse folgen ihm wie den anderen Spaltenfiltern. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
 
 **Sortieren** nach **Ausgenutzt**, **Schweregrad**, **Score**, **EPSS (%)**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
@@ -96,13 +99,16 @@ Zum Beispiel, um alle nicht erfassten Versionen von PostgreSQL als nicht betroff
 
 ## Eine Schwachstelle prüfen
 
-Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Sein Kopf bleibt sichtbar, mit der CVE-Kennung, dem Schweregrad und dem Warnsymbol, wenn die Schwachstelle aktiv ausgenutzt wird. **Schließen** (das Kreuz) oder Esc schließt den Bereich. Der Bereich umfasst alle Technologien und Versionen, die die Schwachstelle betrifft. Sie sehen:
+Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Sein Kopf bleibt sichtbar, mit der CVE-Kennung, dem Schweregrad, dem Informationssymbol, wenn der Score vom Hersteller stammt, und dem Warnsymbol, wenn die Schwachstelle aktiv ausgenutzt wird. **Schließen** (das Kreuz) oder Esc schließt den Bereich. Der Bereich umfasst alle Technologien und Versionen, die die Schwachstelle betrifft. Sie sehen, in dieser Reihenfolge:
 
-- Die Zusammenfassung, den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
-- **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz.
-- **Server**: jeder Server, der eine betroffene Version trägt, mit Technologie, Version und dem Server, in dem er läuft.
-- **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, mit ihrem Server.
+- **Technologien und Versionen**: jede betroffene Version mit ihrem **Status** und einer Notiz. Unter jeder Version die Abzeichen der Quellen, die sie abgeglichen haben. **Warum diese Zeile** öffnet die Kriterien jeder Quelle im Klartext, zum Beispiel „CPE-Kennung a:apache:tomcat: Versionen vor 9.0.99“ für die NVD oder „Apache Software Foundation · Apache Tomcat: Versionen 9.0.0 bis 9.0.98 betroffen“ für den Hersteller.
+- Die Beschreibung, auf drei Zeilen gekürzt (**Mehr anzeigen** zeigt den Rest), den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
+- **Quellen**: der Stand der Schwachstelle bei der NVD (**analysiert**, **Analyse ausstehend**, **nicht analysiert**, **abgelehnt** oder **noch nicht diesem Produkt zugeordnet**), mit einem Link zu ihrer NVD-Seite. Hat KANAP den Eintrag des Herstellers gelesen, nennt eine zweite Zeile, wer ihn wann veröffentlicht hat, seine letzte Aktualisierung und **Auf CVE.org ansehen**.
 - **Ausnutzung**, wenn ein Katalog, ein EPSS-Wert oder eine europäische Kennung bekannt ist. Siehe [Ausnutzung](#exploitation).
+- **Server**: jeder Server, der eine betroffene Version trägt, mit Technologie und Version. Die über ein anderes Asset erreichten Server, etwa den Host einer virtuellen Maschine oder einen Cluster, verbirgt eine Schaltfläche, zum Beispiel **Auch die 4 über ein anderes Asset erreichten Server anzeigen**. Sie erscheinen unter einer eigenen Überschrift, **Über ein anderes Asset**, mit dem Asset, über das sie erreicht werden.
+- **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, einmal pro Version aufgeführt, mit ihren Servern (höchstens drei, dann „und 2 weitere“). Eine Anwendung, die die Technologie deklariert oder auf einem Server gehostet ist, der sie trägt, steht zuerst. Die anderen liegen hinter der gleichen Art von Schaltfläche.
+
+Ist kein Server oder keine Anwendung direkt betroffen, sagt der Bereich das, und die Schaltfläche zeigt weiterhin die anderen.
 
 Eine Version außerhalb der Warnungen ist ausgegraut, mit ihren Servern und Anwendungen. Ist nur ein Teil davon in den Warnungen, nennt eine Zeile über der Liste die Anzahl, zum Beispiel „3 Server, davon 1 in den Warnungen“.
 
@@ -132,7 +138,7 @@ Die E-Mail an die IT-Verantwortlichen meldet eine ausgenutzte Schwachstelle jede
 
 ## Export
 
-**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
+**CSV exportieren** lädt die Schwachstellen herunter, die den Filtern entsprechen, eine Zeile pro Zeile des Rasters, in seiner Reihenfolge, in der Sprache Ihres Bildschirms. Ihre Spalte **Source** nach **Match** enthält `NVD`, `CVE.org` oder `NVD, CVE.org`. Ab 10.000 Schwachstellen grenzen Sie die Filter zuerst ein.
 
 ## E-Mail-Benachrichtigungen
 
