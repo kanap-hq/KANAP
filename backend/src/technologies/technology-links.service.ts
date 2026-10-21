@@ -6,7 +6,7 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { languageOf, writeCsv, type CsvLanguage } from '../common/csv-sheet';
 import { MANUAL_PROVENANCE, provenanceParams, type LinkProvenance } from '../common/link-provenance';
 import { withSavepoint } from '../common/savepoint.util';
-import { SHIPPED_CATALOG_LABELS } from '../it-ops-settings/catalog-shipped-labels';
+import { shippedLabelIn } from '../it-ops-settings/catalog-shipped-labels';
 import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
 import { catalogFromMetadata } from '../it-ops-settings/classification-catalog';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
@@ -91,13 +91,12 @@ const APPLICATIONS_CSV_COPY: Record<CsvLanguage, ApplicationsCsvCopy> = {
 
 /**
  * A catalog value as the screen shows it in `language`: the tenant's translation, else the shipped
- * translation while the tenant keeps the shipped label, else the tenant's label.
+ * translation while the tenant keeps the shipped label or a former shipped label, else the tenant's label.
  */
 function catalogLabelIn(list: string, option: { code: string; label: string; translations?: CatalogTranslations }, language: CsvLanguage): string {
   const translated = option.translations?.[language]?.label;
   if (translated) return translated;
-  const shipped = SHIPPED_CATALOG_LABELS[list]?.[option.code];
-  return shipped && shipped.source === option.label ? shipped[language] : option.label;
+  return shippedLabelIn(list, option, language) ?? option.label;
 }
 
 function notesOf(value: unknown): string | null {

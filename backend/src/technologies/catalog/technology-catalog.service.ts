@@ -158,7 +158,9 @@ export class TechnologyCatalogService {
 
   /**
    * The entries the tenant has not adopted (no technology with its catalog key or its name),
-   * filtered by `q` (name, editor) and `family`, sorted by name.
+   * filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
+   * would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list is offered
+   * under the code the tenant would actually receive.
    */
   async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
@@ -170,18 +172,19 @@ export class TechnologyCatalogService {
     const names = new Set(rows.map((row) => row.name.trim().toLowerCase()));
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
-    const { hostingTypes } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
+    const { hostingTypes, technologyFamilies } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const living = await this.effectiveProducts(opts.manager);
     const items = Array.from(living.values())
       .filter((product) => !keys.has(product.key) && !names.has(product.name.toLowerCase()))
-      .filter((product) => !family || product.family === family)
-      .filter((product) => !needle || product.name.toLowerCase().includes(needle) || product.editor.toLowerCase().includes(needle))
-      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
-      .map((product) => ({
+      .map((product) => ({ product, family: catalogFamilyForTenant(product.family, technologyFamilies) }))
+      .filter((row) => !family || row.family === family)
+      .filter((row) => !needle || row.product.name.toLowerCase().includes(needle) || row.product.editor.toLowerCase().includes(needle))
+      .sort((a, b) => a.product.name.localeCompare(b.product.name, 'en', { sensitivity: 'base' }))
+      .map(({ product, family: resolved }) => ({
         key: product.key,
         name: product.name,
         editor: product.editor,
-        family: product.family,
+        family: resolved,
         hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
         cpe_products: product.cpe_products,
         versions: product.versions.length,

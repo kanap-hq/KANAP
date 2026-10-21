@@ -11,7 +11,7 @@ import { keepsShippedName, localizeTaskType } from './taskTypeLocalization';
 // import one (its type check would fail). A checkout without the backend skips the test.
 const LOCALES = ['en', 'fr', 'de', 'es'] as const;
 
-type ShippedLabels = { source: string; en: string; fr: string; de: string; es: string };
+type ShippedLabels = { source: string; en: string; fr: string; de: string; es: string; former?: ShippedLabels[] };
 type ShippedFile = { catalog: Record<string, Record<string, ShippedLabels>>; taskTypes: Record<string, ShippedLabels> };
 type NodeFs = { existsSync(path: URL): boolean; readFileSync(path: URL, encoding: 'utf8'): string };
 
@@ -45,6 +45,21 @@ describe.skipIf(!shipped)('shipped catalog labels shared with the backend import
         for (const locale of LOCALES) {
           expect(`${list}.${code}.${locale}: ${localizeCatalogItem({ code, label: entry.source }, locale, defaults).label}`)
             .toBe(`${list}.${code}.${locale}: ${entry[locale]}`);
+        }
+      }
+    }
+  });
+
+  it('recognizes a former shipped label under the translation the frontend shows', () => {
+    for (const [list, codes] of Object.entries(SHIPPED_CATALOG_LABELS)) {
+      const defaults = catalogDefaults(list as (typeof CATALOG_LISTS)[number]);
+      for (const [code, entry] of Object.entries(codes)) {
+        for (const former of entry.former ?? []) {
+          expect(defaults?.former?.[code]?.find((item) => item.source === former.source)).toEqual(former);
+          for (const locale of LOCALES) {
+            expect(`${list}.${code}.${locale}: ${localizeCatalogItem({ code, label: former.source }, locale, defaults).label}`)
+              .toBe(`${list}.${code}.${locale}: ${former[locale]}`);
+          }
         }
       }
     }

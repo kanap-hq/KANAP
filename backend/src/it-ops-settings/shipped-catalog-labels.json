@@ -200,7 +200,7 @@
       "runtime": {"source": "Runtime and framework", "en": "Runtime and framework", "fr": "Environnement d’exécution et framework", "de": "Laufzeitumgebung und Framework", "es": "Entorno de ejecución y framework"},
       "storage": {"source": "Storage", "en": "Storage", "fr": "Stockage", "de": "Speicher", "es": "Almacenamiento"},
       "network": {"source": "Network", "en": "Network", "fr": "Réseau", "de": "Netzwerk", "es": "Red"},
-      "network_security": {"source": "Security", "en": "Security", "fr": "Sécurité", "de": "Sicherheit", "es": "Seguridad"},
+      "network_security": {"source": "Security", "en": "Security", "fr": "Sécurité", "de": "Sicherheit", "es": "Seguridad", "former": [{"source": "Network and security", "en": "Network and security", "fr": "Réseau et sécurité", "de": "Netzwerk und Sicherheit", "es": "Red y seguridad"}]},
       "administration": {"source": "Administration", "en": "Administration", "fr": "Administration", "de": "Administration", "es": "Administración"},
       "other": {"source": "Other", "en": "Other", "fr": "Autre", "de": "Sonstiges", "es": "Otro"}
     },

@@ -8,6 +8,8 @@ import { linkProvenance } from '../../common/link-provenance';
 import { onPremHostingTypes, resolveHostingType } from '../hosting-type';
 import { resolveVersionLabel } from '../technology-rows';
 import type { TechnologyRelationsContext } from '../technologies-relations.service';
+import { DEFAULT_HOSTING_TYPES, DEFAULT_TECHNOLOGY_FAMILIES } from '../../it-ops-settings/it-ops-settings.service';
+import { TechnologyCatalogService } from '../catalog/technology-catalog.service';
 import { asset, one, services, technology, type AuditEntry } from './technologies.fixtures';
 
 // The technologies service (lot S) against a real database: create and validation, the version
@@ -653,10 +655,39 @@ async function testAdoptionDescription() {
   }
 }
 
+/**
+ * A tenant whose saved family list has no `network` (it predates that code) is offered a catalog
+ * product of family `network` under `network_security`, and the family filter uses that code.
+ * A tenant that lists `network` keeps the catalog family.
+ */
+async function testCatalogFamilyForTenant() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-family');
+    const saved = DEFAULT_TECHNOLOGY_FAMILIES
+      .filter((item) => item.code !== 'network')
+      .map((item) => (item.code === 'network_security' ? { code: item.code, label: 'Network and security' } : { code: item.code, label: item.label }));
+    const catalogFor = (families: typeof DEFAULT_TECHNOLOGY_FAMILIES) => new TechnologyCatalogService(
+      { log: async () => undefined } as any,
+      { getSettings: async () => ({ technologyFamilies: families, hostingTypes: DEFAULT_HOSTING_TYPES }) } as any,
+    );
+    const opts = { manager: runner.manager, tenantId };
+    const closed = catalogFor(saved);
+    const listed = await closed.notAdopted({ q: 'arista' }, opts);
+    assert.equal(listed.items.find((item) => item.key === 'arista-eos')?.family, 'network_security');
+    const bySecurity = await closed.notAdopted({ q: 'arista', family: 'network_security' }, opts);
+    assert.equal(bySecurity.items.some((item) => item.key === 'arista-eos'), true);
+    const byNetwork = await closed.notAdopted({ q: 'arista', family: 'network' }, opts);
+    assert.equal(byNetwork.items.some((item) => item.key === 'arista-eos'), false);
+    const open = await catalogFor(DEFAULT_TECHNOLOGY_FAMILIES).notAdopted({ q: 'arista' }, opts);
+    assert.equal(open.items.find((item) => item.key === 'arista-eos')?.family, 'network');
+  });
+}
+
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
   ['CVE.org names', testCveNames],
   ['hosting type', testHostingType],
+  ['catalog family for the tenant', testCatalogFamilyForTenant],
   ['version labels', testVersionLabels],
   ['version order', testVersionOrder],
   ['links and version delete', testLinksAndVersionDelete],
