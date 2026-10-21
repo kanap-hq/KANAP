@@ -259,7 +259,12 @@ function testOperatingSystemCpe() {
   assert.deepEqual(ids('oracle-linux'), ['o:oracle:linux']);
   assert.deepEqual(ids('centos'), ['o:centos:centos']);
   assert.deepEqual(ids('rocky-linux'), ['o:resf:rocky_linux']);
-  assert.deepEqual(ids('sles'), [], 'the service pack is the CPE update, which the matching does not read');
+  assert.deepEqual(ids('sles'), [
+    'o:novell:suse_linux_enterprise_server',
+    'o:opensuse_project:suse_linux_enterprise_server',
+    'o:suse:linux_enterprise_server',
+    'o:suse:suse_linux_enterprise_server',
+  ], 'the major in the version, the service pack in the update (SERVICE_PACK_PRODUCTS)');
   assert.deepEqual(ids('windows-server'), [
     'o:microsoft:windows_server_2003',
     'o:microsoft:windows_server_2008',
@@ -302,7 +307,7 @@ function testOperatingSystemCpe() {
 
   // The branch the matching compares is the same number on the catalog entry and on the CPE product.
   const precision: Array<[string, number]> = [
-    ['rhel', 1], ['debian', 1], ['oracle-linux', 1], ['almalinux', 1], ['rocky-linux', 1], ['centos', 1], ['ubuntu', 2],
+    ['rhel', 1], ['debian', 1], ['oracle-linux', 1], ['almalinux', 1], ['rocky-linux', 1], ['centos', 1], ['ubuntu', 2], ['sles', 1],
   ];
   const branched = new Set<string>();
   for (const [key, segments] of precision) {

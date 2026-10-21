@@ -5911,7 +5911,12 @@
       "editor": "SUSE",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:novell:suse_linux_enterprise_server",
+        "o:opensuse_project:suse_linux_enterprise_server",
+        "o:suse:linux_enterprise_server",
+        "o:suse:suse_linux_enterprise_server"
+      ],
       "source_url": "https://endoflife.date/sles",
       "versions": [
         {
@@ -6178,8 +6183,7 @@
           "standard_support_end": "2008-11-30",
           "extended_support_end": "2010-12-31"
         }
-      ],
-      "noCpe": "The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE."
+      ]
     },
     {
       "key": "ubuntu",

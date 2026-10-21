@@ -101,10 +101,12 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  */
-// The service pack is the CPE update component (`linux_enterprise_server:15:sp5`). The matching reads the
-// version only, so one identifier would attach every service pack of a major version to every other.
+// SLES: the NVD files the major in the version and the service pack in the update component
+// (`linux_enterprise_server:15:sp5`), under four names over the years (SUSE, then Novell and the
+// openSUSE project for SLES 10 to 12). The matching compares the major and, when a criterion names
+// a service pack, that service pack (`SERVICE_PACK_PRODUCTS` in vulnerability-rules.ts).
 // `o:suse:sles`, the identifier endoflife.date publishes, names no CVE.
-const SLES_NO_CPE = 'The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE.';
+const SLES_CPE = ['o:suse:linux_enterprise_server', 'o:suse:suse_linux_enterprise_server', 'o:novell:suse_linux_enterprise_server', 'o:opensuse_project:suse_linux_enterprise_server'];
 
 /**
  * "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2"; the service
@@ -147,8 +149,8 @@ function slesLabel(release) {
 const PRODUCTS = [
   // Operating systems (lot T3). CPE identifiers checked at the NVD (lot V3). Windows Server is one
   // product per long-term release from 2003 (the build is not `cpe_version`: the year rule matches the
-  // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_NO_CPE.
-  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS are matched on the major, Ubuntu
+  // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_CPE.
+  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux, CentOS and SLES are matched on the major, Ubuntu
   // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
   // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
   // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
@@ -156,7 +158,7 @@ const PRODUCTS = [
   { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
   { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux'] },
   { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], versionLabel: debianLabel },
-  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: SLES_NO_CPE, versionLabel: slesLabel },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], versionLabel: slesLabel },
   { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'] },
   { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'] },
   { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'] },
