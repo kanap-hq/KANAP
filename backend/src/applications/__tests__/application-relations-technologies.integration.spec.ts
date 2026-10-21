@@ -153,7 +153,7 @@ async function testWriteRefusedWithoutTheRight() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTechnologies(runner, 'techdeny');
     const svc = relationsService();
-    const readOnly = context(runner.manager, seed, { writes: { technologies: false, processes: false } });
+    const readOnly = context(runner.manager, seed, { writes: { technologies: false, processes: false, incidents: true } });
     await assert.rejects(svc.setLink('technologies', seed.appId, seed.tech.sql, true, readOnly), ForbiddenException);
     await assert.rejects(svc.setLink('technologies', seed.appId, seed.tech.java, false, readOnly), ForbiddenException);
     await assert.rejects(svc.setLink('processes', seed.appId, seed.processes.free, true, readOnly), ForbiddenException);
@@ -227,7 +227,10 @@ async function testBusinessContributorScope() {
   });
 }
 
-/** The Relations badge (`GET /applications/:id/relations-count`) counts processes and leaves technologies out. */
+/**
+ * The Relations badge (`GET /applications/:id/relations-count`) leaves technologies out (the
+ * Operations tab) and business processes (the properties panel, lot R1b); both fields stay.
+ */
 async function testBadgeLeavesOutTechnologies() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTechnologies(runner, 'techcount');
@@ -235,7 +238,7 @@ async function testBadgeLeavesOutTechnologies() {
     const counts = await crud.relationCounts(seed.appId, { manager: runner.manager });
     assert.equal(counts.technologies, 2, 'the field still names the declared technologies; hosted ones are not in it');
     assert.equal(counts.processes, 1);
-    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + counts.processes + counts.links + counts.attachments);
+    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + counts.links + counts.attachments);
   });
 }
 
@@ -435,7 +438,7 @@ async function testServersNeedTheRight() {
   await inRolledBackTransaction(async (runner) => {
     const seed = await seedTechnologies(runner, 'techsrvdeny');
     const svc = relationsService();
-    const readOnly = context(runner.manager, seed, { writes: { technologies: false, processes: true } });
+    const readOnly = context(runner.manager, seed, { writes: { technologies: false, processes: true, incidents: true } });
     await assert.rejects(svc.setLink('technologies', seed.appId, seed.tech.elsewhere, true, readOnly, { asset_ids: [seed.servers.etl1] }), ForbiddenException);
     assert.deepEqual(await declarationsOf(runner, seed, seed.tech.elsewhere), []);
     assert.deepEqual(await installedOn(runner, seed, seed.servers.etl1, seed.tech.elsewhere), []);

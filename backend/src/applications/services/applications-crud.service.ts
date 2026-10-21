@@ -350,7 +350,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex: Number(row.capex_count || 0),
       contracts: Number(row.contracts_count || 0),
       projects: Number(row.projects_count || 0),
-      // Still reported. The Relations badge (`total`) leaves it out: technologies are on the Operations tab.
+      // Still reported. The Relations badge (`total`) leaves these out: technologies are on the
+      // Operations tab, business processes in the properties panel (lot R1b).
       technologies: Number(row.technologies_count || 0),
       processes: Number(row.processes_count || 0),
       links: Number(row.links_count || 0),
@@ -358,7 +359,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     };
     return {
       ...counts,
-      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.processes + counts.links + counts.attachments,
+      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.links + counts.attachments,
     };
   }
 

@@ -4,6 +4,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ApplicationsService, ApplicationsRelationsService } from './services';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
 import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
 import { ApplicationsCsvService } from './applications-csv.service';
@@ -112,6 +113,7 @@ export class ApplicationsController {
     const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
     const reads = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.reader;
     const edits = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.member;
+    const contributes = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.contributor;
     const [application, project, request, task] = await Promise.all([
       this.participationScope(ctx, 'applications'),
       this.readProjectScope(ctx),
@@ -125,14 +127,16 @@ export class ApplicationsController {
       access: {
         budget_lines: reads('budget'),
         contracts: reads('contracts'),
+        incidents: reads('incidents'),
         processes: reads('business_processes'),
         projects: reads('portfolio_projects'),
         requests: reads('portfolio_requests'),
         tasks: reads('tasks'),
         technologies: reads('infrastructure'),
       },
-      writes: { technologies: edits('infrastructure'), processes: edits('business_processes') },
+      writes: { technologies: edits('infrastructure'), processes: edits('business_processes'), incidents: contributes('incidents') },
       scopes: { application, project, request, task },
+      incidentViewer: incidentViewerFromContext(ctx),
     };
   }
 
@@ -862,8 +866,10 @@ export class ApplicationsController {
   }
 
   /**
-   * Link one object (`kind`: budget_lines, contracts, processes, projects, requests, tasks,
-   * technologies); the caller must read its module, and edit it for processes and technologies.
+   * Link one object (`kind`: budget_lines, contracts, incidents, processes, projects, requests,
+   * tasks, technologies); the caller must read its module, and edit it for processes and
+   * technologies (contribute to it for incidents: the link is written in the incident's journal,
+   * and a closed incident refuses it).
    * A technology also takes its version (`technology_version_id` or `version_label`, none: unknown)
    * and the deployment servers to record it on (`asset_ids`).
    */

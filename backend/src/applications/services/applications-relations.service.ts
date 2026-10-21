@@ -29,13 +29,16 @@ import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
+import type { RelatedIncident } from '../../technologies/technologies-relations.service';
+import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } from '../../incidents/incident-visibility';
+import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
 
 /** The kinds of objects the Relations tab links to an application. */
-export const RELATION_KINDS = ['budget_lines', 'contracts', 'processes', 'projects', 'requests', 'tasks', 'technologies'] as const;
+export const RELATION_KINDS = ['budget_lines', 'contracts', 'incidents', 'processes', 'projects', 'requests', 'tasks', 'technologies'] as const;
 export type RelationKind = (typeof RELATION_KINDS)[number];
 
 /** Which modules the caller may read: a section the caller cannot read is `null`. */
@@ -43,9 +46,11 @@ export type RelationsAccess = Record<RelationKind, boolean>;
 
 /**
  * The kinds whose link also needs the right to edit the other module (lot T2a): a technology
- * dependency needs `infrastructure:member`, a business process `business_processes:member`.
+ * dependency needs `infrastructure:member`, a business process `business_processes:member`, an
+ * incident the level that edits an incident (`incidents:contributor`, lot R1b), since the link
+ * is written in the incident's journal.
  */
-export type RelationsWrites = { technologies: boolean; processes: boolean };
+export type RelationsWrites = { technologies: boolean; processes: boolean; incidents: boolean };
 
 /** The participation scopes of a Business Contributor (none for everyone else). */
 export type RelationsScopes = {
@@ -63,9 +68,11 @@ export type RelationsContext = {
   /** The extra write rights of the kinds that need one (`RelationsWrites`). */
   writes: RelationsWrites;
   scopes: RelationsScopes;
+  /** Confidential incidents show only to their reporter, owner and the registry admins. */
+  incidentViewer: IncidentViewer;
 };
 
-export type { RelatedBudgetLine, RelatedContract, RelatedProject };
+export type { RelatedBudgetLine, RelatedContract, RelatedIncident, RelatedProject };
 export type RelatedRequest = { id: string; item_number: number | null; name: string; status: string | null; target_delivery_date: string | null };
 export type RelatedTask = {
   id: string;
@@ -116,6 +123,8 @@ export type ApplicationRelations = {
   /** The servers the application is deployed on, offered to record a technology on; null with `technologies`. */
   deployment_servers: DeploymentServer[] | null;
   processes: RelatedProcess[] | null;
+  /** The incidents linked to the application that the caller may see. */
+  incidents: RelatedIncident[] | null;
   suggestions: RelationSuggestion[];
   also: { assets: number; interfaces: number; documents: number };
 };
@@ -157,6 +166,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     @Inject(forwardRef(() => PortfolioRequestsService))
     private readonly requests: PortfolioRequestsService,
     private readonly technologyLinks: TechnologyLinksService,
+    private readonly incidentLinks: IncidentRelationsService,
   ) {
     super(appRepo);
   }
@@ -185,6 +195,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
         .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
       : null;
+    const incidents = ctx.access.incidents ? await this.listIncidents(mg, tenantId, app.id, ctx.incidentViewer) : null;
     const suggestions = await this.listSuggestions(mg, tenantId, app.id, app.supplier_id ?? null, ctx);
     const also = await this.countAlso(mg, tenantId, app.id, ctx);
 
@@ -199,6 +210,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       technologies,
       deployment_servers: deploymentServers,
       processes,
+      incidents,
       suggestions,
       also,
     };
@@ -253,6 +265,24 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
        JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
        WHERE l.tenant_id = $1 AND l.application_id = $2 ${scopeSql}
        ORDER BY r.target_delivery_date ASC NULLS LAST, lower(r.name), r.id`,
+      params,
+    );
+  }
+
+  /**
+   * Incidents linked to the application that the caller may see: the confidentiality rule of the
+   * register (`incidentVisibilitySql`), and no title for a confidential one, as on a technology.
+   */
+  private async listIncidents(mg: EntityManager, tenantId: string, appId: string, viewer: IncidentViewer): Promise<RelatedIncident[]> {
+    const params: unknown[] = [tenantId, appId];
+    const visible = incidentVisibilitySql('i', viewer, params);
+    return mg.query(
+      `SELECT i.id, i.item_number, ${incidentRelatedTitleSql('i')} AS title, i.status::text AS status, i.severity::text AS severity,
+              ${dateText('i.detected_at')} AS detected_at
+         FROM incident_applications l
+         JOIN incidents i ON i.id = l.incident_id AND i.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.application_id = $2${visible}
+        ORDER BY i.detected_at DESC NULLS LAST, i.item_number DESC`,
       params,
     );
   }
@@ -448,7 +478,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     body: LinkInput & { asset_ids?: unknown } = {},
   ): Promise<{ ok: true; changed: boolean; servers?: { added: number; skipped: number } }> {
     if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
-    if ((kind === 'technologies' || kind === 'processes') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
+    if ((kind === 'technologies' || kind === 'processes' || kind === 'incidents') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
     const id = String(targetId || '').trim().toLowerCase();
     if (!UUID_RE.test(id)) throw new BadRequestException('Invalid id.');
     const mg = ctx.manager;
@@ -463,6 +493,12 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       if (!add) return { ok: true, changed: (await this.technologyLinks.setApplicationTechnology(app.id, id, false, {}, linkOpts)).changed };
       const res = await this.technologyLinks.declareApplicationTechnology(app.id, id, body ?? {}, linkOpts);
       return res.servers ? { ok: true, changed: res.changed, servers: res.servers } : { ok: true, changed: res.changed };
+    }
+    // The incident's own service: visibility first, the open state, the incident row lock, the
+    // journal entry and the audit; the set is read under that lock.
+    if (kind === 'incidents') {
+      const res = await this.incidentLinks.setApplicationLink(id, app.id, add, userId, { manager: mg, tenantId, viewer: ctx.incidentViewer });
+      return { ok: true, changed: res.changed };
     }
     if (kind === 'processes') {
       const res = await this.technologyLinks.setProcessApplication(id, app.id, add, { manager: mg, tenantId, userId }, { scope: ctx.scopes.application });
