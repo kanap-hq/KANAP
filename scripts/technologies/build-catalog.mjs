@@ -29,7 +29,8 @@
 //        entry has its four descriptions in technologies.descriptions.json; offline by default.
 //        With --nvd, asks the CPE dictionary of the NVD whether each `part:vendor:product` exists
 //        and how many CVE name it, --latest
-//        adds the newest CVE; one request every 6.5 s, the rate allowed without an API key)
+//        adds the newest CVE. Set NVD_API_KEY to send it as the `apiKey` header: one request every
+//        0.7 s with the key, every 6.5 s without. The key is never logged.)
 //        node scripts/technologies/build-catalog.mjs --nvd-count <a:vendor:product,...> [--latest]
 //        (the same NVD counts for identifiers not in the catalog yet, before adding them)
 //        node scripts/technologies/build-catalog.mjs --nvd-search <keywords | cpe:2.3:...>
@@ -818,8 +819,12 @@ function refreshCpeVersions(out) {
 }
 
 const NVD = 'https://services.nvd.nist.gov/rest/json';
-/** Without an API key the NVD allows 5 requests in a rolling 30 seconds: one every 6.5 s. */
-const NVD_SPACING_MS = 6500;
+/**
+ * The NVD allows 5 requests in a rolling 30 seconds without a key (one every 6.5 s) and 50 with
+ * one (one every 0.7 s). Same header as the backend feed (`apiKey`). The value is never logged.
+ */
+const NVD_API_KEY = (process.env.NVD_API_KEY ?? '').trim();
+const NVD_SPACING_MS = NVD_API_KEY ? 700 : 6500;
 /** `part:vendor:product`; the NVD escapes punctuation with a backslash (`veeam_backup_\&_replication`). */
 const CPE_PRODUCT_SHAPE = /^[aoh]:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s])+:(?:[a-z0-9._\-~%!]|\\[^a-z0-9\s])+$/;
 let lastNvdCall = 0;
@@ -835,7 +840,8 @@ async function nvdGet(path, params) {
     lastNvdCall = Date.now();
     let status = 0;
     try {
-      const response = await fetch(url, { headers: { accept: 'application/json' }, signal: AbortSignal.timeout(120_000) });
+      const headers = { accept: 'application/json', ...(NVD_API_KEY ? { apiKey: NVD_API_KEY } : {}) };
+      const response = await fetch(url, { headers, signal: AbortSignal.timeout(120_000) });
       status = response.status;
       if (response.ok) return await response.json();
     } catch (error) {
