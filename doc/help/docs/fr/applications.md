@@ -296,7 +296,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies sont dans l'onglet [Exploitation](#exploitation), les processus métier dans le [tiroir des propriétés](#tiroir-des-proprietes-panneau-de-droite). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets et incidents liés, ainsi que les liens et fichiers.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies sont dans l'onglet [Exploitation](#exploitation), les processus métier dans le [tiroir des propriétés](#tiroir-des-proprietes-panneau-de-droite). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, demandes et incidents liés, ainsi que les liens et fichiers. Les tâches ne sont pas comptées.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 

@@ -1,6 +1,7 @@
 // @database-spec
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
+import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { context, inRolledBackTransaction, NO_ACCESS, relationsService, runSpecs, seedRelations, YEAR } from './application-relations.fixtures';
 
 // GET /applications/:id/relations (lot R1), on an empty migrated database: the sections, the
@@ -111,7 +112,32 @@ async function testParticipationScopes() {
   });
 }
 
-runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes])
+/**
+ * The Relations badge (`relations-count.total`) counts the linked requests and leaves the tasks out
+ * (fried, 2026-10-21): none without the read right on requests, a Business Contributor's own only.
+ */
+async function testBadgeCountsRequestsNotTasks() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedRelations(runner, 'badge');
+    const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const sum = (c: Awaited<ReturnType<ApplicationsCrudService['relationCounts']>>) =>
+      c.opex + c.capex + c.contracts + c.projects + c.requests + c.links + c.attachments;
+
+    const all = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: {} });
+    assert.equal(all.requests, 2, 'both linked requests');
+    assert.equal(all.total, sum(all), 'requests in the total, tasks never');
+    assert.ok(!('tasks' in all), 'the counts carry no task field');
+
+    const scoped = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: { scope: { userId: seed.userId } } });
+    assert.equal(scoped.requests, 1, 'a Business Contributor counts the requests it takes part in');
+
+    const unread = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: null });
+    assert.equal(unread.requests, 0, 'no read right on requests: none counted');
+    assert.equal(unread.total, all.total - 2);
+  });
+}
+
+runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes, testBadgeCountsRequestsNotTasks])
   .catch((err) => {
     console.error(err);
     process.exit(1);

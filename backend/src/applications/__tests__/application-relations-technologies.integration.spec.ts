@@ -238,7 +238,7 @@ async function testBadgeLeavesOutTechnologies() {
     const counts = await crud.relationCounts(seed.appId, { manager: runner.manager });
     assert.equal(counts.technologies, 2, 'the field still names the declared technologies; hosted ones are not in it');
     assert.equal(counts.processes, 1);
-    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + counts.links + counts.attachments);
+    assert.equal(counts.total, counts.opex + counts.capex + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments);
   });
 }
 

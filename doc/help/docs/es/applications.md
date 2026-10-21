@@ -296,7 +296,7 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías están en la pestaña [Operaciones](#operaciones), los procesos de negocio en el [panel de propiedades](#panel-de-propiedades-panel-derecho). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos e incidentes vinculados, así como los enlaces y archivos.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías están en la pestaña [Operaciones](#operaciones), los procesos de negocio en el [panel de propiedades](#panel-de-propiedades-panel-derecho). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, solicitudes e incidentes vinculados, así como los enlaces y archivos. Las tareas no se cuentan.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 

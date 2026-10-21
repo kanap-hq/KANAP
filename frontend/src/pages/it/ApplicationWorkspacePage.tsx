@@ -156,6 +156,7 @@ type ApplicationRelationsCount = {
   capex: number;
   contracts: number;
   projects: number;
+  requests: number;
   technologies: number;
   processes: number;
   links: number;

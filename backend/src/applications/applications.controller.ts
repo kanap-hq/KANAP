@@ -850,10 +850,13 @@ export class ApplicationsController {
   async relationCounts(
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
-  ): Promise<{ opex: number; capex: number; contracts: number; projects: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
+  ): Promise<{ opex: number; capex: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
+    const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
+    const readsRequests = ctx.isAdmin === true || (RANK[ctx.permissions?.portfolio_requests ?? ''] ?? 0) >= RANK.reader;
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
       projectAccessScope: await this.readProjectScope(ctx),
+      requestsAccess: readsRequests ? { scope: await this.participationScope(ctx, 'portfolio_requests') } : null,
     });
   }
 

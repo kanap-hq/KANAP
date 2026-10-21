@@ -296,7 +296,7 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table, then its links and files. The technologies are on the [Operations](#operations) tab, the business processes in the [properties drawer](#properties-drawer-right-panel). Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects and incidents, and the links and files.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table, then its links and files. The technologies are on the [Operations](#operations) tab, the business processes in the [properties drawer](#properties-drawer-right-panel). Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, requests and incidents, and the links and files. Tasks are not counted.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
