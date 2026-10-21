@@ -151,9 +151,12 @@ El panel es la tarjeta de identidad de la aplicación. Se muestra en cada pesta�
 **Fechas del ciclo de vida**:
 - **Puesta en marcha**, **Fin de soporte**, **Fecha de retiro**
 
-**Responsables**:
+**Procesos de negocio y responsables**:
+- **Procesos de negocio**: los procesos que la aplicación respalda. Cada nombre abre el proceso. Escriba en el campo para buscar y añadir un proceso; pase el cursor sobre un nombre y haga clic en la cruz para quitarlo. Cada cambio se guarda al instante. El proceso muestra el mismo vínculo en su propia sección **Aplicaciones**. Un proceso desactivado sigue en la lista, atenuado. Cambiar la lista requiere también `business_processes:member`; sin permiso de lectura de los procesos de negocio, el campo no aparece.
 - **Responsables de negocio**: partes interesadas del negocio responsables de esta aplicación (selección múltiple)
 - **Responsables IT**: miembros del equipo IT responsables del soporte técnico (selección múltiple)
+
+Para quitar un responsable, pase el cursor sobre su nombre y haga clic en la cruz al final.
 
 **Audiencia**:
 - Añada filas de **Empresa / Departamentos** para registrar quién usa esta aplicación. Elija una empresa y opcionalmente restrinja a departamentos específicos.
@@ -293,7 +296,7 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas, incidentes y procesos de negocio, cada uno en su propia tabla. Las tecnologías están en la pestaña [Operaciones](#operaciones). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, incidentes, sitios web y adjuntos vinculados.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías están en la pestaña [Operaciones](#operaciones), los procesos de negocio en el [panel de propiedades](#panel-de-propiedades-panel-derecho). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos e incidentes vinculados, así como los enlaces y archivos.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
@@ -307,15 +310,14 @@ La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus l�
 | **Solicitudes** | Referencia (`REQ-23`), nombre, estado, entrega deseada |
 | **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Solo aparecen las tareas vinculadas a esta aplicación, no las tareas de sus proyectos |
 | **Incidentes** | Referencia (`INC-14`), título, severidad, estado, fecha de detección |
-| **Procesos de negocio** | Nombre, responsable de negocio |
 
-**Procesos de negocio** lista los procesos que la aplicación respalda. El proceso muestra el mismo vínculo en su propia sección **Aplicaciones**. Un proceso desactivado sigue en la lista, atenuado. Vincular requiere también `business_processes:member`.
+Un incidente confidencial solo aparece para las personas que pueden verlo en el registro de incidentes, sin su título.
 
 Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. Solo ve las secciones de los módulos que puede leer.
 
 A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte. Una línea cuya moneda no tiene tipo de cambio para el año muestra su importe en su propia moneda con una pequeña marca naranja, y el total la excluye. Un aviso de una línea bajo la tabla la indica, por ejemplo «Se excluye 1 línea sin tipo de cambio: USD 2026.» Vea [Tipos manuales](currencies.md#tipos-manuales). Los contratos tienen un total por moneda, sin los contratos desactivados.
 
-**Añadir y quitar vínculos** (`applications:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los incidentes se vinculan desde el propio incidente.
+**Añadir y quitar vínculos** (`applications:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Vincular o desvincular un incidente requiere también `incidents:contributor` y queda registrado en el diario del incidente. Un incidente cerrado o cancelado no se puede vincular ni desvincular: reábralo primero.
 
 **Relacionados**: sugerencias de registros que podría vincular, cada una con el motivo de la sugerencia:
 
@@ -327,9 +329,11 @@ Haga clic en **Vincular** para añadir la sugerencia a su sección. La sección 
 
 **También relacionado**: una línea bajo las sugerencias cuenta los activos de los despliegues de la aplicación, sus interfaces y sus documentos de conocimiento. Cada número abre la pestaña o la sección correspondiente.
 
-**Sitios web relevantes**: añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
+**Enlaces y archivos**: los enlaces web de la aplicación (portales de proveedores, paneles de monitoreo, documentación) y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `applications:member`:
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `applications:member`.
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección: se resalta mientras arrastra.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 ---
 

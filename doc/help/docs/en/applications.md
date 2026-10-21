@@ -151,9 +151,12 @@ The drawer is the application's identity card. It is shown on every tab and edit
 **Lifecycle dates**:
 - **Go live**, **End of support**, **Retired date**
 
-**Owners**:
+**Business processes and owners**:
+- **Business processes**: the processes the application supports. Each name opens the process. Type in the field to search and add one; hover a name and click the cross to remove it. Each change is saved at once. The process shows the same link in its own **Applications** section. A disabled process stays listed, greyed out. Changing the list needs `business_processes:member` as well; without read access to business processes the field is hidden.
 - **Business owners**: business stakeholders accountable for this application (multi-select)
 - **IT owners**: IT team members responsible for technical support (multi-select)
+
+To remove an owner, hover the name and click the cross at its end.
 
 **Audience**:
 - Add **Company / Departments** rows to record who uses this application. Pick a company and optionally restrict to specific departments.
@@ -293,7 +296,7 @@ Two discreet hints may appear: data at the highest confidentiality level combine
 
 ### Relations
 
-The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks, incidents and business processes, each in its own table. The technologies are on the [Operations](#operations) tab. Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects, incidents, websites and attachments.
+The Relations tab shows what this application is linked to: its budget lines, contracts, projects, requests, tasks and incidents, each in its own table, then its links and files. The technologies are on the [Operations](#operations) tab, the business processes in the [properties drawer](#properties-drawer-right-panel). Click a row to open the record. The tab badge counts the linked budget lines, contracts, projects and incidents, and the links and files.
 
 **Components** (only when "Can have child apps" is enabled): a table listing the child applications of this Suite, with their lifecycle and criticality. Click a row to open the child workspace.
 
@@ -307,15 +310,14 @@ The Relations tab shows what this application is linked to: its budget lines, co
 | **Requests** | Reference (`REQ-23`), name, status, desired delivery |
 | **Tasks** | Reference (`T-118`), title, status, assignee, due date. Only the tasks linked to this application itself appear, not the tasks of its projects |
 | **Incidents** | Reference (`INC-14`), title, severity, status, detection date |
-| **Business processes** | Name, business owner |
 
-**Business processes** lists the processes the application supports. The process shows the same link in its own **Applications** section. A disabled process stays listed, greyed out. Linking needs `business_processes:member` as well.
+A confidential incident appears only to the people who can see it in the incident register, without its title.
 
 Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. You only see the sections of the modules you can read.
 
 From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency. A line whose currency has no exchange rate for the year shows its amount in its own currency with a small orange mark, and the total leaves it out. A one-line warning under the table names it, for example "Excluding 1 line with no exchange rate: USD 2026." See [Manual rates](currencies.md#manual-rates). Contracts get one total per currency, without the disabled ones.
 
-**Adding and removing links** (`applications:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Incidents are linked from the incident itself.
+**Adding and removing links** (`applications:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Linking or unlinking an incident also needs `incidents:contributor` and is recorded in the incident's journal. A closed or cancelled incident cannot be linked or unlinked: reopen it first.
 
 **Related**: suggestions of records you may want to link, each with the reason it is suggested:
 
@@ -327,9 +329,11 @@ Click **Link** to add the suggestion to its section. The section is absent when 
 
 **Also related**: a line under the suggestions counts the assets of the application's deployments, its interfaces and its knowledge documents. Each count opens the matching tab or section.
 
-**Relevant websites**: add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Links and files**: the web links of the application (vendor portals, monitoring dashboards, documentation) and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `applications:member`:
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `applications:member`.
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section: it is highlighted while you drag.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
 ---
 
