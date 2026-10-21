@@ -228,7 +228,13 @@ The Operations tab captures the technologies the application depends on, how use
 - **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
 - **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
 
-A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`. To add or remove a declared technology, you need `applications:member` and `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
+A technology can be both. A dash in the version column means the version is not known. The end of standard support turns orange once it has passed. The section needs `infrastructure:reader`.
+
+**Adding a technology**: click **Add**, choose the technology, then its version: an existing one, a new one you type, or **Version unknown**. When the application has deployment servers in service, a last step offers to record the technology at the same version on them, for example "Also record PHP 8.2 on". Each server shows its environments and roles. Nothing is ticked: tick the servers that run it, then click **Add**. A server that already has the technology shows **Already recorded** and keeps its own version. An operating system is not offered here: set it on the server's page. Closing the list adds nothing.
+
+**Changing a declared technology**: click its version to choose another one. When no server of the application carries a declared technology, the server icon at the end of its row (**Record on a server**) offers the same list of servers. A hosted technology is changed on the server: click the server in **Via** to open its page.
+
+To add, change or remove a declared technology, and to record it on servers, you need `applications:member` and `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
 
 **Technical**:
 - **Access methods** (multi-select): how users access this application. Options are configurable in [IT Landscape Settings](it-ops-settings.md). Defaults include Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk.

@@ -17,7 +17,7 @@ const translation = {
   i18n: { language: 'en', resolvedLanguage: 'en' },
 };
 vi.mock('react-i18next', () => ({ useTranslation: () => translation }));
-vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 const auth = { manager: true, readOnly: [] as string[] };
 vi.mock('../../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: (resource: string) => auth.manager && !auth.readOnly.includes(resource) }) }));
 const families: Record<string, string> = { database: 'Base de données' };
@@ -37,7 +37,10 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
     requests: [],
     tasks: [],
     technologies: [
-      { id: 'tec-4', reference: 'TEC-4', name: 'Java', family: 'runtime', declared: true, hosted: false, versions: [], version_unknown: true, standard_support_end: null, via: [] },
+      {
+        id: 'tec-4', reference: 'TEC-4', name: 'Java', family: 'runtime', declared: true, hosted: false, versions: [], version_unknown: true, standard_support_end: null, via: [],
+        declarations: [{ link_id: 'lnk-4', technology_version_id: null, version_label: null }],
+      },
       {
         id: 'tec-1', reference: 'TEC-1', name: 'SQL Server', family: 'database', declared: false, hosted: true, versions: ['2019'], version_unknown: false,
         standard_support_end: '2020-01-14', via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
@@ -45,12 +48,14 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
       {
         id: 'tec-3', reference: 'TEC-3', name: 'Tomcat', family: 'middleware', declared: true, hosted: true, versions: [], version_unknown: true,
         standard_support_end: null, via: [{ asset_id: 'srv-1', asset_name: 'srv-etl-1', host_name: null }],
+        declarations: [{ link_id: 'lnk-3', technology_version_id: null, version_label: null }],
       },
       {
         id: 'tec-2', reference: 'TEC-2', name: 'vSphere', family: 'virtualization', declared: false, hosted: true, versions: ['8'], version_unknown: false,
         standard_support_end: '2099-10-11', via: [{ asset_id: 'srv-2', asset_name: 'srv-etl-2', host_name: 'esx-01' }],
       },
     ],
+    deployment_servers: [],
     processes: [],
     suggestions: [],
     also: { assets: 0, interfaces: 0, documents: 0 },
@@ -68,6 +73,8 @@ function renderSection(data: ApplicationRelationsData) {
     if (url === '/technologies/lookup') {
       return { data: { items: [{ id: 'tec-4', name: 'Java', reference: 'TEC-4', editor: 'Oracle' }, { id: 'tec-1', name: 'SQL Server', reference: 'TEC-1', editor: 'Microsoft' }] } } as never;
     }
+    if (url === '/technologies/tec-1/versions') return { data: { items: [{ id: 'v-2019', label: '2019' }] } } as never;
+    if (url === '/technologies/tec-3/versions') return { data: { items: [{ id: 'v-9', label: '9.0' }] } } as never;
     throw new Error(`unexpected GET ${url}`);
   });
   render(
@@ -88,6 +95,7 @@ beforeEach(() => {
   auth.readOnly = [];
   mocked.get.mockReset();
   mocked.post.mockReset();
+  mocked.patch.mockReset();
   mocked.delete.mockReset();
 });
 
@@ -114,6 +122,10 @@ describe('ApplicationTechnologiesSection', () => {
 
     fireEvent.click(java.getByText('Java'));
     expect(screen.getByTestId('location').textContent).toBe('/it/technologies/TEC-4');
+
+    // A hosted row changes on the server's page.
+    fireEvent.click(sql.getByRole('link', { name: 'srv-etl-1' }));
+    expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/technical');
   });
 
   it('leaves the free width to the technology name', async () => {
@@ -137,9 +149,7 @@ describe('ApplicationTechnologiesSection', () => {
     await waitFor(() => expect(screen.getByText('Tomcat').closest('tr')?.textContent).toContain('technologyLink.hosted'));
   });
 
-  it('declares a technology from the lookup, offering the hosted ones but not the declared ones', async () => {
-    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
-    renderSection(relations());
+  async function pickSqlServer() {
     await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
     const section = screen.getByRole('region', { name: 'workspace.application.relations.sections.technologies' });
     fireEvent.click(within(section).getByText('workspace.application.relations.add'));
@@ -147,15 +157,108 @@ describe('ApplicationTechnologiesSection', () => {
     const option = await screen.findByRole('option', { name: /SQL Server/ });
     expect(screen.queryByRole('option', { name: /Java/ })).toBeNull();
     fireEvent.click(option);
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1' }));
+  }
+
+  const servers = [
+    { asset_id: 'srv-1', name: 'srv-etl-1', asset_reference: 'AST-1', environments: ['prod'], roles: ['app'] },
+    { asset_id: 'srv-3', name: 'CAVE-EDGE-01', asset_reference: 'AST-3', environments: ['prod'], roles: ['web'] },
+  ];
+
+  it('declares a technology from the lookup, then its version, offering the hosted ones but not the declared ones', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderSection(relations());
+    await pickSqlServer();
+    fireEvent.click(await screen.findByRole('option', { name: '2019' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1', technology_version_id: 'v-2019' }));
+  });
+
+  it('declares a new version or an unknown one', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderSection(relations());
+    await pickSqlServer();
+    const field = await screen.findByRole('combobox', { name: 'workspace.technology.versionPicker.search' });
+    fireEvent.change(field, { target: { value: '2022' } });
+    fireEvent.click(await screen.findByRole('option', { name: 'workspace.technology.versionPicker.create(label=2022)' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1', version_label: '2022' }));
+
+    mocked.post.mockClear();
+    await pickSqlServer();
+    fireEvent.click(await screen.findByRole('option', { name: 'workspace.technology.versionPicker.unknown' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1', technology_version_id: null }));
+  });
+
+  it('offers the deployment servers after the version, none ticked, and sends the ticked ones', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderSection(relations({ deployment_servers: servers }));
+    await pickSqlServer();
+    const field = await screen.findByRole('combobox', { name: 'workspace.technology.versionPicker.search' });
+    fireEvent.change(field, { target: { value: '2022' } });
+    fireEvent.keyDown(field, { key: 'Enter' });
+
+    expect(await screen.findByText('workspace.application.relations.technologyServers.proposal(technology=SQL Server,version=2022)')).toBeTruthy();
+    const edge = screen.getByRole('menuitemcheckbox', { name: /CAVE-EDGE-01/ });
+    expect(edge.textContent).toContain('(enums.environment.prod, web)');
+    expect(edge.getAttribute('aria-checked')).toBe('false');
+    // srv-etl-1 carries SQL Server already: shown, not offered.
+    const etl = screen.getByRole('menuitemcheckbox', { name: /srv-etl-1/ });
+    expect(etl.getAttribute('aria-disabled')).toBe('true');
+    expect(etl.textContent).toContain('workspace.application.relations.technologyServers.already');
+    expect(mocked.post).not.toHaveBeenCalled();
+
+    fireEvent.click(edge);
+    expect(edge.getAttribute('aria-checked')).toBe('true');
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.technologyServers.add' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1', version_label: '2022', asset_ids: ['srv-3'] }));
+  });
+
+  it('declares without servers when none is ticked', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderSection(relations({ deployment_servers: servers }));
+    await pickSqlServer();
+    fireEvent.click(await screen.findByRole('option', { name: '2019' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.technologyServers.add' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-1', technology_version_id: 'v-2019' }));
+  });
+
+  it('changes the version of a declaration from its version', async () => {
+    mocked.patch.mockResolvedValue({ data: { ok: true } } as never);
+    renderSection(relations());
+    await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    expect(screen.queryByRole('button', { name: 'workspace.application.relations.technologyServers.changeVersion(name=SQL Server)' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.technologyServers.changeVersion(name=Tomcat)' }));
+    fireEvent.click(await screen.findByRole('option', { name: '9.0' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/tec-3/application-links/lnk-3', { technology_version_id: 'v-9' }));
+    expect(screen.getByTestId('location').textContent).toBe('/it/applications/app-1/operations');
+  });
+
+  it('records a declaration on a server when no server of the application carries it', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true, servers: { added: 1, skipped: 0 } } } as never);
+    renderSection(relations({ deployment_servers: servers }));
+    await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    expect(screen.queryByRole('button', { name: 'workspace.application.relations.technologyServers.actionNamed(name=Tomcat)' })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.technologyServers.actionNamed(name=Java)' }));
+    expect(await screen.findByText('workspace.application.relations.technologyServers.proposalUnknown(technology=Java)')).toBeTruthy();
+    const record = screen.getByRole('button', { name: 'workspace.application.relations.technologyServers.recordOn(count=0)' });
+    expect((record as HTMLButtonElement).disabled).toBe(true);
+    fireEvent.click(screen.getByRole('menuitemcheckbox', { name: /srv-etl-1/ }));
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.technologyServers.recordOn(count=1)' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/technologies', { id: 'tec-4', technology_version_id: null, asset_ids: ['srv-1'] }));
+  });
+
+  it('offers no server and no action without deployment servers', async () => {
+    renderSection(relations());
+    await screen.findByRole('table', { name: 'workspace.application.relations.sections.technologies' });
+    expect(screen.queryByRole('button', { name: /technologyServers\.actionNamed/ })).toBeNull();
   });
 
   it('stays read-only without the right to edit technologies', async () => {
     auth.readOnly = ['infrastructure'];
-    renderSection(relations());
+    renderSection(relations({ deployment_servers: servers }));
     const section = await screen.findByRole('region', { name: 'workspace.application.relations.sections.technologies' });
+    await within(section).findByRole('table');
     expect(within(section).queryByText('workspace.application.relations.add')).toBeNull();
     expect(within(section).queryByRole('button', { name: /relations\.remove/ })).toBeNull();
+    expect(within(section).queryByRole('button', { name: /technologyServers/ })).toBeNull();
   });
 
   it('hides the section when the caller cannot read technologies', async () => {

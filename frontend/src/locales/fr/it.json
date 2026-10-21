@@ -1782,7 +1782,18 @@
         "remove": "Délier {{name}}",
         "suggestions_one": "{{count}} suggestion",
         "suggestions_other": "{{count}} suggestions",
-        "total": "Total"
+        "total": "Total",
+        "technologyServers": {
+          "proposal": "Renseigner aussi {{technology}} {{version}} sur",
+          "proposalUnknown": "Renseigner aussi {{technology}} (version inconnue) sur",
+          "add": "Ajouter",
+          "recordOn_one": "Renseigner sur {{count}} serveur",
+          "recordOn_other": "Renseigner sur {{count}} serveurs",
+          "already": "Déjà renseignée",
+          "action": "Renseigner sur un serveur",
+          "actionNamed": "Renseigner {{name}} sur un serveur",
+          "changeVersion": "Modifier la version de {{name}}"
+        }
       },
       "untitled": "Application sans nom",
       "previous": "Application précédente",

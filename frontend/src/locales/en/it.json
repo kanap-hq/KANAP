@@ -1782,7 +1782,18 @@
         "remove": "Unlink {{name}}",
         "suggestions_one": "{{count}} suggestion",
         "suggestions_other": "{{count}} suggestions",
-        "total": "Total"
+        "total": "Total",
+        "technologyServers": {
+          "proposal": "Also record {{technology}} {{version}} on",
+          "proposalUnknown": "Also record {{technology}} (version unknown) on",
+          "add": "Add",
+          "recordOn_one": "Record on {{count}} server",
+          "recordOn_other": "Record on {{count}} servers",
+          "already": "Already recorded",
+          "action": "Record on a server",
+          "actionNamed": "Record {{name}} on a server",
+          "changeVersion": "Change the version of {{name}}"
+        }
       },
       "untitled": "Untitled application",
       "previous": "Previous application",

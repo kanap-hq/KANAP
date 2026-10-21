@@ -864,6 +864,8 @@ export class ApplicationsController {
   /**
    * Link one object (`kind`: budget_lines, contracts, processes, projects, requests, tasks,
    * technologies); the caller must read its module, and edit it for processes and technologies.
+   * A technology also takes its version (`technology_version_id` or `version_label`, none: unknown)
+   * and the deployment servers to record it on (`asset_ids`).
    */
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
@@ -871,10 +873,14 @@ export class ApplicationsController {
   async linkRelation(
     @Param('id') id: string,
     @Param('kind') kind: string,
-    @Body() body: { id?: string },
+    @Body() body: { id?: string; technology_version_id?: string | null; version_label?: string; asset_ids?: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
-    return this.relations.setLink(relationKindOrThrow(kind), id, String(body?.id ?? ''), true, await this.relationsContext(ctx));
+    const relationKind = relationKindOrThrow(kind);
+    const link = relationKind === 'technologies'
+      ? { technology_version_id: body?.technology_version_id, version_label: body?.version_label, asset_ids: body?.asset_ids }
+      : {};
+    return this.relations.setLink(relationKind, id, String(body?.id ?? ''), true, await this.relationsContext(ctx), link);
   }
 
   @UseGuards(PermissionGuard)
