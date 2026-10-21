@@ -9,6 +9,564 @@
   },
   "products": [
     {
+      "key": "ansible-core",
+      "name": "Ansible (core)",
+      "editor": "Red Hat",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: a:redhat:ansible_engine (up to 3.5) and a:redhat:ansible (2.10 and earlier) do not follow the ansible-core 2.x versions the catalog keeps (2.12 to 2.21). a:redhat:ansible_core does not exist. a:ansible:ansible, which endoflife.date publishes, names one CVE from 2016 and no CPE name.",
+      "source_url": "https://endoflife.date/ansible-core",
+      "versions": [
+        {
+          "key": "2.21",
+          "label": "2.21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-31",
+          "standard_support_end": "2027-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.20",
+          "label": "2.20",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-03",
+          "standard_support_end": "2027-05-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.19",
+          "label": "2.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-21",
+          "standard_support_end": "2026-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.18",
+          "label": "2.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-04",
+          "standard_support_end": "2026-05-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.17",
+          "label": "2.17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-20",
+          "standard_support_end": "2025-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.16",
+          "label": "2.16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-06",
+          "standard_support_end": "2025-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.15",
+          "label": "2.15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-22",
+          "standard_support_end": "2024-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.14",
+          "label": "2.14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-07",
+          "standard_support_end": "2024-05-20",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "azure-devops-server",
+      "name": "Azure DevOps Server",
+      "editor": "Microsoft",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "o:microsoft:azure_devops_server"
+      ],
+      "source_url": "https://endoflife.date/azure-devops-server",
+      "versions": [
+        {
+          "key": "continuous",
+          "label": "Azure DevOps Server",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-09",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2022.2",
+          "label": "2022 Update 2",
+          "cpe_version": "2022",
+          "build_prefixes": [
+            "2022.2"
+          ],
+          "release_date": "2024-07-09",
+          "standard_support_end": "2028-01-11",
+          "extended_support_end": "2033-01-11"
+        },
+        {
+          "key": "2022.1",
+          "label": "2022 Update 1",
+          "cpe_version": "2022",
+          "build_prefixes": [
+            "2022.1"
+          ],
+          "release_date": "2023-11-28",
+          "standard_support_end": "2028-01-11",
+          "extended_support_end": "2033-01-11"
+        },
+        {
+          "key": "2022.0",
+          "label": "2022",
+          "cpe_version": null,
+          "build_prefixes": [
+            "2022.0"
+          ],
+          "release_date": "2022-12-06",
+          "standard_support_end": "2028-01-11",
+          "extended_support_end": "2033-01-11"
+        },
+        {
+          "key": "2020.1",
+          "label": "2020 Update 1",
+          "cpe_version": "2020",
+          "build_prefixes": [
+            "2020.1"
+          ],
+          "release_date": "2021-05-25",
+          "standard_support_end": "2025-10-14",
+          "extended_support_end": "2030-10-08"
+        },
+        {
+          "key": "2020.0",
+          "label": "2020",
+          "cpe_version": null,
+          "build_prefixes": [
+            "2020.0"
+          ],
+          "release_date": "2020-08-25",
+          "standard_support_end": "2025-10-14",
+          "extended_support_end": "2030-10-08"
+        },
+        {
+          "key": "2019.1",
+          "label": "2019 Update 1",
+          "cpe_version": "2019",
+          "build_prefixes": [
+            "2019.1"
+          ],
+          "release_date": "2019-08-20",
+          "standard_support_end": "2024-04-09",
+          "extended_support_end": "2029-04-10"
+        },
+        {
+          "key": "2019.0",
+          "label": "2019",
+          "cpe_version": null,
+          "build_prefixes": [
+            "2019.0"
+          ],
+          "release_date": "2019-03-05",
+          "standard_support_end": "2024-04-09",
+          "extended_support_end": "2029-04-10"
+        }
+      ]
+    },
+    {
+      "key": "bitbucket",
+      "name": "Bitbucket",
+      "editor": "Atlassian",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:atlassian:bitbucket",
+        "a:atlassian:bitbucket_data_center",
+        "a:atlassian:bitbucket_server"
+      ],
+      "source_url": "https://endoflife.date/bitbucket",
+      "versions": [
+        {
+          "key": "10.5",
+          "label": "10.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-28",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "10.4",
+          "label": "10.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-12",
+          "standard_support_end": "2028-07-21",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.3",
+          "label": "10.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-12",
+          "standard_support_end": "2028-05-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.2",
+          "label": "10.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-03",
+          "standard_support_end": "2028-03-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.1",
+          "label": "10.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-20",
+          "standard_support_end": "2027-11-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.0",
+          "label": "10.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-07",
+          "standard_support_end": "2027-09-08",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.6",
+          "label": "9.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-17",
+          "standard_support_end": "2027-01-18",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.5",
+          "label": "9.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-07",
+          "standard_support_end": "2027-01-07",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "chef-infra-server",
+      "name": "Chef Infra Server",
+      "editor": "Progress",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:progress:chef_infra_server"
+      ],
+      "source_url": "https://endoflife.date/chef-infra-server",
+      "versions": [
+        {
+          "key": "15",
+          "label": "15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-06-13",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "14",
+          "label": "14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-06-08",
+          "standard_support_end": "2022-06-13",
+          "extended_support_end": "2025-12-31"
+        }
+      ]
+    },
+    {
+      "key": "confluence",
+      "name": "Confluence",
+      "editor": "Atlassian",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:atlassian:confluence",
+        "a:atlassian:confluence_data_center",
+        "a:atlassian:confluence_server"
+      ],
+      "source_url": "https://endoflife.date/confluence",
+      "versions": [
+        {
+          "key": "11.0",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-10-09",
+          "standard_support_end": "2028-10-08",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.2",
+          "label": "10.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-02",
+          "standard_support_end": "2027-12-02",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.1",
+          "label": "10.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-07",
+          "standard_support_end": "2027-10-07",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.0",
+          "label": "10.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-05",
+          "standard_support_end": "2027-08-05",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.5",
+          "label": "9.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-04",
+          "standard_support_end": "2027-06-04",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.4",
+          "label": "9.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-31",
+          "standard_support_end": "2027-04-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.3",
+          "label": "9.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-04",
+          "standard_support_end": "2027-02-04",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.2",
+          "label": "9.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-09",
+          "standard_support_end": "2026-12-10",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "gitlab",
+      "name": "GitLab",
+      "editor": "GitLab",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:gitlab:gitlab"
+      ],
+      "source_url": "https://endoflife.date/gitlab",
+      "versions": [
+        {
+          "key": "19.5",
+          "label": "19.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-10-15",
+          "standard_support_end": "2026-11-19",
+          "extended_support_end": "2027-01-21"
+        },
+        {
+          "key": "19.4",
+          "label": "19.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-17",
+          "standard_support_end": "2026-10-15",
+          "extended_support_end": "2026-12-17"
+        },
+        {
+          "key": "19.3",
+          "label": "19.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-20",
+          "standard_support_end": "2026-09-17",
+          "extended_support_end": "2026-11-19"
+        },
+        {
+          "key": "19.2",
+          "label": "19.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-16",
+          "standard_support_end": "2026-08-20",
+          "extended_support_end": "2026-10-15"
+        },
+        {
+          "key": "19.1",
+          "label": "19.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-06-18",
+          "standard_support_end": "2026-07-16",
+          "extended_support_end": "2026-09-17"
+        },
+        {
+          "key": "19.0",
+          "label": "19.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-21",
+          "standard_support_end": "2026-06-18",
+          "extended_support_end": "2026-08-20"
+        },
+        {
+          "key": "18.11",
+          "label": "18.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-16",
+          "standard_support_end": "2026-05-21",
+          "extended_support_end": "2026-07-16"
+        },
+        {
+          "key": "18.10",
+          "label": "18.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-19",
+          "standard_support_end": "2026-04-16",
+          "extended_support_end": "2026-06-18"
+        }
+      ]
+    },
+    {
+      "key": "consul",
+      "name": "HashiCorp Consul",
+      "editor": "HashiCorp (IBM)",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:hashicorp:consul"
+      ],
+      "source_url": "https://endoflife.date/consul",
+      "versions": [
+        {
+          "key": "2.0",
+          "label": "2.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-24",
+          "standard_support_end": "2028-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.22",
+          "label": "1.22",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-27",
+          "standard_support_end": "2026-10-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.21",
+          "label": "1.21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-06",
+          "standard_support_end": "2027-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.20",
+          "label": "1.20",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-14",
+          "standard_support_end": "2026-05-24",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.19",
+          "label": "1.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-06-12",
+          "standard_support_end": "2025-10-27",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.18",
+          "label": "1.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-02-26",
+          "standard_support_end": "2026-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.17",
+          "label": "1.17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-03",
+          "standard_support_end": "2024-10-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.16",
+          "label": "1.16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-06-26",
+          "standard_support_end": "2024-06-12",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "jenkins",
       "name": "Jenkins",
       "editor": "Jenkins",
@@ -97,6 +655,265 @@
           "build_prefixes": [],
           "release_date": "2024-09-27",
           "standard_support_end": "2025-02-05",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "artifactory",
+      "name": "JFrog Artifactory",
+      "editor": "JFrog",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:jfrog:artifactory"
+      ],
+      "source_url": "https://endoflife.date/artifactory",
+      "versions": [
+        {
+          "key": "7.161",
+          "label": "7.161",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-27",
+          "standard_support_end": "2028-01-27",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.146",
+          "label": "7.146",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-16",
+          "standard_support_end": "2027-10-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.133",
+          "label": "7.133",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-30",
+          "standard_support_end": "2027-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.125",
+          "label": "7.125",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-30",
+          "standard_support_end": "2027-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.117",
+          "label": "7.117",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-14",
+          "standard_support_end": "2027-01-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.111",
+          "label": "7.111",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-23",
+          "standard_support_end": "2026-10-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.104",
+          "label": "7.104",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-29",
+          "standard_support_end": "2026-07-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.98",
+          "label": "7.98",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-29",
+          "standard_support_end": "2026-04-29",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "jira-service-management",
+      "name": "Jira Service Management",
+      "editor": "Atlassian",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:atlassian:jira_service_desk",
+        "a:atlassian:jira_service_management"
+      ],
+      "source_url": "https://endoflife.date/jira-service-management",
+      "versions": [
+        {
+          "key": "11.3",
+          "label": "11.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-03",
+          "standard_support_end": "2027-12-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.2",
+          "label": "11.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-06",
+          "standard_support_end": "2027-11-06",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.1",
+          "label": "11.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-24",
+          "standard_support_end": "2027-09-24",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.0",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-13",
+          "standard_support_end": "2027-08-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.7",
+          "label": "10.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-17",
+          "standard_support_end": "2027-06-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.6",
+          "label": "10.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-23",
+          "standard_support_end": "2027-04-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.5",
+          "label": "10.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-12",
+          "standard_support_end": "2027-03-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.4",
+          "label": "10.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-22",
+          "standard_support_end": "2027-01-22",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "jira-software",
+      "name": "Jira Software",
+      "editor": "Atlassian",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:atlassian:jira",
+        "a:atlassian:jira_data_center",
+        "a:atlassian:jira_server",
+        "a:atlassian:jira_software_data_center"
+      ],
+      "source_url": "https://endoflife.date/jira-software",
+      "versions": [
+        {
+          "key": "11.3",
+          "label": "11.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-03",
+          "standard_support_end": "2027-12-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.2",
+          "label": "11.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-06",
+          "standard_support_end": "2027-11-06",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.1",
+          "label": "11.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-24",
+          "standard_support_end": "2027-09-24",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.0",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-13",
+          "standard_support_end": "2027-08-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.7",
+          "label": "10.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-13",
+          "standard_support_end": "2027-06-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.6",
+          "label": "10.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-23",
+          "standard_support_end": "2027-04-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.5",
+          "label": "10.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-12",
+          "standard_support_end": "2027-03-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.4",
+          "label": "10.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-22",
+          "standard_support_end": "2027-01-22",
           "extended_support_end": null
         }
       ]
@@ -278,6 +1095,319 @@
       ]
     },
     {
+      "key": "salt",
+      "name": "Salt",
+      "editor": "Broadcom",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:saltstack:salt"
+      ],
+      "source_url": "https://endoflife.date/salt",
+      "versions": [
+        {
+          "key": "3008",
+          "label": "3008",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-27",
+          "standard_support_end": "2027-06-30",
+          "extended_support_end": "2028-06-30"
+        },
+        {
+          "key": "3007",
+          "label": "3007",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-03-06",
+          "standard_support_end": "2026-06-30",
+          "extended_support_end": "2026-07-31"
+        },
+        {
+          "key": "3006",
+          "label": "3006",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-04-18",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": "2027-06-30"
+        },
+        {
+          "key": "3005",
+          "label": "3005",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-08-22",
+          "standard_support_end": "2023-08-25",
+          "extended_support_end": "2024-02-25"
+        },
+        {
+          "key": "3004",
+          "label": "3004",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-10-12",
+          "standard_support_end": "2022-10-18",
+          "extended_support_end": "2023-04-18"
+        }
+      ]
+    },
+    {
+      "key": "sonarqube-server",
+      "name": "SonarQube Server",
+      "editor": "SonarSource",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:sonarsource:sonarqube"
+      ],
+      "source_url": "https://endoflife.date/sonarqube-server",
+      "versions": [
+        {
+          "key": "2026.5",
+          "label": "2026.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-29",
+          "standard_support_end": "2027-10-01",
+          "extended_support_end": "2028-03-01"
+        },
+        {
+          "key": "2026.4",
+          "label": "2026.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-23",
+          "standard_support_end": "2026-09-29",
+          "extended_support_end": null
+        },
+        {
+          "key": "2026.3",
+          "label": "2026.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-21",
+          "standard_support_end": "2026-07-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "2026.2",
+          "label": "2026.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-24",
+          "standard_support_end": "2026-05-21",
+          "extended_support_end": null
+        },
+        {
+          "key": "2026.1",
+          "label": "2026.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-30",
+          "standard_support_end": "2027-01-30",
+          "extended_support_end": "2027-08-02"
+        },
+        {
+          "key": "2025.6",
+          "label": "2025.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-12",
+          "standard_support_end": "2026-01-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2025.5",
+          "label": "2025.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-26",
+          "standard_support_end": "2025-12-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "2025.4",
+          "label": "2025.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-30",
+          "standard_support_end": "2026-07-30",
+          "extended_support_end": "2027-01-30"
+        }
+      ]
+    },
+    {
+      "key": "nexus",
+      "name": "Sonatype Nexus Repository",
+      "editor": "Sonatype",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:sonatype:nexus_repository_manager"
+      ],
+      "source_url": "https://endoflife.date/nexus",
+      "versions": [
+        {
+          "key": "3.97",
+          "label": "3.97",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-10-14",
+          "standard_support_end": "2027-10-14",
+          "extended_support_end": "2028-04-14"
+        },
+        {
+          "key": "3.96",
+          "label": "3.96",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-01",
+          "standard_support_end": "2027-09-01",
+          "extended_support_end": "2028-03-01"
+        },
+        {
+          "key": "3.95",
+          "label": "3.95",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-05",
+          "standard_support_end": "2027-08-05",
+          "extended_support_end": "2028-02-05"
+        },
+        {
+          "key": "3.94",
+          "label": "3.94",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-09",
+          "standard_support_end": "2027-07-09",
+          "extended_support_end": "2028-01-09"
+        },
+        {
+          "key": "3.93",
+          "label": "3.93",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-06-04",
+          "standard_support_end": "2027-06-04",
+          "extended_support_end": "2027-12-04"
+        },
+        {
+          "key": "3.92",
+          "label": "3.92",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-07",
+          "standard_support_end": "2027-05-07",
+          "extended_support_end": "2027-11-07"
+        },
+        {
+          "key": "3.91",
+          "label": "3.91",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-07",
+          "standard_support_end": "2027-04-07",
+          "extended_support_end": "2027-10-07"
+        },
+        {
+          "key": "3.90",
+          "label": "3.90",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-05",
+          "standard_support_end": "2027-03-05",
+          "extended_support_end": "2027-09-05"
+        }
+      ]
+    },
+    {
+      "key": "terraform",
+      "name": "Terraform",
+      "editor": "HashiCorp (IBM)",
+      "family": "administration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:hashicorp:terraform"
+      ],
+      "source_url": "https://endoflife.date/terraform",
+      "versions": [
+        {
+          "key": "1.16",
+          "label": "1.16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-26",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "1.15",
+          "label": "1.15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-29",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "1.14",
+          "label": "1.14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-19",
+          "standard_support_end": "2026-08-26",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.13",
+          "label": "1.13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-20",
+          "standard_support_end": "2026-04-29",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.12",
+          "label": "1.12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-14",
+          "standard_support_end": "2025-11-19",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.11",
+          "label": "1.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-27",
+          "standard_support_end": "2025-08-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.10",
+          "label": "1.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-26",
+          "standard_support_end": "2025-05-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.9",
+          "label": "1.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-06-26",
+          "standard_support_end": "2025-02-27",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "tomcat",
       "name": "Apache Tomcat",
       "editor": "Apache Software Foundation",
@@ -339,6 +1469,91 @@
           "release_date": "2016-03-17",
           "standard_support_end": "2024-03-31",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "drupal",
+      "name": "Drupal",
+      "editor": "Drupal",
+      "family": "application_server",
+      "mode": "installed",
+      "cpe_products": [
+        "a:drupal:drupal"
+      ],
+      "source_url": "https://endoflife.date/drupal",
+      "versions": [
+        {
+          "key": "11.4",
+          "label": "11.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-01",
+          "standard_support_end": "2027-01-01",
+          "extended_support_end": "2027-07-07"
+        },
+        {
+          "key": "11.3",
+          "label": "11.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-17",
+          "standard_support_end": "2026-06-16",
+          "extended_support_end": "2026-12-16"
+        },
+        {
+          "key": "10.6",
+          "label": "10.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-17",
+          "standard_support_end": "2026-06-16",
+          "extended_support_end": "2026-12-16"
+        },
+        {
+          "key": "11.2",
+          "label": "11.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-18",
+          "standard_support_end": "2025-12-10",
+          "extended_support_end": "2026-07-01"
+        },
+        {
+          "key": "10.5",
+          "label": "10.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-18",
+          "standard_support_end": "2025-12-17",
+          "extended_support_end": "2026-07-01"
+        },
+        {
+          "key": "10.4",
+          "label": "10.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-17",
+          "standard_support_end": "2025-06-18",
+          "extended_support_end": "2025-12-10"
+        },
+        {
+          "key": "11.1",
+          "label": "11.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-16",
+          "standard_support_end": "2025-06-18",
+          "extended_support_end": "2025-12-10"
+        },
+        {
+          "key": "11.0",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-08-02",
+          "standard_support_end": "2024-12-16",
+          "extended_support_end": "2025-06-16"
         }
       ]
     },
@@ -546,6 +1761,91 @@
           "release_date": "2016-05-01",
           "standard_support_end": "2023-12-31",
           "extended_support_end": "2030-12-31"
+        }
+      ]
+    },
+    {
+      "key": "wordpress",
+      "name": "WordPress",
+      "editor": "WordPress",
+      "family": "application_server",
+      "mode": "installed",
+      "cpe_products": [
+        "a:wordpress:wordpress"
+      ],
+      "source_url": "https://endoflife.date/wordpress",
+      "versions": [
+        {
+          "key": "7.1",
+          "label": "7.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-19",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.0",
+          "label": "7.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-20",
+          "standard_support_end": "2026-08-19",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.9",
+          "label": "6.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-02",
+          "standard_support_end": "2026-05-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.8",
+          "label": "6.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2025-12-02",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.7",
+          "label": "6.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-12",
+          "standard_support_end": "2025-04-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.6",
+          "label": "6.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-16",
+          "standard_support_end": "2024-11-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.5",
+          "label": "6.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-04-02",
+          "standard_support_end": "2024-07-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.4",
+          "label": "6.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-07",
+          "standard_support_end": "2024-04-02",
+          "extended_support_end": null
         }
       ]
     },
@@ -1426,6 +2726,174 @@
       ]
     },
     {
+      "key": "vmware-srm",
+      "name": "VMware Live Site Recovery",
+      "editor": "Broadcom",
+      "family": "backup",
+      "mode": "installed",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under a VMware Site Recovery Manager product. a:vmware:site_recovery_manager and a:vmware:srm do not exist, and no keyword search of the CPE dictionary finds the product.",
+      "source_url": "https://endoflife.date/vmware-srm",
+      "versions": [
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-12",
+          "standard_support_end": "2028-08-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.0",
+          "label": "9.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-03-19",
+          "standard_support_end": "2027-09-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.8",
+          "label": "8.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-21",
+          "standard_support_end": "2025-10-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.7",
+          "label": "8.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-04-18",
+          "standard_support_end": "2025-10-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.6",
+          "label": "8.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-10-11",
+          "standard_support_end": "2025-10-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.5",
+          "label": "8.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-10-05",
+          "standard_support_end": "2023-04-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.4",
+          "label": "8.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-03-09",
+          "standard_support_end": "2023-04-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.3",
+          "label": "8.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-04-01",
+          "standard_support_end": "2023-04-01",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "zerto",
+      "name": "Zerto",
+      "editor": "HPE",
+      "family": "backup",
+      "mode": "installed",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under a Zerto product. a:zerto:zerto_virtual_manager and a:hpe:zerto do not exist, and the CPE dictionary holds no Zerto entry.",
+      "source_url": "https://endoflife.date/zerto",
+      "versions": [
+        {
+          "key": "10.9",
+          "label": "10.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-13",
+          "standard_support_end": "2027-05-13",
+          "extended_support_end": "2028-05-13"
+        },
+        {
+          "key": "10.8.11",
+          "label": "10.8.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-03",
+          "standard_support_end": "2027-03-03",
+          "extended_support_end": "2028-03-03"
+        },
+        {
+          "key": "10.8",
+          "label": "10.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-28",
+          "standard_support_end": "2026-10-28",
+          "extended_support_end": "2027-10-28"
+        },
+        {
+          "key": "10.0_u7",
+          "label": "10.0 Update 7",
+          "cpe_version": "10.0",
+          "build_prefixes": [],
+          "release_date": "2025-05-06",
+          "standard_support_end": "2026-05-06",
+          "extended_support_end": "2027-05-06"
+        },
+        {
+          "key": "10.0_u6",
+          "label": "10.0 Update 6",
+          "cpe_version": "10.0",
+          "build_prefixes": [],
+          "release_date": "2024-12-03",
+          "standard_support_end": "2026-12-03",
+          "extended_support_end": "2027-12-03"
+        },
+        {
+          "key": "10.0_u5",
+          "label": "10.0 Update 5",
+          "cpe_version": "10.0",
+          "build_prefixes": [],
+          "release_date": "2024-08-06",
+          "standard_support_end": "2024-12-03",
+          "extended_support_end": "2026-08-06"
+        },
+        {
+          "key": "10.0_u4",
+          "label": "10.0 Update 4",
+          "cpe_version": "10.0",
+          "build_prefixes": [],
+          "release_date": "2024-05-15",
+          "standard_support_end": "2024-08-06",
+          "extended_support_end": "2026-05-15"
+        },
+        {
+          "key": "10.0_u3",
+          "label": "10.0 Update 3",
+          "cpe_version": "10.0",
+          "build_prefixes": [],
+          "release_date": "2024-02-12",
+          "standard_support_end": "2024-05-15",
+          "extended_support_end": "2026-02-12"
+        }
+      ]
+    },
+    {
       "key": "amazon-eks",
       "name": "Amazon EKS",
       "editor": "Amazon Web Services",
@@ -1967,6 +3435,91 @@
       ]
     },
     {
+      "key": "istio",
+      "name": "Istio",
+      "editor": "CNCF",
+      "family": "container",
+      "mode": "installed",
+      "cpe_products": [
+        "a:istio:istio"
+      ],
+      "source_url": "https://endoflife.date/istio",
+      "versions": [
+        {
+          "key": "1.31",
+          "label": "1.31",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-31",
+          "standard_support_end": "2027-02-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.30",
+          "label": "1.30",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-18",
+          "standard_support_end": "2026-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.29",
+          "label": "1.29",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-02-16",
+          "standard_support_end": "2026-10-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.28",
+          "label": "1.28",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-05",
+          "standard_support_end": "2026-07-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.27",
+          "label": "1.27",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-11",
+          "standard_support_end": "2026-04-07",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.26",
+          "label": "1.26",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-08",
+          "standard_support_end": "2025-12-22",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.25",
+          "label": "1.25",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-03",
+          "standard_support_end": "2025-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.24",
+          "label": "1.24",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-07",
+          "standard_support_end": "2025-06-24",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "kubernetes",
       "name": "Kubernetes",
       "editor": "Cloud Native Computing Foundation",
@@ -2324,6 +3877,580 @@
       ]
     },
     {
+      "key": "amazon-aurora-mysql",
+      "name": "Amazon Aurora MySQL",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [
+        "a:amazon:aurora_mysql"
+      ],
+      "source_url": "https://endoflife.date/amazon-aurora-mysql",
+      "versions": [
+        {
+          "key": "8.4",
+          "label": "8.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-21",
+          "standard_support_end": "2032-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "3",
+          "label": "3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-11-23",
+          "standard_support_end": "2028-04-30",
+          "extended_support_end": "2029-07-31"
+        },
+        {
+          "key": "2",
+          "label": "2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-02-06",
+          "standard_support_end": "2024-10-31",
+          "extended_support_end": "2029-06-30"
+        },
+        {
+          "key": "1",
+          "label": "1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-07-27",
+          "standard_support_end": "2023-02-28",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "amazon-aurora-postgresql",
+      "name": "Amazon Aurora PostgreSQL",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon Aurora PostgreSQL product. a:amazon:aurora_postgresql does not exist.",
+      "source_url": "https://endoflife.date/amazon-aurora-postgresql",
+      "versions": [
+        {
+          "key": "18",
+          "label": "18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-02-26",
+          "standard_support_end": "2031-02-28",
+          "extended_support_end": "2034-02-28"
+        },
+        {
+          "key": "17",
+          "label": "17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-20",
+          "standard_support_end": "2030-02-28",
+          "extended_support_end": "2033-02-28"
+        },
+        {
+          "key": "16",
+          "label": "16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-14",
+          "standard_support_end": "2029-02-28",
+          "extended_support_end": "2032-02-28"
+        },
+        {
+          "key": "15",
+          "label": "15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-10",
+          "standard_support_end": "2028-02-29",
+          "extended_support_end": "2031-02-28"
+        },
+        {
+          "key": "14",
+          "label": "14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-09-30",
+          "standard_support_end": "2027-02-28",
+          "extended_support_end": "2030-02-28"
+        },
+        {
+          "key": "13",
+          "label": "13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-09-24",
+          "standard_support_end": "2026-02-28",
+          "extended_support_end": "2029-02-28"
+        },
+        {
+          "key": "12",
+          "label": "12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-11-14",
+          "standard_support_end": "2025-02-28",
+          "extended_support_end": "2028-02-29"
+        },
+        {
+          "key": "11",
+          "label": "11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-10-18",
+          "standard_support_end": "2024-02-29",
+          "extended_support_end": "2027-03-31"
+        }
+      ]
+    },
+    {
+      "key": "amazon-documentdb",
+      "name": "Amazon DocumentDB",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon DocumentDB product. a:amazon:documentdb does not exist; the only dictionary entry is a:amazon:documentdb_mcp_server, a client tool.",
+      "source_url": "https://endoflife.date/amazon-documentdb",
+      "versions": [
+        {
+          "key": "8.0",
+          "label": "8.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-14",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "5.0",
+          "label": "5.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-03-01",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "4.0",
+          "label": "4.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-11-09",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.6",
+          "label": "3.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-01-09",
+          "standard_support_end": "2026-03-30",
+          "extended_support_end": "2029-03-30"
+        }
+      ]
+    },
+    {
+      "key": "amazon-elasticache-redis",
+      "name": "Amazon ElastiCache (Redis OSS / Valkey)",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon ElastiCache product. a:amazon:elasticache does not exist.",
+      "source_url": "https://endoflife.date/amazon-elasticache-redis",
+      "versions": [
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-04-12",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "6",
+          "label": "6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-10-13",
+          "standard_support_end": "2027-01-31",
+          "extended_support_end": "2030-01-31"
+        },
+        {
+          "key": "5",
+          "label": "5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-10-17",
+          "standard_support_end": "2026-01-31",
+          "extended_support_end": "2029-01-31"
+        },
+        {
+          "key": "4",
+          "label": "4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2017-11-17",
+          "standard_support_end": "2026-01-31",
+          "extended_support_end": "2029-01-31"
+        }
+      ]
+    },
+    {
+      "key": "amazon-opensearch",
+      "name": "Amazon OpenSearch Service",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon OpenSearch Service product. a:amazon:opensearch_service does not exist, and a:amazon:opensearch (11 CVE) is the family of OpenSearch client libraries.",
+      "source_url": "https://endoflife.date/amazon-opensearch",
+      "versions": [
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-18",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-24",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.1",
+          "label": "3.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-09",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2.19",
+          "label": "2.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-30",
+          "standard_support_end": "2027-11-07",
+          "extended_support_end": "2030-11-07"
+        },
+        {
+          "key": "2.17",
+          "label": "2.17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-13",
+          "standard_support_end": "2027-11-07",
+          "extended_support_end": "2028-11-07"
+        },
+        {
+          "key": "2.15",
+          "label": "2.15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-11",
+          "standard_support_end": "2027-11-07",
+          "extended_support_end": "2028-11-07"
+        },
+        {
+          "key": "2.13",
+          "label": "2.13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-21",
+          "standard_support_end": "2027-11-07",
+          "extended_support_end": "2028-11-07"
+        },
+        {
+          "key": "2.11",
+          "label": "2.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-17",
+          "standard_support_end": "2027-11-07",
+          "extended_support_end": "2028-11-07"
+        }
+      ]
+    },
+    {
+      "key": "amazon-rds-mariadb",
+      "name": "Amazon RDS for MariaDB",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [
+        "a:amazon:relational_database_service"
+      ],
+      "source_url": "https://endoflife.date/amazon-rds-mariadb",
+      "versions": [
+        {
+          "key": "12.3",
+          "label": "12.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-07",
+          "standard_support_end": "2029-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.8",
+          "label": "11.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-25",
+          "standard_support_end": "2028-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.4",
+          "label": "11.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-15",
+          "standard_support_end": "2029-05-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.11",
+          "label": "10.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-08-21",
+          "standard_support_end": "2028-02-29",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.6",
+          "label": "10.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-03",
+          "standard_support_end": "2026-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.5",
+          "label": "10.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-01-21",
+          "standard_support_end": "2026-08-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.4",
+          "label": "10.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-04-06",
+          "standard_support_end": "2025-02-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.3",
+          "label": "10.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-10-23",
+          "standard_support_end": "2023-10-23",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "amazon-rds-mysql",
+      "name": "Amazon RDS for MySQL",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon RDS for MySQL product. a:amazon:relational_database_service is the RDS for MariaDB entry (CVE-2026-3494, MariaDB 10.11.15).",
+      "source_url": "https://endoflife.date/amazon-rds-mysql",
+      "versions": [
+        {
+          "key": "8.4.9",
+          "label": "8.4.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-21",
+          "standard_support_end": "2027-05-08",
+          "extended_support_end": "2032-07-31"
+        },
+        {
+          "key": "8.0.46",
+          "label": "8.0.46",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-21",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": "2029-07-31"
+        },
+        {
+          "key": "8.4.8",
+          "label": "8.4.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-20",
+          "standard_support_end": "2027-02-03",
+          "extended_support_end": "2032-07-31"
+        },
+        {
+          "key": "8.0.45",
+          "label": "8.0.45",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-20",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": "2029-07-31"
+        },
+        {
+          "key": "8.4.7",
+          "label": "8.4.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-21",
+          "standard_support_end": "2026-11-30",
+          "extended_support_end": "2032-07-31"
+        },
+        {
+          "key": "8.0.44",
+          "label": "8.0.44",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-21",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": "2029-07-31"
+        },
+        {
+          "key": "8.4.6",
+          "label": "8.4.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-22",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": "2032-07-31"
+        },
+        {
+          "key": "8.0.43",
+          "label": "8.0.43",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-22",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": "2029-07-31"
+        }
+      ]
+    },
+    {
+      "key": "amazon-rds-postgresql",
+      "name": "Amazon RDS for PostgreSQL",
+      "editor": "AWS",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon RDS for PostgreSQL product. a:amazon:relational_database_service holds one CVE, CVE-2026-3494, with a MariaDB version (10.11.15) and no PostgreSQL entry.",
+      "source_url": "https://endoflife.date/amazon-rds-postgresql",
+      "versions": [
+        {
+          "key": "18",
+          "label": "18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-14",
+          "standard_support_end": "2031-02-28",
+          "extended_support_end": "2034-02-28"
+        },
+        {
+          "key": "17",
+          "label": "17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-14",
+          "standard_support_end": "2030-02-28",
+          "extended_support_end": "2033-02-28"
+        },
+        {
+          "key": "16",
+          "label": "16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-17",
+          "standard_support_end": "2029-02-28",
+          "extended_support_end": "2032-02-29"
+        },
+        {
+          "key": "15",
+          "label": "15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-02-27",
+          "standard_support_end": "2028-02-29",
+          "extended_support_end": "2031-02-28"
+        },
+        {
+          "key": "14",
+          "label": "14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-03",
+          "standard_support_end": "2027-02-28",
+          "extended_support_end": "2030-02-28"
+        },
+        {
+          "key": "13",
+          "label": "13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-02-24",
+          "standard_support_end": "2026-02-28",
+          "extended_support_end": "2029-02-28"
+        },
+        {
+          "key": "12",
+          "label": "12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-03-31",
+          "standard_support_end": "2025-02-28",
+          "extended_support_end": "2028-02-29"
+        },
+        {
+          "key": "11",
+          "label": "11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-03-13",
+          "standard_support_end": "2024-02-29",
+          "extended_support_end": "2027-03-31"
+        }
+      ]
+    },
+    {
       "key": "apache-cassandra",
       "name": "Apache Cassandra",
       "editor": "Apache Software Foundation",
@@ -2384,6 +4511,275 @@
           "build_prefixes": [],
           "release_date": "2015-11-09",
           "standard_support_end": "2024-09-05",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "solr",
+      "name": "Apache Solr",
+      "editor": "ASF",
+      "family": "database",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:solr"
+      ],
+      "source_url": "https://endoflife.date/solr",
+      "versions": [
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-03",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-05-11",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-03-13",
+          "standard_support_end": "2024-10-25",
+          "extended_support_end": null
+        },
+        {
+          "key": "4",
+          "label": "4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2012-10-11",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3",
+          "label": "3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2011-03-30",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "1",
+          "label": "1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2006-12-22",
+          "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "apache-spark",
+      "name": "Apache Spark",
+      "editor": "ASF",
+      "family": "database",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:spark"
+      ],
+      "source_url": "https://endoflife.date/apache-spark",
+      "versions": [
+        {
+          "key": "4.2",
+          "label": "4.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-14",
+          "standard_support_end": "2028-01-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.1",
+          "label": "4.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-11",
+          "standard_support_end": "2027-06-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.0",
+          "label": "4.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-19",
+          "standard_support_end": "2026-11-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-09",
+          "standard_support_end": "2027-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.4",
+          "label": "3.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-04-07",
+          "standard_support_end": "2024-10-21",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-06-09",
+          "standard_support_end": "2023-12-09",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.2",
+          "label": "3.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-10-06",
+          "standard_support_end": "2023-04-09",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "azure-database-for-mysql",
+      "name": "Azure Database for MySQL",
+      "editor": "Microsoft",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Azure Database for MySQL product. a:microsoft:azure_database_for_mysql and a:microsoft:azure_database_for_mysql_flexible_server do not exist.",
+      "source_url": "https://endoflife.date/azure-database-for-mysql",
+      "versions": [
+        {
+          "key": "8.4",
+          "label": "8.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-01",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "8.0",
+          "label": "8.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-12-11",
+          "standard_support_end": "2027-01-31",
+          "extended_support_end": "2029-05-31"
+        },
+        {
+          "key": "5.7",
+          "label": "5.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-03-20",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": "2029-03-31"
+        }
+      ]
+    },
+    {
+      "key": "azure-database-for-postgresql",
+      "name": "Azure Database for PostgreSQL",
+      "editor": "Microsoft",
+      "family": "database",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [
+        "a:microsoft:azure_database_for_postgresql_flexible_server"
+      ],
+      "source_url": "https://endoflife.date/azure-database-for-postgresql",
+      "versions": [
+        {
+          "key": "18",
+          "label": "18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-25",
+          "standard_support_end": "2030-11-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "17",
+          "label": "17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-09-30",
+          "standard_support_end": "2029-11-08",
+          "extended_support_end": null
+        },
+        {
+          "key": "16",
+          "label": "16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-10-15",
+          "standard_support_end": "2028-11-09",
+          "extended_support_end": null
+        },
+        {
+          "key": "15",
+          "label": "15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-15",
+          "standard_support_end": "2027-11-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "14",
+          "label": "14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-06-29",
+          "standard_support_end": "2026-12-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "13",
+          "label": "13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-05-25",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "12",
+          "label": "12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-09-22",
+          "standard_support_end": "2026-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "11",
+          "label": "11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-07-24",
+          "standard_support_end": "2026-07-31",
           "extended_support_end": null
         }
       ]
@@ -4080,6 +6476,90 @@
       ]
     },
     {
+      "key": "nutanix-aos",
+      "name": "Nutanix AOS",
+      "editor": "Nutanix",
+      "family": "hypervisor",
+      "mode": "installed",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: o:nutanix:aos is in the CPE dictionary (one name, no version) and names no CVE. a:nutanix:aos does not exist. o:nutanix:ahv names 16 CVE, the newest CVE-2021-1087 (2021-04-29), and is the hypervisor, not AOS.",
+      "source_url": "https://endoflife.date/nutanix-aos",
+      "versions": [
+        {
+          "key": "7.6",
+          "label": "7.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-27",
+          "standard_support_end": "2027-10-31",
+          "extended_support_end": "2028-07-31"
+        },
+        {
+          "key": "7.5",
+          "label": "7.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-08",
+          "standard_support_end": "2027-03-31",
+          "extended_support_end": "2027-12-31"
+        },
+        {
+          "key": "7.3",
+          "label": "7.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-24",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": "2027-06-30"
+        },
+        {
+          "key": "7.0",
+          "label": "7.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-04",
+          "standard_support_end": "2026-03-31",
+          "extended_support_end": "2026-12-31"
+        },
+        {
+          "key": "6.10",
+          "label": "6.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-07",
+          "standard_support_end": "2026-01-31",
+          "extended_support_end": "2026-10-31"
+        },
+        {
+          "key": "6.8",
+          "label": "6.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-15",
+          "standard_support_end": "2025-05-31",
+          "extended_support_end": "2025-08-31"
+        },
+        {
+          "key": "6.7",
+          "label": "6.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-08-28",
+          "standard_support_end": "2024-05-31",
+          "extended_support_end": "2024-08-31"
+        },
+        {
+          "key": "6.6",
+          "label": "6.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-01-23",
+          "standard_support_end": "2023-08-31",
+          "extended_support_end": "2023-11-30"
+        }
+      ]
+    },
+    {
       "key": "nutanix-prism",
       "name": "Nutanix Prism",
       "editor": "Nutanix",
@@ -4164,6 +6644,92 @@
       ]
     },
     {
+      "key": "horizon",
+      "name": "Omnissa Horizon",
+      "editor": "Omnissa",
+      "family": "hypervisor",
+      "mode": "installed",
+      "cpe_products": [
+        "a:vmware:horizon",
+        "a:vmware:horizon_view"
+      ],
+      "source_url": "https://endoflife.date/horizon",
+      "versions": [
+        {
+          "key": "8.2606",
+          "label": "8.2606",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-24",
+          "standard_support_end": "2029-08-24",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2603",
+          "label": "8.2603",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-14",
+          "standard_support_end": "2029-04-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2512",
+          "label": "8.2512",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-16",
+          "standard_support_end": "2028-12-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2506",
+          "label": "8.2506",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-31",
+          "standard_support_end": "2028-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2503",
+          "label": "8.2503",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2028-04-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2412",
+          "label": "8.2412",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-28",
+          "standard_support_end": "2028-01-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2406",
+          "label": "8.2406",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-25",
+          "standard_support_end": "2027-07-25",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2312",
+          "label": "8.2312",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-01-23",
+          "standard_support_end": "2027-01-23",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "ovirt",
       "name": "oVirt",
       "editor": "oVirt",
@@ -4183,6 +6749,132 @@
           "build_prefixes": [],
           "release_date": "2022-03-16",
           "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "proxmox-ve",
+      "name": "Proxmox VE",
+      "editor": "Proxmox",
+      "family": "hypervisor",
+      "mode": "installed",
+      "cpe_products": [
+        "a:proxmox:virtual_environment"
+      ],
+      "source_url": "https://endoflife.date/proxmox-ve",
+      "versions": [
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-05",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-06-22",
+          "standard_support_end": "2026-08-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-07-06",
+          "standard_support_end": "2024-07-31",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "vmware-cloud-foundation",
+      "name": "VMware Cloud Foundation",
+      "editor": "Broadcom",
+      "family": "hypervisor",
+      "mode": "installed",
+      "cpe_products": [
+        "a:vmware:cloud_foundation",
+        "o:vmware:cloud_foundation"
+      ],
+      "source_url": "https://endoflife.date/vmware-cloud-foundation",
+      "versions": [
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-12",
+          "standard_support_end": "2028-08-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.0",
+          "label": "9.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-06-17",
+          "standard_support_end": "2027-09-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "5.2",
+          "label": "5.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-23",
+          "standard_support_end": "2027-10-11",
+          "extended_support_end": null
+        },
+        {
+          "key": "5.1",
+          "label": "5.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-07",
+          "standard_support_end": "2027-06-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "5.0",
+          "label": "5.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-06-01",
+          "standard_support_end": "2027-06-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.5",
+          "label": "4.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-10-11",
+          "standard_support_end": "2025-05-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.11",
+          "label": "3.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-14",
+          "standard_support_end": "2023-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.4",
+          "label": "4.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-10",
+          "standard_support_end": "2024-09-30",
           "extended_support_end": null
         }
       ]
@@ -4234,6 +6926,94 @@
           "release_date": "2020-04-02",
           "standard_support_end": "2025-10-02",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "xcp-ng",
+      "name": "XCP-ng",
+      "editor": "Vates",
+      "family": "hypervisor",
+      "mode": "installed",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD has no XCP-ng product (a:vates:xcp-ng, o:vates:xcp-ng and a:xcp-ng:xcp-ng do not exist). a:xen:xen names 7 CVE, the newest CVE-2014-5148, and does not follow the XCP-ng versions.",
+      "source_url": "https://endoflife.date/xcp-ng",
+      "versions": [
+        {
+          "key": "8.3",
+          "label": "8.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-07",
+          "standard_support_end": "2028-11-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.2",
+          "label": "8.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-11-18",
+          "standard_support_end": "2025-09-16",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "apache-airflow",
+      "name": "Apache Airflow",
+      "editor": "ASF",
+      "family": "integration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:airflow"
+      ],
+      "source_url": "https://endoflife.date/apache-airflow",
+      "versions": [
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-06",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.2",
+          "label": "3.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-07",
+          "standard_support_end": "2026-07-06",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.1",
+          "label": "3.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-25",
+          "standard_support_end": "2026-04-07",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.0",
+          "label": "3.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-22",
+          "standard_support_end": "2025-09-25",
+          "extended_support_end": null
+        },
+        {
+          "key": "2",
+          "label": "2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-12-17",
+          "standard_support_end": "2025-10-22",
+          "extended_support_end": "2026-04-22"
         }
       ]
     },
@@ -4418,6 +7198,55 @@
           "release_date": "2025-07-22",
           "standard_support_end": "2025-09-21",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "zookeeper",
+      "name": "Apache ZooKeeper",
+      "editor": "ASF",
+      "family": "integration",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:zookeeper"
+      ],
+      "source_url": "https://endoflife.date/zookeeper",
+      "versions": [
+        {
+          "key": "3.9",
+          "label": "3.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-07-19",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.8",
+          "label": "3.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-25",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.7",
+          "label": "3.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-03-17",
+          "standard_support_end": "2023-07-19",
+          "extended_support_end": "2024-01-19"
+        },
+        {
+          "key": "3.6",
+          "label": "3.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-02-25",
+          "standard_support_end": "2022-03-07",
+          "extended_support_end": "2022-12-30"
         }
       ]
     },
@@ -4608,6 +7437,91 @@
           "release_date": "2024-02-29",
           "standard_support_end": "2026-08-31",
           "extended_support_end": "2027-02-28"
+        }
+      ]
+    },
+    {
+      "key": "amazon-msk",
+      "name": "Amazon MSK",
+      "editor": "AWS",
+      "family": "messaging",
+      "mode": "subscribed",
+      "hosting_type": "public_cloud",
+      "cpe_products": [],
+      "noCpe": "Verified on 2026-10-20: the NVD names no CVE under an Amazon MSK product. a:amazon:msk and a:amazon:managed_streaming_for_apache_kafka do not exist.",
+      "source_url": "https://endoflife.date/amazon-msk",
+      "versions": [
+        {
+          "key": "4.2",
+          "label": "4.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-15",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "4.1",
+          "label": "4.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-15",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "4.0",
+          "label": "4.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-16",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.9",
+          "label": "3.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-21",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.8",
+          "label": "3.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-20",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.7",
+          "label": "3.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-29",
+          "standard_support_end": "2026-09-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.6",
+          "label": "3.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-16",
+          "standard_support_end": "2026-06-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-26",
+          "standard_support_end": "2025-10-23",
+          "extended_support_end": null
         }
       ]
     },
@@ -4951,6 +7865,64 @@
       ]
     },
     {
+      "key": "exim",
+      "name": "Exim",
+      "editor": "Exim",
+      "family": "messaging",
+      "mode": "installed",
+      "cpe_products": [
+        "a:exim:exim"
+      ],
+      "source_url": "https://endoflife.date/exim",
+      "versions": [
+        {
+          "key": "4.100",
+          "label": "4.100",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-20",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "4.99",
+          "label": "4.99",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-28",
+          "standard_support_end": "2026-08-20",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.98",
+          "label": "4.98",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-10",
+          "standard_support_end": "2025-10-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.97",
+          "label": "4.97",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-04",
+          "standard_support_end": "2024-07-10",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.96",
+          "label": "4.96",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-06-25",
+          "standard_support_end": "2023-11-04",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "ibm-mq",
       "name": "IBM MQ",
       "editor": "IBM",
@@ -5218,6 +8190,46 @@
           "build_prefixes": [],
           "release_date": "2019-02-27",
           "standard_support_end": "2023-04-17",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "proxmox-mail-gateway",
+      "name": "Proxmox Mail Gateway",
+      "editor": "Proxmox",
+      "family": "messaging",
+      "mode": "installed",
+      "cpe_products": [
+        "a:proxmox:proxmox_mail_gateway"
+      ],
+      "source_url": "https://endoflife.date/proxmox-mail-gateway",
+      "versions": [
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-01",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-06-29",
+          "standard_support_end": "2026-08-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-07-15",
+          "standard_support_end": "2024-07-31",
           "extended_support_end": null
         }
       ]
@@ -5598,6 +8610,91 @@
       ]
     },
     {
+      "key": "grafana-loki",
+      "name": "Grafana Loki",
+      "editor": "Grafana Labs",
+      "family": "monitoring",
+      "mode": "installed",
+      "cpe_products": [
+        "a:grafana:loki"
+      ],
+      "source_url": "https://endoflife.date/grafana-loki",
+      "versions": [
+        {
+          "key": "3.7",
+          "label": "3.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-26",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.6",
+          "label": "3.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-17",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-17",
+          "standard_support_end": "2026-03-26",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.4",
+          "label": "3.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-12",
+          "standard_support_end": "2025-11-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-19",
+          "standard_support_end": "2025-04-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.2",
+          "label": "3.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-09-18",
+          "standard_support_end": "2025-02-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.1",
+          "label": "3.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-02",
+          "standard_support_end": "2024-11-19",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.0",
+          "label": "3.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-04-08",
+          "standard_support_end": "2024-09-18",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "graylog",
       "name": "Graylog",
       "editor": "Graylog",
@@ -5751,6 +8848,176 @@
           "release_date": "2020-08-03",
           "standard_support_end": "2021-08-02",
           "extended_support_end": "2023-07-12"
+        }
+      ]
+    },
+    {
+      "key": "kibana",
+      "name": "Kibana",
+      "editor": "Elastic",
+      "family": "monitoring",
+      "mode": "installed",
+      "cpe_products": [
+        "a:elastic:kibana"
+      ],
+      "source_url": "https://endoflife.date/kibana",
+      "versions": [
+        {
+          "key": "9.5",
+          "label": "9.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-04",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "9.4",
+          "label": "9.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-05",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "9.3",
+          "label": "9.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-02-03",
+          "standard_support_end": "2026-08-04",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.2",
+          "label": "9.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-23",
+          "standard_support_end": "2026-05-05",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-29",
+          "standard_support_end": "2026-02-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.19",
+          "label": "8.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-29",
+          "standard_support_end": "2027-07-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.0",
+          "label": "9.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2025-10-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.18",
+          "label": "8.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2025-10-21",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "logstash",
+      "name": "Logstash",
+      "editor": "Elastic",
+      "family": "monitoring",
+      "mode": "installed",
+      "cpe_products": [
+        "a:elastic:logstash"
+      ],
+      "source_url": "https://endoflife.date/logstash",
+      "versions": [
+        {
+          "key": "9.5",
+          "label": "9.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-08-04",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "9.4",
+          "label": "9.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-05",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "9.3",
+          "label": "9.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-02-03",
+          "standard_support_end": "2026-08-04",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.2",
+          "label": "9.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-23",
+          "standard_support_end": "2026-05-05",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-29",
+          "standard_support_end": "2026-02-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.19",
+          "label": "8.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-29",
+          "standard_support_end": "2027-07-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.18",
+          "label": "8.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2025-10-21",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.0",
+          "label": "9.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2025-10-23",
+          "extended_support_end": null
         }
       ]
     },
@@ -6319,6 +9586,92 @@
       ]
     },
     {
+      "key": "cisco-ios-xe",
+      "name": "Cisco IOS XE",
+      "editor": "Cisco",
+      "family": "network",
+      "mode": "installed",
+      "cpe_products": [
+        "a:cisco:ios_xe",
+        "o:cisco:ios_xe"
+      ],
+      "source_url": "https://endoflife.date/cisco-ios-xe",
+      "versions": [
+        {
+          "key": "26.1",
+          "label": "26.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-06-03",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "17.18",
+          "label": "17.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-08",
+          "standard_support_end": "2028-02-08",
+          "extended_support_end": "2029-08-08"
+        },
+        {
+          "key": "17.17",
+          "label": "17.17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-31",
+          "standard_support_end": "2026-07-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.16",
+          "label": "17.16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-11",
+          "standard_support_end": "2026-01-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.15",
+          "label": "17.15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-08-09",
+          "standard_support_end": "2027-03-30",
+          "extended_support_end": "2028-09-30"
+        },
+        {
+          "key": "17.14",
+          "label": "17.14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-04-13",
+          "standard_support_end": "2025-05-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.13",
+          "label": "17.13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-30",
+          "standard_support_end": "2024-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.12",
+          "label": "17.12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-07-28",
+          "standard_support_end": "2026-03-30",
+          "extended_support_end": "2027-09-30"
+        }
+      ]
+    },
+    {
       "key": "cisco-nx-os",
       "name": "Cisco NX-OS",
       "editor": "Cisco",
@@ -6510,6 +9863,97 @@
           "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-742176.html",
           "checked_on": "2026-10-20",
           "no_planned_end": false
+        }
+      ]
+    },
+    {
+      "key": "big-ip",
+      "name": "F5 BIG-IP",
+      "editor": "F5",
+      "family": "network",
+      "mode": "installed",
+      "cpe_products": [
+        "a:f5:big-ip_access_policy_manager",
+        "a:f5:big-ip_advanced_firewall_manager",
+        "a:f5:big-ip_advanced_web_application_firewall",
+        "a:f5:big-ip_application_security_manager",
+        "a:f5:big-ip_dns",
+        "a:f5:big-ip_domain_name_system",
+        "a:f5:big-ip_local_traffic_manager"
+      ],
+      "source_url": "https://endoflife.date/big-ip",
+      "versions": [
+        {
+          "key": "21.1",
+          "label": "21.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-05",
+          "standard_support_end": "2029-05-05",
+          "extended_support_end": null
+        },
+        {
+          "key": "21.0",
+          "label": "21.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-06",
+          "standard_support_end": "2026-08-06",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.5",
+          "label": "17.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-27",
+          "standard_support_end": "2029-01-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.1",
+          "label": "17.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-03-14",
+          "standard_support_end": "2027-03-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "17.0",
+          "label": "17.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-04-26",
+          "standard_support_end": "2023-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "16.1",
+          "label": "16.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-07-07",
+          "standard_support_end": "2025-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "15.1",
+          "label": "15.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-12-11",
+          "standard_support_end": "2024-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "14.1",
+          "label": "14.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-12-11",
+          "standard_support_end": "2023-12-31",
+          "extended_support_end": null
         }
       ]
     },
@@ -6849,6 +10293,107 @@
           "source_url": "https://support.juniper.net/support/eol/software/junos/",
           "checked_on": "2026-10-20",
           "no_planned_end": false
+        }
+      ]
+    },
+    {
+      "key": "routeros",
+      "name": "MikroTik RouterOS",
+      "editor": "MikroTik",
+      "family": "network",
+      "mode": "installed",
+      "cpe_products": [
+        "o:mikrotik:routeros"
+      ],
+      "source_url": "https://endoflife.date/routeros",
+      "versions": [
+        {
+          "key": "7.24",
+          "label": "RouterOS 7.24",
+          "cpe_version": "7.24",
+          "build_prefixes": [
+            "7.24"
+          ],
+          "release_date": "2026-08-17",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.23",
+          "label": "RouterOS 7.23",
+          "cpe_version": "7.23",
+          "build_prefixes": [
+            "7.23"
+          ],
+          "release_date": "2026-05-26",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.22",
+          "label": "RouterOS 7.22",
+          "cpe_version": "7.22",
+          "build_prefixes": [
+            "7.22"
+          ],
+          "release_date": "2026-03-10",
+          "standard_support_end": "2026-05-26",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.21",
+          "label": "RouterOS 7.21",
+          "cpe_version": "7.21",
+          "build_prefixes": [
+            "7.21"
+          ],
+          "release_date": "2026-01-12",
+          "standard_support_end": "2026-05-26",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.20",
+          "label": "RouterOS 7.20",
+          "cpe_version": "7.20",
+          "build_prefixes": [
+            "7.20"
+          ],
+          "release_date": "2025-09-30",
+          "standard_support_end": "2026-01-12",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.19",
+          "label": "RouterOS 7.19",
+          "cpe_version": "7.19",
+          "build_prefixes": [
+            "7.19"
+          ],
+          "release_date": "2025-05-22",
+          "standard_support_end": "2025-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.18",
+          "label": "RouterOS 7.18",
+          "cpe_version": "7.18",
+          "build_prefixes": [
+            "7.18"
+          ],
+          "release_date": "2025-02-24",
+          "standard_support_end": "2025-05-22",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.17",
+          "label": "RouterOS 7.17",
+          "cpe_version": "7.17",
+          "build_prefixes": [
+            "7.17"
+          ],
+          "release_date": "2025-01-16",
+          "standard_support_end": "2025-02-24",
+          "extended_support_end": null
         }
       ]
     },
@@ -7590,6 +11135,168 @@
       ]
     },
     {
+      "key": "cortex-xdr",
+      "name": "Cortex XDR agent",
+      "editor": "Palo Alto Networks",
+      "family": "network_security",
+      "mode": "installed",
+      "cpe_products": [
+        "a:paloaltonetworks:cortex_xdr_agent",
+        "a:paloaltonetworks:traps"
+      ],
+      "source_url": "https://endoflife.date/cortex-xdr",
+      "versions": [
+        {
+          "key": "9.3",
+          "label": "9.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-26",
+          "standard_support_end": "2027-05-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.2",
+          "label": "9.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-05-03",
+          "standard_support_end": "2027-02-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-25",
+          "standard_support_end": "2026-11-22",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.0",
+          "label": "9.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-09",
+          "standard_support_end": "2026-08-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.9",
+          "label": "8.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-21",
+          "standard_support_end": "2026-05-10",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.8",
+          "label": "8.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-28",
+          "standard_support_end": "2026-02-18",
+          "extended_support_end": null
+        },
+        {
+          "key": "8.7",
+          "label": "8.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-02-02",
+          "standard_support_end": "2025-11-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.9.103-ce",
+          "label": "7.9.103-ce",
+          "cpe_version": "7.9.103",
+          "build_prefixes": [],
+          "release_date": "2024-11-11",
+          "standard_support_end": "2026-12-31",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "fortios",
+      "name": "FortiOS",
+      "editor": "Fortinet",
+      "family": "network_security",
+      "mode": "installed",
+      "cpe_products": [
+        "o:fortinet:fortios"
+      ],
+      "source_url": "https://endoflife.date/fortios",
+      "versions": [
+        {
+          "key": "8.0",
+          "label": "8.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-21",
+          "standard_support_end": "2029-04-21",
+          "extended_support_end": "2030-10-21"
+        },
+        {
+          "key": "7.6",
+          "label": "7.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-25",
+          "standard_support_end": "2028-07-25",
+          "extended_support_end": "2030-01-25"
+        },
+        {
+          "key": "7.4",
+          "label": "7.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-11",
+          "standard_support_end": "2027-05-11",
+          "extended_support_end": "2028-11-11"
+        },
+        {
+          "key": "7.2",
+          "label": "7.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-03-31",
+          "standard_support_end": "2025-03-31",
+          "extended_support_end": "2026-09-30"
+        },
+        {
+          "key": "7.0",
+          "label": "7.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-03-30",
+          "standard_support_end": "2024-03-30",
+          "extended_support_end": "2025-09-30"
+        },
+        {
+          "key": "6.4",
+          "label": "6.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-03-31",
+          "standard_support_end": "2023-03-31",
+          "extended_support_end": "2024-09-30"
+        },
+        {
+          "key": "6.2",
+          "label": "6.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-03-28",
+          "standard_support_end": "2022-03-28",
+          "extended_support_end": "2023-09-28"
+        }
+      ]
+    },
+    {
       "key": "hashicorp-vault",
       "name": "HashiCorp Vault",
       "editor": "HashiCorp",
@@ -7950,6 +11657,167 @@
       ]
     },
     {
+      "key": "pangp",
+      "name": "Palo Alto GlobalProtect",
+      "editor": "Palo Alto Networks",
+      "family": "network_security",
+      "mode": "installed",
+      "cpe_products": [
+        "a:paloaltonetworks:globalprotect"
+      ],
+      "source_url": "https://endoflife.date/pangp",
+      "versions": [
+        {
+          "key": "6.3",
+          "label": "6.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-06-13",
+          "standard_support_end": "2028-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.2",
+          "label": "6.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-23",
+          "standard_support_end": "2027-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.1",
+          "label": "6.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-09-01",
+          "standard_support_end": "2025-03-01",
+          "extended_support_end": "2025-12-31"
+        },
+        {
+          "key": "6.0",
+          "label": "6.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-22",
+          "standard_support_end": "2025-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "5.3",
+          "label": "5.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-06-01",
+          "standard_support_end": "2022-12-01",
+          "extended_support_end": "2023-06-01"
+        },
+        {
+          "key": "5.2",
+          "label": "5.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-07-30",
+          "standard_support_end": "2023-08-31",
+          "extended_support_end": "2024-02-28"
+        },
+        {
+          "key": "5.1",
+          "label": "5.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-12-12",
+          "standard_support_end": "2021-03-12",
+          "extended_support_end": "2024-12-31"
+        }
+      ]
+    },
+    {
+      "key": "panos",
+      "name": "Palo Alto PAN-OS",
+      "editor": "Palo Alto Networks",
+      "family": "network_security",
+      "mode": "installed",
+      "cpe_products": [
+        "o:paloaltonetworks:pan-os"
+      ],
+      "source_url": "https://endoflife.date/panos",
+      "versions": [
+        {
+          "key": "12.2",
+          "label": "12.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-30",
+          "standard_support_end": "2029-07-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "12.1",
+          "label": "12.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-08-28",
+          "standard_support_end": "2028-08-28",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.2",
+          "label": "11.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-02",
+          "standard_support_end": "2027-05-02",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.1",
+          "label": "11.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-03",
+          "standard_support_end": "2027-05-03",
+          "extended_support_end": null
+        },
+        {
+          "key": "11.0",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-17",
+          "standard_support_end": "2024-11-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.2",
+          "label": "10.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-02-27",
+          "standard_support_end": "2025-08-27",
+          "extended_support_end": null
+        },
+        {
+          "key": "10.1",
+          "label": "10.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-05-31",
+          "standard_support_end": "2024-12-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.1",
+          "label": "9.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-12-13",
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "sophos-firewall",
       "name": "Sophos Firewall (SFOS)",
       "editor": "Sophos",
@@ -8195,6 +12063,92 @@
       ]
     },
     {
+      "key": "sns-firmware",
+      "name": "Stormshield Network Security",
+      "editor": "Stormshield",
+      "family": "network_security",
+      "mode": "installed",
+      "cpe_products": [
+        "a:stormshield:network_security",
+        "a:stormshield:stormshield_network_security"
+      ],
+      "source_url": "https://endoflife.date/sns-firmware",
+      "versions": [
+        {
+          "key": "5.0",
+          "label": "5.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-24",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "4.8",
+          "label": "4.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-07-02",
+          "standard_support_end": "2029-12-31",
+          "extended_support_end": "2030-03-31"
+        },
+        {
+          "key": "4.7",
+          "label": "4.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-10-31",
+          "standard_support_end": "2024-11-12",
+          "extended_support_end": "2025-02-12"
+        },
+        {
+          "key": "4.6",
+          "label": "4.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-24",
+          "standard_support_end": "2024-02-22",
+          "extended_support_end": "2024-05-22"
+        },
+        {
+          "key": "4.5",
+          "label": "4.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-07-05",
+          "standard_support_end": "2022-11-24",
+          "extended_support_end": null
+        },
+        {
+          "key": "4.3",
+          "label": "4.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-01-12",
+          "standard_support_end": "2025-12-31",
+          "extended_support_end": "2026-03-31"
+        },
+        {
+          "key": "3.11",
+          "label": "3.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-09-24",
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.7",
+          "label": "3.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-09-29",
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "almalinux",
       "name": "AlmaLinux",
       "editor": "AlmaLinux OS Foundation",
@@ -8204,6 +12158,7 @@
         "o:almalinux:almalinux"
       ],
       "source_url": "https://endoflife.date/almalinux",
+      "security_tracker": "https://errata.almalinux.org/",
       "versions": [
         {
           "key": "10",
@@ -8231,6 +12186,475 @@
           "release_date": "2021-03-30",
           "standard_support_end": "2029-05-31",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "alpine-linux",
+      "name": "Alpine Linux",
+      "editor": "Alpine",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [
+        "o:alpinelinux:alpine_linux"
+      ],
+      "source_url": "https://endoflife.date/alpine-linux",
+      "security_tracker": "https://security.alpinelinux.org/",
+      "versions": [
+        {
+          "key": "3.24",
+          "label": "3.24",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-06-09",
+          "standard_support_end": "2028-06-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.23",
+          "label": "3.23",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-12-04",
+          "standard_support_end": "2027-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.22",
+          "label": "3.22",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-30",
+          "standard_support_end": "2027-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.21",
+          "label": "3.21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-05",
+          "standard_support_end": "2026-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.20",
+          "label": "3.20",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-22",
+          "standard_support_end": "2026-04-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.19",
+          "label": "3.19",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-12-07",
+          "standard_support_end": "2025-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.18",
+          "label": "3.18",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-09",
+          "standard_support_end": "2025-05-09",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.17",
+          "label": "3.17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-22",
+          "standard_support_end": "2024-11-22",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.16",
+          "label": "3.16",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-05-23",
+          "standard_support_end": "2024-05-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.15",
+          "label": "3.15",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-11-24",
+          "standard_support_end": "2023-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.14",
+          "label": "3.14",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-06-15",
+          "standard_support_end": "2023-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.13",
+          "label": "3.13",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-01-14",
+          "standard_support_end": "2022-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.12",
+          "label": "3.12",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-05-29",
+          "standard_support_end": "2022-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.11",
+          "label": "3.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-12-19",
+          "standard_support_end": "2021-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.10",
+          "label": "3.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-06-19",
+          "standard_support_end": "2021-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.9",
+          "label": "3.9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-01-29",
+          "standard_support_end": "2020-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.8",
+          "label": "3.8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-06-26",
+          "standard_support_end": "2020-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.7",
+          "label": "3.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2017-11-30",
+          "standard_support_end": "2019-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.6",
+          "label": "3.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2017-05-24",
+          "standard_support_end": "2019-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-12-22",
+          "standard_support_end": "2018-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.4",
+          "label": "3.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-05-31",
+          "standard_support_end": "2018-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-12-19",
+          "standard_support_end": "2017-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.2",
+          "label": "3.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-05-26",
+          "standard_support_end": "2017-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.1",
+          "label": "3.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-12-10",
+          "standard_support_end": "2016-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "3.0",
+          "label": "3.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-06-04",
+          "standard_support_end": "2016-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.7",
+          "label": "2.7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2011-01-06",
+          "standard_support_end": "2015-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.6",
+          "label": "2.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-12-15",
+          "standard_support_end": "2015-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.5",
+          "label": "2.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-08-12",
+          "standard_support_end": "2014-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.4",
+          "label": "2.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-07-07",
+          "standard_support_end": "2014-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.3",
+          "label": "2.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-05-19",
+          "standard_support_end": "2013-11-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.2",
+          "label": "2.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-05-04",
+          "standard_support_end": "2013-05-01",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.1",
+          "label": "2.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2009-12-30",
+          "standard_support_end": "2012-11-01",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "amazon-linux",
+      "name": "Amazon Linux",
+      "editor": "Amazon Web Services",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [
+        "o:amazon:amazon_linux"
+      ],
+      "source_url": "https://endoflife.date/amazon-linux",
+      "security_tracker": "https://alas.aws.amazon.com/",
+      "versions": [
+        {
+          "key": "2023",
+          "label": "2023",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-03-01",
+          "standard_support_end": "2027-06-30",
+          "extended_support_end": "2029-06-30"
+        },
+        {
+          "key": "2",
+          "label": "2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-06-26",
+          "standard_support_end": "2026-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2018.03",
+          "label": "2018.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-04-25",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2017.09",
+          "label": "2017.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2017-11-03",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2017.03",
+          "label": "2017.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2017-04-07",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2016.09",
+          "label": "2016.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-11-16",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2016.03",
+          "label": "2016.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-03-22",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2015.09",
+          "label": "2015.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-09-22",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2015.03",
+          "label": "2015.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-03-24",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2014.09",
+          "label": "2014.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-09-23",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2014.03",
+          "label": "2014.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-03-27",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2013.09",
+          "label": "2013.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2013-09-30",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2013.03",
+          "label": "2013.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2013-03-27",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2012.09",
+          "label": "2012.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2012-10-11",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2012.03",
+          "label": "2012.03",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2012-03-28",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2011.09",
+          "label": "2011.09",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2011-09-26",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
+        },
+        {
+          "key": "2010.11",
+          "label": "2010.11",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-12-01",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2023-12-31"
         }
       ]
     },
@@ -8293,6 +12717,7 @@
         "o:debian:debian_linux"
       ],
       "source_url": "https://endoflife.date/debian",
+      "security_tracker": "https://security-tracker.debian.org/tracker/",
       "versions": [
         {
           "key": "13",
@@ -8407,6 +12832,158 @@
       ]
     },
     {
+      "key": "ibm-aix",
+      "name": "IBM AIX",
+      "editor": "IBM",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [
+        "o:ibm:aix"
+      ],
+      "source_url": "https://endoflife.date/ibm-aix",
+      "versions": [
+        {
+          "key": "7.3.4",
+          "label": "7.3",
+          "cpe_version": null,
+          "build_prefixes": [
+            "7.3.4"
+          ],
+          "release_date": "2025-12-06",
+          "standard_support_end": "2028-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "7.2.5",
+          "label": "7.2",
+          "cpe_version": null,
+          "build_prefixes": [
+            "7.2.5"
+          ],
+          "release_date": "2020-11-30",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.1.5",
+          "label": "7.1",
+          "cpe_version": null,
+          "build_prefixes": [
+            "7.1.5"
+          ],
+          "release_date": "2017-10-31",
+          "standard_support_end": "2023-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "6.1.9",
+          "label": "6.1",
+          "cpe_version": null,
+          "build_prefixes": [
+            "6.1.9"
+          ],
+          "release_date": "2013-11-30",
+          "standard_support_end": "2017-04-30",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "ibm-i",
+      "name": "IBM i",
+      "editor": "IBM",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [
+        "a:ibm:i",
+        "o:ibm:i"
+      ],
+      "source_url": "https://endoflife.date/ibm-i",
+      "versions": [
+        {
+          "key": "7.6",
+          "label": "7.6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-18",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.5",
+          "label": "7.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-05-10",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "7.4",
+          "label": "7.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-06-21",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": "2029-09-30"
+        },
+        {
+          "key": "7.3",
+          "label": "7.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-04-15",
+          "standard_support_end": "2023-09-30",
+          "extended_support_end": "2028-09-30"
+        },
+        {
+          "key": "7.2",
+          "label": "7.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-05-02",
+          "standard_support_end": "2021-04-30",
+          "extended_support_end": "2026-04-30"
+        },
+        {
+          "key": "7.1",
+          "label": "7.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-04-23",
+          "standard_support_end": "2018-04-30",
+          "extended_support_end": "2024-04-30"
+        },
+        {
+          "key": "6.1",
+          "label": "6.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2008-03-21",
+          "standard_support_end": "2015-09-30",
+          "extended_support_end": "2019-09-30"
+        },
+        {
+          "key": "5.4",
+          "label": "5.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2006-02-14",
+          "standard_support_end": "2013-09-30",
+          "extended_support_end": "2017-09-30"
+        },
+        {
+          "key": "5.3",
+          "label": "5.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2004-06-11",
+          "standard_support_end": "2009-04-30",
+          "extended_support_end": "2013-04-30"
+        }
+      ]
+    },
+    {
       "key": "oracle-linux",
       "name": "Oracle Linux",
       "editor": "Oracle",
@@ -8423,6 +13000,7 @@
         }
       ],
       "source_url": "https://endoflife.date/oracle-linux",
+      "security_tracker": "https://linux.oracle.com/security/",
       "versions": [
         {
           "key": "10",
@@ -8472,6 +13050,95 @@
       ]
     },
     {
+      "key": "oracle-solaris",
+      "name": "Oracle Solaris",
+      "editor": "Oracle",
+      "family": "operating_system",
+      "mode": "installed",
+      "cpe_products": [
+        "a:oracle:solaris",
+        "o:oracle:solaris",
+        "o:sun:solaris"
+      ],
+      "source_url": "https://endoflife.date/oracle-solaris",
+      "versions": [
+        {
+          "key": "11.4",
+          "label": "11.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-08-28",
+          "standard_support_end": "2031-11-01",
+          "extended_support_end": "2037-11-01"
+        },
+        {
+          "key": "11.3",
+          "label": "11.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2015-10-26",
+          "standard_support_end": "2021-01-01",
+          "extended_support_end": "2027-01-01"
+        },
+        {
+          "key": "11.2",
+          "label": "11.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-04-29",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "11.1",
+          "label": "11.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2012-10-03",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "11",
+          "label": "11.0",
+          "cpe_version": null,
+          "build_prefixes": [
+            "11"
+          ],
+          "release_date": "2011-11-09",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "10",
+          "label": "10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2005-01-31",
+          "standard_support_end": "2018-01-01",
+          "extended_support_end": "2027-01-01"
+        },
+        {
+          "key": "9",
+          "label": "9",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2002-05-28",
+          "standard_support_end": "2011-10-01",
+          "extended_support_end": "2014-10-01"
+        },
+        {
+          "key": "8",
+          "label": "8",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2000-02-01",
+          "standard_support_end": "2009-03-01",
+          "extended_support_end": "2012-03-01"
+        }
+      ]
+    },
+    {
       "key": "rhel",
       "name": "Red Hat Enterprise Linux",
       "editor": "Red Hat",
@@ -8484,6 +13151,7 @@
         "o:redhat:enterprise_linux_workstation"
       ],
       "source_url": "https://endoflife.date/rhel",
+      "security_tracker": "https://access.redhat.com/security/security-updates/cve",
       "versions": [
         {
           "key": "10",
@@ -8560,6 +13228,7 @@
         "o:resf:rocky_linux"
       ],
       "source_url": "https://endoflife.date/rocky-linux",
+      "security_tracker": "https://errata.rockylinux.org/",
       "versions": [
         {
           "key": "10",
@@ -8676,6 +13345,7 @@
         }
       ],
       "source_url": "https://endoflife.date/sles",
+      "security_tracker": "https://www.suse.com/security/cve/",
       "versions": [
         {
           "key": "16.0",
@@ -8995,6 +13665,7 @@
         }
       ],
       "source_url": "https://endoflife.date/ubuntu",
+      "security_tracker": "https://ubuntu.com/security/cves",
       "versions": [
         {
           "key": "26.04",
@@ -9327,6 +13998,58 @@
       ]
     },
     {
+      "key": "sharepoint",
+      "name": "SharePoint Server",
+      "editor": "Microsoft",
+      "family": "other",
+      "mode": "installed",
+      "cpe_products": [
+        "a:microsoft:sharepoint_enterprise_server",
+        "a:microsoft:sharepoint_server"
+      ],
+      "source_url": "https://endoflife.date/sharepoint",
+      "versions": [
+        {
+          "key": "subscription",
+          "label": "Subscription Edition",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-11-02",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2019",
+          "label": "2019",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-10-22",
+          "standard_support_end": "2024-01-09",
+          "extended_support_end": "2026-07-14"
+        },
+        {
+          "key": "2016",
+          "label": "2016",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-05-01",
+          "standard_support_end": "2021-07-13",
+          "extended_support_end": "2026-07-14"
+        },
+        {
+          "key": "2013",
+          "label": "2013 SP1",
+          "cpe_version": "2013",
+          "build_prefixes": [
+            "2013"
+          ],
+          "release_date": "2013-01-09",
+          "standard_support_end": "2018-04-10",
+          "extended_support_end": "2023-04-11"
+        }
+      ]
+    },
+    {
       "key": "dotnet",
       "name": ".NET",
       "editor": "Microsoft",
@@ -9587,6 +14310,277 @@
       ]
     },
     {
+      "key": "log4j",
+      "name": "Apache Log4j",
+      "editor": "ASF",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:log4j"
+      ],
+      "source_url": "https://endoflife.date/log4j",
+      "versions": [
+        {
+          "key": "2",
+          "label": "2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2014-07-12",
+          "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "apache-struts",
+      "name": "Apache Struts",
+      "editor": "ASF",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:apache:struts"
+      ],
+      "source_url": "https://endoflife.date/apache-struts",
+      "versions": [
+        {
+          "key": "7",
+          "label": "7",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-12-11",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "6",
+          "label": "6",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-06-02",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2.5",
+          "label": "2.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2016-05-05",
+          "standard_support_end": "2024-04-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "2.2",
+          "label": "2.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2010-06-29",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2.1",
+          "label": "2.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2007-10-29",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "2.0",
+          "label": "2.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2006-09-24",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "1.2",
+          "label": "1.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2004-07-11",
+          "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "azul-zulu",
+      "name": "Azul Zulu",
+      "editor": "Azul",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:azul:zulu",
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
+      ],
+      "source_url": "https://endoflife.date/azul-zulu",
+      "versions": [
+        {
+          "key": "27",
+          "label": "27",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-15",
+          "standard_support_end": "2027-03-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "26",
+          "label": "26",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-17",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "25",
+          "label": "25",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-16",
+          "standard_support_end": "2033-09-30",
+          "extended_support_end": "2035-09-30"
+        },
+        {
+          "key": "24",
+          "label": "24",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-18",
+          "standard_support_end": "2025-09-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "23",
+          "label": "23",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-09-17",
+          "standard_support_end": "2025-03-18",
+          "extended_support_end": null
+        },
+        {
+          "key": "22",
+          "label": "22",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-03-19",
+          "standard_support_end": "2024-09-17",
+          "extended_support_end": "2025-03-17"
+        },
+        {
+          "key": "21",
+          "label": "21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-19",
+          "standard_support_end": "2031-09-30",
+          "extended_support_end": "2033-09-30"
+        },
+        {
+          "key": "20",
+          "label": "20",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-03-21",
+          "standard_support_end": "2023-09-19",
+          "extended_support_end": "2024-03-31"
+        }
+      ]
+    },
+    {
+      "key": "bellsoft-liberica",
+      "name": "BellSoft Liberica JDK",
+      "editor": "BellSoft",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
+      ],
+      "source_url": "https://endoflife.date/bellsoft-liberica",
+      "versions": [
+        {
+          "key": "27",
+          "label": "27",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-16",
+          "standard_support_end": "2027-03-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "26",
+          "label": "26",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-18",
+          "standard_support_end": "2026-09-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "25",
+          "label": "25",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-16",
+          "standard_support_end": "2031-09-30",
+          "extended_support_end": "2034-03-31"
+        },
+        {
+          "key": "24",
+          "label": "24",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-19",
+          "standard_support_end": "2025-09-16",
+          "extended_support_end": null
+        },
+        {
+          "key": "23",
+          "label": "23",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-09-18",
+          "standard_support_end": "2025-03-18",
+          "extended_support_end": null
+        },
+        {
+          "key": "22",
+          "label": "22",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-03-20",
+          "standard_support_end": "2024-09-17",
+          "extended_support_end": null
+        },
+        {
+          "key": "21",
+          "label": "21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-20",
+          "standard_support_end": null,
+          "extended_support_end": "2032-03-31"
+        },
+        {
+          "key": "20",
+          "label": "20",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-03-22",
+          "standard_support_end": "2023-09-19",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "eclipse-temurin",
       "name": "Eclipse Temurin",
       "editor": "Eclipse Foundation",
@@ -9761,6 +14755,93 @@
           "build_prefixes": [],
           "release_date": "2023-02-01",
           "standard_support_end": "2024-02-06",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "ibm-semeru-runtime",
+      "name": "IBM Semeru Runtime",
+      "editor": "IBM",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:ibm:semeru_runtime",
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
+      ],
+      "source_url": "https://endoflife.date/ibm-semeru-runtime",
+      "versions": [
+        {
+          "key": "27",
+          "label": "27",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-09-16",
+          "standard_support_end": "2027-03-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "26",
+          "label": "26",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-03-18",
+          "standard_support_end": "2026-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "25",
+          "label": "25",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-09-25",
+          "standard_support_end": "2031-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "24",
+          "label": "24",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-03-31",
+          "standard_support_end": "2025-09-25",
+          "extended_support_end": null
+        },
+        {
+          "key": "23",
+          "label": "23",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-09-18",
+          "standard_support_end": "2025-03-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "22",
+          "label": "22",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-21",
+          "standard_support_end": "2024-09-18",
+          "extended_support_end": null
+        },
+        {
+          "key": "21",
+          "label": "21",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-09-22",
+          "standard_support_end": "2029-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "17",
+          "label": "17",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2021-12-09",
+          "standard_support_end": "2027-10-31",
           "extended_support_end": null
         }
       ]
@@ -10263,6 +15344,75 @@
       ]
     },
     {
+      "key": "redhat-build-of-openjdk",
+      "name": "Red Hat build of OpenJDK",
+      "editor": "Red Hat",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:oracle:jdk",
+        "a:oracle:openjdk"
+      ],
+      "source_url": "https://endoflife.date/redhat-build-of-openjdk",
+      "versions": [
+        {
+          "key": "25",
+          "label": "OpenJDK 25",
+          "cpe_version": "25",
+          "build_prefixes": [
+            "25"
+          ],
+          "release_date": "2025-11-13",
+          "standard_support_end": "2030-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "21",
+          "label": "OpenJDK 21",
+          "cpe_version": "21",
+          "build_prefixes": [
+            "21"
+          ],
+          "release_date": "2023-11-14",
+          "standard_support_end": "2029-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "17",
+          "label": "OpenJDK 17",
+          "cpe_version": "17",
+          "build_prefixes": [
+            "17"
+          ],
+          "release_date": "2021-11-11",
+          "standard_support_end": "2027-12-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "11",
+          "label": "OpenJDK 11",
+          "cpe_version": "11",
+          "build_prefixes": [
+            "11"
+          ],
+          "release_date": "2018-10-01",
+          "standard_support_end": "2024-10-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "8",
+          "label": "OpenJDK 8",
+          "cpe_version": "8",
+          "build_prefixes": [
+            "8"
+          ],
+          "release_date": "2014-10-01",
+          "standard_support_end": "2026-11-30",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "ruby",
       "name": "Ruby",
       "editor": "Ruby",
@@ -10335,6 +15485,169 @@
           "release_date": "2019-12-25",
           "standard_support_end": "2023-03-31",
           "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "spring-boot",
+      "name": "Spring Boot",
+      "editor": "Broadcom",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:vmware:spring_boot"
+      ],
+      "source_url": "https://endoflife.date/spring-boot",
+      "versions": [
+        {
+          "key": "4.1",
+          "label": "4.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-06-30",
+          "standard_support_end": "2027-07-31",
+          "extended_support_end": "2028-07-31"
+        },
+        {
+          "key": "4.0",
+          "label": "4.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-30",
+          "standard_support_end": "2026-12-31",
+          "extended_support_end": "2027-12-31"
+        },
+        {
+          "key": "3.5",
+          "label": "3.5",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-05-31",
+          "standard_support_end": "2026-06-30",
+          "extended_support_end": "2032-06-30"
+        },
+        {
+          "key": "3.4",
+          "label": "3.4",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-30",
+          "standard_support_end": "2025-12-31",
+          "extended_support_end": "2026-12-31"
+        },
+        {
+          "key": "3.3",
+          "label": "3.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-31",
+          "standard_support_end": "2025-06-30",
+          "extended_support_end": "2026-06-30"
+        },
+        {
+          "key": "3.2",
+          "label": "3.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-30",
+          "standard_support_end": "2024-12-31",
+          "extended_support_end": "2025-12-31"
+        },
+        {
+          "key": "3.1",
+          "label": "3.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-05-31",
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": "2025-06-30"
+        },
+        {
+          "key": "3.0",
+          "label": "3.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-24",
+          "standard_support_end": "2023-12-31",
+          "extended_support_end": "2024-12-31"
+        }
+      ]
+    },
+    {
+      "key": "spring-framework",
+      "name": "Spring Framework",
+      "editor": "Broadcom",
+      "family": "runtime",
+      "mode": "installed",
+      "cpe_products": [
+        "a:pivotal_software:spring_framework",
+        "a:springsource:spring_framework",
+        "a:vmware:spring_framework"
+      ],
+      "source_url": "https://endoflife.date/spring-framework",
+      "versions": [
+        {
+          "key": "7.0",
+          "label": "7.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-11-30",
+          "standard_support_end": "2027-07-31",
+          "extended_support_end": "2028-07-31"
+        },
+        {
+          "key": "6.2",
+          "label": "6.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-11-30",
+          "standard_support_end": "2026-06-30",
+          "extended_support_end": "2032-06-30"
+        },
+        {
+          "key": "6.1",
+          "label": "6.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-11-30",
+          "standard_support_end": "2025-06-30",
+          "extended_support_end": "2032-06-30"
+        },
+        {
+          "key": "6.0",
+          "label": "6.0",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2022-11-30",
+          "standard_support_end": "2024-06-30",
+          "extended_support_end": "2032-06-30"
+        },
+        {
+          "key": "5.3",
+          "label": "5.3",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2020-10-31",
+          "standard_support_end": "2024-08-31",
+          "extended_support_end": "2029-06-30"
+        },
+        {
+          "key": "5.2",
+          "label": "5.2",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2019-09-30",
+          "standard_support_end": "2021-12-31",
+          "extended_support_end": "2029-06-30"
+        },
+        {
+          "key": "5.1",
+          "label": "5.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2018-09-30",
+          "standard_support_end": "2020-12-31",
+          "extended_support_end": "2022-12-31"
         }
       ]
     },
@@ -11374,6 +16687,93 @@
       ]
     },
     {
+      "key": "netapp-ontap",
+      "name": "NetApp ONTAP",
+      "editor": "NetApp",
+      "family": "storage",
+      "mode": "installed",
+      "cpe_products": [
+        "a:netapp:clustered_data_ontap",
+        "a:netapp:ontap",
+        "o:netapp:clustered_data_ontap"
+      ],
+      "source_url": "https://endoflife.date/netapp-ontap",
+      "versions": [
+        {
+          "key": "9.19.1",
+          "label": "9.19.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-01",
+          "standard_support_end": "2029-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.18.1",
+          "label": "9.18.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-02-04",
+          "standard_support_end": "2029-01-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.17.1",
+          "label": "9.17.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-15",
+          "standard_support_end": "2028-09-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.16.1",
+          "label": "9.16.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-01",
+          "standard_support_end": "2028-02-26",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.15.1",
+          "label": "9.15.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-05-01",
+          "standard_support_end": "2027-07-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.14.1",
+          "label": "9.14.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-01-01",
+          "standard_support_end": "2027-01-31",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.13.1",
+          "label": "9.13.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-06-01",
+          "standard_support_end": "2026-06-30",
+          "extended_support_end": null
+        },
+        {
+          "key": "9.12.1",
+          "label": "9.12.1",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-02-01",
+          "standard_support_end": "2026-02-28",
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "nutanix-files",
       "name": "Nutanix Files",
       "editor": "Nutanix",
@@ -11551,6 +16951,64 @@
       ]
     },
     {
+      "key": "truenas",
+      "name": "TrueNAS",
+      "editor": "iXsystems",
+      "family": "storage",
+      "mode": "installed",
+      "cpe_products": [
+        "o:ixsystems:truenas_firmware"
+      ],
+      "source_url": "https://endoflife.date/truenas",
+      "versions": [
+        {
+          "key": "25.10",
+          "label": "25.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-28",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "25.04",
+          "label": "25.04",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "24.10",
+          "label": "24.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-10-29",
+          "standard_support_end": "2025-08-07",
+          "extended_support_end": null
+        },
+        {
+          "key": "24.04",
+          "label": "24.04",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2024-04-23",
+          "standard_support_end": null,
+          "extended_support_end": null
+        },
+        {
+          "key": "23.10",
+          "label": "23.10",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2023-10-24",
+          "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
       "key": "apache-http-server",
       "name": "Apache HTTP Server",
       "editor": "Apache Software Foundation",
@@ -11605,6 +17063,91 @@
           "build_prefixes": [],
           "release_date": "2020-05-04",
           "standard_support_end": null,
+          "extended_support_end": null
+        }
+      ]
+    },
+    {
+      "key": "envoy",
+      "name": "Envoy",
+      "editor": "CNCF",
+      "family": "web_server",
+      "mode": "installed",
+      "cpe_products": [
+        "a:envoyproxy:envoy"
+      ],
+      "source_url": "https://endoflife.date/envoy",
+      "versions": [
+        {
+          "key": "1.40",
+          "label": "1.40",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-10-13",
+          "standard_support_end": "2027-10-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.39",
+          "label": "1.39",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-07-14",
+          "standard_support_end": "2027-07-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.38",
+          "label": "1.38",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-04-23",
+          "standard_support_end": "2027-04-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.37",
+          "label": "1.37",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2026-01-13",
+          "standard_support_end": "2027-01-13",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.36",
+          "label": "1.36",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-10-14",
+          "standard_support_end": "2026-10-14",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.35",
+          "label": "1.35",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-07-23",
+          "standard_support_end": "2026-07-23",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.34",
+          "label": "1.34",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-04-15",
+          "standard_support_end": "2026-04-15",
+          "extended_support_end": null
+        },
+        {
+          "key": "1.33",
+          "label": "1.33",
+          "cpe_version": null,
+          "build_prefixes": [],
+          "release_date": "2025-01-14",
+          "standard_support_end": "2026-01-14",
           "extended_support_end": null
         }
       ]
