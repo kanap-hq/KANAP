@@ -1,6 +1,6 @@
 import '../../i18n';
 import { Children, type ReactElement, type ReactNode } from 'react';
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { MemoryRouter, useLocation } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -9,7 +9,7 @@ import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { formatShortDate } from '../../lib/dateFormat';
-import VulnerabilitiesPage, { filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
+import VulnerabilitiesPage, { FeedAgeLine, filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
 import { formatEpssCell, formatEpssPercent, formatEpssPercentInput, parseEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() } }));
@@ -155,15 +155,16 @@ describe('VulnerabilitiesPage', () => {
     expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
     expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([
-      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
+      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'match_sources', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
     // EPSS is shown as a percentage only. The exploited column stays hidden: the icon next to the severity carries that signal.
-    // The default set is then 1,219 px, past the old 1,100 px budget. The summary still takes the rest.
+    // The default set was then 1,219 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
-    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'servers', 'applications', 'state', 'published_at']);
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1219);
+    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'match_sources', 'servers', 'applications', 'state', 'published_at']);
+    // The Source column (130 px) brings it to 1,349 px.
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1349);
     expect(column('exploited').defaultHidden).toBe(true);
     expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
@@ -367,6 +368,8 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.getByRole('region', { name: CVE })).toBeTruthy();
     expect(detail.textContent).toContain('CVSS:3.1/AV:N');
     expect(within(detail).getByRole('link', { name: 'SRV-WEB-01' }).getAttribute('href')).toBe('/it/assets/a-1');
+    // A server reached through another asset shows once asked for.
+    fireEvent.click(within(detail).getByRole('button', { name: 'Also show the server reached through another asset' }));
     expect(detail.textContent).toContain('VM-APP-02 · Tomcat Version not recorded (potentially concerned) · through ESX-01');
     expect(detail.textContent).toContain('The applications are hidden');
     // No exploitation signal on this CVE: the block stays out.
@@ -894,5 +897,351 @@ describe('VulnerabilitiesPage', () => {
     expect(screen.queryByRole('checkbox')).toBeNull();
     expect(screen.queryByRole('button', { name: /Change state/ })).toBeNull();
     expect(screen.getByRole('button', { name: 'Export CSV' })).toBeTruthy();
+  });
+
+  describe('detail panel', () => {
+    const openDetail = async (detail: VulnerabilityDetail) => {
+      getMock.mockImplementation(async (url: string) => {
+        if (url === `/vulnerabilities/${CVE}`) return { data: detail } as any;
+        throw new Error(`unexpected ${url}`);
+      });
+      renderPage();
+      act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+      return screen.findByTestId('vulnerability-detail');
+    };
+    const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+    const server = (id: string, name: string, via: string | null) => (
+      { asset_id: id, name, reference: null, technology_id: 'tech-1', technology_name: 'Tomcat', version_label: '9.0.80', via_asset_name: via }
+    );
+    const app = (id: string, name: string, kind: 'hosted' | 'declared', serverName: string | null, via: string | null) => (
+      { application_id: id, name, reference: null, technology_name: 'Tomcat', version_label: '9.0.80', server_name: serverName, kind, via_asset_name: via }
+    );
+
+    it('puts the technologies and versions first, then the description, the sources, the exploitation and the reach', async () => {
+      const detail = await openDetail({ ...DETAIL, cisa_kev: true, exploited: true, kev_sources: ['cisa'] });
+      const versions = within(detail).getByText('Technologies and versions');
+      const summary = within(detail).getByTestId('vulnerability-summary');
+      const feeds = within(detail).getByTestId('vulnerability-feeds');
+      const exploitation = within(detail).getByText('Exploitation');
+      const servers = within(detail).getByTestId('vulnerability-servers');
+      expect([before(versions, summary), before(summary, feeds), before(feeds, exploitation), before(exploitation, servers)]).toEqual([true, true, true, true]);
+      // The state of a version is the first control of the panel.
+      expect(before(screen.getByRole('combobox', { name: 'State of 9.0.80' }), summary)).toBe(true);
+    });
+
+    it('cuts the summary at three lines, with see more only when it overflows', async () => {
+      const heights = vi.spyOn(HTMLElement.prototype, 'scrollHeight', 'get').mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === 'vulnerability-summary' && this.textContent!.startsWith('Long') ? 200 : 0;
+      });
+      try {
+        let detail = await openDetail({ ...DETAIL, summary: 'Short summary' });
+        expect(within(detail).queryByRole('button', { name: 'See more' })).toBeNull();
+        cleanup();
+        detail = await openDetail({ ...DETAIL, summary: 'Long summary that runs past three lines' });
+        const summary = within(detail).getByTestId('vulnerability-summary');
+        const clamp = () => getComputedStyle(summary).getPropertyValue('-webkit-line-clamp');
+        expect(clamp()).toBe('3');
+        fireEvent.click(within(detail).getByRole('button', { name: 'See more' }));
+        expect(clamp()).toBe('');
+        fireEvent.click(within(detail).getByRole('button', { name: 'See less' }));
+        expect(within(detail).getByRole('button', { name: 'See more' }).getAttribute('aria-expanded')).toBe('false');
+        // The vector and the references stay visible under the cut summary.
+        expect(detail.textContent).toContain('CVSS:3.1/AV:N');
+        expect(within(detail).getByRole('link', { name: 'example.com/advisory' })).toBeTruthy();
+      } finally {
+        heights.mockRestore();
+      }
+    });
+
+    it('links the NVD page of the CVE', async () => {
+      const detail = await openDetail({ ...DETAIL, nvd_status: 'Analyzed' });
+      const link = within(within(detail).getByTestId('vulnerability-feeds')).getByRole('link', { name: 'NVD page' });
+      expect(link.getAttribute('href')).toBe(`https://nvd.nist.gov/vuln/detail/${CVE}`);
+      expect(link.getAttribute('target')).toBe('_blank');
+    });
+
+    it('lists the direct servers and applications first, and the others behind a button after a rule', async () => {
+      const detail = await openDetail({
+        ...DETAIL,
+        servers: 4,
+        applications: 3,
+        servers_list: [server('a-1', 'SRV-WEB-01', null), server('a-2', 'VM-APP-02', 'ESX-01'), server('a-3', 'VM-APP-03', 'ESX-01'), server('a-4', 'SRV-DB-01', null)],
+        applications_list: [
+          app('app-1', 'Billing', 'hosted', 'SRV-WEB-01', null),
+          app('app-2', 'Portal', 'declared', null, null),
+          app('app-3', 'Guest', 'hosted', 'VM-APP-02', 'ESX-01'),
+        ],
+      });
+      const servers = within(detail).getByTestId('vulnerability-servers');
+      expect(within(servers).getAllByRole('link').map((link) => link.textContent)).toEqual(['SRV-WEB-01', 'SRV-DB-01']);
+      expect(servers.querySelector('[data-indirect]')).toBeNull();
+      const show = within(servers).getByRole('button', { name: 'Also show the 2 servers reached through another asset' });
+      expect(show.getAttribute('aria-expanded')).toBe('false');
+      fireEvent.click(show);
+      const group = servers.querySelector('[data-indirect]') as HTMLElement;
+      expect(getComputedStyle(group).borderTopStyle).toBe('solid');
+      expect(group.textContent).toContain('Through another asset');
+      expect(group.textContent).toContain('VM-APP-02 · Tomcat 9.0.80 · through ESX-01');
+      expect(within(servers).getAllByRole('link').map((link) => link.textContent)).toEqual(['SRV-WEB-01', 'SRV-DB-01', 'VM-APP-02', 'VM-APP-03']);
+      fireEvent.click(within(servers).getByRole('button', { name: 'Hide the 2 servers reached through another asset' }));
+      expect(servers.querySelector('[data-indirect]')).toBeNull();
+
+      const apps = within(detail).getByTestId('vulnerability-applications');
+      expect(within(apps).getAllByRole('link').map((link) => link.textContent)).toEqual(['Billing', 'Portal']);
+      fireEvent.click(within(apps).getByRole('button', { name: 'Also show the application reached through another asset' }));
+      expect((apps.querySelector('[data-indirect]') as HTMLElement).textContent).toContain('Guest · Tomcat 9.0.80 · VM-APP-02 through ESX-01');
+    });
+
+    it('groups an application reached by several servers into one line per technology version', async () => {
+      const detail = await openDetail({
+        ...DETAIL,
+        servers: 5,
+        applications: 2,
+        alerting: { servers: 5, applications: 2 },
+        applications_list: [
+          { ...app('app-27', 'VMware vSphere', 'hosted', 'PAR-VCENTER-01', null), reference: 'APP-27' },
+          { ...app('app-27', 'VMware vSphere', 'hosted', 'PAR-ESX-01', null), reference: 'APP-27' },
+          { ...app('app-27', 'VMware vSphere', 'hosted', 'PAR-ESX-02', null), reference: 'APP-27' },
+          { ...app('app-27', 'VMware vSphere', 'hosted', 'PAR-VM-07', 'PAR-ESX-02'), reference: 'APP-27' },
+          // The same server twice (two instances) counts once.
+          app('app-9', 'Intranet', 'hosted', 'SRV-A', null),
+          app('app-9', 'Intranet', 'hosted', 'SRV-A', null),
+          app('app-9', 'Intranet', 'hosted', 'SRV-B', null),
+          app('app-9', 'Intranet', 'hosted', 'SRV-C', null),
+          app('app-9', 'Intranet', 'hosted', 'SRV-D', null),
+          app('app-9', 'Intranet', 'hosted', 'SRV-E', null),
+          { ...app('app-9', 'Intranet', 'declared', null, null), version_label: '8.0' },
+        ],
+      });
+      const apps = within(detail).getByTestId('vulnerability-applications');
+      const lines = () => Array.from(apps.querySelectorAll('li')).map((li) => li.textContent);
+      expect(lines()).toEqual([
+        'APP-27 VMware vSphere · Tomcat 9.0.80 · PAR-VCENTER-01, PAR-ESX-01, PAR-ESX-02',
+        'Intranet · Tomcat 9.0.80 · SRV-A, SRV-B, SRV-C and 2 more',
+        'Intranet · Tomcat 8.0',
+      ]);
+      // The indirect part counts distinct applications, and holds only the servers reached through another asset.
+      fireEvent.click(within(apps).getByRole('button', { name: 'Also show the application reached through another asset' }));
+      expect((apps.querySelector('[data-indirect]') as HTMLElement).textContent)
+        .toBe('Through another assetAPP-27 VMware vSphere · Tomcat 9.0.80 · PAR-VM-07 through PAR-ESX-02');
+      // The alerts line keeps counting distinct applications, as the server does.
+      expect(detail.textContent).not.toContain('in alerts');
+    });
+
+    it('says when nothing is directly concerned, and shows no button without indirect rows', async () => {
+      const detail = await openDetail({
+        ...DETAIL,
+        servers: 1,
+        applications: 1,
+        servers_list: [server('a-2', 'VM-APP-02', 'ESX-01')],
+        applications_list: [app('app-1', 'Billing', 'hosted', 'SRV-WEB-01', null)],
+      });
+      const servers = within(detail).getByTestId('vulnerability-servers');
+      expect(servers.textContent).toBe('No server directly concerned.Also show the server reached through another asset');
+      expect(within(servers).queryByRole('link')).toBeNull();
+      const apps = within(detail).getByTestId('vulnerability-applications');
+      expect(within(apps).queryByRole('button')).toBeNull();
+      expect(within(apps).getByRole('link', { name: 'Billing' })).toBeTruthy();
+    });
+  });
+
+  describe('feeds', () => {
+    const openDetail = async (detail: VulnerabilityDetail) => {
+      getMock.mockImplementation(async (url: string) => {
+        if (url === `/vulnerabilities/${CVE}`) return { data: detail } as any;
+        throw new Error(`unexpected ${url}`);
+      });
+      renderPage();
+      act(() => grid.props!.onCellClicked({ data: ROW, column: { getColId: () => 'cve_id' } }));
+      return screen.findByTestId('vulnerability-detail');
+    };
+
+    it('shows the feeds of each row as badges, and filters them on the server', async () => {
+      renderPage();
+      const source = column('match_sources');
+      expect(source).toMatchObject({ colId: 'source', headerName: 'Source', sortable: false, width: 130 });
+      expect(source.defaultHidden).toBeUndefined();
+      expect(source.headerTooltip).toBe('NVD: the US vulnerability database. Publisher: the record the publisher released on CVE.org.');
+      expect(await source.filterParams.getValues({})).toEqual([
+        { value: 'nvd', label: 'NVD' },
+        { value: 'cve_org', label: 'Publisher' },
+        { value: 'both', label: 'Both' },
+      ]);
+      const Source = source.cellRenderer;
+      render(
+        <ThemeProvider theme={createAppTheme('light')}>
+          <Source data={{ ...ROW, match_sources: ['nvd'] }} />
+          <Source data={{ ...ROW, match_sources: ['cve_org'] }} />
+          <Source data={{ ...ROW, match_sources: ['cve_org', 'nvd'] }} />
+          <Source data={ROW} />
+        </ThemeProvider>,
+      );
+      const cells = Array.from(document.querySelectorAll('[data-sources]')) as HTMLElement[];
+      expect(cells.map((cell) => cell.textContent)).toEqual(['NVD', 'Publisher', 'NVDPublisher']);
+      expect(cells[2].getAttribute('aria-label')).toBe('Source: NVD, Publisher');
+      fireEvent.mouseOver(cells[1]);
+      expect((await screen.findByRole('tooltip')).textContent).toContain('the record the publisher released on CVE.org');
+      // The filter model carries `source`: the export and the change in bulk send it as the list does.
+      getMock.mockResolvedValue({ data: new Blob(['x']), headers: {} } as any);
+      const filters = JSON.stringify({ state: { filterType: 'set', values: ['to_review'] }, source: { filterType: 'set', values: ['cve_org'] } });
+      act(() => grid.props!.onListRequestChange({ params: { page: 1, limit: 50, filters }, total: 2 }));
+      fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+      await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({ params: { filters } })));
+      postMock.mockResolvedValue({ data: { rows: 2, cves: 1, changes: 2, as_of: '2026-10-21T08:00:00.000Z' } } as any);
+      fireEvent.click(box(ALL_BOX));
+      fireEvent.click(screen.getByRole('button', { name: 'Change state (2)' }));
+      await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', { state: 'handled', all: true, filters: { filters }, dry_run: true }));
+    });
+
+    it('marks a score the publisher gave, in the grid and in the panel header', async () => {
+      renderPage();
+      const Severity = column('severity').cellRenderer;
+      const MARK = 'Score released by the publisher: the NVD has not assessed it yet';
+      const cells = render(
+        <ThemeProvider theme={createAppTheme('dark')}>
+          <Severity data={{ ...ROW, score_source: 'cve_org' }} />
+          <Severity data={{ ...ROW, score_source: 'nvd' }} />
+          <Severity data={{ ...ROW, score_source: null }} />
+        </ThemeProvider>,
+      );
+      expect(screen.getAllByRole('img', { name: MARK })).toHaveLength(1);
+      fireEvent.mouseOver(screen.getByRole('img', { name: MARK }));
+      expect((await screen.findByRole('tooltip')).textContent).toBe(MARK);
+      cells.unmount();
+      await openDetail({ ...DETAIL, score_source: 'cve_org' });
+      const header = screen.getByRole('heading', { name: CVE }).parentElement as HTMLElement;
+      expect(within(header).getByRole('img', { name: MARK })).toBeTruthy();
+    });
+
+    it('says how far the NVD went for each status', async () => {
+      const cases: Array<[string | null, string]> = [
+        ['Analyzed', 'analyzed'], ['Modified', 'analyzed'],
+        ['Awaiting Analysis', 'awaiting analysis'], ['Undergoing Analysis', 'awaiting analysis'], ['Received', 'awaiting analysis'],
+        ['Deferred', 'not analyzed'], ['Rejected', 'rejected'], [null, 'not linked to this product yet'],
+      ];
+      for (const [status, text] of cases) {
+        await openDetail({ ...DETAIL, nvd_status: status, record: null });
+        const feeds = screen.getByTestId('vulnerability-feeds');
+        expect(feeds.textContent).toBe(`NVD: ${text} · NVD page`);
+        // No record: the second line stays out, and the NVD page is the only link.
+        expect(within(feeds).getAllByRole('link').map((link) => link.textContent)).toEqual(['NVD page']);
+        cleanup();
+      }
+    });
+
+    it('names the publisher record, its dates and its CVE.org page', async () => {
+      await openDetail({
+        ...DETAIL,
+        nvd_status: 'Awaiting Analysis',
+        record: { assigner: 'apache', published_at: '2026-09-30T10:00:00.000Z', updated_at: '2026-10-02T10:00:00.000Z', state: 'PUBLISHED' },
+      });
+      const feeds = screen.getByTestId('vulnerability-feeds');
+      const published = formatShortDate('2026-09-30T10:00:00.000Z', 'en', { year: 'always' });
+      const updated = formatShortDate('2026-10-02T10:00:00.000Z', 'en', { year: 'always' });
+      expect(feeds.textContent).toContain(`Publisher record: released by apache on ${published}, updated on ${updated} · See on CVE.org`);
+      const link = within(feeds).getByRole('link', { name: 'See on CVE.org' });
+      expect(link.getAttribute('href')).toBe(`https://www.cve.org/CVERecord?id=${CVE}`);
+      expect(link.getAttribute('target')).toBe('_blank');
+      cleanup();
+      await openDetail({ ...DETAIL, record: { assigner: null, published_at: null, updated_at: null, state: null } });
+      expect(screen.getByTestId('vulnerability-feeds').textContent).toContain('Publisher record: available · See on CVE.org');
+    });
+
+    it('lists why a version is a row, closed until asked', async () => {
+      await openDetail({
+        ...DETAIL,
+        technologies: [{
+          ...DETAIL.technologies[0],
+          versions: [{
+            ...VERSION_980,
+            match_sources: ['cve_org', 'nvd'],
+            matches: [
+              { source: 'cve_org', vendor: 'Apache Software Foundation', product: 'Apache Tomcat', cpe: null, default_status: 'unaffected',
+                versions: [{ version: '9.0.0.M1', status: 'affected', lessThan: null, lessThanOrEqual: '9.0.98', changes: [] }], versions_total: 1 },
+              { source: 'nvd', cpe: 'a:apache:tomcat', versions: [{ end: '9.0.99', end_including: false }] },
+            ],
+          }, VERSION_UNKNOWN],
+        }],
+      });
+      const detail = screen.getByTestId('vulnerability-detail');
+      expect(Array.from(detail.querySelectorAll('[data-sources]')).map((node) => node.textContent)).toEqual(['NVDPublisher']);
+      const toggle = within(detail).getByRole('button', { name: 'Why this row: 9.0.80' });
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      expect(detail.textContent).not.toContain('CPE identifier');
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute('aria-expanded')).toBe('true');
+      const list = document.getElementById(toggle.getAttribute('aria-controls')!) as HTMLElement;
+      expect(Array.from(list.querySelectorAll('li')).map((li) => li.textContent)).toEqual([
+        'Apache Software Foundation · Apache Tomcat: versions 9.0.0.M1 to 9.0.98 affected; all other versions: not affected',
+        'CPE identifier a:apache:tomcat: versions before 9.0.99',
+      ]);
+      fireEvent.click(toggle);
+      expect(toggle.getAttribute('aria-expanded')).toBe('false');
+      // A version from an answer that names no feed shows neither badges nor toggle.
+      expect(within(detail).queryByRole('button', { name: /Version not recorded/ })).toBeNull();
+    });
+
+    it('says when each feed was read, and warns on a failed or old read', async () => {
+      const now = new Date('2026-10-21T08:00:00.000Z');
+      const at = (iso: string) => {
+        const date = new Date(iso);
+        return `${formatShortDate(date, 'en')} at ${new Intl.DateTimeFormat('en', { hour: '2-digit', minute: '2-digit' }).format(date)}`;
+      };
+      const item = (entry: Record<string, unknown>) => ({ source: 'nvd', last_success_at: null, last_attempt_at: null, failing: false, enabled: true, ...entry }) as any;
+      const line = (items: any[], dark = false) => {
+        const view = render(<ThemeProvider theme={createAppTheme(dark ? 'dark' : 'light')}><FeedAgeLine items={items} now={now} /></ThemeProvider>);
+        const node = screen.queryByTestId('vulnerability-feed-age');
+        return { node, view };
+      };
+      const NVD = '2026-10-21T02:20:00.000Z';
+      const ORG = '2026-10-21T02:21:00.000Z';
+      let shown = line([item({ last_success_at: NVD }), item({ source: 'cve_org', last_success_at: ORG })]);
+      expect(shown.node!.textContent).toBe(`Data read: NVD on ${at(NVD)} · Publishers (CVE.org) on ${at(ORG)}`);
+      expect(shown.node!.querySelector('[data-feed-warning]')).toBeNull();
+      shown.view.unmount();
+      // A feed that is off is left out; one never read says so.
+      shown = line([item({ last_success_at: NVD }), item({ source: 'cve_org', enabled: false, last_success_at: ORG })]);
+      expect(shown.node!.textContent).toBe(`Data read: NVD on ${at(NVD)}`);
+      shown.view.unmount();
+      shown = line([item({ last_success_at: NVD }), item({ source: 'cve_org' })]);
+      expect(shown.node!.textContent).toBe(`Data read: NVD on ${at(NVD)} · Publishers (CVE.org) not read yet`);
+      shown.view.unmount();
+      // Both off: no line.
+      shown = line([item({ enabled: false }), item({ source: 'cve_org', enabled: false })]);
+      expect(shown.node).toBeNull();
+      shown.view.unmount();
+      // More than three days, then a failed last read, in the warning color on the same line.
+      shown = line([item({ last_success_at: NVD }), item({ source: 'cve_org', last_success_at: '2026-10-16T07:00:00.000Z' })]);
+      const stale = shown.node!.querySelector('[data-feed-warning]') as HTMLElement;
+      expect(stale.textContent).toBe('CVE.org has not been read for 5 days');
+      expect(stale.querySelector('svg')).toBeTruthy();
+      expect(getComputedStyle(stale).color).toBe('rgb(180, 83, 9)');
+      expect(getComputedStyle(shown.node!).whiteSpace).toBe('nowrap');
+      shown.view.unmount();
+      shown = line([item({ last_success_at: NVD }), item({ source: 'cve_org', last_success_at: ORG, failing: true })], true);
+      const failing = shown.node!.querySelector('[data-feed-warning]') as HTMLElement;
+      expect(failing.textContent).toBe('The last read of CVE.org failed');
+      expect(getComputedStyle(failing).color).toBe('rgb(240, 168, 48)');
+      shown.view.unmount();
+    });
+
+    it('reads the feeds once on the page, and shows no line when that read fails', async () => {
+      getMock.mockImplementation(async (url: string) => {
+        if (url === '/vulnerabilities/sources') {
+          return { data: { items: [
+            { source: 'nvd', last_success_at: new Date().toISOString(), last_attempt_at: null, failing: false, enabled: true },
+            { source: 'cve_org', last_success_at: null, last_attempt_at: null, failing: false, enabled: true },
+          ] } } as any;
+        }
+        throw new Error(`unexpected ${url}`);
+      });
+      renderPage();
+      expect((await screen.findByTestId('vulnerability-feed-age')).textContent).toContain('Publishers (CVE.org) not read yet');
+      cleanup();
+      getMock.mockRejectedValue(new Error('down'));
+      renderPage();
+      await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/sources'));
+      expect(screen.queryByTestId('vulnerability-feed-age')).toBeNull();
+    });
   });
 });

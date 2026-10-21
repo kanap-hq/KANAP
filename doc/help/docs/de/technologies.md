@@ -258,18 +258,18 @@ Darunter fasst der Abschnitt **Schwachstellen** die bekannten Schwachstellen jed
 
 #### Schwachstellen
 
-Eine Zusammenfassung der Schwachstellen, eine Zeile pro Version der Technologie, in der Reihenfolge der Versionstabelle. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen, alle Status zusammen.
+Eine Zusammenfassung der Schwachstellen, eine Zeile pro installierter Version der Technologie, in der Reihenfolge der Versionstabelle. Die Zahl neben dem Titel ist die Anzahl verschiedener Schwachstellen, alle Status zusammen.
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **Version** | Die Version. Eine Version außerhalb der Warnungen ist ausgegraut und zeigt **Von den Warnungen ausgeschlossen**. **Version nicht erfasst (möglicherweise betroffen)** fasst die Server und Anwendungen zusammen, die keine Version angeben; diese Zeile erscheint nur, wenn es solche gibt |
 | **Server** | Wie viele Server in Betrieb diese Version tragen |
-| **Zu prüfen** | Die noch zu prüfenden Schwachstellen nach Schweregrad: **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Keine** und **Nicht bewertet**. **0**, wenn keine mehr übrig ist |
+| **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine Schwachstelle mit dem Schweregrad **Keine** zählt bei **Niedrig**. Ein Punkt bedeutet, dass keine mehr übrig ist. Fahren Sie über eine Überschrift für einen Hinweis |
 | **Gesamt** | Die verschiedenen Schwachstellen dieser Version, alle Status zusammen |
 
 **Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Version: auf ihre zu prüfenden Schwachstellen, wenn sie welche hat, sonst auf alle Status. **Alles auf der Seite Schwachstellen ansehen** unter der Tabelle öffnet die Seite für die ganze Technologie, alle Status zusammen.
 
-Eine Version, die kein Server und keine Anwendung nutzt, zeigt **Nicht installiert** anstelle der Zähler und keinen Link **Ansehen**. KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
+Versionen, die kein Server und keine Anwendung nutzt, erhalten keine Zeile. Sie werden unter der Tabelle zusammen genannt, zum Beispiel „Nicht installiert: 2016, 2017“. KANAP sucht nur nach Schwachstellen von Versionen, die auf einem Server installiert oder von einer Anwendung deklariert sind.
 
 Sind die Technologie oder einige ihrer Versionen außerhalb der Warnungen, sagt es eine Zeile oben im Abschnitt: **Von den Warnungen ausgeschlossen**, **Von den Warnungen ausgeschlossen, außer 2 Versionen** oder **3 Versionen von den Warnungen ausgeschlossen**. Mit `infrastructure:member` öffnet **Ändern** daneben die Versionstabelle im Reiter Übersicht, wo die Schalter sind. Siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 

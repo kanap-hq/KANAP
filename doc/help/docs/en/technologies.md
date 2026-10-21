@@ -258,18 +258,18 @@ Below them, when vulnerabilities are followed, the **Vulnerabilities** section s
 
 #### Vulnerabilities
 
-A summary of the vulnerabilities, one line per version of the technology, in the order of the versions table. The count next to the title is the number of distinct vulnerabilities, every state.
+A summary of the vulnerabilities, one line per installed version of the technology, in the order of the versions table. The count next to the title is the number of distinct vulnerabilities, every state.
 
 | Column | What it shows |
 |---|---|
 | **Version** | The version. A version out of the alerts is greyed and says **Excluded from alerts**. **Version not recorded (potentially concerned)** groups the servers and applications that name no version; this line shows only when there are some |
 | **Servers** | How many servers in service carry this version |
-| **To review** | The vulnerabilities still to review, by severity: **Critical**, **High**, **Medium**, **Low**, **None** and **Not rated**. **0** when none is left |
+| **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low**. A dot stands for none left. Hover a header for a reminder |
 | **Total** | The distinct vulnerabilities of this version, every state |
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the version: on its vulnerabilities to review when it has some, on every state otherwise. **See everything on the Vulnerabilities page**, under the table, opens the page on the whole technology, every state.
 
-A version that no server and no application uses shows **Not installed** in place of the counts, and no **See** link. KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.
+The versions that no server and no application uses get no line. They are named together under the table, for example "Not installed: 2016, 2017". KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.
 
 When the technology or some of its versions are out of the alerts, a line at the top of the section says so: **Excluded from alerts**, **Excluded from alerts, except 2 versions** or **3 versions excluded from alerts**. With `infrastructure:member`, **Change** next to it opens the versions table of the Overview tab, where the switches are. See [Vulnerability alerts](#vulnerability-alerts).
 

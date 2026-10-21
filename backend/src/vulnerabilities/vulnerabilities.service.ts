@@ -1,4 +1,6 @@
 import { BadRequestException, ConflictException, Injectable, NotFoundException, Optional } from '@nestjs/common';
+import { Features } from '../config/features';
+import { cveListEnabled } from './cve-list-feed.service';
 import { NvdFeedService } from './nvd-feed.service';
 import type { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
@@ -10,7 +12,8 @@ import { gridTextClause, gridTextModel } from '../technologies/technologies.serv
 import { versionInUseSql } from '../technologies/reports/version-support';
 import { assetInServiceSql, inServiceSql, REACH_FROM_TECHNOLOGIES, TechnologyReachService, withoutJit } from '../technologies/technology-reach.service';
 import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
-import { VulnerabilityMatchService } from './vulnerability-match.service';
+import type { ParsedAffected, ParsedAffectedVersion } from './cve-record';
+import { probesOf, productsOf, readCveNames, VulnerabilityMatchService } from './vulnerability-match.service';
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
@@ -41,6 +44,11 @@ export type VulnerabilityFilters = {
   exploited?: unknown;
   /** A number: the minimum EPSS probability, from 0 to 1. */
   epss?: unknown;
+  /**
+   * Which feed produced the row. `nvd` keeps a row the NVD matched, `cve_org` a row CVE.org
+   * matched, `both` a row both matched. A row both matched stays in `nvd` and in `cve_org`.
+   */
+  source?: unknown;
 };
 
 /** At most this many rows (technology version and CVE) in one change of state in bulk. */
@@ -53,10 +61,26 @@ const EXPLOITED_SQL = `(COALESCE(c.cisa_kev, false) OR COALESCE(c.eu_kev, false)
 /** The page of a CVE in the European vulnerability database. */
 const EUVD_VULNERABILITY_URL = 'https://euvd.enisa.europa.eu/vulnerability/';
 
+/**
+ * What the list, the detail, the export and the per-version summary show.
+ * The NVD cache wins when it holds a score. A CVE the NVD received and has not scored yet
+ * (`cvss_score` null) falls back to the CVE.org record (`r`). The summary text falls back only
+ * when the cache summary is blank, whether or not the cache has a score.
+ * `score_source` is `nvd` when that cache score belongs to an NVD row (`nvd_status` set). A CVE
+ * only CVE.org matched is copied into the cache with `nvd_status` null, and stays `cve_org`.
+ */
+const EFFECTIVE_SCORE = `(COALESCE(c.cvss_score, r.cvss_score))`;
+const EFFECTIVE_SEVERITY = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.severity WHEN r.cvss_score IS NOT NULL THEN r.severity ELSE c.severity END)`;
+const EFFECTIVE_SUMMARY = `(CASE WHEN NULLIF(btrim(c.summary), '') IS NOT NULL THEN c.summary ELSE COALESCE(r.summary, c.summary) END)`;
+const EFFECTIVE_CVSS_VERSION = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_version ELSE COALESCE(r.cvss_version, c.cvss_version) END)`;
+const EFFECTIVE_CVSS_VECTOR = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_vector ELSE COALESCE(r.cvss_vector, c.cvss_vector) END)`;
+const SCORE_SOURCE_SQL = `(CASE WHEN COALESCE(c.cvss_score, r.cvss_score) IS NULL THEN NULL WHEN c.cvss_score IS NOT NULL AND c.nvd_status IS NOT NULL THEN 'nvd' ELSE 'cve_org' END)`;
+const SEVERITY_ORDER = `CASE ${EFFECTIVE_SEVERITY} WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 WHEN 'none' THEN 1 ELSE 0 END`;
+
 /** The grid's sortable columns. */
 const GRID_SORTS: Record<string, string> = {
   severity: 'severity', // SEVERITY_ORDER, then the score
-  cvss_score: 'c.cvss_score',
+  cvss_score: EFFECTIVE_SCORE,
   published_at: 'c.published_at',
   cve_id: 'c.cve_id',
   technology: 'lower(t.name)',
@@ -111,7 +135,8 @@ const CVE_RE = /^CVE-\d{4}-\d{4,}$/;
 /** At most this many rows in one exported file. */
 const EXPORT_LIMIT = 10000;
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
-const SEVERITY_ORDER = `CASE c.severity WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 WHEN 'none' THEN 1 ELSE 0 END`;
+/** Versions of one CVE.org block shown on a detail row. The rest stay counted. */
+const MATCH_VERSION_CAP = 20;
 
 type Row = {
   id: string;
@@ -131,6 +156,8 @@ type Row = {
   version_label: string | null;
   /** Whether this row alerts: the version's exception, or the technology's setting. */
   alerts: boolean;
+  /** The feeds that produced the row, as stored (`cve_org`, `nvd`, or both). */
+  match_sources: string[] | null;
 };
 
 /** A row of the list grid: the row, with its CVE. */
@@ -140,6 +167,8 @@ type Cve = {
   cve_id: string;
   summary: string | null;
   cvss_score: string | null;
+  /** `nvd` when the cache score is an NVD row, `cve_org` when the shown score is the record's, null with no score. */
+  score_source: 'nvd' | 'cve_org' | null;
   severity: string | null;
   cvss_version: string | null;
   cvss_vector: string | null;
@@ -155,6 +184,15 @@ type Cve = {
   epss_percentile: string | null;
   epss_date: string | null;
   euvd_id: string | null;
+};
+
+/** The CVE.org record beside the cache, when `cves()` joined it. Absent from a list row. */
+type CveWithRecord = Cve & {
+  record_cve_id: string | null;
+  record_assigner: string | null;
+  record_published_at: Date | null;
+  record_updated_at: Date | null;
+  record_state: string | null;
 };
 
 function commaList(value: unknown): string[] {
@@ -189,6 +227,39 @@ function exploitedChoice(value: unknown): boolean | null {
   throw new BadRequestException('exploited must be yes or no.');
 }
 
+const MATCH_SOURCES = ['cve_org', 'nvd'] as const;
+type MatchSource = (typeof MATCH_SOURCES)[number];
+
+/** The feeds of a row, in a stable order (`cve_org`, then `nvd`). */
+function sortedSources(value: unknown): MatchSource[] {
+  const raw = Array.isArray(value) ? value : [];
+  const found = new Set(raw.filter((item): item is MatchSource => item === 'nvd' || item === 'cve_org'));
+  return MATCH_SOURCES.filter((source) => found.has(source));
+}
+
+/** The CSV cell: `NVD`, `CVE.org`, or `NVD, CVE.org`. */
+function sourceLabel(sources: readonly MatchSource[]): string {
+  const labels: string[] = [];
+  if (sources.includes('nvd')) labels.push('NVD');
+  if (sources.includes('cve_org')) labels.push('CVE.org');
+  return labels.join(', ');
+}
+
+/** `nvd`, `cve_org` or `both`, or nothing. Anything else is a 400. */
+function sourceChoice(value: unknown): 'nvd' | 'cve_org' | 'both' | null {
+  const raw = String(value ?? '').trim().toLowerCase();
+  if (!raw) return null;
+  if (raw === 'nvd' || raw === 'cve_org' || raw === 'both') return raw;
+  throw new BadRequestException('source must be nvd, cve_org or both.');
+}
+
+/** A row the named feed matched. `both` keeps a row both feeds matched. */
+const SOURCE_SQL: Record<'nvd' | 'cve_org' | 'both', string> = {
+  nvd: `'nvd' = ANY (tv.match_sources)`,
+  cve_org: `'cve_org' = ANY (tv.match_sources)`,
+  both: `tv.match_sources @> ARRAY['cve_org', 'nvd']::text[]`,
+};
+
 /** The minimum EPSS probability, or nothing. A value that is not a number from 0 to 1 is a 400. */
 function epssMinimum(value: unknown): number | null {
   if (value === undefined || value === null || String(value).trim() === '') return null;
@@ -204,6 +275,7 @@ function presentCve(c: Omit<Cve, 'cvss_vector' | 'reference_urls'>) {
     cve_id: c.cve_id,
     summary: c.summary,
     cvss_score: c.cvss_score == null ? null : Number(c.cvss_score),
+    score_source: c.score_source === 'nvd' || c.score_source === 'cve_org' ? c.score_source : null,
     severity: c.severity,
     cvss_version: c.cvss_version,
     published_at: c.published_at,
@@ -236,12 +308,15 @@ function presentRow(r: Row) {
     state_changed_by_name: r.state_changed_by_name,
     detected_at: r.detected_at,
     alerts: r.alerts,
+    match_sources: sortedSources(r.match_sources),
   };
 }
 
+type FeedMatch = { source: MatchSource; [key: string]: unknown };
+
 /** Rows of one CVE grouped per technology, versions by label (unknown version last). */
-function groupByTechnology(rows: Row[]) {
-  const byTech = new Map<string, { technology_id: string; reference: string | null; name: string; editor: string | null; versions: ReturnType<typeof presentRow>[] }>();
+function groupByTechnology(rows: Row[], matchesByTechnology: Map<string, Record<MatchSource, FeedMatch[]>>) {
+  const byTech = new Map<string, { technology_id: string; reference: string | null; name: string; editor: string | null; versions: Array<ReturnType<typeof presentRow> & { matches: FeedMatch[] }> }>();
   for (const r of rows) {
     const entry = byTech.get(r.technology_id) ?? {
       technology_id: r.technology_id,
@@ -250,7 +325,10 @@ function groupByTechnology(rows: Row[]) {
       editor: r.editor,
       versions: [],
     };
-    entry.versions.push(presentRow(r));
+    const prepared = matchesByTechnology.get(r.technology_id) ?? { cve_org: [], nvd: [] };
+    // A version the feed did not match carries none of that feed's criteria.
+    const matches = sortedSources(r.match_sources).flatMap((source) => prepared[source]);
+    entry.versions.push({ ...presentRow(r), matches });
     byTech.set(r.technology_id, entry);
   }
   const list = Array.from(byTech.values());
@@ -263,6 +341,148 @@ function groupByTechnology(rows: Row[]) {
 }
 
 const rowKey = (technologyId: string, versionId: string | null) => `${technologyId}|${versionId ?? ''}`;
+
+type NvdCriterion = {
+  product: string;
+  version_exact: string | null;
+  version_start: string | null;
+  start_including: boolean | null;
+  version_end: string | null;
+  end_including: boolean | null;
+};
+
+type AffectedRow = {
+  id: string;
+  container: 'cna' | 'adp';
+  vendor: string | null;
+  product: string | null;
+  vendor_key: string;
+  product_key: string;
+  default_status: ParsedAffected['default_status'];
+  versions: unknown;
+  cpe_products: string[] | null;
+  cpes: string[] | null;
+  package_name: string | null;
+  collection_url: string | null;
+  platforms: string[] | null;
+  modules: string[] | null;
+};
+
+function textOrNull(value: unknown): string | null {
+  return typeof value === 'string' && value.length > 0 ? value : null;
+}
+
+/** One NVD bound, with only the ends the criterion carries. */
+function presentBound(row: NvdCriterion): Record<string, string | boolean> {
+  const bound: Record<string, string | boolean> = {};
+  if (row.version_exact) bound.exact = row.version_exact;
+  if (row.version_start) {
+    bound.start = row.version_start;
+    bound.start_including = row.start_including === true;
+  }
+  if (row.version_end) {
+    bound.end = row.version_end;
+    bound.end_including = row.end_including === true;
+  }
+  return bound;
+}
+
+function boundSortKey(bound: Record<string, string | boolean>): string {
+  return `${bound.exact ?? ''}\0${bound.start ?? ''}\0${bound.end ?? ''}`;
+}
+
+function compareText(a: string, b: string): number {
+  return a < b ? -1 : a > b ? 1 : 0;
+}
+
+/** Vulnerable criteria of this CVE whose product the technology declares, one object per product. */
+function nvdMatches(criteria: NvdCriterion[], products: string[]): FeedMatch[] {
+  const wanted = new Set(products);
+  const byProduct = new Map<string, Array<Record<string, string | boolean>>>();
+  for (const row of criteria) {
+    const product = String(row.product ?? '').toLowerCase();
+    if (!wanted.has(product)) continue;
+    const list = byProduct.get(product) ?? [];
+    list.push(presentBound(row));
+    byProduct.set(product, list);
+  }
+  return Array.from(byProduct.entries())
+    .sort((a, b) => compareText(a[0], b[0]))
+    .map(([cpe, versions]) => ({
+      source: 'nvd' as const,
+      cpe,
+      versions: versions.sort((a, b) => compareText(boundSortKey(a), boundSortKey(b))),
+    }));
+}
+
+function compactVersion(value: unknown): ParsedAffectedVersion {
+  const item = value && typeof value === 'object' && !Array.isArray(value) ? value as Record<string, unknown> : {};
+  return {
+    version: textOrNull(item.version),
+    status: item.status === 'affected' || item.status === 'unaffected' || item.status === 'unknown' ? item.status : null,
+    versionType: textOrNull(item.versionType),
+    lessThan: textOrNull(item.lessThan),
+    lessThanOrEqual: textOrNull(item.lessThanOrEqual),
+    changes: Array.isArray(item.changes) ? item.changes as ParsedAffectedVersion['changes'] : [],
+  };
+}
+
+/** CVE.org blocks this technology reaches, by a name or by a CPE product. `probesOf` decides. */
+function orgMatches(blocks: AffectedRow[], names: ReturnType<typeof readCveNames>, products: string[]): FeedMatch[] {
+  const matched = blocks.flatMap((block) => {
+    const parsed: ParsedAffected = {
+      container: block.container,
+      vendor: block.vendor,
+      product: block.product,
+      vendor_key: block.vendor_key,
+      product_key: block.product_key,
+      default_status: block.default_status,
+      versions: [],
+      cpe_products: block.cpe_products ?? [],
+      cpes: block.cpes ?? [],
+      package_name: block.package_name,
+      collection_url: block.collection_url,
+      platforms: block.platforms ?? [],
+      modules: block.modules ?? [],
+    };
+    const probes = probesOf(names, products, parsed);
+    if (probes.length === 0) return [];
+    const versions = Array.isArray(block.versions) ? block.versions : [];
+    const item: FeedMatch = {
+      source: 'cve_org',
+      vendor: block.vendor,
+      product: block.product,
+      cpe: probes.find((probe) => probe.precisionProduct)?.precisionProduct ?? null,
+      container: block.container,
+      default_status: block.default_status,
+      versions: versions.slice(0, MATCH_VERSION_CAP).map(compactVersion),
+      versions_total: versions.length,
+    };
+    if (block.package_name) item.package_name = block.package_name;
+    if (block.platforms && block.platforms.length > 0) item.platforms = block.platforms;
+    if (block.modules && block.modules.length > 0) item.modules = block.modules;
+    return [{ item, vendor: block.vendor ?? '', product: block.product ?? '', container: block.container, id: Number(block.id) }];
+  });
+  matched.sort((a, b) => compareText(a.vendor, b.vendor) || compareText(a.product, b.product) || compareText(a.container, b.container) || a.id - b.id);
+  return matched.map((entry) => entry.item);
+}
+
+/** An error kept from an attempt that is newer than the last success. No success yet counts as newer. */
+function feedFailing(row: { last_error: string | null; last_attempt_at: Date | string | null; last_success_at: Date | string | null } | undefined): boolean {
+  if (!row?.last_error || !row.last_attempt_at) return false;
+  if (!row.last_success_at) return true;
+  return new Date(row.last_attempt_at).getTime() > new Date(row.last_success_at).getTime();
+}
+
+function presentRecord(cve: CveWithRecord) {
+  if (!cve.record_cve_id) return null;
+  return {
+    assigner: cve.record_assigner,
+    published_at: cve.record_published_at,
+    updated_at: cve.record_updated_at,
+    state: cve.record_state,
+  };
+}
 
 /**
  * The vulnerabilities of a tenant (lot T6a): the rows of `technology_vulnerabilities` with the
@@ -279,7 +499,7 @@ export class VulnerabilitiesService {
     @Optional() private readonly feed?: NvdFeedService,
   ) {}
 
-  /** The WHERE clause of the filters, on `tv` (rows), `t` (technologies) and `c` (cache). */
+  /** The WHERE clause of the filters, on `tv` (rows), `t` (technologies), `c` (cache) and `r` (CVE.org record). */
   private async filterSql(mg: EntityManager, tenantId: string, filters: VulnerabilityFilters, params: unknown[]): Promise<string> {
     const where: string[] = [];
     const push = (value: unknown) => { params.push(value); return `$${params.length}`; };
@@ -287,7 +507,7 @@ export class VulnerabilitiesService {
     if (severities.length) {
       const valid = severities.map(severityOf);
       if (valid.some((s) => !s)) throw new BadRequestException('severity must be critical, high, medium, low or none.');
-      where.push(`c.severity = ANY(${push(valid)}::text[])`);
+      where.push(`${EFFECTIVE_SEVERITY} = ANY(${push(valid)}::text[])`);
     }
     const states = commaList(filters.state);
     if (states.length) {
@@ -322,10 +542,12 @@ export class VulnerabilitiesService {
     const q = String(filters.q ?? '').trim();
     if (q) {
       const like = push(`%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`);
-      where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR c.summary ILIKE ${like})`);
+      where.push(`(tv.cve_id ILIKE ${like} OR t.name ILIKE ${like} OR ${EFFECTIVE_SUMMARY} ILIKE ${like})`);
     }
     const exploited = exploitedChoice(filters.exploited);
     if (exploited !== null) where.push(exploited ? EXPLOITED_SQL : `NOT ${EXPLOITED_SQL}`);
+    const source = sourceChoice(filters.source);
+    if (source) where.push(SOURCE_SQL[source]);
     const epssMin = epssMinimum(filters.epss);
     if (epssMin !== null) where.push(`c.epss >= ${push(epssMin)}::numeric`);
     where.push(...this.gridClauses(filters.filters, push));
@@ -353,7 +575,9 @@ export class VulnerabilitiesService {
    * `editor` (without case), `technology` (id or `TEC-n`; an unknown one matches nothing) and
    * `version` (labels, `null` for the rows without version), text filters on `cve_id` and
    * `summary`, a number filter on `cvss_score` and `epss`, a date filter on `published_at`, a set
-   * filter on `exploited` (`yes` / `no`; an unknown value matches nothing, both match every row).
+   * filter on `exploited` (`yes` / `no`; an unknown value matches nothing; `yes` and `no`
+   * together match every row) and on `source` (`nvd`, `cve_org`, `both`; an unknown value
+   * matches nothing, several match the rows any of them would keep).
    * An unreadable model or another column is ignored; `technologies` (the name before T6c) reads
    * as `technology`; a set filter in exclude mode is a 400.
    */
@@ -375,7 +599,7 @@ export class VulnerabilitiesService {
       if (!m || m.filterType !== 'set' || !Array.isArray(m.values)) return null;
       return m.values.filter((v: unknown): v is string => typeof v === 'string' && v.trim() !== '').map((v: string) => v.trim());
     };
-    for (const [column, expr] of [['severity', 'c.severity'], ['state', 'tv.state']] as const) {
+    for (const [column, expr] of [['severity', EFFECTIVE_SEVERITY], ['state', 'tv.state']] as const) {
       const values = setValues(column);
       if (values) out.push(values.length ? `${expr} = ANY(${push(values)}::text[])` : 'false');
     }
@@ -398,11 +622,11 @@ export class VulnerabilitiesService {
       out.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
     }
     const json = typeof raw === 'string' ? raw : JSON.stringify(model);
-    for (const [column, expr] of [['cve_id', 'tv.cve_id'], ['summary', 'c.summary']] as const) {
+    for (const [column, expr] of [['cve_id', 'tv.cve_id'], ['summary', EFFECTIVE_SUMMARY]] as const) {
       const clause = gridTextClause(expr, gridTextModel(json, column), push);
       if (clause) out.push(clause);
     }
-    const score = gridNumberClause('c.cvss_score', model.cvss_score, push);
+    const score = gridNumberClause(EFFECTIVE_SCORE, model.cvss_score, push);
     if (score) out.push(score);
     const epss = gridNumberClause('c.epss', model.epss, push);
     if (epss) out.push(epss);
@@ -414,9 +638,49 @@ export class VulnerabilitiesService {
       else if (yes && !no) out.push(EXPLOITED_SQL);
       else if (no && !yes) out.push(`NOT ${EXPLOITED_SQL}`);
     }
+    const sources = setValues('source');
+    if (sources) {
+      const parts = sources
+        .map((value) => value.toLowerCase())
+        .filter((value): value is 'nvd' | 'cve_org' | 'both' => value === 'nvd' || value === 'cve_org' || value === 'both')
+        .map((value) => SOURCE_SQL[value]);
+      out.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
+    }
     const published = gridDateClause('c.published_at', model.published_at, push);
     if (published) out.push(`(${published})`);
     return out;
+  }
+
+  /**
+   * What each feed matched, per technology, recomputed from the cache. A version drops a feed it
+   * was not matched by (`groupByTechnology`). Nothing is stored.
+   */
+  private async sourceMatches(mg: EntityManager, tenantId: string, cveId: string, technologyIds: string[]) {
+    const map = new Map<string, Record<MatchSource, FeedMatch[]>>();
+    if (technologyIds.length === 0) return map;
+    const techs: Array<{ id: string; cpe_products: string[] | null; cve_names: unknown }> = await mg.query(
+      `SELECT id, cpe_products, cve_names FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [tenantId, technologyIds],
+    );
+    const criteria: NvdCriterion[] = await mg.query(
+      `SELECT product, version_exact, version_start, start_including, version_end, end_including
+         FROM vulnerability_cve_matches
+        WHERE cve_id = $1 AND vulnerable`,
+      [cveId],
+    );
+    const blocks: AffectedRow[] = await mg.query(
+      `SELECT id::text AS id, container, vendor, product, vendor_key, product_key, default_status, versions,
+              cpe_products, cpes, package_name, collection_url, platforms, modules
+         FROM vulnerability_cve_affected
+        WHERE cve_id = $1`,
+      [cveId],
+    );
+    for (const tech of techs) {
+      const products = productsOf(tech.cpe_products);
+      const names = readCveNames(tech.cve_names);
+      map.set(tech.id, { nvd: nvdMatches(criteria, products), cve_org: orgMatches(blocks, names, products) });
+    }
+    return map;
   }
 
   /** The rows with their technology, CVE and version (`v`, none for the rows without version). */
@@ -424,13 +688,14 @@ export class VulnerabilitiesService {
     FROM technology_vulnerabilities tv
     JOIN technologies t ON t.tenant_id = tv.tenant_id AND t.id = tv.technology_id
     JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+    LEFT JOIN vulnerability_cve_records r ON r.cve_id = c.cve_id
     LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id`;
 
   private readonly rowColumns = `tv.id, tv.technology_id, tv.technology_version_id, tv.cve_id, tv.state, tv.note, tv.match_basis, tv.matching,
     tv.detected_at, tv.state_changed_at,
     NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS state_changed_by_name,
     t.name AS technology_name, t.item_number AS technology_item_number, t.editor, v.label AS version_label,
-    ${vulnerabilityAlertsSql('v', 't')} AS alerts`;
+    ${vulnerabilityAlertsSql('v', 't')} AS alerts, tv.match_sources`;
 
   private readonly usersJoin = `LEFT JOIN users u ON u.tenant_id = tv.tenant_id AND u.id = tv.state_changed_by`;
 
@@ -445,12 +710,19 @@ export class VulnerabilitiesService {
     );
   }
 
-  private async cves(mg: EntityManager, ids: string[]): Promise<Map<string, Cve>> {
-    const rows: Cve[] = ids.length
+  private async cves(mg: EntityManager, ids: string[]): Promise<Map<string, CveWithRecord>> {
+    const rows: CveWithRecord[] = ids.length
       ? await mg.query(
-        `SELECT c.cve_id, c.summary, c.cvss_score, c.severity, c.cvss_version, c.cvss_vector, c.published_at,
-                c.last_modified_at, c.nvd_status, c.reference_urls, ${SIGNAL_COLUMNS}
-           FROM vulnerability_cves c WHERE c.cve_id = ANY($1::text[])`,
+        `SELECT c.cve_id, ${EFFECTIVE_SUMMARY} AS summary, ${EFFECTIVE_SCORE} AS cvss_score,
+                ${EFFECTIVE_SEVERITY} AS severity, ${EFFECTIVE_CVSS_VERSION} AS cvss_version,
+                ${EFFECTIVE_CVSS_VECTOR} AS cvss_vector, c.published_at,
+                c.last_modified_at, c.nvd_status, c.reference_urls, ${SCORE_SOURCE_SQL} AS score_source,
+                r.cve_id AS record_cve_id, r.assigner AS record_assigner,
+                r.published_at AS record_published_at, r.updated_at AS record_updated_at, r.state AS record_state,
+                ${SIGNAL_COLUMNS}
+           FROM vulnerability_cves c
+           LEFT JOIN vulnerability_cve_records r ON r.cve_id = c.cve_id
+          WHERE c.cve_id = ANY($1::text[])`,
         [ids],
       )
       : [];
@@ -510,6 +782,37 @@ export class VulnerabilitiesService {
   }
 
   /**
+   * How fresh each feed is. Both sources are always named, with null dates when no pass has written
+   * a row. `failing` is true when the last attempt is newer than the last success and an error was
+   * kept. The error text stays in the database: it can name a mirror.
+   */
+  async sources(opts: VulnOpts) {
+    const rows: Array<{ source: string; last_success_at: Date | null; last_attempt_at: Date | null; last_error: string | null }> = await opts.manager.query(
+      `SELECT source, last_success_at, last_attempt_at, last_error
+         FROM vulnerability_feed_sources
+        WHERE source = ANY($1::text[])`,
+      [['nvd', 'cve_org']],
+    );
+    const bySource = new Map(rows.map((row) => [row.source, row]));
+    const enabled: Record<MatchSource, boolean> = {
+      nvd: Features.VULNERABILITY_FEED_ENABLED,
+      cve_org: cveListEnabled(),
+    };
+    return {
+      items: (['nvd', 'cve_org'] as const).map((source) => {
+        const row = bySource.get(source);
+        return {
+          source,
+          last_success_at: row?.last_success_at ?? null,
+          last_attempt_at: row?.last_attempt_at ?? null,
+          failing: feedFailing(row),
+          enabled: enabled[source],
+        };
+      }),
+    };
+  }
+
+  /**
    * The rows (technology, version and CVE) that concern the tenant, filtered, exploited first and
    * then most severe, paged by row (lot T6c: the unit that carries the state).
    */
@@ -538,13 +841,13 @@ export class VulnerabilitiesService {
     const direction = String(sortDir ?? '').toUpperCase() === 'ASC' ? 'ASC' : 'DESC';
     // Then by CVE, technology, version and row: a stable order, so the pages neither repeat nor skip a row.
     const tail = `c.cve_id DESC, lower(t.name), t.id, ${versionOrderSql('v.label')}, tv.id`;
-    const severityThen = `${SEVERITY_ORDER} DESC, c.cvss_score DESC NULLS LAST`;
+    const severityThen = `${SEVERITY_ORDER} DESC, ${EFFECTIVE_SCORE} DESC NULLS LAST`;
     // Exploited first (the default, and the column itself). An explicit severity sort stays on the
     // severity. Another column: that column, then most severe.
     const order = !sortField || sortField === 'exploited'
       ? `${EXPLOITED_SQL} ${sortField === 'exploited' ? direction : 'DESC'}, ${severityThen}, c.published_at DESC NULLS LAST, ${tail}`
       : sortField === 'severity'
-        ? `${SEVERITY_ORDER} ${direction}, c.cvss_score ${direction} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`
+        ? `${SEVERITY_ORDER} ${direction}, ${EFFECTIVE_SCORE} ${direction} NULLS LAST, c.published_at DESC NULLS LAST, ${tail}`
         : sortField === 'technology'
           ? `lower(t.name) ${direction}, t.id, ${severityThen}, ${tail}`
           : `${GRID_SORTS[sortField]} ${direction} NULLS LAST, ${severityThen}, ${tail}`;
@@ -562,7 +865,9 @@ export class VulnerabilitiesService {
     }
     const rows: GridRow[] = total === 0 ? [] : await mg.query(
       `SELECT ${this.rowColumns},
-              c.summary, c.cvss_score, c.severity, c.cvss_version, c.published_at, c.last_modified_at, c.nvd_status,
+              ${EFFECTIVE_SUMMARY} AS summary, ${EFFECTIVE_SCORE} AS cvss_score, ${EFFECTIVE_SEVERITY} AS severity,
+              ${EFFECTIVE_CVSS_VERSION} AS cvss_version, ${SCORE_SOURCE_SQL} AS score_source,
+              c.published_at, c.last_modified_at, c.nvd_status,
               ${SIGNAL_COLUMNS}
          ${this.rowsFrom}
          ${this.usersJoin}
@@ -592,6 +897,7 @@ export class VulnerabilitiesService {
       state_changed_by_name: r.state_changed_by_name,
       detected_at: r.detected_at,
       alerts: r.alerts,
+      match_sources: sortedSources(r.match_sources),
       // The servers and applications of this version.
       ...this.counts([r], reach),
     }));
@@ -644,7 +950,9 @@ export class VulnerabilitiesService {
     const versionOf = new Map(rows.map((r) => [rowKey(r.technology_id, r.technology_version_id), r]));
 
     const reachedAssets = rows.flatMap((r) => reach.servers.get(rowKey(r.technology_id, r.technology_version_id)) ?? []);
-    const assetIds = Array.from(new Set(reachedAssets.flatMap((a) => [a.asset_id, a.via_asset_id]).filter((id): id is string => !!id)));
+    const reachedApps = reach.apps ? rows.flatMap((r) => reach.apps!.get(rowKey(r.technology_id, r.technology_version_id)) ?? []) : [];
+    // The names of the servers, of the carriers they are reached through, and of the applications' servers, in one query.
+    const assetIds = Array.from(new Set([...reachedAssets, ...reachedApps].flatMap((a) => [a.asset_id, a.via_asset_id]).filter((id): id is string => !!id)));
     const assetRows: Array<{ id: string; name: string; asset_reference: string | null; environment: string | null }> = assetIds.length
       ? await mg.query(`SELECT id, name, asset_reference, environment FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, assetIds])
       : [];
@@ -667,7 +975,6 @@ export class VulnerabilitiesService {
 
     let apps: Array<Record<string, unknown>> | null = null;
     if (reach.apps) {
-      const reachedApps = rows.flatMap((r) => reach.apps!.get(rowKey(r.technology_id, r.technology_version_id)) ?? []);
       const appIds = Array.from(new Set(reachedApps.map((a) => a.application_id)));
       const appRows: Array<{ id: string; name: string; sequential_id: string | null; criticality: string | null }> = appIds.length
         ? await mg.query(`SELECT id, name, sequential_id, criticality FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, appIds])
@@ -684,6 +991,8 @@ export class VulnerabilitiesService {
           kind: a.kind,
           environment: a.environment,
           server_name: a.asset_id ? assetsById.get(a.asset_id)?.name ?? null : null,
+          /** Hosted on a server the technology reaches through another asset (a host, a cluster): that asset. */
+          via_asset_name: a.via_asset_id ? assetsById.get(a.via_asset_id)?.name ?? null : null,
           technology_id: a.technology_id,
           technology_name: row.technology_name,
           version_label: row.version_label,
@@ -695,6 +1004,7 @@ export class VulnerabilitiesService {
     const kevSources: Array<'cisa' | 'eu'> = [];
     if (presented.cisa_kev) kevSources.push('cisa');
     if (presented.eu_kev) kevSources.push('eu');
+    const technologyIds = Array.from(new Set(rows.map((r) => r.technology_id)));
     return {
       ...presented,
       /** The European record: its EUVD id, or the CVE id when the mapping has none. */
@@ -702,7 +1012,9 @@ export class VulnerabilitiesService {
       kev_sources: kevSources,
       cvss_vector: cve.cvss_vector,
       reference_urls: cve.reference_urls ?? [],
-      technologies: groupByTechnology(rows),
+      /** The CVE.org record, or null when this installation has not read it. */
+      record: presentRecord(cve),
+      technologies: groupByTechnology(rows, await this.sourceMatches(mg, tenantId, cveId, technologyIds)),
       ...this.counts(rows, reach),
       alerting: this.counts(rows.filter((r) => r.alerts), reach),
       servers_list: servers,
@@ -736,7 +1048,7 @@ export class VulnerabilitiesService {
    * versions table, plus the unknown version when a link names none. `installed` follows
    * `versionInUseSql` (for the unknown version: a link that names no version is in use). A version
    * that is not installed has `servers` and every count at 0. `open` counts distinct CVE still to
-   * review by severity, `unknown` for a CVE the NVD has not scored yet (`severity` null), `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
+   * review by severity, `unknown` when neither the NVD cache nor the CVE.org record has a severity, `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
    * `versions_excluded` and `versions_included` count every version.
    */
   async summary(idOrRef: string, opts: VulnOpts) {
@@ -772,15 +1084,16 @@ export class VulnerabilitiesService {
        ),
        agg AS (
          SELECT tv.technology_version_id,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'critical')::int AS critical,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'high')::int AS high,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'medium')::int AS medium,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'low')::int AS low,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity = 'none')::int AS none,
-                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND c.severity IS NULL)::int AS unknown,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} = 'critical')::int AS critical,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} = 'high')::int AS high,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} = 'medium')::int AS medium,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} = 'low')::int AS low,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} = 'none')::int AS none,
+                count(DISTINCT tv.cve_id) FILTER (WHERE tv.state = 'to_review' AND ${EFFECTIVE_SEVERITY} IS NULL)::int AS unknown,
                 count(DISTINCT tv.cve_id)::int AS total
            FROM technology_vulnerabilities tv
            LEFT JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
+           LEFT JOIN vulnerability_cve_records r ON r.cve_id = c.cve_id
           WHERE tv.tenant_id = $1 AND tv.technology_id = $3
           GROUP BY tv.technology_version_id
        ),
@@ -1129,7 +1442,7 @@ export class VulnerabilitiesService {
   /** The list as a CSV file, one line per grid row (technology, version and CVE), with its filters and sort. */
   async exportCsv(filters: VulnerabilityFilters, language: unknown, opts: VulnOpts, applications: ApplicationsAccess) {
     const { items } = await this.listRows(filters, opts, applications, false);
-    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'State', 'Note', 'Servers', 'Applications', 'Exploited', 'KEV added', 'Ransomware', 'EPSS', 'EPSS percentile', 'EUVD', 'Alerts'];
+    const headers = ['CVE', 'Severity', 'Score', 'Published', 'Technology reference', 'Technology', 'Publisher', 'Version', 'Match', 'Source', 'State', 'Note', 'Servers', 'Applications', 'Exploited', 'KEV added', 'Ransomware', 'EPSS', 'EPSS percentile', 'EUVD', 'Alerts'];
     const basisLabel: Record<MatchBasis, string> = {
       version_in_range: 'Version in range',
       version_not_comparable: 'Version not comparable',
@@ -1146,6 +1459,7 @@ export class VulnerabilitiesService {
       item.editor ?? '',
       item.version ?? 'Unknown',
       basisLabel[item.match_basis],
+      sourceLabel(item.match_sources),
       stateLabel[item.state],
       item.note ?? '',
       String(item.servers),

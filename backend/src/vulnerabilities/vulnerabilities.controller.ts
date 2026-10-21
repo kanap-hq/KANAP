@@ -37,7 +37,7 @@ async function applicationsAccess(ctx: TenantRequest): Promise<ApplicationsAcces
   return { scope };
 }
 
-/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export`, `filter-values` and `cve-names` before `:cveId`. */
+/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export`, `filter-values`, `cve-names` and `sources` before `:cveId`. */
 @UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
@@ -85,6 +85,13 @@ export class VulnerabilitiesController {
   @Get('cve-names')
   cveNameDirectory(@Query('q') q: string | undefined, @Query('vendor') vendor: string | undefined, @Tenant() ctx: TenantRequest) {
     return this.cveNames.directory(requireManager(ctx.manager), q, vendor);
+  }
+
+  /** How fresh the NVD and CVE.org passes are. A static path, declared before `:cveId`. */
+  @RequireLevel('infrastructure', 'reader')
+  @Get('sources')
+  sources(@Tenant() ctx: TenantRequest) {
+    return this.svc.sources(opts(ctx));
   }
 
   @RequireLevel('infrastructure', 'reader')

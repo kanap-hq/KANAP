@@ -29,7 +29,7 @@ Cada tecnología se compara así:
 
 Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, por ejemplo Tomcat en Windows. KANAP las muestra para el producto vulnerable solo, de modo que una puede aparecer para una instalación a la que no afecta. Márquela como **No afectada**.
 
-Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
+Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. La columna **Fuente** de la lista indica qué fuentes la cotejaron. Cuando la NVD aún no ha puntuado una vulnerabilidad, KANAP muestra la puntuación y la gravedad de la ficha del editor. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
 
 Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
 
@@ -54,6 +54,8 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 
 La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad. Las vulnerabilidades explotadas activamente van primero, y después las más graves. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
+Una línea encima de la cuadrícula indica cuándo leyó KANAP cada fuente por última vez: **Datos leídos**, y después la NVD y los editores (CVE.org), cada uno con el día y la hora de su última lectura. Una fuente desactivada no aparece. Una advertencia sigue en la misma línea cuando la última lectura de una fuente falló, o cuando una fuente lleva más de 3 días sin leerse. Los datos de esa fuente pueden estar entonces desactualizados.
+
 **Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** devuelve la página a su estado de apertura: las filas **Por revisar**, las vulnerabilidades explotadas activamente primero, **Alertas** en **Incluidas**, **Publicada** en todas las fechas y **Solo explotadas** desactivado. La exportación y un cambio de estado en bloque siguen estos tres ajustes.
 
 **Columnas**:
@@ -61,7 +63,7 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 | Columna | Qué muestra |
 |---|---|
 | **CVE** | El identificador de la vulnerabilidad, por ejemplo `CVE-2024-1234` |
-| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**. Un icono de alerta sigue al nombre cuando la CISA o la Unión Europea incluye la vulnerabilidad. Su información emergente nombra los catálogos, y el uso en ransomware cuando la CISA lo registra |
+| **Gravedad** | **Crítica**, **Alta**, **Media**, **Baja**, **Ninguna** o **Sin evaluar**. Un icono de alerta sigue al nombre cuando la CISA o la Unión Europea incluye la vulnerabilidad. Su información emergente nombra los catálogos, y el uso en ransomware cuando la CISA lo registra. Un icono de información marca una puntuación publicada por el editor: la NVD aún no ha evaluado la vulnerabilidad |
 | **Explotada** | **Sí** o **No**. Oculta por defecto: el icono de **Gravedad** muestra el mismo hecho |
 | **Puntuación** | La puntuación CVSS. Oculta por defecto |
 | **EPSS (%)** | La probabilidad de explotación en los próximos 30 días, como porcentaje en el idioma de su pantalla. Por ejemplo, 15,3 %. El panel lateral añade el percentil |
@@ -71,11 +73,12 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 | **Editor** | El editor de la tecnología. Oculta por defecto |
 | **Servidores** | Cuántos servidores llevan esta versión, directamente o a través del servidor en el que se ejecutan |
 | **Aplicaciones** | Cuántas aplicaciones usan esta versión, alojadas o declaradas |
+| **Fuente** | Las fuentes que cotejaron la fila: **NVD**, **Editor** (la ficha que el editor publicó en CVE.org), o ambas |
 | **Estado** | **Por revisar**, **Tratada** o **No afectada** |
 | **Nota** | La nota de la fila. Oculta por defecto |
 | **Publicación** | La fecha de publicación |
 
-**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor**, **Estado** y **Explotada** ofrecen casillas (**Versión** ofrece también **Sin registrar**, **Explotada** ofrece **Sí** y **No**), **Puntuación** un número, **EPSS (%)** un porcentaje mínimo de 0 a 100, **Publicación** una fecha, **CVE** y **Resumen** un texto. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
+**Filtros**: cada columna tiene su propio filtro bajo su encabezado. **Gravedad**, **Tecnología**, **Versión**, **Editor**, **Fuente**, **Estado** y **Explotada** ofrecen casillas (**Versión** ofrece también **Sin registrar**, **Explotada** ofrece **Sí** y **No**), **Puntuación** un número, **EPSS (%)** un porcentaje mínimo de 0 a 100, **Publicación** una fecha, **CVE** y **Resumen** un texto. **Fuente** ofrece **NVD**, **Editor** y **Ambas**: una fila que cotejaron las dos fuentes queda bajo **NVD** y bajo **Editor**, y **Ambas** solo conserva esas filas. La exportación y el cambio de estado en bloque lo siguen, como siguen los demás filtros de columna. El cuadro de búsqueda sobre la cuadrícula busca en el identificador CVE, el resumen y el nombre de la tecnología.
 
 **Orden** por **Explotada**, **Gravedad**, **Puntuación**, **EPSS (%)**, **Publicación**, **CVE** o **Tecnología**. La lista se abre con las vulnerabilidades explotadas activamente, y después las más graves. El selector de columnas muestra u oculta columnas, y la cuadrícula recuerda su elección.
 
@@ -96,13 +99,16 @@ Por ejemplo, para marcar todas las versiones sin registrar de PostgreSQL como no
 
 ## Revisar una vulnerabilidad
 
-Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. Su encabezado queda visible, con el identificador CVE, la gravedad y el icono de alerta cuando la vulnerabilidad está explotada activamente. **Cerrar** (la cruz) o Esc cierra el panel. El panel abarca todas las tecnologías y versiones a las que afecta la vulnerabilidad. Verá:
+Haga clic en una fila para abrir su vulnerabilidad en un panel lateral. Su encabezado queda visible, con el identificador CVE, la gravedad, el icono de información cuando la puntuación viene del editor, y el icono de alerta cuando la vulnerabilidad está explotada activamente. **Cerrar** (la cruz) o Esc cierra el panel. El panel abarca todas las tecnologías y versiones a las que afecta la vulnerabilidad. Verá, en este orden:
 
-- El resumen, el vector CVSS y los enlaces de referencia (avisos del editor, parches).
-- **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota.
-- **Servidores**: cada servidor que lleva una versión afectada, con la tecnología, la versión y el servidor en el que se ejecuta.
-- **Aplicaciones**: cada aplicación que usa una versión afectada, con su servidor.
+- **Tecnologías y versiones**: cada versión afectada, con su **Estado** y una nota. Bajo cada versión, las insignias de las fuentes que la cotejaron. **Por qué esta fila** abre los criterios de cada fuente en lenguaje claro, por ejemplo «Identificador CPE a:apache:tomcat: versiones anteriores a 9.0.99» para la NVD, o «Apache Software Foundation · Apache Tomcat: versiones 9.0.0 a 9.0.98 afectadas» para el editor.
+- La descripción, cortada a tres líneas (**Ver más** muestra el resto), el vector CVSS y los enlaces de referencia (avisos del editor, parches).
+- **Fuentes**: el estado de la vulnerabilidad en la NVD (**analizada**, **pendiente de análisis**, **no analizada**, **rechazada** o **aún no vinculada a este producto**), con un enlace a su ficha de la NVD. Cuando KANAP ha leído la ficha del editor, una segunda línea indica quién la publicó y cuándo, su última actualización, y **Ver en CVE.org**.
 - **Explotación**, cuando se conoce un catálogo, una puntuación EPSS o un identificador europeo. Consulte [Explotación](#exploitation).
+- **Servidores**: cada servidor que lleva una versión afectada, con la tecnología y la versión. Los servidores alcanzados a través de otro activo, como el host de una máquina virtual o un clúster, quedan ocultos tras un botón, por ejemplo **Mostrar también los 4 servidores alcanzados a través de otro activo**. Aparecen bajo su propio título, **A través de otro activo**, con el activo por el que se alcanzan.
+- **Aplicaciones**: cada aplicación que usa una versión afectada, listada una vez por versión con sus servidores (tres como máximo, y después «y 2 más»). Una aplicación que declara la tecnología, o que está alojada en un servidor que la lleva, va primero. Las demás quedan tras el mismo tipo de botón.
+
+Cuando ningún servidor o ninguna aplicación está afectado directamente, el panel lo indica, y el botón sigue mostrando los demás.
 
 Una versión fuera de las alertas aparece atenuada, con sus servidores y aplicaciones. Cuando solo una parte está en las alertas, una línea encima de la lista indica cuántos, por ejemplo «3 servidores, de ellos 1 en las alertas».
 
@@ -132,7 +138,7 @@ El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualq
 
 ## Exportación
 
-**Exportar CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por fila de la cuadrícula, en su orden, en el idioma de su pantalla. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
+**Exportar CSV** descarga las vulnerabilidades que cumplen los filtros, una fila por fila de la cuadrícula, en su orden, en el idioma de su pantalla. Su columna **Source**, después de **Match**, da `NVD`, `CVE.org` o `NVD, CVE.org`. Por encima de 10 000 vulnerabilidades, acote primero los filtros.
 
 ## Notificaciones por correo electrónico
 

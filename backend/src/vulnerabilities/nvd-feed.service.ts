@@ -29,6 +29,9 @@ const RATE_WINDOW_MS = 30_000;
 const ATTEMPTS = 3;
 const RETRY_DELAY_MS = 30_000;
 const REQUEST_TIMEOUT_MS = 120_000;
+/** How much of a product error `vulnerability_feed_sources.last_error` keeps. */
+const FEED_ERROR_LIMIT = 300;
+const NVD_SOURCE = 'nvd';
 
 export type ParsedCve = {
   cve_id: string;
@@ -299,6 +302,7 @@ export class NvdFeedService implements OnModuleInit {
   /** The scheduled run: collect the NVD, then CVE.org, match every tenant, stamp the signals, then tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
+    await this.markNvdAttempt();
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
@@ -342,11 +346,59 @@ export class NvdFeedService implements OnModuleInit {
         summary.errors.push(`Notifications of tenant ${tenantId}: ${error?.message ?? error}`);
       }
     }
+    // Before the throw below: a pass where every product failed still records that it failed.
+    await this.markNvdOutcome(summary);
     if (summary.errors.length > 0) this.logger.warn(`[${NVD_FEED_TASK_NAME}] ${summary.errors.length} failure(s): ${summary.errors.join(' | ')}`);
     if (summary.failed_products.length > 0 && summary.failed_products.length === summary.products) {
       throw new Error(`No product could be read from the NVD: ${summary.errors[0] ?? 'unknown error'}`);
     }
     return summary;
+  }
+
+  /**
+   * The age of the NVD pass (`vulnerability_feed_sources`, `source = 'nvd'`). A failed write is
+   * logged and does not stop the pass. The cursor of another source is left alone.
+   */
+  private async markNvdAttempt(): Promise<void> {
+    try {
+      await this.dataSource.query(
+        `INSERT INTO vulnerability_feed_sources (source, last_attempt_at) VALUES ($1, now())
+         ON CONFLICT (source) DO UPDATE SET last_attempt_at = now()`,
+        [NVD_SOURCE],
+      );
+    } catch (error) {
+      this.warnProgress(error);
+    }
+  }
+
+  /** Success clears the error and keeps the attempt time. A product failure keeps the previous success. */
+  private async markNvdOutcome(summary: FeedSummary): Promise<void> {
+    try {
+      if (summary.failed_products.length === 0) {
+        await this.dataSource.query(
+          `INSERT INTO vulnerability_feed_sources (source, last_success_at, last_error) VALUES ($1, now(), NULL)
+           ON CONFLICT (source) DO UPDATE SET last_success_at = now(), last_error = NULL`,
+          [NVD_SOURCE],
+        );
+        return;
+      }
+      const message = String(summary.errors[0] ?? 'NVD feed failed').slice(0, FEED_ERROR_LIMIT);
+      await this.dataSource.query(
+        `INSERT INTO vulnerability_feed_sources (source, last_error) VALUES ($1, $2)
+         ON CONFLICT (source) DO UPDATE SET last_error = EXCLUDED.last_error`,
+        [NVD_SOURCE, message],
+      );
+    } catch (error) {
+      this.warnProgress(error);
+    }
+  }
+
+  private warnProgress(error: unknown): void {
+    try {
+      this.logger.warn(`[${NVD_FEED_TASK_NAME}] feed progress: ${String((error as { message?: string })?.message ?? error).slice(0, FEED_ERROR_LIMIT)}`);
+    } catch {
+      // A logger failure must not become an unhandled rejection.
+    }
   }
 
   /**

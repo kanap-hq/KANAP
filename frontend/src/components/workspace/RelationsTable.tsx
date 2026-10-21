@@ -297,11 +297,13 @@ type SectionProps = {
   addLabel?: string;
   /** The page's own section title, in place of the default one (the section keeps `title` as its name). */
   heading?: React.ReactNode;
+  /** Other actions on the right of the title, before "Add" (a refresh, its result line). */
+  actions?: React.ReactNode;
   children: React.ReactNode;
 };
 
 /** A Relations section: title and count, an "Add" text action on the right, then its content. */
-export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, children }: SectionProps) {
+export function RelationsSection({ title, count, onAdd, adding, addLabel, heading, actions, children }: SectionProps) {
   return (
     <Box component="section" aria-label={title}>
       <Box sx={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', mb: 0.75, minHeight: 28 }}>
@@ -313,6 +315,7 @@ export function RelationsSection({ title, count, onAdd, adding, addLabel, headin
           )}
           {count != null && <Typography component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{count}</Typography>}
         </Box>
+        {actions}
         {onAdd && (
           <Button
             variant="text"

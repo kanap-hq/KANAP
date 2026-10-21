@@ -443,7 +443,22 @@
         "epssOn": "as of {{date}}",
         "epssFirst": "EPSS: FIRST",
         "euvdLink": "See on the European vulnerability database (ENISA)",
-        "euvdSource": "Source: ENISA, European vulnerability database"
+        "euvdSource": "Source: ENISA, European vulnerability database",
+        "seeMore": "See more",
+        "seeLess": "See less",
+        "indirect": "Through another asset",
+        "noDirectServers": "No server directly concerned.",
+        "noDirectApplications": "No application directly concerned.",
+        "showIndirectServers_one": "Also show the server reached through another asset",
+        "showIndirectServers_other": "Also show the {{count}} servers reached through another asset",
+        "hideIndirectServers_one": "Hide the server reached through another asset",
+        "hideIndirectServers_other": "Hide the {{count}} servers reached through another asset",
+        "showIndirectApplications_one": "Also show the application reached through another asset",
+        "showIndirectApplications_other": "Also show the {{count}} applications reached through another asset",
+        "hideIndirectApplications_one": "Hide the application reached through another asset",
+        "hideIndirectApplications_other": "Hide the {{count}} applications reached through another asset",
+        "moreServers_one": "and {{count}} more",
+        "moreServers_other": "and {{count}} more"
       },
       "section": {
         "title": "Vulnerabilities",
@@ -456,10 +471,11 @@
         "noLongerMatches": "No longer matches",
         "see": "See",
         "seeAll": "See everything on the Vulnerabilities page",
-        "notInstalled": "Not installed",
+        "notInstalledList_one": "Not installed: {{versions}}",
+        "notInstalledList_other": "Not installed: {{versions}}",
         "notInstalledHint": "KANAP only looks for vulnerabilities of versions installed on a server or declared by an application.",
         "columns": {
-          "open": "To review",
+          "openHint": "{{severity}}: CVE still to review. Total counts every state.",
           "total": "Total"
         },
         "alerts": {
@@ -501,6 +517,93 @@
       },
       "shortcut": {
         "exploitedOnly": "Exploited only"
+      },
+      "feeds": {
+        "column": "Source",
+        "badge": {
+          "nvd": "NVD",
+          "cve_org": "Publisher"
+        },
+        "filter": {
+          "both": "Both"
+        },
+        "badgeHint": "NVD: the US vulnerability database. Publisher: the record the publisher released on CVE.org.",
+        "scoreFromPublisher": "Score released by the publisher: the NVD has not assessed it yet",
+        "title": "Sources",
+        "nvdLabel": "NVD:",
+        "nvdStatus": {
+          "analyzed": "analyzed",
+          "pending": "awaiting analysis",
+          "deferred": "not analyzed",
+          "rejected": "rejected",
+          "absent": "not linked to this product yet"
+        },
+        "nvdLink": "NVD page",
+        "record": {
+          "label": "Publisher record:",
+          "publishedBy": "released by {{assigner}} on {{date}}",
+          "publishedByOnly": "released by {{assigner}}",
+          "publishedOn": "released on {{date}}",
+          "updatedOn": "updated on {{date}}",
+          "available": "available",
+          "link": "See on CVE.org"
+        },
+        "why": {
+          "toggle": "Why this row",
+          "toggleOf": "Why this row: {{version}}",
+          "separator": "; ",
+          "withVersions": "{{subject}}: {{versions}}",
+          "cpe": "CPE identifier {{cpe}}",
+          "exact": "version {{version}}",
+          "every": "all versions",
+          "nvd": {
+            "from": "versions from {{start}}",
+            "after": "versions after {{start}}",
+            "before": "versions before {{end}}",
+            "upToIncluded": "versions up to {{end}} included",
+            "fromToIncluded": "versions from {{start}} to {{end}} included",
+            "fromToExcluded": "versions from {{start}} to {{end}} excluded",
+            "afterToIncluded": "versions after {{start}} up to {{end}} included",
+            "afterToExcluded": "versions after {{start}} and before {{end}}"
+          },
+          "org": {
+            "range": "versions {{start}} to {{end}}",
+            "rangeExcluded": "versions {{start}} to {{end}} (excluded)",
+            "before": "versions before {{end}}",
+            "upTo": "versions up to {{end}}",
+            "andLater": "versions {{start}} and later",
+            "entry": "{{range}} {{status}}",
+            "change": "from {{at}} {{status}}",
+            "default": "all other versions: {{status}}",
+            "more_one": "and {{count}} more version",
+            "more_other": "and {{count}} more versions",
+            "package": "package {{name}}",
+            "platforms": "platforms {{list}}",
+            "modules": "modules {{list}}",
+            "unnamed": "Publisher record"
+          },
+          "status": {
+            "affected_one": "affected",
+            "affected_other": "affected",
+            "unaffected_one": "not affected",
+            "unaffected_other": "not affected",
+            "unknown_one": "status unknown",
+            "unknown_other": "status unknown"
+          }
+        },
+        "age": {
+          "line": "Data read: {{list}}",
+          "item": "{{source}} on {{date}} at {{time}}",
+          "never": "{{source}} not read yet",
+          "nvd": "NVD",
+          "cve_org": "Publishers (CVE.org)",
+          "failingNvd": "The last read of the NVD failed",
+          "failingCveOrg": "The last read of CVE.org failed",
+          "staleNvd_one": "The NVD has not been read for {{count}} day",
+          "staleNvd_other": "The NVD has not been read for {{count}} days",
+          "staleCveOrg_one": "CVE.org has not been read for {{count}} day",
+          "staleCveOrg_other": "CVE.org has not been read for {{count}} days"
+        }
       }
     },
     "interfaces": {

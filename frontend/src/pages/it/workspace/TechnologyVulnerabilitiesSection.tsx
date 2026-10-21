@@ -1,11 +1,13 @@
 import { useState } from 'react';
-import { Box, Button, Link, Tooltip, Typography } from '@mui/material';
+import { Box, Button, Link, Tooltip, Typography, useTheme } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import api from '../../../api';
 import { useFeatures } from '../../../config/FeaturesContext';
+import { StatusDot } from '../../../components/design';
+import { getDotColor, VULNERABILITY_SEVERITY_COLORS } from '../../../utils/statusColors';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import { SEVERITIES, SeverityCell, versionText } from '../vulnerabilities/vulnerabilityTypes';
 import { TECHNOLOGY_VERSIONS_ANCHOR } from './TechnologyOverviewTab';
@@ -15,6 +17,20 @@ export type VulnerabilityOpenCounts = { critical: number; high: number; medium: 
 
 /** The order of the open counts: the severities, then the CVE not rated yet ("Not rated", as on the Vulnerabilities page). */
 const OPEN_KEYS = [...SEVERITIES, 'unknown'] as const;
+
+/**
+ * The columns of CVE to review, one per severity. A CVE rated None (CVSS 0.0) is counted with Low:
+ * the table keeps five columns, and None is the bottom of the Low band.
+ */
+const OPEN_COLUMNS = [
+  { key: 'critical', severity: 'critical', counts: ['critical'] },
+  { key: 'high', severity: 'high', counts: ['high'] },
+  { key: 'medium', severity: 'medium', counts: ['medium'] },
+  { key: 'low', severity: 'low', counts: ['low', 'none'] },
+  { key: 'unknown', severity: null, counts: ['unknown'] },
+] as const;
+
+const numberSx = { fontVariantNumeric: 'tabular-nums' } as const;
 
 /** One version of `GET /technologies/:id/vulnerabilities/summary`. */
 export type TechnologyVulnerabilityVersion = {
@@ -66,9 +82,9 @@ type Props = {
 };
 
 /**
- * The vulnerabilities of a technology, for its Compliance tab: one line per version, with the CVE
- * still to review by severity. A version that is not in use shows "Not installed" in place of the
- * server and CVE counts. "See" opens the Vulnerabilities page on an installed version that has a
+ * The vulnerabilities of a technology, for its Compliance tab: one line per version in use, with
+ * its servers, the CVE still to review in one column per severity, and the total. The versions not
+ * in use are named in one line under the table. "See" opens the Vulnerabilities page on an installed version that has a
  * CVE: on its CVE to review when it has some, on every state otherwise. The count next to the title
  * is of distinct CVE, every state; "See everything" opens every state too. A member can match the
  * technology again.
@@ -76,6 +92,7 @@ type Props = {
  */
 export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit }: Props) {
   const { t } = useTranslation('it');
+  const mode = useTheme().palette.mode;
   const location = useLocation();
   const { config } = useFeatures();
   const enabled = config.features.vulnerabilityFeed === true;
@@ -96,6 +113,9 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   const data = query.data;
   const searching = Boolean(data?.collecting) || (data?.products ?? []).some((product) => product.status === 'pending');
   const versions = data?.versions ?? [];
+  // Only the versions in use get a line; the others are named once, under the table.
+  const installed = versions.filter((row) => row.installed);
+  const notInstalled = versions.filter((row) => !row.installed);
   // The page's technology filter takes the reference: a raw id would show in it.
   const technologyRef = data?.technology?.reference ?? data?.technology?.id ?? technologyId;
   const banner = alertsBanner(data, t);
@@ -142,48 +162,51 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
     {
       key: 'servers',
       header: t('pages.vulnerabilities.columns.servers'),
-      width: 88,
+      width: 64,
       align: 'right',
-      // Servers, to review and total become the one "Not installed" label.
-      span: (row) => (row.installed ? 1 : 3),
-      render: (row) => row.installed
-        ? <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.servers}</Box>
-        : (
-          <Tooltip title={t('pages.vulnerabilities.section.notInstalledHint')}>
-            <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('pages.vulnerabilities.section.notInstalled')}</Box>
+      render: (row) => <Box component="span" sx={numberSx}>{row.servers}</Box>,
+    },
+    // The CVE still to review, by severity: the header's hint says so, apart from Total.
+    ...OPEN_COLUMNS.map((column): RelationsColumn<TechnologyVulnerabilityVersion> => {
+      const label = t(`pages.vulnerabilities.severities.${column.severity ?? 'unknown'}`);
+      const colorKey = column.severity ? VULNERABILITY_SEVERITY_COLORS[column.severity] : 'default';
+      const color = getDotColor(colorKey, mode);
+      const attention = colorKey === 'warning';
+      return {
+        key: `open-${column.key}`,
+        header: (
+          <Tooltip title={t('pages.vulnerabilities.section.columns.openHint', { severity: label })} describeChild>
+            <Box component="span" data-severity={column.severity ?? 'unknown'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px', maxWidth: '100%' }}>
+              <StatusDot color={color} />
+              {/* A long name (Non évaluée, Nicht bewertet) wraps on two lines rather than being cut. */}
+              <Box component="span" sx={{ whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'right' }}>{label}</Box>
+            </Box>
           </Tooltip>
         ),
-    },
-    {
-      key: 'open',
-      header: t('pages.vulnerabilities.section.columns.open'),
-      render: (row) => {
-        if (!row.installed) return null;
-        const open = OPEN_KEYS.filter((key) => (row.open[key] ?? 0) > 0);
-        if (open.length === 0) return <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>0</Box>;
-        return (
-          <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, whiteSpace: 'normal' }}>
-            {open.map((key) => (
-              <SeverityCell key={key} severity={key === 'unknown' ? null : key} score={null} count={row.open[key]} />
-            ))}
-          </Box>
-        );
-      },
-    },
+        width: 84,
+        align: 'right',
+        render: (row) => {
+          const count = column.counts.reduce((sum, key) => sum + (row.open[key] ?? 0), 0);
+          if (count === 0) return <Box component="span" data-zero="" sx={{ color: 'kanap.text.tertiary' }}>·</Box>;
+          return (
+            <Box component="span" sx={{ ...numberSx, ...(attention ? { color, fontWeight: 500 } : {}) }}>{count}</Box>
+          );
+        },
+      };
+    }),
     {
       key: 'total',
       header: t('pages.vulnerabilities.section.columns.total'),
-      width: 72,
+      width: 56,
       align: 'right',
-      render: (row) => row.installed
-        ? <Box component="span" sx={{ fontVariantNumeric: 'tabular-nums' }}>{row.total}</Box>
-        : null,
+      render: (row) => <Box component="span" sx={{ ...numberSx, fontWeight: 500 }}>{row.total}</Box>,
     },
     {
       key: 'see',
       header: '',
-      width: 88,
-      render: (row) => row.installed && row.total > 0 ? (
+      width: 48,
+      align: 'right',
+      render: (row) => row.total > 0 ? (
         <Link
           component={RouterLink}
           to={pageOf(row)}
@@ -200,7 +223,18 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
   if (!enabled) return null;
 
   return (
-    <RelationsSection title={t('pages.vulnerabilities.section.title')} count={data ? data.cves ?? 0 : undefined}>
+    <RelationsSection
+      title={t('pages.vulnerabilities.section.title')}
+      count={data ? data.cves ?? 0 : undefined}
+      actions={canEdit ? (
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+          {result && <Typography role="status" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{result}</Typography>}
+          <Button variant="text" size="small" onClick={() => void rematch()} disabled={busy} sx={{ fontSize: 12, minWidth: 0, px: 1 }}>
+            {t('pages.vulnerabilities.section.rematch')}
+          </Button>
+        </Box>
+      ) : undefined}
+    >
       {banner && (
         <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary', py: 0.5 }}>
           <Box component="span">{banner}</Box>
@@ -214,26 +248,30 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
           )}
         </Typography>
       )}
-      {canEdit && (
-        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1, mb: 0.5 }}>
-          {result && <Typography role="status" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{result}</Typography>}
-          <Button variant="text" size="small" onClick={() => void rematch()} disabled={busy} sx={{ fontSize: 12, minWidth: 0, px: 1 }}>
-            {t('pages.vulnerabilities.section.rematch')}
-          </Button>
-        </Box>
-      )}
       {searching && <RelationsEmpty>{t('pages.vulnerabilities.section.searching')}</RelationsEmpty>}
       {data && versions.length === 0 && !searching && <RelationsEmpty>{t('pages.vulnerabilities.section.empty')}</RelationsEmpty>}
       {query.isError && <RelationsEmpty>{t('pages.vulnerabilities.section.loadFailed')}</RelationsEmpty>}
       {versions.length > 0 && (
         <>
-          <RelationsTable
-            columns={columns}
-            rows={versions}
-            rowKey={(row) => row.version_id ?? 'none'}
-            rowMuted={(row) => row.alerts === false}
-            ariaLabel={t('pages.vulnerabilities.section.title')}
-          />
+          {installed.length > 0 && (
+            <RelationsTable
+              columns={columns}
+              rows={installed}
+              rowKey={(row) => row.version_id ?? 'none'}
+              rowMuted={(row) => row.alerts === false}
+              ariaLabel={t('pages.vulnerabilities.section.title')}
+            />
+          )}
+          {notInstalled.length > 0 && (
+            <Tooltip title={t('pages.vulnerabilities.section.notInstalledHint')} placement="bottom-start">
+              <Typography data-testid="vulnerabilities-not-installed" sx={{ fontSize: 13, color: 'kanap.text.secondary', mt: 1, width: 'fit-content', maxWidth: '100%' }}>
+                {t('pages.vulnerabilities.section.notInstalledList', {
+                  count: notInstalled.length,
+                  versions: notInstalled.map((row) => versionText({ version_label: row.label }, t)).join(', '),
+                })}
+              </Typography>
+            </Tooltip>
+          )}
           <Box sx={{ mt: 1 }}>
             <Link component={RouterLink} to={`${pageBase}&alerts=all&state=all`} underline="hover" sx={{ fontSize: 13 }}>
               {t('pages.vulnerabilities.section.seeAll')}

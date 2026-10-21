@@ -1,8 +1,9 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography,
+  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
@@ -24,13 +25,16 @@ import { formatShortDate } from '../../lib/dateFormat';
 import { getWithListContext } from '../../lib/listContext';
 import { drawerMenuItemSx, drawerSelectSx, inlineControlSx } from '../../theme/formSx';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { getDotColor } from '../../utils/statusColors';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
 import ForbiddenPage from '../ForbiddenPage';
 import {
   EPSS_HOME,
   ExploitedBadge,
   SEVERITIES,
+  ScoreSourceMark,
   SeverityCell,
+  SourceBadges,
   VULNERABILITY_STATES,
   VulnerabilityStateCell,
   exploitationSources,
@@ -39,12 +43,15 @@ import {
   formatEpssPercentInput,
   parseEpssPercent,
   hasExploitationData,
+  groupApplications,
+  isDirectServer,
   versionText,
   type VulnerabilityDetail,
   type VulnerabilityGridRow,
   type VulnerabilityState,
   type VulnerabilityVersion,
 } from './vulnerabilities/vulnerabilityTypes';
+import { describeMatch, feedAges, nvdState, type FeedAge, type FeedSourceStatus } from './vulnerabilities/feedText';
 
 const ENDPOINT = '/vulnerabilities';
 
@@ -367,6 +374,236 @@ function VersionStateRow({ technologyId, cveId, version, canEdit, onSaved }: {
           {t('pages.vulnerabilities.saveFailed')}
         </Typography>
       )}
+      <VersionMatches version={version} label={label} />
+    </Box>
+  );
+}
+
+/**
+ * Under a version: the feeds that matched it, and "Why this row", closed by default, which lists
+ * each criterion in plain words. Nothing on an answer that names no feed.
+ */
+function VersionMatches({ version, label }: { version: VulnerabilityVersion; label: string }) {
+  const { t } = useTranslation('it');
+  const [open, setOpen] = useState(false);
+  const sources = version.match_sources ?? [];
+  const matches = version.matches ?? [];
+  if (sources.length === 0 && matches.length === 0) return null;
+  const listId = `why-${version.id}`;
+  return (
+    <Box sx={{ gridColumn: '1 / -1', minWidth: 0, mt: '-2px' }}>
+      <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0 }}>
+        <SourceBadges sources={sources} />
+        {matches.length > 0 && (
+          <MLink
+            component="button"
+            type="button"
+            underline="hover"
+            aria-expanded={open}
+            aria-controls={listId}
+            aria-label={t('pages.vulnerabilities.feeds.why.toggleOf', { version: label })}
+            onClick={() => setOpen((value) => !value)}
+            sx={{ fontSize: 12, color: 'kanap.text.secondary', '&:hover': { color: 'primary.main' } }}
+          >
+            {t('pages.vulnerabilities.feeds.why.toggle')}
+          </MLink>
+        )}
+      </Box>
+      {open && (
+        <Box component="ul" id={listId} sx={{ ...listSx, mt: 0.5, fontSize: 12, color: 'kanap.text.secondary' }}>
+          {matches.map((match, index) => (
+            <li key={`${match.source}:${index}`}>{describeMatch(match, t)}</li>
+          ))}
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+/** The NVD status and the publisher's record of a CVE, in two lines at most. */
+function FeedSourcesBlock({ detail }: { detail: VulnerabilityDetail }) {
+  const { t } = useTranslation('it');
+  const locale = useLocale();
+  const record = detail.record ?? null;
+  const day = (value: string | null) => (value ? formatShortDate(value, locale, { year: 'always' }) : '');
+  const recordParts: string[] = [];
+  if (record) {
+    const published = day(record.published_at);
+    if (record.assigner && published) recordParts.push(t('pages.vulnerabilities.feeds.record.publishedBy', { assigner: record.assigner, date: published }));
+    else if (record.assigner) recordParts.push(t('pages.vulnerabilities.feeds.record.publishedByOnly', { assigner: record.assigner }));
+    else if (published) recordParts.push(t('pages.vulnerabilities.feeds.record.publishedOn', { date: published }));
+    const updated = day(record.updated_at);
+    if (updated) recordParts.push(t('pages.vulnerabilities.feeds.record.updatedOn', { date: updated }));
+  }
+  return (
+    <DetailBlock title={t('pages.vulnerabilities.feeds.title')} divided>
+      <Box data-testid="vulnerability-feeds" sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
+        <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+          <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.feeds.nvdLabel')}</Box>
+          {' '}
+          <Box component="span" data-nvd-state={nvdState(detail.nvd_status)}>
+            {t(`pages.vulnerabilities.feeds.nvdStatus.${nvdState(detail.nvd_status)}`)}
+          </Box>
+          {' · '}
+          <ExternalLink href={`https://nvd.nist.gov/vuln/detail/${encodeURIComponent(detail.cve_id)}`}>
+            {t('pages.vulnerabilities.feeds.nvdLink')}
+          </ExternalLink>
+        </Typography>
+        {record && (
+          <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
+            <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.feeds.record.label')}</Box>
+            {' '}
+            {recordParts.length > 0 ? recordParts.join(', ') : t('pages.vulnerabilities.feeds.record.available')}
+            {' · '}
+            <ExternalLink href={`https://www.cve.org/CVERecord?id=${encodeURIComponent(detail.cve_id)}`}>
+              {t('pages.vulnerabilities.feeds.record.link')}
+            </ExternalLink>
+          </Typography>
+        )}
+      </Box>
+    </DetailBlock>
+  );
+}
+
+/**
+ * How fresh the data of each feed is, in one tertiary line above the grid. A feed that is off is
+ * left out. A failed last read, or no success for more than three days, turns that feed's part
+ * into a warning on the same line.
+ */
+export function FeedAgeLine({ items, now }: { items: FeedSourceStatus[] | null | undefined; now?: Date }) {
+  const { t } = useTranslation('it');
+  const locale = useLocale();
+  const mode = useTheme().palette.mode;
+  const ages = feedAges(items, now);
+  if (ages.length === 0) return null;
+  const time = (date: Date) => new Intl.DateTimeFormat(locale, { hour: '2-digit', minute: '2-digit' }).format(date);
+  const name = (age: FeedAge) => t(`pages.vulnerabilities.feeds.age.${age.source}`);
+  const read = ages.map((age) => (age.readAt
+    ? t('pages.vulnerabilities.feeds.age.item', { source: name(age), date: formatShortDate(age.readAt, locale), time: time(age.readAt) })
+    : t('pages.vulnerabilities.feeds.age.never', { source: name(age) })));
+  const warnings = ages.flatMap((age) => {
+    if (!age.warning) return [];
+    const suffix = age.source === 'nvd' ? 'Nvd' : 'CveOrg';
+    return [age.warning.kind === 'failing'
+      ? t(`pages.vulnerabilities.feeds.age.failing${suffix}`)
+      : t(`pages.vulnerabilities.feeds.age.stale${suffix}`, { count: age.warning.days })];
+  });
+  const text = t('pages.vulnerabilities.feeds.age.line', { list: read.join(' · ') });
+  return (
+    <Box
+      data-testid="vulnerability-feed-age"
+      title={[text, ...warnings].join(' · ')}
+      sx={{ display: 'flex', alignItems: 'center', gap: 1, minWidth: 0, mb: 1, fontSize: 12, color: 'kanap.text.tertiary', whiteSpace: 'nowrap', overflow: 'hidden' }}
+    >
+      <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', minWidth: 0 }}>{text}</Box>
+      {warnings.length > 0 && (
+        <Box
+          component="span"
+          role="status"
+          data-feed-warning=""
+          sx={{ display: 'inline-flex', alignItems: 'center', gap: '4px', color: getDotColor('warning', mode), minWidth: 0, flexShrink: 1 }}
+        >
+          <WarningAmberOutlined aria-hidden sx={{ fontSize: 14, flexShrink: 0 }} />
+          <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis' }}>{warnings.join(' · ')}</Box>
+        </Box>
+      )}
+    </Box>
+  );
+}
+
+/** A quiet text button of the panel ("See more", "Also show..."): secondary, teal on hover. */
+const panelToggleSx = { fontSize: 12, color: 'kanap.text.secondary', textAlign: 'left', '&:hover': { color: 'primary.main' } } as const;
+
+/**
+ * The summary, cut at three lines. "See more" shows only when the text really overflows, measured
+ * again when the text changes; "See less" cuts it again.
+ */
+function ClampedSummary({ text }: { text: string }) {
+  const { t } = useTranslation('it');
+  const ref = useRef<HTMLParagraphElement | null>(null);
+  const [expanded, setExpanded] = useState(false);
+  const [overflows, setOverflows] = useState(false);
+  useLayoutEffect(() => { setExpanded(false); }, [text]);
+  useLayoutEffect(() => {
+    // Measured while cut: the full height beyond the three visible lines.
+    if (expanded) return;
+    const el = ref.current;
+    setOverflows(el != null && el.scrollHeight > el.clientHeight + 1);
+  }, [text, expanded]);
+  return (
+    <>
+      <Typography
+        ref={ref}
+        data-testid="vulnerability-summary"
+        sx={{
+          fontSize: 14,
+          lineHeight: 1.6,
+          color: 'kanap.text.primary',
+          ...(expanded ? {} : { display: '-webkit-box', WebkitLineClamp: 3, WebkitBoxOrient: 'vertical', overflow: 'hidden' }),
+        }}
+      >
+        {text}
+      </Typography>
+      {overflows && (
+        <MLink
+          component="button"
+          type="button"
+          underline="hover"
+          aria-expanded={expanded}
+          onClick={() => setExpanded((value) => !value)}
+          sx={{ ...panelToggleSx, mt: 0.5 }}
+        >
+          {t(expanded ? 'pages.vulnerabilities.detail.seeLess' : 'pages.vulnerabilities.detail.seeMore')}
+        </MLink>
+      )}
+    </>
+  );
+}
+
+/**
+ * The servers or applications of the panel, direct ones first. Those reached through another asset
+ * stay hidden behind a text button, and show after a soft rule under their own small heading.
+ */
+function DirectFirstList<T>({ direct, indirect, indirectCount, renderItem, noDirect, showKey, hideKey, testId }: {
+  direct: T[];
+  indirect: T[];
+  /** Distinct servers or applications of the indirect part, for the button. */
+  indirectCount: number;
+  renderItem: (item: T, index: number) => React.ReactNode;
+  noDirect: string;
+  showKey: string;
+  hideKey: string;
+  testId: string;
+}) {
+  const { t } = useTranslation('it');
+  const [showIndirect, setShowIndirect] = useState(false);
+  const groupId = `${testId}-indirect`;
+  return (
+    <Box data-testid={testId}>
+      {direct.length > 0 ? (
+        <Box component="ul" sx={listSx}>{direct.map(renderItem)}</Box>
+      ) : (
+        <Typography sx={quietSx}>{noDirect}</Typography>
+      )}
+      {indirect.length > 0 && (
+        <MLink
+          component="button"
+          type="button"
+          underline="hover"
+          aria-expanded={showIndirect}
+          aria-controls={showIndirect ? groupId : undefined}
+          onClick={() => setShowIndirect((value) => !value)}
+          sx={{ ...panelToggleSx, mt: 0.75 }}
+        >
+          {t(showIndirect ? hideKey : showKey, { count: indirectCount })}
+        </MLink>
+      )}
+      {showIndirect && indirect.length > 0 && (
+        <Box id={groupId} data-indirect="" sx={{ mt: 1, pt: 1, borderTop: '1px solid', borderColor: 'kanap.border.soft' }}>
+          <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mb: 0.5 }}>{t('pages.vulnerabilities.detail.indirect')}</Typography>
+          <Box component="ul" sx={listSx}>{indirect.map(renderItem)}</Box>
+        </Box>
+      )}
     </Box>
   );
 }
@@ -387,6 +624,7 @@ function DetailHeader({ cveId, detail, onClose }: {
         {detail && (
           <Box sx={{ display: 'flex', alignItems: 'center', gap: '8px', mt: 0.5, minWidth: 0, flexWrap: 'wrap' }}>
             <SeverityCell severity={detail.severity} score={detail.cvss_score} />
+            <ScoreSourceMark source={detail.score_source} />
             {(detail.exploited || sources.length > 0) && <ExploitedBadge row={detail} />}
           </Box>
         )}
@@ -398,7 +636,10 @@ function DetailHeader({ cveId, detail, onClose }: {
   );
 }
 
-/** One CVE in the side panel: what it says, what it touches, and its state per technology version. */
+/**
+ * One CVE in the side panel: its state per technology version first, where it is changed, then
+ * what it says, its feeds, its exploitation, and the servers and applications it touches.
+ */
 function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
   cveId: string;
   canEdit: boolean;
@@ -419,6 +660,9 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
   const applicationsLine = !d || d.applications == null
     ? null
     : inAlertsLine(d.applications, d.alerting?.applications, t, 'pages.vulnerabilities.detail.applicationsInAlerts');
+  const indirectServers = d ? d.servers_list.filter((server) => !isDirectServer(server)) : [];
+  // One line per application and technology version, whatever the number of servers that bring it.
+  const applicationGroups = d?.applications_list ? groupApplications(d.applications_list) : null;
   const showDescription = Boolean(d && (d.summary || d.cvss_vector || d.reference_urls.length > 0));
   const showExploitation = Boolean(d && hasExploitationData(d));
   // The panel stays open; the grid, which does not read react-query, is refreshed by its caller.
@@ -434,10 +678,36 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
           <ReportDataStatus loading={detail.isLoading} error={detail.isError} onRetry={() => void detail.refetch()} />
         ) : (
     <Box data-testid="vulnerability-detail">
+      <DetailBlock title={t('pages.vulnerabilities.detail.versions')}>
+        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
+          {d.technologies.map((tech) => (
+            <Box key={tech.technology_id}>
+              <Box sx={{ mb: 0.5 }}>
+                <RecordLink to={`/it/technologies/${tech.reference ?? tech.technology_id}`}>
+                  {tech.reference && <><RelationRef>{tech.reference}</RelationRef>{' '}</>}
+                  {tech.name}
+                </RecordLink>
+              </Box>
+              <Box component="ul" sx={{ ...listSx, gap: '6px' }}>
+                {tech.versions.map((version) => (
+                  <VersionStateRow
+                    key={version.id}
+                    technologyId={tech.technology_id}
+                    cveId={d.cve_id}
+                    version={version}
+                    canEdit={canEdit}
+                    onSaved={onSaved}
+                  />
+                ))}
+              </Box>
+            </Box>
+          ))}
+        </Box>
+      </DetailBlock>
       {showDescription && (
-        <DetailBlock>
+        <DetailBlock divided>
           <Box sx={detailDescriptionSx}>
-            {d.summary && <Typography sx={{ fontSize: 14, lineHeight: 1.6, color: 'kanap.text.primary' }}>{d.summary}</Typography>}
+            {d.summary && <ClampedSummary text={d.summary} />}
             {d.cvss_vector && (
               <Typography sx={{ fontSize: 13, color: 'kanap.text.primary', mt: d.summary ? 1 : 0 }}>
                 <Box component="span" sx={{ color: 'kanap.text.secondary' }}>{t('pages.vulnerabilities.detail.vector')}</Box>
@@ -455,8 +725,9 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
           </Box>
         </DetailBlock>
       )}
+      <FeedSourcesBlock detail={d} />
       {showExploitation && (
-        <DetailBlock title={t('pages.vulnerabilities.detail.exploitation')} divided={showDescription}>
+        <DetailBlock title={t('pages.vulnerabilities.detail.exploitation')} divided>
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: '4px' }}>
             {sources.length > 0 && (
               <Typography sx={{ fontSize: 13, color: 'kanap.text.primary' }}>
@@ -499,32 +770,6 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
           </Box>
         </DetailBlock>
       )}
-      <DetailBlock title={t('pages.vulnerabilities.detail.versions')} divided={showDescription || showExploitation}>
-        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1.5 }}>
-          {d.technologies.map((tech) => (
-            <Box key={tech.technology_id}>
-              <Box sx={{ mb: 0.5 }}>
-                <RecordLink to={`/it/technologies/${tech.reference ?? tech.technology_id}`}>
-                  {tech.reference && <><RelationRef>{tech.reference}</RelationRef>{' '}</>}
-                  {tech.name}
-                </RecordLink>
-              </Box>
-              <Box component="ul" sx={{ ...listSx, gap: '6px' }}>
-                {tech.versions.map((version) => (
-                  <VersionStateRow
-                    key={version.id}
-                    technologyId={tech.technology_id}
-                    cveId={d.cve_id}
-                    version={version}
-                    canEdit={canEdit}
-                    onSaved={onSaved}
-                  />
-                ))}
-              </Box>
-            </Box>
-          ))}
-        </Box>
-      </DetailBlock>
       <Box sx={{
         display: 'grid',
         gridTemplateColumns: { xs: '1fr', md: '1fr 1fr' },
@@ -548,8 +793,15 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
           {d.servers_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noServers')}</Typography>
           ) : (
-            <Box component="ul" sx={listSx}>
-              {d.servers_list.map((server, index) => {
+            <DirectFirstList
+              testId="vulnerability-servers"
+              direct={d.servers_list.filter(isDirectServer)}
+              indirect={indirectServers}
+              indirectCount={new Set(indirectServers.map((server) => server.asset_id)).size}
+              noDirect={t('pages.vulnerabilities.detail.noDirectServers')}
+              showKey="pages.vulnerabilities.detail.showIndirectServers"
+              hideKey="pages.vulnerabilities.detail.hideIndirectServers"
+              renderItem={(server, index) => {
                 const quiet = server.alerts === false;
                 return (
                   <li key={`${server.asset_id}:${server.technology_id}:${index}`}>
@@ -560,8 +812,8 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
                     </Box>
                   </li>
                 );
-              })}
-            </Box>
+              }}
+            />
           )}
         </DetailBlock>
         <DetailBlock title={t('pages.vulnerabilities.detail.applications')}>
@@ -571,23 +823,33 @@ function VulnerabilityDetailPanel({ cveId, canEdit, onClose, onChanged }: {
           ) : d.applications_list.length === 0 ? (
             <Typography sx={quietSx}>{t('pages.vulnerabilities.detail.noApplications')}</Typography>
           ) : (
-            <Box component="ul" sx={listSx}>
-              {d.applications_list.map((app, index) => {
+            <DirectFirstList
+              testId="vulnerability-applications"
+              direct={applicationGroups!.direct}
+              indirect={applicationGroups!.indirect}
+              indirectCount={new Set(applicationGroups!.indirect.map((group) => group.application_id)).size}
+              noDirect={t('pages.vulnerabilities.detail.noDirectApplications')}
+              showKey="pages.vulnerabilities.detail.showIndirectApplications"
+              hideKey="pages.vulnerabilities.detail.hideIndirectApplications"
+              renderItem={(app) => {
                 const quiet = app.alerts === false;
+                const names = app.servers.map((server) => (server.via ? `${server.name} ${t('pages.vulnerabilities.detail.via', { name: server.via })}` : server.name));
+                const shown = names.slice(0, 3).join(', ');
+                const servers = names.length > 3 ? `${shown} ${t('pages.vulnerabilities.detail.moreServers', { count: names.length - 3 })}` : shown;
                 return (
-                  <li key={`${app.application_id}:${index}`}>
+                  <li key={app.key}>
                     <RecordLink to={`/it/applications/${app.application_id}`} quiet={quiet}>
                       {app.reference && <><RelationRef>{app.reference}</RelationRef>{' '}</>}
                       {app.name ?? ''}
                     </RecordLink>
                     <Box component="span" sx={{ color: quiet ? 'kanap.text.tertiary' : 'kanap.text.secondary' }}>
                       {' · '}{app.technology_name} {versionText(app, t)}
-                      {app.server_name && <>{' · '}{app.server_name}</>}
+                      {servers && <>{' · '}{servers}</>}
                     </Box>
                   </li>
                 );
-              })}
-            </Box>
+              }}
+            />
           )}
         </DetailBlock>
       </Box>
@@ -869,6 +1131,12 @@ export default function VulnerabilitiesPage() {
     { value: 'yes', label: t('pages.vulnerabilities.columns.exploitedYes') },
     { value: 'no', label: t('pages.vulnerabilities.columns.exploitedNo') },
   ], [t]);
+  // `nvd` and `cve_org` keep a row both feeds matched; `both` keeps only those.
+  const sourceValues = useCallback(async () => [
+    { value: 'nvd', label: t('pages.vulnerabilities.feeds.badge.nvd') },
+    { value: 'cve_org', label: t('pages.vulnerabilities.feeds.badge.cve_org') },
+    { value: 'both', label: t('pages.vulnerabilities.feeds.filter.both') },
+  ], [t]);
   const stateValues = useCallback(async () => VULNERABILITY_STATES.map((s) => ({ value: s, label: t(`pages.vulnerabilities.states.${s}`) })), [t]);
   const editorValues = useCallback(async () => {
     const res = await api.get<{ editor?: Array<string | null> }>('/technologies/filter-values', { params: { fields: 'editor' } });
@@ -941,6 +1209,7 @@ export default function VulnerabilitiesPage() {
       cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? (
         <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px', minWidth: 0, maxWidth: '100%' }}>
           <SeverityCell severity={p.data.severity} score={p.data.cvss_score} />
+          <ScoreSourceMark source={p.data.score_source} />
           {p.data.exploited ? <ExploitedBadge row={p.data} /> : null}
         </Box>
       ) : null),
@@ -998,6 +1267,19 @@ export default function VulnerabilitiesPage() {
       cellRenderer: VersionCell,
     },
     {
+      headerName: t('pages.vulnerabilities.feeds.column'),
+      colId: 'source',
+      field: 'match_sources',
+      // "NVD" and "Hersteller" side by side.
+      width: 130,
+      sortable: false,
+      headerTooltip: t('pages.vulnerabilities.feeds.badgeHint'),
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: sourceValues, searchable: false },
+      cellRenderer: (p: ICellRendererParams<VulnerabilityRow>) => (p.data ? <SourceBadges sources={p.data.match_sources} /> : null),
+    },
+    {
       headerName: t('pages.vulnerabilities.columns.editor'),
       field: 'editor',
       width: 130,
@@ -1029,7 +1311,7 @@ export default function VulnerabilitiesPage() {
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [canEdit, editorValues, exploitedValues, locale, severityValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
+  ], [canEdit, editorValues, exploitedValues, locale, severityValues, sourceValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
   // One write, so resetting the alerts, the publication window and the shortcut cannot overwrite each other.
   const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod; exploitedOnly?: boolean }) => {
@@ -1063,6 +1345,14 @@ export default function VulnerabilitiesPage() {
     if (alerts !== 'included' || !request || request.total !== 0) return null;
     return excludedProbeOf(request);
   }, [alerts, request]);
+  // How fresh each feed is, for the line above the grid. A failed read shows no line.
+  const feedSources = useQuery({
+    queryKey: ['vulnerabilities', 'sources'],
+    queryFn: async () => (await api.get<{ items: FeedSourceStatus[] }>(`${ENDPOINT}/sources`)).data,
+    enabled: enabled && allowed,
+    retry: false,
+    staleTime: 5 * 60 * 1000,
+  });
   const excludedRows = useQuery({
     queryKey: ['vulnerabilities', 'excluded-rows', excludedProbe],
     queryFn: async () => Number((await api.get<{ total: number }>(ENDPOINT, { params: excludedProbe ?? {} })).data?.total ?? 0),
@@ -1152,6 +1442,7 @@ export default function VulnerabilitiesPage() {
       {exportError && (
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
       )}
+      <FeedAgeLine items={Array.isArray(feedSources.data?.items) ? feedSources.data!.items : null} />
       {/* The header of the box column: the box alone, centred, without the cell's padding. */}
       <Box sx={{
         '& .ag-header-cell[col-id="select"]': { px: 0 },
