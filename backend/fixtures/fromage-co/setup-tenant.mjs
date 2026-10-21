@@ -2177,6 +2177,137 @@ async function ensureTechnologies() {
   ok('Technologies ensured');
 }
 
+// ── Incidents ─────────────────────────────────────────────────────────────────
+//
+// The register of 31-incidents.csv, tied to the landscape: the cave gateway, the B2B portal
+// database (PostgreSQL 13), the backup SAN near its end of life, the SQL Server cluster, the LIMS
+// on SQL Server Express. One confidential incident, one with personal data notified to the
+// authority, two with an incident review.
+
+/** The incidents of 31-incidents.csv (by title) and what they affected. */
+const INCIDENT_LINKS = {
+  'Cave B humidity readings lost overnight': {
+    applications: ['CaveGuard IoT', 'Cave Monitoring Dashboard'],
+    assets: ['CAVE-GW-02', 'CAVE-SW-01'],
+    technologies: ['Schneider EcoStruxure'],
+  },
+  'Phishing campaign against accounts payable': {
+    applications: ['Okta Workforce Identity', 'Exchange Online'],
+  },
+  'SAP month-end close slowed down by host memory contention': {
+    applications: ['SAP S/4HANA', 'SAP BW/4HANA'],
+    assets: ['PAR-ESX-01', 'PAR-ERP-01', 'PAR-ERP-02'],
+    technologies: ['VMware ESXi'],
+  },
+  'B2B portal down: database disk full': {
+    applications: ['Fromage B2B Portal'],
+    assets: ['PAR-DB-01'],
+    technologies: ['PostgreSQL'],
+  },
+  'Order confirmations sent to the wrong customers': {
+    applications: ['La Boutique du Fromage'],
+    assets: ['AWS-ECS-API'],
+  },
+  'Veeam backup jobs failing on the backup SAN': {
+    applications: ['Veeam Backup & Replication'],
+    assets: ['PAR-SAN-02', 'PAR-BKP-01'],
+  },
+  'CheeseTrack offline during SQL Server cluster failover': {
+    applications: ['CheeseTrack'],
+    assets: ['PAR-SQL-01', 'PAR-SQL-02'],
+    technologies: ['Microsoft SQL Server'],
+  },
+  'Microsoft Teams outage in Western Europe': {
+    applications: ['Microsoft Teams'],
+  },
+  'Lab results cannot be saved in QualityLab LIMS': {
+    applications: ['QualityLab LIMS'],
+    assets: ['PAR-APP-01'],
+    technologies: ['Microsoft SQL Server'],
+  },
+  'VPN to the Gouda site keeps dropping': {
+    applications: ['Sage X3'],
+    assets: ['GOU-FW-01', 'PAR-FW-01'],
+    technologies: ['FortiOS'],
+  },
+};
+
+const csvCell = (value) => (/[;"\n\r]/.test(value) ? `"${value.replace(/"/g, '""')}"` : value);
+
+/** Imports CSV rows built here ([headers, ...rows]) into the incident register. */
+async function importIncidentRows(table, label) {
+  const text = table.map((cells) => cells.map((cell) => csvCell(cell ?? '')).join(';')).join('\n');
+  const result = await request('POST', '/incidents/import?dryRun=false&mode=enrich', undefined, {
+    uploadBytes: Buffer.from(text, 'utf8'),
+    uploadName: '31-incidents.csv',
+  });
+  if (result?.ok === false) throw new Error(`Incident import (${label}) returned ok=false:\n${JSON.stringify(result, null, 2)}`);
+}
+
+/**
+ * Creates the incidents of 31-incidents.csv that the register does not hold yet (a rerun creates
+ * none) and links them. A closed incident refuses every change, so the new ones are imported as
+ * resolved, linked, then closed by a second import that names them by reference.
+ */
+async function ensureIncidents() {
+  const name = '31-incidents.csv';
+  info(`Importing ${name}`);
+  const existing = new Set((await getAll('/incidents?limit=1000')).map((item) => lower(item.title)));
+  const rows = readCsv(name).filter((row) => !existing.has(lower(row.title)));
+  if (rows.length === 0) {
+    ok(`${name}: every incident is already there`);
+    return;
+  }
+  const headers = Object.keys(rows[0]);
+  const closedAt = headers.find((header) => header.startsWith('closed_at'));
+  const isClosed = (row) => lower(row.status) === 'closed';
+  await importIncidentRows([
+    headers,
+    ...rows.map((row) => headers.map((header) => {
+      if (isClosed(row) && header === 'status') return 'resolved';
+      if (isClosed(row) && header === closedAt) return '';
+      return row[header];
+    })),
+  ], 'new incidents');
+
+  info('Linking incidents to applications, assets and technologies');
+  const incidents = await getAll('/incidents?limit=1000');
+  const assets = await getAll('/assets?limit=1000');
+  const technologies = await getAll('/technologies?limit=1000');
+  const idsOf = (list, names, kind, title) => names.map((item) => {
+    const id = list.find((candidate) => candidate.name === item)?.id;
+    if (!id) warn(`${kind} '${item}' not found for incident '${title}'`);
+    return id;
+  }).filter(Boolean);
+  const incidentOf = (title) => incidents.find((item) => item.title === title);
+  for (const row of rows) {
+    const incident = incidentOf(row.title);
+    if (!incident) {
+      warn(`Incident '${row.title}' not found after the import`);
+      continue;
+    }
+    const links = INCIDENT_LINKS[row.title] ?? {};
+    if (links.applications?.length) {
+      await apiPost(`/incidents/${incident.id}/applications/bulk-replace`, { application_ids: await appIdsFromNames(links.applications) });
+    }
+    if (links.assets?.length) {
+      await apiPost(`/incidents/${incident.id}/assets/bulk-replace`, { asset_ids: idsOf(assets, links.assets, 'Asset', row.title) });
+    }
+    if (links.technologies?.length) {
+      await apiPost(`/incidents/${incident.id}/technologies/bulk-replace`, { technology_ids: idsOf(technologies, links.technologies, 'Technology', row.title) });
+    }
+  }
+
+  const closing = rows.filter(isClosed).filter((row) => incidentOf(row.title)?.item_number);
+  if (closing.length) {
+    await importIncidentRows([
+      ['ref', 'title', 'severity', 'status', closedAt],
+      ...closing.map((row) => [`INC-${incidentOf(row.title).item_number}`, row.title, row.severity, 'closed', row[closedAt]]),
+    ], 'closure');
+  }
+  ok(`Imported and linked ${rows.length} incident(s)`);
+}
+
 async function linkProcessesToApplications() {
   info('Linking business processes to applications');
   const processes = await getAll('/business-processes?limit=500');
@@ -2209,6 +2340,7 @@ async function runRelations() {
   await ensureApplicationServers();
   await ensureTechnologies();
   await linkProcessesToApplications();
+  await ensureIncidents();
   step('budget-links');
   await linkContractsToSpend();
   await linkSpendToApps();
