@@ -103,6 +103,15 @@ Tool-specific or private notes live in each tool's local files, never here.
 - Never read a pass/fail status from `$?` after a pipe (`tail` and `grep` steal it). Use
   `cmd >/dev/null 2>&1; echo $?` or `${PIPESTATUS[0]}`.
 
+## Leftovers
+
+- Never leave a todo, backlog, progress or follow-up list in this repository, in `planning/`
+  or anywhere else. When a piece of work ends, its leftovers (open points, ideas, questions)
+  go to the maintainer's tracker: agents working for the maintainer find its location in
+  `CLAUDE.local.md`, external contributors put them in the pull request description.
+- A planning document is a specification, a brief or a review. Once its lots are merged,
+  say so in its first line (date, PR numbers) and stop editing it.
+
 ## Versions and releases
 
 - A version is `YY.M.N` (`26.10.1`, `26.10.2`, then `26.11.1`; no leading zero), tagged `v26.10.1`:
