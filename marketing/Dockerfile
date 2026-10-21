@@ -31,7 +31,7 @@ RUN npm run build
 
 # ---------- Runtime stage ----------
 # nginx:alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
-FROM nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+FROM nginx:alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d
 
 # Clean-URL nginx config (directory format output)
 COPY web/nginx.conf /etc/nginx/conf.d/default.conf
