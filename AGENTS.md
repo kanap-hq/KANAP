@@ -345,6 +345,7 @@ files under `.agents/skills/`, never a copy.
 | `translate` | fr/de/es locale JSON |
 | `translate-docs` | fr/de/es user manual pages |
 | `user-manual-maintainer` | Keep `doc/help` in line with the product |
+| `technology-catalog-curation` | Refresh the KANAP-maintained technology catalog before a release |
 
 ## Security
 
