@@ -149,6 +149,8 @@ Un tipo marcado con **Dejar de proponer** se mantiene en las tecnologías que lo
 
 El soporte sigue vigente el día de su fecha de fin. Con una sola fecha, esa fecha es el fin. **Añadir versión** añade una línea; pase el ratón por una línea para editarla o eliminarla. Eliminar una versión que usan servidores o aplicaciones pide confirmación: esos vínculos muestran entonces una versión desconocida.
 
+**Notas**: al final de la pestaña, texto libre, como las condiciones de licencia o las fechas de renovación.
+
 #### Alertas de vulnerabilidad
 
 Cuando se siguen las vulnerabilidades, la tabla de versiones elige las versiones que cuentan en las alertas de vulnerabilidad. Una versión en las alertas aparece por defecto en la página [Vulnerabilidades](vulnerabilities.md), en los correos y en los contadores. Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades: la sección [Vulnerabilidades](#vulnerabilidades) de la tecnología la sigue mostrando, y la página muestra sus filas con su filtro **Alertas**.
@@ -169,19 +171,26 @@ Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta
 
 La comprobación añade las nuevas versiones, identificadores de producto CPE y nombres CVE.org del producto, y actualiza las fechas de fin de soporte, los identificadores y los nombres que el catálogo cambió. Nunca sobrescribe un valor que usted cambió, y nunca vuelve a crear una versión, un identificador o un nombre que usted eliminó. Una versión que registró antes de que el catálogo la conociera se vincula a él cuando las etiquetas coinciden, y se rellenan sus fechas vacías.
 
-**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Una tecnología sin identificador CPE ni nombre CVE.org no recibe ninguna vulnerabilidad. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos. SUSE Linux Enterprise Server llega sin identificador: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable.
+#### Identificadores de vulnerabilidad
 
-**Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. KANAP los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). La sección está bajo los identificadores de producto CPE y aparece cuando KANAP lee la lista CVE.org. Cada nombre aparece por separado.
+El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los identificadores de producto CPE y los nombres CVE.org. KANAP encuentra las vulnerabilidades de una tecnología a través de ellos.
 
-- **Añadir un nombre**: busque en el directorio de los nombres publicados. Cada resultado muestra su número de vulnerabilidades y la fecha de la última. Elija uno, con una versión opcional. No se puede escribir un nombre que no esté en el directorio.
+- **Plegado**: cuando la tecnología tiene al menos un identificador, el grupo está plegado, con un resumen en su línea de título, por ejemplo `2 identificadores CPE · 3 nombres de CVE.org`. Haga clic en el título para abrirlo.
+- **Abierto**: cuando la tecnología no tiene ninguno, el grupo está abierto, con una advertencia: no se busca ninguna vulnerabilidad para esta tecnología. La sección **Versiones** también lo indica. Con `infrastructure:member`, **Añadir un identificador** junto a esa línea abre el grupo.
+
+El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, KANAP no busca ninguna vulnerabilidad para ninguna versión.
+
+**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos. SUSE Linux Enterprise Server llega sin identificador: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable.
+
+**Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. KANAP los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). Los nombres están bajo los identificadores de producto CPE y aparecen cuando KANAP lee la lista CVE.org. Cada nombre aparece por separado.
+
+- **Añadir un nombre**: escriba parte del nombre del producto en la búsqueda. La lista propone los nombres exactos que los editores escriben en sus fichas, cada uno con su número de vulnerabilidades y la fecha de la última. Elija uno, con una versión opcional. No se puede escribir un nombre que no esté en la lista.
 - **Sugerencias**: los nombres vistos en las vulnerabilidades de sus identificadores CPE. Cada uno muestra su número de vulnerabilidades y la parte de esas vulnerabilidades que lo llevan.
-- **Nombres exactos**: la comparación ignora mayúsculas, minúsculas y puntuación, y por lo demás exige el nombre exacto. Un nombre parecido no coincide: declare cada variante de un producto por separado.
-- **Versión**: un nombre con una versión solo vale para las versiones cuya etiqueta empieza por ella, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` recibe el nombre de `2012 R2` y deja el de `2012`.
+- **Nombres exactos**: la comparación ignora mayúsculas, minúsculas y puntuación, y por lo demás exige el nombre exacto. Un nombre parecido no coincide: declare cada variante de un producto por separado. Por ejemplo, `Microsoft SQL Server 2008` no coteja nada: las fichas escriben `Microsoft SQL Server 2008 Service Pack 4 (QFE)`. Elija ese nombre, con la versión `2008`.
+- **Versión**: una versión limita el nombre a las versiones de la tecnología cuya etiqueta empieza por ella, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` recibe el nombre de `2012 R2` y deja el de `2012`.
 - **Desde el catálogo**: muchas entradas del catálogo llegan con sus nombres (Microsoft, Apache, bases de datos y otras). La comprobación del catálogo los mantiene al día como los identificadores CPE, y un nombre que usted quitó no vuelve.
 
-Dónde encontrar este valor: en [cve.org](https://www.cve.org), abra la ficha de una vulnerabilidad del producto y anote los nombres de editor y de producto que lista. Cambiar los nombres requiere `infrastructure:member`, como para los identificadores CPE.
-
-**Notas**: texto libre, como las condiciones de licencia o las fechas de renovación.
+Dónde encontrar este valor: en [cve.org](https://www.cve.org), abra la ficha de una vulnerabilidad del producto. El nombre debe ser el de su sección **Product status**. Cambiar los nombres requiere `infrastructure:member`, como para los identificadores CPE.
 
 ### Servidores
 

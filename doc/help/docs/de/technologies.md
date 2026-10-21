@@ -149,6 +149,8 @@ Ein als **Nicht mehr anbieten** markierter Typ bleibt bei den Technologien, die 
 
 Der Support läuft an seinem Enddatum noch. Bei nur einem Datum ist dieses Datum das Ende. **Version hinzufügen** fügt eine Zeile hinzu; fahren Sie über eine Zeile, um sie zu bearbeiten oder zu löschen. Das Löschen einer Version, die Server oder Anwendungen nutzen, fragt zuerst nach: Diese Verknüpfungen zeigen dann eine unbekannte Version.
 
+**Notizen**: unten im Reiter, Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
+
 #### Warnungen zu Schwachstellen
 
 Wenn Schwachstellen verfolgt werden, legt die Versionstabelle fest, welche Versionen in den Warnungen zu Schwachstellen zählen. Eine Version in den Warnungen erscheint standardmäßig auf der Seite [Schwachstellen](vulnerabilities.md), in den E-Mails und in den Zählern. Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen: Der Abschnitt [Schwachstellen](#schwachstellen) der Technologie zeigt sie weiterhin, und die Seite zeigt ihre Zeilen über ihren Filter **Warnungen**.
@@ -169,19 +171,26 @@ Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine
 
 Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen des Produkts hinzu und aktualisiert die Supportende-Daten, Kennungen und Namen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version, Kennung oder einen Namen wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Eine Technologie ohne CPE-Kennung und ohne CVE.org-Namen erhält keine Schwachstelle. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server kommt ohne Kennung: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich.
+#### Schwachstellenkennungen
 
-**CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. KANAP gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Der Abschnitt steht unter den CPE-Produktkennungen und erscheint, wenn KANAP die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
+Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produktkennungen und die CVE.org-Namen zusammen. Über sie findet KANAP die Schwachstellen einer Technologie.
 
-- **Einen Namen hinzufügen**: Durchsuchen Sie das Verzeichnis der veröffentlichten Namen. Jedes Ergebnis zeigt seine Anzahl an Schwachstellen und das Datum der letzten. Wählen Sie einen aus, mit einer optionalen Version. Ein Name, der nicht im Verzeichnis steht, lässt sich nicht eintippen.
+- **Eingeklappt**: Hat die Technologie mindestens eine Kennung, ist die Gruppe eingeklappt, mit einer Zusammenfassung in ihrer Titelzeile, zum Beispiel `2 CPE-Kennungen · 3 CVE.org-Namen`. Klicken Sie auf den Titel, um sie zu öffnen.
+- **Geöffnet**: Hat die Technologie keine, ist die Gruppe geöffnet, mit einem Warnhinweis: Für diese Technologie wird nach keiner Schwachstelle gesucht. Der Abschnitt **Versionen** weist ebenfalls darauf hin. Mit `infrastructure:member` öffnet **Kennung hinzufügen** neben diesem Hinweis die Gruppe.
+
+Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht KANAP für keine Version nach Schwachstellen.
+
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server kommt ohne Kennung: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich.
+
+**CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. KANAP gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Die Namen stehen unter den CPE-Produktkennungen und erscheinen, wenn KANAP die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
+
+- **Einen Namen hinzufügen**: Geben Sie einen Teil des Produktnamens in die Suche ein. Die Liste zeigt die genauen Namen, die die Hersteller in ihren Einträgen schreiben, jeweils mit der Anzahl ihrer Schwachstellen und dem Datum der letzten. Wählen Sie einen aus, mit einer optionalen Version. Ein Name, der nicht in der Liste steht, lässt sich nicht eintippen.
 - **Vorschläge**: die Namen, die auf den Schwachstellen Ihrer CPE-Kennungen vorkommen. Jeder zeigt seine Anzahl an Schwachstellen und den Anteil dieser Schwachstellen, die ihn tragen.
-- **Genaue Namen**: Der Vergleich ignoriert Groß- und Kleinschreibung sowie Satzzeichen und verlangt ansonsten den genauen Namen. Ein ähnlicher Name passt nicht: Erfassen Sie jede Variante eines Produkts einzeln.
-- **Version**: Ein Name mit Version gilt nur für die Versionen, deren Bezeichnung mit ihr beginnt, zum Beispiel `2019` für `Windows Server 2019`. Beginnt eine Bezeichnung mit mehreren davon, zählt nur die längste: `2012 R2` erhält den Namen von `2012 R2` und nicht den von `2012`.
+- **Genaue Namen**: Der Vergleich ignoriert Groß- und Kleinschreibung sowie Satzzeichen und verlangt ansonsten den genauen Namen. Ein ähnlicher Name passt nicht: Erfassen Sie jede Variante eines Produkts einzeln. Zum Beispiel findet `Microsoft SQL Server 2008` nichts: Die Einträge schreiben `Microsoft SQL Server 2008 Service Pack 4 (QFE)`. Wählen Sie diesen Namen, mit der Version `2008`.
+- **Version**: Eine Version beschränkt den Namen auf die Versionen der Technologie, deren Bezeichnung mit ihr beginnt, zum Beispiel `2019` für `Windows Server 2019`. Beginnt eine Bezeichnung mit mehreren davon, zählt nur die längste: `2012 R2` erhält den Namen von `2012 R2` und nicht den von `2012`.
 - **Aus dem Katalog**: Viele Katalogeinträge bringen ihre Namen mit (Microsoft, Apache, Datenbanken und andere). Die Katalogprüfung hält sie wie die CPE-Kennungen aktuell, und ein Name, den Sie entfernt haben, kommt nicht zurück.
 
-Wo Sie diesen Wert finden: Öffnen Sie auf [cve.org](https://www.cve.org) den Eintrag einer Schwachstelle des Produkts und übernehmen Sie die Hersteller- und Produktnamen, die er nennt. Zum Ändern der Namen brauchen Sie `infrastructure:member`, wie für die CPE-Kennungen.
-
-**Notizen**: Freitext, etwa Lizenzbedingungen oder Verlängerungstermine.
+Wo Sie diesen Wert finden: Öffnen Sie auf [cve.org](https://www.cve.org) den Eintrag einer Schwachstelle des Produkts. Der Name muss der aus seinem Abschnitt **Product status** sein. Zum Ändern der Namen brauchen Sie `infrastructure:member`, wie für die CPE-Kennungen.
 
 ### Server
 

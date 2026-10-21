@@ -149,6 +149,8 @@ A type marked **No longer offered** stays on the technologies that have it. A ty
 
 Support still runs on its end date. With a single date, that date is the end. **Add version** adds a line; hover a line to edit or delete it. Deleting a version used by servers or applications asks first: those links then show an unknown version.
 
+**Notes**: at the bottom of the tab, free text such as licensing terms or renewal dates.
+
 #### Vulnerability alerts
 
 When vulnerabilities are followed, the versions table chooses which versions count in the vulnerability alerts. A version in the alerts appears on the [Vulnerabilities](vulnerabilities.md) page by default, in the emails and in the counts. A version out of the alerts is still matched with the vulnerabilities: the technology's [Vulnerabilities](#vulnerabilities) section still shows it, and the page shows its rows with its **Alerts** filter.
@@ -169,19 +171,26 @@ A version that comes from the catalog shows **Catalog** next to its label, and a
 
 The check adds the new versions, CPE product identifiers and CVE.org names of the product, and updates the end of support dates, identifiers and names the catalog changed. It never overwrites a value you changed, and never brings back a version, an identifier or a name you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities. A technology with no CPE identifier and no CVE.org name gets no vulnerability. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included. SUSE Linux Enterprise Server arrives without them: the NVD publishes too few of its vulnerabilities for a reliable match.
+#### Vulnerability identifiers
 
-**CVE.org names**: the publisher and product names as the publisher writes them in its own vulnerability records, for example publisher `SAP_SE` and product `SAP HANA Database`. KANAP matches them with the CVE.org list, which also holds the vulnerabilities the NVD has not analysed (see [Vulnerabilities](vulnerabilities.md#how-kanap-finds-them)). The section sits under the CPE product identifiers and shows when KANAP reads the CVE.org list. Each name is listed on its own.
+The **Vulnerability identifiers** group, under the versions, holds the CPE product identifiers and the CVE.org names. KANAP finds the vulnerabilities of a technology through them.
 
-- **Adding a name**: search the directory of the published names. Each result shows its number of vulnerabilities and the date of the latest one. Pick one, with an optional version. A name missing from the directory cannot be typed in.
+- **Folded**: when the technology has at least one identifier, the group is folded, with a summary on its title line, for example `2 CPE identifiers · 3 CVE.org names`. Click the title to open it.
+- **Open**: when the technology has none, the group is open, with a warning: no vulnerability is looked up for this technology. The **Versions** section says so too. With `infrastructure:member`, **Add an identifier** next to that line opens the group.
+
+The match is made at the level of the technology. Every version of the technology is compared with the vulnerabilities of its identifiers, and a version you add is matched at once. Without an identifier, KANAP looks up no vulnerability for any version.
+
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included. SUSE Linux Enterprise Server arrives without them: the NVD publishes too few of its vulnerabilities for a reliable match.
+
+**CVE.org names**: the publisher and product names as the publisher writes them in its own vulnerability records, for example publisher `SAP_SE` and product `SAP HANA Database`. KANAP matches them with the CVE.org list, which also holds the vulnerabilities the NVD has not analysed (see [Vulnerabilities](vulnerabilities.md#how-kanap-finds-them)). The names sit under the CPE product identifiers and show when KANAP reads the CVE.org list. Each name is listed on its own.
+
+- **Adding a name**: type part of the product name in the search. The list offers the exact names publishers write on their records, each with its number of vulnerabilities and the date of the latest one. Pick one, with an optional version. A name missing from the list cannot be typed in.
 - **Suggestions**: the names seen on the vulnerabilities of your CPE identifiers. Each one shows its number of vulnerabilities and the share of those vulnerabilities that carry it.
-- **Exact names**: the comparison ignores case and punctuation, and otherwise needs the exact name. A close name does not match, so declare each variant of a product on its own.
-- **Version**: a name with a version applies only to the versions whose label starts with it, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` gets the name of `2012 R2` and leaves the one of `2012`.
+- **Exact names**: the comparison ignores case and punctuation, and otherwise needs the exact name. A close name does not match, so declare each variant of a product on its own. For example, `Microsoft SQL Server 2008` matches nothing: the records write `Microsoft SQL Server 2008 Service Pack 4 (QFE)`. Pick that name, with the version `2008`.
+- **Version**: a version limits the name to the versions of the technology whose label starts with it, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` gets the name of `2012 R2` and leaves the one of `2012`.
 - **From the catalog**: many catalog entries come with their names (Microsoft, Apache, databases and others). The catalog check keeps them up to date like the CPE identifiers, and a name you removed does not come back.
 
-Where to find this value: on [cve.org](https://www.cve.org), open the record of a vulnerability of the product and read the publisher and product names it lists. Changing the names needs `infrastructure:member`, as for the CPE identifiers.
-
-**Notes**: free text, such as licensing terms or renewal dates.
+Where to find this value: on [cve.org](https://www.cve.org), open the record of a vulnerability of the product. The name must be the one in its **Product status** section. Changing the names needs `infrastructure:member`, as for the CPE identifiers.
 
 ### Servers
 

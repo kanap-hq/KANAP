@@ -149,6 +149,8 @@ Un type marqué **Ne plus proposer** reste sur les technologies qui l'ont. Un ty
 
 Le support court encore le jour de sa date de fin. Avec une seule date, cette date est la fin. **Ajouter une version** ajoute une ligne ; survolez une ligne pour la modifier ou la supprimer. Supprimer une version utilisée par des serveurs ou des applications demande confirmation : ces liens affichent alors une version inconnue.
 
+**Notes** : en bas de l'onglet, texte libre, comme les conditions de licence ou les dates de renouvellement.
+
 #### Alertes de vulnérabilité
 
 Quand les vulnérabilités sont suivies, la table des versions choisit les versions qui comptent dans les alertes de vulnérabilité. Une version dans les alertes apparaît par défaut sur la page [Vulnérabilités](vulnerabilities.md), dans les e-mails et dans les compteurs. Une version hors des alertes reste rapprochée des vulnérabilités : la section [Vulnérabilités](#vulnerabilites) de la technologie la montre toujours, et la page montre ses lignes avec son filtre **Alertes**.
@@ -169,19 +171,26 @@ Une version issue du catalogue affiche **Catalogue** à côté de son libellé, 
 
 La consultation ajoute les nouvelles versions, les nouveaux identifiants CPE produit et les nouveaux noms CVE.org du produit, et met à jour les dates de fin de support, les identifiants et les noms que le catalogue a changés. Elle n'écrase jamais une valeur que vous avez changée, et ne recrée jamais une version, un identifiant ou un nom que vous avez supprimé. Une version saisie avant que le catalogue ne la connaisse lui est rattachée quand les libellés correspondent, et ses dates vides sont remplies.
 
-**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées. Une technologie sans identifiant CPE ni nom CVE.org ne reçoit aucune vulnérabilité. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. La plupart des entrées du catalogue arrivent avec leurs identifiants, systèmes d'exploitation compris. SUSE Linux Enterprise Server arrive sans identifiant : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable.
+#### Identifiants de vulnérabilité
 
-**Noms CVE.org** : les noms d'éditeur et de produit tels que l'éditeur les écrit dans ses propres fiches de vulnérabilité, par exemple l'éditeur `SAP_SE` et le produit `SAP HANA Database`. KANAP les rapproche de la liste CVE.org, qui contient aussi des vulnérabilités que la NVD n'a pas analysées (voir [Vulnérabilités](vulnerabilities.md#comment-kanap-les-trouve)). La section se trouve sous les identifiants CPE produit et s'affiche quand KANAP lit la liste CVE.org. Chaque nom est listé à part.
+Le groupe **Identifiants de vulnérabilité**, sous les versions, réunit les identifiants CPE produit et les noms CVE.org. KANAP trouve les vulnérabilités d'une technologie grâce à eux.
 
-- **Ajouter un nom** : cherchez dans l'annuaire des noms publiés. Chaque résultat indique son nombre de vulnérabilités et la date de la dernière. Choisissez-en un, avec une version facultative. Un nom absent de l'annuaire ne peut pas être saisi.
+- **Replié** : quand la technologie a au moins un identifiant, le groupe est replié, avec un résumé sur sa ligne de titre, par exemple `2 identifiants CPE · 3 noms CVE.org`. Cliquez sur le titre pour l'ouvrir.
+- **Ouvert** : quand la technologie n'en a aucun, le groupe est ouvert, avec un avertissement : aucune vulnérabilité n'est recherchée pour cette technologie. La section **Versions** le signale aussi. Avec `infrastructure:member`, **Ajouter un identifiant** à côté de cette ligne ouvre le groupe.
+
+Le rapprochement se fait au niveau de la technologie. Chaque version de la technologie est comparée aux vulnérabilités de ses identifiants, et une version que vous ajoutez est rapprochée aussitôt. Sans identifiant, KANAP ne recherche aucune vulnérabilité, pour aucune version.
+
+**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. La plupart des entrées du catalogue arrivent avec leurs identifiants, systèmes d'exploitation compris. SUSE Linux Enterprise Server arrive sans identifiant : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable.
+
+**Noms CVE.org** : les noms d'éditeur et de produit tels que l'éditeur les écrit dans ses propres fiches de vulnérabilité, par exemple l'éditeur `SAP_SE` et le produit `SAP HANA Database`. KANAP les rapproche de la liste CVE.org, qui contient aussi des vulnérabilités que la NVD n'a pas analysées (voir [Vulnérabilités](vulnerabilities.md#comment-kanap-les-trouve)). Les noms se trouvent sous les identifiants CPE produit et s'affichent quand KANAP lit la liste CVE.org. Chaque nom est listé à part.
+
+- **Ajouter un nom** : tapez une partie du nom du produit dans la recherche. La liste propose les noms exacts que les éditeurs écrivent dans leurs fiches, chacun avec son nombre de vulnérabilités et la date de la dernière. Choisissez-en un, avec une version facultative. Un nom absent de la liste ne peut pas être saisi.
 - **Suggestions** : les noms vus sur les vulnérabilités de vos identifiants CPE. Chacun indique son nombre de vulnérabilités et la part de ces vulnérabilités qui le portent.
-- **Noms exacts** : la comparaison ignore la casse et la ponctuation, et demande pour le reste le nom exact. Un nom proche ne correspond pas : déclarez chaque variante d'un produit à part.
-- **Version** : un nom avec une version ne vaut que pour les versions dont le libellé commence par elle, par exemple `2019` pour `Windows Server 2019`. Quand un libellé commence par plusieurs d'entre elles, seule la plus longue compte : `2012 R2` reçoit le nom de `2012 R2` et laisse celui de `2012`.
+- **Noms exacts** : la comparaison ignore la casse et la ponctuation, et demande pour le reste le nom exact. Un nom proche ne correspond pas : déclarez chaque variante d'un produit à part. Par exemple, `Microsoft SQL Server 2008` ne rapproche rien : les fiches écrivent `Microsoft SQL Server 2008 Service Pack 4 (QFE)`. Choisissez ce nom, avec la version `2008`.
+- **Version** : une version limite le nom aux versions de la technologie dont le libellé commence par elle, par exemple `2019` pour `Windows Server 2019`. Quand un libellé commence par plusieurs d'entre elles, seule la plus longue compte : `2012 R2` reçoit le nom de `2012 R2` et laisse celui de `2012`.
 - **Depuis le catalogue** : beaucoup d'entrées du catalogue arrivent avec leurs noms (Microsoft, Apache, bases de données et d'autres). La consultation du catalogue les tient à jour comme les identifiants CPE, et un nom que vous avez retiré ne revient pas.
 
-Où trouver cette valeur : sur [cve.org](https://www.cve.org), ouvrez la fiche d'une vulnérabilité du produit et relevez les noms d'éditeur et de produit qu'elle liste. Modifier les noms demande `infrastructure:member`, comme pour les identifiants CPE.
-
-**Notes** : texte libre, comme les conditions de licence ou les dates de renouvellement.
+Où trouver cette valeur : sur [cve.org](https://www.cve.org), ouvrez la fiche d'une vulnérabilité du produit. Le nom doit être celui de sa section **Product status**. Modifier les noms demande `infrastructure:member`, comme pour les identifiants CPE.
 
 ### Serveurs
 
