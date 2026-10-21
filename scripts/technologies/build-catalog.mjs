@@ -181,6 +181,13 @@ const PRODUCTS = [
   { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'] },
   { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'] },
   { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', cpe: ['o:centos:centos'] },
+  // endoflife.date, October 2026. Amazon Linux: endoflife.date also publishes `o:amazon:linux`, which names no CVE.
+  // Solaris 10 stays in the catalog (extended support through 2027), so the Sun identifier is kept with it.
+  { key: 'amazon-linux', slug: 'amazon-linux', name: 'Amazon Linux', editor: 'Amazon Web Services', family: 'operating_system', cpe: ['o:amazon:amazon_linux'], cpeExclude: ['o:amazon:linux'] },
+  { key: 'alpine-linux', slug: 'alpine-linux', name: 'Alpine Linux', editor: 'Alpine', family: 'operating_system', cpe: ['o:alpinelinux:alpine_linux'] },
+  { key: 'ibm-aix', slug: 'ibm-aix', name: 'IBM AIX', editor: 'IBM', family: 'operating_system', cpe: ['o:ibm:aix'] },
+  { key: 'ibm-i', slug: 'ibm-i', name: 'IBM i', editor: 'IBM', family: 'operating_system', cpe: ['o:ibm:i', 'a:ibm:i'] },
+  { key: 'oracle-solaris', slug: 'oracle-solaris', name: 'Oracle Solaris', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:solaris', 'a:oracle:solaris', 'o:sun:solaris'] },
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
@@ -199,10 +206,26 @@ const PRODUCTS = [
   { key: 'neo4j', slug: 'neo4j', name: 'Neo4j', editor: 'Neo4j', family: 'database' },
   { key: 'clickhouse', slug: 'clickhouse', name: 'ClickHouse', editor: 'ClickHouse', family: 'database', cpe: ['a:clickhouse:clickhouse'] },
   { key: 'memcached', slug: 'memcached', name: 'Memcached', editor: 'Memcached', family: 'database' },
+  // Managed services: `subscribed` alone would be SaaS. They run in the public cloud.
+  // RDS for MariaDB and Aurora MySQL each name one CVE (CVE-2026-3494). Kept.
+  { key: 'amazon-rds-postgresql', slug: 'amazon-rds-postgresql', name: 'Amazon RDS for PostgreSQL', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon RDS for PostgreSQL product. a:amazon:relational_database_service holds one CVE, CVE-2026-3494, with a MariaDB version (10.11.15) and no PostgreSQL entry.' },
+  { key: 'amazon-rds-mysql', slug: 'amazon-rds-mysql', name: 'Amazon RDS for MySQL', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon RDS for MySQL product. a:amazon:relational_database_service is the RDS for MariaDB entry (CVE-2026-3494, MariaDB 10.11.15).' },
+  { key: 'amazon-rds-mariadb', slug: 'amazon-rds-mariadb', name: 'Amazon RDS for MariaDB', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', cpe: ['a:amazon:relational_database_service'] },
+  { key: 'amazon-aurora-postgresql', slug: 'amazon-aurora-postgresql', name: 'Amazon Aurora PostgreSQL', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon Aurora PostgreSQL product. a:amazon:aurora_postgresql does not exist.' },
+  { key: 'amazon-aurora-mysql', slug: 'amazon-aurora-mysql', name: 'Amazon Aurora MySQL', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', cpe: ['a:amazon:aurora_mysql'] },
+  { key: 'azure-database-for-postgresql', slug: 'azure-database-for-postgresql', name: 'Azure Database for PostgreSQL', editor: 'Microsoft', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', cpe: ['a:microsoft:azure_database_for_postgresql_flexible_server'] },
+  { key: 'azure-database-for-mysql', slug: 'azure-database-for-mysql', name: 'Azure Database for MySQL', editor: 'Microsoft', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Azure Database for MySQL product. a:microsoft:azure_database_for_mysql and a:microsoft:azure_database_for_mysql_flexible_server do not exist.' },
+  { key: 'amazon-elasticache-redis', slug: 'amazon-elasticache-redis', name: 'Amazon ElastiCache (Redis OSS / Valkey)', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon ElastiCache product. a:amazon:elasticache does not exist.' },
+  { key: 'amazon-documentdb', slug: 'amazon-documentdb', name: 'Amazon DocumentDB', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon DocumentDB product. a:amazon:documentdb does not exist; the only dictionary entry is a:amazon:documentdb_mcp_server, a client tool.' },
+  { key: 'amazon-opensearch', slug: 'amazon-opensearch', name: 'Amazon OpenSearch Service', editor: 'AWS', family: 'database', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon OpenSearch Service product. a:amazon:opensearch_service does not exist, and a:amazon:opensearch (11 CVE) is the family of OpenSearch client libraries.' },
+  { key: 'apache-spark', slug: 'apache-spark', name: 'Apache Spark', editor: 'ASF', family: 'database', cpe: ['a:apache:spark'] },
+  { key: 'solr', slug: 'solr', name: 'Apache Solr', editor: 'ASF', family: 'database', cpe: ['a:apache:solr'] },
   // Application servers
   { key: 'tomcat', slug: 'tomcat', name: 'Apache Tomcat', editor: 'Apache Software Foundation', family: 'application_server' },
   { key: 'eclipse-jetty', slug: 'eclipse-jetty', name: 'Eclipse Jetty', editor: 'Eclipse Foundation', family: 'application_server', cpe: ['a:mortbay:jetty'] },
   { key: 'redhat-jboss-eap', slug: 'redhat-jboss-eap', name: 'Red Hat JBoss EAP', editor: 'Red Hat', family: 'application_server', cpe: ['a:redhat:jboss_enterprise_application_platform'] },
+  { key: 'wordpress', slug: 'wordpress', name: 'WordPress', editor: 'WordPress', family: 'application_server', cpe: ['a:wordpress:wordpress'] },
+  { key: 'drupal', slug: 'drupal', name: 'Drupal', editor: 'Drupal', family: 'application_server', cpe: ['a:drupal:drupal'] },
   // Web servers and proxies
   { key: 'apache-http-server', slug: 'apache-http-server', name: 'Apache HTTP Server', editor: 'Apache Software Foundation', family: 'web_server' },
   // The NVD files the nginx CVE under `f5:nginx` since F5 took it over; `nginx:nginx` keeps two of
@@ -212,6 +235,7 @@ const PRODUCTS = [
   { key: 'traefik', slug: 'traefik', name: 'Traefik', editor: 'Traefik Labs', family: 'web_server', cpe: ['a:containous:traefik'] },
   { key: 'caddy', slug: 'caddy', name: 'Caddy', editor: 'Caddy', family: 'web_server', cpe: ['a:caddy_project:caddy'] },
   { key: 'squid', slug: 'squid', name: 'Squid', editor: 'Squid Cache', family: 'web_server' },
+  { key: 'envoy', slug: 'envoy', name: 'Envoy', editor: 'CNCF', family: 'web_server', cpe: ['a:envoyproxy:envoy'] },
   // Hypervisors and virtualisation management
   // ESXi is an operating system for the NVD (`o:vmware:esxi`; `a:vmware:esxi` holds CVE of 2011 at
   // the latest). The versions come from vCenter: both carry the vSphere major (7.0, 8.0, 9.0).
@@ -219,6 +243,12 @@ const PRODUCTS = [
   { key: 'nutanix-prism', slug: 'nutanix-prism', name: 'Nutanix Prism', editor: 'Nutanix', family: 'hypervisor', noCpe: 'Verified on 2026-10-20: a:nutanix:prism is in the CPE dictionary and names no CVE. CVE-2026-84731 (Prism Element) has no CPE criterion.' },
   { key: 'ovirt', slug: 'ovirt', name: 'oVirt', editor: 'oVirt', family: 'hypervisor', cpe: ['a:ovirt:ovirt', 'a:ovirt:ovirt-engine', 'a:redhat:ovirt-engine'] },
   { key: 'citrix-vad', slug: 'citrix-vad', name: 'Citrix Virtual Apps and Desktops', editor: 'Citrix', family: 'hypervisor', cpe: ['a:citrix:virtual_apps_and_desktops'] },
+  { key: 'proxmox-ve', slug: 'proxmox-ve', name: 'Proxmox VE', editor: 'Proxmox', family: 'hypervisor', cpe: ['a:proxmox:virtual_environment'] },
+  { key: 'xcp-ng', slug: 'xcp-ng', name: 'XCP-ng', editor: 'Vates', family: 'hypervisor', noCpe: 'Verified on 2026-10-20: the NVD has no XCP-ng product (a:vates:xcp-ng, o:vates:xcp-ng and a:xcp-ng:xcp-ng do not exist). a:xen:xen names 7 CVE, the newest CVE-2014-5148, and does not follow the XCP-ng versions.' },
+  { key: 'nutanix-aos', slug: 'nutanix-aos', name: 'Nutanix AOS', editor: 'Nutanix', family: 'hypervisor', noCpe: 'Verified on 2026-10-20: o:nutanix:aos is in the CPE dictionary (one name, no version) and names no CVE. a:nutanix:aos does not exist. o:nutanix:ahv names 16 CVE, the newest CVE-2021-1087 (2021-04-29), and is the hypervisor, not AOS.' },
+  // Horizon 8 is a calendar version at endoflife.date (`8.2606`). The NVD stops at 7.13 (CVE-2022-22964): the identifiers are kept, and those 8.x versions do not meet the old numbers.
+  { key: 'horizon', slug: 'horizon', name: 'Omnissa Horizon', editor: 'Omnissa', family: 'hypervisor', cpe: ['a:vmware:horizon', 'a:vmware:horizon_view'] },
+  { key: 'vmware-cloud-foundation', slug: 'vmware-cloud-foundation', name: 'VMware Cloud Foundation', editor: 'Broadcom', family: 'hypervisor', cpe: ['a:vmware:cloud_foundation', 'o:vmware:cloud_foundation'] },
   // Containers
   { key: 'kubernetes', slug: 'kubernetes', name: 'Kubernetes', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'docker-engine', slug: 'docker-engine', name: 'Docker Engine', editor: 'Docker', family: 'container', cpe: ['a:docker:docker', 'a:mobyproject:moby'] },
@@ -227,6 +257,7 @@ const PRODUCTS = [
   { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform', 'o:redhat:openshift'] },
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
+  { key: 'istio', slug: 'istio', name: 'Istio', editor: 'CNCF', family: 'container', cpe: ['a:istio:istio'] },
   { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon EKS product. a:amazon:eks and a:amazon:elastic_kubernetes_service do not exist, and CVE-2026-86831 (the EKS Network Policy Agent) has no CPE criterion.' },
   // 11 CVE on 2026-10-20, the newest CVE-2026-50516. The version is `-` (the whole service), except two platform dates.
   { key: 'azure-kubernetes-service', slug: 'azure-kubernetes-service', name: 'Azure Kubernetes Service', editor: 'Microsoft', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', cpe: ['a:microsoft:azure_kubernetes_service'] },
@@ -248,16 +279,23 @@ const PRODUCTS = [
   { key: 'ibm-mq', slug: 'ibm-mq', name: 'IBM MQ', editor: 'IBM', family: 'messaging', cpe: ['a:ibm:websphere_mq'] },
   { key: 'postfix', slug: 'postfix', name: 'Postfix', editor: 'Postfix', family: 'messaging' },
   { key: 'dovecot', slug: 'dovecot', name: 'Dovecot', editor: 'Open-Xchange', family: 'messaging', cpe: ['a:open-xchange:dovecot'] },
+  { key: 'amazon-msk', slug: 'amazon-msk', name: 'Amazon MSK', editor: 'AWS', family: 'messaging', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon MSK product. a:amazon:msk and a:amazon:managed_streaming_for_apache_kafka do not exist.' },
+  { key: 'exim', slug: 'exim', name: 'Exim', editor: 'Exim', family: 'messaging', cpe: ['a:exim:exim'] },
+  { key: 'proxmox-mail-gateway', slug: 'proxmox-mail-gateway', name: 'Proxmox Mail Gateway', editor: 'Proxmox', family: 'messaging', cpe: ['a:proxmox:proxmox_mail_gateway'] },
   // Integration
   { key: 'mulesoft-runtime', slug: 'mulesoft-runtime', name: 'MuleSoft Mule runtime', editor: 'Salesforce', family: 'integration', cpe: ['a:mulesoft:mule_runtime', 'a:salesforce:mule'] },
   { key: 'apache-nifi', slug: 'apache-nifi', name: 'Apache NiFi', editor: 'Apache Software Foundation', family: 'integration' },
   { key: 'kong-gateway', slug: 'kong-gateway', name: 'Kong Gateway', editor: 'Kong', family: 'integration' },
   { key: 'apache-apisix', slug: 'apache-apisix', name: 'Apache APISIX', editor: 'Apache Software Foundation', family: 'integration' },
+  { key: 'apache-airflow', slug: 'apache-airflow', name: 'Apache Airflow', editor: 'ASF', family: 'integration', cpe: ['a:apache:airflow'] },
+  { key: 'zookeeper', slug: 'zookeeper', name: 'Apache ZooKeeper', editor: 'ASF', family: 'integration', cpe: ['a:apache:zookeeper'] },
   // Backup
   { key: 'veeam-backup-and-replication', slug: 'veeam-backup-and-replication', name: 'Veeam Backup & Replication', editor: 'Veeam', family: 'backup', cpe: ['a:veeam:veeam_backup_\\&_replication'] },
   { key: 'veeam-backup-for-microsoft-365', slug: 'veeam-backup-for-microsoft-365', name: 'Veeam Backup for Microsoft 365', editor: 'Veeam', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a Veeam Backup for Microsoft 365 product. a:veeam:backup_for_microsoft_365 and a:veeam:backup_for_microsoft_office_365 do not exist.' },
   { key: 'commvault', slug: 'commvault', name: 'Commvault', editor: 'Commvault', family: 'backup' },
   { key: 'proxmox-backup-server', slug: 'proxmox-backup-server', name: 'Proxmox Backup Server', editor: 'Proxmox', family: 'backup', cpe: ['a:proxmox:backup_server'] },
+  { key: 'vmware-srm', slug: 'vmware-srm', name: 'VMware Live Site Recovery', editor: 'Broadcom', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a VMware Site Recovery Manager product. a:vmware:site_recovery_manager and a:vmware:srm do not exist, and no keyword search of the CPE dictionary finds the product.' },
+  { key: 'zerto', slug: 'zerto', name: 'Zerto', editor: 'HPE', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a Zerto product. a:zerto:zerto_virtual_manager and a:hpe:zerto do not exist, and the CPE dictionary holds no Zerto entry.' },
   // Monitoring
   { key: 'zabbix', slug: 'zabbix', name: 'Zabbix', editor: 'Zabbix', family: 'monitoring', cpe: ['a:zabbix:zabbix_server'] },
   { key: 'grafana', slug: 'grafana', name: 'Grafana', editor: 'Grafana Labs', family: 'monitoring' },
@@ -268,6 +306,9 @@ const PRODUCTS = [
   { key: 'splunk', slug: 'splunk', name: 'Splunk Enterprise', editor: 'Splunk', family: 'monitoring' },
   { key: 'graylog', slug: 'graylog', name: 'Graylog', editor: 'Graylog', family: 'monitoring' },
   { key: 'veeam-one', slug: 'veeam-one', name: 'Veeam ONE', editor: 'Veeam', family: 'monitoring', cpe: ['a:veeam:one', 'h:veeam:one'] },
+  { key: 'kibana', slug: 'kibana', name: 'Kibana', editor: 'Elastic', family: 'monitoring', cpe: ['a:elastic:kibana'] },
+  { key: 'logstash', slug: 'logstash', name: 'Logstash', editor: 'Elastic', family: 'monitoring', cpe: ['a:elastic:logstash'] },
+  { key: 'grafana-loki', slug: 'grafana-loki', name: 'Grafana Loki', editor: 'Grafana Labs', family: 'monitoring', cpe: ['a:grafana:loki'] },
   // Runtimes and frameworks
   { key: 'dotnet', slug: 'dotnet', name: '.NET', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_core'] },
   { key: 'dotnetfx', slug: 'dotnetfx', name: '.NET Framework', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_framework'] },
@@ -280,21 +321,63 @@ const PRODUCTS = [
   { key: 'eclipse-temurin', slug: 'eclipse-temurin', name: 'Eclipse Temurin', editor: 'Eclipse Foundation', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'amazon-corretto', slug: 'amazon-corretto', name: 'Amazon Corretto', editor: 'Amazon Web Services', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'microsoft-build-of-openjdk', slug: 'microsoft-build-of-openjdk', name: 'Microsoft Build of OpenJDK', editor: 'Microsoft', family: 'runtime', cpe: OPENJDK_CPE },
+  // The OpenJDK builds follow Temurin: Oracle's identifiers, plus the vendor's own name when the NVD has one.
+  { key: 'azul-zulu', slug: 'azul-zulu', name: 'Azul Zulu', editor: 'Azul', family: 'runtime', cpe: ['a:azul:zulu', ...OPENJDK_CPE] },
+  { key: 'bellsoft-liberica', slug: 'bellsoft-liberica', name: 'BellSoft Liberica JDK', editor: 'BellSoft', family: 'runtime', cpe: OPENJDK_CPE },
+  { key: 'ibm-semeru-runtime', slug: 'ibm-semeru-runtime', name: 'IBM Semeru Runtime', editor: 'IBM', family: 'runtime', cpe: ['a:ibm:semeru_runtime', ...OPENJDK_CPE] },
+  { key: 'redhat-build-of-openjdk', slug: 'redhat-build-of-openjdk', name: 'Red Hat build of OpenJDK', editor: 'Red Hat', family: 'runtime', cpe: OPENJDK_CPE },
+  { key: 'spring-boot', slug: 'spring-boot', name: 'Spring Boot', editor: 'Broadcom', family: 'runtime', cpe: ['a:vmware:spring_boot'] },
+  // Three successive publisher names. The Pivotal and SpringSource ones cover the versions up to 5.x.
+  { key: 'spring-framework', slug: 'spring-framework', name: 'Spring Framework', editor: 'Broadcom', family: 'runtime', cpe: ['a:vmware:spring_framework', 'a:pivotal_software:spring_framework', 'a:springsource:spring_framework'] },
+  { key: 'log4j', slug: 'log4j', name: 'Apache Log4j', editor: 'ASF', family: 'runtime', cpe: ['a:apache:log4j'] },
+  { key: 'apache-struts', slug: 'apache-struts', name: 'Apache Struts', editor: 'ASF', family: 'runtime', cpe: ['a:apache:struts'] },
   { key: 'go', slug: 'go', name: 'Go', editor: 'Google', family: 'runtime' },
   { key: 'ruby', slug: 'ruby', name: 'Ruby', editor: 'Ruby', family: 'runtime' },
   { key: 'powershell', slug: 'powershell', name: 'PowerShell', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:powershell_core'] },
   // Storage
   { key: 'ceph', slug: 'ceph', name: 'Ceph', editor: 'Ceph Foundation', family: 'storage', cpe: ['a:ceph:ceph', 'a:linuxfoundation:ceph', 'a:redhat:ceph'] },
   { key: 'nutanix-files', slug: 'nutanix-files', name: 'Nutanix Files', editor: 'Nutanix', family: 'storage', noCpe: 'Verified on 2026-10-20: a:nutanix:files_storage is in the CPE dictionary and names no CVE. a:nutanix:files does not exist.' },
+  { key: 'netapp-ontap', slug: 'netapp-ontap', name: 'NetApp ONTAP', editor: 'NetApp', family: 'storage', cpe: ['a:netapp:ontap', 'a:netapp:clustered_data_ontap', 'o:netapp:clustered_data_ontap'] },
+  // The NVD only names TrueNAS CORE up to 13.0 (`truenas_firmware`, 3 CVE, newest CVE-2024-11946). The catalog follows 24.x and 25.x. Kept: the identifier names CVE.
+  { key: 'truenas', slug: 'truenas', name: 'TrueNAS', editor: 'iXsystems', family: 'storage', cpe: ['o:ixsystems:truenas_firmware'] },
   // Network and security
   { key: 'hashicorp-vault', slug: 'hashicorp-vault', name: 'HashiCorp Vault', editor: 'HashiCorp', family: 'network_security' },
   { key: 'bind-9', slug: 'bind-9', name: 'BIND 9', editor: 'ISC', family: 'network_security', cpe: ['a:isc:bind'] },
   { key: 'opnsense', slug: 'opnsense', name: 'OPNsense', editor: 'Deciso', family: 'network_security' },
+  { key: 'panos', slug: 'panos', name: 'Palo Alto PAN-OS', editor: 'Palo Alto Networks', family: 'network_security', cpe: ['o:paloaltonetworks:pan-os'] },
+  { key: 'fortios', slug: 'fortios', name: 'FortiOS', editor: 'Fortinet', family: 'network_security', cpe: ['o:fortinet:fortios'] },
+  { key: 'pangp', slug: 'pangp', name: 'Palo Alto GlobalProtect', editor: 'Palo Alto Networks', family: 'network_security', cpe: ['a:paloaltonetworks:globalprotect'] },
+  { key: 'sns-firmware', slug: 'sns-firmware', name: 'Stormshield Network Security', editor: 'Stormshield', family: 'network_security', cpe: ['a:stormshield:stormshield_network_security', 'a:stormshield:network_security'] },
+  // The community-edition label `7.9.103-ce` is the NVD version `7.9.103`. `traps` is the name before Cortex XDR.
+  { key: 'cortex-xdr', slug: 'cortex-xdr', name: 'Cortex XDR agent', editor: 'Palo Alto Networks', family: 'network_security', cpe: ['a:paloaltonetworks:cortex_xdr_agent', 'a:paloaltonetworks:traps'], cpeVersions: [[/^7\.9\.103-ce$/i, '7.9.103']] },
+  // BIG-IP keeps the modules that share one TMOS version: LTM, APM, ASM, Advanced WAF, AFM and DNS (`big-ip_dns` is the older DNS name, 14 CVE).
+  { key: 'cisco-ios-xe', slug: 'cisco-ios-xe', name: 'Cisco IOS XE', editor: 'Cisco', family: 'network', cpe: ['o:cisco:ios_xe', 'a:cisco:ios_xe'] },
+  { key: 'routeros', slug: 'routeros', name: 'MikroTik RouterOS', editor: 'MikroTik', family: 'network', cpe: ['o:mikrotik:routeros'] },
+  { key: 'big-ip', slug: 'big-ip', name: 'F5 BIG-IP', editor: 'F5', family: 'network', cpe: ['a:f5:big-ip_local_traffic_manager', 'a:f5:big-ip_access_policy_manager', 'a:f5:big-ip_application_security_manager', 'a:f5:big-ip_advanced_web_application_firewall', 'a:f5:big-ip_advanced_firewall_manager', 'a:f5:big-ip_domain_name_system', 'a:f5:big-ip_dns'] },
   // Administration
   { key: 'ansible-automation-platform', slug: 'red-hat-ansible-automation-platform', name: 'Red Hat Ansible Automation Platform', editor: 'Red Hat', family: 'administration' },
   { key: 'puppet', slug: 'puppet', name: 'Puppet', editor: 'Perforce', family: 'administration', cpe: ['a:puppetlabs:puppet'] },
   { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite', 'o:redhat:satellite'] },
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
+  { key: 'gitlab', slug: 'gitlab', name: 'GitLab', editor: 'GitLab', family: 'administration', cpe: ['a:gitlab:gitlab'] },
+  { key: 'jira-software', slug: 'jira-software', name: 'Jira Software', editor: 'Atlassian', family: 'administration', cpe: ['a:atlassian:jira', 'a:atlassian:jira_server', 'a:atlassian:jira_data_center', 'a:atlassian:jira_software_data_center'] },
+  { key: 'jira-service-management', slug: 'jira-service-management', name: 'Jira Service Management', editor: 'Atlassian', family: 'administration', cpe: ['a:atlassian:jira_service_desk', 'a:atlassian:jira_service_management'] },
+  { key: 'confluence', slug: 'confluence', name: 'Confluence', editor: 'Atlassian', family: 'administration', cpe: ['a:atlassian:confluence', 'a:atlassian:confluence_server', 'a:atlassian:confluence_data_center'] },
+  { key: 'bitbucket', slug: 'bitbucket', name: 'Bitbucket', editor: 'Atlassian', family: 'administration', cpe: ['a:atlassian:bitbucket', 'a:atlassian:bitbucket_server', 'a:atlassian:bitbucket_data_center'] },
+  // The NVD also files the Jenkins plug-in under `a:jfrog:artifactory`. Kept: the identifier names the product's CVE.
+  { key: 'artifactory', slug: 'artifactory', name: 'JFrog Artifactory', editor: 'JFrog', family: 'administration', cpe: ['a:jfrog:artifactory'] },
+  { key: 'nexus', slug: 'nexus', name: 'Sonatype Nexus Repository', editor: 'Sonatype', family: 'administration', cpe: ['a:sonatype:nexus_repository_manager'] },
+  // SonarQube Server: the NVD stops at 10.x (10.6, CVE-2024-47911). The catalog follows the calendar versions (`2026.5`). The identifier is kept; those versions do not meet the old numbers.
+  { key: 'sonarqube-server', slug: 'sonarqube-server', name: 'SonarQube Server', editor: 'SonarSource', family: 'administration', cpe: ['a:sonarsource:sonarqube'] },
+  { key: 'terraform', slug: 'terraform', name: 'Terraform', editor: 'HashiCorp (IBM)', family: 'administration', cpe: ['a:hashicorp:terraform'] },
+  { key: 'consul', slug: 'consul', name: 'HashiCorp Consul', editor: 'HashiCorp (IBM)', family: 'administration', cpe: ['a:hashicorp:consul'] },
+  { key: 'chef-infra-server', slug: 'chef-infra-server', name: 'Chef Infra Server', editor: 'Progress', family: 'administration', cpe: ['a:progress:chef_infra_server'] },
+  { key: 'salt', slug: 'salt', name: 'Salt', editor: 'Broadcom', family: 'administration', cpe: ['a:saltstack:salt'] },
+  // ansible-core 2.12 to 2.21 does not match the NVD numbering: `ansible_engine` stops at 3.5, `ansible` at 2.10 and earlier.
+  { key: 'ansible-core', slug: 'ansible-core', name: 'Ansible (core)', editor: 'Red Hat', family: 'administration', noCpe: 'Verified on 2026-10-20: a:redhat:ansible_engine (up to 3.5) and a:redhat:ansible (2.10 and earlier) do not follow the ansible-core 2.x versions the catalog keeps (2.12 to 2.21). a:redhat:ansible_core does not exist. a:ansible:ansible, which endoflife.date publishes, names one CVE from 2016 and no CPE name.' },
+  { key: 'azure-devops-server', slug: 'azure-devops-server', name: 'Azure DevOps Server', editor: 'Microsoft', family: 'administration', cpe: ['o:microsoft:azure_devops_server'] },
+  // SharePoint: the NVD still files 2019 and the build numbers `16.0.*` (newest CVE-2026-108452). Subscription Edition is `sharepoint_server` with version `-`, so a version cannot be matched. The identifiers are kept.
+  { key: 'sharepoint', slug: 'sharepoint', name: 'SharePoint Server', editor: 'Microsoft', family: 'other', cpe: ['a:microsoft:sharepoint_server', 'a:microsoft:sharepoint_enterprise_server'] },
   // Maintained by KANAP (backend/src/technologies/catalog/curated/). Identifiers checked against
   // the NVD on 2026-10-20 (planning/catalogue-enrichi/cpe.md, group B). `security` in those notes
   // is the family `network_security`. No entry excludes an identifier or goes without one.
@@ -663,7 +746,7 @@ function cleanLabel(label, name) {
  * - `cpeVersions` of an entry: `[pattern, version]` pairs for the labels without a number the NVD
  *   uses; Exchange `Subscription Edition SU11` → `15.2`, its build line, which the NVD bounds under
  *   `exchange_server_subscription_edition` (`< 15.02.2562.017`); Ivanti `9.1R18` → `9.1` (the
- *   maintenance release is the NVD update);
+ *   maintenance release is the NVD update); Cortex XDR `7.9.103-ce` → `7.9.103`;
  * - Oracle Database and Check Point Gaia (`cpeVersion: 'label'`): the label in lower case.
  *   Oracle is `19c`; Gaia is `r81.20`;
  * - `escaped-parens`: one ASA or NX-OS version, parentheses escaped and lower case

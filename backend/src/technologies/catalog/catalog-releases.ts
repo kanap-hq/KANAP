@@ -91,6 +91,8 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   'arista-eos': { stripTrain: true },
   'oracle-weblogic': { stripTrain: true },
   'ibm-websphere': { stripTrain: true },
+  // Cortex XDR community edition: the label `7.9.103-ce` is the NVD version `7.9.103`.
+  'cortex-xdr': { patterns: [[/^7\.9\.103-ce$/i, '7.9.103']] },
 };
 
 /** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
