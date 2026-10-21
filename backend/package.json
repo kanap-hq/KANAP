@@ -93,7 +93,7 @@
     "pino-http": "^9.0.0",
     "reflect-metadata": "^0.2.2",
     "resend": "^6.32.1",
-    "sanitize-html": "^2.18.0",
+    "sanitize-html": "^2.18.1",
     "speakeasy": "^2.0.0",
     "stripe": "^20.4.1",
     "turndown": "^7.2.4",
