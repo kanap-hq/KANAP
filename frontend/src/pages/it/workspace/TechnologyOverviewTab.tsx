@@ -28,7 +28,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
 import DeleteConfirmDialog from '../../../components/DeleteConfirmDialog';
@@ -46,6 +46,14 @@ import { formatSupportDate, supportStateColor, supportStateOf, type SupportState
 import { EditorField } from '../components/TechnologyCreateDialog';
 import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
 
+/** Where KANAP read the dates of a maintained version, while the stored dates still match the catalog. */
+export type CatalogDateSource = {
+  source_url: string;
+  checked_on: string;
+  editor: string;
+  no_planned_end: boolean;
+};
+
 export type TechnologyVersion = {
   id: string;
   label: string;
@@ -56,6 +64,8 @@ export type TechnologyVersion = {
   notes: string | null;
   /** Set when the version comes from the catalog (adoption or the living catalog's sync). */
   catalog_key?: string | null;
+  /** Null once a stored end date differs from the catalog, and on a version KANAP does not maintain. */
+  catalog_source?: CatalogDateSource | null;
   /** Own setting: `true`, `false`, or `null` when the version follows the technology. */
   vulnerability_alerts?: boolean | null;
   /** The version's exception, or the technology's setting. */
@@ -84,6 +94,8 @@ export type TechnologyDetail = {
   cve_names?: TechnologyCveName[];
   /** The catalog entry the technology was adopted from; its versions and dates are then kept up to date. */
   catalog_key?: string | null;
+  /** Page where the distributor tracks vulnerabilities per package. Null when the product has none. */
+  catalog_security_tracker?: string | null;
   replaced_by_id: string | null;
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
@@ -532,6 +544,36 @@ function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning:
   };
 }
 
+/** Known distributor trackers, keyed by their page without a trailing slash. */
+const SECURITY_TRACKER_KEYS: Record<string, string> = {
+  'https://ubuntu.com/security/cves': 'workspace.technology.versions.trackers.ubuntu',
+  'https://access.redhat.com/security/security-updates/cve': 'workspace.technology.versions.trackers.redhat',
+  'https://security-tracker.debian.org/tracker': 'workspace.technology.versions.trackers.debian',
+  'https://www.suse.com/security/cve': 'workspace.technology.versions.trackers.suse',
+  'https://errata.rockylinux.org': 'workspace.technology.versions.trackers.rocky',
+  'https://errata.almalinux.org': 'workspace.technology.versions.trackers.alma',
+  'https://linux.oracle.com/security': 'workspace.technology.versions.trackers.oracle',
+  'https://alas.aws.amazon.com': 'workspace.technology.versions.trackers.amazon',
+  'https://security.alpinelinux.org': 'workspace.technology.versions.trackers.alpine',
+};
+
+/** The link text of a distributor's tracker: its name, or "security tracker of <editor>". */
+function securityTrackerName(url: string, editor: string | null, t: TFunction): string {
+  const key = SECURITY_TRACKER_KEYS[url.replace(/\/+$/, '')];
+  if (key) return t(key);
+  const name = editor?.trim();
+  return name
+    ? t('workspace.technology.versions.securityTrackerOf', { editor: name })
+    : t('workspace.technology.versions.securityTracker');
+}
+
+/** Neutral at rest: a link inside a table cell turns teal only on hover. */
+const catalogSourceLinkSx = {
+  color: 'inherit',
+  font: 'inherit',
+  '&:hover': { color: 'kanap.teal', textDecoration: 'underline', textUnderlineOffset: '2px' },
+} as const;
+
 function VersionsTable({ technology, canManage, onChanged, onError, unmatched, onAddIdentifier }: {
   technology: TechnologyDetail;
   canManage: boolean;
@@ -769,6 +811,12 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
           {technology.versions.map((version) => {
             if (editing === version.id) return editRow(version.id);
             const status = supportStateOf(version.standard_support_end, version.extended_support_end);
+            const source = version.catalog_source;
+            // Both ends are empty together when the vendor plans no end. The phrase replaces each dash.
+            const noEnd = source?.no_planned_end === true;
+            const endCell = (date: string | null) => (noEnd
+              ? <Box component="span" sx={{ fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>{t('workspace.technology.versions.noPlannedEnd')}</Box>
+              : formatSupportDate(date, locale, '—'));
             return (
               <TableRow key={version.id}>
                 <TableCell>
@@ -780,9 +828,30 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
                       </Box>
                     </Tooltip>
                   )}
+                  {/* A second line, not the Catalog mark's tooltip: the source is a link, which a tooltip would hide. */}
+                  {source && (
+                    <Box sx={{ mt: '2px', fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>
+                      <Trans
+                        t={t}
+                        i18nKey="workspace.technology.versions.dateSource"
+                        values={{ editor: source.editor, date: formatSupportDate(source.checked_on, locale) }}
+                        components={{
+                          editor: (
+                            <Link
+                              href={source.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="none"
+                              sx={catalogSourceLinkSx}
+                            />
+                          ),
+                        }}
+                      />
+                    </Box>
+                  )}
                 </TableCell>
-                <TableCell>{formatSupportDate(version.standard_support_end, locale, '—')}</TableCell>
-                <TableCell>{formatSupportDate(version.extended_support_end, locale, '—')}</TableCell>
+                <TableCell>{endCell(version.standard_support_end)}</TableCell>
+                <TableCell>{endCell(version.extended_support_end)}</TableCell>
                 <TableCell>
                   <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
                     <StatusDot color={supportStateColor(status, theme)} />
@@ -821,6 +890,26 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
       {technology.catalog_key && (
         <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, color: th.palette.kanap.text.tertiary })}>
           {t('workspace.technology.versions.catalogNote')}
+        </Typography>
+      )}
+      {technology.catalog_security_tracker && (
+        <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, lineHeight: 1.4, color: th.palette.kanap.text.tertiary })}>
+          <Trans
+            t={t}
+            i18nKey="workspace.technology.versions.securityTrackerNote"
+            values={{ name: securityTrackerName(technology.catalog_security_tracker, technology.editor, t) }}
+            components={{
+              tracker: (
+                <Link
+                  href={technology.catalog_security_tracker}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline="none"
+                  sx={tealLinkSx}
+                />
+              ),
+            }}
+          />
         </Typography>
       )}
       <DeleteConfirmDialog

@@ -75,6 +75,109 @@ describe('TechnologyOverviewTab', () => {
     expect(screen.queryByText('Catalog')).not.toBeInTheDocument();
   });
 
+  it('names the source of a catalog version while its dates still match', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-r81',
+        label: 'R81.20',
+        standard_support_end: '2027-05-31',
+        catalog_key: 'check-point-gaia:R81.20',
+        catalog_source: {
+          source_url: 'https://www.checkpoint.com/support-services/support-life-cycle-policy/',
+          checked_on: '2026-10-20',
+          editor: 'Check Point',
+          no_planned_end: false,
+        },
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /R81.20/ });
+    const link = within(row).getByRole('link', { name: 'Check Point' });
+    expect(link).toHaveAttribute('href', 'https://www.checkpoint.com/support-services/support-life-cycle-policy/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(row).getByText(/verified on 20 Oct 2026/)).toBeInTheDocument();
+    expect(within(row).getByText('Catalog')).toBeInTheDocument();
+  });
+
+  it('hides the source once the stored dates leave the catalog', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-r81',
+        label: 'R81.20',
+        standard_support_end: '2028-01-15',
+        catalog_key: 'check-point-gaia:R81.20',
+        catalog_source: null,
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /R81.20/ });
+    expect(within(row).queryByRole('link', { name: 'Check Point' })).not.toBeInTheDocument();
+    expect(within(row).queryByText(/verified on/)).not.toBeInTheDocument();
+    expect(within(row).getByText('Catalog')).toBeInTheDocument();
+  });
+
+  it('replaces both empty dates when the vendor plans no end', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-was',
+        label: '9.0.x',
+        standard_support_end: null,
+        extended_support_end: null,
+        catalog_key: 'ibm-websphere:9.0.x',
+        catalog_source: {
+          source_url: 'https://www.ibm.com/support/pages/websphere-application-server90x',
+          checked_on: '2026-10-20',
+          editor: 'IBM',
+          no_planned_end: true,
+        },
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /9\.0\.x/ });
+    expect(within(row).getAllByText('No end planned by the vendor')).toHaveLength(2);
+    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+    expect(within(row).getByRole('link', { name: 'IBM' })).toHaveAttribute('href', 'https://www.ibm.com/support/pages/websphere-application-server90x');
+  });
+
+  it('points at the distributor package tracker under the versions', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      editor: 'Canonical',
+      catalog_key: 'ubuntu',
+      catalog_security_tracker: 'https://ubuntu.com/security/cves',
+    });
+    const link = screen.getByRole('link', { name: 'Ubuntu CVE tracker' });
+    expect(link).toHaveAttribute('href', 'https://ubuntu.com/security/cves');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByText(/publishes vulnerabilities per package/)).toBeInTheDocument();
+    expect(screen.getByText('Versions and dates kept up to date from the catalog')).toBeInTheDocument();
+  });
+
+  it('names an unknown tracker from the editor, and a known one despite a trailing slash', () => {
+    const { unmount } = renderTab({
+      ...TECHNOLOGY,
+      editor: 'Example',
+      catalog_security_tracker: 'https://example.test/security',
+    });
+    expect(screen.getByRole('link', { name: 'Example security tracker' })).toHaveAttribute('href', 'https://example.test/security');
+    unmount();
+    renderTab({
+      ...TECHNOLOGY,
+      catalog_security_tracker: 'https://security-tracker.debian.org/tracker/',
+    });
+    expect(screen.getByRole('link', { name: 'Debian security tracker' })).toHaveAttribute('href', 'https://security-tracker.debian.org/tracker/');
+  });
+
+  it('shows no tracker line when the product publishes none', () => {
+    renderTab();
+    expect(screen.queryByText(/publishes vulnerabilities per package/)).not.toBeInTheDocument();
+  });
+
   it('explains the catalog mark to a keyboard user', async () => {
     renderTab();
     const mark = screen.getByText('Catalog');
