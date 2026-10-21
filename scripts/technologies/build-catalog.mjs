@@ -101,10 +101,13 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  */
-// The service pack is the CPE update component (`linux_enterprise_server:15:sp5`). The matching reads the
-// version only, so one identifier would attach every service pack of a major version to every other.
+// SLES: the NVD files the major in the version and the service pack in the update component
+// (`linux_enterprise_server:15:sp5`), under five names over the years (SUSE, then Novell and the
+// openSUSE project for SLES 10 to 12). `o:suse:suse_linux` and `o:novell:suse_linux` are left out:
+// they also name the former SUSE Linux desktop releases (9.0, 10.1), which would meet SLES 10 and 11. The matching compares the major and, when a criterion names
+// a service pack, that service pack (`SERVICE_PACK_PRODUCTS` in vulnerability-rules.ts).
 // `o:suse:sles`, the identifier endoflife.date publishes, names no CVE.
-const SLES_NO_CPE = 'The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE.';
+const SLES_CPE = ['o:suse:linux_enterprise_server', 'o:suse:suse_linux_enterprise_server', 'o:novell:suse_linux_enterprise_server', 'o:opensuse_project:suse_linux_enterprise_server', 'o:opensuse:suse_linux_enterprise_server'];
 
 /**
  * "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2"; the service
@@ -147,16 +150,19 @@ function slesLabel(release) {
 const PRODUCTS = [
   // Operating systems (lot T3). CPE identifiers checked at the NVD (lot V3). Windows Server is one
   // product per long-term release from 2003 (the build is not `cpe_version`: the year rule matches the
-  // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_NO_CPE.
-  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS are matched on the major, Ubuntu
+  // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_CPE.
+  // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux, CentOS and SLES are matched on the major, Ubuntu
   // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
   // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
   // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
-  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
+  // October 2026: RHEL 4 to 7 also come as the Server, Workstation and Desktop editions (about 1 900 CVE
+  // each); the support channels (EUS, AUS, TUS, ELS, RHUI, supplementary) are left out. Windows Server
+  // also comes as `o:microsoft:windows_server` with the release as version (`2022`, 302 CVE).
+  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025', 'o:microsoft:windows_server'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
   { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
-  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux'] },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'] },
   { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], versionLabel: debianLabel },
-  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', noCpe: SLES_NO_CPE, versionLabel: slesLabel },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], versionLabel: slesLabel },
   { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'] },
   { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'] },
   { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'] },
@@ -204,7 +210,7 @@ const PRODUCTS = [
   { key: 'docker-engine', slug: 'docker-engine', name: 'Docker Engine', editor: 'Docker', family: 'container', cpe: ['a:docker:docker', 'a:mobyproject:moby'] },
   { key: 'containerd', slug: 'containerd', name: 'containerd', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'podman', slug: 'podman', name: 'Podman', editor: 'Red Hat', family: 'container' },
-  { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform'] },
+  { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform', 'o:redhat:openshift'] },
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon EKS product. a:amazon:eks and a:amazon:elastic_kubernetes_service do not exist, and CVE-2026-86831 (the EKS Network Policy Agent) has no CPE criterion.' },
@@ -247,14 +253,16 @@ const PRODUCTS = [
   { key: 'icinga', slug: 'icinga', name: 'Icinga', editor: 'Icinga', family: 'monitoring' },
   { key: 'splunk', slug: 'splunk', name: 'Splunk Enterprise', editor: 'Splunk', family: 'monitoring' },
   { key: 'graylog', slug: 'graylog', name: 'Graylog', editor: 'Graylog', family: 'monitoring' },
-  { key: 'veeam-one', slug: 'veeam-one', name: 'Veeam ONE', editor: 'Veeam', family: 'monitoring', cpe: ['a:veeam:one'] },
+  { key: 'veeam-one', slug: 'veeam-one', name: 'Veeam ONE', editor: 'Veeam', family: 'monitoring', cpe: ['a:veeam:one', 'h:veeam:one'] },
   // Runtimes and frameworks
   { key: 'dotnet', slug: 'dotnet', name: '.NET', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_core'] },
   { key: 'dotnetfx', slug: 'dotnetfx', name: '.NET Framework', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_framework'] },
-  { key: 'nodejs', slug: 'nodejs', name: 'Node.js', editor: 'OpenJS Foundation', family: 'runtime' },
+  { key: 'nodejs', slug: 'nodejs', name: 'Node.js', editor: 'OpenJS Foundation', family: 'runtime', cpe: ['a:joyent:node.js'] },
   { key: 'python', slug: 'python', name: 'Python', editor: 'Python Software Foundation', family: 'runtime' },
   { key: 'php', slug: 'php', name: 'PHP', editor: 'The PHP Group', family: 'runtime' },
-  { key: 'oracle-jdk', slug: 'oracle-jdk', name: 'Oracle JDK', editor: 'Oracle', family: 'runtime' },
+  // October 2026: older spellings the NVD still files CVE under (Sun JDK and JRE: 395 and 426 CVE;
+  // Joyent Node.js 2; OpenShift 2 as an operating system 8; Satellite 3; Veeam ONE as hardware 2).
+  { key: 'oracle-jdk', slug: 'oracle-jdk', name: 'Oracle JDK', editor: 'Oracle', family: 'runtime', cpe: ['a:sun:jdk', 'a:sun:jre'] },
   { key: 'eclipse-temurin', slug: 'eclipse-temurin', name: 'Eclipse Temurin', editor: 'Eclipse Foundation', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'amazon-corretto', slug: 'amazon-corretto', name: 'Amazon Corretto', editor: 'Amazon Web Services', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'microsoft-build-of-openjdk', slug: 'microsoft-build-of-openjdk', name: 'Microsoft Build of OpenJDK', editor: 'Microsoft', family: 'runtime', cpe: OPENJDK_CPE },
@@ -271,7 +279,7 @@ const PRODUCTS = [
   // Administration
   { key: 'ansible-automation-platform', slug: 'red-hat-ansible-automation-platform', name: 'Red Hat Ansible Automation Platform', editor: 'Red Hat', family: 'administration' },
   { key: 'puppet', slug: 'puppet', name: 'Puppet', editor: 'Perforce', family: 'administration', cpe: ['a:puppetlabs:puppet'] },
-  { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite'] },
+  { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite', 'o:redhat:satellite'] },
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
 ];
 
@@ -300,6 +308,39 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1 (Server Core installation)", version: "2008 R2" },
     { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2", version: "2008" },
     { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2 (Server Core installation)", version: "2008" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Systems Service Pack 1", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008", version: "2008" },
+  ],
+  // Operating systems (October 2026 lot): Canonical and SUSE publish the release in the product name.
+  // SLES names keep the major only: the matching compares the major, and a service pack name
+  // (`15 SP5`) would hide the names of the whole major from that service pack (the longest
+  // release wins).
+  ubuntu: [
+    { vendor: "Canonical", product: "Ubuntu Linux" },
+    { vendor: "Canonical", product: "Ubuntu" },
+    { vendor: "Canonical", product: "Ubuntu 26.04 LTS", version: "26.04" },
+    { vendor: "Canonical", product: "Ubuntu 24.04 LTS", version: "24.04" },
+    { vendor: "Canonical", product: "Ubuntu 22.04 LTS", version: "22.04" },
+    { vendor: "Canonical", product: "Ubuntu 20.04 LTS", version: "20.04" },
+    { vendor: "Canonical", product: "Ubuntu 18.04 LTS", version: "18.04" },
+    { vendor: "Canonical", product: "Ubuntu 16.04 LTS", version: "16.04" },
+  ],
+  sles: [
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP1", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP4-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP5-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP6", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP6-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP7", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12-SP4", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12-SP5", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 11", version: "11" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 11-SP4-LTSS", version: "11" },
   ],
   mssqlserver: [
     { vendor: "Microsoft", product: "Microsoft SQL Server 2025 for x64-based Systems (GDR)", version: "2025" },
@@ -312,6 +353,7 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (CU 31)", version: "2017" },
     { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 (GDR)", version: "2016" },
     { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 Azure Connect Feature Pack", version: "2016" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (CU 29)", version: "2019" },
   ],
   msexchange: [
     { vendor: "Microsoft", product: "Microsoft Exchange Server Subscription Edition RTM", version: "Subscription Edition" },
@@ -324,14 +366,17 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: ".NET 9.0", version: "9" },
     { vendor: "Microsoft", product: ".NET 8.0", version: "8" },
     { vendor: "Microsoft", product: ".NET 6.0", version: "6" },
+    { vendor: "Microsoft", product: ".NET 7.0", version: "7" },
   ],
   powershell: [
     { vendor: "Microsoft", product: "PowerShell 7.6", version: "7.6" },
     { vendor: "Microsoft", product: "PowerShell 7.5", version: "7.5" },
     { vendor: "Microsoft", product: "PowerShell 7.4", version: "7.4" },
+    { vendor: "Microsoft", product: "PowerShell Core" },
   ],
   "entra-id": [
     { vendor: "Microsoft", product: "Microsoft Entra" },
+    { vendor: "Microsoft", product: "Azure Active Directory" },
   ],
   "azure-kubernetes-service": [
     { vendor: "Microsoft", product: "Azure Kubernetes Service" },
@@ -345,6 +390,7 @@ const CVE_NAMES = {
   "eclipse-jetty": [
     { vendor: "Eclipse Foundation", product: "Eclipse Jetty" },
     { vendor: "Eclipse Foundation", product: "Jetty" },
+    { vendor: "The Eclipse Foundation", product: "Eclipse Jetty" },
   ],
   commvault: [
     { vendor: "Commvault", product: "Commvault Cloud" },
@@ -401,6 +447,7 @@ const CVE_NAMES = {
   ],
   "apache-artemis": [
     { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Artemis" },
+    { vendor: "Apache Software Foundation", product: "Apache Artemis" },
   ],
   "apache-kafka": [
     { vendor: "Apache Software Foundation", product: "Apache Kafka" },
@@ -461,6 +508,69 @@ const CVE_NAMES = {
   ],
   traefik: [
     { vendor: "traefik", product: "traefik" },
+  ],
+  // October 2026 lot: pairs that pass the suggestion rules (at least 3 shared CVE, share 0.2,
+  // precision 0.5) on the NVD lists of the entry's identifiers.
+  centreon: [
+    { vendor: "Centreon", product: "Centreon" },
+    { vendor: "Centreon", product: "Infra Monitoring" },
+    { vendor: "Centreon", product: "web" },
+  ],
+  "citrix-vad": [
+    { vendor: "n/a", product: "Citrix Virtual Apps and Desktops" },
+  ],
+  clickhouse: [
+    { vendor: "ClickHouse", product: "ClickHouse" },
+    { vendor: "n/a", product: "ClickHouse" },
+    { vendor: "yandex", product: "clickhouse" },
+  ],
+  "docker-engine": [
+    { vendor: "moby", product: "moby" },
+  ],
+  go: [
+    { vendor: "golang", product: "go" },
+  ],
+  graylog: [
+    { vendor: "Graylog2", product: "graylog2-server" },
+  ],
+  harbor: [
+    { vendor: "n/a", product: "Harbor" },
+  ],
+  "ibm-mq": [
+    { vendor: "IBM", product: "MQ" },
+  ],
+  icinga: [
+    { vendor: "Icinga", product: "icinga2" },
+  ],
+  keycloak: [
+    { vendor: "n/a", product: "keycloak" },
+  ],
+  kubernetes: [
+    { vendor: "Kubernetes", product: "Kubernetes" },
+  ],
+  mariadb: [
+    { vendor: "MariaDB", product: "server" },
+  ],
+  "mulesoft-runtime": [
+    { vendor: "n/a", product: "Mulesoft" },
+  ],
+  mysql: [
+    { vendor: "Oracle Corporation", product: "MySQL Server" },
+  ],
+  neo4j: [
+    { vendor: "neo4j", product: "Enterprise Edition" },
+  ],
+  nginx: [
+    { vendor: "f5", product: "nginx" },
+  ],
+  opensearch: [
+    { vendor: "opensearch-project", product: "security" },
+  ],
+  opnsense: [
+    { vendor: "Opnsense", product: "OPNsense" },
+  ],
+  "veeam-one": [
+    { vendor: "Veeam", product: "One" },
   ],
 };
 for (const entry of PRODUCTS) if (CVE_NAMES[entry.key]) entry.cve_names = CVE_NAMES[entry.key];

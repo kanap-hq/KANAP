@@ -198,7 +198,8 @@
       "family": "administration",
       "mode": "installed",
       "cpe_products": [
-        "a:redhat:satellite"
+        "a:redhat:satellite",
+        "o:redhat:satellite"
       ],
       "source_url": "https://endoflife.date/redhat-satellite",
       "versions": [
@@ -408,6 +409,11 @@
         {
           "vendor": "Eclipse Foundation",
           "product": "Jetty",
+          "version": null
+        },
+        {
+          "vendor": "The Eclipse Foundation",
+          "product": "Eclipse Jetty",
           "version": null
         }
       ]
@@ -1079,6 +1085,13 @@
           "standard_support_end": "2025-05-19",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "moby",
+          "product": "moby",
+          "version": null
+        }
       ]
     },
     {
@@ -1249,6 +1262,13 @@
           "standard_support_end": "2024-06-04",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "n/a",
+          "product": "Harbor",
+          "version": null
+        }
       ]
     },
     {
@@ -1333,6 +1353,13 @@
           "release_date": "2024-04-17",
           "standard_support_end": "2025-04-28",
           "extended_support_end": "2025-07-15"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Kubernetes",
+          "product": "Kubernetes",
+          "version": null
         }
       ]
     },
@@ -1522,7 +1549,8 @@
       "mode": "installed",
       "cpe_products": [
         "a:redhat:openshift",
-        "a:redhat:openshift_container_platform"
+        "a:redhat:openshift_container_platform",
+        "o:redhat:openshift"
       ],
       "source_url": "https://endoflife.date/red-hat-openshift",
       "versions": [
@@ -1747,6 +1775,23 @@
           "release_date": "2026-02-27",
           "standard_support_end": "2026-05-21",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "ClickHouse",
+          "product": "ClickHouse",
+          "version": null
+        },
+        {
+          "vendor": "n/a",
+          "product": "ClickHouse",
+          "version": null
+        },
+        {
+          "vendor": "yandex",
+          "product": "clickhouse",
+          "version": null
         }
       ]
     },
@@ -2121,6 +2166,13 @@
           "standard_support_end": "2025-02-13",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "MariaDB",
+          "product": "server",
+          "version": null
+        }
       ]
     },
     {
@@ -2269,6 +2321,11 @@
           "vendor": "Microsoft",
           "product": "Microsoft SQL Server 2017 (GDR)",
           "version": "2017"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SQL Server 2019 (CU 29)",
+          "version": "2019"
         },
         {
           "vendor": "Microsoft",
@@ -2483,6 +2540,13 @@
           "standard_support_end": "2024-10-15",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Oracle Corporation",
+          "product": "MySQL Server",
+          "version": null
+        }
       ]
     },
     {
@@ -2568,6 +2632,13 @@
           "standard_support_end": "2026-04-02",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "neo4j",
+          "product": "Enterprise Edition",
+          "version": null
+        }
       ]
     },
     {
@@ -2608,6 +2679,13 @@
           "release_date": "2021-07-12",
           "standard_support_end": "2022-05-26",
           "extended_support_end": "2025-05-06"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "opensearch-project",
+          "product": "security",
+          "version": null
         }
       ]
     },
@@ -3094,6 +3172,13 @@
           "standard_support_end": "2025-04-11",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "n/a",
+          "product": "keycloak",
+          "version": null
+        }
       ]
     },
     {
@@ -3110,6 +3195,11 @@
       "source_url": null,
       "versions": [],
       "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Azure Active Directory",
+          "version": null
+        },
         {
           "vendor": "Microsoft",
           "product": "Microsoft Entra",
@@ -3284,6 +3374,13 @@
           "release_date": "2024-04-14",
           "standard_support_end": "2029-04-15",
           "extended_support_end": "2034-04-15"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "n/a",
+          "product": "Citrix Virtual Apps and Desktops",
+          "version": null
         }
       ]
     },
@@ -3810,6 +3907,13 @@
           "standard_support_end": "2026-08-31",
           "extended_support_end": "2027-02-28"
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "n/a",
+          "product": "Mulesoft",
+          "version": null
+        }
       ]
     },
     {
@@ -4002,6 +4106,11 @@
         {
           "vendor": "Apache Software Foundation",
           "product": "Apache ActiveMQ Artemis",
+          "version": null
+        },
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Artemis",
           "version": null
         }
       ]
@@ -4234,6 +4343,13 @@
           "release_date": "2014-06-13",
           "standard_support_end": "2020-04-30",
           "extended_support_end": "2023-04-30"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "IBM",
+          "product": "MQ",
+          "version": null
         }
       ]
     },
@@ -4590,6 +4706,23 @@
           "standard_support_end": "2023-11-30",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Centreon",
+          "product": "Centreon",
+          "version": null
+        },
+        {
+          "vendor": "Centreon",
+          "product": "Infra Monitoring",
+          "version": null
+        },
+        {
+          "vendor": "Centreon",
+          "product": "web",
+          "version": null
+        }
       ]
     },
     {
@@ -4852,6 +4985,13 @@
           "standard_support_end": "2024-05-17",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Graylog2",
+          "product": "graylog2-server",
+          "version": null
+        }
       ]
     },
     {
@@ -4909,6 +5049,13 @@
           "release_date": "2020-08-03",
           "standard_support_end": "2021-08-02",
           "extended_support_end": "2023-07-12"
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Icinga",
+          "product": "icinga2",
+          "version": null
         }
       ]
     },
@@ -5103,7 +5250,8 @@
       "family": "monitoring",
       "mode": "installed",
       "cpe_products": [
-        "a:veeam:one"
+        "a:veeam:one",
+        "h:veeam:one"
       ],
       "source_url": "https://endoflife.date/veeam-one",
       "versions": [
@@ -5178,6 +5326,13 @@
           "release_date": "2012-10-09",
           "standard_support_end": null,
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Veeam",
+          "product": "One",
+          "version": null
         }
       ]
     },
@@ -5510,6 +5665,13 @@
           "standard_support_end": "2023-07-28",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Opnsense",
+          "product": "OPNsense",
+          "version": null
+        }
       ]
     },
     {
@@ -5796,7 +5958,10 @@
       "family": "operating_system",
       "mode": "installed",
       "cpe_products": [
-        "o:redhat:enterprise_linux"
+        "o:redhat:enterprise_linux",
+        "o:redhat:enterprise_linux_desktop",
+        "o:redhat:enterprise_linux_server",
+        "o:redhat:enterprise_linux_workstation"
       ],
       "source_url": "https://endoflife.date/rhel",
       "versions": [
@@ -5911,7 +6076,13 @@
       "editor": "SUSE",
       "family": "operating_system",
       "mode": "installed",
-      "cpe_products": [],
+      "cpe_products": [
+        "o:novell:suse_linux_enterprise_server",
+        "o:opensuse:suse_linux_enterprise_server",
+        "o:opensuse_project:suse_linux_enterprise_server",
+        "o:suse:linux_enterprise_server",
+        "o:suse:suse_linux_enterprise_server"
+      ],
       "source_url": "https://endoflife.date/sles",
       "versions": [
         {
@@ -6179,7 +6350,78 @@
           "extended_support_end": "2010-12-31"
         }
       ],
-      "noCpe": "The NVD files the service pack in the update component (o:suse:linux_enterprise_server, version 15, update sp5), which the matching does not read. o:suse:sles, the identifier endoflife.date publishes, names no CVE."
+      "cve_names": [
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server",
+          "version": null
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 11",
+          "version": "11"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 11-SP4-LTSS",
+          "version": "11"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 12",
+          "version": "12"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 12-SP4",
+          "version": "12"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 12-SP5",
+          "version": "12"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP1",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP4-LTSS",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP5-LTSS",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP6",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP6-LTSS",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15 SP7",
+          "version": "15"
+        },
+        {
+          "vendor": "SUSE",
+          "product": "SUSE Linux Enterprise Server 15-LTSS",
+          "version": "15"
+        }
+      ]
     },
     {
       "key": "ubuntu",
@@ -6313,6 +6555,48 @@
           "standard_support_end": "2011-06-01",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu",
+          "version": null
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 16.04 LTS",
+          "version": "16.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 18.04 LTS",
+          "version": "18.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 20.04 LTS",
+          "version": "20.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 22.04 LTS",
+          "version": "22.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 24.04 LTS",
+          "version": "24.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu 26.04 LTS",
+          "version": "26.04"
+        },
+        {
+          "vendor": "Canonical",
+          "product": "Ubuntu Linux",
+          "version": null
+        }
       ]
     },
     {
@@ -6322,6 +6606,7 @@
       "family": "operating_system",
       "mode": "installed",
       "cpe_products": [
+        "o:microsoft:windows_server",
         "o:microsoft:windows_server_2003",
         "o:microsoft:windows_server_2008",
         "o:microsoft:windows_server_2012",
@@ -6426,12 +6711,27 @@
       "cve_names": [
         {
           "vendor": "Microsoft",
+          "product": "Windows Server 2008",
+          "version": "2008"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 R2",
+          "version": "2008 R2"
+        },
+        {
+          "vendor": "Microsoft",
           "product": "Windows Server 2008 R2 Service Pack 1",
           "version": "2008 R2"
         },
         {
           "vendor": "Microsoft",
           "product": "Windows Server 2008 R2 Service Pack 1 (Server Core installation)",
+          "version": "2008 R2"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Windows Server 2008 R2 Systems Service Pack 1",
           "version": "2008 R2"
         },
         {
@@ -6585,6 +6885,11 @@
           "vendor": "Microsoft",
           "product": ".NET 6.0",
           "version": "6"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": ".NET 7.0",
+          "version": "7"
         },
         {
           "vendor": "Microsoft",
@@ -6931,6 +7236,13 @@
           "standard_support_end": "2024-02-06",
           "extended_support_end": null
         }
+      ],
+      "cve_names": [
+        {
+          "vendor": "golang",
+          "product": "go",
+          "version": null
+        }
       ]
     },
     {
@@ -6990,6 +7302,7 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
+        "a:joyent:node.js",
         "a:nodejs:node.js"
       ],
       "source_url": "https://endoflife.date/nodejs",
@@ -7084,7 +7397,9 @@
       "cpe_products": [
         "a:oracle:java_se",
         "a:oracle:jdk",
-        "a:oracle:jre"
+        "a:oracle:jre",
+        "a:sun:jdk",
+        "a:sun:jre"
       ],
       "source_url": "https://endoflife.date/oracle-jdk",
       "versions": [
@@ -7327,6 +7642,11 @@
           "vendor": "Microsoft",
           "product": "PowerShell 7.6",
           "version": "7.6"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "PowerShell Core",
+          "version": null
         }
       ]
     },
@@ -7875,6 +8195,13 @@
           "release_date": "2023-04-11",
           "standard_support_end": "2024-04-23",
           "extended_support_end": null
+        }
+      ],
+      "cve_names": [
+        {
+          "vendor": "f5",
+          "product": "nginx",
+          "version": null
         }
       ]
     },

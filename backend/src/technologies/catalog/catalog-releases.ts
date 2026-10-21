@@ -75,6 +75,7 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   'rocky-linux': { matchSegments: 1 },
   centos: { matchSegments: 1 },
   ubuntu: { matchSegments: 2 },
+  sles: { matchSegments: 1 },
 };
 
 /** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
