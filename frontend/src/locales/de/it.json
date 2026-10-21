@@ -3559,7 +3559,8 @@
       "monitoring": "Überwachung",
       "runtime": "Laufzeitumgebung und Framework",
       "storage": "Speicher",
-      "network_security": "Netzwerk und Sicherheit",
+      "network": "Netzwerk",
+      "network_security": "Sicherheit",
       "administration": "Administration",
       "other": "Sonstiges"
     },

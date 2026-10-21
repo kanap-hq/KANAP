@@ -10,7 +10,7 @@ import { catalogCveNames, cveNameIdentity, sortCveNames, type CveName } from '..
 import { defaultVulnerabilityAlerts } from '../../vulnerabilities/vulnerability-alerts';
 import { hostingTypeOfMode, isCloudHostingType, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
-import { lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
+import { catalogFamilyForTenant, lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
 // Written for KANAP and kept apart from the catalog, which the script rebuilds from endoflife.date.
@@ -275,7 +275,7 @@ export class TechnologyCatalogService {
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-      const family = (settings.technologyFamilies ?? []).some((item) => item.code === product.family) ? product.family : 'other';
+      const family = catalogFamilyForTenant(product.family, settings.technologyFamilies);
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(

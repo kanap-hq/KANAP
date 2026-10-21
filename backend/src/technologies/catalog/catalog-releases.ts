@@ -403,6 +403,21 @@ export function validCatalogVersion(value: unknown): value is CatalogVersion {
     && !(v.standard_support_end && v.extended_support_end && (v.extended_support_end as string) < (v.standard_support_end as string));
 }
 
+/**
+ * The family an adoption writes. The catalog family when the tenant lists it. A catalog family
+ * `network` falls back to `network_security` when the tenant still has that code (a list saved
+ * before `network` existed). Any other family missing from the tenant list is `other`.
+ */
+export function catalogFamilyForTenant(
+  catalogFamily: string,
+  tenantFamilies: readonly { code: string }[] | null | undefined,
+): string {
+  const codes = new Set((tenantFamilies ?? []).map((item) => item.code));
+  if (codes.has(catalogFamily)) return catalogFamily;
+  if (catalogFamily === 'network' && codes.has('network_security')) return 'network_security';
+  return 'other';
+}
+
 /** The endoflife.date product of an entry, read from its `source_url`; null for an entry written by hand. */
 export function endoflifeSlug(product: CatalogProduct): string | null {
   const match = /^https:\/\/endoflife\.date\/([a-z0-9._-]+)$/i.exec(product.source_url ?? '');

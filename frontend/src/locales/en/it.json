@@ -3559,7 +3559,8 @@
       "monitoring": "Monitoring",
       "runtime": "Runtime and framework",
       "storage": "Storage",
-      "network_security": "Network and security",
+      "network": "Network",
+      "network_security": "Security",
       "administration": "Administration",
       "other": "Other"
     },

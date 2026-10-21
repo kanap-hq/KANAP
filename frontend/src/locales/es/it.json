@@ -3559,7 +3559,8 @@
       "monitoring": "Monitorización",
       "runtime": "Entorno de ejecución y framework",
       "storage": "Almacenamiento",
-      "network_security": "Red y seguridad",
+      "network": "Red",
+      "network_security": "Seguridad",
       "administration": "Administración",
       "other": "Otro"
     },

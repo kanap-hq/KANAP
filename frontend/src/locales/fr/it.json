@@ -3559,7 +3559,8 @@
       "monitoring": "Supervision",
       "runtime": "Environnement d’exécution et framework",
       "storage": "Stockage",
-      "network_security": "Réseau et sécurité",
+      "network": "Réseau",
+      "network_security": "Sécurité",
       "administration": "Administration",
       "other": "Autre"
     },
