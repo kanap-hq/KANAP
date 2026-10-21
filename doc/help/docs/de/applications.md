@@ -228,7 +228,13 @@ Der Reiter Betrieb erfasst die Technologien, von denen die Anwendung abhängt, w
 - **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
 - **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
 
-Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`. Um eine deklarierte Technologie hinzuzufügen oder zu entfernen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
+Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`.
+
+**Eine Technologie hinzufügen**: Klicken Sie auf **Hinzufügen**, wählen Sie die Technologie und dann ihre Version: eine vorhandene, eine neue, die Sie eingeben, oder **Version unbekannt**. Hat die Anwendung Bereitstellungsserver in Betrieb, bietet ein letzter Schritt an, die Technologie in derselben Version auf diesen Servern zu erfassen, zum Beispiel „PHP 8.2 auch erfassen auf“. Jeder Server zeigt seine Umgebungen und Rollen. Nichts ist angehakt: Haken Sie die Server an, auf denen sie läuft, und klicken Sie dann auf **Hinzufügen**. Ein Server, der die Technologie bereits trägt, zeigt **Bereits erfasst** und behält seine eigene Version. Ein Betriebssystem wird hier nicht angeboten: Erfassen Sie es auf der Seite des Servers. Das Schließen der Liste fügt nichts hinzu.
+
+**Eine deklarierte Technologie ändern**: Klicken Sie auf ihre Version, um eine andere zu wählen. Trägt kein Server der Anwendung eine deklarierte Technologie, bietet das Serversymbol am Zeilenende (**Auf einem Server erfassen**) dieselbe Serverliste an. Eine gehostete Technologie wird am Server geändert: Klicken Sie unter **Über** auf den Server, um seine Seite zu öffnen.
+
+Um eine deklarierte Technologie hinzuzufügen, zu ändern oder zu entfernen und sie auf Servern zu erfassen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
 **Technisch**:
 - **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.

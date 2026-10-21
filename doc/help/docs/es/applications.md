@@ -228,7 +228,13 @@ La pestaña Operaciones captura las tecnologías de las que depende la aplicaci�
 - **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
 - **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
 
-Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`. Para añadir o quitar una tecnología declarada, necesita `applications:member` e `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
+Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indica que la versión no se conoce. El fin del soporte estándar pasa a naranja una vez superado. La sección requiere `infrastructure:reader`.
+
+**Añadir una tecnología**: haga clic en **Añadir**, elija la tecnología y luego su versión: una existente, una nueva que usted escribe o **Versión desconocida**. Cuando la aplicación tiene servidores de despliegue en servicio, un último paso propone registrar la tecnología con la misma versión en ellos, por ejemplo «Registrar también PHP 8.2 en». Cada servidor muestra sus entornos y sus roles. No hay nada marcado: marque los servidores que la ejecutan y haga clic en **Añadir**. Un servidor que ya lleva la tecnología muestra **Ya registrada** y conserva su propia versión. Un sistema operativo no se propone aquí: regístrelo en la página del servidor. Cerrar la lista no añade nada.
+
+**Cambiar una tecnología declarada**: haga clic en su versión para elegir otra. Cuando ningún servidor de la aplicación lleva una tecnología declarada, el icono de servidor al final de su fila (**Registrar en un servidor**) propone la misma lista de servidores. Una tecnología alojada se cambia en el servidor: haga clic en el servidor en **Vía** para abrir su página.
+
+Para añadir, cambiar o quitar una tecnología declarada, y para registrarla en servidores, necesita `applications:member` e `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
 
 **Técnico**:
 - **Métodos de acceso** (selección múltiple): cómo acceden los usuarios a esta aplicación. Las opciones son configurables en [Configuración del Panorama IT](it-ops-settings.md). Los valores predeterminados incluyen Web, Aplicación instalada localmente, Aplicación móvil, HMI propietario (interfaz industrial), Terminal / CLI, VDI / Escritorio remoto, Kiosk.

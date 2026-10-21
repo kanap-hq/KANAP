@@ -228,7 +228,13 @@ L'onglet Exploitation capture les technologies dont l'application dépend, comme
 - **Déclarée** : quelqu'un a lié la technologie à l'application, par exemple Entra ID pour une application qui connecte ses utilisateurs par ce service.
 - **Hébergée** : un serveur de l'un de ses déploiements porte la technologie. **Via** nomme le serveur, et l'hôte quand la technologie tourne sur l'hôte d'une machine virtuelle. Les déploiements désactivés ne comptent pas.
 
-Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`. Pour ajouter ou retirer une technologie déclarée, il faut `applications:member` et `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
+Une technologie peut être les deux. Un tiret dans la colonne des versions signifie que la version n'est pas connue. La fin du support standard passe en orange une fois dépassée. La section demande `infrastructure:reader`.
+
+**Ajouter une technologie** : cliquez sur **Ajouter**, choisissez la technologie, puis sa version : une version existante, une nouvelle version que vous saisissez, ou **Version inconnue**. Quand l'application a des serveurs de déploiement en service, une dernière étape propose de renseigner la technologie à la même version sur ces serveurs, par exemple « Renseigner aussi PHP 8.2 sur ». Chaque serveur indique ses environnements et ses rôles. Rien n'est coché : cochez les serveurs qui l'exécutent, puis cliquez sur **Ajouter**. Un serveur qui porte déjà la technologie affiche **Déjà renseignée** et garde sa propre version. Un système d'exploitation n'est pas proposé ici : renseignez-le sur la fiche du serveur. Fermer la liste n'ajoute rien.
+
+**Modifier une technologie déclarée** : cliquez sur sa version pour en choisir une autre. Quand aucun serveur de l'application ne porte une technologie déclarée, l'icône de serveur en fin de ligne (**Renseigner sur un serveur**) propose la même liste de serveurs. Une technologie hébergée se modifie sur le serveur : cliquez sur le serveur dans **Via** pour ouvrir sa fiche.
+
+Pour ajouter, modifier ou retirer une technologie déclarée, et pour la renseigner sur des serveurs, il faut `applications:member` et `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
 **Technique** :
 - **Méthodes d'accès** (multi-sélection) : comment les utilisateurs accèdent à cette application. Les options sont configurables dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Les options par défaut incluent Web, Application installée localement, Application mobile, IHM propriétaire (interface industrielle), Terminal / CLI, VDI / Bureau distant, Borne.
