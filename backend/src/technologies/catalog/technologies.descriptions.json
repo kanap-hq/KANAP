@@ -73,6 +73,12 @@
       "de": "Open-Source-Werkzeug zum Aufbau von Datenflüssen zwischen Systemen in einem visuellen Editor: Daten erfassen, umwandeln und weiterleiten.",
       "es": "Herramienta de código abierto para construir flujos de datos entre sistemas en un editor visual: recoger, transformar y enrutar datos."
     },
+    "arista-eos": {
+      "en": "Arista Networks operating system for its data center and campus switches, built on Linux and programmable.",
+      "fr": "Système d’exploitation d’Arista Networks pour ses commutateurs de centre de données et de campus, basé sur Linux et programmable.",
+      "de": "Betriebssystem von Arista Networks für seine Rechenzentrums- und Campus-Switches, auf Linux-Basis und programmierbar.",
+      "es": "Sistema operativo de Arista Networks para sus conmutadores de centro de datos y campus, basado en Linux y programable."
+    },
     "authentik": {
       "en": "Open-source identity provider: single sign-on, multi-factor authentication and user management over SAML, OAuth2 and LDAP.",
       "fr": "Fournisseur d’identité open source : authentification unique, authentification multifacteur et gestion des utilisateurs via SAML, OAuth2 et LDAP.",
@@ -115,11 +121,35 @@
       "de": "Verteiltes Open-Source-Speichersystem, das Block-, Datei- und Objektspeicher auf Standardservern bereitstellt.",
       "es": "Sistema de almacenamiento distribuido de código abierto que ofrece almacenamiento de bloques, archivos y objetos en servidores estándar."
     },
+    "check-point-gaia": {
+      "en": "Operating system of Check Point Quantum security gateways: firewall, VPN, intrusion prevention and central management.",
+      "fr": "Système d’exploitation des passerelles de sécurité Check Point Quantum : pare-feu, VPN, prévention d’intrusion et administration centralisée.",
+      "de": "Betriebssystem der Check-Point-Quantum-Sicherheitsgateways: Firewall, VPN, Angriffsabwehr und zentrale Verwaltung.",
+      "es": "Sistema operativo de las pasarelas de seguridad Check Point Quantum: cortafuegos, VPN, prevención de intrusiones y administración centralizada."
+    },
     "checkmk": {
       "en": "Monitoring software for servers, networks, applications and cloud services, with automatic discovery of what to check.",
       "fr": "Logiciel de supervision des serveurs, réseaux, applications et services cloud, qui découvre lui-même les points à contrôler.",
       "de": "Überwachungssoftware für Server, Netzwerke, Anwendungen und Cloud-Dienste, die zu prüfende Elemente selbst erkennt.",
       "es": "Software de supervisión de servidores, redes, aplicaciones y servicios en la nube, que descubre por sí mismo qué comprobar."
+    },
+    "cisco-asa": {
+      "en": "Cisco firewall software for stateful filtering, site-to-site VPN and remote access VPN.",
+      "fr": "Logiciel de pare-feu de Cisco pour le filtrage avec état, les VPN entre sites et les VPN d’accès distant.",
+      "de": "Firewall-Software von Cisco für zustandsbehaftete Filterung, Site-to-Site-VPN und Fernzugriffs-VPN.",
+      "es": "Software de cortafuegos de Cisco para filtrado con estado, VPN entre sitios y VPN de acceso remoto."
+    },
+    "cisco-ftd": {
+      "en": "Cisco next-generation firewall software: filtering, intrusion prevention, malware protection and URL filtering, managed centrally.",
+      "fr": "Logiciel de pare-feu de nouvelle génération de Cisco : filtrage, prévention d’intrusion, protection contre les logiciels malveillants et filtrage d’URL, administré de façon centralisée.",
+      "de": "Next-Generation-Firewall-Software von Cisco: Filterung, Angriffsabwehr, Malwareschutz und URL-Filter, zentral verwaltet.",
+      "es": "Software de cortafuegos de nueva generación de Cisco: filtrado, prevención de intrusiones, protección contra malware y filtrado de URL, con administración centralizada."
+    },
+    "cisco-nx-os": {
+      "en": "Cisco operating system for Nexus data center switches: routing, switching, fabric and automation features.",
+      "fr": "Système d’exploitation de Cisco pour les commutateurs de centre de données Nexus : routage, commutation, fabric et automatisation.",
+      "de": "Betriebssystem von Cisco für Nexus-Rechenzentrums-Switches: Routing, Switching, Fabric und Automatisierung.",
+      "es": "Sistema operativo de Cisco para los conmutadores de centro de datos Nexus: enrutamiento, conmutación, fabric y automatización."
     },
     "citrix-vad": {
       "en": "Citrix platform that delivers Windows applications and virtual desktops to users from the data center or the cloud.",
@@ -156,6 +186,30 @@
       "fr": "Distribution Linux communautaire, publiée environ tous les deux ans sous forme de version stable portant le nom d’un personnage de Toy Story.",
       "de": "Community-Linux-Distribution, die etwa alle zwei Jahre als stabile Version erscheint, benannt nach einer Figur aus Toy Story.",
       "es": "Distribución Linux comunitaria, publicada aproximadamente cada dos años como versión estable con el nombre de un personaje de Toy Story."
+    },
+    "dell-data-domain": {
+      "en": "Operating system of Dell PowerProtect DD (formerly Data Domain) backup appliances: deduplicated storage and replication of backup copies.",
+      "fr": "Système d’exploitation des appliances de sauvegarde Dell PowerProtect DD (anciennement Data Domain) : stockage dédupliqué et réplication des copies de sauvegarde.",
+      "de": "Betriebssystem der Backup-Appliances Dell PowerProtect DD (früher Data Domain): deduplizierter Speicher und Replikation der Sicherungskopien.",
+      "es": "Sistema operativo de los appliances de copia de seguridad Dell PowerProtect DD (antes Data Domain): almacenamiento deduplicado y replicación de las copias."
+    },
+    "dell-powerscale": {
+      "en": "Operating system of Dell PowerScale (formerly Isilon) clusters: scale-out file storage shared over NFS, SMB and S3.",
+      "fr": "Système d’exploitation des grappes Dell PowerScale (anciennement Isilon) : stockage de fichiers évolutif partagé en NFS, SMB et S3.",
+      "de": "Betriebssystem der Dell-PowerScale-Cluster (früher Isilon): skalierbarer Dateispeicher, bereitgestellt über NFS, SMB und S3.",
+      "es": "Sistema operativo de los clústeres Dell PowerScale (antes Isilon): almacenamiento de archivos escalable compartido por NFS, SMB y S3."
+    },
+    "dell-powerstore": {
+      "en": "Operating system of Dell PowerStore arrays: block, file and vVol storage, data reduction, snapshots and replication.",
+      "fr": "Système d’exploitation des baies Dell PowerStore : stockage bloc, fichier et vVol, réduction des données, instantanés et réplication.",
+      "de": "Betriebssystem der Dell-PowerStore-Arrays: Block-, Datei- und vVol-Speicher, Datenreduktion, Snapshots und Replikation.",
+      "es": "Sistema operativo de las cabinas Dell PowerStore: almacenamiento de bloques, archivos y vVol, reducción de datos, instantáneas y replicación."
+    },
+    "dell-unity": {
+      "en": "Operating environment of Dell Unity XT arrays: unified block and file storage with snapshots and replication.",
+      "fr": "Environnement d’exploitation des baies Dell Unity XT : stockage unifié bloc et fichier, avec instantanés et réplication.",
+      "de": "Betriebsumgebung der Dell-Unity-XT-Arrays: einheitlicher Block- und Dateispeicher mit Snapshots und Replikation.",
+      "es": "Entorno operativo de las cabinas Dell Unity XT: almacenamiento unificado de bloques y archivos, con instantáneas y replicación."
     },
     "docker-engine": {
       "en": "Software that builds container images and runs containers on a server or a workstation.",
@@ -259,6 +313,12 @@
       "de": "Messaging-Middleware von IBM, die Nachrichten zwischen Anwendungen garantiert und genau einmal zustellt.",
       "es": "Middleware de mensajería de IBM que transporta mensajes entre aplicaciones con entrega garantizada y única."
     },
+    "ibm-websphere": {
+      "en": "IBM’s Java application server for Jakarta EE applications, in traditional and Liberty editions.",
+      "fr": "Serveur d’applications Java d’IBM pour les applications Jakarta EE, en éditions traditionnelle et Liberty.",
+      "de": "Java-Anwendungsserver von IBM für Jakarta-EE-Anwendungen, in den Editionen Traditional und Liberty.",
+      "es": "Servidor de aplicaciones Java de IBM para aplicaciones Jakarta EE, en ediciones tradicional y Liberty."
+    },
     "icinga": {
       "en": "Open-source monitoring system that checks hosts and services and sends alerts when they fail.",
       "fr": "Système de supervision open source qui contrôle hôtes et services et alerte en cas de défaillance.",
@@ -271,11 +331,23 @@
       "de": "Zeitreihendatenbank für Metriken, Sensordaten und Ereignisse, mit zeitbasierten Abfragen und Aufbewahrungsregeln.",
       "es": "Base de datos de series temporales para métricas, datos de sensores y eventos, con consultas temporales y reglas de retención."
     },
+    "ivanti-connect-secure": {
+      "en": "Ivanti SSL VPN gateway that gives remote users access to internal applications and networks.",
+      "fr": "Passerelle VPN SSL d’Ivanti qui donne aux utilisateurs distants l’accès aux applications et réseaux internes.",
+      "de": "SSL-VPN-Gateway von Ivanti, das entfernten Benutzern Zugriff auf interne Anwendungen und Netzwerke gibt.",
+      "es": "Pasarela VPN SSL de Ivanti que da a los usuarios remotos acceso a las aplicaciones y redes internas."
+    },
     "jenkins": {
       "en": "Open-source automation server for continuous integration and delivery: builds, tests and deploys code.",
       "fr": "Serveur d’automatisation open source pour l’intégration et la livraison continues : compile, teste et déploie le code.",
       "de": "Open-Source-Automatisierungsserver für Continuous Integration und Delivery: baut, testet und verteilt Code.",
       "es": "Servidor de automatización de código abierto para integración y entrega continuas: compila, prueba y despliega código."
+    },
+    "juniper-junos": {
+      "en": "Operating system of Juniper routers, switches and firewalls, now published by HPE.",
+      "fr": "Système d’exploitation des routeurs, commutateurs et pare-feu Juniper, publié aujourd’hui par HPE.",
+      "de": "Betriebssystem der Router, Switches und Firewalls von Juniper, heute von HPE veröffentlicht.",
+      "es": "Sistema operativo de los enrutadores, conmutadores y cortafuegos de Juniper, publicado hoy por HPE."
     },
     "keycloak": {
       "en": "Open-source identity and access management: single sign-on, user federation and authentication over OpenID Connect and SAML.",
@@ -349,6 +421,12 @@
       "de": "Graphdatenbank, die Knoten und ihre Beziehungen speichert und mit der Sprache Cypher abgefragt wird.",
       "es": "Base de datos de grafos que almacena nodos y sus relaciones, consultada con el lenguaje Cypher."
     },
+    "netscaler-adc": {
+      "en": "Application delivery controller from NetScaler (Cloud Software Group): load balancing, SSL offloading, remote access gateway and web application firewall.",
+      "fr": "Contrôleur de distribution d’applications de NetScaler (Cloud Software Group) : répartition de charge, déchargement SSL, passerelle d’accès distant et pare-feu applicatif web.",
+      "de": "Application Delivery Controller von NetScaler (Cloud Software Group): Lastverteilung, SSL-Offloading, Fernzugriffs-Gateway und Web Application Firewall.",
+      "es": "Controlador de entrega de aplicaciones de NetScaler (Cloud Software Group): balanceo de carga, descarga SSL, pasarela de acceso remoto y cortafuegos de aplicaciones web."
+    },
     "nginx": {
       "en": "Web server, reverse proxy and load balancer, widely used in front of web applications and APIs.",
       "fr": "Serveur web, proxy inverse et répartiteur de charge, très utilisé devant les applications web et les API.",
@@ -402,6 +480,12 @@
       "fr": "Distribution Linux d’Oracle, reconstruite à partir de Red Hat Enterprise Linux, avec un support payant en option.",
       "de": "Linux-Distribution von Oracle, aus Red Hat Enterprise Linux neu erstellt, mit optionalem kostenpflichtigem Support.",
       "es": "Distribución Linux de Oracle, reconstruida a partir de Red Hat Enterprise Linux, con soporte de pago opcional."
+    },
+    "oracle-weblogic": {
+      "en": "Oracle’s Java application server for Jakarta EE applications, used by many Oracle business products.",
+      "fr": "Serveur d’applications Java d’Oracle pour les applications Jakarta EE, utilisé par de nombreux produits métier d’Oracle.",
+      "de": "Java-Anwendungsserver von Oracle für Jakarta-EE-Anwendungen, von vielen Geschäftsprodukten von Oracle genutzt.",
+      "es": "Servidor de aplicaciones Java de Oracle para aplicaciones Jakarta EE, usado por muchos productos de negocio de Oracle."
     },
     "ovirt": {
       "en": "Open-source virtualization management for KVM: hosts, virtual machines, storage and networks from one console.",
@@ -529,6 +613,12 @@
       "de": "Kommerzielle Linux-Distribution von SUSE für Server, veröffentlicht als Hauptversion mit ihren Service Packs.",
       "es": "Distribución Linux comercial de SUSE para servidores, publicada como versión principal y sus service packs."
     },
+    "sophos-firewall": {
+      "en": "Operating system of Sophos firewalls: filtering, VPN, intrusion prevention, web filtering and SD-WAN.",
+      "fr": "Système d’exploitation des pare-feu de Sophos : filtrage, VPN, prévention d’intrusion, filtrage web et SD-WAN.",
+      "de": "Betriebssystem der Sophos-Firewalls: Filterung, VPN, Angriffsabwehr, Webfilter und SD-WAN.",
+      "es": "Sistema operativo de los cortafuegos de Sophos: filtrado, VPN, prevención de intrusiones, filtrado web y SD-WAN."
+    },
     "splunk": {
       "en": "Platform that collects, indexes and searches machine data such as logs and events, for monitoring and security.",
       "fr": "Plateforme qui collecte, indexe et recherche les données machine comme les journaux et les événements, pour la supervision et la sécurité.",
@@ -540,6 +630,12 @@
       "fr": "Proxy web open source avec cache, utilisé pour filtrer et accélérer l’accès au web.",
       "de": "Open-Source-Web-Proxy mit Cache, eingesetzt zum Filtern und Beschleunigen des Webzugriffs.",
       "es": "Proxy web de código abierto con caché, usado para filtrar y acelerar el acceso a la web."
+    },
+    "synology-dsm": {
+      "en": "Operating system of Synology NAS devices: file sharing, backup, user management and add-on applications from a web interface.",
+      "fr": "Système d’exploitation des NAS Synology : partage de fichiers, sauvegarde, gestion des utilisateurs et applications complémentaires depuis une interface web.",
+      "de": "Betriebssystem der Synology-NAS-Geräte: Dateifreigabe, Backup, Benutzerverwaltung und Zusatzanwendungen über eine Weboberfläche.",
+      "es": "Sistema operativo de los NAS de Synology: uso compartido de archivos, copia de seguridad, gestión de usuarios y aplicaciones adicionales desde una interfaz web."
     },
     "tomcat": {
       "en": "Open-source Java web server and servlet container of the Apache Software Foundation, running Java web applications.",
@@ -582,6 +678,12 @@
       "fr": "Outil de supervision et de reporting de Veeam pour les environnements virtuels et les sauvegardes Veeam.",
       "de": "Überwachungs- und Reporting-Werkzeug von Veeam für virtuelle Umgebungen und Veeam-Backups.",
       "es": "Herramienta de supervisión e informes de Veeam para entornos virtuales y copias de seguridad de Veeam."
+    },
+    "veritas-netbackup": {
+      "en": "Enterprise backup software, now published by Cohesity: backup and recovery of servers, virtual machines, databases and cloud workloads.",
+      "fr": "Logiciel de sauvegarde d’entreprise, publié aujourd’hui par Cohesity : sauvegarde et restauration des serveurs, machines virtuelles, bases de données et charges cloud.",
+      "de": "Backup-Software für Unternehmen, heute von Cohesity veröffentlicht: Sicherung und Wiederherstellung von Servern, virtuellen Maschinen, Datenbanken und Cloud-Workloads.",
+      "es": "Software de copia de seguridad empresarial, publicado hoy por Cohesity: copia y recuperación de servidores, máquinas virtuales, bases de datos y cargas en la nube."
     },
     "vsphere": {
       "en": "VMware virtualization platform: ESXi hypervisors running the virtual machines and vCenter managing them.",

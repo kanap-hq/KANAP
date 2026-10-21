@@ -103,8 +103,9 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * `hosting_type`: a code of the default hosting types (`on_prem`, `colocation`, `public_cloud`,
  * `private_cloud`, `saas`) when `mode` says too little (a managed cloud service is `public_cloud`,
  * where `subscribed` alone gives `saas`); the adoption writes it in place of the one of `mode`.
- * `cpeVersion: 'label'`: the label is the NVD version as it stands; `cpeVersions`: `[pattern,
- * version]` for labels without a usable number (see `cpeVersionOf`).
+ * `cpeVersion`: `label` (the label, lower case, is the NVD version), `escaped-parens`
+ * (`9.16(4)` → `9.16\(4\)`) or `strip-x` (`4.36.x` → `4.36`). `cpeVersions`: `[pattern, version]`
+ * for labels without a usable number (see `cpeVersionOf`).
  * `cpeExclude`: identifiers published by endoflife.date that the NVD does not use for this product.
  * `noCpe`: why an entry has no identifier (checked by --check-cpe); it drops any published one. Every identifier kept was
  * checked against the NVD with --check-cpe --nvd (lot C3, 2026-10-17; the operating systems, lot V3,
@@ -294,6 +295,26 @@ const PRODUCTS = [
   { key: 'puppet', slug: 'puppet', name: 'Puppet', editor: 'Perforce', family: 'administration', cpe: ['a:puppetlabs:puppet'] },
   { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite', 'o:redhat:satellite'] },
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
+  // Maintained by KANAP (backend/src/technologies/catalog/curated/). Identifiers checked against
+  // the NVD on 2026-10-20 (planning/catalogue-enrichi/cpe.md, group B). `security` in those notes
+  // is the family `network_security`. No entry excludes an identifier or goes without one.
+  { key: 'check-point-gaia', slug: null, curated: true, name: 'Check Point Gaia (Quantum)', editor: 'Check Point', family: 'network_security', cpe: ['o:checkpoint:gaia_os', 'o:checkpoint:gaia', 'a:checkpoint:quantum_security_management', 'o:checkpoint:quantum_security_gateway_firmware', 'a:checkpoint:security_gateway'], cpeVersion: 'label' },
+  { key: 'cisco-asa', slug: null, curated: true, name: 'Cisco Secure Firewall ASA', editor: 'Cisco', family: 'network_security', cpe: ['o:cisco:adaptive_security_appliance_software', 'a:cisco:adaptive_security_appliance_software'], cpeVersion: 'escaped-parens' },
+  { key: 'cisco-ftd', slug: null, curated: true, name: 'Cisco Secure Firewall Threat Defense', editor: 'Cisco', family: 'network_security', cpe: ['a:cisco:secure_firewall_threat_defense', 'a:cisco:firepower_threat_defense', 'o:cisco:firepower_threat_defense'] },
+  { key: 'sophos-firewall', slug: null, curated: true, name: 'Sophos Firewall (SFOS)', editor: 'Sophos', family: 'network_security', cpe: ['o:sophos:firewall_firmware', 'o:sophos:xg_firewall_firmware', 'o:sophos:sfos', 'a:sophos:firewall'] },
+  { key: 'ivanti-connect-secure', slug: null, curated: true, name: 'Ivanti Connect Secure', editor: 'Ivanti', family: 'network_security', cpe: ['a:ivanti:connect_secure', 'a:pulsesecure:pulse_connect_secure'], cpeVersion: 'strip-x', cpeVersions: [[/^9\.1R\d+$/i, '9.1']] },
+  { key: 'cisco-nx-os', slug: null, curated: true, name: 'Cisco NX-OS', editor: 'Cisco', family: 'network', cpe: ['o:cisco:nx-os', 'a:cisco:nx-os'], cpeVersion: 'escaped-parens' },
+  { key: 'juniper-junos', slug: null, curated: true, name: 'Juniper Junos OS', editor: 'HPE Juniper Networking', family: 'network', cpe: ['o:juniper:junos', 'o:juniper:junos_os_evolved'] },
+  { key: 'arista-eos', slug: null, curated: true, name: 'Arista EOS', editor: 'Arista Networks', family: 'network', cpe: ['o:arista:eos'], cpeVersion: 'strip-x' },
+  { key: 'netscaler-adc', slug: null, curated: true, name: 'NetScaler ADC', editor: 'Cloud Software Group', family: 'network', cpe: ['a:citrix:netscaler_application_delivery_controller', 'a:citrix:netscaler_gateway', 'o:citrix:netscaler_application_delivery_controller_firmware', 'o:citrix:netscaler_gateway_firmware', 'a:citrix:application_delivery_controller', 'a:citrix:gateway', 'a:citrix:netscaler'] },
+  { key: 'dell-powerstore', slug: null, curated: true, name: 'Dell PowerStore OS', editor: 'Dell Technologies', family: 'storage', cpe: ['o:dell:powerstoreos', 'o:dell:emc_powerstore_firmware'] },
+  { key: 'dell-powerscale', slug: null, curated: true, name: 'Dell PowerScale OneFS', editor: 'Dell Technologies', family: 'storage', cpe: ['o:dell:powerscale_onefs', 'a:dell:powerscale_onefs', 'o:dell:emc_powerscale_onefs', 'o:emc:isilon_onefs', 'a:dell:emc_isilon_onefs'] },
+  { key: 'dell-unity', slug: null, curated: true, name: 'Dell Unity OE', editor: 'Dell Technologies', family: 'storage', cpe: ['a:dell:unity_operating_environment', 'a:dell:emc_unity_operating_environment', 'a:dell:unity_xt_operating_environment', 'a:dell:emc_unity_xt_operating_environment', 'a:dell:unityvsa_operating_environment', 'a:dell:emc_unityvsa_operating_environment'] },
+  { key: 'synology-dsm', slug: null, curated: true, name: 'Synology DSM', editor: 'Synology', family: 'storage', cpe: ['o:synology:diskstation_manager', 'a:synology:diskstation_manager'] },
+  { key: 'veritas-netbackup', slug: null, curated: true, name: 'NetBackup', editor: 'Cohesity', family: 'backup', cpe: ['a:veritas:netbackup'] },
+  { key: 'dell-data-domain', slug: null, curated: true, name: 'Dell PowerProtect DD (DD OS)', editor: 'Dell Technologies', family: 'backup', cpe: ['o:dell:data_domain_operating_system', 'o:dell:emc_data_domain_os', 'o:emc:data_domain_os'] },
+  { key: 'oracle-weblogic', slug: null, curated: true, name: 'Oracle WebLogic Server', editor: 'Oracle', family: 'application_server', cpe: ['a:oracle:weblogic_server'], cpeVersion: 'strip-x' },
+  { key: 'ibm-websphere', slug: null, curated: true, name: 'IBM WebSphere Application Server', editor: 'IBM', family: 'application_server', cpe: ['a:ibm:websphere_application_server'], cpeVersion: 'strip-x' },
 ];
 
 /**
@@ -641,15 +662,35 @@ function cleanLabel(label, name) {
  *   Edition SU11`: the label stands for it, counted as concerned);
  * - `cpeVersions` of an entry: `[pattern, version]` pairs for the labels without a number the NVD
  *   uses; Exchange `Subscription Edition SU11` → `15.2`, its build line, which the NVD bounds under
- *   `exchange_server_subscription_edition` (`< 15.02.2562.017`);
- * - Oracle Database (`cpeVersion: 'label'`): the NVD names the releases `database_server:19c`,
- *   `21c` in its exact criteria and ranges them in numbers (`19.3` to `19.22`); the label in lower
- *   case matches both, `19c` being 19 with a qualifier.
+ *   `exchange_server_subscription_edition` (`< 15.02.2562.017`); Ivanti `9.1R18` → `9.1` (the
+ *   maintenance release is the NVD update);
+ * - Oracle Database and Check Point Gaia (`cpeVersion: 'label'`): the label in lower case.
+ *   Oracle is `19c`; Gaia is `r81.20`;
+ * - `escaped-parens`: one ASA or NX-OS version, parentheses escaped and lower case
+ *   (`9.16(4.51)` → `9.16\(4.51\)`, `7.0(3)I7(x)` → `7.0\(3\)i7\(x\)`). A label that is not one
+ *   version (`7.0(3)F3(3-5)`, `7.0(3)F1/2(x)`) stays null;
+ * - `strip-x`: a train written `4.36.x` or `15.x` gives `4.36` or `15` (a branch the matching
+ *   compares). Any other label of that entry uses the two rules above.
+ * Twin of `cpeVersionOf` in catalog-releases.ts (`CPE_VERSION_RULES`).
  */
+function escapedParensVersion(text) {
+  const lower = text.toLowerCase();
+  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]+\d*)+$/.test(lower)) return null;
+  return lower.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
 function cpeVersionOf(label, entry) {
   const text = String(label ?? '').trim();
   if (entry?.cpeVersion === 'label') return text.toLowerCase() || null;
   for (const [pattern, version] of entry?.cpeVersions ?? []) if (pattern.test(text)) return version;
+  if (entry?.cpeVersion === 'escaped-parens') {
+    const escaped = escapedParensVersion(text);
+    if (escaped) return escaped;
+  }
+  if (entry?.cpeVersion === 'strip-x') {
+    const train = /^(\d+(?:\.\d+)*)\.x$/i.exec(text);
+    if (train) return train[1];
+  }
   if (/^v?\d+(\.\d+)*[a-z]*$/i.test(text)) return null;
   return text.split(/\s+/).find((token) => /^\d+(\.\d+)*$/.test(token)) ?? null;
 }

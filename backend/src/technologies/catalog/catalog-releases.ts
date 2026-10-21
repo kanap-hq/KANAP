@@ -40,6 +40,13 @@ type CpeVersionRule = {
   fromLabel?: boolean;
   patterns?: Array<[RegExp, string]>;
   /**
+   * One ASA or NX-OS version: lower case, parentheses escaped (`9.16(4)` → `9.16\(4\)`).
+   * A label that is not a single version stays on the default rule.
+   */
+  escapedParens?: boolean;
+  /** A train label `4.36.x` or `15.x` gives `4.36` or `15`. Other labels use the default rule. */
+  stripTrain?: boolean;
+  /**
    * The CPE product the NVD gives each release of the entry, `{year}` standing for the year that
    * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`) and Windows Server
    * (`o:microsoft:windows_server_2022`). The matching applies such a product to the versions whose
@@ -76,6 +83,14 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   centos: { matchSegments: 1 },
   ubuntu: { matchSegments: 2 },
   sles: { matchSegments: 1 },
+  // KANAP-maintained products. Twin of `cpeVersion` / `cpeVersions` in build-catalog.mjs.
+  'check-point-gaia': { fromLabel: true },
+  'cisco-asa': { escapedParens: true },
+  'cisco-nx-os': { escapedParens: true },
+  'ivanti-connect-secure': { stripTrain: true, patterns: [[/^9\.1R\d+$/i, '9.1']] },
+  'arista-eos': { stripTrain: true },
+  'oracle-weblogic': { stripTrain: true },
+  'ibm-websphere': { stripTrain: true },
 };
 
 /** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
@@ -210,12 +225,27 @@ export function cleanLabel(label: unknown, name: unknown): string {
   return text || String(name);
 }
 
+/** One version whose parentheses the NVD escapes (`9.16(4.51)` → `9.16\(4.51\)`), or null. */
+function escapedParensVersion(text: string): string | null {
+  const lower = text.toLowerCase();
+  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]+\d*)+$/.test(lower)) return null;
+  return lower.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
 /** The NVD version of a release label (`cpeVersionOf` of the script): null when the label is the version. */
 export function cpeVersionOf(label: string, catalogKey: string): string | null {
   const text = String(label ?? '').trim();
   const rule = CPE_VERSION_RULES[catalogKey];
   if (rule?.fromLabel) return text.toLowerCase() || null;
   for (const [pattern, version] of rule?.patterns ?? []) if (pattern.test(text)) return version;
+  if (rule?.escapedParens) {
+    const escaped = escapedParensVersion(text);
+    if (escaped) return escaped;
+  }
+  if (rule?.stripTrain) {
+    const train = /^(\d+(?:\.\d+)*)\.x$/i.exec(text);
+    if (train) return train[1];
+  }
   if (/^v?\d+(\.\d+)*[a-z]*$/i.test(text)) return null;
   return text.split(/\s+/).find((token) => /^\d+(\.\d+)*$/.test(token)) ?? null;
 }
