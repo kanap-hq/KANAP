@@ -2069,6 +2069,17 @@
         "cpe": "e.g., a:microsoft:sql_server",
         "noAdminZone": "No zone"
       },
+      "identifiers": {
+        "title": "Vulnerability identifiers",
+        "cpeCount_one": "{{count, count}} CPE identifier",
+        "cpeCount_other": "{{count, count}} CPE identifiers",
+        "cveNameCount_one": "{{count, count}} CVE.org name",
+        "cveNameCount_other": "{{count, count}} CVE.org names",
+        "missing": "Without a CPE identifier or a CVE.org name, no vulnerability is looked up for this technology.",
+        "missingCpe": "Without a CPE identifier, no vulnerability is looked up for this technology.",
+        "versionsUnmatched": "These versions will not be matched to any vulnerability until the technology has an identifier.",
+        "add": "Add an identifier"
+      },
       "cpe": {
         "title": "CPE product identifiers",
         "empty": "No identifier yet.",
@@ -2102,9 +2113,9 @@
         "seeMore_one": "See the other one",
         "seeMore_other": "See the {{count}} others",
         "suggestionsFailed": "The suggestions could not be loaded.",
-        "hint": "Where to find this value: the name as the publisher writes it on its CVE records, on",
+        "hint": "Type part of the product name: the list offers the exact names publishers write on their records, with their number of vulnerabilities. A name must match the one on the record, in its Product status section on",
         "site": "cve.org",
-        "versionHint": "A version applies the name only to the technology versions whose label starts with it."
+        "versionHint": "A version limits the name to the technology versions whose label starts with it, e.g., 2019."
       },
       "versions": {
         "title": "Versions",

@@ -59,6 +59,9 @@ function renderTab(technology: TechnologyDetail = TECHNOLOGY, canManage = true, 
     </QueryClientProvider>
   );
   const view = render(tree(technology, canManage));
+  // The names sit in the identifiers group, folded when the technology has an identifier.
+  const toggle = screen.getByRole('button', { name: /Vulnerability identifiers/ });
+  if (toggle.getAttribute('aria-expanded') === 'false') fireEvent.click(toggle);
   return {
     onPatch,
     unmount: view.unmount,
@@ -270,8 +273,8 @@ describe('TechnologyCveNames', () => {
     renderTab();
     const link = within(section()).getByRole('link', { name: 'cve.org' });
     expect(link).toHaveAttribute('href', 'https://www.cve.org');
-    expect(within(section()).getByText(/Where to find this value: the name as the publisher writes it on its CVE records, on/)).toBeInTheDocument();
-    expect(within(section()).getByText(/A version applies the name only to the technology versions whose label starts with it/)).toBeInTheDocument();
+    expect(within(section()).getByText(/Type part of the product name: the list offers the exact names publishers write on their records, with their number of vulnerabilities\. A name must match the one on the record, in its Product status section on/)).toBeInTheDocument();
+    expect(within(section()).getByText(/A version limits the name to the technology versions whose label starts with it, e\.g\., 2019\./)).toBeInTheDocument();
   });
 
   it('offers no command to a reader', () => {

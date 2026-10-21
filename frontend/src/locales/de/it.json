@@ -2069,6 +2069,17 @@
         "cpe": "z. B. a:microsoft:sql_server",
         "noAdminZone": "Keine Zone"
       },
+      "identifiers": {
+        "title": "Schwachstellenkennungen",
+        "cpeCount_one": "{{count, count}} CPE-Kennung",
+        "cpeCount_other": "{{count, count}} CPE-Kennungen",
+        "cveNameCount_one": "{{count, count}} CVE.org-Name",
+        "cveNameCount_other": "{{count, count}} CVE.org-Namen",
+        "missing": "Ohne CPE-Kennung und ohne CVE.org-Namen wird für diese Technologie nach keiner Schwachstelle gesucht.",
+        "missingCpe": "Ohne CPE-Kennung wird für diese Technologie nach keiner Schwachstelle gesucht.",
+        "versionsUnmatched": "Diese Versionen werden keiner Schwachstelle zugeordnet, solange die Technologie keine Kennung hat.",
+        "add": "Kennung hinzufügen"
+      },
       "cpe": {
         "title": "CPE-Produktkennungen",
         "empty": "Noch keine Kennung.",
@@ -2102,9 +2113,9 @@
         "seeMore_one": "Den anderen anzeigen",
         "seeMore_other": "Die {{count}} anderen anzeigen",
         "suggestionsFailed": "Die Vorschläge konnten nicht geladen werden.",
-        "hint": "Wo Sie diesen Wert finden: der Name, wie der Hersteller ihn in seinen CVE-Einträgen schreibt, auf",
+        "hint": "Geben Sie einen Teil des Produktnamens ein: Die Liste zeigt die genauen Namen, die die Hersteller in ihren Einträgen schreiben, mit der Zahl ihrer Schwachstellen. Ein Name muss mit dem des Eintrags übereinstimmen, im Abschnitt Product status auf",
         "site": "cve.org",
-        "versionHint": "Eine Version gilt nur für die Versionen der Technologie, deren Bezeichnung damit beginnt."
+        "versionHint": "Eine Version beschränkt den Namen auf die Versionen der Technologie, deren Bezeichnung damit beginnt, z. B. 2019."
       },
       "versions": {
         "title": "Versionen",

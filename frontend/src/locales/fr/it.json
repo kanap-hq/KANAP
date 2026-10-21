@@ -2069,6 +2069,17 @@
         "cpe": "ex. a:microsoft:sql_server",
         "noAdminZone": "Aucune zone"
       },
+      "identifiers": {
+        "title": "Identifiants de vulnérabilité",
+        "cpeCount_one": "{{count, count}} identifiant CPE",
+        "cpeCount_other": "{{count, count}} identifiants CPE",
+        "cveNameCount_one": "{{count, count}} nom CVE.org",
+        "cveNameCount_other": "{{count, count}} noms CVE.org",
+        "missing": "Sans identifiant CPE ni nom CVE.org, aucune vulnérabilité n’est recherchée pour cette technologie.",
+        "missingCpe": "Sans identifiant CPE, aucune vulnérabilité n’est recherchée pour cette technologie.",
+        "versionsUnmatched": "Ces versions ne seront rapprochées d’aucune vulnérabilité tant que la technologie n’a pas d’identifiant.",
+        "add": "Ajouter un identifiant"
+      },
       "cpe": {
         "title": "Identifiants CPE produit",
         "empty": "Aucun identifiant pour l’instant.",
@@ -2102,9 +2113,9 @@
         "seeMore_one": "Voir l’autre",
         "seeMore_other": "Voir les {{count}} autres",
         "suggestionsFailed": "Les suggestions n’ont pas pu être chargées.",
-        "hint": "Où trouver cette valeur : le nom tel que l’éditeur l’écrit dans ses fiches CVE, sur",
+        "hint": "Tapez une partie du nom du produit : la liste propose les noms exacts que les éditeurs écrivent dans leurs fiches, avec leur nombre de vulnérabilités. Un nom doit être identique à celui de la fiche, dans sa section Product status sur",
         "site": "cve.org",
-        "versionHint": "Une version limite le nom aux versions de la technologie dont le libellé commence par elle."
+        "versionHint": "Une version limite le nom aux versions de la technologie dont le libellé commence par elle, ex. 2019."
       },
       "versions": {
         "title": "Versions",
