@@ -169,6 +169,10 @@ Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung
 
 Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt unter ihren Versionen „Versionen und Daten werden aus dem Katalog aktuell gehalten“. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
 
+Wenn KANAP die Daten pflegt, nennt die Version ihre Quelle unter der Bezeichnung: den Hersteller als Link zur Seite, auf der die Daten gelesen wurden, und den Tag der Prüfung. Die Zeile bleibt, solange Ihre Daten denen des Katalogs entsprechen. Eine Version ohne vom Hersteller geplantes Ende zeigt „Kein Ende vom Hersteller geplant“ anstelle der leeren Daten.
+
+Eine Linux-Distribution ergänzt eine Zeile unter der Tabelle. Der Anbieter veröffentlicht Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version, und die Zeile führt zu seinem Tracker, in dem die Betroffenheit der Pakete steht.
+
 Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen des Produkts hinzu und aktualisiert die Supportende-Daten, Kennungen und Namen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version, Kennung oder einen Namen wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
 #### Schwachstellenkennungen

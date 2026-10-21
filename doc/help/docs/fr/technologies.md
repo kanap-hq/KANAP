@@ -169,6 +169,10 @@ Changer plus tard la famille ou le type d'hébergement d'une technologie laisse 
 
 Une version issue du catalogue affiche **Catalogue** à côté de son libellé, et une technologie adoptée depuis le catalogue indique « Versions et dates tenues à jour depuis le catalogue » sous ses versions. KANAP consulte le catalogue chaque jour dans le cloud. Sur une installation sur site, chaque version de KANAP apporte son catalogue au démarrage, sauf si votre administrateur [active la consultation quotidienne](on-premise/configuration.md#optional-technology-catalog).
 
+Quand KANAP tient les dates, la version indique leur source sous son libellé : l'éditeur, en lien vers la page où les dates ont été lues, et le jour de la vérification. La ligne reste tant que vos dates sont celles du catalogue. Une version dont l'éditeur ne prévoit pas de fin affiche « Aucune fin prévue par l'éditeur » à la place des dates vides.
+
+Une distribution Linux ajoute une ligne sous le tableau. Le distributeur publie ses vulnérabilités par paquet. KANAP suit le support de chaque version, et la ligne mène à son suivi, où se lit l'exposition de chaque paquet.
+
 La consultation ajoute les nouvelles versions, les nouveaux identifiants CPE produit et les nouveaux noms CVE.org du produit, et met à jour les dates de fin de support, les identifiants et les noms que le catalogue a changés. Elle n'écrase jamais une valeur que vous avez changée, et ne recrée jamais une version, un identifiant ou un nom que vous avez supprimé. Une version saisie avant que le catalogue ne la connaisse lui est rattachée quand les libellés correspondent, et ses dates vides sont remplies.
 
 #### Identifiants de vulnérabilité

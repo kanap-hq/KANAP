@@ -169,6 +169,10 @@ Changing the family or the hosting type of a technology later leaves its setting
 
 A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog says "Versions and dates kept up to date from the catalog" under its versions. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
 
+When KANAP maintains the dates, the version names their source under its label: the publisher, as a link to the page the dates were read from, and the day they were checked. The line stays while your dates match the catalog. A version with no end planned by the publisher shows "No end planned by the vendor" in place of the empty dates.
+
+A Linux distribution adds a line under the table. The distributor publishes vulnerabilities per package. KANAP tracks support for each version, and the line links to the distributor's tracker, where that package exposure is published.
+
 The check adds the new versions, CPE product identifiers and CVE.org names of the product, and updates the end of support dates, identifiers and names the catalog changed. It never overwrites a value you changed, and never brings back a version, an identifier or a name you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
 #### Vulnerability identifiers

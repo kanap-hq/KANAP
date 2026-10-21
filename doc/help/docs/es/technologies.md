@@ -169,6 +169,10 @@ Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja s
 
 Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo indica «Versiones y fechas mantenidas al día desde el catálogo» bajo sus versiones. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
 
+Cuando KANAP mantiene las fechas, la versión indica su fuente bajo la etiqueta: el editor, como enlace a la página donde se leyeron las fechas, y el día de la comprobación. La línea permanece mientras sus fechas coinciden con las del catálogo. Una versión sin fin previsto por el editor muestra «Ningún fin previsto por el editor» en lugar de las fechas vacías.
+
+Una distribución Linux añade una línea bajo la tabla. El distribuidor publica las vulnerabilidades por paquete. KANAP sigue el soporte de cada versión, y la línea lleva a su seguimiento, donde se lee la exposición de cada paquete.
+
 La comprobación añade las nuevas versiones, identificadores de producto CPE y nombres CVE.org del producto, y actualiza las fechas de fin de soporte, los identificadores y los nombres que el catálogo cambió. Nunca sobrescribe un valor que usted cambió, y nunca vuelve a crear una versión, un identificador o un nombre que usted eliminó. Una versión que registró antes de que el catálogo la conociera se vincula a él cuando las etiquetas coinciden, y se rellenan sus fechas vacías.
 
 #### Identificadores de vulnerabilidad
