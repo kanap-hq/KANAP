@@ -113,7 +113,7 @@ The Relations tab shows entities that are linked to this location. It is read-on
 
 ## Deleting a location
 
-From the workspace header, click **Delete** to remove a location.
+From the workspace header, click **Delete** (trash icon) to remove a location.
 
 - Requires `locations:member` permission.
 - Linked assets are not deleted. They are automatically unassigned (their location reference is cleared).

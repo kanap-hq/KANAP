@@ -160,7 +160,7 @@ Deaktivieren Sie einen Kalender, wenn er nicht mehr verwendet werden soll, zum B
 
 ## Löschen
 
-Die Schaltfläche **Löschen** in der Kopfzeile löscht den Kalender nach einer Bestätigung (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
+Die Schaltfläche **Löschen** (Papierkorbsymbol) in der Kopfzeile löscht den Kalender nach einer Bestätigung (erfordert `working_day_profiles:admin`). Sie ist deaktiviert, mit dem Grund in einer Zeile, solange Budgetzeilen den Kalender verwenden, zum Beispiel „Verwendet von 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn stattdessen.“
 
 Dieselbe Regel gilt für **Auswahl löschen** in der Liste: Ein Kalender, den Budgetzeilen verwenden, bleibt erhalten, mit einem Grund wie „Dieser Kalender wird noch verwendet: 3 OPEX-Zeilen und 1 CAPEX-Zeile. Deaktivieren Sie ihn, statt ihn zu löschen.“
 

@@ -129,9 +129,9 @@ Haga clic en cualquier fila para abrir el espacio de trabajo de la tarea. El esp
 El encabezado contiene:
   - Migración de **Volver** a **Tareas** (o al espacio de trabajo del proyecto de origen, cuando viene de uno)
   - **Indicador de posición**: Su posición en la lista filtrada (p. ej., "3 de 12") con flechas **Anterior** / **Siguiente**
-  - **Enviar enlace**: Enviar por correo electrónico un enlace a la tarea
+  - **Compartir**: Enviar por correo electrónico un enlace a la tarea
   - **Convertir en solicitud**: Promover la tarea a una solicitud del portafolio
-  - **Eliminar**: Eliminar la tarea, con sus comentarios y su historial (requiere `tasks:admin`). Primero se pide confirmación, y la eliminación no se puede deshacer
+  - **Eliminar** (icono de papelera): Eliminar la tarea, con sus comentarios y su historial (requiere `tasks:admin`). Primero se pide confirmación, y la eliminación no se puede deshacer
   - **Cerrar**: Volver a la lista de tareas
 
 Debajo de la barra de herramientas, el bloque de título muestra:
@@ -657,7 +657,7 @@ Puede promover una tarea a una solicitud del portafolio cuando el trabajo merece
 ### Cómo convertir
 
 1. Abra el espacio de trabajo de la tarea
-2. Haga clic en **Convertir en solicitud** en la barra de herramientas del encabezado (junto a **Enviar enlace**)
+2. Haga clic en **Convertir en solicitud** en la barra de herramientas del encabezado (junto a **Compartir**)
 3. En el diálogo:
    - **Nombre de la solicitud**: Por defecto es el título de la tarea. Edítelo si es necesario
    - **Vista previa del propósito**: Muestra la descripción de la tarea, que se convierte en el propósito de la solicitud
@@ -695,7 +695,7 @@ La solicitud se crea con estado **Pendiente de revisión** y queda vinculada a l
 Puede enviar por correo electrónico un enlace a cualquier tarea a colegas o contactos externos.
 
 1. Abra el espacio de trabajo de la tarea
-2. Haga clic en **Enviar enlace** en la barra de herramientas del encabezado
+2. Haga clic en **Compartir** en la barra de herramientas del encabezado
 3. En el diálogo:
    - **Seleccionar destinatarios**: Busque usuarios existentes de la plataforma por nombre o correo, y/o escriba cualquier dirección de correo y pulse Enter
    - **Añadir un mensaje** (opcional): Incluya una nota personal

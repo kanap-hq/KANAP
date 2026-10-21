@@ -85,7 +85,7 @@ Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail d
 - **Statut**, sous le nom : **Activé** ou **Désactivé**. Cliquez dessus pour le changer. Choisir **Désactivé** désactive la société aussitôt : la fin de validité devient l'heure actuelle
 - **Panneau Propriétés** à droite : **Pays**, **Devise de base**, **Plan comptable** et **Cycle de vie**. Utilisez le bouton situé à côté pour replier le panneau ou le rouvrir
 
-- **Supprimer**, en haut à droite : visible des administrateurs des sociétés (`companies:admin`). Voir [Supprimer une société](#supprimer-une-societe)
+- **Supprimer**, une icône corbeille en haut à droite : visible des administrateurs des sociétés (`companies:admin`). Voir [Supprimer une société](#supprimer-une-societe)
 
 **Enregistrement automatique** : chaque modification s'enregistre d'elle-même quand vous quittez le champ. Il n'y a ni bouton Enregistrer, ni bouton Réinitialiser, ni bouton Fermer. Vous pouvez continuer à travailler pendant l'enregistrement. Le haut de la page affiche **Enregistrement…** pendant l'enregistrement, puis **Enregistré** un court instant. Lorsqu'une modification est refusée, le champ reprend sa valeur précédente et la raison s'affiche dessous. Le message reste jusqu'à ce que vous tapiez de nouveau dans le champ.
 

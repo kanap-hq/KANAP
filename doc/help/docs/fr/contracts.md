@@ -131,7 +131,7 @@ Chaque modification s'enregistre d'elle-même : listes et dates aussitôt, valeu
 
 Il faut `contracts:member` pour modifier. Les lecteurs voient la même page, tous les champs verrouillés.
 
-**Envoyer le lien**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
+**Partager**, dans l'en-tête, envoie par e-mail un lien vers le contrat à des collègues de votre espace de travail.
 
 La fiche a quatre onglets : **Vue d'ensemble**, **Budget**, **Conformité** et **Relations**. Les adresses des anciens onglets **Détails** et **Tâches** ouvrent la vue d'ensemble.
 
@@ -223,7 +223,7 @@ Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
 ### Supprimer un contrat
 
-**Supprimer**, dans l'en-tête de la page du contrat ou dans la liste pour les contrats cochés, supprime des contrats (`contracts:admin`). Cette action est irréversible.
+**Supprimer** (icône corbeille), dans l'en-tête de la page du contrat ou dans la liste pour les contrats cochés, supprime des contrats (`contracts:admin`). Cette action est irréversible.
 
 - Les liens disparaissent et les éléments liés sont conservés : les lignes budgétaires, applications, actifs (y compris ceux dont c'est le contrat de support) et contacts perdent leur lien avec le contrat
 - Ce qui appartient au contrat est supprimé avec lui : ses tâches (y compris la tâche de décision de renouvellement), ses sites web pertinents et ses pièces jointes
@@ -317,4 +317,4 @@ Gardez votre liste de contrats synchronisée avec d'autres outils grâce au CSV 
 - **Liez les lignes budgétaires tôt** : l'**Écart** et le filtre **Sous-budgétés** ne servent que si le contrat est lié aux lignes qui le paient.
 - **Renseignez le montant annuel** : même avec une facturation mensuelle, le montant annuel alimente l'engagement et les totaux.
 - **Liez applications et actifs** : ils décident des clauses que le contrat doit contenir.
-- **Partagez un contrat** : utilisez **Envoyer le lien**, ou copiez l'adresse de la page. Elle ouvre le même onglet et garde le contexte de votre liste.
+- **Partagez un contrat** : utilisez **Partager**, ou copiez l'adresse de la page. Elle ouvre le même onglet et garde le contexte de votre liste.

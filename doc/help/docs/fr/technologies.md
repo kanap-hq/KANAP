@@ -113,7 +113,7 @@ La fiche comporte un en-tête, un panneau de propriétés à droite et six ongle
 - **Référence** : cliquez pour la copier.
 - **Cycle de vie** : cliquez pour le changer. Une technologie retirée n'est plus proposée quand vous en cherchez une à lier.
 - **Famille**.
-- **Supprimer** (`infrastructure:admin`) : la confirmation nomme ce qui part avec la technologie.
+- **Supprimer**, une icône corbeille (`infrastructure:admin`) : la confirmation nomme ce qui part avec la technologie.
 
 ### Panneau de propriétés
 

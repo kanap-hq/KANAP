@@ -213,7 +213,7 @@ La clôture verrouille l'incident. Champs, revue d'incident, notes de journal, l
 
 ### Supprimer un incident
 
-**Supprimer** (`incidents:admin`) se trouve sur la fiche de l'incident, et sur la liste une fois des lignes sélectionnées. Il retire un enregistrement qui n'a pas sa place dans le registre, comme une saisie de test. Les autres utilisateurs ne voient ni le bouton ni la sélection.
+**Supprimer** (`incidents:admin`) est une icône corbeille sur la fiche de l'incident, et sur la liste une fois des lignes sélectionnées. Il retire un enregistrement qui n'a pas sa place dans le registre, comme une saisie de test. Les autres utilisateurs ne voient ni le bouton ni la sélection.
 
 Avant toute suppression, une confirmation liste ce qui part avec l'incident : sa revue d'incident, ses tâches, ses entrées du journal et ses pièces jointes (fichiers compris). Elle liste aussi les liens retirés : les applications, les actifs et les documents Knowledge restent, seul leur lien avec l'incident disparaît. La suppression est inscrite dans la piste d'audit.
 

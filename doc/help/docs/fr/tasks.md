@@ -129,9 +129,9 @@ Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail de la tâche.
 L'en-tête contient :
   - Fil d'Ariane **Retour** vers **Tâches** (ou vers l'espace de travail du projet d'origine, si vous venez de l'un d'eux)
   - **Indicateur de position** : Votre position dans la liste filtrée (ex. : « 3 sur 12 ») avec flèches **Précédent** / **Suivant**
-  - **Envoyer le lien** : Envoyer un lien vers la tâche par e-mail
+  - **Partager** : Envoyer un lien vers la tâche par e-mail
   - **Convertir en demande** : Promouvoir la tâche en demande de portefeuille
-  - **Supprimer** : Supprimer la tâche, avec ses commentaires et son historique (nécessite `tasks:admin`). Vous confirmez d'abord, et la suppression est définitive
+  - **Supprimer** (icône corbeille) : Supprimer la tâche, avec ses commentaires et son historique (nécessite `tasks:admin`). Vous confirmez d'abord, et la suppression est définitive
   - **Fermer** : Retourner à la liste des tâches
 
 Sous la barre d'outils, le bloc de titre affiche :
@@ -657,7 +657,7 @@ Vous pouvez promouvoir une tâche en demande de portefeuille lorsque le travail 
 ### Comment convertir
 
 1. Ouvrez l'espace de travail de la tâche
-2. Cliquez sur **Convertir en demande** dans la barre d'outils de l'en-tête (à côté de **Envoyer le lien**)
+2. Cliquez sur **Convertir en demande** dans la barre d'outils de l'en-tête (à côté de **Partager**)
 3. Dans la boîte de dialogue :
    - **Nom de la demande** : Par défaut sur le titre de la tâche ; modifiez-le si nécessaire
    - **Aperçu de l'objectif** : Affiche la description de la tâche, qui devient l'objectif de la demande
@@ -695,7 +695,7 @@ La demande est créée avec un statut de **En attente de revue** et est liée en
 Vous pouvez envoyer par e-mail un lien vers n'importe quelle tâche à des collègues ou contacts externes.
 
 1. Ouvrez l'espace de travail de la tâche
-2. Cliquez sur **Envoyer le lien** dans la barre d'outils de l'en-tête
+2. Cliquez sur **Partager** dans la barre d'outils de l'en-tête
 3. Dans la boîte de dialogue :
    - **Sélectionner les destinataires** : Recherchez des utilisateurs de la plateforme existants par nom ou e-mail, et/ou tapez n'importe quelle adresse e-mail et appuyez sur Entrée
    - **Ajouter un message** (optionnel) : Inclure une note personnelle

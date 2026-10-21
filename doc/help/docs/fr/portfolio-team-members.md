@@ -237,7 +237,7 @@ Cliquez sur l'**icône de suppression** à côté d'une entrée de temps pour la
 ## Actions
 
 Depuis l'en-tête de l'espace de travail :
-- **Supprimer** : Retirer cette configuration de contributeur (n'affecte pas le compte utilisateur). Disponible uniquement lors de la modification du profil d'un autre contributeur avec `portfolio_settings:admin`.
+- **Supprimer** (icône corbeille) : Retirer cette configuration de contributeur (n'affecte pas le compte utilisateur). Disponible uniquement lors de la modification du profil d'un autre contributeur avec `portfolio_settings:admin`.
 - **Lien retour** : Retourner à la liste des contributeurs, ou aux **Paramètres** si vous avez ouvert votre propre profil
 
 Il n'y a pas de bouton Enregistrer : chaque modification est enregistrée automatiquement.

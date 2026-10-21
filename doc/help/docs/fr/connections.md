@@ -80,6 +80,8 @@ Une connexion impliquant plusieurs serveurs (par ex., clusters à équilibrage d
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. Il comporte quatre onglets : **Vue d'ensemble**, **Couches**, **Criticité & Conformité** et **Interfaces liées**.
 
+**Supprimer**, une icône corbeille dans l'en-tête, supprime la connexion après une confirmation (`infrastructure:member`). La confirmation compte les liaisons d'interface dont elle est détachée. Les interfaces elles-mêmes restent.
+
 ### Vue d'ensemble
 
 L'onglet Vue d'ensemble capture l'identité et la topologie de la connexion.

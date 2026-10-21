@@ -85,9 +85,9 @@ Die Arbeitsbereichs-Kopfzeile gibt Ihnen operativen Kontext, ohne die Seite zu v
 
 - eine kopierbare Anfragenreferenz wie `REQ-42`
 - eine Metadatenleiste mit **Status**, **Bewertung**, **Anforderer**, **IT-Verantwortlicher**, **Ziel-Lieferdatum** und (falls zutreffend) der **Quell-Aufgabe**, aus der die Anfrage erstellt wurde
-- **Link senden** zum Teilen
+- **Teilen**, um einen Link zur Anfrage zu senden
 - **In Projekt umwandeln**, wenn die Anfrage **Genehmigt** oder **Konvertiert** ist
-- **Löschen** für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
+- **Löschen**, ein Papierkorbsymbol, für Administratoren (wenn die Anfrage noch nicht konvertiert ist). Eine konvertierte Anfrage bleibt der Ursprung ihres Projekts und kann nicht gelöscht werden
 - Vorherige/Nächste-Navigation basierend auf dem genauen Listenkontext, aus dem Sie kamen
 
 ### Eigenschaftsleiste

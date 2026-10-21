@@ -131,7 +131,7 @@ Cada cambio se guarda solo: listas y fechas al instante, valores escritos y nota
 
 Necesita `contracts:member` para editar. Los lectores ven la misma página con todos los campos bloqueados.
 
-**Enviar enlace**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
+**Compartir**, en el encabezado, envía por correo un enlace al contrato a colegas de su espacio de trabajo.
 
 La ficha tiene cuatro pestañas: **Vista general**, **Presupuesto**, **Conformidad** y **Relaciones**. Las direcciones de las antiguas pestañas **Detalles** y **Tareas** abren la vista general.
 
@@ -223,7 +223,7 @@ Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuest
 
 ### Eliminar un contrato
 
-**Eliminar**, en la cabecera de la página del contrato o en la lista para los contratos marcados, elimina contratos (`contracts:admin`). Esta acción no se puede deshacer.
+**Eliminar** (icono de papelera), en la cabecera de la página del contrato o en la lista para los contratos marcados, elimina contratos (`contracts:admin`). Esta acción no se puede deshacer.
 
 - Los vínculos se quitan y los elementos vinculados se conservan: las líneas presupuestarias, aplicaciones, activos (también aquellos de los que es el contrato de soporte) y contactos pierden su vínculo con el contrato
 - Lo que pertenece al contrato se elimina con él: sus tareas (incluida la tarea de decisión de renovación), sitios web relevantes y adjuntos
@@ -317,4 +317,4 @@ Mantenga su lista de contratos sincronizada con otras herramientas mediante CSV 
 - **Vincule pronto las líneas presupuestarias**: la **Diferencia** y el filtro **Infrapresupuestados** solo sirven si el contrato está vinculado a las líneas que lo pagan.
 - **Registre el importe anual**: aunque la facturación sea mensual, el importe anual alimenta el compromiso y los totales.
 - **Vincule aplicaciones y activos**: deciden qué cláusulas se espera que contenga el contrato.
-- **Comparta un contrato**: use **Enviar enlace** o copie la dirección de la página. Abre la misma pestaña y conserva el contexto de su lista.
+- **Comparta un contrato**: use **Compartir** o copie la dirección de la página. Abre la misma pestaña y conserva el contexto de su lista.

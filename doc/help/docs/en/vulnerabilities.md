@@ -95,15 +95,15 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 | **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **Source**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. **Source** offers **NVD**, **Publisher** and **Both**: a row both sources matched stays under **NVD** and under **Publisher**, and **Both** keeps only those rows. The export and a change of state in bulk follow it, as they follow the other column filters. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Servers** and **Applications** list the servers and the applications a vulnerability reaches by direct links: search one by name or reference and tick one or several. Several values keep the rows of any of them, and a filter in both columns keeps the rows that match both. The **Applications** filter needs the right to read applications. **Severity**, **Technology**, **Version**, **Publisher**, **Source**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. **Source** offers **NVD**, **Publisher** and **Both**: a row both sources matched stays under **NVD** and under **Publisher**, and **Both** keeps only those rows. The export and a change of state in bulk follow it, as they follow the other column filters. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
 **Sort** by **Exploited**, **Severity**, **Score**, **EPSS (%)**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
 
 **Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts, `?exploited=1` the actively exploited vulnerabilities. The link of the emails uses `period`.
 
-**Asset and application**: `?asset=AST-12` keeps the vulnerabilities of one asset, and `?application=APP-4` those of one application, by direct links (see [What KANAP counts](#what-kanap-counts)). The lists of assets and applications, their records and the dashboard open the page this way. A line above the grid names the filter, for example "Filtered on PAR-ESX-01 · remove". **remove** clears it. You need to be able to read the application to filter on it.
+**Asset and application**: `?asset=AST-12` opens the page with the filter of the **Servers** column set on one asset, and `?application=APP-4` with the filter of the **Applications** column set on one application, by direct links (see [What KANAP counts](#what-kanap-counts)). The lists of assets and applications and their records open the page this way. Clear the column filter to see the other rows. You need to be able to read the application to filter on it.
 
-**In use in the estate**: `?estate=1` keeps the vulnerabilities of the technologies installed on an asset in service or declared by an application in service. The **Vulnerabilities** tile of the dashboard opens the page with it. The same line above the grid shows **In use in the estate · remove**.
+**In use in the estate**: `?estate=1` keeps the vulnerabilities of the technologies installed on an asset in service or declared by an application in service. The links of the dashboard's **Vulnerabilities in your estate** tile to CVEs open the page with it. A line above the grid shows **In use in the estate · remove**. **remove** clears it.
 
 **Reset filters** also clears these two filters. The export and a change of state in bulk follow them.
 
@@ -180,7 +180,7 @@ The recipients are the IT owners of the technology whose account is enabled and 
 - **Technology workspace**: the **Vulnerabilities** section of the Compliance tab. See [Technologies](technologies.md#vulnerabilities).
 - **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
 - **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#technical) and [Applications](applications.md#operations).
-- **Dashboard**: the **Vulnerabilities** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
+- **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
 - **Plaid**: the assistant answers questions about vulnerabilities. See [Plaid](ai-assistant.md#tool-calls).
 
 ## Tips

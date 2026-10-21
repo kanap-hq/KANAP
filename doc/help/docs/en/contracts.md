@@ -131,7 +131,7 @@ Every change saves itself: lists and dates at once, typed values and notes after
 
 You need `contracts:member` to edit. Readers see the same page with every field locked.
 
-**Send link** in the header emails a link to the contract to colleagues of your workspace.
+**Share** in the header emails a link to the contract to colleagues of your workspace.
 
 The page has four tabs: **Overview**, **Budget**, **Compliance** and **Relations**. The addresses of the former **Details** and **Tasks** tabs open the overview.
 
@@ -223,7 +223,7 @@ Budget lines are linked on the [Budget](#budget) tab.
 
 ### Deleting a contract
 
-**Delete** in the header of the contract page, or in the list for the contracts you tick, deletes contracts (`contracts:admin`). This cannot be undone.
+**Delete** (trash icon) in the header of the contract page, or in the list for the contracts you tick, deletes contracts (`contracts:admin`). This cannot be undone.
 
 - The links go and the linked items stay: budget lines, applications, assets (also those whose support contract it is) and contacts lose their link to the contract
 - What belongs to the contract goes with it: its tasks (the renewal decision task included), relevant websites and attachments
@@ -317,4 +317,4 @@ Keep your contract list in sync with other tools using CSV (`contracts:admin`).
 - **Link budget lines early**: the **Gap** and **Under-budgeted** filter only help when the contract is linked to the lines that pay for it.
 - **Record the yearly amount**: even when billing is monthly, the yearly amount drives the commitment and the totals.
 - **Link applications and assets**: they decide which clauses the contract is expected to hold.
-- **Share a contract**: use **Send link**, or copy the page address. It opens the same tab and keeps your list context.
+- **Share a contract**: use **Share**, or copy the page address. It opens the same tab and keeps your list context.

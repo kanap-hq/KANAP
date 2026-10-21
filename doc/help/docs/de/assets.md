@@ -106,9 +106,9 @@ Die Kopfzeile zeigt:
 - **Asset-Name** (an Ort und Stelle bearbeitbar)
 - **Asset-Referenz** (z. B. `AST-123`): kopierbare Kennung
 - **Lebenszyklus**-Chip (auch über die Eigenschaftsleiste bearbeitbar)
-- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen des Assets, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet den Abschnitt **Schwachstellen** im Reiter **Technisch**. Nur angezeigt, wenn das Asset welche hat
-- **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
-- **Löschen** (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
+- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen des Assets, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset. Nur angezeigt, wenn das Asset welche hat
+- **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
+- **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)
@@ -210,12 +210,12 @@ Das Betriebssystem erscheint in der Spalte **OS** der Liste, in der Mitgliederta
 
 #### Schwachstellen
 
-Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die noch zu prüfenden Schwachstellen der auf diesem Asset erfassten Technologien, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen. Eine Zeile pro Technologie und Version:
+Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die noch zu prüfenden Schwachstellen der auf diesem Asset erfassten Technologien, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen: Ein Klick darauf öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset. Eine Zeile pro Technologie und Version:
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **Technologie**, **Version** | Die Technologie und ihre Version. **Version nicht erfasst (möglicherweise betroffen)**, wenn das Asset keine Version nennt |
-| **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
+| **Krit.**, **Hoch**, **Mittel**, **Niedrig**, **N. bew.** | Eine Spalte pro Schweregrad (Kritisch, Hoch, Mittel, Niedrig, Nicht bewertet, der volle Name im Tooltip der Überschrift): die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
 | **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
 **Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Ein außer Betrieb genommenes Asset hat keinen Abschnitt.

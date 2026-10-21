@@ -113,7 +113,7 @@ El espacio de trabajo tiene una cabecera, un panel de propiedades a la derecha y
 - **Referencia**: haga clic para copiarla.
 - **Ciclo de vida**: haga clic para cambiarlo. Una tecnología retirada ya no se ofrece cuando busca una para vincular.
 - **Familia**.
-- **Eliminar** (`infrastructure:admin`): la confirmación nombra lo que se va con la tecnología.
+- **Eliminar**, un icono de papelera (`infrastructure:admin`): la confirmación nombra lo que se va con la tecnología.
 
 ### Panel de propiedades
 

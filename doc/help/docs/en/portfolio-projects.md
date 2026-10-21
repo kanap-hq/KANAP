@@ -100,7 +100,7 @@ The workspace header is a control strip, not decoration.
 - The project title (click to edit when you have manage rights)
 - A compact metadata row: **Status**, **Score**, **Progress**, **IT Lead**, **Planned End**, and **Origin** (or the source request reference for request-origin projects)
 - **Previous** and **Next** move through the current list result set, not through every project in the system
-- **Send link** emails the current project URL with an optional message
+- **Share** emails the current project URL with an optional message
 
 Sending a link does not grant access. It only shares the location. Permissions remain exactly as they were before the email was sent.
 
@@ -371,7 +371,7 @@ Bulk import is useful for large portfolio maintenance, but it is not a shortcut 
 
 ## Sending a link
 
-Use **Send link** from the workspace header to email a direct project link to internal or external recipients.
+Use **Share** from the workspace header to email a direct project link to internal or external recipients.
 
 - you can send it to platform users or to any email address
 - you can include an optional message

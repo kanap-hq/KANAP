@@ -135,13 +135,13 @@ The header shows:
 - **Reference**: short identifier you can copy
 - **Lifecycle** chip: click to change
 - **Business criticality** chip: shows the level and opens a menu of the organization's levels
-- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the application, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the **Vulnerabilities** section of the **Operations** tab. Shown only when the application has some
+- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the application, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. Shown only when the application has some
 - **Version** chip (if a version is set): click to copy
 - **Go live** date
-- **Send link**: copy a shareable link to this workspace
-- **Create new version**: launch the version migration wizard (see [Version management](#version-management))
+- **Share**: copy a shareable link to this workspace
+- **New version**: launch the version migration wizard (see [Version management](#version-management))
 - **Convert to technology** (`applications:admin` and `infrastructure:member`): see [Converting an application to a technology](#converting-an-application-to-a-technology)
-- **Delete** (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
+- **Delete**, a trash icon with its name in a tooltip (`applications:admin`): an application with interfaces gets the refusal and why, with Close only. Otherwise the confirmation names the application and counts the deployments deleted with it, along with its links to other records
 - **Previous / Next**: walk through the filtered list without returning to the grid
 
 ### Properties drawer (right panel)
@@ -253,13 +253,13 @@ A technology can be both. A dash in the version column means the version is not 
 
 To add, change or remove a declared technology, and to record it on servers, you need `applications:member` and `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
 
-**Vulnerabilities** (when vulnerabilities are followed) lists the vulnerabilities still to review on the application, in the alerts. The count next to the title is the number of distinct vulnerabilities to review. One line per technology and version:
+**Vulnerabilities** (when vulnerabilities are followed) lists the vulnerabilities still to review on the application, in the alerts. The count next to the title is the number of distinct vulnerabilities to review: click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. One line per technology and version:
 
 | Column | What it shows |
 |---|---|
 | **Technology**, **Version** | The technology and its version. **Version not recorded (potentially concerned)** when no version is named |
 | **Servers** | The deployment servers that have this technology and version recorded on themselves. **Declared** when the application declares it and no server has it. **Record on a server** then offers its deployment servers, as in **Technologies** |
-| **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
+| **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. A disabled application has no section.
@@ -380,7 +380,7 @@ KANAP offers **two ways to manage application versions**, depending on how your 
 | Approach | Best for | What happens |
 |----------|----------|--------------|
 | **Simple** | Most applications | Update the version fields in the properties drawer or in the create form: same record, new version number |
-| **Sophisticated** | Major migrations | Use **Create new version** to create a new application record with lineage tracking. Run old and new versions side by side |
+| **Sophisticated** | Major migrations | Use **New version** to create a new application record with lineage tracking. Run old and new versions side by side |
 
 ### Simple version tracking (in-place updates)
 
@@ -392,7 +392,7 @@ This approach keeps everything in a single record. When you upgrade, update the 
 
 ### Creating a new version (parallel migrations)
 
-For major application upgrades where you need to run old and new versions in parallel across different environments (e.g., SAP S/4HANA 1909 in Prod while 2023 is in QA), use **Create new version** in the workspace header.
+For major application upgrades where you need to run old and new versions in parallel across different environments (e.g., SAP S/4HANA 1909 in Prod while 2023 is in QA), use **New version** in the workspace header.
 
 The wizard has three steps:
 
@@ -454,9 +454,9 @@ Use this when you want to create an independent duplicate of an application, typ
 
 **What does NOT get copied**: Deployments, interfaces, server assignments, attachments, version fields (version, go-live date, end of support).
 
-### Comparison: Copy item vs Create new version
+### Comparison: Copy item vs New version
 
-| Aspect | Copy item | Create new version |
+| Aspect | Copy item | New version |
 |--------|-----------|-------------------|
 | **Purpose** | Independent duplicate | Versioned successor with lineage |
 | **User options** | None (automatic) | 3-step wizard |
@@ -466,7 +466,7 @@ Use this when you want to create an independent duplicate of an application, typ
 
 **Relations**:
 
-| Relation | Copy item | Create new version |
+| Relation | Copy item | New version |
 |----------|-----------|--------------------|
 | Owners (business and IT) | Yes | Optional (default: yes) |
 | Companies (audience) | Yes | Optional (default: yes) |
@@ -486,7 +486,7 @@ Use this when you want to create an independent duplicate of an application, typ
 
 **Core fields**:
 
-| Field | Copy item | Create new version |
+| Field | Copy item | New version |
 |-------|-----------|--------------------|
 | Description | Yes | Yes |
 | ETL enabled | Yes | Yes |

@@ -80,6 +80,8 @@ Eine Verbindung mit mehreren Servern (z. B. lastverteilte Cluster oder Mesh-Topo
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Er hat vier Reiter: **Übersicht**, **Schichten**, **Kritikalität & Compliance** und **Verwandte Schnittstellen**.
 
+**Löschen**, ein Papierkorbsymbol in der Kopfzeile, löscht die Verbindung nach einer Bestätigung (`infrastructure:member`). Die Bestätigung zählt die Schnittstellen-Bindungen, von denen sie getrennt wird. Die Schnittstellen selbst bleiben.
+
 ### Übersicht
 
 Der Reiter Übersicht erfasst Identität und Topologie der Verbindung.

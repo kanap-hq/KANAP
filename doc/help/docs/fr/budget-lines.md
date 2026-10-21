@@ -194,7 +194,7 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Son adresse désigne la ligne par sa référence, par exemple `/ops/budget/BL-12/overview`. Il comporte quatre parties :
 
-- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Envoyer le lien**, le menu **...** (**Changer le type...**, voir [Changer le type](#changer-le-type)) et le bouton de fermeture
+- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager**, le menu **...** (**Changer le type...**, voir [Changer le type](#changer-le-type)) et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Quatre onglets** : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations** (l'onglet Relations indique le nombre de liens de la ligne)
 - **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type**. Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix

@@ -216,7 +216,7 @@ Lorsque vous ouvrez une tâche, vous obtenez une barre latérale à gauche et un
 |--------|---------|
 | **Enregistrer** | Cliquez sur **Enregistrer** ou appuyez sur **Ctrl+S** (Cmd+S sur Mac) |
 | **Convertir en demande** | Barre d'outils de l'en-tête : promeut une tâche en demande formelle de portefeuille lorsque le périmètre grandit |
-| **Envoyer un lien** | Barre d'outils de l'en-tête : envoyer un lien par e-mail à des collègues ou contacts externes |
+| **Partager** | Barre d'outils de l'en-tête : envoyer un lien par e-mail à des collègues ou contacts externes |
 | **Saisir du temps en ligne** | Dans l'onglet Commentaires, combinez un commentaire + changement de statut + saisie de temps en une seule soumission |
 | **Copier la référence** | Cliquez sur la pastille de référence (ex. : T-42) pour la copier dans votre presse-papiers |
 

@@ -209,9 +209,9 @@ Für Projektaufgaben ist die Zeiterfassung essenziell: sie speist den Roadmap-Ge
 
 ### Aufgabe teilen
 
-Müssen Sie jemanden einbeziehen? Klicken Sie auf **Link senden** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden, auch an Personen außerhalb von KANAP. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
+Müssen Sie jemanden einbeziehen? Klicken Sie auf **Teilen** im Aufgaben-Header, um einen direkten Link per E-Mail an einen Kollegen zu senden, auch an Personen außerhalb von KANAP. Fügen Sie bei Bedarf eine persönliche Nachricht hinzu.
 
-!!! info "Link senden funktioniert überall"
+!!! info "Teilen funktioniert überall"
     Das ist nicht nur für Aufgaben. Sie können Links zu Projekten, Anfragen, Verträgen, Apps senden, zu jedem Arbeitsbereich-Objekt. Es ist der schnellste Weg, jemanden auf die richtige Stelle zu verweisen.
 
 ---
@@ -299,7 +299,7 @@ Die wöchentliche E-Mail und Echtzeit-Benachrichtigungen halten Sie auf dem Lauf
 | Design ändern (Hell/Dunkel) | Avatar > Mein Profil > Erscheinungsbild-Tab |
 | Meine Verfügbarkeit festlegen | Portfolio > Mitwirkende > Ihren Namen |
 | Meine Fähigkeiten hinzufügen | Portfolio > Mitwirkende > Ihren Namen > Fähigkeiten-Tab |
-| Einen Link teilen | Beliebigen Arbeitsbereich öffnen > Link senden |
+| Einen Link teilen | Beliebigen Arbeitsbereich öffnen > Teilen |
 | Mein Dashboard anpassen | Dashboard > Einstellungen (Zahnrad-Symbol) |
 
 ---

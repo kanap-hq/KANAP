@@ -106,9 +106,9 @@ L'en-tête affiche :
 - **Nom de l'actif** (modifiable sur place)
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
 - Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
-- **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'actif, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la section **Vulnérabilités** de l'onglet **Technique**. Affiché seulement quand l'actif en a
-- **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Supprimer** (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
+- **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'actif, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Affiché seulement quand l'actif en a
+- **Partager** : copier un lien partageable vers cet espace de travail
+- **Supprimer**, une icône corbeille avec son nom en infobulle (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
 ### Tiroir des propriétés (panneau de droite)
@@ -210,12 +210,12 @@ Le système d'exploitation apparaît dans la colonne **OS** de la liste, dans le
 
 #### Vulnérabilités
 
-Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste les vulnérabilités encore à traiter sur les technologies renseignées sur cet actif, dans les alertes. Le nombre à côté du titre est celui des vulnérabilités distinctes à traiter. Une ligne par technologie et version :
+Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste les vulnérabilités encore à traiter sur les technologies renseignées sur cet actif, dans les alertes. Le nombre à côté du titre est celui des vulnérabilités distinctes à traiter : cliquez dessus pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Une ligne par technologie et version :
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
 | **Technologie**, **Version** | La technologie et sa version. **Version non renseignée (potentiellement concernée)** quand l'actif ne nomme aucune version |
-| **Critique**, **Élevée**, **Moyenne**, **Faible**, **Non évaluée** | Une colonne par sévérité : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
+| **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
 | **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
 **Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Un actif retiré n'a pas de section.

@@ -135,13 +135,13 @@ Die Kopfzeile zeigt:
 - **Referenz**: kurze Kennung, die Sie kopieren können
 - **Lebenszyklus**-Chip: klicken zum Ändern
 - **Geschäftskritikalitäts**-Chip: zeigt die Stufe und öffnet ein Menü mit den Stufen der Organisation
-- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen der Anwendung, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet den Abschnitt **Schwachstellen** im Reiter **Betrieb**. Nur angezeigt, wenn die Anwendung welche hat
+- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen der Anwendung, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Nur angezeigt, wenn die Anwendung welche hat
 - **Versions**-Chip (wenn eine Version festgelegt ist): klicken zum Kopieren
 - **Go-Live**-Datum
-- **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
-- **Neue Version erstellen**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
+- **Teilen**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
+- **Neue Version**: Den Versionsmigrations-Assistenten starten (siehe [Versionsverwaltung](#versionsverwaltung))
 - **In Technologie umwandeln** (`applications:admin` und `infrastructure:member`): siehe [Eine Anwendung in eine Technologie umwandeln](#eine-anwendung-in-eine-technologie-umwandeln)
-- **Löschen** (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
+- **Löschen**, ein Papierkorbsymbol mit seinem Namen im Tooltip (`applications:admin`): eine Anwendung mit Schnittstellen erhält die Ablehnung und den Grund, nur mit Schließen. Sonst nennt die Bestätigung die Anwendung und zählt die Bereitstellungen, die mit ihr gelöscht werden, zusammen mit ihren Verknüpfungen zu anderen Einträgen
 - **Vorherige / Nächste**: Durch die gefilterte Liste navigieren, ohne zum Raster zurückzukehren
 
 ### Eigenschaftsleiste (rechtes Panel)
@@ -253,13 +253,13 @@ Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, da
 
 Um eine deklarierte Technologie hinzuzufügen, zu ändern oder zu entfernen und sie auf Servern zu erfassen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
-**Schwachstellen** (wenn Schwachstellen verfolgt werden) listet die noch zu prüfenden Schwachstellen der Anwendung, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen. Eine Zeile pro Technologie und Version:
+**Schwachstellen** (wenn Schwachstellen verfolgt werden) listet die noch zu prüfenden Schwachstellen der Anwendung, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen: Ein Klick darauf öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Eine Zeile pro Technologie und Version:
 
 | Spalte | Was sie zeigt |
 |---|---|
 | **Technologie**, **Version** | Die Technologie und ihre Version. **Version nicht erfasst (möglicherweise betroffen)**, wenn keine Version genannt ist |
 | **Server** | Die Bereitstellungsserver, die diese Technologie und Version selbst erfasst haben. **Deklariert**, wenn die Anwendung sie deklariert und kein Server sie hat. **Auf einem Server erfassen** bietet dann ihre Bereitstellungsserver an, wie in **Technologien** |
-| **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
+| **Krit.**, **Hoch**, **Mittel**, **Niedrig**, **N. bew.** | Eine Spalte pro Schweregrad (Kritisch, Hoch, Mittel, Niedrig, Nicht bewertet, der volle Name im Tooltip der Überschrift): die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
 | **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
 **Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Eine deaktivierte Anwendung hat keinen Abschnitt.
@@ -380,7 +380,7 @@ KANAP bietet **zwei Wege zur Verwaltung von Anwendungsversionen**, je nachdem, w
 | Ansatz | Am besten für | Was passiert |
 |----------|----------|--------------|
 | **Einfach** | Die meisten Anwendungen | Versionsfelder in der Eigenschaftsleiste oder im Erstellungsformular aktualisieren: gleicher Datensatz, neue Versionsnummer |
-| **Erweitert** | Große Migrationen | **Neue Version erstellen** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen: alte und neue Versionen parallel betreiben |
+| **Erweitert** | Große Migrationen | **Neue Version** verwenden, um einen neuen Anwendungsdatensatz mit Versionsnachverfolgung zu erstellen: alte und neue Versionen parallel betreiben |
 
 ### Einfache Versionsverfolgung (In-Place-Updates)
 
@@ -392,7 +392,7 @@ Dieser Ansatz hält alles in einem einzigen Datensatz. Wenn Sie ein Upgrade durc
 
 ### Eine neue Version erstellen (Parallelmigrationen)
 
-Für größere Anwendungsupgrades, bei denen Sie alte und neue Versionen parallel über verschiedene Umgebungen betreiben müssen (z. B. SAP S/4HANA 1909 in Prod, während 2023 in QA ist), verwenden Sie **Neue Version erstellen** in der Kopfzeile des Arbeitsbereichs.
+Für größere Anwendungsupgrades, bei denen Sie alte und neue Versionen parallel über verschiedene Umgebungen betreiben müssen (z. B. SAP S/4HANA 1909 in Prod, während 2023 in QA ist), verwenden Sie **Neue Version** in der Kopfzeile des Arbeitsbereichs.
 
 Der Assistent hat drei Schritte:
 
@@ -454,9 +454,9 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 
 **Was NICHT kopiert wird**: Bereitstellungen, Schnittstellen, Server-Zuweisungen, Anhänge, Versionsfelder (Version, Go-Live-Datum, Support-Ende).
 
-### Vergleich: Element kopieren vs. Neue Version erstellen
+### Vergleich: Element kopieren vs. Neue Version
 
-| Aspekt | Element kopieren | Neue Version erstellen |
+| Aspekt | Element kopieren | Neue Version |
 |--------|-----------|-------------------|
 | **Zweck** | Unabhängiges Duplikat | Versionierter Nachfolger mit Verkettung |
 | **Benutzeroptionen** | Keine (automatisch) | 3-Schritt-Assistent |
@@ -466,7 +466,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 
 **Verknüpfungen**:
 
-| Verknüpfung | Element kopieren | Neue Version erstellen |
+| Verknüpfung | Element kopieren | Neue Version |
 |----------|-----------|--------------------|
 | Verantwortliche (Business und IT) | Ja | Optional (Standard: ja) |
 | Unternehmen (Zielgruppe) | Ja | Optional (Standard: ja) |
@@ -486,7 +486,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 
 **Kernfelder**:
 
-| Feld | Element kopieren | Neue Version erstellen |
+| Feld | Element kopieren | Neue Version |
 |-------|-----------|--------------------|
 | Beschreibung | Ja | Ja |
 | ETL aktiviert | Ja | Ja |

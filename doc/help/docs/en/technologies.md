@@ -113,7 +113,7 @@ The workspace has a header, a properties drawer on the right, and six tabs: **Ov
 - **Reference**: click to copy it.
 - **Lifecycle**: click to change it. A retired technology is no longer offered when you search for one to link.
 - **Family**.
-- **Delete** (`infrastructure:admin`): the confirmation names what goes with the technology.
+- **Delete**, a trash icon (`infrastructure:admin`): the confirmation names what goes with the technology.
 
 ### Properties drawer
 

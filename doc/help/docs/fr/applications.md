@@ -135,13 +135,13 @@ L'en-tête affiche :
 - **Référence** : court identifiant copiable
 - Pastille **Cycle de vie** : cliquez pour modifier
 - Pastille **Criticité business** : affiche le niveau et ouvre un menu des niveaux définis par l'organisation
-- **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'application, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la section **Vulnérabilités** de l'onglet **Exploitation**. Affiché seulement quand l'application en a
+- **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'application, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Affiché seulement quand l'application en a
 - Pastille **Version** (si une version est définie) : cliquez pour copier
 - Date de **Mise en production**
-- **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Créer une nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
+- **Partager** : copier un lien partageable vers cet espace de travail
+- **Nouvelle version** : lancer l'assistant de migration de version (voir [Gestion des versions](#gestion-des-versions))
 - **Convertir en technologie** (`applications:admin` et `infrastructure:member`) : voir [Convertir une application en technologie](#convertir-une-application-en-technologie)
-- **Supprimer** (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
+- **Supprimer**, une icône corbeille avec son nom en infobulle (`applications:admin`) : une application qui a des interfaces reçoit le refus et sa raison, avec seulement Fermer. Sinon, la confirmation nomme l’application et compte les déploiements supprimés avec elle, ainsi que ses liens vers d’autres éléments
 - **Précédent / Suivant** : parcourir la liste filtrée sans revenir à la grille
 
 ### Tiroir des propriétés (panneau de droite)
@@ -253,13 +253,13 @@ Une technologie peut être les deux. Un tiret dans la colonne des versions signi
 
 Pour ajouter, modifier ou retirer une technologie déclarée, et pour la renseigner sur des serveurs, il faut `applications:member` et `infrastructure:member`. Une technologie hébergée n'a pas de croix : retirez-la du serveur.
 
-**Vulnérabilités** (quand les vulnérabilités sont suivies) liste les vulnérabilités encore à traiter sur l'application, dans les alertes. Le nombre à côté du titre est celui des vulnérabilités distinctes à traiter. Une ligne par technologie et version :
+**Vulnérabilités** (quand les vulnérabilités sont suivies) liste les vulnérabilités encore à traiter sur l'application, dans les alertes. Le nombre à côté du titre est celui des vulnérabilités distinctes à traiter : cliquez dessus pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Une ligne par technologie et version :
 
 | Colonne | Ce qu'elle affiche |
 |---|---|
 | **Technologie**, **Version** | La technologie et sa version. **Version non renseignée (potentiellement concernée)** quand aucune version n'est nommée |
 | **Serveurs** | Les serveurs de déploiement qui ont cette technologie et cette version renseignées sur eux-mêmes. **Déclarée** quand l'application la déclare et qu'aucun serveur ne l'a. **Renseigner sur un serveur** propose alors ses serveurs de déploiement, comme dans **Technologies** |
-| **Critique**, **Élevée**, **Moyenne**, **Faible**, **Non évaluée** | Une colonne par sévérité : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
+| **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
 | **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
 **Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Une application désactivée n'a pas de section.
@@ -380,7 +380,7 @@ KANAP propose **deux approches pour gérer les versions d'applications**, selon 
 | Approche | Idéale pour | Ce qui se passe |
 |----------|-------------|-----------------|
 | **Simple** | La plupart des applications | Mettez à jour les champs de version dans le tiroir des propriétés ou le formulaire de création : même enregistrement, nouveau numéro de version |
-| **Avancée** | Migrations majeures | Utilisez **Créer une nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
+| **Avancée** | Migrations majeures | Utilisez **Nouvelle version** pour créer un nouvel enregistrement d'application avec suivi de lignée : exécutez ancienne et nouvelle versions côte à côte |
 
 ### Suivi de version simple (mise à jour en place)
 
@@ -392,7 +392,7 @@ Cette approche garde tout dans un seul enregistrement. Lors d'une mise à niveau
 
 ### Créer une nouvelle version (migrations parallèles)
 
-Pour les mises à niveau majeures d'applications où vous devez exécuter les anciennes et nouvelles versions en parallèle dans différents environnements (ex. : SAP S/4HANA 1909 en Prod alors que 2023 est en QA), utilisez **Créer une nouvelle version** dans l'en-tête de l'espace de travail.
+Pour les mises à niveau majeures d'applications où vous devez exécuter les anciennes et nouvelles versions en parallèle dans différents environnements (ex. : SAP S/4HANA 1909 en Prod alors que 2023 est en QA), utilisez **Nouvelle version** dans l'en-tête de l'espace de travail.
 
 L'assistant comporte trois étapes :
 
@@ -454,9 +454,9 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 **Ce qui N'est PAS copié** : Déploiements, interfaces, assignations d'actifs, pièces jointes, champs de version (version, date de mise en production, fin de support).
 
-### Comparaison : Copier l'élément vs Créer une nouvelle version
+### Comparaison : Copier l'élément vs Nouvelle version
 
-| Aspect | Copier l'élément | Créer une nouvelle version |
+| Aspect | Copier l'élément | Nouvelle version |
 |--------|------------------|---------------------------|
 | **Objectif** | Duplicata indépendant | Successeur versionné avec lignée |
 | **Options utilisateur** | Aucune (automatique) | Assistant en 3 étapes |
@@ -466,7 +466,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 **Relations** :
 
-| Relation | Copier l'élément | Créer une nouvelle version |
+| Relation | Copier l'élément | Nouvelle version |
 |----------|------------------|---------------------------|
 | Responsables (métier et IT) | Oui | Optionnel (par défaut : oui) |
 | Sociétés (audience) | Oui | Optionnel (par défaut : oui) |
@@ -486,7 +486,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 **Champs principaux** :
 
-| Champ | Copier l'élément | Créer une nouvelle version |
+| Champ | Copier l'élément | Nouvelle version |
 |-------|------------------|---------------------------|
 | Description | Oui | Oui |
 | ETL activé | Oui | Oui |

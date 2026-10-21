@@ -113,7 +113,7 @@ Der Reiter Verknüpfungen zeigt Entitäten, die mit diesem Standort verknüpft s
 
 ## Einen Standort löschen
 
-Klicken Sie in der Arbeitsbereich-Kopfzeile auf **Löschen**, um einen Standort zu entfernen.
+Klicken Sie in der Arbeitsbereich-Kopfzeile auf **Löschen** (Papierkorbsymbol), um einen Standort zu entfernen.
 
 - Erfordert die Berechtigung `locations:member`.
 - Verknüpfte Assets werden nicht gelöscht. Sie werden automatisch entkoppelt (ihre Standortreferenz wird gelöscht).

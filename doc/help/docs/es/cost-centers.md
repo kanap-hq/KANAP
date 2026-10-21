@@ -139,7 +139,7 @@ Cada línea OPEX y CAPEX con un centro de coste muestra el responsable del presu
 
 ### Eliminar
 
-El botón **Eliminar** del encabezado elimina el elemento tras una confirmación (requiere `cost_centers:admin`). Está desactivado, con el motivo en una línea, cuando hay líneas de presupuesto que usan el centro de coste (por ejemplo "Usado por 3 líneas OPEX. Desactívelo en su lugar.") o cuando el grupo aún contiene elementos (por ejemplo "Contiene 2 elementos."). En su lugar, desactive el elemento: se mantiene en sus líneas y en los informes.
+El botón **Eliminar** (icono de papelera) del encabezado elimina el elemento tras una confirmación (requiere `cost_centers:admin`). Está desactivado, con el motivo en una línea, cuando hay líneas de presupuesto que usan el centro de coste (por ejemplo "Usado por 3 líneas OPEX. Desactívelo en su lugar.") o cuando el grupo aún contiene elementos (por ejemplo "Contiene 2 elementos."). En su lugar, desactive el elemento: se mantiene en sus líneas y en los informes.
 
 ---
 

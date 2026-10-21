@@ -135,13 +135,13 @@ El encabezado muestra:
 - **Referencia**: identificador corto que puede copiar
 - Chip de **Ciclo de vida**: haga clic para cambiar
 - Chip de **Criticidad de negocio**: muestra el nivel y abre un menú con los niveles de la organización
-- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en la aplicación, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la sección **Vulnerabilidades** de la pestaña **Operaciones**. Solo se muestra cuando la aplicación tiene alguna
+- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en la aplicación, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Solo se muestra cuando la aplicación tiene alguna
 - Chip de **Versión** (si hay versión definida): haga clic para copiar
 - Fecha de **Puesta en marcha**
-- **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
-- **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
+- **Compartir**: copiar un enlace compartible a este espacio de trabajo
+- **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
-- **Eliminar** (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
+- **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
 ### Panel de propiedades (panel derecho)
@@ -253,13 +253,13 @@ Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indic
 
 Para añadir, cambiar o quitar una tecnología declarada, y para registrarla en servidores, necesita `applications:member` e `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
 
-**Vulnerabilidades** (cuando se siguen las vulnerabilidades) lista las vulnerabilidades aún por revisar en la aplicación, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar. Una línea por tecnología y versión:
+**Vulnerabilidades** (cuando se siguen las vulnerabilidades) lista las vulnerabilidades aún por revisar en la aplicación, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar: haga clic en él para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Una línea por tecnología y versión:
 
 | Columna | Qué muestra |
 |---|---|
 | **Tecnología**, **Versión** | La tecnología y su versión. **Versión no registrada (potencialmente afectada)** cuando no se indica ninguna versión |
 | **Servidores** | Los servidores de despliegue que tienen esta tecnología y esta versión registradas en sí mismos. **Declarada** cuando la aplicación la declara y ningún servidor la tiene. **Registrar en un servidor** ofrece entonces sus servidores de despliegue, como en **Tecnologías** |
-| **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
+| **Crít.**, **Alta**, **Media**, **Baja**, **S. eval.** | Una columna por gravedad (Crítica, Alta, Media, Baja, Sin evaluar, el nombre completo en una información emergente del encabezado): las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
 | **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
 
 **Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Una aplicación desactivada no tiene sección.
@@ -380,7 +380,7 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 | Enfoque | Ideal para | Qué sucede |
 |---------|------------|------------|
 | **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación: mismo registro, nuevo número de versión |
-| **Sofisticado** | Migraciones mayores | Use **Crear nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
+| **Sofisticado** | Migraciones mayores | Use **Nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
 
 ### Seguimiento simple de versiones (actualizaciones in situ)
 
@@ -392,7 +392,7 @@ Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los 
 
 ### Crear una nueva versión (migraciones en paralelo)
 
-Para actualizaciones mayores de aplicaciones donde necesita ejecutar las versiones antigua y nueva en paralelo en diferentes entornos (p. ej., SAP S/4HANA 1909 en Prod mientras 2023 está en QA), utilice **Crear nueva versión** en el encabezado del espacio de trabajo.
+Para actualizaciones mayores de aplicaciones donde necesita ejecutar las versiones antigua y nueva en paralelo en diferentes entornos (p. ej., SAP S/4HANA 1909 en Prod mientras 2023 está en QA), utilice **Nueva versión** en el encabezado del espacio de trabajo.
 
 El asistente tiene tres pasos:
 
@@ -454,9 +454,9 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Qué NO se copia**: Despliegues, interfaces, asignaciones de servidores, adjuntos, campos de versión (versión, fecha de puesta en marcha, fin de soporte).
 
-### Comparación: Copiar elemento vs Crear nueva versión
+### Comparación: Copiar elemento vs Nueva versión
 
-| Aspecto | Copiar elemento | Crear nueva versión |
+| Aspecto | Copiar elemento | Nueva versión |
 |---------|-----------------|---------------------|
 | **Propósito** | Duplicado independiente | Sucesor versionado con linaje |
 | **Opciones del usuario** | Ninguna (automático) | Asistente de 3 pasos |
@@ -466,7 +466,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Relaciones**:
 
-| Relación | Copiar elemento | Crear nueva versión |
+| Relación | Copiar elemento | Nueva versión |
 |----------|-----------------|---------------------|
 | Responsables (negocio e IT) | Sí | Opcional (predeterminado: sí) |
 | Empresas (audiencia) | Sí | Opcional (predeterminado: sí) |
@@ -486,7 +486,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Campos principales**:
 
-| Campo | Copiar elemento | Crear nueva versión |
+| Campo | Copiar elemento | Nueva versión |
 |-------|-----------------|---------------------|
 | Descripción | Sí | Sí |
 | ETL habilitado | Sí | Sí |

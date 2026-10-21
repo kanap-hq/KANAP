@@ -106,9 +106,9 @@ El encabezado muestra:
 - **Nombre del activo** (editable en línea)
 - **Referencia del activo** (p. ej., `AST-123`): identificador copiable
 - Chip de **Ciclo de vida** (también editable desde el panel de propiedades)
-- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en el activo, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la sección **Vulnerabilidades** de la pestaña **Técnico**. Solo se muestra cuando el activo tiene alguna
-- **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
-- **Eliminar** (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
+- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en el activo, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo. Solo se muestra cuando el activo tiene alguna
+- **Compartir**: copiar un enlace compartible a este espacio de trabajo
+- **Eliminar**, un icono de papelera con su nombre en una información emergente (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
 - **Anterior / Siguiente** (p. ej., "3 de 47"): navegar por la lista filtrada sin volver a ella
 
 ### Panel de propiedades (panel derecho)
@@ -210,12 +210,12 @@ El sistema operativo aparece en la columna **OS** de la lista, en la tabla de mi
 
 #### Vulnerabilidades
 
-Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista las vulnerabilidades aún por revisar en las tecnologías registradas en este activo, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar. Una línea por tecnología y versión:
+Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista las vulnerabilidades aún por revisar en las tecnologías registradas en este activo, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar: haga clic en él para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo. Una línea por tecnología y versión:
 
 | Columna | Qué muestra |
 |---|---|
 | **Tecnología**, **Versión** | La tecnología y su versión. **Versión no registrada (potencialmente afectada)** cuando el activo no indica ninguna versión |
-| **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
+| **Crít.**, **Alta**, **Media**, **Baja**, **S. eval.** | Una columna por gravedad (Crítica, Alta, Media, Baja, Sin evaluar, el nombre completo en una información emergente del encabezado): las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
 | **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
 
 **Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Un activo retirado no tiene sección.

@@ -100,7 +100,7 @@ Die Arbeitsbereichs-Kopfzeile ist eine Steuerungsleiste, keine Dekoration.
 - Der Projekttitel (klicken zum Bearbeiten, wenn Sie Verwaltungsrechte haben)
 - Eine kompakte Metadatenzeile: **Status**, **Bewertung**, **Fortschritt**, **IT-Leiter**, **Geplantes Ende** und **Herkunft** (oder die Quell-Anfragen-Referenz für Projekte mit Anfragenherkunft)
 - **Vorherige** und **Nächste** bewegen sich durch das aktuelle Listenergebnis, nicht durch jedes Projekt im System
-- **Link senden** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
+- **Teilen** sendet die aktuelle Projekt-URL per E-Mail mit einer optionalen Nachricht
 
 Das Senden eines Links gewährt keinen Zugriff. Es teilt nur den Standort. Berechtigungen bleiben genau so, wie sie vor dem Versenden der E-Mail waren.
 
@@ -371,7 +371,7 @@ Massenimport ist nützlich für die Pflege großer Portfolios, aber er ist keine
 
 ## Einen Link senden
 
-Verwenden Sie **Link senden** aus der Arbeitsbereichs-Kopfzeile, um einen direkten Projekt-Link an interne oder externe Empfänger zu senden.
+Verwenden Sie **Teilen** aus der Arbeitsbereichs-Kopfzeile, um einen direkten Projekt-Link an interne oder externe Empfänger zu senden.
 
 - Sie können ihn an Plattformbenutzer oder an jede E-Mail-Adresse senden
 - Sie können eine optionale Nachricht einfügen

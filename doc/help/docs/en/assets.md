@@ -106,9 +106,9 @@ The header shows:
 - **Asset name** (editable in place)
 - **Asset reference** (e.g., `AST-123`): copyable identifier
 - **Lifecycle** chip (also editable from the properties drawer)
-- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the asset, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the **Vulnerabilities** section of the **Technical** tab. Shown only when the asset has some
-- **Send link**: copy a shareable link to this workspace
-- **Delete** (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
+- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the asset, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. Shown only when the asset has some
+- **Share**: copy a shareable link to this workspace
+- **Delete**, a trash icon with its name in a tooltip (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
 
 ### Properties drawer (right panel)
@@ -210,12 +210,12 @@ The operating system shows in the **OS** column of the list, in the cluster memb
 
 #### Vulnerabilities
 
-When vulnerabilities are followed, the last section of the tab lists the vulnerabilities still to review on the technologies recorded on this asset, in the alerts. The count next to the title is the number of distinct vulnerabilities to review. One line per technology and version:
+When vulnerabilities are followed, the last section of the tab lists the vulnerabilities still to review on the technologies recorded on this asset, in the alerts. The count next to the title is the number of distinct vulnerabilities to review: click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. One line per technology and version:
 
 | Column | What it shows |
 |---|---|
 | **Technology**, **Version** | The technology and its version. **Version not recorded (potentially concerned)** when the asset names no version |
-| **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
+| **Crit.**, **High**, **Med.**, **Low**, **N/R** | One column per severity (Critical, High, Medium, Low, Not rated, the full name in a tooltip on the header): the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
 | **Total** | The distinct vulnerabilities still to review on this line |
 
 **See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. A retired asset has no section.

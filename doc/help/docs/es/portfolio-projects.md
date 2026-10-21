@@ -100,7 +100,7 @@ El encabezado del espacio de trabajo es una franja de control, no decoración.
 - El título del proyecto (haga clic para editar cuando tenga derechos de gestión)
 - Una fila de metadatos compacta: **Estado**, **Puntuación**, **Progreso**, **Responsable IT**, **Fin planificado** y **Origen** (o la referencia de la solicitud de origen para proyectos de origen-solicitud)
 - **Anterior** y **Siguiente** se mueven por el conjunto de resultados de la lista actual, no por todos los proyectos del sistema
-- **Enviar enlace** envía por correo la URL actual del proyecto con un mensaje opcional
+- **Compartir** envía por correo la URL actual del proyecto con un mensaje opcional
 
 Enviar un enlace no concede acceso. Solo comparte la ubicación. Los permisos permanecen exactamente como estaban antes de enviar el correo.
 
@@ -371,7 +371,7 @@ La importación masiva es útil para mantenimiento del portafolio a gran escala,
 
 ## Enviar un enlace
 
-Use **Enviar enlace** desde el encabezado del espacio de trabajo para enviar por correo un enlace directo del proyecto a destinatarios internos o externos.
+Use **Compartir** desde el encabezado del espacio de trabajo para enviar por correo un enlace directo del proyecto a destinatarios internos o externos.
 
 - puede enviarlo a usuarios de la plataforma o a cualquier dirección de correo
 - puede incluir un mensaje opcional

@@ -237,7 +237,7 @@ Klicken Sie auf das **Löschsymbol** neben einem Zeiteintrag, um ihn zu entferne
 ## Aktionen
 
 Aus der Arbeitsbereich-Kopfzeile:
-- **Löschen**: Diese Mitwirkenden-Konfiguration entfernen (betrifft nicht das Benutzerkonto). Nur beim Bearbeiten des Profils eines anderen Mitwirkenden mit `portfolio_settings:admin` verfügbar.
+- **Löschen** (Papierkorbsymbol): Diese Mitwirkenden-Konfiguration entfernen (betrifft nicht das Benutzerkonto). Nur beim Bearbeiten des Profils eines anderen Mitwirkenden mit `portfolio_settings:admin` verfügbar.
 - **Zurück-Link**: Zur Mitwirkenden-Liste zurückkehren, oder zu **Einstellungen**, wenn Sie Ihr eigenes Profil geöffnet haben
 
 Es gibt keine Speichern-Schaltfläche: Jede Änderung wird automatisch gespeichert.

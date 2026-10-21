@@ -160,13 +160,13 @@ The levels are the ones defined in the IT landscape settings; a deprecated level
 
 ---
 
-### Vulnerabilities { #vulnerabilities }
+### Vulnerabilities in your estate { #vulnerabilities }
 
-Shows the vulnerabilities that call for attention in your estate. The counts follow [What KANAP counts](vulnerabilities.md#what-kanap-counts): vulnerabilities still to review, in the alerts. Each line opens the matching list:
+Shows the vulnerabilities that call for attention in your estate, under the subtitle "CVE to review on technologies in use". The counts follow [What KANAP counts](vulnerabilities.md#what-kanap-counts): vulnerabilities still to review, in the alerts. Each line opens the matching list:
 
 - **Applications at the highest criticality with a critical or high CVE**, for example "2 Critical applications with a critical or high CVE": the applications at the highest business criticality level of your catalog that a critical or high vulnerability reaches. Opens the applications list filtered on that level and on **With severe vulnerabilities**. Needs `applications:reader`, and counts the applications you can read.
-- **Critical CVEs published in the last 7 days** and **in the last 30 days**, on technologies in use in the estate: installed on an asset in service or declared by an application in service. Opens the [Vulnerabilities](vulnerabilities.md) page on those vulnerabilities.
-- **CVEs known to be exploited**, on technologies in use in the estate. Opens the Vulnerabilities page on the exploited ones.
+- **Critical CVEs published in the last 7 days** and **in the last 30 days**, on technologies in use in the estate: installed on an asset in service or declared by an application in service. Opens the [Vulnerabilities](vulnerabilities.md) page on those vulnerabilities, with the **In use in the estate** filter.
+- **CVEs known to be exploited**, on technologies in use in the estate. Opens the Vulnerabilities page on the exploited ones, with the same filter.
 - **Assets with a critical or high CVE**. Opens the assets list filtered on **With severe vulnerabilities**.
 
 A line at zero is hidden. When every line is at zero, the tile says "No critical vulnerability to review." A warning follows when a source has not been read for more than 3 days, for example "The NVD has not been read for 4 days": the figures may then be out of date. **View all** opens the Vulnerabilities page.

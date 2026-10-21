@@ -216,7 +216,7 @@ When you open a task, you get a sidebar on the left and a main content area on t
 |--------|-----|
 | **Save** | Click **Save** or press **Ctrl+S** (Cmd+S on Mac) |
 | **Convert to Request** | Header toolbar. Promotes a task into a formal portfolio request when the scope grows |
-| **Send link** | Header toolbar. Email a link to colleagues or external contacts |
+| **Share** | Header toolbar. Email a link to colleagues or external contacts |
 | **Log time inline** | In the Comments tab, combine a comment + status change + time entry in one submit |
 | **Copy reference** | Click the reference chip (e.g., T-42) to copy it to your clipboard |
 

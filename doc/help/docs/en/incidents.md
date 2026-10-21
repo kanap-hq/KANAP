@@ -213,7 +213,7 @@ Closing locks the incident. Fields, the incident review, journal notes, links, a
 
 ### Deleting an incident
 
-**Delete** (`incidents:admin`) is on the incident page, and on the list once you select rows. It removes a record that has no place in the register, such as a test entry. Other users see neither the button nor the selection.
+**Delete** (`incidents:admin`) is a trash icon on the incident page, and on the list once you select rows. It removes a record that has no place in the register, such as a test entry. Other users see neither the button nor the selection.
 
 Before anything is removed, a confirmation lists what goes with the incident: its incident review, its tasks, its journal entries and its attachments (the files too). It also lists the links that are removed: applications, assets and Knowledge documents stay, only their link to the incident goes. The deletion is recorded in the audit trail.
 

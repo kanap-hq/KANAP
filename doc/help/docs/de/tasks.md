@@ -129,9 +129,9 @@ Klicken Sie auf eine Zeile, um den Aufgaben-Arbeitsbereich zu öffnen. Der Arbei
 Die Kopfzeile enthält:
   - **Zurück**-Breadcrumb zu **Aufgaben** (oder zum ursprünglichen Projekt-Arbeitsbereich, wenn Sie von dort kamen)
   - **Positionsindikator**: Ihre Position in der gefilterten Liste (z. B. „3 von 12") mit **Vorherige** / **Nächste**-Pfeilen
-  - **Link senden**: Eine Link zur Aufgabe per E-Mail senden
+  - **Teilen**: Eine Link zur Aufgabe per E-Mail senden
   - **In Anfrage umwandeln**: Die Aufgabe zu einer Portfolio-Anfrage befördern
-  - **Löschen**: Die Aufgabe mit ihren Kommentaren und ihrem Verlauf entfernen (erfordert `tasks:admin`). Sie bestätigen zuerst, und das Löschen lässt sich nicht rückgängig machen
+  - **Löschen** (Papierkorbsymbol): Die Aufgabe mit ihren Kommentaren und ihrem Verlauf entfernen (erfordert `tasks:admin`). Sie bestätigen zuerst, und das Löschen lässt sich nicht rückgängig machen
   - **Schließen**: Zur Aufgabenliste zurückkehren
 
 Unter der Symbolleiste zeigt der Titelblock:
@@ -657,7 +657,7 @@ Sie können eine Aufgabe zu einer Portfolio-Anfrage befördern, wenn die Arbeit 
 ### So konvertieren Sie
 
 1. Öffnen Sie den Aufgaben-Arbeitsbereich
-2. Klicken Sie auf **In Anfrage umwandeln** in der Kopfzeilen-Symbolleiste (neben **Link senden**)
+2. Klicken Sie auf **In Anfrage umwandeln** in der Kopfzeilen-Symbolleiste (neben **Teilen**)
 3. Im Dialog:
    - **Anfragenname**: Standardmäßig der Aufgabentitel. Bei Bedarf bearbeiten
    - **Zweck-Vorschau**: Zeigt die Aufgabenbeschreibung an, die zum Zweck der Anfrage wird
@@ -695,7 +695,7 @@ Die Anfrage wird mit dem Status **Wartet auf Überprüfung** erstellt und ist mi
 Sie können einen Link zu jeder Aufgabe per E-Mail an Kollegen oder externe Kontakte senden.
 
 1. Öffnen Sie den Aufgaben-Arbeitsbereich
-2. Klicken Sie auf **Link senden** in der Kopfzeilen-Symbolleiste
+2. Klicken Sie auf **Teilen** in der Kopfzeilen-Symbolleiste
 3. Im Dialog:
    - **Empfänger auswählen**: Suchen Sie nach vorhandenen Plattformbenutzern nach Name oder E-Mail und/oder geben Sie eine beliebige E-Mail-Adresse ein und drücken Sie Enter
    - **Eine Nachricht hinzufügen** (optional): Eine persönliche Notiz einfügen

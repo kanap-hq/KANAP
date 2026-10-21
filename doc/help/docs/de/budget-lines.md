@@ -194,7 +194,7 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Seine Adresse nennt die Zeile über ihre Referenz, zum Beispiel `/ops/budget/BL-12/overview`. Er besteht aus vier Teilen:
 
-- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Link senden**, das Menü **...** (**Typ ändern…**, siehe [Typ ändern](#typ-andern)) und die Schaltfläche zum Schließen
+- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen**, das Menü **...** (**Typ ändern…**, siehe [Typ ändern](#typ-andern)) und die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachbereichsverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Zeile einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Zeile gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
 - **Vier Tabs**: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile)
 - **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ**. Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl

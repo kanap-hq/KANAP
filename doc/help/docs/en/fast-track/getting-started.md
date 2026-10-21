@@ -209,9 +209,9 @@ For project tasks, time logging is essential: it feeds the roadmap generator and
 
 ### Share a task
 
-Need to loop someone in? Click **Send Link** in the task header to email a direct link to any colleague, even people outside KANAP. Add a personal message if needed.
+Need to loop someone in? Click **Share** in the task header to email a direct link to any colleague, even people outside KANAP. Add a personal message if needed.
 
-!!! info "Send Link works everywhere"
+!!! info "Share works everywhere"
     This isn't just for tasks. You can send links to projects, requests, contracts, apps: any workspace object. It's the fastest way to point someone to the right place.
 
 ---
@@ -299,7 +299,7 @@ The weekly email and real-time notifications keep you in the loop without checki
 | Change theme (light/dark) | Avatar → My Profile → Appearance tab |
 | Set my availability | Portfolio → Contributors → your name |
 | Add my skills | Portfolio → Contributors → your name → Skills tab |
-| Share a link to anything | Open any workspace → Send Link |
+| Share a link to anything | Open any workspace → Share |
 | Customize my dashboard | Dashboard → Settings (gear icon) |
 
 ---

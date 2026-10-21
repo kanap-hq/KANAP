@@ -113,7 +113,7 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 - **Referenz**: zum Kopieren anklicken.
 - **Lebenszyklus**: zum Ändern anklicken. Eine ausgemusterte Technologie wird beim Suchen nach einer zu verknüpfenden Technologie nicht mehr angeboten.
 - **Familie**.
-- **Löschen** (`infrastructure:admin`): Die Bestätigung nennt, was mit der Technologie gelöscht wird.
+- **Löschen**, ein Papierkorbsymbol (`infrastructure:admin`): Die Bestätigung nennt, was mit der Technologie gelöscht wird.
 
 ### Eigenschaftenfeld
 

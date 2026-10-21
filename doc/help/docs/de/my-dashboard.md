@@ -160,13 +160,13 @@ Die Stufen sind die in den Einstellungen der IT-Landschaft definierten; eine nic
 
 ---
 
-### Schwachstellen { #vulnerabilities }
+### Schwachstellen im Bestand { #vulnerabilities }
 
-Zeigt die Schwachstellen, die in Ihrem Bestand Aufmerksamkeit brauchen. Die Zählungen folgen [Was KANAP zählt](vulnerabilities.md#what-kanap-counts): noch zu prüfende Schwachstellen in den Warnungen. Jede Zeile öffnet die passende Liste:
+Zeigt die Schwachstellen, die in Ihrem Bestand Aufmerksamkeit brauchen, unter dem Untertitel „Zu prüfende CVEs in eingesetzten Technologien“. Die Zählungen folgen [Was KANAP zählt](vulnerabilities.md#what-kanap-counts): noch zu prüfende Schwachstellen in den Warnungen. Jede Zeile öffnet die passende Liste:
 
 - **Anwendungen der höchsten Kritikalität mit einer kritischen oder hohen CVE**, zum Beispiel „2 Anwendungen der Kritikalität Kritisch mit einer kritischen oder hohen CVE“: die Anwendungen auf der höchsten Stufe der Geschäftskritikalität Ihres Katalogs, die eine kritische oder hohe Schwachstelle erreicht. Öffnet die Anwendungsliste, gefiltert auf diese Stufe und auf **Mit schwerwiegenden Schwachstellen**. Erfordert `applications:reader` und zählt die Anwendungen, die Sie lesen dürfen.
-- **Kritische CVEs in den letzten 7 Tagen** und **in den letzten 30 Tagen veröffentlicht**, auf Technologien im Bestand: installiert auf einem Asset in Betrieb oder deklariert von einer Anwendung in Betrieb. Öffnet die Seite [Schwachstellen](vulnerabilities.md) auf diesen Schwachstellen.
-- **Bekanntermaßen ausgenutzte CVEs**, auf Technologien im Bestand. Öffnet die Seite Schwachstellen auf den ausgenutzten.
+- **Kritische CVEs in den letzten 7 Tagen** und **in den letzten 30 Tagen veröffentlicht**, auf Technologien im Bestand: installiert auf einem Asset in Betrieb oder deklariert von einer Anwendung in Betrieb. Öffnet die Seite [Schwachstellen](vulnerabilities.md) auf diesen Schwachstellen, mit dem Filter **Im Bestand im Einsatz**.
+- **Bekanntermaßen ausgenutzte CVEs**, auf Technologien im Bestand. Öffnet die Seite Schwachstellen auf den ausgenutzten, mit demselben Filter.
 - **Assets mit einer kritischen oder hohen CVE**. Öffnet die Asset-Liste, gefiltert auf **Mit schwerwiegenden Schwachstellen**.
 
 Eine Zeile mit null ist ausgeblendet. Stehen alle Zeilen auf null, zeigt die Kachel „Keine kritische Schwachstelle zu prüfen.“. Eine Warnung folgt, wenn eine Quelle seit mehr als 3 Tagen nicht gelesen wurde, zum Beispiel „Die NVD wurde seit 4 Tagen nicht gelesen“: Die Zahlen können dann veraltet sein. **Alle anzeigen** öffnet die Seite Schwachstellen.

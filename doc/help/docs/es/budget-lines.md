@@ -194,7 +194,7 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dirección nombra la línea por su referencia, por ejemplo `/ops/budget/BL-12/overview`. Tiene cuatro partes:
 
-- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Enviar enlace**, el menú **...** (**Cambiar el tipo…**, consulte [Cambiar el tipo](#cambiar-el-tipo)) y el botón de cierre
+- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, el menú **...** (**Cambiar el tipo…**, consulte [Cambiar el tipo](#cambiar-el-tipo)) y el botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cuatro pestañas**: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea)
 - **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo**. Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
