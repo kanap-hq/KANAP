@@ -80,6 +80,8 @@ Una conexión que involucra múltiples servidores (p. ej., clústeres con balanc
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. Tiene cuatro pestañas: **Visión general**, **Capas**, **Criticidad y conformidad** e **Interfaces relacionadas**.
 
+**Eliminar**, un icono de papelera en el encabezado, elimina la conexión tras una confirmación (`infrastructure:member`). La confirmación cuenta los enlaces de interfaz de los que se desvincula. Las interfaces en sí se conservan.
+
 ### Visión general
 
 La pestaña Visión general captura la identidad y topología de la conexión.

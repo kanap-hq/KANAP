@@ -11,7 +11,9 @@ import { Features } from '../config/features';
 import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { CveNamesService } from './cve-names.service';
+import { vulnerabilityHomeSummary } from './vulnerability-home-summary';
 import { VulnerabilitiesService, type ApplicationsAccess, type VulnerabilityFilters, type VulnOpts } from './vulnerabilities.service';
+import { VulnerabilityReachService } from './vulnerability-reach.service';
 
 /** Every vulnerability route answers 403 `FEATURE_DISABLED` while `VULNERABILITY_FEED_ENABLED` is off. */
 @Injectable()
@@ -37,7 +39,7 @@ async function applicationsAccess(ctx: TenantRequest): Promise<ApplicationsAcces
   return { scope };
 }
 
-/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export`, `filter-values`, `cve-names` and `sources` before `:cveId`. */
+/** The vulnerabilities of the tenant (lot T6a), under the `infrastructure` permission. `export`, `filter-values`, `cve-names`, `sources` and `home-summary` before `:cveId`. */
 @UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
 @Controller('vulnerabilities')
 export class VulnerabilitiesController {
@@ -66,18 +68,18 @@ export class VulnerabilitiesController {
     return file.content;
   }
 
-  /** The values of the grid's version filter, under the other filters. */
+  /** The values of the page's filters: the version labels under the other filters, the assets and applications with vulnerabilities that count. */
   @RequireLevel('infrastructure', 'reader')
   @Get('filter-values')
   async filterValues(@Query() query: VulnerabilityFilters & { fields?: string }, @Tenant() ctx: TenantRequest) {
-    return this.svc.filterValues(query ?? {}, opts(ctx));
+    return this.svc.filterValues(query ?? {}, opts(ctx), await applicationsAccess(ctx));
   }
 
   /** The state (and a common note) of many rows at once: chosen ones, or all of the filter. */
   @RequireLevel('infrastructure', 'member')
   @Post('bulk-state')
   async bulkState(@Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
-    return this.svc.bulkState(body ?? {}, opts(ctx));
+    return this.svc.bulkState(body ?? {}, opts(ctx), await applicationsAccess(ctx));
   }
 
   /** Published CVE.org vendor and product names. A static path, declared before `:cveId`. */
@@ -92,6 +94,13 @@ export class VulnerabilitiesController {
   @Get('sources')
   sources(@Tenant() ctx: TenantRequest) {
     return this.svc.sources(opts(ctx));
+  }
+
+  /** The home tile's figures (lot 6). A static path, declared before `:cveId`. */
+  @RequireLevel('infrastructure', 'reader')
+  @Get('home-summary')
+  async homeSummary(@Tenant() ctx: TenantRequest) {
+    return vulnerabilityHomeSummary(opts(ctx), await applicationsAccess(ctx), (o) => this.svc.sources(o));
   }
 
   @RequireLevel('infrastructure', 'reader')
@@ -130,5 +139,34 @@ export class TechnologyVulnerabilitiesController {
   @Patch(':cveId')
   async update(@Param('id') id: string, @Param('cveId') cveId: string, @Body() body: Record<string, unknown>, @Tenant() ctx: TenantRequest) {
     return this.svc.update(id, cveId, body ?? {}, opts(ctx));
+  }
+}
+
+/** The vulnerabilities of an asset (id or `AST-n`), for its record and badge, under `infrastructure`. */
+@UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
+@Controller('assets/:id/vulnerabilities')
+export class AssetVulnerabilitiesController {
+  constructor(private readonly svc: VulnerabilityReachService) {}
+
+  @RequireLevel('infrastructure', 'reader')
+  @Get()
+  list(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.ofAsset(id, opts(ctx));
+  }
+}
+
+/**
+ * The vulnerabilities of an application (id or `APP-n`), for its record and badge, under
+ * `applications`, among the applications the user reads (outside them: 404).
+ */
+@UseGuards(JwtAuthGuard, VulnerabilityFeedGuard, PermissionGuard)
+@Controller('applications/:id/vulnerabilities')
+export class ApplicationVulnerabilitiesController {
+  constructor(private readonly svc: VulnerabilityReachService) {}
+
+  @RequireLevel('applications', 'reader')
+  @Get()
+  async list(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.svc.ofApplication(id, opts(ctx), await applicationsAccess(ctx));
   }
 }

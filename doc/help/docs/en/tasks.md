@@ -129,9 +129,9 @@ Click any row to open the task workspace. The workspace puts the task content (d
 The header contains:
   - **Back** breadcrumb to **Tasks** (or to the originating project workspace, when you came from one)
   - **Position indicator**: Your position in the filtered list (e.g., "3 of 12") with **Previous** / **Next** arrows
-  - **Send link**: Email a link to the task
+  - **Share**: Email a link to the task
   - **Convert to Request**: Promote the task to a portfolio request
-  - **Delete**: Remove the task, with its comments and history (requires `tasks:admin`). You confirm first, and the delete cannot be undone
+  - **Delete** (trash icon): Remove the task, with its comments and history (requires `tasks:admin`). You confirm first, and the delete cannot be undone
   - **Close**: Return to the task list
 
 Below the toolbar, the title block shows:
@@ -657,7 +657,7 @@ You can promote a task into a portfolio request when the work deserves formal ev
 ### How to convert
 
 1. Open the task workspace
-2. Click **Convert to Request** in the header toolbar (next to **Send link**)
+2. Click **Convert to Request** in the header toolbar (next to **Share**)
 3. In the dialog:
    - **Request Name**: Defaults to the task title. Edit if needed
    - **Purpose Preview**: Shows the task description, which becomes the request's purpose
@@ -695,7 +695,7 @@ The request is created with a status of **Pending Review** and is linked back to
 You can email a link to any task to colleagues or external contacts.
 
 1. Open the task workspace
-2. Click **Send link** in the header toolbar
+2. Click **Share** in the header toolbar
 3. In the dialog:
    - **Select recipients**: Search for existing platform users by name or email, and/or type any email address and press Enter
    - **Add a message** (optional): Include a personal note

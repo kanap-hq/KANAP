@@ -131,7 +131,7 @@ Jede Änderung speichert sich selbst: Auswahllisten und Daten sofort, eingetippt
 
 Zum Bearbeiten benötigen Sie `contracts:member`. Leser sehen dieselbe Seite mit gesperrten Feldern.
 
-**Link senden** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail.
+**Teilen** in der Kopfzeile schickt Kollegen Ihres Arbeitsbereichs einen Link zum Vertrag per E-Mail.
 
 Die Seite hat vier Reiter: **Übersicht**, **Budget**, **Konformität** und **Verknüpfungen**. Die Adressen der früheren Reiter **Details** und **Aufgaben** öffnen die Übersicht.
 
@@ -223,7 +223,7 @@ Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
 
 ### Einen Vertrag löschen
 
-**Löschen** in der Kopfzeile der Vertragsseite, oder in der Liste für die angehakten Verträge, löscht Verträge (`contracts:admin`). Dies kann nicht rückgängig gemacht werden.
+**Löschen** (Papierkorbsymbol) in der Kopfzeile der Vertragsseite, oder in der Liste für die angehakten Verträge, löscht Verträge (`contracts:admin`). Dies kann nicht rückgängig gemacht werden.
 
 - Die Verknüpfungen werden entfernt, die verknüpften Elemente bleiben erhalten: Budgetzeilen, Anwendungen, Assets (auch die, deren Supportvertrag er ist) und Kontakte verlieren ihre Verknüpfung mit dem Vertrag
 - Was zum Vertrag gehört, wird mit ihm gelöscht: seine Aufgaben (auch die Aufgabe zur Verlängerungsentscheidung), relevanten Websites und Anhänge
@@ -317,4 +317,4 @@ Halten Sie Ihre Vertragsliste per CSV mit anderen Werkzeugen synchron (`contract
 - **Verknüpfen Sie Budgetzeilen früh**: **Abweichung** und der Filter **Unterbudgetiert** helfen nur, wenn der Vertrag mit den Zeilen verknüpft ist, die ihn bezahlen.
 - **Erfassen Sie den Jahresbetrag**: Auch bei monatlicher Abrechnung speist der Jahresbetrag die Verpflichtung und die Summen.
 - **Verknüpfen Sie Anwendungen und Assets**: Sie entscheiden, welche Klauseln der Vertrag enthalten sollte.
-- **Teilen Sie einen Vertrag**: Nutzen Sie **Link senden** oder kopieren Sie die Adresse der Seite. Sie öffnet denselben Reiter und behält Ihren Listenkontext.
+- **Teilen Sie einen Vertrag**: Nutzen Sie **Teilen** oder kopieren Sie die Adresse der Seite. Sie öffnet denselben Reiter und behält Ihren Listenkontext.

@@ -1,10 +1,9 @@
 import { BadRequestException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition, type ParticipationAccessScope } from '../../auth/business-contributor-scope';
-import { Features } from '../../config/features';
 import { gridTextClause } from '../../technologies/technologies.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
-import { vulnerabilityAlertsSql } from '../../vulnerabilities/vulnerability-alerts';
+import { countingRowSql, rowJoinsSql, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
 import { assetInServiceSql, inServiceSql } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
@@ -119,14 +118,14 @@ export function versionsInUseText(versions: VersionInUse[] | null): string | nul
   return parts.join('; ');
 }
 
+/** The distinct CVE of the technology `t` that count (`vulnerability-reach-counts.ts`); null with the feed off. */
 export function technologyOpenVulnerabilitiesSql(t: string): string {
-  if (!Features.VULNERABILITY_FEED_ENABLED) return 'NULL::int';
+  if (!vulnerabilityCountsEnabled()) return 'NULL::int';
+  const a = { row: 'tv', technology: t, version: 'ver', cve: 'vc', record: 'vr' };
   return `(SELECT count(DISTINCT tv.cve_id)::int
              FROM technology_vulnerabilities tv
-             JOIN vulnerability_cves vc ON vc.cve_id = tv.cve_id
-             LEFT JOIN technology_versions ver ON ver.tenant_id = tv.tenant_id AND ver.id = tv.technology_version_id
-            WHERE tv.tenant_id = ${t}.tenant_id AND tv.technology_id = ${t}.id AND tv.state = 'to_review'
-              AND ${vulnerabilityAlertsSql('ver', t)})`;
+             ${rowJoinsSql(a, false)}
+            WHERE tv.tenant_id = ${t}.tenant_id AND tv.technology_id = ${t}.id AND ${countingRowSql(a)})`;
 }
 
 /**

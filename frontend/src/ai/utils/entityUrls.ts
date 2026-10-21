@@ -30,6 +30,9 @@ const ENTITY_URL_BUILDERS: Record<string, (id: string) => string> = {
   departments: (id) => `/master-data/departments/${id}`,
   suppliers: (id) => `/master-data/suppliers/${id}`,
   business_processes: (id) => `/master-data/business-processes/${id}`,
+  // A CVE id: the vulnerabilities page searched on it, every state and alert setting (the
+  // backend links the assistant's vulnerabilities through their `page_url`).
+  vulnerabilities: (cveId) => `/it/vulnerabilities?${new URLSearchParams({ q: cveId, state: 'all', alerts: 'all' }).toString()}`,
 };
 
 export function buildEntityUrl(entityType: string, id: string): string | null {

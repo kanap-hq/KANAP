@@ -70,7 +70,7 @@ Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para do
 
 ---
 
-## Trabajar con la lista
+## Trabajar con la lista { #working-with-the-list }
 
 La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio de aplicaciones.
 
@@ -82,6 +82,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 
 **Columnas predeterminadas**:
 - **Nombre**: Nombre de la aplicación con la categoría como subtítulo y una insignia "Incluido en: {suite}" para los componentes de una suite
+- **Vulnerabilidades por revisar**: las vulnerabilidades aún por revisar en las tecnologías que la aplicación declara o que sus servidores de despliegue tienen registradas y, en naranja, cuántas son críticas o altas (`5 · 2`). Vacía para una aplicación desactivada o cuando no queda ninguna. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Presente cuando se siguen las vulnerabilidades. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)
 - **Categoría**: El propósito principal de la aplicación
 - **Entornos**: Chips de colores que muestran entornos activos (Prod, Pre-prod, QA, Test, Dev, Sandbox). Pase el ratón para ver la URL base y el ciclo de vida.
 - **Ciclo de vida**: Estado actual
@@ -112,6 +113,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - Los filtros de criticidad, criticidad cibernética, clase de datos y ola de recuperación listan sus valores en el orden del catálogo (la más crítica primero, las olas en orden de restauración).
 - La mayoría de columnas usan filtros de conjunto de casillas que solo muestran los valores presentes en el conjunto de resultados actual; el filtro flotante muestra `Todos`, `Ninguno` o `N seleccionados` con una **x** para limpiar.
 - Las aplicaciones retiradas están ocultas por defecto; use el filtro de **Ciclo de vida** para incluir Retiradas.
+- **Vulnerabilidades por revisar** filtra por **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**, y ordena por las vulnerabilidades críticas o altas y luego por el total. Las aplicaciones desactivadas van al final y no entran en ningún valor del filtro.
 
 **Acciones**:
 - **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
@@ -133,12 +135,13 @@ El encabezado muestra:
 - **Referencia**: identificador corto que puede copiar
 - Chip de **Ciclo de vida**: haga clic para cambiar
 - Chip de **Criticidad de negocio**: muestra el nivel y abre un menú con los niveles de la organización
+- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en la aplicación, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Solo se muestra cuando la aplicación tiene alguna
 - Chip de **Versión** (si hay versión definida): haga clic para copiar
 - Fecha de **Puesta en marcha**
-- **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
-- **Crear nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
+- **Compartir**: copiar un enlace compartible a este espacio de trabajo
+- **Nueva versión**: lanzar el asistente de migración de versión (consulte [Gestión de versiones](#gestion-de-versiones))
 - **Convertir en tecnología** (`applications:admin` e `infrastructure:member`): consulte [Convertir una aplicación en tecnología](#convertir-una-aplicacion-en-tecnologia)
-- **Eliminar** (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
+- **Eliminar**, un icono de papelera con su nombre en una información emergente (`applications:admin`): una aplicación con interfaces recibe el rechazo y el motivo, solo con Cerrar. Si no, la confirmación nombra la aplicación y cuenta los despliegues eliminados con ella, junto con sus vínculos con otros elementos
 - **Anterior / Siguiente**: recorrer la lista filtrada sin volver a la cuadrícula
 
 ### Panel de propiedades (panel derecho)
@@ -174,6 +177,11 @@ La pestaña Visión general es la narrativa de la aplicación. Contiene:
 **Conexiones**: Un resumen de solo lectura construido a partir de las interfaces de la aplicación. Para apps no middleware muestra dos filas: **Recibe de** y **Envía a**. Para apps ETL/middleware muestra una única fila **Conectado a**. Cada entrada es una píldora clicable que abre la aplicación relacionada; "+ N más en Interfaces" salta a la pestaña Interfaces.
 
 **Conocimiento**: Artículos de conocimiento vinculados. Si tiene `knowledge:member`, puede crear nuevos artículos directamente desde esta sección.
+
+**Soporte**:
+- Una tabla de contactos de soporte extraída de sus datos maestros de Contactos. Cada fila muestra el nombre del contacto, correo, teléfono y un rol de texto libre (p. ej., Gestor de cuenta, Soporte N1).
+- **Añadir contacto** abre un diálogo para elegir un contacto y definir un rol.
+- **Notas de soporte**: texto libre para los acuerdos de soporte (SLA, vías de escalado, información de guardias).
 
 ---
 
@@ -222,11 +230,17 @@ Cada fila muestra el nombre de la interfaz, la aplicación contraparte y un indi
 
 ---
 
-### Operaciones
+### Operaciones { #operations }
 
-La pestaña Operaciones captura las tecnologías de las que depende la aplicación, cómo acceden a ella los usuarios y quién la soporta.
+La pestaña Operaciones reúne, en este orden, cómo acceden los usuarios a la aplicación (**Técnico**), las tecnologías de las que depende y sus vulnerabilidades.
 
-**Tecnologías** (arriba en la pestaña) lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**. Columnas: referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar.
+**Técnico**:
+- **Métodos de acceso** (selección múltiple): cómo acceden los usuarios a esta aplicación. Las opciones son configurables en [Configuración del Panorama IT](it-ops-settings.md). Los valores predeterminados incluyen Web, Aplicación instalada localmente, Aplicación móvil, HMI propietario (interfaz industrial), Terminal / CLI, VDI / Escritorio remoto, Kiosk.
+- **Acceso externo**: si la aplicación es accesible desde internet
+- **Integración de datos / ETL**: si la aplicación participa en pipelines de integración de datos (también activa el modo "middleware" para esta app en las vistas de Interfaces y Conexiones)
+- **Puede tener apps hijas**: convertir esta aplicación en una Suite que agrupa otras aplicaciones
+
+**Tecnologías** lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**. Columnas: referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar.
 
 - **Declarada**: alguien vinculó la tecnología a la aplicación, por ejemplo Entra ID para una aplicación cuyos usuarios inician sesión con ella.
 - **Alojada**: un servidor de uno de sus despliegues lleva la tecnología. **Vía** nombra el servidor, y el host cuando la tecnología se ejecuta en el host de una máquina virtual. Los despliegues desactivados no cuentan.
@@ -239,16 +253,20 @@ Una tecnología puede ser ambas cosas. Un guion en la columna de versiones indic
 
 Para añadir, cambiar o quitar una tecnología declarada, y para registrarla en servidores, necesita `applications:member` e `infrastructure:member`. Una tecnología alojada no tiene cruz: quítela del servidor.
 
-**Técnico**:
-- **Métodos de acceso** (selección múltiple): cómo acceden los usuarios a esta aplicación. Las opciones son configurables en [Configuración del Panorama IT](it-ops-settings.md). Los valores predeterminados incluyen Web, Aplicación instalada localmente, Aplicación móvil, HMI propietario (interfaz industrial), Terminal / CLI, VDI / Escritorio remoto, Kiosk.
-- **Acceso externo**: si la aplicación es accesible desde internet
-- **Integración de datos / ETL**: si la aplicación participa en pipelines de integración de datos (también activa el modo "middleware" para esta app en las vistas de Interfaces y Conexiones)
-- **Puede tener apps hijas**: convertir esta aplicación en una Suite que agrupa otras aplicaciones
+**Vulnerabilidades** (cuando se siguen las vulnerabilidades) lista las vulnerabilidades aún por revisar en la aplicación, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar: haga clic en él para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Una línea por tecnología y versión:
 
-**Soporte**:
-- Una tabla de contactos de soporte extraída de sus datos maestros de Contactos. Cada fila muestra el nombre del contacto, correo, teléfono y un rol de texto libre (p. ej., Gestor de cuenta, Soporte N1).
-- **Añadir contacto** abre un diálogo para elegir un contacto y definir un rol.
-- **Notas de soporte**: texto libre para los acuerdos de soporte (SLA, vías de escalado, información de guardias).
+| Columna | Qué muestra |
+|---|---|
+| **Tecnología**, **Versión** | La tecnología y su versión. **Versión no registrada (potencialmente afectada)** cuando no se indica ninguna versión |
+| **Servidores** | Los servidores de despliegue que tienen esta tecnología y esta versión registradas en sí mismos. **Declarada** cuando la aplicación la declara y ningún servidor la tiene. **Registrar en un servidor** ofrece entonces sus servidores de despliegue, como en **Tecnologías** |
+| **Crít.**, **Alta**, **Media**, **Baja**, **S. eval.** | Una columna por gravedad (Crítica, Alta, Media, Baja, Sin evaluar, el nombre completo en una información emergente del encabezado): las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
+| **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
+
+**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Una aplicación desactivada no tiene sección.
+
+La sección solo cuenta vínculos directos. Una tecnología que la sección **Tecnologías** muestra a través del host de una máquina virtual no cuenta aquí: cuenta en el host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
+
+Un usuario que lee las aplicaciones sin leer la infraestructura sigue viendo esta sección, la insignia del encabezado y la columna de la lista, para las aplicaciones que puede leer.
 
 ---
 
@@ -296,7 +314,7 @@ Pueden aparecer dos indicaciones discretas: datos en el nivel de confidencialida
 
 ### Relaciones
 
-La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías están en la pestaña [Operaciones](#operaciones), los procesos de negocio en el [panel de propiedades](#panel-de-propiedades-panel-derecho). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, solicitudes e incidentes vinculados, así como los enlaces y archivos. Las tareas no se cuentan.
+La pestaña Relaciones muestra con qué está vinculada esta aplicación: sus líneas presupuestarias, contratos, proyectos, solicitudes, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías están en la pestaña [Operaciones](#operations), los procesos de negocio en el [panel de propiedades](#panel-de-propiedades-panel-derecho). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta las líneas presupuestarias, contratos, proyectos, solicitudes e incidentes vinculados, así como los enlaces y archivos. Las tareas no se cuentan.
 
 **Componentes** (solo cuando está activado "Puede tener apps hijas"): una tabla que lista las aplicaciones hijas de esta Suite, con su ciclo de vida y criticidad. Haga clic en una fila para abrir el espacio de trabajo del hijo.
 
@@ -362,7 +380,7 @@ KANAP ofrece **dos formas de gestionar versiones de aplicaciones**, dependiendo 
 | Enfoque | Ideal para | Qué sucede |
 |---------|------------|------------|
 | **Simple** | La mayoría de aplicaciones | Actualice los campos de versión en el panel de propiedades o en el formulario de creación: mismo registro, nuevo número de versión |
-| **Sofisticado** | Migraciones mayores | Use **Crear nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
+| **Sofisticado** | Migraciones mayores | Use **Nueva versión** para crear un nuevo registro de aplicación con seguimiento de linaje. Ejecute las versiones antigua y nueva en paralelo |
 
 ### Seguimiento simple de versiones (actualizaciones in situ)
 
@@ -374,7 +392,7 @@ Este enfoque mantiene todo en un solo registro. Cuando actualiza, modifique los 
 
 ### Crear una nueva versión (migraciones en paralelo)
 
-Para actualizaciones mayores de aplicaciones donde necesita ejecutar las versiones antigua y nueva en paralelo en diferentes entornos (p. ej., SAP S/4HANA 1909 en Prod mientras 2023 está en QA), utilice **Crear nueva versión** en el encabezado del espacio de trabajo.
+Para actualizaciones mayores de aplicaciones donde necesita ejecutar las versiones antigua y nueva en paralelo en diferentes entornos (p. ej., SAP S/4HANA 1909 en Prod mientras 2023 está en QA), utilice **Nueva versión** en el encabezado del espacio de trabajo.
 
 El asistente tiene tres pasos:
 
@@ -436,9 +454,9 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Qué NO se copia**: Despliegues, interfaces, asignaciones de servidores, adjuntos, campos de versión (versión, fecha de puesta en marcha, fin de soporte).
 
-### Comparación: Copiar elemento vs Crear nueva versión
+### Comparación: Copiar elemento vs Nueva versión
 
-| Aspecto | Copiar elemento | Crear nueva versión |
+| Aspecto | Copiar elemento | Nueva versión |
 |---------|-----------------|---------------------|
 | **Propósito** | Duplicado independiente | Sucesor versionado con linaje |
 | **Opciones del usuario** | Ninguna (automático) | Asistente de 3 pasos |
@@ -448,7 +466,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Relaciones**:
 
-| Relación | Copiar elemento | Crear nueva versión |
+| Relación | Copiar elemento | Nueva versión |
 |----------|-----------------|---------------------|
 | Responsables (negocio e IT) | Sí | Opcional (predeterminado: sí) |
 | Empresas (audiencia) | Sí | Opcional (predeterminado: sí) |
@@ -468,7 +486,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 **Campos principales**:
 
-| Campo | Copiar elemento | Crear nueva versión |
+| Campo | Copiar elemento | Nueva versión |
 |-------|-----------------|---------------------|
 | Descripción | Sí | Sí |
 | ETL habilitado | Sí | Sí |
@@ -598,6 +616,10 @@ Una celda de clasificación vacía conserva el valor existente en los modos Enri
 | `users_override` | Sobrescritura manual del conteo de usuarios |
 | `created_at` | Marca de tiempo de creación del registro |
 | `updated_at` | Marca de tiempo de última modificación |
+| `vulnerabilities_to_review` | Vulnerabilidades aún por revisar, contadas como en la columna de la lista. Vacía para una aplicación desactivada |
+| `severe_vulnerabilities` | De ellas, las críticas o altas. Vacía para una aplicación desactivada |
+
+Las dos columnas de vulnerabilidades no aparecen cuando no se siguen las vulnerabilidades. La importación las ignora.
 
 ### Aceptación de etiquetas y códigos
 

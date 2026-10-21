@@ -13,7 +13,11 @@ export type RelationsColumn<T> = {
    * shrink, down to 96px (a date, an amount), so that the name keeps at least 120px.
    */
   width?: number;
+  /** The least width the column shrinks to in a narrow table, in place of the 96px floor (a label with long words). */
+  minWidth?: number;
   align?: 'left' | 'right';
+  /** The cells wrap on several lines instead of being cut by the ellipsis (a list of names, a long label). */
+  wrap?: boolean;
   /**
    * The column hides in a table too narrow for it (1 first, then 2, ...), once the columns with a
    * width would otherwise lose more than a fifth of it or go below 96px. Without one, the column
@@ -66,6 +70,12 @@ const COLUMN_MIN_WIDTH = 96;
 /** The share of their width the columns may lose before the next one with a `hideOrder` hides. */
 const MAX_SHRINK = 0.2;
 
+/** The width a column with a width shrinks to: its `minWidth`, or 96px (a narrower column keeps its own). */
+function leastWidth(column: Pick<RelationsColumn<unknown>, 'width' | 'minWidth'>): number | undefined {
+  if (column.width == null) return undefined;
+  return Math.min(column.width, column.minWidth ?? COLUMN_MIN_WIDTH);
+}
+
 /**
  * Fits the column widths in `available` px (the trailing action columns excluded): the columns
  * with a width give up room in proportion to what they can spare, so that the column without
@@ -73,7 +83,7 @@ const MAX_SHRINK = 0.2;
  * the table needs, and its frame scrolls.
  */
 export function fitColumnWidths(
-  columns: Array<Pick<RelationsColumn<unknown>, 'width'>>,
+  columns: Array<Pick<RelationsColumn<unknown>, 'width' | 'minWidth'>>,
   available: number,
 ): { widths: Array<number | undefined>; minWidth?: number } {
   const widths = columns.map((column) => column.width);
@@ -81,7 +91,7 @@ export function fitColumnWidths(
   const room = available - flexMin;
   const total = widths.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (total <= room) return { widths };
-  const floors = widths.map((width) => (width == null ? undefined : Math.min(width, COLUMN_MIN_WIDTH)));
+  const floors = columns.map((column) => leastWidth(column));
   const floorTotal = floors.reduce<number>((sum, width) => sum + (width ?? 0), 0);
   if (floorTotal >= room) return { widths: floors, minWidth: floorTotal + flexMin };
   const ratio = (total - room) / (total - floorTotal);
@@ -91,7 +101,7 @@ export function fitColumnWidths(
 }
 
 /** Hides the columns a narrow table cannot hold (by `hideOrder`), then fits the others' widths. */
-export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'hideOrder'>>(
+export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'minWidth' | 'hideOrder'>>(
   columns: C[],
   available: number,
 ): { columns: C[]; widths: Array<number | undefined>; minWidth?: number } {
@@ -99,7 +109,7 @@ export function fitColumns<C extends Pick<RelationsColumn<unknown>, 'width' | 'h
   const hidden = new Set<C>();
   const total = (least: boolean) => columns.reduce((sum, column) => {
     if (column.width == null || hidden.has(column)) return sum;
-    return sum + (least ? Math.min(column.width, COLUMN_MIN_WIDTH) : column.width);
+    return sum + (least ? leastWidth(column)! : column.width);
   }, 0);
   const hideable = columns
     .filter((column) => column.width != null && column.hideOrder != null)
@@ -193,6 +203,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
             textOverflow: 'ellipsis',
           },
           '& .r': { textAlign: 'right' },
+          '& td.w': { whiteSpace: 'normal', overflow: 'visible', textOverflow: 'clip', overflowWrap: 'anywhere' },
           '& tfoot td': { fontWeight: 500, borderBottom: 'none', borderTop: `1px solid ${theme.palette.kanap.border.default}` },
           '& tbody tr:hover td': { backgroundColor: theme.palette.kanap.bg.hover },
           '& tbody tr[data-href]': { cursor: 'pointer' },
@@ -231,7 +242,7 @@ export function RelationsTable<T>({ columns: allColumns, rows, rowKey, rowHref, 
                   component="td"
                   key={column.key}
                   colSpan={span > 1 ? span : undefined}
-                  className={column.align === 'right' && span === 1 ? 'r' : undefined}
+                  className={[column.align === 'right' && span === 1 ? 'r' : null, column.wrap ? 'w' : null].filter(Boolean).join(' ') || undefined}
                   sx={muted && index === nameIndex ? { '&&': { color: 'kanap.text.tertiary' } } : undefined}
                 >
                   {column.render(row)}

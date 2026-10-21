@@ -213,7 +213,7 @@ Cerrar bloquea el incidente. Campos, revisión del incidente, notas del diario, 
 
 ### Eliminar un incidente
 
-**Eliminar** (`incidents:admin`) está en la página del incidente y en la lista una vez seleccionadas las filas. Retira un registro que no tiene cabida en el registro de incidentes, como una entrada de prueba. Los demás usuarios no ven ni el botón ni la selección.
+**Eliminar** (`incidents:admin`) es un icono de papelera en la página del incidente y en la lista una vez seleccionadas las filas. Retira un registro que no tiene cabida en el registro de incidentes, como una entrada de prueba. Los demás usuarios no ven ni el botón ni la selección.
 
 Antes de retirar nada, una confirmación indica lo que se va con el incidente: su revisión de incidente, sus tareas, sus entradas del diario y sus adjuntos (también los archivos). También indica los vínculos que se quitan: las aplicaciones, los activos y los documentos de Knowledge se mantienen, solo desaparece su vínculo con el incidente. La eliminación queda registrada en la pista de auditoría.
 

@@ -39,7 +39,26 @@ type Flow =
  * a declaration changes from the version; a declaration no server of the application carries can
  * be recorded on one. One read of `GET /applications/:id/relations`; each write is one call.
  */
-export default function ApplicationTechnologiesSection({ id }: { id: string }) {
+/** What the section lends to the content rendered after it. */
+export type ApplicationTechnologyTools = {
+  /**
+   * Opens "Record on a server" for a declared technology and version, the flow of the section's own
+   * row action. Undefined when the user may not record on servers or the application has none.
+   */
+  recordOnServer?: (
+    target: { technologyId: string; name: string; versionId: string | null; version: string | null },
+    anchor: HTMLElement,
+  ) => void;
+};
+
+export default function ApplicationTechnologiesSection({
+  id,
+  after,
+}: {
+  id: string;
+  /** Rendered after the section, even when the user may not see the technologies. */
+  after?: (tools: ApplicationTechnologyTools) => React.ReactNode;
+}) {
   const { t, i18n } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const { labelFor } = useItOpsEnumOptions();
@@ -126,7 +145,7 @@ export default function ApplicationTechnologiesSection({ id }: { id: string }) {
     return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: row.reference, hint: row.editor }));
   }, []);
 
-  if (data && data.technologies === null) return null;
+  if (data && data.technologies === null) return after ? <>{after({})}</> : null;
 
   const rows = data?.technologies ?? [];
   const servers = data?.deployment_servers ?? [];
@@ -150,6 +169,19 @@ export default function ApplicationTechnologiesSection({ id }: { id: string }) {
     }
     setFlow({ step: 'servers', anchor, technology, choice, version: versionText(choice), mode: 'add' });
   };
+  const recordOnServer: ApplicationTechnologyTools['recordOnServer'] = data && canRecordOnServers && servers.length > 0
+    ? (target, anchor) => {
+      if (!offersServers(target.technologyId, familyOf(target.technologyId))) return;
+      setFlow({
+        step: 'servers',
+        anchor,
+        technology: { id: target.technologyId, label: target.name },
+        choice: { technology_version_id: target.versionId },
+        version: target.version,
+        mode: 'record',
+      });
+    }
+    : undefined;
   const today = todayYmd();
   const dash = '—';
   const title = t('workspace.application.relations.sections.technologies');
@@ -344,6 +376,7 @@ export default function ApplicationTechnologiesSection({ id }: { id: string }) {
           />
         )}
       </RelationsSection>
+      {after?.({ recordOnServer })}
     </>
   );
 }

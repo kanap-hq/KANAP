@@ -85,9 +85,9 @@ El encabezado del espacio de trabajo le da contexto operativo sin salir de la p�
 
 - una referencia de solicitud copiable como `REQ-42`
 - una franja de metadatos con **Estado**, **Puntuación**, **Solicitante**, **Responsable IT**, **Fecha de entrega objetivo** y (cuando aplica) la **Tarea de origen** desde la que se creó la solicitud
-- **Enviar enlace** para compartir
+- **Compartir** para enviar un enlace a la solicitud
 - **Convertir en proyecto** cuando la solicitud está **Aprobada** o **Convertida**
-- **Eliminar** para administradores (cuando la solicitud aún no se ha convertido). Una solicitud convertida sigue siendo el origen de su proyecto y no se puede eliminar
+- **Eliminar**, un icono de papelera, para administradores (cuando la solicitud aún no se ha convertido). Una solicitud convertida sigue siendo el origen de su proyecto y no se puede eliminar
 - navegación anterior/siguiente basada en el contexto exacto de la lista del que vino
 
 ### Panel de Propiedades

@@ -478,7 +478,26 @@
       "netboxMissing_one": "{{count}} Asset fehlt in Netbox",
       "netboxMissing_other": "{{count}} Assets fehlen in Netbox",
       "netboxErrors_one": "{{count}} Fehler",
-      "netboxErrors_other": "{{count}} Fehler"
+      "netboxErrors_other": "{{count}} Fehler",
+      "vulnerabilities": "Schwachstellen im Bestand",
+      "vulnerabilitiesSubtitle": "Zu prüfende CVEs in eingesetzten Technologien",
+      "vulnerabilitiesLines": {
+        "applications_one": "Anwendung der Kritikalität {{level}} mit einer kritischen oder hohen CVE",
+        "applications_other": "Anwendungen der Kritikalität {{level}} mit einer kritischen oder hohen CVE",
+        "critical7_one": "kritische CVE in den letzten 7 Tagen veröffentlicht",
+        "critical7_other": "kritische CVEs in den letzten 7 Tagen veröffentlicht",
+        "critical30_one": "kritische CVE in den letzten 30 Tagen veröffentlicht",
+        "critical30_other": "kritische CVEs in den letzten 30 Tagen veröffentlicht",
+        "exploited_one": "bekanntermaßen ausgenutzte CVE",
+        "exploited_other": "bekanntermaßen ausgenutzte CVEs",
+        "assets_one": "Asset mit einer kritischen oder hohen CVE",
+        "assets_other": "Assets mit einer kritischen oder hohen CVE"
+      },
+      "vulnerabilitiesNone": "Keine kritische Schwachstelle zu prüfen.",
+      "vulnerabilitiesStaleNvd_one": "Die NVD wurde seit {{count}} Tag nicht gelesen",
+      "vulnerabilitiesStaleNvd_other": "Die NVD wurde seit {{count}} Tagen nicht gelesen",
+      "vulnerabilitiesStaleCveOrg_one": "CVE.org wurde seit {{count}} Tag nicht gelesen",
+      "vulnerabilitiesStaleCveOrg_other": "CVE.org wurde seit {{count}} Tagen nicht gelesen"
     },
     "welcome": "Willkommen",
     "budgetSettings": {
@@ -728,6 +747,7 @@
   },
   "share": {
     "sendLink": "Link senden",
+    "share": "Teilen",
     "searchUsersOrEmail": "Benutzer suchen oder E-Mail eingeben…",
     "messageOptional": "Nachricht (optional)",
     "addPersonalMessage": "Persönliche Nachricht hinzufügen…",

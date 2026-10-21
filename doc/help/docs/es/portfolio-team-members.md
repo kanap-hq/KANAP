@@ -237,7 +237,7 @@ Haga clic en el **icono de eliminar** junto a una entrada de tiempo para quitarl
 ## Acciones
 
 Desde el encabezado del espacio de trabajo:
-- **Eliminar**: Eliminar esta configuración de colaborador (no afecta la cuenta de usuario). Solo disponible al editar el perfil de otro colaborador con `portfolio_settings:admin`.
+- **Eliminar** (icono de papelera): Eliminar esta configuración de colaborador (no afecta la cuenta de usuario). Solo disponible al editar el perfil de otro colaborador con `portfolio_settings:admin`.
 - **Enlace de retorno**: Volver a la lista de colaboradores, o a **Configuración** si abrió su propio perfil
 
 No hay botón Guardar: cada cambio se guarda automáticamente.

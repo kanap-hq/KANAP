@@ -6,7 +6,7 @@ Ouvrez-la depuis **Cartographie SI > Vulnérabilités**, dans le groupe **Exploi
 
 ## Disponibilité
 
-Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne [les active](on-premise/configuration.md#optional-vulnerabilities) pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) et la liste CVE.org, ou un miroir de chacune. Le même interrupteur lit aussi trois sources d'exploitation, ou un miroir de chacune : le catalogue de la CISA, la base européenne des vulnérabilités de l'ENISA et les scores EPSS du jour. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans la liste des technologies, ni section sur une technologie, ni réglage de notification, ni e-mail.
+Les vulnérabilités sont suivies par défaut dans le cloud. Sur une installation sur site, elles restent désactivées tant que votre administrateur ne [les active](on-premise/configuration.md#optional-vulnerabilities) pas, et le serveur doit alors joindre la NVD (la base nationale des vulnérabilités des États-Unis) et la liste CVE.org, ou un miroir de chacune. Le même interrupteur lit aussi trois sources d'exploitation, ou un miroir de chacune : le catalogue de la CISA, la base européenne des vulnérabilités de l'ENISA et les scores EPSS du jour. Tant qu'elles sont désactivées, KANAP n'en montre rien : ni page, ni colonne dans les listes des technologies, des actifs et des applications, ni section ou badge sur une fiche, ni tuile au tableau de bord, ni réglage de notification, ni e-mail. Plaid ne répond pas non plus sur les vulnérabilités.
 
 ## Comment KANAP les trouve
 
@@ -48,7 +48,24 @@ Une version hors des alertes reste rapprochée des vulnérabilités. Elle reste 
 
 - Cette page ne montre par défaut que les lignes dans les alertes.
 - Les e-mails n'annoncent que les lignes dans les alertes.
-- La colonne **Vulnérabilités à traiter** de la liste des technologies ne compte que les lignes dans les alertes.
+- Les colonnes **Vulnérabilités à traiter** des listes des technologies, des actifs et des applications ne comptent que les lignes dans les alertes, comme les fiches, les badges et la tuile du tableau de bord.
+
+## Ce que KANAP compte { #what-kanap-counts }
+
+Une vulnérabilité atteint un serveur ou une application par des liens directs uniquement, partout : sur cette page, dans les listes, sur les fiches, au tableau de bord et dans Plaid.
+
+- **Serveur** : la technologie et la version sont renseignées sur le serveur lui-même. Un serveur retiré n'est pas compté.
+- **Application** : l'application déclare la technologie et la version, ou l'un de ses serveurs de déploiement les a renseignées sur lui-même. Une technologie à la fois déclarée et hébergée compte une fois. Une application désactivée, ou dont la date de désactivation est passée, n'est pas comptée.
+
+Les comptes par serveur et par application, dans les listes, sur les fiches, au tableau de bord et dans Plaid, suivent les mêmes règles :
+
+- **Quelles vulnérabilités** : celles encore **À traiter** dont la technologie ou la version est dans les alertes. Chaque vulnérabilité compte une fois, même quand elle concerne plusieurs versions.
+- **Sévérité** : celle de la NVD, ou celle de l'éditeur (CVE.org) quand la NVD n'a pas encore évalué la vulnérabilité. **Grave** veut dire critique ou élevée.
+- **Hors service** : un serveur retiré ou une application désactivée ne compte rien. Sa cellule reste vide.
+
+Une machine virtuelle ou un invité ne compte pas les vulnérabilités de son hôte. Une vulnérabilité de VMware ESXi ne compte que sur les hôtes ESXi. Compter par les hôtes mettrait une seule vulnérabilité d'un hyperviseur sur presque tous les serveurs et applications d'un parc virtualisé.
+
+La portée par un autre actif reste visible, sans être comptée : dans le panneau latéral d'une vulnérabilité, sous **Par un autre actif**, et sur la fiche d'un actif, dans la partie **Par un autre actif** de sa section **Vulnérabilités**. Voir [Actifs](assets.md#technical).
 
 ## La liste
 
@@ -71,18 +88,24 @@ Une ligne au-dessus de la grille indique quand KANAP a lu chaque source pour la 
 | **Technologie** | La technologie concernée |
 | **Version** | La version concernée. **Non renseignée** quand un serveur ou une application utilise la technologie sans nommer sa version : la ligne est alors potentiellement concernée |
 | **Éditeur** | L'éditeur de la technologie. Masquée par défaut |
-| **Serveurs** | Le nombre de serveurs qui portent cette version, directement ou par le serveur dans lequel ils tournent |
-| **Applications** | Le nombre d'applications qui utilisent cette version, hébergées ou déclarées |
+| **Serveurs** | Le nombre de serveurs qui ont cette version renseignée sur eux-mêmes. Un serveur qui tourne dans un autre n'est pas compté. Voir [Ce que KANAP compte](#what-kanap-counts) |
+| **Applications** | Le nombre d'applications qui déclarent cette version, ou qui tournent sur un serveur qui l'a renseignée |
 | **Source** | Les sources qui ont rapproché la ligne : **NVD**, **Éditeur** (la fiche que l'éditeur a publiée sur CVE.org), ou les deux |
 | **État** | **À traiter**, **Traitée** ou **Non concernée** |
 | **Note** | La note de la ligne. Masquée par défaut |
 | **Publication** | La date de publication |
 
-**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Sévérité**, **Technologie**, **Version**, **Éditeur**, **Source**, **État** et **Exploitée** proposent des cases à cocher (**Version** propose aussi **Non renseignée**, **Exploitée** propose **Oui** et **Non**), **Score** un nombre, **EPSS (%)** un pourcentage minimal de 0 à 100, **Publication** une date, **CVE** et **Résumé** un texte. **Source** propose **NVD**, **Éditeur** et **Les deux** : une ligne que les deux sources ont rapprochée reste sous **NVD** et sous **Éditeur**, et **Les deux** ne garde que ces lignes. L'export et le changement d'état en masse le suivent, comme les autres filtres de colonne. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
+**Filtres** : chaque colonne a son propre filtre sous son en-tête. **Serveurs** et **Applications** listent les serveurs et les applications qu'une vulnérabilité atteint par liens directs : cherchez-en un par nom ou par référence et cochez-en un ou plusieurs. Plusieurs valeurs gardent les lignes de l'une d'elles, et un filtre dans les deux colonnes garde les lignes qui répondent aux deux. Le filtre **Applications** demande le droit de lire les applications. **Sévérité**, **Technologie**, **Version**, **Éditeur**, **Source**, **État** et **Exploitée** proposent des cases à cocher (**Version** propose aussi **Non renseignée**, **Exploitée** propose **Oui** et **Non**), **Score** un nombre, **EPSS (%)** un pourcentage minimal de 0 à 100, **Publication** une date, **CVE** et **Résumé** un texte. **Source** propose **NVD**, **Éditeur** et **Les deux** : une ligne que les deux sources ont rapprochée reste sous **NVD** et sous **Éditeur**, et **Les deux** ne garde que ces lignes. L'export et le changement d'état en masse le suivent, comme les autres filtres de colonne. La zone de recherche au-dessus de la grille porte sur l'identifiant CVE, le résumé et le nom de la technologie.
 
 **Tri** par **Exploitée**, **Sévérité**, **Score**, **EPSS (%)**, **Publication**, **CVE** ou **Technologie**. La liste s'ouvre sur les vulnérabilités exploitées activement, puis les plus sévères. Le sélecteur de colonnes affiche ou masque des colonnes, et la grille retient votre choix.
 
 **Liens** : la page lit ses filtres dans son adresse, ce qui permet de partager une liste filtrée. `?technology=TEC-4` garde une technologie, `?version=none` les lignes sans version renseignée, `?state=all` tous les états, `?published=30d` les vulnérabilités publiées dans les 30 derniers jours (`7d`, `30d`, `90d`, `1y` ou `older1y`, comme le filtre **Publiée**), `?period=30` la même chose par le filtre de la colonne **Publiée**, `?alerts=excluded` ou `?alerts=all` les lignes hors des alertes, `?exploited=1` les vulnérabilités exploitées activement. Le lien des e-mails utilise `period`.
+
+**Actif et application** : `?asset=AST-12` ouvre la page avec le filtre de la colonne **Serveurs** posé sur un actif, et `?application=APP-4` avec le filtre de la colonne **Applications** posé sur une application, par liens directs (voir [Ce que KANAP compte](#what-kanap-counts)). Les listes des actifs et des applications et leurs fiches ouvrent la page ainsi. Videz le filtre de la colonne pour voir les autres lignes. Il faut pouvoir lire l'application pour filtrer dessus.
+
+**Touchant le parc** : `?estate=1` garde les vulnérabilités des technologies installées sur un actif en service ou déclarées par une application en service. Les liens vers des CVE de la tuile **Vulnérabilités du parc** du tableau de bord ouvrent la page avec ce filtre. Une ligne au-dessus de la grille affiche **Touchant le parc · retirer**. **retirer** l'enlève.
+
+**Réinitialiser les filtres** enlève aussi ces deux filtres. L'export et le changement d'état en masse les suivent.
 
 ## Changer l'état de plusieurs lignes
 
@@ -105,8 +128,8 @@ Cliquez sur une ligne pour ouvrir sa vulnérabilité dans un panneau latéral. S
 - La description, coupée à trois lignes (**Voir plus** affiche la suite), le vecteur CVSS et les liens de référence (avis de l'éditeur, correctifs).
 - **Sources** : l'état de la vulnérabilité à la NVD (**analysée**, **en attente d'analyse**, **non analysée**, **rejetée** ou **pas encore rattachée à ce produit**), avec un lien vers sa fiche NVD. Quand KANAP a lu la fiche de l'éditeur, une seconde ligne indique qui l'a publiée et quand, sa dernière mise à jour, et **Voir sur CVE.org**.
 - **Exploitation**, quand un catalogue, un score EPSS ou un identifiant européen est connu. Voir [Exploitation](#exploitation).
-- **Serveurs** : chaque serveur qui porte une version concernée, avec la technologie et la version. Les serveurs atteints par un autre actif, comme l'hôte d'une machine virtuelle ou un cluster, sont masqués derrière un bouton, par exemple **Afficher aussi les 4 serveurs atteints par un autre actif**. Ils s'affichent sous leur propre titre, **Par un autre actif**, avec l'actif par lequel ils sont atteints.
-- **Applications** : chaque application qui utilise une version concernée, listée une fois par version avec ses serveurs (trois au plus, puis « et 2 autres »). Une application qui déclare la technologie, ou qui est hébergée sur un serveur qui la porte, vient en premier. Les autres sont derrière le même genre de bouton.
+- **Serveurs** : chaque serveur qui a une version concernée renseignée sur lui-même, avec la technologie et la version. Les serveurs atteints par un autre actif, comme une machine virtuelle sur un hôte ou les membres d'un cluster, sont masqués derrière un bouton, par exemple **Afficher aussi les 4 serveurs atteints par un autre actif**. Ils s'affichent sous leur propre titre, **Par un autre actif**, avec l'actif par lequel ils sont atteints. Ils ne sont pas comptés.
+- **Applications** : chaque application qui utilise une version concernée, listée une fois par version avec ses serveurs (trois au plus, puis « et 2 autres »). Une application qui déclare la technologie, ou qui tourne sur un serveur qui l'a renseignée, vient en premier. Les autres sont derrière le même genre de bouton et ne sont pas comptées.
 
 Quand aucun serveur ou aucune application n'est directement concerné, le panneau le dit, et le bouton affiche toujours les autres.
 
@@ -155,6 +178,10 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 
 - **Liste des technologies** : la colonne **Vulnérabilités à traiter**, en orange quand certaines sont critiques ou élevées. Voir [Technologies](technologies.md#travailler-avec-la-liste).
 - **Fiche technologie** : la section **Vulnérabilités** de l'onglet Conformité. Voir [Technologies](technologies.md#vulnerabilites).
+- **Listes des actifs et des applications** : la colonne **Vulnérabilités à traiter**. Voir [Actifs](assets.md#working-with-the-list) et [Applications](applications.md#working-with-the-list).
+- **Fiches actif et application** : la section **Vulnérabilités** et le badge des vulnérabilités graves dans l'en-tête. Voir [Actifs](assets.md#technical) et [Applications](applications.md#operations).
+- **Tableau de bord** : la tuile **Vulnérabilités du parc**. Voir [Mon tableau de bord](my-dashboard.md#vulnerabilities).
+- **Plaid** : l'assistant répond aux questions sur les vulnérabilités. Voir [Plaid](ai-assistant.md#tool-calls).
 
 ## Conseils
 

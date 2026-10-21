@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react';
 import {
-  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography, useTheme,
+  Box, Button, Checkbox, Drawer, FormControlLabel, IconButton, Link as MLink, MenuItem, Stack, Switch, TextField, Tooltip, Typography,
+  useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
@@ -10,7 +11,7 @@ import { useTranslation } from 'react-i18next';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
-import CheckboxSetFilter from '../../components/CheckboxSetFilter';
+import CheckboxSetFilter, { type CheckboxSetFilterOption } from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import PageHeader from '../../components/PageHeader';
 import ReportDataStatus from '../../components/reports/ReportDataStatus';
@@ -66,8 +67,9 @@ export type VulnerabilityRow = VulnerabilityGridRow;
 /**
  * The grid's filter model from the address: "to review" unless `state` says otherwise (`all`: every
  * state); `editor`, `technology` (`TEC-n`), `version` (a label, `none`: not recorded) and `severity`
- * as set filters; `q` on the CVE id; `period` (days) on the publication date. These are the entries
- * from the technologies list, the technology record and the emails.
+ * as set filters; `q` on the CVE id; `period` (days) on the publication date; `asset` (`AST-n` or id)
+ * and `application` (`APP-n` or id) on the Servers and Applications columns. These are the entries
+ * from the technologies, assets and applications lists, the records, the home tile and the emails.
  */
 export function filterModelFromSearch(search: string): Record<string, unknown> {
   const params = new URLSearchParams(search);
@@ -83,6 +85,10 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
   if (version) model.version = set([version === 'none' ? null : version]);
   const severity = params.get('severity');
   if (severity && (SEVERITIES as readonly string[]).includes(severity)) model.severity = set([severity]);
+  for (const kind of SUBJECT_KINDS) {
+    const subject = subjectValue(params.get(kind));
+    if (subject) model[kind] = set([subject]);
+  }
   const q = params.get('q');
   if (q) model.cve_id = { filterType: 'text', type: 'contains', filter: q };
   // `period=<days>` (the emails' link): as the email, from now less that many days, in UTC. The
@@ -95,6 +101,87 @@ export function filterModelFromSearch(search: string): Record<string, unknown> {
     model.published_at = { filterType: 'date', type: 'greaterThan', dateFrom: `${dayBefore.toISOString().slice(0, 10)} 00:00:00`, dateTo: null };
   }
   return model;
+}
+
+export type SubjectKind = 'asset' | 'application';
+const SUBJECT_KINDS: readonly SubjectKind[] = ['asset', 'application'];
+
+/**
+ * The value an asset or application of the address takes in its column filter: a business
+ * reference (`AST-n`, `APP-n`) in capitals, an id in lower case, as the options carry them.
+ */
+function subjectValue(raw: string | null): string | null {
+  const ref = raw?.trim();
+  if (!ref) return null;
+  return /^[a-z]+-\d+$/i.test(ref) ? ref.toUpperCase() : ref.toLowerCase();
+}
+
+/** An option of the Servers or Applications column filter (`GET /vulnerabilities/filter-values`). */
+export type SubjectOption = { id: string; reference: string | null; name: string };
+
+/** The name of an asset or application the options do not hold, `null` when unreadable. */
+async function subjectName(kind: SubjectKind, ref: string): Promise<string | null> {
+  const path = kind === 'asset'
+    ? (/^AST-\d+$/i.test(ref) ? `/assets/by-ref/${encodeURIComponent(ref)}` : `/assets/${encodeURIComponent(ref)}`)
+    : `/applications/${encodeURIComponent(ref)}`;
+  try {
+    return (await api.get<{ name?: string | null }>(path)).data?.name || null;
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The values of the Servers or Applications column filter: the subjects with a vulnerability that
+ * counts, by name only, searched by name or reference (`keywords`). The value is the reference (the
+ * id of a subject without one), as the links write it. A value the column holds outside them (a
+ * link from a record whose rows are all handled) is listed first, by its name.
+ */
+async function subjectFilterValues(kind: SubjectKind, context: any): Promise<CheckboxSetFilterOption[]> {
+  const res = await api.get<Partial<Record<SubjectKind, SubjectOption[]>>>(`${ENDPOINT}/filter-values`, { params: { fields: kind } });
+  const list = Array.isArray(res.data?.[kind]) ? res.data![kind]! : [];
+  const options = list.map((option) => ({ value: option.reference ?? option.id, label: option.name, keywords: option.reference ?? '' }));
+  const known = new Set(options.map((option) => option.value.toUpperCase()));
+  const chosen: unknown[] = context?.getQueryState?.()?.filters?.[kind]?.values ?? [];
+  const missing = chosen.filter((value): value is string => typeof value === 'string' && !known.has(value.toUpperCase()));
+  const extra = await Promise.all(missing.map(async (value) => {
+    const byId = list.find((option) => option.id.toUpperCase() === value.toUpperCase());
+    return { value, label: byId?.name ?? (await subjectName(kind, value)) ?? value, keywords: value };
+  }));
+  return [...extra, ...options];
+}
+
+/** `estate=1` on the address: only the CVE touching the estate, as the home tile counts them. */
+export function estateFromSearch(search: string): boolean {
+  return new URLSearchParams(search).get('estate') === '1';
+}
+
+const mentionRemoveSx = { fontSize: 13, verticalAlign: 'baseline' } as const;
+
+/** "In use in the estate · remove", its meaning in a tooltip. */
+function EstateMention({ onRemove }: { onRemove: () => void }) {
+  const { t } = useTranslation('it');
+  return (
+    <Box component="span" data-testid="vulnerabilities-estate">
+      <Tooltip title={t('pages.vulnerabilities.estateFilter.hint')}>
+        <span>{t('pages.vulnerabilities.estateFilter.label')}</span>
+      </Tooltip>
+      {' · '}
+      <MLink component="button" type="button" underline="hover" onClick={onRemove} sx={mentionRemoveSx}>
+        {t('pages.vulnerabilities.subjectFilter.remove')}
+      </MLink>
+    </Box>
+  );
+}
+
+/** The estate filter of the address, which has no control in the toolbar, on one quiet line. */
+function AddressFilterLine({ estate, onRemoveEstate }: { estate: boolean; onRemoveEstate: () => void }) {
+  if (!estate) return null;
+  return (
+    <Typography component="div" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>
+      <EstateMention onRemove={onRemoveEstate} />
+    </Typography>
+  );
 }
 
 export type AlertsFilter = 'included' | 'excluded' | 'all';
@@ -1071,20 +1158,34 @@ export default function VulnerabilitiesPage() {
   const alerts = alertsFromSearch(location.search);
   const published = publishedFromSearch(location.search);
   const exploitedOnly = exploitedOnlyFromSearch(location.search);
+  const estate = estateFromSearch(location.search);
   // Recomputed when the period changes. A page left open past midnight UTC keeps the day it opened on.
   const publishedDays = useMemo(() => publishedRange(published), [published]);
   // `exploited=1` becomes the API's `yes`. Off sends nothing, so the list contract stays on `alerts` alone.
   const extraParams = useMemo(
-    () => ({ alerts, ...publishedDays, ...(exploitedOnly ? { exploited: 'yes' } : {}) }),
-    [alerts, exploitedOnly, publishedDays],
+    () => ({
+      alerts,
+      ...publishedDays,
+      ...(exploitedOnly ? { exploited: 'yes' } : {}),
+      ...(estate ? { estate: '1' } : {}),
+    }),
+    [alerts, estate, exploitedOnly, publishedDays],
   );
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { config } = useFeatures();
   const enabled = config.features.vulnerabilityFeed === true;
   const allowed = hasLevel('infrastructure', 'reader');
+  // The Applications column filter only for a user who reads the applications (the API keeps the user's own).
+  const readsApplications = hasLevel('applications', 'reader');
+
   const canEdit = hasLevel('infrastructure', 'member');
-  const initialModel = useMemo(() => filterModelFromSearch(location.search), [location.search]);
+  // The Applications column has a filter only for a user who reads the applications.
+  const initialModel = useMemo(() => {
+    const model = filterModelFromSearch(location.search);
+    if (!readsApplications) delete model.application;
+    return model;
+  }, [location.search, readsApplications]);
   const [selection, setSelection] = useState<Selection>(NO_SELECTION);
   const [refreshKey, setRefreshKey] = useState(0);
   const [openCve, setOpenCve] = useState<string | null>(null);
@@ -1158,9 +1259,13 @@ export default function VulnerabilitiesPage() {
     if (exploitedOnly) params.exploited = 'yes';
     if (publishedDays.from) params.from = publishedDays.from;
     if (publishedDays.to) params.to = publishedDays.to;
+    if (estate) params.estate = '1';
     const res = await getWithListContext<{ version?: Array<string | null> }>(`${ENDPOINT}/filter-values`, params);
     return (res.data?.version || []).map((value) => ({ value, label: value ?? t('pages.vulnerabilities.versionNone') }));
-  }, [alerts, exploitedOnly, publishedDays, t]);
+  }, [alerts, estate, exploitedOnly, publishedDays, t]);
+
+  const assetValues = useCallback(({ context }: { context?: any }) => subjectFilterValues('asset', context), []);
+  const applicationValues = useCallback(({ context }: { context?: any }) => subjectFilterValues('application', context), []);
 
   const columns: EnhancedColDef<VulnerabilityRow>[] = useMemo(() => [
     ...(canEdit ? [{
@@ -1291,8 +1396,30 @@ export default function VulnerabilitiesPage() {
       filterParams: { getValues: editorValues },
       tooltipField: 'editor',
     },
-    { headerName: t('pages.vulnerabilities.columns.servers'), field: 'servers', width: 80, type: 'rightAligned', sortable: false, filter: false },
-    { headerName: t('pages.vulnerabilities.columns.applications'), field: 'applications', width: 100, type: 'rightAligned', sortable: false, filter: false },
+    // The Servers and Applications columns filter the rows by their direct links (`asset`, `application`
+    // in the grid model): several values keep the rows of any of them, both columns the rows of both.
+    {
+      headerName: t('pages.vulnerabilities.columns.servers'),
+      colId: 'asset',
+      valueGetter: (p: { data?: VulnerabilityRow }) => p.data?.servers,
+      width: 105,
+      type: 'rightAligned',
+      sortable: false,
+      filter: CheckboxSetFilter,
+      floatingFilterComponent: CheckboxSetFloatingFilter,
+      filterParams: { getValues: assetValues },
+    },
+    {
+      headerName: t('pages.vulnerabilities.columns.applications'),
+      colId: 'application',
+      valueGetter: (p: { data?: VulnerabilityRow }) => p.data?.applications,
+      width: 115,
+      type: 'rightAligned',
+      sortable: false,
+      ...(readsApplications
+        ? { filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: applicationValues } }
+        : { filter: false }),
+    },
     {
       headerName: t('pages.vulnerabilities.columns.state'),
       field: 'state',
@@ -1311,10 +1438,17 @@ export default function VulnerabilitiesPage() {
       filter: 'agDateColumnFilter',
       valueFormatter: (p: any) => (p.value ? formatShortDate(p.value as string, locale, { year: 'always' }) : ''),
     },
-  ], [canEdit, editorValues, exploitedValues, locale, severityValues, sourceValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
+  ], [applicationValues, assetValues, canEdit, editorValues, exploitedValues, locale, readsApplications, severityValues, sourceValues, stateValues, t, technologyValues, toggleAll, toggleRow, versionValues]);
 
   // One write, so resetting the alerts, the publication window and the shortcut cannot overwrite each other.
-  const writeSearch = (next: { alerts?: AlertsFilter; published?: PublishedPeriod; exploitedOnly?: boolean }) => {
+  // `subject: null` drops the address's asset and application, read once into their column filters.
+  const writeSearch = (next: {
+    alerts?: AlertsFilter;
+    published?: PublishedPeriod;
+    exploitedOnly?: boolean;
+    subject?: null;
+    estate?: false;
+  }) => {
     const params = new URLSearchParams(location.search);
     if (next.alerts !== undefined) {
       if (next.alerts === 'included') params.delete('alerts');
@@ -1328,6 +1462,8 @@ export default function VulnerabilitiesPage() {
       if (next.exploitedOnly) params.set('exploited', '1');
       else params.delete('exploited');
     }
+    if (next.subject === null) for (const kind of SUBJECT_KINDS) params.delete(kind);
+    if (next.estate === false) params.delete('estate');
     const search = params.toString();
     navigate({ pathname: location.pathname, search: search ? `?${search}` : '' }, { replace: true });
   };
@@ -1443,6 +1579,10 @@ export default function VulnerabilitiesPage() {
         <Typography role="alert" sx={{ fontSize: 13, color: 'kanap.text.secondary', mb: 1 }}>{t('pages.vulnerabilities.exportFailed')}</Typography>
       )}
       <FeedAgeLine items={Array.isArray(feedSources.data?.items) ? feedSources.data!.items : null} />
+      <AddressFilterLine
+        estate={estate}
+        onRemoveEstate={() => writeSearch({ estate: false })}
+      />
       {/* The header of the box column: the box alone, centred, without the cell's padding. */}
       <Box sx={{
         '& .ag-header-cell[col-id="select"]': { px: 0 },
@@ -1455,12 +1595,12 @@ export default function VulnerabilitiesPage() {
         endpoint={ENDPOINT}
         queryKey="vulnerabilities"
         extraParams={extraParams}
-        extraNarrows={alerts !== 'included' || published !== 'all' || exploitedOnly}
-        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all', exploitedOnly: false })}
+        extraNarrows={alerts !== 'included' || published !== 'all' || exploitedOnly || estate}
+        onResetFilters={() => writeSearch({ alerts: 'included', published: 'all', exploitedOnly: false, subject: null, estate: false })}
         defaultFilterModel={OPENING_FILTER_MODEL}
         resetSortOnReset
         toolbarExtras={(
-          <Stack direction="row" spacing={2} alignItems="center">
+          <Stack direction="row" alignItems="center" useFlexGap flexWrap="wrap" sx={{ columnGap: 2, rowGap: 1 }}>
             {alertsFilter}
             {publishedFilter}
             <FormControlLabel
@@ -1514,7 +1654,7 @@ export default function VulnerabilitiesPage() {
             </Stack>
           ) : (
             <Typography sx={quietSx} data-testid="vulnerabilities-empty">
-              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all' || exploitedOnly
+              {request?.params?.filters || request?.params?.q || alerts !== 'included' || published !== 'all' || exploitedOnly || estate
                 ? t('pages.vulnerabilities.empty.filtered')
                 : t('pages.vulnerabilities.empty.none')}
             </Typography>

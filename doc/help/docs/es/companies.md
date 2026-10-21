@@ -85,7 +85,7 @@ Haga clic en cualquier fila de la lista para abrir el espacio de trabajo de la e
 - **Estado**, bajo el nombre: **Activado** o **Desactivado**. Haga clic para cambiarlo. Elegir **Desactivado** desactiva la empresa de inmediato: el fin de validez pasa a ser la hora actual
 - **Panel Propiedades** a la derecha: **País**, **Moneda base**, **Plan de cuentas** y **Ciclo de vida**. Use el botón situado junto al panel para plegarlo o volver a abrirlo
 
-- **Eliminar**, arriba a la derecha: visible para los administradores de empresas (`companies:admin`). Consulte [Eliminar una empresa](#eliminar-una-empresa)
+- **Eliminar**, un icono de papelera arriba a la derecha: visible para los administradores de empresas (`companies:admin`). Consulte [Eliminar una empresa](#eliminar-una-empresa)
 
 **Guardado automático**: Cada cambio se guarda por sí solo al salir del campo. No hay botones Guardar, Restablecer ni Cerrar. Puede seguir trabajando mientras se guarda un cambio. La parte superior de la página muestra **Guardando…** mientras guarda y luego **Guardado** durante un momento. Cuando se rechaza un cambio, el campo vuelve a mostrar su valor anterior y el motivo aparece debajo. El mensaje se mantiene hasta que vuelva a escribir en el campo.
 

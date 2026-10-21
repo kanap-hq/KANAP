@@ -80,6 +80,8 @@ A connection involving multiple servers (e.g., load-balanced clusters or mesh to
 
 Click any row to open the workspace. It has four tabs: **Overview**, **Layers**, **Criticality & Compliance**, and **Related Interfaces**.
 
+**Delete**, a trash icon in the header, deletes the connection after a confirmation (`infrastructure:member`). The confirmation counts the interface bindings it is unlinked from. The interfaces themselves stay.
+
 ### Overview
 
 The Overview tab captures the connection's identity and topology.

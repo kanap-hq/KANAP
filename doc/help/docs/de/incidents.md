@@ -213,7 +213,7 @@ Das Schließen sperrt den Vorfall. Felder, die Vorfallanalyse, Journalnotizen, V
 
 ### Einen Vorfall löschen
 
-**Löschen** (`incidents:admin`) steht auf der Seite des Vorfalls und in der Liste, sobald Zeilen ausgewählt sind. Es entfernt einen Datensatz, der nicht ins Register gehört, etwa einen Testeintrag. Andere Benutzer sehen weder die Schaltfläche noch die Auswahl.
+**Löschen** (`incidents:admin`) steht als Papierkorbsymbol auf der Seite des Vorfalls und in der Liste, sobald Zeilen ausgewählt sind. Es entfernt einen Datensatz, der nicht ins Register gehört, etwa einen Testeintrag. Andere Benutzer sehen weder die Schaltfläche noch die Auswahl.
 
 Bevor etwas entfernt wird, listet eine Bestätigung auf, was mit dem Vorfall gelöscht wird: seine Vorfallsanalyse, seine Aufgaben, seine Journaleinträge und seine Anhänge (samt Dateien). Sie listet auch die entfernten Verknüpfungen auf: Anwendungen, Assets und Knowledge-Dokumente bleiben erhalten, nur ihre Verknüpfung mit dem Vorfall entfällt. Die Löschung wird im Audit-Trail festgehalten.
 

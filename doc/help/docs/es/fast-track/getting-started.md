@@ -209,10 +209,10 @@ Para tareas de proyecto, el registro de tiempo es esencial: alimenta el generado
 
 ### Comparta una tarea
 
-¿Necesita incluir a alguien? Haga clic en **Enviar enlace** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega, incluso personas fuera de KANAP. Añada un mensaje personal si lo necesita.
+¿Necesita incluir a alguien? Haga clic en **Compartir** en el encabezado de la tarea para enviar un enlace directo por correo a cualquier colega, incluso personas fuera de KANAP. Añada un mensaje personal si lo necesita.
 
 !!! info "Información"
-    Enviar enlace funciona en todas partes. Esto no es solo para tareas. Puede enviar enlaces a proyectos, solicitudes, contratos, aplicaciones: cualquier objeto del espacio de trabajo. Es la forma más rápida de dirigir a alguien al lugar correcto.
+    Compartir funciona en todas partes. Esto no es solo para tareas. Puede enviar enlaces a proyectos, solicitudes, contratos, aplicaciones: cualquier objeto del espacio de trabajo. Es la forma más rápida de dirigir a alguien al lugar correcto.
 
 ---
 
@@ -299,7 +299,7 @@ El correo semanal y las notificaciones en tiempo real le mantienen informado sin
 | Cambiar tema (claro/oscuro) | Avatar > Mi perfil > pestaña Apariencia |
 | Establecer mi disponibilidad | Portafolio > Colaboradores > su nombre |
 | Añadir mis competencias | Portafolio > Colaboradores > su nombre > pestaña Competencias |
-| Compartir un enlace a cualquier cosa | Abrir cualquier espacio de trabajo > Enviar enlace |
+| Compartir un enlace a cualquier cosa | Abrir cualquier espacio de trabajo > Compartir |
 | Personalizar mi panel de control | Panel de control > Configuración (icono de engranaje) |
 
 ---

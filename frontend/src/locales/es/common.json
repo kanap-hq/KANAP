@@ -478,7 +478,26 @@
       "netboxMissing_one": "{{count}} activo ausente de Netbox",
       "netboxMissing_other": "{{count}} activos ausentes de Netbox",
       "netboxErrors_one": "{{count}} error",
-      "netboxErrors_other": "{{count}} errores"
+      "netboxErrors_other": "{{count}} errores",
+      "vulnerabilities": "Vulnerabilidades del parque",
+      "vulnerabilitiesSubtitle": "CVE por revisar en las tecnologías en servicio",
+      "vulnerabilitiesLines": {
+        "applications_one": "aplicación de criticidad {{level}} con una CVE crítica o alta",
+        "applications_other": "aplicaciones de criticidad {{level}} con una CVE crítica o alta",
+        "critical7_one": "CVE crítica publicada en los últimos 7 días",
+        "critical7_other": "CVE críticas publicadas en los últimos 7 días",
+        "critical30_one": "CVE crítica publicada en los últimos 30 días",
+        "critical30_other": "CVE críticas publicadas en los últimos 30 días",
+        "exploited_one": "CVE explotada",
+        "exploited_other": "CVE explotadas",
+        "assets_one": "activo con una CVE crítica o alta",
+        "assets_other": "activos con una CVE crítica o alta"
+      },
+      "vulnerabilitiesNone": "Ninguna vulnerabilidad crítica por revisar.",
+      "vulnerabilitiesStaleNvd_one": "La NVD no se ha leído desde hace {{count}} día",
+      "vulnerabilitiesStaleNvd_other": "La NVD no se ha leído desde hace {{count}} días",
+      "vulnerabilitiesStaleCveOrg_one": "CVE.org no se ha leído desde hace {{count}} día",
+      "vulnerabilitiesStaleCveOrg_other": "CVE.org no se ha leído desde hace {{count}} días"
     },
     "welcome": "Bienvenido",
     "budgetSettings": {
@@ -728,6 +747,7 @@
   },
   "share": {
     "sendLink": "Enviar enlace",
+    "share": "Compartir",
     "searchUsersOrEmail": "Buscar usuarios o escribir un correo electrónico…",
     "messageOptional": "Mensaje (opcional)",
     "addPersonalMessage": "Agregar un mensaje personal…",

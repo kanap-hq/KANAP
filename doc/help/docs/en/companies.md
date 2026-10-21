@@ -85,7 +85,7 @@ Click any row in the list to open the company workspace. It has two tabs: **Over
 - **Status**, under the name: **Enabled** or **Disabled**. Click it to change it. Choosing **Disabled** disables the company at once: the end of validity becomes the current time
 - **Properties panel** on the right: **Country**, **Base currency**, **Chart of accounts** and **Lifecycle**. Use the panel toggle next to it to collapse the panel or open it again
 
-- **Delete**, at the top right: shown to company administrators (`companies:admin`). See [Deleting a company](#deleting-a-company)
+- **Delete**, a trash icon at the top right: shown to company administrators (`companies:admin`). See [Deleting a company](#deleting-a-company)
 
 **Autosave**: Every change saves on its own when you leave the field. There are no Save, Reset or Close buttons. You can keep working while a change saves. The top of the page reads **Saving…** while it saves, then **Saved** for a moment. When a change is refused, the field shows its previous value again and the reason shows under it. The message stays until you type in the field again.
 

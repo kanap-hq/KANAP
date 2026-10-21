@@ -1,5 +1,5 @@
 import React, { useCallback, useMemo, useRef, useState } from 'react';
-import { Box, Button, Link as MLink, Menu, MenuItem, Stack, Typography, useTheme } from '@mui/material';
+import { Box, Button, Link as MLink, Menu, MenuItem, Stack, Typography } from '@mui/material';
 import { ICellRendererParams } from 'ag-grid-community';
 import { Link as RouterLink, useLocation, useNavigate } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -21,9 +21,9 @@ import { useLocale } from '../../i18n/useLocale';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { refusalCounts } from '../../utils/deleteRefusal';
 import { formatSupportDate, supportStateColor, supportStateNeedsAttention, supportStateOf } from '../../utils/supportState';
-import { getDotColor } from '../../utils/statusColors';
 import ForbiddenPage from '../ForbiddenPage';
 import TechnologyCreateDialog from './components/TechnologyCreateDialog';
+import VulnerabilityCountCell from '../../components/vulnerabilities/VulnerabilityCountCell';
 
 export type TechnologyRow = {
   id: string;
@@ -48,34 +48,13 @@ export type TechnologyRow = {
  * Vulnerabilities page filtered on the technology.
  */
 function VulnerabilitiesCell({ data }: ICellRendererParams<TechnologyRow, any>) {
-  const { t } = useTranslation('it');
-  const theme = useTheme();
-  const count = data?.vulnerabilities_to_review ?? 0;
-  if (!data || count === 0) return null;
-  const severe = data.vulnerabilities_severe ?? 0;
-  // Compact: the count, then the critical or high ones in the attention colour (full text on hover).
-  const label = t('pages.technologies.vulnerabilityCount', { count, severe });
+  if (!data) return null;
   return (
-    <MLink
-      component={RouterLink}
+    <VulnerabilityCountCell
+      count={data.vulnerabilities_to_review}
+      severe={data.vulnerabilities_severe}
       to={`/it/vulnerabilities?technology=${encodeURIComponent(data.reference || data.id)}`}
-      underline="hover"
-      title={label}
-      aria-label={label}
-      data-testid="vulnerabilities-to-review"
-      onClick={(event: React.MouseEvent) => event.stopPropagation()}
-      sx={{ fontSize: 13, color: 'kanap.text.primary', fontVariantNumeric: 'tabular-nums', '&:hover': { color: 'primary.main' } }}
-    >
-      {count}
-      {severe > 0 && (
-        <>
-          {' · '}
-          <Box component="span" data-testid="vulnerabilities-severe" sx={{ color: getDotColor('warning', theme.palette.mode), fontWeight: 500 }}>
-            {severe}
-          </Box>
-        </>
-      )}
-    </MLink>
+    />
   );
 }
 
@@ -268,7 +247,7 @@ export default function TechnologiesPage() {
     },
     { headerName: t('pages.technologies.columns.nextSupportEnd'), field: 'next_support_end', width: 130, headerTooltip: t('pages.technologies.columns.nextSupportEnd'), sortable: false, filter: false, cellRenderer: SupportEndCell },
     ...(vulnerabilityFeed
-      ? [{ headerName: t('pages.technologies.columns.vulnerabilities'), field: 'vulnerabilities_to_review' as const, width: 110, headerTooltip: t('pages.technologies.columns.vulnerabilities'), sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
+      ? [{ headerName: t('pages.technologies.columns.vulnerabilitiesShort'), field: 'vulnerabilities_to_review' as const, width: 140, headerTooltip: t('pages.technologies.columns.vulnerabilities'), sortable: false, filter: false, cellRenderer: VulnerabilitiesCell }]
       : []),
   ], [LinkCell, SupportEndCell, editorValues, familyValues, hostingTypeValues, labelFor, lifecycleValues, t, vulnerabilityFeed]);
 

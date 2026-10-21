@@ -139,7 +139,7 @@ Chaque ligne OPEX et CAPEX qui a un centre de coûts affiche le responsable budg
 
 ### Supprimer
 
-Le bouton **Supprimer** de l'en-tête supprime l'élément après une confirmation (nécessite `cost_centers:admin`). Il est désactivé, avec la raison sur une ligne, lorsque des lignes budgétaires utilisent le centre de coûts (par exemple « Utilisé par 3 lignes OPEX. Désactivez-le plutôt. ») ou lorsque le groupe contient encore des éléments (par exemple « Contient 2 éléments. »). Désactivez plutôt l'élément : il reste sur ses lignes et dans les rapports.
+Le bouton **Supprimer** (icône corbeille) de l'en-tête supprime l'élément après une confirmation (nécessite `cost_centers:admin`). Il est désactivé, avec la raison sur une ligne, lorsque des lignes budgétaires utilisent le centre de coûts (par exemple « Utilisé par 3 lignes OPEX. Désactivez-le plutôt. ») ou lorsque le groupe contient encore des éléments (par exemple « Contient 2 éléments. »). Désactivez plutôt l'élément : il reste sur ses lignes et dans les rapports.
 
 ---
 

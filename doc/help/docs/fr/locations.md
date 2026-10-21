@@ -113,7 +113,7 @@ L'onglet Relations affiche les entités liées à ce site. Il est en lecture seu
 
 ## Supprimer un site
 
-Depuis l'en-tête de l'espace de travail, cliquez sur **Supprimer** pour retirer un site.
+Depuis l'en-tête de l'espace de travail, cliquez sur **Supprimer** (icône corbeille) pour retirer un site.
 
 - Nécessite l'autorisation `locations:member`.
 - Les actifs liés ne sont pas supprimés : ils sont automatiquement désassignés (leur référence de site est effacée).

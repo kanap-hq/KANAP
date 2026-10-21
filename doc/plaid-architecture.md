@@ -119,7 +119,11 @@ Plaid can currently read these entity families:
 `business_processes`, `capex_items`, `chart_of_accounts`, `companies`,
 `connections`, `contacts`, `contracts`, `departments`, `documents`,
 `incidents`, `interfaces`, `locations`, `projects`, `requests`, `spend_items`,
-`suppliers`, `tasks`, `technologies`, and `users`.
+`suppliers`, `tasks`, `technologies`, `users`, and `vulnerabilities`.
+
+`search_all` searches every family but `vulnerabilities`, which has no search
+index: `AI_SEARCH_ENTITY_TYPES` (the searched families) and
+`AI_QUERY_ENTITY_TYPES` (the listed ones) are two lists in `ai.types.ts`.
 
 `get_entity_context` takes `applications`, `assets`, `projects`, `requests`,
 `tasks` and `technologies` (`AI_CONTEXT_ENTITY_TYPES` in `ai.types.ts`).
@@ -261,8 +265,62 @@ applications from the database. The chat's read profile (`read_query`) offers
 `get_entity_context` too, so a question that names a server or a technology
 without its reference can reach its related records.
 
-Page size: 25 items by default, at most 50, 30 for `applications` and
-`technologies`, 15 for
+### Vulnerabilities
+
+Vulnerabilities (right `infrastructure`) are read through
+`listAiVulnerabilities` (`backend/src/ai/query/ai-vulnerabilities.query.ts`), as
+the vulnerabilities page lists them: one item per `technology_vulnerabilities`
+row, a CVE on one version of a technology. As on the page, a list or an
+aggregate with no `state` or `alerts` filter keeps the rows to review that
+alert; the value `all` on either filter lifts that default. The detail reads
+every row. The item's `ref` and label are the CVE id. Fields: `cve_id`, `summary`, `severity`,
+`cvss_score` and `score_source` (the page's effective values, NVD first, then
+CVE.org), `exploited` (CISA KEV or EU KEV), `epss`, `state`, `note`,
+`technology` (`TEC-n`, also filtered by name) and `technology_name`, `version`
+(`null`: no version recorded), `sources` (`nvd`, `cve_org`), `alerts`,
+`published_at`, `detected_at`, and the reach by direct links only
+(`backend/src/vulnerabilities/vulnerability-reach-counts.ts`), as the page's
+columns:
+
+- `servers_reached`: servers in service that carry the technology and version
+  themselves, not through a host or cluster;
+- `applications_reached`: applications in service that declare it or whose
+  server carries it directly, within the user's application read scope; null
+  for a user who cannot read applications, and no aggregate metric.
+
+Both are counted rows first: the tenant's links are counted once per technology
+and version, then joined to the rows by id, so a sort, a filter or a sum over
+every row stays cheap (about 70 ms on 13,500 rows, against 0.8 to 2.4 s with a
+subquery per row).
+
+The `asset` and `application` filters (id or `AST-n` / `APP-n`) keep the rows
+in those direct links; an unknown asset, or an application unknown or outside
+the user's scope, matches nothing. Each item carries `page_url`, the
+vulnerabilities page filtered on it. `get_entity_detail` takes a row id or a CVE
+id (then the CVE's first row) and adds the CVE's signals and `rows`, every
+technology version the CVE concerns. The aggregates count rows. With the
+vulnerability feed off, the family is left out of the readable families and its
+tools answer `vulnerabilityFeed is not available` (`ai-policy.service.ts`).
+
+Assets and applications carry `open_vulnerabilities` and
+`severe_vulnerabilities` (`backend/src/ai/query/ai-vulnerability-counts.util.ts`):
+the counts of the Vulnerabilities column of their lists, from the shared module,
+direct links only, null for a retired asset, an application out of service or
+with the feed off. An application reader without the `infrastructure` right
+reads them. They are in the list, the detail and the aggregate metrics (the
+counts of the aggregated ids, joined by id). The `vulnerabilities` field is the
+list's column: its filter takes `severe`, `any` and `none`, and its sort orders
+by the severe count, then the count. The counts take no number filter: the list
+services filter on that column only, and the registry contract wants every
+advertised filter to apply. The question "which critical applications are
+touched by an exploited CVE?" is two calls: `applications` filtered on the top
+criticality and `vulnerabilities` `severe`, then `vulnerabilities`
+filtered on `application` and `exploited` `true`. A mention of a vulnerability
+links to the vulnerabilities page searched on its CVE
+(`frontend/src/ai/utils/entityUrls.ts`).
+
+Page size: 25 items by default, at most 50, 30 for `applications`,
+`technologies` and `vulnerabilities`, 15 for
 `spend_items` and `capex_items` (`aiQueryLimit` in `ai-query.executor.ts`). A
 larger `limit` is reduced and the result's `limit` is the one applied. The
 values keep a full page under the MCP response cap (64,000 characters,

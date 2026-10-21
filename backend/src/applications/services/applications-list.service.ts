@@ -23,6 +23,13 @@ import {
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { buildDerivedUsersByApp, derivedTotalUsersSql } from './derived-users';
 import { textSortKey } from '../../common/list-sort';
+import { applicationCountsForTenantSql, applicationVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
+import {
+  VULNERABILITIES_LIST_FIELD,
+  vulnerabilityFilterPredicateSql,
+  vulnerabilityListFields,
+  vulnerabilitySortKeySql,
+} from '../../vulnerabilities/vulnerability-list-column';
 
 /** The application list columns that sort alphabetically (the supplier name too). */
 const APPLICATION_TEXT_SORTS = new Set(['name', 'editor']);
@@ -52,6 +59,20 @@ const COUNT_SORT_SQL: Record<string, { include: string; sql: string }> = {
   suites_count: { include: 'structure', sql: '(SELECT COUNT(*) FROM application_suites l WHERE l.application_id = a.id AND l.tenant_id = a.tenant_id)' },
   components_count: { include: 'structure', sql: '(SELECT COUNT(*) FROM application_suites l WHERE l.suite_id = a.id AND l.tenant_id = a.tenant_id)' },
 };
+
+/**
+ * Joins the vulnerability counts of the applications (shared module) as `vc` (`vc.open`,
+ * `vc.severe`, null out of service), for the sort and the filter of the Vulnerabilities column:
+ * the counts of every application of the tenant, computed once and joined by id. The tenant is the
+ * request's (`tenantId`), else the session's. The builder keeps the applications of the user's scope.
+ */
+const joinVulnerabilityCounts = (builder: SelectQueryBuilder<Application>, tenantId: string) => {
+  const tenant = tenantId ? ':vulnerabilityCountsTenant' : 'app_current_tenant()';
+  builder.leftJoin(`(${applicationCountsForTenantSql({ tenant })})`, 'vc', 'vc.id = a.id');
+  if (tenantId) builder.setParameter('vulnerabilityCountsTenant', tenantId);
+};
+/** The Vulnerabilities column sorts by severe count then count, out of service last either way. */
+const VULNERABILITY_SORT_SQL = vulnerabilitySortKeySql('vc');
 
 type ParamNameFactory = () => string;
 type SetFilterModel = { filterType: 'set'; values: any[] };
@@ -172,7 +193,7 @@ const buildApplicationOwnerNamesSql = (ownerType: 'business' | 'it', alias = 'a'
  * Fields whose filter the compilers below read rather than `compileAgFilterCondition`: they take a set
  * model's `values` as the ticked values, so an exclude model answers 400 there (`assertSetFilterModes`).
  */
-const CUSTOM_SET_FILTER_FIELDS = new Set(['environments', 'hosting_types', 'linked_project_name', 'owners_business', 'owners_it']);
+const CUSTOM_SET_FILTER_FIELDS = new Set(['environments', 'hosting_types', 'linked_project_name', 'owners_business', 'owners_it', VULNERABILITIES_LIST_FIELD]);
 
 const compileEnvironmentsSetFilter = (model: any, nextParam: ParamNameFactory): CompiledCondition | null => {
   const normalized = normalizeSetFilterModel(model);
@@ -434,8 +455,16 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
     const nextParam = createParamNameGenerator('p');
     const compiledFilters: CompiledCondition[] = [];
+    let filtersOnVulnerabilities = false;
     if (fm) {
       for (const [field, model] of Object.entries(fm)) {
+        if (field === VULNERABILITIES_LIST_FIELD) {
+          // Severe, any or none; an application out of service (null) is in none.
+          const predicate = vulnerabilityFilterPredicateSql(model, 'vc');
+          if (predicate) compiledFilters.push({ sql: predicate, params: {} });
+          filtersOnVulnerabilities = filtersOnVulnerabilities || (predicate != null && predicate !== '1=0');
+          continue;
+        }
         if (field === 'environments') {
           const custom = compileEnvironmentsSetFilter(model, nextParam);
           if (custom) {
@@ -499,12 +528,14 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
     const needsSupplierJoin = include.has('supplier') || (fm && Object.prototype.hasOwnProperty.call(fm, 'supplier_name')) || sortField === 'supplier_name';
 
-    const applyTo = (builder: SelectQueryBuilder<Application>, options?: { selectSupplier?: boolean }) => {
+    // `sortsByVulnerabilities`: the caller sorts on the counts, joined as `vc` (the filter joins them too).
+    const applyTo = (builder: SelectQueryBuilder<Application>, options?: { selectSupplier?: boolean; sortsByVulnerabilities?: boolean }) => {
       applyExplicitTenantConstraint(builder, tenantId);
       if (needsSupplierJoin) {
         builder.leftJoin('suppliers', 's', 's.id = a.supplier_id AND s.tenant_id = a.tenant_id');
         if (options?.selectSupplier) builder.addSelect('s.name', 's_name');
       }
+      if (filtersOnVulnerabilities || options?.sortsByVulnerabilities) joinVulnerabilityCounts(builder, tenantId);
       if (!includeInactive) builder.andWhere('(a.disabled_at IS NULL OR a.disabled_at > NOW())');
       applyApplicationParticipantScope(builder, opts?.accessScope, 'a');
       applyOwnerScopeCondition(builder, ownerScope);
@@ -512,23 +543,15 @@ export class ApplicationsListService extends ApplicationsBaseService {
       applyCompiledFilters(builder);
       applyQuickSearch(builder);
     };
-    return { tenantId, include, needsSupplierJoin, applyTo };
+    return { tenantId, include, needsSupplierJoin, filtersOnVulnerabilities, applyTo };
   }
 
   async list(query: any, opts?: ServiceOpts) {
     const mg = this.getManager(opts);
     const repo = mg.getRepository(Application);
     const { page, limit, skip, sort } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
-    const { include, needsSupplierJoin, applyTo } = this.buildFilteredScope(query, opts, sort.field);
-
-    // Count query
-    const qbBase = repo.createQueryBuilder('a');
-    applyTo(qbBase);
-    const total = await qbBase.getCount();
-
-    // Page query
-    const qb = repo.createQueryBuilder('a');
-    applyTo(qb, { selectSupplier: true });
+    const { tenantId, include, needsSupplierJoin, filtersOnVulnerabilities, applyTo } = this.buildFilteredScope(query, opts, sort.field);
+    const sortsByVulnerabilities = sort.field === VULNERABILITIES_LIST_FIELD && include.has('vulnerabilities') && vulnerabilityCountsEnabled();
 
     // Sorting
     const appFields = new Set([
@@ -539,44 +562,113 @@ export class ApplicationsListService extends ApplicationsBaseService {
       'status', 'disabled_at', 'created_at', 'updated_at',
     ]);
     const direction: 'ASC' | 'DESC' = (String(sort.direction).toUpperCase() === 'ASC' ? 'ASC' : 'DESC');
-    if (classificationSort[sort.field]) {
-      qb.addSelect(classificationSort[sort.field], 'classification_sort_value');
-      qb.orderBy('classification_sort_value', direction, 'NULLS LAST');
-    } else if (sort.field === 'supplier_name' && needsSupplierJoin) {
-      qb.addSelect((await textSortKey(mg))('s.name'), 'text_sort_value');
-      qb.orderBy('text_sort_value', direction, 'NULLS LAST');
-    } else if (sort.field === 'sequential_id') {
-      qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
-      qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
-    } else if (COUNT_SORT_SQL[sort.field] && include.has(COUNT_SORT_SQL[sort.field].include)) {
-      // Through a selected alias: the paginated query cannot order on a raw subquery.
-      qb.addSelect(COUNT_SORT_SQL[sort.field].sql, 'count_sort_value');
-      qb.orderBy('count_sort_value', direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
-    } else if (APPLICATION_TEXT_SORTS.has(sort.field)) {
-      // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
-      qb.addSelect((await textSortKey(mg))(`a.${sort.field}`), 'text_sort_value');
-      qb.orderBy('text_sort_value', direction, 'NULLS LAST');
-    } else if (appFields.has(sort.field)) {
-      qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
-    } else {
-      qb.orderBy('a.created_at', 'DESC');
-    }
-    qb.addOrderBy('a.id', 'ASC');
-    qb.skip(skip).take(limit);
+    const textSort = APPLICATION_TEXT_SORTS.has(sort.field) || sort.field === 'supplier_name' ? await textSortKey(mg) : null;
+    const applySort = (qb: SelectQueryBuilder<Application>) => {
+      if (classificationSort[sort.field]) {
+        qb.addSelect(classificationSort[sort.field], 'classification_sort_value');
+        qb.orderBy('classification_sort_value', direction, 'NULLS LAST');
+      } else if (sort.field === 'supplier_name' && needsSupplierJoin) {
+        qb.addSelect(textSort!('s.name'), 'text_sort_value');
+        qb.orderBy('text_sort_value', direction, 'NULLS LAST');
+      } else if (sort.field === 'sequential_id') {
+        qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
+        qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
+      } else if (sortsByVulnerabilities) {
+        qb.addSelect(VULNERABILITY_SORT_SQL, 'vulnerability_sort_value');
+        qb.orderBy('vulnerability_sort_value', direction, 'NULLS LAST');
+      } else if (COUNT_SORT_SQL[sort.field] && include.has(COUNT_SORT_SQL[sort.field].include)) {
+        // Through a selected alias: the paginated query cannot order on a raw subquery.
+        qb.addSelect(COUNT_SORT_SQL[sort.field].sql, 'count_sort_value');
+        qb.orderBy('count_sort_value', direction, direction === 'DESC' ? 'NULLS LAST' : 'NULLS FIRST');
+      } else if (APPLICATION_TEXT_SORTS.has(sort.field)) {
+        // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
+        qb.addSelect(textSort!(`a.${sort.field}`), 'text_sort_value');
+        qb.orderBy('text_sort_value', direction, 'NULLS LAST');
+      } else if (appFields.has(sort.field)) {
+        qb.orderBy(classificationTargets[sort.field]?.expression ?? `a.${sort.field}`, direction, 'NULLS LAST');
+      } else {
+        qb.orderBy('a.created_at', 'DESC');
+      }
+      qb.addOrderBy('a.id', 'ASC');
+    };
 
-    const { raw, entities } = await qb.getRawAndEntities();
+    let total: number;
+    let entities: Application[];
+    let supplierNames: Map<string, string | null>;
+    // The counts of the page's rows when the list joined them (`vc`), else read for the page below.
+    let joinedCounts: Map<string, { open: number | null; severe: number | null }> | null = null;
+    if (filtersOnVulnerabilities || sortsByVulnerabilities) {
+      // The counts of the tenant cost one computation per statement that joins them: the page's ids,
+      // its total and its counts in one statement, then the entities by id (lot 2, performance: the
+      // count, TypeORM's paginated ids and its entities each computed them, 374 ms on the dense set).
+      // Every join of `applyTo` names at most one row per application: no DISTINCT is needed.
+      const pageQb = repo.createQueryBuilder('a').select('a.id', 'page_id');
+      applyTo(pageQb, { sortsByVulnerabilities });
+      applySort(pageQb);
+      pageQb
+        .addSelect('vc.open', 'vc_open')
+        .addSelect('vc.severe', 'vc_severe')
+        .addSelect('count(*) OVER ()', 'page_total')
+        .offset(skip)
+        .limit(limit);
+      const rows: Array<{ page_id: string; vc_open: number | null; vc_severe: number | null; page_total: string | number }> = await pageQb.getRawMany();
+      if (rows.length > 0) {
+        total = Number(rows[0].page_total);
+      } else {
+        // A page past the end: no row carries the total.
+        const qbBase = repo.createQueryBuilder('a');
+        applyTo(qbBase);
+        total = skip > 0 ? await qbBase.getCount() : 0;
+      }
+      joinedCounts = new Map(rows.map((row) => [row.page_id, {
+        open: row.vc_open == null ? null : Number(row.vc_open),
+        severe: row.vc_severe == null ? null : Number(row.vc_severe),
+      }]));
+      const order = rows.map((row) => row.page_id);
+      const byId = new Map<string, Application>();
+      supplierNames = new Map();
+      if (order.length > 0) {
+        const qb = repo.createQueryBuilder('a').where('a.id IN (:...pageIds)', { pageIds: order });
+        applyExplicitTenantConstraint(qb, tenantId);
+        if (needsSupplierJoin) qb.leftJoin('suppliers', 's', 's.id = a.supplier_id AND s.tenant_id = a.tenant_id').addSelect('s.name', 's_name');
+        const { raw, entities: found } = await qb.getRawAndEntities();
+        for (const app of found) byId.set(app.id, app);
+        for (const r of raw as any[]) supplierNames.set(r.a_id, r.s_name ?? null);
+      }
+      entities = order.map((id) => byId.get(id)).filter((app): app is Application => !!app);
+    } else {
+      // Count query
+      const qbBase = repo.createQueryBuilder('a');
+      applyTo(qbBase);
+      total = await qbBase.getCount();
+
+      // Page query
+      const qb = repo.createQueryBuilder('a');
+      applyTo(qb, { selectSupplier: true, sortsByVulnerabilities });
+      applySort(qb);
+      qb.skip(skip).take(limit);
+      const result = await qb.getRawAndEntities();
+      entities = result.entities;
+      supplierNames = new Map(entities.map((app, idx) => [app.id, ((result.raw[idx] || {}) as any).s_name ?? null]));
+    }
     const pageIds = entities.map((e) => e.id);
 
     // Prepare expansions
     const expansions = await this.buildExpansions(pageIds, include, mg);
     // Batched: one set of queries for the whole page instead of 2-5 per application.
     const derivedUsersByApp = await buildDerivedUsersByApp(entities, mg);
+    // Vulnerabilities to review and severe ones, one batch for the page, when the column shows.
+    const vulnerabilityCounts = joinedCounts && include.has('vulnerabilities')
+      ? joinedCounts
+      : include.has('vulnerabilities') && pageIds.length > 0
+      ? await applicationVulnerabilityCounts(mg, tenantId || (await mg.query('SELECT app_current_tenant() AS id'))[0]?.id, pageIds)
+      : null;
 
     const tenantRows = await mg.query('SELECT metadata FROM tenants WHERE id = app_current_tenant()');
     const catalog = catalogFromMetadata(tenantRows[0]?.metadata?.it_ops);
     // Compute derived users per row and attach expansions
     const items = await Promise.all(
-      entities.map(async (app, idx) => {
+      entities.map(async (app) => {
         const base: any = { ...app, ...classificationReadState(app) };
         for (const [field, options, output, rankField] of [
           ['criticality', catalog.businessCriticalityLevels, 'business_criticality_label', 'business_criticality_rank'],
@@ -589,8 +681,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
           base[rankField] = option ? ('rank' in option ? option.rank : option.order) : null;
         }
         if (include.has('supplier')) {
-          const r = (raw[idx] || {}) as any;
-          base.supplier_name = r.s_name || null;
+          base.supplier_name = supplierNames.get(app.id) || null;
         }
         if (include.has('owners')) {
           const ow = expansions.ownersByApp[app.id] || { business: [], it: [] };
@@ -629,6 +720,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
         if (include.has('deployments')) {
           base.deployments = expansions.instancesByApp[app.id] || [];
         }
+        if (vulnerabilityCounts) Object.assign(base, vulnerabilityListFields(vulnerabilityCounts.get(app.id)));
         base.derived_total_users = derivedUsersByApp[app.id] ?? 0;
         return base;
       }),
@@ -646,9 +738,11 @@ export class ApplicationsListService extends ApplicationsBaseService {
     const { sort } = parsePagination(query, { field: 'created_at', direction: 'DESC' });
     const { applyTo } = this.buildFilteredScope(query, opts, sort.field);
 
-    // Same filters and scope as the grid, ids only
+    // Same filters and scope as the grid, ids only. The record navigation and the export follow the
+    // grid's order on the Vulnerabilities column, whatever `include` says.
+    const sortsByVulnerabilities = sort.field === VULNERABILITIES_LIST_FIELD && vulnerabilityCountsEnabled();
     const qb = repo.createQueryBuilder('a').select('a.id').addSelect('a.sequential_id', 'ref');
-    applyTo(qb);
+    applyTo(qb, { sortsByVulnerabilities });
 
     // Sorting
     const appFields = new Set([
@@ -665,6 +759,9 @@ export class ApplicationsListService extends ApplicationsBaseService {
     } else if (sort.field === 'sequential_id') {
       qb.addSelect(SEQUENTIAL_ID_SORT_SQL, 'reference_sort_value');
       qb.orderBy('reference_sort_value', direction, 'NULLS LAST');
+    } else if (sortsByVulnerabilities) {
+      qb.addSelect(VULNERABILITY_SORT_SQL, 'vulnerability_sort_value');
+      qb.orderBy('vulnerability_sort_value', direction, 'NULLS LAST');
     } else if (APPLICATION_TEXT_SORTS.has(sort.field)) {
       // Text alphabetically, case and accents ignored, through a selected alias (paged over joins).
       qb.addSelect((await textSortKey(mg))(`a.${sort.field}`), 'text_sort_value');
@@ -676,9 +773,12 @@ export class ApplicationsListService extends ApplicationsBaseService {
     }
 
     qb.addOrderBy('a.id', 'ASC');
-    const total = await qb.clone().getCount();
+    // The total in the same statement: the counts (`vc`), when joined, are computed once. Every join
+    // of `applyTo` names at most one row per application, so the rows are the distinct ids.
+    qb.addSelect('count(*) OVER ()', 'ids_total');
     const limit = query?.__classificationExport === true ? undefined : Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
-    const rows: Array<{ a_id: string; ref: string | null }> = await qb.take(limit).getRawMany();
+    const rows: Array<{ a_id: string; ref: string | null; ids_total: string | number }> = await qb.take(limit).getRawMany();
+    const total = rows.length > 0 ? Number(rows[0].ids_total) : 0;
     const ids = rows.map((r) => r.a_id);
     const refs = rows.map((r) => r.ref || r.a_id);
 
@@ -901,9 +1001,17 @@ export class ApplicationsListService extends ApplicationsBaseService {
       const needsSupplierJoin = field === 'supplier_name' || (filtersForField && Object.prototype.hasOwnProperty.call(filtersForField, 'supplier_name'));
       const nextParam = createParamNameGenerator('p');
       const compiledFilters: CompiledCondition[] = [];
+      let filtersOnVulnerabilities = false;
 
       if (filtersForField) {
         for (const [filterField, model] of Object.entries(filtersForField)) {
+          if (filterField === VULNERABILITIES_LIST_FIELD) {
+            // As the list: severe, any or none on the counts joined as `vc`.
+            const predicate = vulnerabilityFilterPredicateSql(model, 'vc');
+            if (predicate) compiledFilters.push({ sql: predicate, params: {} });
+            filtersOnVulnerabilities = filtersOnVulnerabilities || (predicate != null && predicate !== '1=0');
+            continue;
+          }
           if (filterField === 'environments') {
             const custom = compileEnvironmentsSetFilter(model, nextParam);
             if (custom) {
@@ -941,6 +1049,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
 
       const quickSearch = q ? buildQuickSearchConditions(q, ['a.name', buildApplicationOwnerNamesSql('it')], nextParam) : [];
       const baseQb = buildBaseQuery(filtersForField, lifecycleFilterPresent, field === 'lifecycle', needsSupplierJoin);
+      if (filtersOnVulnerabilities) joinVulnerabilityCounts(baseQb, tenantId);
       applyCompiledFilters(baseQb, compiledFilters);
       applyQuickSearch(baseQb, quickSearch);
 

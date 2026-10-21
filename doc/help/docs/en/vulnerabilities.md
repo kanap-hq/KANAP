@@ -6,7 +6,7 @@ Open it from **IT Landscape > Vulnerabilities**, in the **Operations** group. Yo
 
 ## Availability
 
-Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) and the CVE.org list, or a mirror of each. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies list, no section on a technology, no notification setting and no email.
+Vulnerabilities are followed by default in the cloud. On an on-premise installation they are off until your administrator [turns them on](on-premise/configuration.md#optional-vulnerabilities), and the server must then reach the NVD (the US National Vulnerability Database) and the CVE.org list, or a mirror of each. The same switch also reads three exploitation sources, or a mirror of each: the CISA catalog, ENISA's European vulnerability database and the daily EPSS scores. While they are off, KANAP shows none of it: no page, no column in the technologies, assets and applications lists, no section or badge on a record, no dashboard tile, no notification setting and no email. Plaid does not answer about vulnerabilities either.
 
 ## How KANAP finds them
 
@@ -48,7 +48,24 @@ A version out of the alerts is still matched with the vulnerabilities. It stays 
 
 - This page shows only the rows in the alerts by default.
 - The emails announce only the rows in the alerts.
-- The **Vulnerabilities to review** column of the technologies list counts only the rows in the alerts.
+- The **Vulnerabilities to review** columns of the technologies, assets and applications lists count only the rows in the alerts, as do the records, the badges and the dashboard tile.
+
+## What KANAP counts { #what-kanap-counts }
+
+A vulnerability reaches a server or an application through direct links only, everywhere: on this page, in the lists, on the records, on the dashboard and in Plaid.
+
+- **Server**: the technology and the version are recorded on the server itself. A retired server is not counted.
+- **Application**: the application declares the technology and the version, or one of its deployment servers has them recorded on itself. A technology both declared and hosted counts once. A disabled application, or one whose disable date has passed, is not counted.
+
+The counts per server and per application, in the lists, on the records, on the dashboard and in Plaid, follow the same rules:
+
+- **Which vulnerabilities**: those still **To review** whose technology or version is in the alerts. Each vulnerability counts once, even when it concerns several versions.
+- **Severity**: the NVD's, or the publisher's (CVE.org) when the NVD has not scored the vulnerability yet. **Severe** means critical or high.
+- **Out of service**: a retired server or a disabled application counts nothing. Its cell stays empty.
+
+A virtual machine or a guest does not count the vulnerabilities of its host. A vulnerability of VMware ESXi counts on the ESXi hosts only. Counting through the hosts would put one vulnerability of a hypervisor on almost every server and application of a virtualised estate.
+
+The reach through another asset stays visible, without being counted: in the side panel of a vulnerability, under **Through another asset**, and on the record of an asset, in the **Through another asset** part of its **Vulnerabilities** section. See [Assets](assets.md#technical).
 
 ## The list
 
@@ -71,18 +88,24 @@ A line above the grid says when KANAP last read each source: **Data read**, then
 | **Technology** | The concerned technology |
 | **Version** | The concerned version. **Not recorded** when a server or an application uses the technology without naming its version: the row is then potentially concerned |
 | **Publisher** | The technology's publisher. Hidden by default |
-| **Servers** | How many servers carry this version, directly or through the server they run in |
-| **Applications** | How many applications use this version, hosted or declared |
+| **Servers** | How many servers have this version recorded on themselves. A server that runs inside another one is not counted. See [What KANAP counts](#what-kanap-counts) |
+| **Applications** | How many applications declare this version, or run on a server that has it recorded |
 | **Source** | The sources that matched the row: **NVD**, **Publisher** (the record the publisher released on CVE.org), or both |
 | **State** | **To review**, **Handled** or **Not affected** |
 | **Note** | The note of the row. Hidden by default |
 | **Published** | The publication date |
 
-**Filters**: each column has its own filter under its header. **Severity**, **Technology**, **Version**, **Publisher**, **Source**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. **Source** offers **NVD**, **Publisher** and **Both**: a row both sources matched stays under **NVD** and under **Publisher**, and **Both** keeps only those rows. The export and a change of state in bulk follow it, as they follow the other column filters. The search box above the grid matches the CVE identifier, the summary and the technology name.
+**Filters**: each column has its own filter under its header. **Servers** and **Applications** list the servers and the applications a vulnerability reaches by direct links: search one by name or reference and tick one or several. Several values keep the rows of any of them, and a filter in both columns keeps the rows that match both. The **Applications** filter needs the right to read applications. **Severity**, **Technology**, **Version**, **Publisher**, **Source**, **State** and **Exploited** offer checkboxes (**Version** offers **Not recorded** too, **Exploited** offers **Yes** and **No**), **Score** a number, **EPSS (%)** a minimum percentage from 0 to 100, **Published** a date, **CVE** and **Summary** a text. **Source** offers **NVD**, **Publisher** and **Both**: a row both sources matched stays under **NVD** and under **Publisher**, and **Both** keeps only those rows. The export and a change of state in bulk follow it, as they follow the other column filters. The search box above the grid matches the CVE identifier, the summary and the technology name.
 
 **Sort** by **Exploited**, **Severity**, **Score**, **EPSS (%)**, **Published**, **CVE** or **Technology**. The list opens with actively exploited vulnerabilities first, then the most severe. The column chooser shows or hides columns, and the grid remembers your choice.
 
 **Links**: the page reads its filters from its address, so you can share a filtered list. `?technology=TEC-4` keeps one technology, `?version=none` the rows without a recorded version, `?state=all` every state, `?published=30d` the vulnerabilities published within the last 30 days (`7d`, `30d`, `90d`, `1y` or `older1y`, as the **Published** filter), `?period=30` the same through the filter of the **Published** column, `?alerts=excluded` or `?alerts=all` the rows out of the alerts, `?exploited=1` the actively exploited vulnerabilities. The link of the emails uses `period`.
+
+**Asset and application**: `?asset=AST-12` opens the page with the filter of the **Servers** column set on one asset, and `?application=APP-4` with the filter of the **Applications** column set on one application, by direct links (see [What KANAP counts](#what-kanap-counts)). The lists of assets and applications and their records open the page this way. Clear the column filter to see the other rows. You need to be able to read the application to filter on it.
+
+**In use in the estate**: `?estate=1` keeps the vulnerabilities of the technologies installed on an asset in service or declared by an application in service. The links of the dashboard's **Vulnerabilities in your estate** tile to CVEs open the page with it. A line above the grid shows **In use in the estate · remove**. **remove** clears it.
+
+**Reset filters** also clears these two filters. The export and a change of state in bulk follow them.
 
 ## Changing the state of several rows
 
@@ -105,8 +128,8 @@ Click a row to open its vulnerability in a side panel. Its header stays in view 
 - The description, cut at three lines (**See more** shows the rest), the CVSS vector and the reference links (publisher advisories, patches).
 - **Sources**: the state of the vulnerability at the NVD (**analyzed**, **awaiting analysis**, **not analyzed**, **rejected**, or **not linked to this product yet**), with a link to its NVD page. When KANAP has read the publisher's record, a second line gives who released it and when, its last update, and **See on CVE.org**.
 - **Exploitation**, when a catalog, an EPSS score or a European identifier is known. See [Exploitation](#exploitation).
-- **Servers**: each server that carries a concerned version, with the technology and the version. The servers reached through another asset, such as the host of a virtual machine or a cluster, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through.
-- **Applications**: each application that uses a concerned version, listed once per version with its servers (three at most, then "and 2 more"). An application that declares the technology, or is hosted on a server that carries it, comes first. The others sit behind the same kind of button.
+- **Servers**: each server that has a concerned version recorded on itself, with the technology and the version. The servers reached through another asset, such as a virtual machine on a host or the members of a cluster, are hidden behind a button, for example **Also show the 4 servers reached through another asset**. They show under their own heading, **Through another asset**, with the asset they are reached through. They are not counted.
+- **Applications**: each application that uses a concerned version, listed once per version with its servers (three at most, then "and 2 more"). An application that declares the technology, or runs on a server that has it recorded, comes first. The others sit behind the same kind of button and are not counted.
 
 When no server or application is directly concerned, the panel says so, and the button still shows the others.
 
@@ -155,6 +178,10 @@ The recipients are the IT owners of the technology whose account is enabled and 
 
 - **Technologies list**: the **Vulnerabilities to review** column, in orange when some are critical or high. See [Technologies](technologies.md#working-with-the-list).
 - **Technology workspace**: the **Vulnerabilities** section of the Compliance tab. See [Technologies](technologies.md#vulnerabilities).
+- **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
+- **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#technical) and [Applications](applications.md#operations).
+- **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
+- **Plaid**: the assistant answers questions about vulnerabilities. See [Plaid](ai-assistant.md#tool-calls).
 
 ## Tips
 

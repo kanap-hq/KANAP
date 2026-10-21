@@ -20,6 +20,12 @@ import {
   CsvResolverService,
 } from '../common/csv';
 import { applicationCsvConfig, csvOwnerKeys, sameKeys } from './application-csv.config';
+import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
+import {
+  csvConfigForVulnerabilityFeed,
+  VULNERABILITY_CSV_PROPERTY,
+  vulnerabilityListFields,
+} from '../vulnerabilities/vulnerability-list-column';
 
 /**
  * Service for importing and exporting Applications via CSV (V2)
@@ -147,15 +153,20 @@ export class ApplicationsCsvService {
         residencyByApp.get(row.application_id)!.push({ country_iso: row.country_iso });
       }
 
+      // Vulnerabilities to review and severe ones (shared module) of the applications the list
+      // reads in the user's scope, empty for an application out of service.
+      const vulnerabilityCounts = await applicationVulnerabilityCounts(manager, tenantId, appIds);
+
       // Attach to applications
       for (const app of applications) {
         (app as any)._owners = ownersByApp.get(app.id) || [];
         (app as any)._dataResidency = residencyByApp.get(app.id) || [];
+        (app as any)[VULNERABILITY_CSV_PROPERTY] = vulnerabilityListFields(vulnerabilityCounts.get(app.id));
       }
     }
 
     // Build CSV content - owner columns are now handled via COMPUTED fields in config
-    return this.exportSvc.export(applicationCsvConfig, applications, {
+    return this.exportSvc.export(csvConfigForVulnerabilityFeed(applicationCsvConfig), applications, {
       manager,
       tenantId,
       scope,
@@ -176,7 +187,7 @@ export class ApplicationsCsvService {
     }
 
     // For data export, filter by exportable
-    let selectedFields = applicationCsvConfig.fields.filter((f) => f.exportable !== false);
+    let selectedFields = csvConfigForVulnerabilityFeed(applicationCsvConfig).fields.filter((f) => f.exportable !== false);
 
     if (preset && applicationCsvConfig.exportPresets) {
       const presetConfig = applicationCsvConfig.exportPresets.find((p) => p.name === preset);
@@ -396,7 +407,7 @@ export class ApplicationsCsvService {
    * Get field metadata and presets for frontend display.
    */
   getFieldInfo(): { fields: CsvFieldInfo[]; presets: Array<{ name: string; label: string; fields: string[] }> } {
-    const fields = applicationCsvConfig.fields
+    const fields = csvConfigForVulnerabilityFeed(applicationCsvConfig).fields
       .filter((f) => f.exportable !== false || f.importable !== false)
       .map((f) => ({
         csvColumn: f.csvColumn,

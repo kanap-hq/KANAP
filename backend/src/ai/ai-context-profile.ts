@@ -252,6 +252,8 @@ const CANONICAL_REF_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEn
   { pattern: /\bINC-\d+\b/i, entityType: 'incidents' },
   // Read only for now: kept out of BUSINESS_ENTITY_TYPES until technologies have a write.
   { pattern: /\bTEC-\d+\b/i, entityType: 'technologies' },
+  // Read only: a CVE id names the vulnerability rows of that CVE.
+  { pattern: /\bCVE-\d{4}-\d{4,}\b/i, entityType: 'vulnerabilities' },
 ];
 
 const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }> = [
@@ -266,6 +268,7 @@ const URL_ENTITY_TYPES: Array<{ pattern: RegExp; entityType: AiQueryEntityType }
   { pattern: /\/it\/interfaces\//i, entityType: 'interfaces' },
   { pattern: /\/it\/locations\//i, entityType: 'locations' },
   { pattern: /\/it\/technologies\//i, entityType: 'technologies' },
+  { pattern: /\/it\/vulnerabilities\b/i, entityType: 'vulnerabilities' },
   { pattern: /\/ops\/contracts\//i, entityType: 'contracts' },
   { pattern: /\/ops\/capex\//i, entityType: 'capex_items' },
   { pattern: /\/ops\/opex\//i, entityType: 'spend_items' },

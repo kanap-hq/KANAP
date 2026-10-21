@@ -3,16 +3,74 @@ import { textSortKey } from '../../common/list-sort';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { Asset } from '../asset.entity';
-import { parsePagination } from '../../common/pagination';
+import { parsePagination, Sort } from '../../common/pagination';
 import { operatingSystemLabelSql } from '../../technologies/operating-system-codes';
 import { AssetsBaseService, ServiceOpts } from './assets-base.service';
 import { assertSetFilterModes, bindPositional, compileAgFilterCondition, createParamNameGenerator } from '../../common/ag-grid-filtering';
+import { assetCountsForTenantSql, assetVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
+import {
+  VULNERABILITIES_LIST_FIELD,
+  vulnerabilityFilterPredicateSql,
+  vulnerabilityListFields,
+  vulnerabilitySortKeySql,
+} from '../../vulnerabilities/vulnerability-list-column';
 
 /** The readable operating system, one scalar subquery on the assets alias `a`. */
 const ASSET_OS_LABEL = operatingSystemLabelSql('a');
 
 /** The asset list columns that sort alphabetically. */
 const ASSET_TEXT_SORTS = new Set(['name', 'asset_reference', 'provider', 'region', 'zone', 'hostname', 'fqdn', 'operating_system', 'location_name', 'sub_location_name', 'cluster']);
+
+/**
+ * The vulnerability counts of the asset `a` (shared module), as `vc.open` and `vc.severe`, for the
+ * sort and the filter of the Vulnerabilities column: the counts of every asset of the tenant
+ * `tenant` (its placeholder), computed once and joined by id. Joined only when one of them asks for it.
+ */
+const vulnerabilityCountsJoin = (tenant: string) => `LEFT JOIN (${assetCountsForTenantSql({ tenant })}) vc ON vc.id = a.id`;
+
+/**
+ * The sort of the list: the selected sort value and the ORDER BY terms before the id. The
+ * Vulnerabilities column sorts by severe count then count, a retired asset last either way; with
+ * the feed off it sorts as an unknown column (by creation date).
+ */
+function listSort(sort: Sort, sortField: string): { value: string; orderBy: string; orderByValue: (value: string) => string; joinsVulnerabilities: boolean } {
+  if (sort.field === VULNERABILITIES_LIST_FIELD && vulnerabilityCountsEnabled()) {
+    const key = vulnerabilitySortKeySql('vc');
+    return { value: key, orderBy: `${key} ${sort.direction} NULLS LAST`, orderByValue: (value) => `${value} ${sort.direction} NULLS LAST`, joinsVulnerabilities: true };
+  }
+  return { value: sortField, orderBy: `${sortField} ${sort.direction}`, orderByValue: (value) => `${value} ${sort.direction}`, joinsVulnerabilities: false };
+}
+
+/** The joins of the list's rows, after `FROM assets a`. A member of two clusters repeats. */
+const LIST_JOINS = `
+      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
+      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
+      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
+      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id`;
+
+/**
+ * The ordered rows of the list and their total in one statement: the distinct `(id, sort value)`
+ * rows are read once (a materialized CTE), counted by id, and the page taken from them. The
+ * vulnerability counts (`vc`), when joined, are then computed once per display (lot 2,
+ * performance: the count and the page each computed them). `columns` adds columns of the rows
+ * (`a.asset_reference AS ref`, `vc.open AS vc_open`); `page` holds the placeholders of the limit
+ * and the offset.
+ */
+function orderedRowsSql(p: { columns: string[]; vulnerabilityJoin: string; whereConditions: string; ordering: ReturnType<typeof listSort>; page: string }): string {
+  return `
+      WITH list_rows AS MATERIALIZED (
+        SELECT DISTINCT a.id, ${p.ordering.value} AS sort_value${p.columns.map((column) => `, ${column}`).join('')}
+        FROM assets a
+        ${LIST_JOINS}
+        ${p.vulnerabilityJoin}
+        WHERE ${p.whereConditions}
+      )
+      SELECT lr.*, (SELECT COUNT(DISTINCT id) FROM list_rows)::int AS list_total
+      FROM list_rows lr
+      ORDER BY ${p.ordering.orderByValue('lr.sort_value')}, lr.id ASC
+      ${p.page}
+    `;
+}
 
 /**
  * Service for listing and filtering assets.
@@ -34,7 +92,7 @@ export class AssetsListService extends AssetsBaseService {
     const { page, limit, skip, sort, q, filters } = parsePagination(query);
 
     const tenantId = this.ensureTenantId(opts?.tenantId);
-    const { whereConditions, params } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
+    const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
 
     // Sort field mapping
     const sortFieldMap: Record<string, string> = {
@@ -62,59 +120,32 @@ export class AssetsListService extends AssetsBaseService {
     const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
       ? (await textSortKey(mg))(sortFieldMap[sort.field])
       : sortFieldMap[sort.field] || 'a.created_at';
+    const ordering = listSort(sort, sortField);
+    const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
-    // Count query
-    const countQuery = `
-      SELECT COUNT(DISTINCT a.id)::int as count
-      FROM assets a
-      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
-      WHERE ${whereConditions}
-    `;
-    const countResult = await mg.query(countQuery, params);
-    const total = countResult[0]?.count || 0;
-
-    // Data query with pagination
-    const dataQuery = `
-      SELECT DISTINCT ON (a.id)
-        a.id, a.tenant_id, a.name, a.asset_reference, a.kind, a.provider, a.environment,
-        a.region, a.zone, a.hostname, a.domain, a.admin_zone, a.fqdn, a.aliases,
-        a.ip_addresses, a.cluster, a.is_cluster, ${ASSET_OS_LABEL} AS operating_system,
-        a.location_id, a.sub_location_id, a.status, a.notes, a.created_at, a.updated_at,
-        l.name AS location_name,
-        l.hosting_type AS hosting_type,
-        sl.name AS sub_location_name,
-        a.ip_addresses->0->>'network_segment' AS network_segment
-      FROM assets a
-      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
-      WHERE ${whereConditions}
-      ORDER BY a.id, ${sortField} ${sort.direction}
-    `;
-
-    // Get all matching IDs first, then apply pagination
-    const allIdsQuery = `
-      SELECT DISTINCT a.id, ${sortField} as sort_value
-      FROM assets a
-      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
-      WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}, a.id ASC
-      LIMIT $${params.length + 1} OFFSET $${params.length + 2}
-    `;
-
-    const paginatedIds = await mg.query(allIdsQuery, [...params, limit, skip]);
-    const ids = paginatedIds.map((r: any) => r.id);
+    const countsJoined = vulnerabilityJoin !== '';
+    const paginatedIds: Array<{ id: string; list_total: number; vc_open?: number | null; vc_severe?: number | null }> = await mg.query(
+      orderedRowsSql({
+        columns: countsJoined ? ['vc.open AS vc_open', 'vc.severe AS vc_severe'] : [],
+        vulnerabilityJoin,
+        whereConditions,
+        ordering,
+        page: `LIMIT $${params.length + 1} OFFSET $${params.length + 2}`,
+      }),
+      [...params, limit, skip],
+    );
+    const ids = paginatedIds.map((r) => r.id);
 
     if (ids.length === 0) {
+      // A page past the end (or an empty list): no row carries the total.
+      const total = skip > 0 ? await this.countRows(mg, whereConditions, params, joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '') : 0;
       return { items: [], total, page, limit };
     }
+    const total = Number(paginatedIds[0].list_total) || 0;
+    // The counts of the page's rows when the list joined them, else read for the page.
+    const joinedCounts = countsJoined
+      ? new Map(paginatedIds.map((r) => [r.id, { open: r.vc_open == null ? null : Number(r.vc_open), severe: r.vc_severe == null ? null : Number(r.vc_severe) }]))
+      : null;
 
     // Fetch full data for paginated IDs
     const itemsQuery = `
@@ -136,13 +167,26 @@ export class AssetsListService extends AssetsBaseService {
     const itemsRaw = await mg.query(itemsQuery, [ids, tenantId]);
 
     // Maintain sort order from paginated query
-    const itemsMap = new Map(itemsRaw.map((item: any) => [item.id, item]));
+    const itemsMap = new Map<string, any>(itemsRaw.map((item: any) => [item.id, item]));
     const items = ids.map((id: string) => itemsMap.get(id)).filter(Boolean);
 
     // Enrich with cluster names and assignment counts
-    await this.enrichListItems(items, ids, mg, tenantId);
+    await this.enrichListItems(items, ids, mg, tenantId, joinedCounts);
 
     return { items, total, page, limit };
+  }
+
+  /** The number of assets the filters keep (the list's rows counted by id). */
+  private async countRows(mg: any, whereConditions: string, params: any[], vulnerabilityJoin: string): Promise<number> {
+    const rows = await mg.query(
+      `SELECT COUNT(DISTINCT a.id)::int as count
+      FROM assets a
+      ${LIST_JOINS}
+      ${vulnerabilityJoin}
+      WHERE ${whereConditions}`,
+      params,
+    );
+    return Number(rows[0]?.count) || 0;
   }
 
   /**
@@ -154,7 +198,7 @@ export class AssetsListService extends AssetsBaseService {
     const { sort, q, filters } = parsePagination(query);
 
     const tenantId = this.ensureTenantId(opts?.tenantId);
-    const { whereConditions, params } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
+    const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, undefined, tenantId);
 
     // Sort field mapping
     const sortFieldMap: Record<string, string> = {
@@ -182,34 +226,16 @@ export class AssetsListService extends AssetsBaseService {
     const sortField = ASSET_TEXT_SORTS.has(sort.field) && sortFieldMap[sort.field]
       ? (await textSortKey(mg))(sortFieldMap[sort.field])
       : sortFieldMap[sort.field] || 'a.created_at';
-
-    const countQuery = `
-      SELECT COUNT(DISTINCT a.id)::int as count
-      FROM assets a
-      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
-      WHERE ${whereConditions}
-    `;
-    const countResult = await mg.query(countQuery, params);
-    const total = Number(countResult[0]?.count) || 0;
+    const ordering = listSort(sort, sortField);
+    const vulnerabilityJoin = joinsVulnerabilities || ordering.joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : '';
 
     // Need a subquery to properly order by sort field
     const limit = Math.min(Math.max(Number(query?.limit) || 10000, 1), 10000);
-    const orderedIdsQuery = `
-      SELECT DISTINCT a.id, a.asset_reference as ref, ${sortField} as sort_value
-      FROM assets a
-      LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
-      LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
-      LEFT JOIN asset_cluster_members acm ON acm.asset_id = a.id AND acm.tenant_id = a.tenant_id
-      LEFT JOIN assets cluster_asset ON cluster_asset.id = acm.cluster_id AND cluster_asset.tenant_id = a.tenant_id
-      WHERE ${whereConditions}
-      ORDER BY ${sortField} ${sort.direction}, a.id ASC
-      LIMIT $${params.length + 1}
-    `;
-
-    const rows: Array<{ id: string; ref: string | null }> = await mg.query(orderedIdsQuery, [...params, limit]);
+    const rows: Array<{ id: string; ref: string | null; list_total: number }> = await mg.query(
+      orderedRowsSql({ columns: ['a.asset_reference AS ref'], vulnerabilityJoin, whereConditions, ordering, page: `LIMIT $${params.length + 1}` }),
+      [...params, limit],
+    );
+    const total = rows.length > 0 ? Number(rows[0].list_total) || 0 : 0;
     const ids = rows.map((r) => r.id);
     const refs = rows.map((r) => r.ref || r.id);
     return { ids, refs, total };
@@ -218,7 +244,13 @@ export class AssetsListService extends AssetsBaseService {
   /**
    * Enrich list items with assignment counts, location info, and cluster names.
    */
-  private async enrichListItems(items: Asset[], ids: string[], mg: any, tenantId: string): Promise<void> {
+  private async enrichListItems(
+    items: Asset[],
+    ids: string[],
+    mg: any,
+    tenantId: string,
+    joinedCounts: Map<string, { open: number | null; severe: number | null }> | null,
+  ): Promise<void> {
     // Get assignment counts
     const assignmentRows: Array<{ asset_id: string; c: string }> = await mg.query(
       `SELECT asset_id, COUNT(*)::text as c FROM app_asset_assignments WHERE asset_id = ANY($1) AND tenant_id = $2 GROUP BY asset_id`,
@@ -227,6 +259,13 @@ export class AssetsListService extends AssetsBaseService {
     const assignmentMap = Object.fromEntries(assignmentRows.map((r) => [r.asset_id, Number(r.c)]));
     for (const item of items) {
       (item as any).assignments_count = assignmentMap[item.id] || 0;
+    }
+
+    // Vulnerabilities to review and severe ones (null retired or feed off): those the list joined,
+    // else one batch for the page.
+    const vulnerabilityCounts = joinedCounts ?? await assetVulnerabilityCounts(mg, tenantId, ids);
+    for (const item of items) {
+      Object.assign(item as any, vulnerabilityListFields(vulnerabilityCounts.get(item.id)));
     }
 
     // Get location info for grid display
@@ -309,7 +348,7 @@ export class AssetsListService extends AssetsBaseService {
 
     for (const field of fields) {
       const expression = FILTER_VALUE_FIELDS[field];
-      const { whereConditions, params } = this.buildFilterWhereConditions(filters, q, field, tenantId);
+      const { whereConditions, params, joinsVulnerabilities, tenantParam } = this.buildFilterWhereConditions(filters, q, field, tenantId);
 
       // For cluster field, we need a different join strategy
       const clusterJoin = field === 'cluster'
@@ -324,6 +363,7 @@ export class AssetsListService extends AssetsBaseService {
         LEFT JOIN locations l ON l.id = a.location_id AND l.tenant_id = a.tenant_id
         LEFT JOIN location_sub_items sl ON sl.id = a.sub_location_id AND sl.tenant_id = a.tenant_id
         ${clusterJoin}
+        ${joinsVulnerabilities ? vulnerabilityCountsJoin(tenantParam) : ''}
         WHERE ${whereConditions}
         ORDER BY value ASC NULLS LAST
       `;
@@ -344,8 +384,9 @@ export class AssetsListService extends AssetsBaseService {
     q?: string,
     skipField?: string,
     tenantId?: string,
-  ): { whereConditions: string; params: any[] } {
+  ): { whereConditions: string; params: any[]; joinsVulnerabilities: boolean; tenantParam: string } {
     let whereConditions = '1=1';
+    let joinsVulnerabilities = false;
     const params: any[] = [];
     const filters: Record<string, any> = rawFilters && typeof rawFilters === 'object' ? rawFilters : {};
     assertSetFilterModes(filters);
@@ -393,6 +434,15 @@ export class AssetsListService extends AssetsBaseService {
     // Apply set and text filters
     for (const [field, model] of Object.entries(filters)) {
       if (shouldSkip(field)) continue;
+      // The Vulnerabilities column: severe, any or none, on the counts the list joins as `vc`.
+      if (field === VULNERABILITIES_LIST_FIELD) {
+        const predicate = vulnerabilityFilterPredicateSql(model, 'vc');
+        if (predicate) {
+          whereConditions += ` AND ${predicate}`;
+          joinsVulnerabilities = joinsVulnerabilities || predicate !== '1=0';
+        }
+        continue;
+      }
       const numberExpression = numberExpressions[field];
       if (numberExpression) {
         const value = Number(model?.filter);
@@ -472,12 +522,15 @@ export class AssetsListService extends AssetsBaseService {
       )`;
     }
 
+    // The tenant's placeholder, also read by the vulnerability counts join (the session's tenant without one).
+    let tenantParam = 'app_current_tenant()';
     if (tenantId) {
       params.push(tenantId);
-      whereConditions += ` AND a.tenant_id = $${params.length}`;
+      tenantParam = `$${params.length}`;
+      whereConditions += ` AND a.tenant_id = ${tenantParam}`;
     }
 
-    return { whereConditions, params };
+    return { whereConditions, params, joinsVulnerabilities, tenantParam };
   }
 
   /**

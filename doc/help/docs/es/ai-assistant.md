@@ -106,13 +106,15 @@ Plaid va mostrando su respuesta carácter a carácter. Mientras la genera:
 
 Cuando termina la generación, el foco vuelve al cuadro de redacción para que pueda continuar la conversación sin recurrir al ratón.
 
-### Llamadas a herramientas
+### Llamadas a herramientas { #tool-calls }
 
 Plaid usa un pequeño conjunto de herramientas internas para responder preguntas: `Search all`, `Search knowledge`, `Get document`, `Get entity context` y algunas otras. Cada llamada a herramienta aparece como una línea compacta debajo del mensaje ("ha usado Buscar todo · 8 resultados"). Normalmente no necesita leer los detalles de las herramientas, pero están ahí si quiere ver exactamente en qué registros se basó la respuesta.
 
 `Search all` encuentra las líneas presupuestarias por el nombre de sus valores analíticos e indica a Plaid qué valores tiene cada línea. Plaid nombra una línea presupuestaria por su referencia `BL-12`, y sus enlaces abren la línea.
 
 Plaid lista y lee las tecnologías para los usuarios que pueden leer la infraestructura. Puede filtrarlas por familia, editor, fin de soporte o número de servidores, y leer las versiones, los servidores y las aplicaciones de una tecnología. Si se le pregunta por un servidor, una aplicación o una tecnología por su nombre, sin su referencia, también lee los registros relacionados. No puede modificar una tecnología. Los asistentes conectados por MCP obtienen las mismas respuestas.
+
+Cuando se siguen las vulnerabilidades, Plaid también lista, cuenta y lee las vulnerabilidades, para los usuarios que leen la infraestructura. Un elemento es una CVE en una versión de una tecnología, como en la página [Vulnerabilidades](vulnerabilities.md). Plaid puede filtrarlas por gravedad, explotación, estado, alertas, tecnología, fecha de publicación, activo o aplicación, y contarlas por gravedad o por tecnología. Salvo que pida otra cosa, Plaid conserva las vulnerabilidades por revisar que están en las alertas, como la página. Los servidores y las aplicaciones que alcanza una vulnerabilidad siguen los vínculos directos, como los cuenta la página (consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)). En los activos y las aplicaciones, Plaid lee cuántas vulnerabilidades quedan por revisar y cuántas son críticas o altas. Pregunte, por ejemplo: «¿Qué aplicaciones críticas están afectadas por una CVE explotada?» Plaid no puede cambiar el estado de una vulnerabilidad. Los asistentes conectados por MCP obtienen las mismas respuestas.
 
 Cuando Plaid suma importes presupuestarios, una línea cuya moneda no tiene tipo de cambio para el año queda excluida de la suma. Plaid indica entonces qué monedas y años ha excluido. Los asistentes conectados por MCP reciben la misma respuesta.
 

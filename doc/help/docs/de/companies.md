@@ -85,7 +85,7 @@ Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich des Untern
 - **Status**, unter dem Namen: **Aktiviert** oder **Deaktiviert**. Klicken Sie darauf, um ihn zu ändern. Die Wahl von **Deaktiviert** deaktiviert das Unternehmen sofort: Das Ende der Gültigkeit wird auf den aktuellen Zeitpunkt gesetzt
 - **Bereich Eigenschaften** rechts: **Land**, **Basiswährung**, **Kontenplan** und **Lebenszyklus**. Mit der Schaltfläche daneben klappen Sie den Bereich ein oder wieder aus
 
-- **Löschen**, oben rechts: sichtbar für Unternehmensadministratoren (`companies:admin`). Siehe [Ein Unternehmen löschen](#ein-unternehmen-loschen)
+- **Löschen**, ein Papierkorbsymbol oben rechts: sichtbar für Unternehmensadministratoren (`companies:admin`). Siehe [Ein Unternehmen löschen](#ein-unternehmen-loschen)
 
 **Automatisches Speichern**: Jede Änderung wird von selbst gespeichert, sobald Sie das Feld verlassen. Es gibt keine Schaltflächen zum Speichern, Zurücksetzen oder Schließen. Sie können weiterarbeiten, während eine Änderung gespeichert wird. Oben auf der Seite steht **Wird gespeichert…**, solange gespeichert wird, dann kurz **Gespeichert**. Wird eine Änderung abgelehnt, zeigt das Feld wieder seinen vorherigen Wert und darunter den Grund. Die Meldung bleibt, bis Sie wieder in das Feld tippen.
 

@@ -31,6 +31,7 @@ import { suppliersRegistry } from './suppliers.registry';
 import { tasksRegistry } from './tasks.registry';
 import { technologiesRegistry } from './technologies.registry';
 import { usersRegistry } from './users.registry';
+import { vulnerabilitiesRegistry } from './vulnerabilities.registry';
 
 export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistry> = {
   accounts: accountsRegistry,
@@ -56,6 +57,7 @@ export const aiEntityRegistries: Record<AiQueryEntityType, AiEntityFilterRegistr
   tasks: tasksRegistry,
   technologies: technologiesRegistry,
   users: usersRegistry,
+  vulnerabilities: vulnerabilitiesRegistry,
 };
 
 export function getAiEntityRegistry(entityType: AiQueryEntityType): AiEntityFilterRegistry {

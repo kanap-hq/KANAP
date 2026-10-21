@@ -113,7 +113,7 @@ Der Arbeitsbereich hat eine Kopfzeile, ein Eigenschaftenfeld rechts und sechs Re
 - **Referenz**: zum Kopieren anklicken.
 - **Lebenszyklus**: zum Ändern anklicken. Eine ausgemusterte Technologie wird beim Suchen nach einer zu verknüpfenden Technologie nicht mehr angeboten.
 - **Familie**.
-- **Löschen** (`infrastructure:admin`): Die Bestätigung nennt, was mit der Technologie gelöscht wird.
+- **Löschen**, ein Papierkorbsymbol (`infrastructure:admin`): Die Bestätigung nennt, was mit der Technologie gelöscht wird.
 
 ### Eigenschaftenfeld
 
@@ -263,7 +263,7 @@ Eine Zusammenfassung der Schwachstellen, eine Zeile pro installierter Version de
 | Spalte | Was sie zeigt |
 |---|---|
 | **Version** | Die Version. Eine Version außerhalb der Warnungen ist ausgegraut und zeigt **Von den Warnungen ausgeschlossen**. **Version nicht erfasst (möglicherweise betroffen)** fasst die Server und Anwendungen zusammen, die keine Version angeben; diese Zeile erscheint nur, wenn es solche gibt |
-| **Server** | Wie viele Server in Betrieb diese Version tragen |
+| **Server** | Wie viele Server in Betrieb diese Version selbst erfasst haben. Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts) |
 | **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine Schwachstelle mit dem Schweregrad **Keine** zählt bei **Niedrig**. Ein Punkt bedeutet, dass keine mehr übrig ist. Fahren Sie über eine Überschrift für einen Hinweis |
 | **Gesamt** | Die verschiedenen Schwachstellen dieser Version, alle Status zusammen |
 
@@ -295,7 +295,7 @@ Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** 
 Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 
 - Von der Technologie aus: Reiter **Server**, **Hinzufügen**, dann Server und Version wählen.
-- Vom Server aus: Reiter **Technisch** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#technisch).
+- Vom Server aus: Reiter **Technisch** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#technical).
 
 Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
 
@@ -353,8 +353,8 @@ Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Tech
 
 ## Wo Technologien erscheinen
 
-- **Anwendungen**: Der Abschnitt **Technologien** oben im Reiter Betrieb listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#betrieb).
-- **Assets**: Der Abschnitt **Technologien** im Reiter Technisch eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#technisch).
+- **Anwendungen**: Der Abschnitt **Technologien** oben im Reiter Betrieb listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#operations).
+- **Assets**: Der Abschnitt **Technologien** im Reiter Technisch eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#technical).
 - **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
 - Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, Betriebssysteme eingeschlossen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).

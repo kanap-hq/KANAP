@@ -6,7 +6,7 @@ Die Seite Schwachstellen listet die veröffentlichten Schwachstellen (CVE), die 
 
 ## Verfügbarkeit
 
-In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) und die CVE.org-Liste erreichen, oder jeweils einen Spiegel. Derselbe Schalter liest auch drei Quellen zur Ausnutzung, oder jeweils einen Spiegel: den Katalog der CISA, die europäische Schwachstellendatenbank der ENISA und die täglichen EPSS-Werte. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in der Technologieliste, keinen Abschnitt bei einer Technologie, keine Benachrichtigungseinstellung und keine E-Mail.
+In der Cloud werden Schwachstellen standardmäßig verfolgt. Bei einer On-Premise-Installation sind sie aus, bis Ihr Administrator [sie einschaltet](on-premise/configuration.md#optional-vulnerabilities); der Server muss dann die NVD (die US-amerikanische National Vulnerability Database) und die CVE.org-Liste erreichen, oder jeweils einen Spiegel. Derselbe Schalter liest auch drei Quellen zur Ausnutzung, oder jeweils einen Spiegel: den Katalog der CISA, die europäische Schwachstellendatenbank der ENISA und die täglichen EPSS-Werte. Solange sie aus sind, zeigt KANAP nichts davon: keine Seite, keine Spalte in den Listen der Technologien, Assets und Anwendungen, keinen Abschnitt und kein Badge auf einem Datensatz, keine Dashboard-Kachel, keine Benachrichtigungseinstellung und keine E-Mail. Auch Plaid antwortet nicht zu Schwachstellen.
 
 ## Wie KANAP sie findet
 
@@ -48,7 +48,24 @@ Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgegli
 
 - Diese Seite zeigt standardmäßig nur die Zeilen in den Warnungen.
 - Die E-Mails melden nur die Zeilen in den Warnungen.
-- Die Spalte **Zu prüfende Schwachstellen** der Technologieliste zählt nur die Zeilen in den Warnungen.
+- Die Spalten **Zu prüfende Schwachstellen** der Listen der Technologien, Assets und Anwendungen zählen nur die Zeilen in den Warnungen, ebenso die Datensätze, die Badges und die Dashboard-Kachel.
+
+## Was KANAP zählt { #what-kanap-counts }
+
+Eine Schwachstelle erreicht einen Server oder eine Anwendung nur über direkte Verknüpfungen, überall: auf dieser Seite, in den Listen, auf den Datensätzen, im Dashboard und in Plaid.
+
+- **Server**: Technologie und Version sind auf dem Server selbst erfasst. Ein außer Betrieb genommener Server wird nicht gezählt.
+- **Anwendung**: Die Anwendung deklariert Technologie und Version, oder einer ihrer Bereitstellungsserver hat sie selbst erfasst. Eine Technologie, die zugleich deklariert und gehostet ist, zählt einmal. Eine deaktivierte Anwendung, oder eine, deren Deaktivierungsdatum vergangen ist, wird nicht gezählt.
+
+Die Zählungen pro Server und pro Anwendung, in den Listen, auf den Datensätzen, im Dashboard und in Plaid, folgen denselben Regeln:
+
+- **Welche Schwachstellen**: die noch im Status **Zu prüfen**, deren Technologie oder Version in den Warnungen ist. Jede Schwachstelle zählt einmal, auch wenn sie mehrere Versionen betrifft.
+- **Schweregrad**: der der NVD, oder der des Herstellers (CVE.org), wenn die NVD die Schwachstelle noch nicht bewertet hat. **Schwerwiegend** heißt kritisch oder hoch.
+- **Außer Betrieb**: Ein außer Betrieb genommener Server oder eine deaktivierte Anwendung zählt nichts. Die Zelle bleibt leer.
+
+Eine virtuelle Maschine oder ein Gast zählt die Schwachstellen seines Hosts nicht. Eine Schwachstelle von VMware ESXi zählt nur auf den ESXi-Hosts. Über die Hosts zu zählen, würde eine einzige Schwachstelle eines Hypervisors auf fast alle Server und Anwendungen eines virtualisierten Bestands legen.
+
+Die Reichweite über ein anderes Asset bleibt sichtbar, ohne gezählt zu werden: im Seitenbereich einer Schwachstelle, unter **Über ein anderes Asset**, und auf dem Datensatz eines Assets, im Teil **Über ein anderes Asset** seines Abschnitts **Schwachstellen**. Siehe [Assets](assets.md#technical).
 
 ## Die Liste
 
@@ -71,18 +88,24 @@ Eine Zeile über dem Raster zeigt, wann KANAP jede Quelle zuletzt gelesen hat: *
 | **Technologie** | Die betroffene Technologie |
 | **Version** | Die betroffene Version. **Nicht erfasst**, wenn ein Server oder eine Anwendung die Technologie ohne Angabe der Version nutzt: Die Zeile ist dann möglicherweise betroffen |
 | **Hersteller** | Der Hersteller der Technologie. Standardmäßig ausgeblendet |
-| **Server** | Wie viele Server diese Version tragen, direkt oder über den Server, in dem sie laufen |
-| **Anwendungen** | Wie viele Anwendungen diese Version nutzen, gehostet oder deklariert |
+| **Server** | Wie viele Server diese Version selbst erfasst haben. Ein Server, der in einem anderen läuft, wird nicht gezählt. Siehe [Was KANAP zählt](#what-kanap-counts) |
+| **Anwendungen** | Wie viele Anwendungen diese Version deklarieren oder auf einem Server laufen, der sie erfasst hat |
 | **Quelle** | Die Quellen, die die Zeile abgeglichen haben: **NVD**, **Hersteller** (der Eintrag, den der Hersteller auf CVE.org veröffentlicht hat) oder beide |
 | **Status** | **Zu prüfen**, **Behandelt** oder **Nicht betroffen** |
 | **Notiz** | Die Notiz der Zeile. Standardmäßig ausgeblendet |
 | **Veröffentlicht** | Das Veröffentlichungsdatum |
 
-**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Quelle**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS (%)** einen Mindestprozentsatz von 0 bis 100, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. **Quelle** bietet **NVD**, **Hersteller** und **Beide**: Eine Zeile, die beide Quellen abgeglichen haben, bleibt unter **NVD** und unter **Hersteller**, und **Beide** behält nur diese Zeilen. Der Export und die Statusänderung in Masse folgen ihm wie den anderen Spaltenfiltern. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
+**Filter**: Jede Spalte hat ihren eigenen Filter unter ihrer Überschrift. **Server** und **Anwendungen** listen die Server und Anwendungen, die eine Schwachstelle über direkte Verknüpfungen erreicht: Suchen Sie einen Eintrag nach Name oder Referenz und haken Sie einen oder mehrere an. Mehrere Werte behalten die Zeilen jedes von ihnen, und ein Filter in beiden Spalten behält die Zeilen, die beide erfüllen. Der Filter **Anwendungen** erfordert das Recht, Anwendungen zu lesen. **Schweregrad**, **Technologie**, **Version**, **Hersteller**, **Quelle**, **Status** und **Ausgenutzt** bieten Kontrollkästchen (**Version** bietet auch **Nicht erfasst**, **Ausgenutzt** bietet **Ja** und **Nein**), **Score** eine Zahl, **EPSS (%)** einen Mindestprozentsatz von 0 bis 100, **Veröffentlicht** ein Datum, **CVE** und **Zusammenfassung** einen Text. **Quelle** bietet **NVD**, **Hersteller** und **Beide**: Eine Zeile, die beide Quellen abgeglichen haben, bleibt unter **NVD** und unter **Hersteller**, und **Beide** behält nur diese Zeilen. Der Export und die Statusänderung in Masse folgen ihm wie den anderen Spaltenfiltern. Das Suchfeld über dem Raster durchsucht die CVE-Kennung, die Zusammenfassung und den Technologienamen.
 
 **Sortieren** nach **Ausgenutzt**, **Schweregrad**, **Score**, **EPSS (%)**, **Veröffentlicht**, **CVE** oder **Technologie**. Die Liste öffnet sich mit den aktiv ausgenutzten Schwachstellen, danach den schwersten. Die Spaltenauswahl blendet Spalten ein oder aus, und das Raster merkt sich Ihre Wahl.
 
 **Links**: Die Seite liest ihre Filter aus ihrer Adresse, sodass Sie eine gefilterte Liste teilen können. `?technology=TEC-4` behält eine Technologie, `?version=none` die Zeilen ohne erfasste Version, `?state=all` alle Status, `?published=30d` die in den letzten 30 Tagen veröffentlichten Schwachstellen (`7d`, `30d`, `90d`, `1y` oder `older1y`, wie der Filter **Veröffentlicht**), `?period=30` dasselbe über den Filter der Spalte **Veröffentlicht**, `?alerts=excluded` oder `?alerts=all` die Zeilen außerhalb der Warnungen, `?exploited=1` die aktiv ausgenutzten Schwachstellen. Der Link der E-Mails nutzt `period`.
+
+**Asset und Anwendung**: `?asset=AST-12` öffnet die Seite mit dem Filter der Spalte **Server** auf ein Asset gesetzt, `?application=APP-4` mit dem Filter der Spalte **Anwendungen** auf eine Anwendung gesetzt, über direkte Verknüpfungen (siehe [Was KANAP zählt](#what-kanap-counts)). Die Listen der Assets und Anwendungen und ihre Datensätze öffnen die Seite so. Leeren Sie den Spaltenfilter, um die übrigen Zeilen zu sehen. Um nach einer Anwendung zu filtern, müssen Sie sie lesen dürfen.
+
+**Im Bestand im Einsatz**: `?estate=1` behält die Schwachstellen der Technologien, die auf einem Asset in Betrieb installiert oder von einer Anwendung in Betrieb deklariert sind. Die Links der Dashboard-Kachel **Schwachstellen im Bestand** zu CVEs öffnen die Seite damit. Eine Zeile über dem Raster zeigt **Im Bestand im Einsatz · entfernen**. **entfernen** hebt den Filter auf.
+
+**Filter zurücksetzen** hebt auch diese beiden Filter auf. Der Export und die Massenänderung des Status folgen ihnen.
 
 ## Den Status mehrerer Zeilen ändern
 
@@ -105,8 +128,8 @@ Ein Klick auf eine Zeile öffnet ihre Schwachstelle in einem Seitenbereich. Sein
 - Die Beschreibung, auf drei Zeilen gekürzt (**Mehr anzeigen** zeigt den Rest), den CVSS-Vektor und die Referenzlinks (Herstellerhinweise, Patches).
 - **Quellen**: der Stand der Schwachstelle bei der NVD (**analysiert**, **Analyse ausstehend**, **nicht analysiert**, **abgelehnt** oder **noch nicht diesem Produkt zugeordnet**), mit einem Link zu ihrer NVD-Seite. Hat KANAP den Eintrag des Herstellers gelesen, nennt eine zweite Zeile, wer ihn wann veröffentlicht hat, seine letzte Aktualisierung und **Auf CVE.org ansehen**.
 - **Ausnutzung**, wenn ein Katalog, ein EPSS-Wert oder eine europäische Kennung bekannt ist. Siehe [Ausnutzung](#exploitation).
-- **Server**: jeder Server, der eine betroffene Version trägt, mit Technologie und Version. Die über ein anderes Asset erreichten Server, etwa den Host einer virtuellen Maschine oder einen Cluster, verbirgt eine Schaltfläche, zum Beispiel **Auch die 4 über ein anderes Asset erreichten Server anzeigen**. Sie erscheinen unter einer eigenen Überschrift, **Über ein anderes Asset**, mit dem Asset, über das sie erreicht werden.
-- **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, einmal pro Version aufgeführt, mit ihren Servern (höchstens drei, dann „und 2 weitere“). Eine Anwendung, die die Technologie deklariert oder auf einem Server gehostet ist, der sie trägt, steht zuerst. Die anderen liegen hinter der gleichen Art von Schaltfläche.
+- **Server**: jeder Server, der eine betroffene Version selbst erfasst hat, mit Technologie und Version. Die über ein anderes Asset erreichten Server, etwa eine virtuelle Maschine auf einem Host oder die Mitglieder eines Clusters, verbirgt eine Schaltfläche, zum Beispiel **Auch die 4 über ein anderes Asset erreichten Server anzeigen**. Sie erscheinen unter einer eigenen Überschrift, **Über ein anderes Asset**, mit dem Asset, über das sie erreicht werden. Sie werden nicht gezählt.
+- **Anwendungen**: jede Anwendung, die eine betroffene Version nutzt, einmal pro Version aufgeführt, mit ihren Servern (höchstens drei, dann „und 2 weitere“). Eine Anwendung, die die Technologie deklariert oder auf einem Server läuft, der sie erfasst hat, steht zuerst. Die anderen liegen hinter der gleichen Art von Schaltfläche und werden nicht gezählt.
 
 Ist kein Server oder keine Anwendung direkt betroffen, sagt der Bereich das, und die Schaltfläche zeigt weiterhin die anderen.
 
@@ -155,6 +178,10 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 
 - **Technologieliste**: die Spalte **Zu prüfende Schwachstellen**, orange, wenn kritische oder hohe darunter sind. Siehe [Technologien](technologies.md#mit-der-liste-arbeiten).
 - **Technologie-Arbeitsbereich**: der Abschnitt **Schwachstellen** im Reiter Compliance. Siehe [Technologien](technologies.md#schwachstellen).
+- **Listen der Assets und Anwendungen**: die Spalte **Zu prüfende Schwachstellen**. Siehe [Assets](assets.md#working-with-the-list) und [Anwendungen](applications.md#working-with-the-list).
+- **Datensätze von Assets und Anwendungen**: der Abschnitt **Schwachstellen** und das Badge der schwerwiegenden Schwachstellen in der Kopfzeile. Siehe [Assets](assets.md#technical) und [Anwendungen](applications.md#operations).
+- **Dashboard**: die Kachel **Schwachstellen im Bestand**. Siehe [Mein Dashboard](my-dashboard.md#vulnerabilities).
+- **Plaid**: Der Assistent beantwortet Fragen zu Schwachstellen. Siehe [Plaid](ai-assistant.md#tool-calls).
 
 ## Tipps
 

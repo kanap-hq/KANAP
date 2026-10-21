@@ -15,6 +15,12 @@ import {
   CsvFieldInfo,
 } from '../common/csv';
 import { assetCsvConfig } from './asset-csv.config';
+import { assetVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
+import {
+  csvConfigForVulnerabilityFeed,
+  VULNERABILITY_CSV_PROPERTY,
+  vulnerabilityListFields,
+} from '../vulnerabilities/vulnerability-list-column';
 
 /**
  * Service for importing and exporting Assets via CSV
@@ -78,9 +84,14 @@ export class AssetsCsvService {
         exportCatalogLabels(asset, { kind: settings.serverKinds, status: settings.lifecycleStates, domain: settings.domains });
         if (Array.isArray(asset.ip_addresses)) asset.ip_addresses = asset.ip_addresses.map((ip) => ({ ...ip, type: ipTypeLabel(ip.type) }));
       }
+      // Vulnerabilities to review and severe ones (shared module), empty for a retired asset.
+      const vulnerabilityCounts = await assetVulnerabilityCounts(manager, tenantId, assets.map((asset) => asset.id));
+      for (const asset of assets) {
+        (asset as any)[VULNERABILITY_CSV_PROPERTY] = vulnerabilityListFields(vulnerabilityCounts.get(asset.id));
+      }
     }
 
-    return this.exportSvc.export(assetCsvConfig, assets, {
+    return this.exportSvc.export(csvConfigForVulnerabilityFeed(assetCsvConfig), assets, {
       manager,
       tenantId,
       scope,
@@ -112,7 +123,8 @@ export class AssetsCsvService {
    * Get field metadata and presets for frontend display.
    */
   getFieldInfo(): { fields: CsvFieldInfo[]; presets: Array<{ name: string; label: string; fields: string[] }> } {
-    const fields = assetCsvConfig.fields
+    const config = csvConfigForVulnerabilityFeed(assetCsvConfig);
+    const fields = config.fields
       .filter((f) => f.exportable !== false || f.importable !== false)
       .map((f) => ({
         csvColumn: f.csvColumn,
@@ -125,7 +137,7 @@ export class AssetsCsvService {
         enumValues: f.enumValues,
       }));
 
-    const presets = (assetCsvConfig.exportPresets ?? []).map((p) => ({
+    const presets = (config.exportPresets ?? []).map((p) => ({
       name: p.name,
       label: p.label,
       fields: p.fields,

@@ -9,23 +9,42 @@ import { assertSetFilterModes } from '../common/ag-grid-filtering';
 import { languageOf, writeCsv } from '../common/csv-sheet';
 import { readTechnology, technologyReference, UUID_RE } from '../technologies/technology-rows';
 import { gridTextClause, gridTextModel } from '../technologies/technologies.service';
-import { versionInUseSql } from '../technologies/reports/version-support';
-import { assetInServiceSql, inServiceSql, REACH_FROM_TECHNOLOGIES, TechnologyReachService, withoutJit } from '../technologies/technology-reach.service';
+import { TechnologyReachService } from '../technologies/technology-reach.service';
 import { compareVersionLabels, versionOrderSql } from '../technologies/version-order';
 import type { ParsedAffected, ParsedAffectedVersion } from './cve-record';
 import { probesOf, productsOf, readCveNames, VulnerabilityMatchService } from './vulnerability-match.service';
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
+import { applicationCountsForTenantSql, applicationLinksSql, assetCountsForTenantSql, assetLinksSql, directReachOfTechnologies, EFFECTIVE_SEVERITY, exploitedSql, rowOnApplicationsSql, rowOnAssetsSql, technologyInEstateSql } from './vulnerability-reach-counts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
 export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
 /** The applications the caller reads: null without the `applications` read right, a Business Contributor's own only. */
 export type ApplicationsAccess = { scope?: ParticipationAccessScope } | null;
 
+/** An option of the page's asset or application filter: its id, its business reference and its name. */
+export type VulnerabilitySubjectOption = { id: string; reference: string | null; name: string };
+
 export type VulnerabilityFilters = {
   severity?: unknown;
   state?: unknown;
   editor?: unknown;
   technology?: unknown;
+  /**
+   * Assets (id or `AST-n`, comma separated): the rows in their direct links
+   * (`vulnerability-reach-counts.ts`). An unknown asset is a 400.
+   */
+  asset?: unknown;
+  /**
+   * Applications (id or `APP-n`, comma separated): the rows they declare or their servers have in a
+   * direct link. An unknown application, or one the user does not read, is a 400.
+   */
+  application?: unknown;
+  /**
+   * `1`: the rows whose technology touches the estate (installed on an asset in service or declared
+   * by an application in service, `technologyInEstateSql`), as the home tile counts them. `0` or
+   * absent: no filter. Anything else is a 400.
+   */
+  estate?: unknown;
   from?: unknown;
   to?: unknown;
   q?: unknown;
@@ -57,7 +76,7 @@ export const BULK_MAX_ROWS = 5000;
 const BULK_BATCH = 500;
 
 /** Known to be exploited: in the CISA KEV or the EU KEV (a null flag counts as not). */
-const EXPLOITED_SQL = `(COALESCE(c.cisa_kev, false) OR COALESCE(c.eu_kev, false))`;
+const EXPLOITED_SQL = exploitedSql('c');
 /** The page of a CVE in the European vulnerability database. */
 const EUVD_VULNERABILITY_URL = 'https://euvd.enisa.europa.eu/vulnerability/';
 
@@ -66,15 +85,15 @@ const EUVD_VULNERABILITY_URL = 'https://euvd.enisa.europa.eu/vulnerability/';
  * The NVD cache wins when it holds a score. A CVE the NVD received and has not scored yet
  * (`cvss_score` null) falls back to the CVE.org record (`r`). The summary text falls back only
  * when the cache summary is blank, whether or not the cache has a score.
+ * The severity is `EFFECTIVE_SEVERITY` of `vulnerability-reach-counts.ts`, the one definition.
  * `score_source` is `nvd` when that cache score belongs to an NVD row (`nvd_status` set). A CVE
  * only CVE.org matched is copied into the cache with `nvd_status` null, and stays `cve_org`.
  */
-const EFFECTIVE_SCORE = `(COALESCE(c.cvss_score, r.cvss_score))`;
-const EFFECTIVE_SEVERITY = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.severity WHEN r.cvss_score IS NOT NULL THEN r.severity ELSE c.severity END)`;
-const EFFECTIVE_SUMMARY = `(CASE WHEN NULLIF(btrim(c.summary), '') IS NOT NULL THEN c.summary ELSE COALESCE(r.summary, c.summary) END)`;
-const EFFECTIVE_CVSS_VERSION = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_version ELSE COALESCE(r.cvss_version, c.cvss_version) END)`;
-const EFFECTIVE_CVSS_VECTOR = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_vector ELSE COALESCE(r.cvss_vector, c.cvss_vector) END)`;
-const SCORE_SOURCE_SQL = `(CASE WHEN COALESCE(c.cvss_score, r.cvss_score) IS NULL THEN NULL WHEN c.cvss_score IS NOT NULL AND c.nvd_status IS NOT NULL THEN 'nvd' ELSE 'cve_org' END)`;
+export const EFFECTIVE_SCORE = `(COALESCE(c.cvss_score, r.cvss_score))`;
+export const EFFECTIVE_SUMMARY = `(CASE WHEN NULLIF(btrim(c.summary), '') IS NOT NULL THEN c.summary ELSE COALESCE(r.summary, c.summary) END)`;
+export const EFFECTIVE_CVSS_VERSION = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_version ELSE COALESCE(r.cvss_version, c.cvss_version) END)`;
+export const EFFECTIVE_CVSS_VECTOR = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_vector ELSE COALESCE(r.cvss_vector, c.cvss_vector) END)`;
+export const SCORE_SOURCE_SQL = `(CASE WHEN COALESCE(c.cvss_score, r.cvss_score) IS NULL THEN NULL WHEN c.cvss_score IS NOT NULL AND c.nvd_status IS NOT NULL THEN 'nvd' ELSE 'cve_org' END)`;
 const SEVERITY_ORDER = `CASE ${EFFECTIVE_SEVERITY} WHEN 'critical' THEN 5 WHEN 'high' THEN 4 WHEN 'medium' THEN 3 WHEN 'low' THEN 2 WHEN 'none' THEN 1 ELSE 0 END`;
 
 /** The grid's sortable columns. */
@@ -225,6 +244,14 @@ function exploitedChoice(value: unknown): boolean | null {
   if (raw === 'yes' || raw === 'true' || raw === '1') return true;
   if (raw === 'no' || raw === 'false' || raw === '0') return false;
   throw new BadRequestException('exploited must be yes or no.');
+}
+
+/** `1`: only the rows touching the estate. `0` or nothing: no filter. Anything else is a 400. */
+function estateChoice(value: unknown): boolean {
+  const raw = String(value ?? '').trim();
+  if (raw === '' || raw === '0') return false;
+  if (raw === '1') return true;
+  throw new BadRequestException('estate must be 1 or 0.');
 }
 
 const MATCH_SOURCES = ['cve_org', 'nvd'] as const;
@@ -485,10 +512,48 @@ function presentRecord(cve: CveWithRecord) {
 }
 
 /**
+ * The ids of the assets or applications `refs` name (an id or a business reference, `AST-n` or
+ * `APP-n`, without case), and the references that name none. An application the user does not
+ * read is unknown. One query, before the rows are read: a filter never reads them per row (the
+ * page's filters and the assistant's, `ai-vulnerabilities.query.ts`).
+ */
+export async function vulnerabilitySubjectIds(
+  mg: Pick<EntityManager, 'query'>,
+  tenantId: string,
+  kind: 'asset' | 'application',
+  refs: string[],
+  applications: ApplicationsAccess,
+): Promise<{ ids: string[]; unknown: string[] }> {
+  if (kind === 'application' && !applications) return { ids: [], unknown: refs };
+  const wanted = refs.map((ref) => ref.toUpperCase());
+  const params: unknown[] = [tenantId, wanted];
+  const [table, reference] = kind === 'asset' ? ['assets', 'asset_reference'] : ['applications', 'sequential_id'];
+  const scopeSql = kind === 'application' && applications?.scope
+    ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('s', `$${params.length}`)}`)
+    : '';
+  const found: Array<{ id: string; ref: string | null }> = await mg.query(
+    `SELECT s.id::text AS id, upper(s.${reference}) AS ref
+       FROM ${table} s
+      WHERE s.tenant_id = $1 AND (upper(s.id::text) = ANY($2::text[]) OR upper(s.${reference}) = ANY($2::text[])) ${scopeSql}`,
+    params,
+  );
+  const ids = new Set<string>();
+  const unknown: string[] = [];
+  for (const [i, ref] of wanted.entries()) {
+    const hits = found.filter((row) => row.id.toUpperCase() === ref || row.ref === ref);
+    if (hits.length === 0) unknown.push(refs[i]);
+    for (const hit of hits) ids.add(hit.id);
+  }
+  return { ids: Array.from(ids), unknown };
+}
+
+/**
  * The vulnerabilities of a tenant (lot T6a): the rows of `technology_vulnerabilities` with the
- * CVE of the platform cache, and the servers and applications they reach through the deductions
- * of the technology layer (`TechnologyReachService`). A row with a version reaches the servers and
- * applications whose link names that version; a row without version, those whose link names none.
+ * CVE of the platform cache, and the servers and applications they reach. A row with a version
+ * reaches the servers and applications whose link names that version; a row without version,
+ * those whose link names none. Every count of servers and applications is of direct links
+ * (`vulnerability-reach-counts.ts`); the panel also lists what the deductions of the technology
+ * layer reach through another asset (`TechnologyReachService`), marked and not counted.
  */
 @Injectable()
 export class VulnerabilitiesService {
@@ -499,8 +564,25 @@ export class VulnerabilitiesService {
     @Optional() private readonly feed?: NvdFeedService,
   ) {}
 
-  /** The WHERE clause of the filters, on `tv` (rows), `t` (technologies), `c` (cache) and `r` (CVE.org record). */
-  private async filterSql(mg: EntityManager, tenantId: string, filters: VulnerabilityFilters, params: unknown[]): Promise<string> {
+  /** `vulnerabilitySubjectIds` for the query parameters: a reference that names nothing is a 400. */
+  private async subjectIdsOrThrow(
+    mg: EntityManager,
+    tenantId: string,
+    kind: 'asset' | 'application',
+    refs: string[],
+    applications: ApplicationsAccess,
+  ): Promise<string[]> {
+    const { ids, unknown } = await vulnerabilitySubjectIds(mg, tenantId, kind, refs, applications);
+    if (unknown.length) throw new BadRequestException(`${kind} ${unknown[0]} is not an ${kind} of this workspace.`);
+    return ids;
+  }
+
+  /**
+   * The WHERE clause of the filters, on `tv` (rows), `t` (technologies), `c` (cache) and `r` (CVE.org
+   * record). `applications` is what the user reads: the application filters stay inside it.
+   * `params` starts with the tenant (`$1`), as every caller's `tv.tenant_id = $1`.
+   */
+  private async filterSql(mg: EntityManager, tenantId: string, filters: VulnerabilityFilters, params: unknown[], applications: ApplicationsAccess): Promise<string> {
     const where: string[] = [];
     const push = (value: unknown) => { params.push(value); return `$${params.length}`; };
     const severities = commaList(filters.severity);
@@ -531,6 +613,12 @@ export class VulnerabilitiesService {
       }
       where.push(`tv.technology_id = ANY(${push(ids)}::uuid[])`);
     }
+    // Direct links only (`vulnerability-reach-counts.ts`), as the counts.
+    const assets = commaList(filters.asset);
+    if (assets.length) where.push(rowOnAssetsSql({ tenant: '$1', ids: push(await this.subjectIdsOrThrow(mg, tenantId, 'asset', assets, applications)) }));
+    const apps = commaList(filters.application);
+    if (apps.length) where.push(rowOnApplicationsSql({ tenant: '$1', ids: push(await this.subjectIdsOrThrow(mg, tenantId, 'application', apps, applications)) }));
+    if (estateChoice(filters.estate)) where.push(technologyInEstateSql('tv'));
     for (const [key, op] of [['from', '>='], ['to', '<']] as const) {
       const value = String(filters[key] ?? '').trim();
       if (!value) continue;
@@ -550,7 +638,7 @@ export class VulnerabilitiesService {
     if (source) where.push(SOURCE_SQL[source]);
     const epssMin = epssMinimum(filters.epss);
     if (epssMin !== null) where.push(`c.epss >= ${push(epssMin)}::numeric`);
-    where.push(...this.gridClauses(filters.filters, push));
+    where.push(...await this.gridClauses(mg, tenantId, filters.filters, push, applications));
     const alerts = this.alertsClause(filters);
     if (alerts) where.push(alerts);
     return where.length ? `AND ${where.join(' AND ')}` : '';
@@ -577,11 +665,16 @@ export class VulnerabilitiesService {
    * `summary`, a number filter on `cvss_score` and `epss`, a date filter on `published_at`, a set
    * filter on `exploited` (`yes` / `no`; an unknown value matches nothing; `yes` and `no`
    * together match every row) and on `source` (`nvd`, `cve_org`, `both`; an unknown value
-   * matches nothing, several match the rows any of them would keep).
+   * matches nothing, several match the rows any of them would keep); set filters on `asset` and
+   * `application` (id, `AST-n` or `APP-n`: the rows in their direct links, as
+   * `vulnerability-reach-counts.ts` counts them; an unknown asset, or an application unknown or
+   * outside what the user reads, matches nothing; several values keep the rows of any of them, and
+   * the two columns together the rows of both: the page's Servers and Applications columns).
    * An unreadable model or another column is ignored; `technologies` (the name before T6c) reads
-   * as `technology`; a set filter in exclude mode is a 400.
+   * as `technology`; a set filter in exclude mode is a 400. The assets and applications are read
+   * once (`vulnerabilitySubjectIds`), before the rows; the tenant is `$1`.
    */
-  private gridClauses(raw: unknown, push: (value: unknown) => string): string[] {
+  private async gridClauses(mg: EntityManager, tenantId: string, raw: unknown, push: (value: unknown) => string, applications: ApplicationsAccess): Promise<string[]> {
     let model: Record<string, any>;
     try {
       model = typeof raw === 'string' ? JSON.parse(raw) : (raw as Record<string, any>);
@@ -612,6 +705,14 @@ export class VulnerabilitiesService {
         const p = push(technologies.map((v) => v.toUpperCase()));
         out.push(`(upper(t.id::text) = ANY(${p}::text[]) OR ('TEC-' || t.item_number) = ANY(${p}::text[]))`);
       }
+    }
+    // Unknown references, or applications the user does not read, are left out; none left: nothing matches.
+    for (const kind of ['asset', 'application'] as const) {
+      const refs = setValues(kind);
+      if (!refs) continue;
+      const ids = refs.length ? (await vulnerabilitySubjectIds(mg, tenantId, kind, refs, applications)).ids : [];
+      if (ids.length === 0) out.push('false');
+      else out.push((kind === 'asset' ? rowOnAssetsSql : rowOnApplicationsSql)({ tenant: '$1', ids: push(ids) }));
     }
     // Versions by label (one label may name a version of several technologies); `null`: not recorded.
     const versions = setValues('version');
@@ -742,10 +843,11 @@ export class VulnerabilitiesService {
   }
 
   /**
-   * What the rows reach: per (technology, version) key, the servers (reached assets) and the
-   * visible applications (hosted or declared). Applications are null without the read right.
+   * What the rows reach through the asset graph, for the panel's lists: per (technology, version)
+   * key, the servers (reached assets, directly or through another asset) and the visible
+   * applications (hosted or declared). Applications are null without the read right. Not counted.
    */
-  private async reachOf(mg: EntityManager, tenantId: string, rows: Row[], applications: ApplicationsAccess) {
+  private async graphReach(mg: EntityManager, tenantId: string, rows: Row[], applications: ApplicationsAccess) {
     const techIds = Array.from(new Set(rows.map((r) => r.technology_id)));
     const assets = await this.reach.assetsOfTechnologies(mg, tenantId, techIds);
     const servers = new Map<string, typeof assets>();
@@ -769,14 +871,39 @@ export class VulnerabilitiesService {
     return { servers, apps };
   }
 
-  /** Counts of distinct servers and applications reached by a set of rows. */
+  /**
+   * The direct reach of the rows (`vulnerability-reach-counts.ts`), what every count reads: per
+   * (technology, version) key, the servers whose direct links name it, and the visible
+   * applications that declare it or whose server has it in a direct link. Applications are null
+   * without the read right.
+   */
+  private async reachOf(mg: EntityManager, tenantId: string, rows: Row[], applications: ApplicationsAccess) {
+    const techIds = Array.from(new Set(rows.map((r) => r.technology_id)));
+    const direct = await directReachOfTechnologies(mg, tenantId, techIds, applications !== null);
+    const add = (map: Map<string, Set<string>>, key: string, id: string) => {
+      const set = map.get(key);
+      if (set) set.add(id);
+      else map.set(key, new Set([id]));
+    };
+    const servers = new Map<string, Set<string>>();
+    for (const a of direct.assets) add(servers, rowKey(a.technology_id, a.technology_version_id), a.asset_id);
+    if (!applications) return { servers, apps: null };
+    const visible = await this.visibleApplicationIds(mg, tenantId, direct.applications.map((a) => a.application_id), applications.scope);
+    const apps = new Map<string, Set<string>>();
+    for (const a of direct.applications) {
+      if (visible.has(a.application_id)) add(apps, rowKey(a.technology_id, a.technology_version_id), a.application_id);
+    }
+    return { servers, apps };
+  }
+
+  /** Counts of distinct servers and applications a set of rows reaches by direct links. */
   private counts(rows: Row[], reach: Awaited<ReturnType<VulnerabilitiesService['reachOf']>>) {
     const servers = new Set<string>();
     const apps = new Set<string>();
     for (const r of rows) {
       const key = rowKey(r.technology_id, r.technology_version_id);
-      for (const a of reach.servers.get(key) ?? []) servers.add(a.asset_id);
-      for (const a of reach.apps?.get(key) ?? []) apps.add(a.application_id);
+      for (const id of reach.servers.get(key) ?? []) servers.add(id);
+      for (const id of reach.apps?.get(key) ?? []) apps.add(id);
     }
     return { servers: servers.size, applications: reach.apps ? apps.size : null };
   }
@@ -852,7 +979,7 @@ export class VulnerabilitiesService {
           ? `lower(t.name) ${direction}, t.id, ${severityThen}, ${tail}`
           : `${GRID_SORTS[sortField]} ${direction} NULLS LAST, ${severityThen}, ${tail}`;
     const params: unknown[] = [tenantId];
-    const where = await this.filterSql(mg, tenantId, filters, params);
+    const where = await this.filterSql(mg, tenantId, filters, params, applications);
     // The rows and the distinct CVE among them: the grid's total speaks of both.
     const [counted] = await mg.query(
       `SELECT count(*)::int AS rows, count(DISTINCT tv.cve_id)::int AS cves ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
@@ -898,20 +1025,32 @@ export class VulnerabilitiesService {
       detected_at: r.detected_at,
       alerts: r.alerts,
       match_sources: sortedSources(r.match_sources),
-      // The servers and applications of this version.
+      // The servers and applications of this version, by direct links.
       ...this.counts([r], reach),
     }));
     return { items, total, cves, limit, offset, rows };
   }
 
   /**
-   * The values of the grid's set filters that depend on the rows (`fields`: `version`): the labels
-   * of the versions the other filters reach, newest number first, `null` last when a row has no version.
+   * The values of the page's filters (`fields`, comma separated). `version`: the labels of the
+   * versions the other filters reach, newest number first, `null` last when a row has no version.
+   * `asset` and `application`: the assets and applications with at least one vulnerability that
+   * counts (`vulnerability-reach-counts.ts`: to review, in the alerts, direct links, in service),
+   * whatever the other filters, by name (`subjectOptions`).
+   * `applications`: what the user reads (the application filter and options stay inside it).
    */
-  async filterValues(query: VulnerabilityFilters & { fields?: unknown }, opts: VulnOpts): Promise<Record<string, Array<string | null>>> {
+  async filterValues(
+    query: VulnerabilityFilters & { fields?: unknown },
+    opts: VulnOpts,
+    applications: ApplicationsAccess = null,
+  ): Promise<Record<string, Array<string | null> | VulnerabilitySubjectOption[]>> {
     const { manager: mg, tenantId } = opts;
-    const out: Record<string, Array<string | null>> = {};
-    if (!commaList(query.fields).includes('version')) return out;
+    const out: Record<string, Array<string | null> | VulnerabilitySubjectOption[]> = {};
+    const fields = commaList(query.fields);
+    for (const kind of ['asset', 'application'] as const) {
+      if (fields.includes(kind)) out[kind] = await this.subjectOptions(mg, tenantId, kind, applications);
+    }
+    if (!fields.includes('version')) return out;
     // The column's own filter does not narrow its values.
     let grid = query.filters;
     try {
@@ -924,7 +1063,7 @@ export class VulnerabilitiesService {
       grid = undefined;
     }
     const params: unknown[] = [tenantId];
-    const where = await this.filterSql(mg, tenantId, { ...query, filters: grid }, params);
+    const where = await this.filterSql(mg, tenantId, { ...query, filters: grid }, params, applications);
     const rows: Array<{ value: string | null }> = await mg.query(
       `SELECT DISTINCT v.label AS value ${this.rowsFrom} WHERE tv.tenant_id = $1 ${where}`,
       params,
@@ -935,10 +1074,42 @@ export class VulnerabilitiesService {
   }
 
   /**
+   * The options of the asset or application filter: the subjects whose counts
+   * (`assetCountsForTenantSql`, `applicationCountsForTenantSql`) have at least one vulnerability
+   * open, so an estate's hundreds of servers with none stay out. One query for the tenant; the
+   * applications only for a user who reads them, inside the user's scope. By name.
+   */
+  private async subjectOptions(
+    mg: EntityManager,
+    tenantId: string,
+    kind: 'asset' | 'application',
+    applications: ApplicationsAccess,
+  ): Promise<VulnerabilitySubjectOption[]> {
+    if (kind === 'application' && !applications) return [];
+    const params: unknown[] = [tenantId];
+    const [table, reference, counts] = kind === 'asset'
+      ? ['assets', 'asset_reference', assetCountsForTenantSql({ tenant: '$1' })]
+      : ['applications', 'sequential_id', applicationCountsForTenantSql({ tenant: '$1' })];
+    const scopeSql = kind === 'application' && applications?.scope
+      ? (params.push(applications.scope.userId), `AND ${applicationParticipantCondition('s', `$${params.length}`)}`)
+      : '';
+    return mg.query(
+      `SELECT s.id::text AS id, s.${reference} AS reference, s.name
+         FROM ${table} s
+         JOIN (${counts}) vc ON vc.id = s.id
+        WHERE s.tenant_id = $1 AND vc.open > 0 ${scopeSql}
+        ORDER BY lower(s.name), s.id`,
+      params,
+    );
+  }
+
+  /**
    * One CVE: its record, the technologies and versions it concerns, the servers and applications
    * reached. Every row is kept, alerting or not (lot V1): each version, server and application
-   * carries `alerts`, the effective setting of its row. `servers` and `applications` count them
-   * all; `alerting` counts those of the rows that alert, as the page does.
+   * carries `alerts`, the effective setting of its row. `servers` and `applications` count those
+   * reached by direct links (`vulnerability-reach-counts.ts`), of every row; `alerting` counts those
+   * of the rows that alert, as the page does. `servers_list` and `applications_list` also hold what
+   * is reached through another asset (`via_asset_name`), with `direct` false: listed, not counted.
    */
   async detail(cveIdRaw: string, opts: VulnOpts, applications: ApplicationsAccess) {
     const { manager: mg, tenantId } = opts;
@@ -946,7 +1117,8 @@ export class VulnerabilitiesService {
     const rows = await this.rowsOf(mg, tenantId, `AND tv.cve_id = $2`, [tenantId, cveId]);
     const cve = (await this.cves(mg, [cveId])).get(cveId);
     if (!cve || rows.length === 0) throw new NotFoundException('Vulnerability not found');
-    const reach = await this.reachOf(mg, tenantId, rows, applications);
+    const direct = await this.reachOf(mg, tenantId, rows, applications);
+    const reach = await this.graphReach(mg, tenantId, rows, applications);
     const versionOf = new Map(rows.map((r) => [rowKey(r.technology_id, r.technology_version_id), r]));
 
     const reachedAssets = rows.flatMap((r) => reach.servers.get(rowKey(r.technology_id, r.technology_version_id)) ?? []);
@@ -969,6 +1141,8 @@ export class VulnerabilitiesService {
         technology_name: row.technology_name,
         version_label: row.version_label,
         via_asset_name: a.via_asset_id ? assetsById.get(a.via_asset_id)?.name ?? null : null,
+        /** Installed on this server (counted), or reached through another asset (listed only). */
+        direct: a.via_asset_id == null && direct.servers.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
         alerts: row.alerts,
       };
     }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
@@ -996,6 +1170,10 @@ export class VulnerabilitiesService {
           technology_id: a.technology_id,
           technology_name: row.technology_name,
           version_label: row.version_label,
+          /** Declared, or hosted on a server with a direct link (counted); else listed only. */
+          direct: a.kind === 'declared'
+            ? direct.apps?.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.application_id) === true
+            : a.via_asset_id == null && !!a.asset_id && direct.servers.get(rowKey(a.technology_id, a.technology_version_id))?.has(a.asset_id) === true,
           alerts: row.alerts,
         };
       }).sort((x, y) => String(x.name ?? '').localeCompare(String(y.name ?? ''), 'en', { sensitivity: 'base' }));
@@ -1015,8 +1193,8 @@ export class VulnerabilitiesService {
       /** The CVE.org record, or null when this installation has not read it. */
       record: presentRecord(cve),
       technologies: groupByTechnology(rows, await this.sourceMatches(mg, tenantId, cveId, technologyIds)),
-      ...this.counts(rows, reach),
-      alerting: this.counts(rows.filter((r) => r.alerts), reach),
+      ...this.counts(rows, direct),
+      alerting: this.counts(rows.filter((r) => r.alerts), direct),
       servers_list: servers,
       applications_list: apps,
     };
@@ -1045,9 +1223,11 @@ export class VulnerabilitiesService {
 
   /**
    * The vulnerabilities of one technology, one row per version (lot V4b), in the order of the
-   * versions table, plus the unknown version when a link names none. `installed` follows
-   * `versionInUseSql` (for the unknown version: a link that names no version is in use). A version
-   * that is not installed has `servers` and every count at 0. `open` counts distinct CVE still to
+   * versions table, plus the unknown version when a link names none. `installed`: a direct link
+   * of an asset in service or of an application in service names the version (for the unknown
+   * version: a link that names no version). `servers`: the assets in service whose direct link names
+   * the version, as every count (`vulnerability-reach-counts.ts`); an asset the graph carries the
+   * version to does not count. A version that is not installed has `servers` and every count at 0. `open` counts distinct CVE still to
    * review by severity, `unknown` when neither the NVD cache nor the CVE.org record has a severity, `total` every distinct CVE of the version, `cves` the distinct CVE of the technology.
    * `versions_excluded` and `versions_included` count every version.
    */
@@ -1056,11 +1236,13 @@ export class VulnerabilitiesService {
     const tech = await readTechnology(mg, tenantId, idOrRef);
     const counts = await this.versionAlertCounts(mg, tenantId, tech.id);
     const products = await this.productStates(mg, tech.cpe_products);
-    // One statement: the reach ($1 tenant, $2 this technology) and the rows ($3). A technology with
-    // no version and no link still returns `cves` through the left join (the pad row has a null `installed`).
-    // The rows are grouped by version first (`agg`), and the servers counted once per version
-    // (`servers`, materialized), then both are joined to the few version lines: the reach is never
-    // aggregated again for each match row.
+    // One statement: the direct links ($1 tenant, $2 this technology) and the rows ($3). A technology
+    // with no version and no link still returns `cves` through the left join (the pad row has a null
+    // `installed`). The servers are the assets in service whose direct link names the version
+    // (`assetLinksSql`, nothing carried through the asset graph); a version is installed when a
+    // direct link of an asset or an application names it (`assetLinksSql`, `applicationLinksSql`).
+    // The rows are grouped by version first (`agg`), the links once per version (`servers`,
+    // `in_use`), then both are joined to the few version lines.
     const rows: Array<{
       technology_version_id: string | null;
       label: string | null;
@@ -1075,12 +1257,17 @@ export class VulnerabilitiesService {
       unknown: number | null;
       total: number | null;
       cves: number;
-    }> = await withoutJit(mg,
-      `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
-       servers AS MATERIALIZED (
-         SELECT technology_version_id, count(DISTINCT asset_id)::int AS servers
-           FROM reach
-          GROUP BY technology_version_id
+    }> = await mg.query(
+      `WITH servers AS MATERIALIZED (
+         SELECT l.technology_version_id, count(DISTINCT l.subject_id)::int AS servers
+           FROM (${assetLinksSql({ tenant: '$1', technologies: '$2' })}) l
+          GROUP BY l.technology_version_id
+       ),
+       in_use AS MATERIALIZED (
+         SELECT DISTINCT l.technology_version_id
+           FROM (${assetLinksSql({ tenant: '$1', technologies: '$2' })}
+                 UNION ALL
+                 ${applicationLinksSql({ tenant: '$1', technologies: '$2' })}) l
        ),
        agg AS (
          SELECT tv.technology_version_id,
@@ -1100,19 +1287,14 @@ export class VulnerabilitiesService {
        versions AS (
          SELECT v.id AS technology_version_id, v.label,
                 ${vulnerabilityAlertsSql('v', 't')} AS alerts,
-                ${versionInUseSql('v')} AS installed
+                EXISTS (SELECT 1 FROM in_use iu WHERE iu.technology_version_id = v.id) AS installed
            FROM technology_versions v
            JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
           WHERE v.tenant_id = $1 AND v.technology_id = $3
        ),
        unknown AS (
          SELECT t.vulnerability_alerts AS alerts,
-                (EXISTS (SELECT 1 FROM asset_technologies uat
-                           JOIN assets ua ON ua.tenant_id = uat.tenant_id AND ua.id = uat.asset_id AND ${assetInServiceSql('ua')}
-                          WHERE uat.tenant_id = $1 AND uat.technology_id = $3 AND uat.technology_version_id IS NULL)
-              OR EXISTS (SELECT 1 FROM application_technologies ud
-                           JOIN applications uap ON uap.tenant_id = ud.tenant_id AND uap.id = ud.application_id AND ${inServiceSql('uap')}
-                          WHERE ud.tenant_id = $1 AND ud.technology_id = $3 AND ud.technology_version_id IS NULL)) AS installed
+                EXISTS (SELECT 1 FROM in_use iu WHERE iu.technology_version_id IS NULL) AS installed
            FROM technologies t
           WHERE t.tenant_id = $1 AND t.id = $3
             AND (EXISTS (SELECT 1 FROM asset_technologies at
@@ -1304,8 +1486,9 @@ export class VulnerabilitiesService {
    * write also sends `expected_rows`, the rows of the count (required with `all`): when the locked
    * rows are more (a matching that began before the count committed after it), nothing is written
    * and the answer is a 409 `bulk_list_changed`. More than `BULK_MAX_ROWS` rows is a 400.
+   * `applications`: what the user reads (the application filter stays inside it).
    */
-  async bulkState(body: Record<string, unknown>, opts: VulnOpts) {
+  async bulkState(body: Record<string, unknown>, opts: VulnOpts, applications: ApplicationsAccess = null) {
     const { manager: mg, tenantId } = opts;
     const state = String(body.state ?? '');
     if (!(VULNERABILITY_STATES as readonly string[]).includes(state)) {
@@ -1338,7 +1521,7 @@ export class VulnerabilitiesService {
     const params: unknown[] = [tenantId];
     let where: string;
     if (all) {
-      where = await this.filterSql(mg, tenantId, { ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, params);
+      where = await this.filterSql(mg, tenantId, { ...filters, limit: undefined, offset: undefined, page: undefined, sort: undefined }, params, applications);
       if (excluded.length > 0) {
         params.push(excluded);
         where += ` AND tv.id <> ALL($${params.length}::uuid[])`;

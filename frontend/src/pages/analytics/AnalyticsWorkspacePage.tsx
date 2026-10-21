@@ -4,7 +4,6 @@ import type { TFunction } from 'i18next';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { KanapDialog, PropertyGroup, PropertyRow } from '../../components/design';
@@ -38,6 +37,7 @@ import {
   type AnalyticsField,
 } from './analyticsFields';
 import AnalyticsLinesUsage from './AnalyticsLinesUsage';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 
@@ -202,15 +202,7 @@ export default function AnalyticsWorkspacePage() {
   const disabled = !canEdit;
 
   const actions = canDelete && data ? (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => setConfirmOpen(true)}
-      disabled={deleting}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
   ) : undefined;
 
   return (

@@ -396,6 +396,8 @@ const ENTITY_TYPE_FROM_URL_PREFIX: Array<{ prefix: string; entityType: string }>
   { prefix: '/it/applications/', entityType: 'applications' },
   { prefix: '/it/assets/', entityType: 'assets' },
   { prefix: '/it/technologies/', entityType: 'technologies' },
+  // The vulnerabilities page, filtered on a CVE (`page_url` of the assistant's vulnerabilities).
+  { prefix: '/it/vulnerabilities', entityType: 'vulnerabilities' },
   { prefix: '/it/incidents/', entityType: 'incidents' },
   { prefix: '/it/connections/', entityType: 'connections' },
   { prefix: '/it/interfaces/', entityType: 'interfaces' },
@@ -461,7 +463,7 @@ export async function extractMentionContextItems(text: string, manager: EntityMa
       kind: 'mention',
       label,
       entity_type: entityType,
-      ref: label.match(/^[A-Z]+-\d+$/) ? label : null,
+      ref: label.match(/^[A-Z]+-\d+$/) || (entityType === 'vulnerabilities' && /^CVE-\d{4}-\d{4,}$/i.test(label)) ? label : null,
     });
   }
   return items.slice(0, 12);

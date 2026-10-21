@@ -212,9 +212,15 @@
         "applications": "Anwendungen",
         "itOwner": "IT-Verantwortlicher",
         "nextSupportEnd": "Nächstes Supportende",
-        "vulnerabilities": "Zu prüfende Schwachstellen"
+        "vulnerabilities": "Zu prüfende Schwachstellen",
+        "vulnerabilitiesShort": "Schwachstellen"
       },
       "vulnerabilityCount": "{{count}} · {{severe}} kritisch oder hoch",
+      "vulnerabilityFilter": {
+        "severe": "Mit schwerwiegenden Schwachstellen",
+        "any": "Mit Schwachstellen",
+        "none": "Ohne"
+      },
       "delete": {
         "warning_one": "Diese Technologie und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
         "warning_other": "Diese {{count}} Technologien und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
@@ -413,6 +419,13 @@
         "none": "Keine",
         "unknown": "Nicht bewertet"
       },
+      "severitiesShort": {
+        "critical": "Krit.",
+        "high": "Hoch",
+        "medium": "Mittel",
+        "low": "Niedrig",
+        "unknown": "N. bew."
+      },
       "states": {
         "to_review": "Zu prüfen",
         "handled": "Behandelt",
@@ -604,6 +617,35 @@
           "staleCveOrg_one": "CVE.org wurde seit {{count}} Tag nicht gelesen",
           "staleCveOrg_other": "CVE.org wurde seit {{count}} Tagen nicht gelesen"
         }
+      },
+      "reach": {
+        "via": "Asset",
+        "openHint": "{{severity}}: zu prüfende CVE.",
+        "empty": {
+          "asset": "Keine zu prüfende Schwachstelle auf diesem Asset.",
+          "application": "Keine zu prüfende Schwachstelle in dieser Anwendung."
+        },
+        "indirect": {
+          "title": "Über ein anderes Asset",
+          "hint": "Nicht gezählt: Diese Technologien sind auf einem anderen Asset installiert (einem Host, einem Cluster)."
+        },
+        "countLink_one": "Die zu prüfende Schwachstelle auf der Seite Schwachstellen ansehen",
+        "countLink_other": "Die {{count}} zu prüfenden Schwachstellen auf der Seite Schwachstellen ansehen"
+      },
+      "severeBadge": {
+        "label_one": "{{count}} schwerwiegend",
+        "label_other": "{{count}} schwerwiegend",
+        "hint_one": "{{count}} kritische oder hohe Schwachstelle zu prüfen",
+        "hint_other": "{{count}} kritische oder hohe Schwachstellen zu prüfen",
+        "exploited_one": "{{count}} als ausgenutzt bekannt",
+        "exploited_other": "{{count}} als ausgenutzt bekannt"
+      },
+      "subjectFilter": {
+        "remove": "entfernen"
+      },
+      "estateFilter": {
+        "label": "Im Bestand im Einsatz",
+        "hint": "Technologie, die auf einem Asset in Betrieb installiert oder von einer Anwendung in Betrieb deklariert ist."
       }
     },
     "interfaces": {
@@ -1563,7 +1605,7 @@
         "deployments": "Bereitstellungen",
         "operations": "Betrieb"
       },
-      "createNewVersion": "Neue Version erstellen",
+      "createNewVersion": "Neue Version",
       "saveBeforeVersion": "Speichern Sie die Änderungen, bevor Sie eine neue Version erstellen",
       "overview": {
         "description": "Beschreibung",

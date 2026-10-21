@@ -9,29 +9,31 @@ import api from '../../api';
 import { createAppTheme } from '../../config/ThemeContext';
 import i18n from '../../i18n';
 import { formatShortDate } from '../../lib/dateFormat';
-import VulnerabilitiesPage, { FeedAgeLine, filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
+import VulnerabilitiesPage, { estateFromSearch, FeedAgeLine, filterModelFromSearch, publishedFromSearch, publishedRange, type VulnerabilityRow } from './VulnerabilitiesPage';
 import { formatEpssCell, formatEpssPercent, formatEpssPercentInput, parseEpssPercent, type VulnerabilityDetail } from './vulnerabilities/vulnerabilityTypes';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), patch: vi.fn(), post: vi.fn() } }));
-const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'none' }));
+const auth = vi.hoisted(() => ({ level: 'member' as 'reader' | 'member' | 'none', denied: [] as string[] }));
 const RANK: Record<string, number> = { none: 0, reader: 1, member: 2, admin: 3 };
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: (_resource: string, level: string) => RANK[auth.level] >= RANK[level] }),
+  useAuth: () => ({ hasLevel: (resource: string, level: string) => !auth.denied.includes(resource) && RANK[auth.level] >= RANK[level] }),
 }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 vi.mock('../ForbiddenPage', () => ({ default: () => <div>Forbidden</div> }));
 // The grid: its props, and the selection column drawn for the rows of `grid.rows` (header box and
 // row boxes), inside the page as AG Grid draws them.
-const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, rows: [] as any[] }));
+// `grid.toolbar`: the toolbar's extras drawn above it too, as the grid does.
+const grid = vi.hoisted(() => ({ props: null as null | Record<string, any>, rows: [] as any[], toolbar: false }));
 vi.mock('../../components/ServerDataGrid', () => ({
   default: (props: Record<string, any>) => {
     grid.props = props;
+    const toolbar = grid.toolbar ? <div data-testid="toolbar">{props.toolbarExtras}</div> : null;
     const select = (props.columns as any[]).find((col) => col.colId === 'select');
-    if (!select) return null;
+    if (!select) return toolbar;
     const Header = select.headerComponent;
     const Cell = select.cellRenderer;
-    return <div data-testid="grid"><Header />{grid.rows.map((row) => <Cell key={row.id} data={row} />)}</div>;
+    return <>{toolbar}<div data-testid="grid"><Header />{grid.rows.map((row) => <Cell key={row.id} data={row} />)}</div></>;
   },
 }));
 
@@ -116,10 +118,12 @@ describe('VulnerabilitiesPage', () => {
   beforeEach(() => {
     grid.props = null;
     grid.rows = [ROW, ROW_NONE];
+    grid.toolbar = false;
     getMock.mockReset();
     patchMock.mockReset();
     postMock.mockReset();
     auth.level = 'member';
+    auth.denied = [];
     features.vulnerabilityFeed = true;
     getMock.mockImplementation(async (url: string) => {
       if (url === `/vulnerabilities/${CVE}`) return { data: DETAIL } as any;
@@ -155,16 +159,16 @@ describe('VulnerabilitiesPage', () => {
     expect(grid.props!.getRowId(ROW_NONE)).toBe('row-2');
     expect(grid.props!.initialState.filter.filterModel).toEqual({ state: { filterType: 'set', values: ['to_review'] } });
     expect((grid.props!.columns as any[]).map((col) => col.field ?? col.colId)).toEqual([
-      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'match_sources', 'editor', 'servers', 'applications', 'state', 'note', 'published_at',
+      'select', 'cve_id', 'severity', 'exploited', 'cvss_score', 'epss', 'summary', 'technology', 'version', 'match_sources', 'editor', 'asset', 'application', 'state', 'note', 'published_at',
     ]);
     expect(column('published_at').filter).toBe('agDateColumnFilter');
     expect(column('published_at').sortable).not.toBe(false);
     // EPSS is shown as a percentage only. The exploited column stays hidden: the icon next to the severity carries that signal.
     // The default set was then 1,219 px, past the old 1,100 px budget. The summary still takes the rest.
     const shown = (grid.props!.columns as any[]).filter((col) => !col.defaultHidden);
-    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'match_sources', 'servers', 'applications', 'state', 'published_at']);
-    // The Source column (130 px) brings it to 1,349 px.
-    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1349);
+    expect(shown.map((col) => col.field ?? col.colId)).toEqual(['select', 'cve_id', 'severity', 'epss', 'summary', 'technology', 'version', 'match_sources', 'asset', 'application', 'state', 'published_at']);
+    // The Source column (130 px) brought it to 1,349 px, the Servers and Applications filters to 1,389 px.
+    expect(shown.reduce((sum, col) => sum + (col.width ?? col.minWidth), 0)).toBe(1389);
     expect(column('exploited').defaultHidden).toBe(true);
     expect(column('cvss_score').defaultHidden).toBe(true);
     expect(column('select')).toMatchObject({ suppressColumnsToolPanel: true, filter: false, sortable: false, width: 44 });
@@ -174,7 +178,8 @@ describe('VulnerabilitiesPage', () => {
     expect(grid.props!.showRowCount).toBe(true);
     expect(grid.props!.rowCountText({ total: 31, cves: 12 })).toBe('Total: 31 rows (12 CVE)');
     expect(grid.props!.rowCountText({ total: 1, cves: 1 })).toBe('Total: 1 row (1 CVE)');
-    expect(column('servers').filter).toBe(false);
+    expect(column('asset').valueGetter({ data: ROW })).toBe(1);
+    expect(column('application').valueGetter({ data: ROW })).toBeNull();
     expect(await column('technology').filterParams.getValues({})).toEqual([{ value: 'TEC-1', label: 'TEC-1 Tomcat' }]);
     expect(column('technology').valueFormatter({ value: ROW.technology })).toBe('TEC-1 Tomcat');
     expect((await column('state').filterParams.getValues({})).map((v: any) => v.label)).toEqual(['To review', 'Handled', 'Not affected']);
@@ -220,6 +225,161 @@ describe('VulnerabilitiesPage', () => {
       version: { filterType: 'set', values: [null] },
       cve_id: { filterType: 'text', type: 'contains', filter: 'CVE-2026-1001' },
     });
+  });
+
+  it('turns the asset and application of the address into Servers and Applications column filters', () => {
+    const set = (values: string[]) => ({ filterType: 'set', values });
+    expect(filterModelFromSearch('?asset=ast-12')).toEqual({ state: set(['to_review']), asset: set(['AST-12']) });
+    expect(filterModelFromSearch('?application=APP-3&asset=AST-12&state=all')).toEqual({ asset: set(['AST-12']), application: set(['APP-3']) });
+    // A subject without reference comes by its id, in lower case as the options carry it.
+    expect(filterModelFromSearch('?application=0A1B2C3D-0000-4000-8000-00000000000F').application).toEqual(set(['0a1b2c3d-0000-4000-8000-00000000000f']));
+    expect(filterModelFromSearch('?asset=&application=')).toEqual({ state: set(['to_review']) });
+  });
+
+  describe('Servers and Applications column filters', () => {
+    const SERVERS = [
+      { id: 'a-7', reference: 'AST-7', name: 'PAR-DB-02' },
+      { id: 'a-12', reference: 'AST-12', name: 'PAR-ESX-01' },
+    ];
+    const APPS = [{ id: 'app-3', reference: 'APP-3', name: 'Payroll' }];
+    const set = (values: string[]) => ({ filterType: 'set', values });
+    const stateOf = (filters: Record<string, unknown>) => ({ context: { getQueryState: () => ({ filters }) } });
+    const optionsMock = (servers = SERVERS, apps = APPS) => getMock.mockImplementation(async (url: string, config?: any) => {
+      if (url === '/vulnerabilities/filter-values') {
+        const fields = String(config?.params?.fields);
+        if (fields === 'asset') return { data: { asset: servers } } as any;
+        if (fields === 'application') return { data: { application: apps } } as any;
+        return { data: { version: [] } } as any;
+      }
+      if (url === '/vulnerabilities/export') return { data: new Blob(['x']), headers: {} } as any;
+      if (url === '/assets/by-ref/AST-40') return { data: { id: 'a-40', name: 'PAR-OLD-04' } } as any;
+      if (url === '/applications/APP-9') throw Object.assign(new Error('forbidden'), { response: { status: 403 } });
+      throw new Error(`unexpected ${url}`);
+    });
+
+    it('filters in the column headers, by name only, searched by name or reference, with no selector in the toolbar', async () => {
+      optionsMock();
+      grid.toolbar = true;
+      renderPage();
+      expect(screen.queryByRole('combobox', { name: 'Server' })).toBeNull();
+      expect(screen.queryByRole('combobox', { name: 'Application' })).toBeNull();
+      expect(column('asset')).toMatchObject({ headerName: 'Servers', sortable: false });
+      expect(column('asset').filter).not.toBe(false);
+      expect(column('asset').floatingFilterComponent).toBeTruthy();
+      expect(await column('asset').filterParams.getValues(stateOf({}))).toEqual([
+        { value: 'AST-7', label: 'PAR-DB-02', keywords: 'AST-7' },
+        { value: 'AST-12', label: 'PAR-ESX-01', keywords: 'AST-12' },
+      ]);
+      expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', { params: { fields: 'asset' } });
+      expect(await column('application').filterParams.getValues(stateOf({}))).toEqual([{ value: 'APP-3', label: 'Payroll', keywords: 'APP-3' }]);
+      expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', { params: { fields: 'application' } });
+      // Nothing on the address: the grid model carries the subjects.
+      expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+    });
+
+    it('opens a link ?asset= with the Servers column filtered, and resets it with the other filters', async () => {
+      optionsMock();
+      renderPage('/it/vulnerabilities?asset=AST-12&technology=TEC-1', true);
+      expect(grid.props!.initialState.filter.filterModel).toEqual({
+        state: set(['to_review']),
+        technology: set(['TEC-1']),
+        asset: set(['AST-12']),
+      });
+      expect(grid.props!.extraParams).toEqual({ alerts: 'included' });
+      expect(grid.props!.extraNarrows).toBe(false);
+      // The value of the link is one of the options: ticked as it is, nothing else read.
+      const values = await column('asset').filterParams.getValues(stateOf({ asset: set(['AST-12']) }));
+      expect(values.map((v: any) => v.label)).toEqual(['PAR-DB-02', 'PAR-ESX-01']);
+      expect(getMock).not.toHaveBeenCalledWith('/assets/by-ref/AST-12');
+      act(() => grid.props!.onResetFilters());
+      await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?technology=TEC-1'));
+    });
+
+    it('sends several servers and an application through the grid model to the version values, the export and the change of state', async () => {
+      optionsMock();
+      renderPage('/it/vulnerabilities?application=APP-3');
+      expect(grid.props!.initialState.filter.filterModel.application).toEqual(set(['APP-3']));
+      const filters = { state: set(['to_review']), asset: set(['AST-7', 'AST-12']), application: set(['APP-3']) };
+      await column('version').filterParams.getValues(stateOf(filters));
+      expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({
+        params: { fields: 'version', filters: JSON.stringify(filters), alerts: 'included' },
+      }));
+      postMock.mockImplementation(async (_url: string, body: any) => ({
+        data: body.dry_run ? { rows: 3, cves: 2, changes: 3, as_of: '2026-10-18T10:00:02.000Z' } : { ok: true, changed: 3 },
+      }) as any);
+      listed(3, JSON.stringify(filters), 'exploited:DESC');
+      fireEvent.click(screen.getByRole('button', { name: 'Export CSV' }));
+      await waitFor(() => expect(getMock).toHaveBeenCalledWith('/vulnerabilities/export', expect.objectContaining({
+        params: { sort: 'exploited:DESC', filters: JSON.stringify(filters) },
+      })));
+      fireEvent.click(box(ALL_BOX));
+      fireEvent.click(screen.getByRole('button', { name: 'Change state (3)' }));
+      await waitFor(() => expect(postMock).toHaveBeenLastCalledWith('/vulnerabilities/bulk-state', {
+        state: 'handled', all: true, filters: { sort: 'exploited:DESC', filters: JSON.stringify(filters) }, dry_run: true,
+      }));
+    });
+
+    it('lists a value of the column outside the options first, by its name, or by its reference when unreadable', async () => {
+      optionsMock([], []);
+      renderPage();
+      expect(await column('asset').filterParams.getValues(stateOf({ asset: set(['AST-40']) }))).toEqual([
+        { value: 'AST-40', label: 'PAR-OLD-04', keywords: 'AST-40' },
+      ]);
+      expect(await column('application').filterParams.getValues(stateOf({ application: set(['APP-9']) }))).toEqual([
+        { value: 'APP-9', label: 'APP-9', keywords: 'APP-9' },
+      ]);
+    });
+
+    it('gives the Applications column no filter without the applications read right, and drops its link', () => {
+      optionsMock();
+      auth.denied = ['applications'];
+      renderPage('/it/vulnerabilities?asset=AST-12&application=APP-3');
+      expect(column('application').filter).toBe(false);
+      expect(column('application').filterParams).toBeUndefined();
+      expect(column('asset').filter).not.toBe(false);
+      expect(grid.props!.initialState.filter.filterModel).toEqual({ state: set(['to_review']), asset: set(['AST-12']) });
+    });
+  });
+
+  it('reads estate=1 from the address, sends it to the API and names it alone on the line under the toolbar', async () => {
+    expect(estateFromSearch('?estate=1')).toBe(true);
+    expect(estateFromSearch('?estate=0')).toBe(false);
+    expect(estateFromSearch('')).toBe(false);
+    getMock.mockImplementation(async (url: string) => {
+      if (url === '/assets/by-ref/AST-12') return { data: { id: 'a-12', name: 'PAR-ESX-01' } } as any;
+      if (url === '/vulnerabilities/filter-values') return { data: { version: [] } } as any;
+      throw new Error(`unexpected ${url}`);
+    });
+    renderPage('/it/vulnerabilities?asset=AST-12&estate=1&exploited=1', true);
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included', exploited: 'yes', estate: '1' });
+    expect(grid.props!.initialState.filter.filterModel.asset).toEqual({ filterType: 'set', values: ['AST-12'] });
+    expect(grid.props!.extraNarrows).toBe(true);
+    // The asset is in its column filter; the line names the estate only.
+    const estate = screen.getByTestId('vulnerabilities-estate');
+    expect(estate.textContent).toBe('In use in the estate · remove');
+    expect(estate.parentElement!.textContent).toBe('In use in the estate · remove');
+    expect(screen.queryByTestId('vulnerabilities-subject')).toBeNull();
+
+    await column('version').filterParams.getValues({ context: { getQueryState: () => ({ filters: {} }) } });
+    expect(getMock).toHaveBeenCalledWith('/vulnerabilities/filter-values', expect.objectContaining({
+      params: { fields: 'version', alerts: 'included', exploited: 'yes', estate: '1' },
+    }));
+
+    // "remove" drops estate only.
+    fireEvent.click(within(estate).getByRole('button', { name: 'remove' }));
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities?asset=AST-12&exploited=1'));
+    expect(screen.queryByTestId('vulnerabilities-estate')).toBeNull();
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included', exploited: 'yes' });
+  });
+
+  it('resets estate with the other filters', async () => {
+    renderPage('/it/vulnerabilities?estate=1', true);
+    expect(grid.props!.extraParams).toEqual({ alerts: 'included', estate: '1' });
+    expect(screen.getByTestId('vulnerabilities-estate').textContent).toBe('In use in the estate · remove');
+    act(() => grid.props!.onResetFilters());
+    await waitFor(() => expect(screen.getByTestId('location').textContent).toBe('/it/vulnerabilities'));
+    expect(grid.props!.extraNarrows).toBe(false);
+    expect(screen.queryByTestId('vulnerabilities-estate')).toBeNull();
   });
 
   it('reads the emails\' period as the email does: from now less its days, in UTC', () => {

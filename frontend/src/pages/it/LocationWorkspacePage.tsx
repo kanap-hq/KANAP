@@ -9,7 +9,6 @@ import {
   TextField,
   Typography,
 } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
@@ -30,6 +29,7 @@ import { drawerSelectSx, drawerMenuItemSx, drawerFieldValueSx } from '../../them
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type TabKey = 'overview' | 'contacts' | 'relations';
 
@@ -458,15 +458,7 @@ export default function LocationWorkspacePage() {
         />
       )}
       {!isCreate && canDelete && (
-        <Button
-          variant="action-danger"
-          startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-          size="small"
-          onClick={() => setDeleteDialogOpen(true)}
-          disabled={deleting}
-        >
-          {t('common:buttons.delete')}
-        </Button>
+        <DeleteIconButton onClick={() => setDeleteDialogOpen(true)} disabled={deleting} />
       )}
     </>
   );

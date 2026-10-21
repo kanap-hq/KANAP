@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, MenuItem, Stack, TextField, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -33,6 +32,7 @@ import {
   refusalField,
   type CostCenterField,
 } from './costCenterFields';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 const LIST_PATH = '/master-data/cost-centers';
 const EMPTY_SET: ReadonlySet<string> = new Set();
@@ -211,15 +211,7 @@ export default function CostCenterWorkspacePage() {
   const disabled = !canEdit;
 
   const actions = !isCreate && canDelete && data ? (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || !!deleteBlock}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
   ) : undefined;
 
   if (isCreate) {

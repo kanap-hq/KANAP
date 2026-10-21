@@ -6,7 +6,6 @@ import {
   IconButton, LinearProgress, Snackbar, Stack, Typography, useTheme,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
 import TransformIcon from '@mui/icons-material/Transform';
 import api from '../../api';
 import { formatShortDate } from '../../lib/dateFormat';
@@ -50,6 +49,7 @@ import { getScoreColor } from '../tasks/theme/taskDetailTokens';
 import { fetchPortfolioRelationsCount } from '../../utils/workspaceTabCounts';
 import { KanapDialog, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type TabKey = 'summary' | 'analysis' | 'scoring' | 'relations' | 'knowledge';
 type LegacyPanelRoute = 'overview' | 'activity' | 'team';
@@ -1048,14 +1048,7 @@ export default function RequestWorkspacePage() {
               </Button>
             )}
             {!isCreate && canAdmin && form?.status !== 'converted' && (
-              <Button
-                variant="action-danger"
-                startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-                onClick={() => setDeleteConfirmOpen(true)}
-                size="small"
-              >
-                {t('common:buttons.delete')}
-              </Button>
+              <DeleteIconButton onClick={() => setDeleteConfirmOpen(true)} />
             )}
             <IconButton
               aria-label={t('common:buttons.close')}

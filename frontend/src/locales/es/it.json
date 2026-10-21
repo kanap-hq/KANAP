@@ -212,9 +212,15 @@
         "applications": "Aplicaciones",
         "itOwner": "Responsable de TI",
         "nextSupportEnd": "Próximo fin de soporte",
-        "vulnerabilities": "Vulnerabilidades por revisar"
+        "vulnerabilities": "Vulnerabilidades por revisar",
+        "vulnerabilitiesShort": "Vulnerabilidades"
       },
       "vulnerabilityCount": "{{count}} · {{severe}} críticas o altas",
+      "vulnerabilityFilter": {
+        "severe": "Con vulnerabilidades graves",
+        "any": "Con vulnerabilidades",
+        "none": "Sin"
+      },
       "delete": {
         "warning_one": "Se eliminarán esta tecnología y sus vínculos con servidores y aplicaciones.",
         "warning_other": "Se eliminarán estas {{count}} tecnologías y sus vínculos con servidores y aplicaciones.",
@@ -413,6 +419,13 @@
         "none": "Ninguna",
         "unknown": "Sin evaluar"
       },
+      "severitiesShort": {
+        "critical": "Crít.",
+        "high": "Alta",
+        "medium": "Media",
+        "low": "Baja",
+        "unknown": "S. eval."
+      },
       "states": {
         "to_review": "Por revisar",
         "handled": "Tratada",
@@ -604,6 +617,35 @@
           "staleCveOrg_one": "CVE.org no se ha leído desde hace {{count}} día",
           "staleCveOrg_other": "CVE.org no se ha leído desde hace {{count}} días"
         }
+      },
+      "reach": {
+        "via": "Activo",
+        "openHint": "{{severity}}: CVE por revisar.",
+        "empty": {
+          "asset": "Ninguna vulnerabilidad por revisar en este activo.",
+          "application": "Ninguna vulnerabilidad por revisar en esta aplicación."
+        },
+        "indirect": {
+          "title": "A través de otro activo",
+          "hint": "No contabilizadas: estas tecnologías están instaladas en otro activo (un host, un clúster)."
+        },
+        "countLink_one": "Ver la vulnerabilidad por revisar en la página Vulnerabilidades",
+        "countLink_other": "Ver las {{count}} vulnerabilidades por revisar en la página Vulnerabilidades"
+      },
+      "severeBadge": {
+        "label_one": "{{count}} grave",
+        "label_other": "{{count}} graves",
+        "hint_one": "{{count}} vulnerabilidad crítica o alta por revisar",
+        "hint_other": "{{count}} vulnerabilidades críticas o altas por revisar",
+        "exploited_one": "{{count}} conocida como explotada",
+        "exploited_other": "{{count}} conocidas como explotadas"
+      },
+      "subjectFilter": {
+        "remove": "quitar"
+      },
+      "estateFilter": {
+        "label": "En uso en el parque",
+        "hint": "Tecnología instalada en un activo en servicio o declarada por una aplicación en servicio."
       }
     },
     "interfaces": {
@@ -1563,7 +1605,7 @@
         "deployments": "Despliegues",
         "operations": "Operaciones"
       },
-      "createNewVersion": "Crear nueva versión",
+      "createNewVersion": "Nueva versión",
       "saveBeforeVersion": "Guarde los cambios antes de crear una nueva versión",
       "overview": {
         "description": "Descripción",

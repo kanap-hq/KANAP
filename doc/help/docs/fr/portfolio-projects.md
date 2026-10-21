@@ -100,7 +100,7 @@ L'en-tête de l'espace de travail est une bande de contrôle, pas de la décorat
 - Le titre du projet (cliquez pour modifier lorsque vous avez les droits manage)
 - Une rangée de métadonnées compacte : **Statut**, **Score**, **Avancement**, **Responsable IT**, **Fin planifiée** et **Origine** (ou la référence de la demande source pour les projets d'origine demande)
 - **Précédent** et **Suivant** parcourent l'ensemble de résultats de la liste actuelle, pas tous les projets du système
-- **Envoyer le lien** envoie l'URL du projet courant par e-mail avec un message optionnel
+- **Partager** envoie l'URL du projet courant par e-mail avec un message optionnel
 
 Envoyer un lien n'accorde pas l'accès. Cela ne fait que partager l'emplacement. Les autorisations restent exactement comme elles étaient avant l'envoi de l'e-mail.
 
@@ -371,7 +371,7 @@ L'import en masse est utile pour la maintenance à grande échelle du portefeuil
 
 ## Envoyer un lien
 
-Utilisez **Envoyer le lien** depuis l'en-tête de l'espace de travail pour envoyer par e-mail un lien direct vers le projet à des destinataires internes ou externes.
+Utilisez **Partager** depuis l'en-tête de l'espace de travail pour envoyer par e-mail un lien direct vers le projet à des destinataires internes ou externes.
 
 - vous pouvez l'envoyer aux utilisateurs de la plateforme ou à toute adresse e-mail
 - vous pouvez inclure un message optionnel

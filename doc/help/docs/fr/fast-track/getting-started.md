@@ -209,9 +209,9 @@ Pour les tâches projet, la saisie de temps est essentielle : elle alimente le g
 
 ### Partagez une tâche
 
-Besoin d'impliquer quelqu'un ? Cliquez sur **Envoyer un lien** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue, même des personnes en dehors de KANAP. Ajoutez un message personnel si nécessaire.
+Besoin d'impliquer quelqu'un ? Cliquez sur **Partager** dans l'en-tête de la tâche pour envoyer par e-mail un lien direct à n'importe quel collègue, même des personnes en dehors de KANAP. Ajoutez un message personnel si nécessaire.
 
-!!! info "Information : Envoyer un lien fonctionne partout"
+!!! info "Information : Partager fonctionne partout"
     Ce n'est pas réservé aux tâches. Vous pouvez envoyer des liens vers des projets, demandes, contrats, applications : tout objet d'espace de travail. C'est la manière la plus rapide d'orienter quelqu'un vers le bon endroit.
 
 ---
@@ -299,7 +299,7 @@ L'e-mail hebdomadaire et les notifications en temps réel vous tiennent informé
 | Changer de thème (clair/sombre) | Avatar > Mon profil > onglet Apparence |
 | Définir ma disponibilité | Portefeuille > Contributeurs > votre nom |
 | Ajouter mes compétences | Portefeuille > Contributeurs > votre nom > onglet Compétences |
-| Partager un lien vers n'importe quoi | Ouvrez n'importe quel espace de travail > Envoyer un lien |
+| Partager un lien vers n'importe quoi | Ouvrez n'importe quel espace de travail > Partager |
 | Personnaliser mon tableau de bord | Tableau de bord > Paramètres (icône engrenage) |
 
 ---

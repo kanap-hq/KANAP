@@ -24,7 +24,7 @@ Rendez-vous dans **Cartographie SI > Actifs** pour voir votre inventaire d'actif
 
 ---
 
-## Travailler avec la liste
+## Travailler avec la liste { #working-with-the-list }
 
 La liste des actifs vous donne une vue filtrable et triable de chaque actif de votre inventaire.
 
@@ -34,6 +34,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 |---------|--------------------|
 | **#** | Référence de l'actif (ex. : `AST-123`), monospace |
 | **Nom** | Nom de l'actif (cliquez pour ouvrir l'espace de travail) |
+| **Vulnérabilités à traiter** | Les vulnérabilités encore à traiter sur les technologies renseignées sur l'actif, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour un actif retiré ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Présente quand les vulnérabilités sont suivies |
 | **Type d'actif** | Le type de l'actif (ex. : Machine virtuelle, Serveur physique) |
 | **Cluster** | Appartenance à un cluster, ou un badge « Cluster » si cet actif est lui-même un cluster |
 | **Environnement** | Prod, Pré-prod, QA, Test, Dev, Sandbox, avec un point coloré |
@@ -69,6 +70,9 @@ La plupart des colonnes prennent en charge des filtres par jeu de cases à coche
 | Zone réseau | Filtrer par segment réseau |
 | Cycle de vie | Filtrer par statut de cycle de vie |
 | Zone d'administration | Inclut « (Vide) » pour les actifs sans zone |
+| Vulnérabilités à traiter | **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**. Un actif retiré n'entre dans aucune de ces valeurs |
+
+Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérabilités critiques ou élevées, puis par leur total. Les actifs retirés viennent en dernier. La colonne ne compte que les liens directs : une machine virtuelle ne compte pas les vulnérabilités de son hôte. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 
 **Conseil** : Combinez les filtres entre colonnes pour affiner les résultats. Par exemple, filtrez par Environnement = « Prod » et Cycle de vie = « Actif » pour voir uniquement les actifs de production actifs.
 
@@ -102,8 +106,9 @@ L'en-tête affiche :
 - **Nom de l'actif** (modifiable sur place)
 - **Référence de l'actif** (ex. : `AST-123`) : identifiant copiable
 - Pastille **Cycle de vie** (également modifiable depuis le tiroir des propriétés)
-- **Envoyer le lien** : copier un lien partageable vers cet espace de travail
-- **Supprimer** (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
+- **Vulnérabilités graves**, par exemple « 3 graves » : les vulnérabilités critiques ou élevées encore à traiter sur l'actif, avec la couleur de la plus haute. Une icône d'alerte suit quand certaines sont connues comme exploitées. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Affiché seulement quand l'actif en a
+- **Partager** : copier un lien partageable vers cet espace de travail
+- **Supprimer**, une icône corbeille avec son nom en infobulle (`infrastructure:admin`). Pour un actif encore utilisé, la raison s'affiche avant toute confirmation
 - **Précédent / Suivant** (ex. : « 3 sur 47 ») : naviguer dans la liste filtrée sans y revenir
 
 ### Tiroir des propriétés (panneau de droite)
@@ -131,6 +136,12 @@ L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 
 **Description** : Une description en texte enrichi de l'actif. Sauvegarde automatiquement au fur et à mesure que vous éditez.
 
+**Identité** :
+- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
+- **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
+- **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
+- **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
+
 **Assignations** (non affichées pour les actifs cluster) : Liste les applications s'exécutant sur cet actif. Chaque ligne affiche :
 
 | Colonne | Ce qu'elle affiche |
@@ -151,20 +162,28 @@ Si cet actif est un cluster, une notification en ligne remplace le tableau d'ass
 
 ---
 
-### Technique
+### Technique { #technical }
 
-L'onglet Technique organise le cluster, l'identité réseau, les technologies que porte le serveur et la configuration IP.
+L'onglet Technique regroupe, dans cet ordre, le cluster, les adresses IP, les technologies que porte le serveur et leurs vulnérabilités.
 
 **Gestion du cluster** :
 - Bascule **Cluster** : marquer cet actif comme cluster.
 - Si l'actif **est un cluster** : une section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur **Modifier les membres** pour ajouter ou supprimer des membres via une boîte de dialogue de recherche.
 - Si l'actif **n'est pas un cluster** : une section **Appartenance à un cluster** affiche les clusters auxquels cet actif appartient (le cas échéant).
 
-**Identité** :
-- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
-- **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
-- **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
-- **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
+**Adresses IP** :
+
+Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre configuration réseau :
+
+- Cliquez sur **Ajouter une adresse IP** pour ajouter une nouvelle entrée.
+- **Type** : L'objectif de l'adresse IP (Hôte, IPMI, Management, iSCSI, ou types personnalisés depuis les Paramètres)
+- **Adresse IP** : L'adresse elle-même
+- **Sous-réseau** : Sous-réseau depuis la liste configurée (filtré au site de l'actif)
+- **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
+- **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
+
+Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
+
 **Technologies** : ce que porte le serveur, par exemple Windows Server, SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
 
 - **Système d'exploitation** : le système d'exploitation du serveur est l'une de ses technologies, de la famille **Système d'exploitation**. Il vient en tête de liste, avec la mention « Système d'exploitation » après son nom. Voir [Système d'exploitation](#systeme-dexploitation) ci-dessous.
@@ -189,18 +208,19 @@ Pour que VMware ESXi ou FortiOS soit le système d'exploitation d'un hôte, plac
 
 Le système d'exploitation apparaît dans la colonne **OS** de la liste, dans le tableau des membres d'un cluster et sur la [Carte des connexions](connection-map.md). Ses versions et ses dates de fin de support viennent de la technologie : voir [Technologies](technologies.md).
 
-**Adresses IP** :
+#### Vulnérabilités
 
-Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre configuration réseau :
+Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste les vulnérabilités encore à traiter sur les technologies renseignées sur cet actif, dans les alertes. Le nombre à côté du titre est celui des vulnérabilités distinctes à traiter : cliquez dessus pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif. Une ligne par technologie et version :
 
-- Cliquez sur **Ajouter une adresse IP** pour ajouter une nouvelle entrée.
-- **Type** : L'objectif de l'adresse IP (Hôte, IPMI, Management, iSCSI, ou types personnalisés depuis les Paramètres)
-- **Adresse IP** : L'adresse elle-même
-- **Sous-réseau** : Sous-réseau depuis la liste configurée (filtré au site de l'actif)
-- **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
-- **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
+| Colonne | Ce qu'elle affiche |
+|---|---|
+| **Technologie**, **Version** | La technologie et sa version. **Version non renseignée (potentiellement concernée)** quand l'actif ne nomme aucune version |
+| **Crit.**, **Élev.**, **Moy.**, **Faible**, **N. éval.** | Une colonne par sévérité (Critique, Élevée, Moyenne, Faible, Non évaluée, le nom complet en infobulle sur l'en-tête) : les vulnérabilités encore à traiter. Une vulnérabilité notée **Aucune** compte avec **Faible** |
+| **Total** | Les vulnérabilités distinctes encore à traiter sur cette ligne |
 
-Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
+**Voir** ouvre la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'actif et la technologie. Quand il ne reste rien à traiter, la section le dit en une ligne. Un actif retiré n'a pas de section.
+
+**Par un autre actif** liste à part les technologies que l'actif reçoit d'un autre, comme l'hôte sur lequel il tourne ou son cluster, avec cet actif dans la colonne **Actif**. Ces lignes ne sont pas comptées, ni dans le badge ni ailleurs : une vulnérabilité compte sur l'actif où la technologie est renseignée. Leur **Voir** ouvre la page sur cet autre actif. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -367,6 +387,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 Certains champs sont calculés et ne peuvent pas être importés :
 - **Fournisseur** : Dérivé automatiquement du site de l'actif
 - **FQDN** : Calculé à partir du nom d'hôte + domaine
+- **Vulnérabilités** : `vulnerabilities_to_review` (les vulnérabilités encore à traiter) et `severe_vulnerabilities` (celles critiques ou élevées), comptées comme dans la colonne de la liste. Export seulement : l'import les ignore. Vides pour un actif retiré. Absentes du fichier quand les vulnérabilités ne sont pas suivies
 
 ### Limitations
 

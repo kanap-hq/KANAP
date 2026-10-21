@@ -21,6 +21,13 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDate, formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { countValueFormatter } from '../../components/grid/countValueFormatter';
+import { useFeatures } from '../../config/FeaturesContext';
+import VulnerabilityCountCell from '../../components/vulnerabilities/VulnerabilityCountCell';
+import {
+  VULNERABILITIES_FIELD,
+  vulnerabilityFilterFromSearch,
+  vulnerabilityFilterOptions,
+} from '../../components/vulnerabilities/vulnerabilityListColumn';
 type AssetRow = {
   id: string;
   asset_reference: string | null;
@@ -41,8 +48,23 @@ type AssetRow = {
   network_segment: string | null;
   admin_zone: string | null;
   assignments_count?: number;
+  /** CVE still to review, and those critical or high (null for a retired asset or the feed off). */
+  vulnerabilities_to_review?: number | null;
+  vulnerabilities_severe?: number | null;
   created_at: string;
 };
+
+/** The vulnerabilities to review of an asset, a link to the Vulnerabilities page filtered on it. */
+function VulnerabilitiesCell({ data }: ICellRendererParams<AssetRow, any>) {
+  if (!data) return null;
+  return (
+    <VulnerabilityCountCell
+      count={data.vulnerabilities_to_review}
+      severe={data.vulnerabilities_severe}
+      to={`/it/vulnerabilities?asset=${encodeURIComponent(data.asset_reference || data.id)}`}
+    />
+  );
+}
 
 const ENV_LABEL_KEYS: Record<string, string> = {
   prod: 'enums.environment.prod',
@@ -62,6 +84,8 @@ export default function AssetsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasLevel } = useAuth();
+  const { config, isLoading: featuresLoading } = useFeatures();
+  const vulnerabilityFeed = config.features.vulnerabilityFeed === true;
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<AssetRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -74,19 +98,22 @@ export default function AssetsPage() {
   );
   const envLabel = useCallback((v?: string) => (v ? envLabelMap[v] || v : ''), [envLabelMap]);
 
-  // Read filters from URL to restore state when returning from workspace
+  // Read filters from URL to restore state when returning from workspace, and
+  // `?vulnerabilities=severe|any|none` (a link from the home page) on the Vulnerabilities column.
+  const vulnerabilityUrlFilter = useMemo(() => vulnerabilityFilterFromSearch(location.search), [location.search]);
   const urlFilters = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const filtersParam = params.get('filters');
+    let parsed: Record<string, unknown> | null = null;
     if (filtersParam) {
       try {
-        return JSON.parse(filtersParam);
+        parsed = JSON.parse(filtersParam);
       } catch {
-        return null;
+        parsed = null;
       }
     }
-    return null;
-  }, [location.search]);
+    return vulnerabilityUrlFilter ? { ...(parsed || {}), ...vulnerabilityUrlFilter } : parsed;
+  }, [location.search, vulnerabilityUrlFilter]);
 
   // Use URL filters if present (no default filter for assets)
   const initialGridState = useMemo(() => {
@@ -276,6 +303,19 @@ export default function AssetsPage() {
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('common.name'), field: 'name', minWidth: 180, cellRenderer: ClickToWorkspace },
+    // Hidden while the vulnerability feed is off: the counts are null then.
+    ...(vulnerabilityFeed
+      ? [{
+        headerName: t('pages.technologies.columns.vulnerabilitiesShort'),
+        field: VULNERABILITIES_FIELD as keyof AssetRow,
+        width: 140,
+        headerTooltip: t('pages.technologies.columns.vulnerabilities'),
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: async () => vulnerabilityFilterOptions(t), searchable: false },
+        cellRenderer: VulnerabilitiesCell,
+      }]
+      : []),
     {
       headerName: t('pages.assets.columns.assetType'),
       field: 'kind',
@@ -434,7 +474,7 @@ export default function AssetsPage() {
       cellRenderer: ClickToWorkspace,
     },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 180, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToWorkspace },
-  ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t]);
+  ], [ClickToWorkspace, ClusterCell, EnvironmentCell, envLabel, envLabelMap, getAssetFilterValues, labelFor, lifecycleLabel, t, vulnerabilityFeed]);
 
   const actions = (
     <Stack direction="row" spacing={1}>
@@ -471,6 +511,8 @@ export default function AssetsPage() {
   return (
     <>
       <PageHeader title={t('pages.assets.title')} actions={actions} />
+      {/* A filter on the Vulnerabilities column waits for the column: the grid drops a filter on a column it does not have. */}
+      {!(vulnerabilityUrlFilter && featuresLoading) && (
       <ServerDataGrid<AssetRow>
         columns={columns}
         endpoint="/assets"
@@ -489,6 +531,7 @@ export default function AssetsPage() {
           lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
         }}
       />
+      )}
       <CsvExportDialogV2
         open={exportOpen}
         onClose={() => setExportOpen(false)}

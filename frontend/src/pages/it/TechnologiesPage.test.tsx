@@ -197,6 +197,16 @@ describe('TechnologiesPage', () => {
     expect(screen.queryByTestId('vulnerabilities-severe')).toBeNull();
   });
 
+  it('renders the vulnerability count through the cell shared with the asset and application lists', () => {
+    features.vulnerabilityFeed = true;
+    renderPage();
+    const Cell = column('vulnerabilities_to_review').cellRenderer;
+    const { container } = render(<MemoryRouter><Cell data={{ id: 'u3', reference: 'TEC-5', vulnerabilities_to_review: null, vulnerabilities_severe: null }} /></MemoryRouter>);
+    expect(container.textContent).toBe('');
+    render(<MemoryRouter><Cell data={{ id: 'u4', reference: '', vulnerabilities_to_review: 1, vulnerabilities_severe: 1 }} /></MemoryRouter>);
+    expect(screen.getByTestId('vulnerabilities-to-review').getAttribute('href')).toBe('/it/vulnerabilities?technology=u4');
+  });
+
   it('has no vulnerability column while the feed is off, and the editor opens the technology', () => {
     renderPage();
     expect(column('vulnerabilities_to_review')).toBeUndefined();

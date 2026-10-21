@@ -139,7 +139,7 @@ Each OPEX and CAPEX line with a cost center shows the cost center's budget holde
 
 ### Deleting
 
-The **Delete** button in the header deletes the node after a confirmation (requires `cost_centers:admin`). It is disabled, with the reason on one line, when budget lines use the cost center (for example "Used by 3 OPEX lines. Disable it instead.") or when the group still contains nodes (for example "Contains 2 nodes."). Disable the node instead: it stays on its lines and in reports.
+The **Delete** button (trash icon) in the header deletes the node after a confirmation (requires `cost_centers:admin`). It is disabled, with the reason on one line, when budget lines use the cost center (for example "Used by 3 OPEX lines. Disable it instead.") or when the group still contains nodes (for example "Contains 2 nodes."). Disable the node instead: it stays on its lines and in reports.
 
 ---
 

@@ -13,6 +13,7 @@ describe('invalidateTechnologyLinks', () => {
       ['technology-servers', 't1'],
       ['technology-workspace', 'TEC-3'],
       ['technologies', {}],
+      ['vulnerabilities', 'application', 'app-1'],
       ['asset-workspace-relations-count', 'a1'],
       ['contracts', {}],
     ];
@@ -21,7 +22,7 @@ describe('invalidateTechnologyLinks', () => {
     const stale = keys.filter((key) => client.getQueryState(key)?.isInvalidated).map((key) => key[0]);
     expect(stale).toEqual([
       'asset-technologies', 'asset-impact', 'application-relations', 'application-workspace-relations-count',
-      'technology-servers', 'technology-workspace', 'technologies',
+      'technology-servers', 'technology-workspace', 'technologies', 'vulnerabilities',
     ]);
   });
 });

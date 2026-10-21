@@ -10,12 +10,12 @@ import { StorageService } from '../common/storage/storage.service';
 import { validateUploadedFile } from '../common/upload-validation';
 import { fixMulterFilename } from '../common/upload';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
 import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
-import { defaultVulnerabilityAlerts, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
+import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
+import { countingRowSql, rowJoinsSql, severeSql, vulnerabilityCountsEnabled } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   BUILD_PREFIX_RE,
   CPE_PRODUCT_RE,
@@ -220,19 +220,16 @@ export class TechnologiesService {
     const offset = query.offset !== undefined
       ? Math.max(Number(query.offset) || 0, 0)
       : Math.max((Number(query.page) || 1) - 1, 0) * limit;
-    // The CVE still to review that alert, and those critical or high (lot T6b, lot V1), while the
-    // vulnerability feed is on; null otherwise. A version follows the technology unless it has its
-    // own setting; a row with no version follows the technology. A CVE matched on both an alerting
-    // row and a silent one still counts.
-    // One scalar subquery, run for the rows of the page only (after the LIMIT): [to review, critical or high].
-    // The join keeps the CVE the page lists (a row whose CVE is missing from the cache is not shown there).
-    const vulnerabilityCounts = Features.VULNERABILITY_FEED_ENABLED
-      ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE c.severity IN ('critical', 'high'))]::int[]
+    // The CVE that count (`vulnerability-reach-counts.ts`: to review and alerting), and those
+    // severe by their effective severity (NVD, else CVE.org), while the feed is on; null otherwise.
+    // A CVE matched on both an alerting row and a silent one still counts.
+    // One scalar subquery, run for the rows of the page only (after the LIMIT): [open, severe].
+    const vulnerabilityCounts = vulnerabilityCountsEnabled()
+      ? `(SELECT ARRAY[count(DISTINCT tv.cve_id), count(DISTINCT tv.cve_id) FILTER (WHERE ${severeSql('c', 'r')})]::int[]
             FROM technology_vulnerabilities tv
-            JOIN vulnerability_cves c ON c.cve_id = tv.cve_id
-            LEFT JOIN technology_versions v ON v.tenant_id = tv.tenant_id AND v.id = tv.technology_version_id
-           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id AND tv.state = 'to_review'
-             AND ${vulnerabilityAlertsSql('v', 't')}) AS vulnerability_counts`
+            ${rowJoinsSql({ row: 'tv', technology: 't', version: 'v', cve: 'c', record: 'r' }, false)}
+           WHERE tv.tenant_id = t.tenant_id AND tv.technology_id = t.id
+             AND ${countingRowSql({ row: 'tv', technology: 't', version: 'v', cve: 'c', record: 'r' })}) AS vulnerability_counts`
       : 'NULL::int[] AS vulnerability_counts';
     const rows: Array<TechnologyRow & {
       total: string;

@@ -63,6 +63,7 @@ const SERVICE_FALLBACK_SORT: Record<string, string> = {
   tasks: 'created_at',
   technologies: 'name',
   users: 'last_name',
+  vulnerabilities: 'exploited',
 };
 
 const OLDER = '2030-01-15T10:00:00.000Z';
@@ -184,6 +185,12 @@ async function seedTenant(runner: QueryRunner): Promise<Seed> {
   await pair('technologies', (n, at) => insertId(runner,
     `INSERT INTO technologies (tenant_id, name, item_number, editor, created_at, updated_at) VALUES ($1, $2, $3, 'Contract Inc.', $4, $4)`,
     [tenantId, `Technology ${n}`, n, at]));
+  // The CVE cache is shared by every tenant; the rows are this tenant's, first detected a year apart.
+  const cves = [1, 2].map((n) => `CVE-2098-${`${tag.replace(/\D/g, '')}0000`.slice(0, 4)}${n}`);
+  await runner.query(`INSERT INTO vulnerability_cves (cve_id, severity) VALUES ($1, 'high'), ($2, 'low') ON CONFLICT DO NOTHING`, cves);
+  await pair('vulnerabilities', (n, at) => insertId(runner,
+    `INSERT INTO technology_vulnerabilities (tenant_id, technology_id, cve_id, match_basis, detected_at, updated_at) VALUES ($1, $2, $3, 'version_unknown', $4, $4)`,
+    [tenantId, rows.technologies.older, cves[n - 1], at]));
 
   return { tenantId, userId, rows };
 }
@@ -441,6 +448,10 @@ async function testEveryFilterShapeIsAccepted(harness: Harness, runner: QueryRun
 
 async function run() {
   const harness = await createHarness();
+  // The vulnerabilities family is read with the vulnerability feed on only.
+  const { Features } = require('../../config/features');
+  const feed = Features.VULNERABILITY_FEED_ENABLED;
+  Features.VULNERABILITY_FEED_ENABLED = true;
   try {
     await testStaticConsistency(harness);
     const runner = harness.dataSource.createQueryRunner();
@@ -459,6 +470,7 @@ async function run() {
       await runner.release();
     }
   } finally {
+    Features.VULNERABILITY_FEED_ENABLED = feed;
     await harness.app.close();
   }
   console.log('ai-query-registry-contract.integration.spec: ok');

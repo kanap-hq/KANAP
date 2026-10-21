@@ -6,7 +6,6 @@ import {
   Typography,
 } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { taskDetailTokens, taskDetailTypography } from '../theme/taskDetailTokens';
@@ -16,6 +15,7 @@ import TaskNavChip from './TaskNavChip';
 import TaskMetadataBar from './TaskMetadataBar';
 import SendLinkButton from '../../../components/workspace/SendLinkButton';
 import type { TaskCrumb } from '../taskWorkspaceOrigin';
+import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 
 function isModifiedClick(event: React.MouseEvent) {
   return event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0;
@@ -338,9 +338,7 @@ export default function TaskDetailHeader({
             </Button>
 
             {canDelete && (
-              <Button variant="action-danger" onClick={onDelete} startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}>
-                {t('common:buttons.delete')}
-              </Button>
+              <DeleteIconButton onClick={onDelete} />
             )}
 
             <IconButton

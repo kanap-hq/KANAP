@@ -237,7 +237,7 @@ Click the **delete icon** next to a time entry to remove it. You will be asked t
 ## Actions
 
 From the workspace header:
-- **Delete**: Remove this contributor configuration (doesn't affect the user account). Only available when editing another contributor's profile with `portfolio_settings:admin`.
+- **Delete** (trash icon): Remove this contributor configuration (doesn't affect the user account). Only available when editing another contributor's profile with `portfolio_settings:admin`.
 - **Back link**: Return to the contributors list, or to **Settings** if you opened your own profile
 
 There is no Save button: every change is saved automatically.

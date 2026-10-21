@@ -8,9 +8,16 @@ import { UsersModule } from '../users/users.module';
 import { CveListFeedService } from './cve-list-feed.service';
 import { NvdFeedService } from './nvd-feed.service';
 import { VulnerabilitySignalsService } from './vulnerability-signals.service';
-import { TechnologyVulnerabilitiesController, VulnerabilitiesController, VulnerabilityFeedGuard } from './vulnerabilities.controller';
+import {
+  ApplicationVulnerabilitiesController,
+  AssetVulnerabilitiesController,
+  TechnologyVulnerabilitiesController,
+  VulnerabilitiesController,
+  VulnerabilityFeedGuard,
+} from './vulnerabilities.controller';
 import { VulnerabilitiesService } from './vulnerabilities.service';
 import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { VulnerabilityReachService } from './vulnerability-reach.service';
 import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 
 /**
@@ -20,8 +27,8 @@ import { VulnerabilityNotificationsService } from './vulnerability-notifications
  */
 @Module({
   imports: [AuditModule, NotificationsModule, PermissionsModule, forwardRef(() => UsersModule), ScheduledTasksModule, TechnologiesModule],
-  controllers: [VulnerabilitiesController, TechnologyVulnerabilitiesController],
-  providers: [VulnerabilitySignalsService, CveListFeedService, NvdFeedService, VulnerabilitiesService, VulnerabilityMatchService, VulnerabilityNotificationsService, VulnerabilityFeedGuard],
+  controllers: [VulnerabilitiesController, TechnologyVulnerabilitiesController, AssetVulnerabilitiesController, ApplicationVulnerabilitiesController],
+  providers: [VulnerabilitySignalsService, CveListFeedService, NvdFeedService, VulnerabilitiesService, VulnerabilityMatchService, VulnerabilityReachService, VulnerabilityNotificationsService, VulnerabilityFeedGuard],
   exports: [VulnerabilityMatchService],
 })
 export class VulnerabilitiesModule {}

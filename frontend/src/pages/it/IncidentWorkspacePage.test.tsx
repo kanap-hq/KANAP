@@ -450,7 +450,7 @@ describe('IncidentWorkspacePage — delete', () => {
   it('asks with what goes and what loses its link, then deletes and leaves the register page', async () => {
     vi.mocked(api.post).mockImplementation(async (url: string) => (url === '/incidents/delete-check' ? { data: impact } : { data: {} }) as any);
     renderPage();
-    fireEvent.click(await screen.findByText('common:buttons.delete'));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
 
     await waitFor(() => expect(dialogsMock.confirm).toHaveBeenCalled());
     expect(api.post).toHaveBeenCalledWith('/incidents/delete-check', { ids: [incident.id] });
@@ -467,7 +467,7 @@ describe('IncidentWorkspacePage — delete', () => {
       ? { data: { ...impact, incidents: 0, blocked: 1, refused: [{ id: incident.id, name: 'INC-1', code: 'INCIDENT_HAS_REGULATORY_RECORDS', usages: [{ type: 'regulatory_records', total: 1 }] }] } }
       : { data: {} }) as any);
     renderPage();
-    fireEvent.click(await screen.findByText('common:buttons.delete'));
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
 
     await waitFor(() => expect(dialogsMock.alert).toHaveBeenCalled());
     expect((dialogsMock.alert.mock.calls[0] as any[])[0].message).toBe('errors:INCIDENT_HAS_REGULATORY_RECORDS');
@@ -479,7 +479,7 @@ describe('IncidentWorkspacePage — delete', () => {
     authLevel.incidents = level;
     renderPage();
     await screen.findByText('workspace.incident.actions.exportPdf');
-    expect(screen.queryByText('common:buttons.delete')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
   });
 });
 

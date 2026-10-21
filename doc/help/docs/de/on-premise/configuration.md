@@ -445,7 +445,7 @@ Jeder Benutzer öffnet ihn, bestätigt und meldet sich dann bei KANAP an, wie un
 
 ## Optional: Schwachstellen { #optional-vulnerabilities }
 
-Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden zwei Quellen: die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen, und die CVE.org-Liste, in der die Hersteller die Einträge ihrer eigenen Produkte schreiben. Derselbe Schalter liest die Ausnutzungssignale: den CISA-Katalog bekannter ausgenutzter Schwachstellen, die europäische Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Kennungen) und die täglichen EPSS-Werte.
+Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen, die Schwachstellenzähler der Technologien, Assets und Anwendungen, die Dashboard-Kachel **Schwachstellen im Bestand** und die Antworten von Plaid zu Schwachstellen sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden zwei Quellen: die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen, und die CVE.org-Liste, in der die Hersteller die Einträge ihrer eigenen Produkte schreiben. Derselbe Schalter liest die Ausnutzungssignale: den CISA-Katalog bekannter ausgenutzter Schwachstellen, die europäische Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Kennungen) und die täglichen EPSS-Werte.
 
 | Variable | Beschreibung | Standard |
 |----------|-------------|---------|

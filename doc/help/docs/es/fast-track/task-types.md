@@ -216,7 +216,7 @@ Cuando abre una tarea, tiene una barra lateral a la izquierda y un área de cont
 |--------|------|
 | **Guardar** | Haga clic en **Guardar** o pulse **Ctrl+S** (Cmd+S en Mac) |
 | **Convertir a solicitud** | Barra de herramientas del encabezado. Promueve una tarea a solicitud formal del portafolio cuando el alcance crece |
-| **Enviar enlace** | Barra de herramientas del encabezado. Enviar un enlace por correo a colegas o contactos externos |
+| **Compartir** | Barra de herramientas del encabezado. Enviar un enlace por correo a colegas o contactos externos |
 | **Registrar tiempo en línea** | En la pestaña Comentarios, combine un comentario + cambio de estado + entrada de tiempo en un solo envío |
 | **Copiar referencia** | Haga clic en el chip de referencia (p. ej., T-42) para copiarlo al portapapeles |
 

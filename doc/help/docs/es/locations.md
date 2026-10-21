@@ -113,7 +113,7 @@ La pestaña Relaciones muestra las entidades vinculadas a esta ubicación. Es de
 
 ## Eliminar una ubicación
 
-Desde el encabezado del espacio de trabajo, haga clic en **Eliminar** para eliminar una ubicación.
+Desde el encabezado del espacio de trabajo, haga clic en **Eliminar** (icono de papelera) para eliminar una ubicación.
 
 - Requiere permiso `locations:member`.
 - Los activos vinculados no se eliminan: se desasignan automáticamente (se borra su referencia de ubicación).

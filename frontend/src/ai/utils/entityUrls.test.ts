@@ -19,3 +19,9 @@ describe('budget line mentions', () => {
     expect(buildEntityUrl('capex_items', 'abc')).toBe('/ops/budget/abc');
   });
 });
+
+describe('vulnerability mentions', () => {
+  it('opens the vulnerabilities page searched on the CVE, every state and alert setting', () => {
+    expect(buildEntityUrl('vulnerabilities', 'CVE-2024-3094')).toBe('/it/vulnerabilities?q=CVE-2024-3094&state=all&alerts=all');
+  });
+});

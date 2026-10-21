@@ -1,6 +1,4 @@
 import React from 'react';
-import { Button } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
@@ -9,6 +7,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { deleteFailureReason, refusalCounts } from '../../../utils/deleteRefusal';
 import { useLocale } from '../../../i18n/useLocale';
 import { applicationDeleteCheck } from '../applicationDeleteCheck';
+import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
 
 type Props = {
   applicationId: string;
@@ -61,14 +60,6 @@ export default function ApplicationDeleteButton({ applicationId, applicationName
   };
 
   return (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => { void handleClick(); }}
-      disabled={deleting}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => { void handleClick(); }} disabled={deleting} />
   );
 }

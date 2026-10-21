@@ -212,9 +212,15 @@
         "applications": "Applications",
         "itOwner": "IT owner",
         "nextSupportEnd": "Next end of support",
-        "vulnerabilities": "Vulnerabilities to review"
+        "vulnerabilities": "Vulnerabilities to review",
+        "vulnerabilitiesShort": "Vulnerabilities"
       },
       "vulnerabilityCount": "{{count}} · {{severe}} critical or high",
+      "vulnerabilityFilter": {
+        "severe": "With severe vulnerabilities",
+        "any": "With vulnerabilities",
+        "none": "Without"
+      },
       "delete": {
         "warning_one": "This technology and its links to servers and applications will be deleted.",
         "warning_other": "These {{count}} technologies and their links to servers and applications will be deleted.",
@@ -413,6 +419,13 @@
         "none": "None",
         "unknown": "Not rated"
       },
+      "severitiesShort": {
+        "critical": "Crit.",
+        "high": "High",
+        "medium": "Med.",
+        "low": "Low",
+        "unknown": "N/R"
+      },
       "states": {
         "to_review": "To review",
         "handled": "Handled",
@@ -604,6 +617,35 @@
           "staleCveOrg_one": "CVE.org has not been read for {{count}} day",
           "staleCveOrg_other": "CVE.org has not been read for {{count}} days"
         }
+      },
+      "reach": {
+        "via": "Asset",
+        "openHint": "{{severity}}: CVE to review.",
+        "empty": {
+          "asset": "No vulnerability to review on this asset.",
+          "application": "No vulnerability to review on this application."
+        },
+        "indirect": {
+          "title": "Through another asset",
+          "hint": "Not counted: these technologies are installed on another asset (a host, a cluster)."
+        },
+        "countLink_one": "See the vulnerability to review on the Vulnerabilities page",
+        "countLink_other": "See the {{count}} vulnerabilities to review on the Vulnerabilities page"
+      },
+      "severeBadge": {
+        "label_one": "{{count}} severe",
+        "label_other": "{{count}} severe",
+        "hint_one": "{{count}} critical or high vulnerability to review",
+        "hint_other": "{{count}} critical or high vulnerabilities to review",
+        "exploited_one": "{{count}} known as exploited",
+        "exploited_other": "{{count}} known as exploited"
+      },
+      "subjectFilter": {
+        "remove": "remove"
+      },
+      "estateFilter": {
+        "label": "In use in the estate",
+        "hint": "Technology installed on an asset in service or declared by an application in service."
       }
     },
     "interfaces": {
@@ -1563,7 +1605,7 @@
         "deployments": "Deployments",
         "operations": "Operations"
       },
-      "createNewVersion": "Create new version",
+      "createNewVersion": "New version",
       "saveBeforeVersion": "Save changes before creating a new version",
       "overview": {
         "description": "Description",

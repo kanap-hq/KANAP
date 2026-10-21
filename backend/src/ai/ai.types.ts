@@ -40,7 +40,8 @@ export type AiToolName =
   | 'prepare_mutation_plan'
   | 'undo_preview';
 
-export const AI_QUERY_ENTITY_TYPES = [
+/** The families the search index covers (`search_index_refresh_<type>`), which `search_all` searches. */
+export const AI_SEARCH_ENTITY_TYPES = [
   'accounts',
   'analytics_categories',
   'applications',
@@ -66,8 +67,12 @@ export const AI_QUERY_ENTITY_TYPES = [
   'users',
 ] as const;
 
-/** Every family the search index covers is also listable and aggregatable. */
-export const AI_SEARCH_ENTITY_TYPES = AI_QUERY_ENTITY_TYPES;
+/**
+ * The families query_entities, aggregate_entities, get_filter_values and get_entity_detail read:
+ * every searched family, and the ones with no search index. `vulnerabilities` (the CVE rows of the
+ * technologies, `query/ai-vulnerabilities.query.ts`) is listed only: `search_all` does not search it.
+ */
+export const AI_QUERY_ENTITY_TYPES = [...AI_SEARCH_ENTITY_TYPES, 'vulnerabilities'] as const;
 
 export const AI_CONTEXT_ENTITY_TYPES = [
   'applications',
@@ -118,7 +123,7 @@ export type AiEntityMetadataValue =
 export type AiEntityMetadata = Record<string, AiEntityMetadataValue>;
 
 export type AiEntitySummaryDto = {
-  type: AiSearchEntityType | AiContextEntityType;
+  type: AiQueryEntityType | AiContextEntityType;
   id: string;
   ref: string | null;
   label: string;

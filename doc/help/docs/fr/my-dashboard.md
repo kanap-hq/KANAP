@@ -160,6 +160,23 @@ Les niveaux sont ceux définis dans les paramètres de la cartographie SI ; un n
 
 ---
 
+### Vulnérabilités du parc { #vulnerabilities }
+
+Affiche les vulnérabilités qui demandent de l'attention dans votre parc, sous le sous-titre « CVE à traiter sur les technologies en service ». Les comptes suivent [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts) : vulnérabilités encore à traiter, dans les alertes. Chaque ligne ouvre la liste correspondante :
+
+- **Applications de la criticité la plus haute avec une CVE critique ou élevée**, par exemple « 2 applications de criticité Critique avec une CVE critique ou élevée » : les applications au niveau de criticité business le plus haut de votre catalogue qu'une vulnérabilité critique ou élevée atteint. Ouvre la liste des applications filtrée sur ce niveau et sur **Avec des vulnérabilités graves**. Nécessite `applications:reader`, et compte les applications que vous pouvez lire.
+- **CVE critiques publiées ces 7 derniers jours** et **ces 30 derniers jours**, sur les technologies utilisées dans le parc : installées sur un actif en service ou déclarées par une application en service. Ouvre la page [Vulnérabilités](vulnerabilities.md) sur ces vulnérabilités, avec le filtre **Touchant le parc**.
+- **CVE exploitées**, sur les technologies utilisées dans le parc. Ouvre la page Vulnérabilités sur les vulnérabilités exploitées, avec le même filtre.
+- **Actifs avec une CVE critique ou élevée**. Ouvre la liste des actifs filtrée sur **Avec des vulnérabilités graves**.
+
+Une ligne à zéro est masquée. Quand toutes les lignes sont à zéro, la tuile affiche « Aucune vulnérabilité critique à traiter. ». Un avertissement suit quand une source n'a pas été lue depuis plus de 3 jours, par exemple « La NVD n'a pas été lue depuis 4 jours » : les chiffres peuvent alors être en retard. **Tout voir** ouvre la page Vulnérabilités.
+
+La tuile est activée par défaut. Elle n'existe que quand les vulnérabilités sont suivies. Voir [Vulnérabilités](vulnerabilities.md#disponibilite).
+
+**Nécessite** : `infrastructure:reader`
+
+---
+
 ### Activité de l'équipe
 
 Affiche l'activité projet récente sur les projets où vous êtes impliqué (modifications, commentaires, décisions). Chaque ligne indique le projet, le type d'activité, l'auteur et un court résumé. Cliquez sur un élément pour sauter à l'onglet d'activité du projet.

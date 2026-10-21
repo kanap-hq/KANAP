@@ -1,7 +1,6 @@
 import React from 'react';
-import { Alert, Box, Button, IconButton, LinearProgress, Typography, useTheme } from '@mui/material';
+import { Alert, Box, IconButton, LinearProgress, Typography, useTheme } from '@mui/material';
 import CloseIcon from '@mui/icons-material/Close';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
@@ -25,6 +24,7 @@ import TechnologyApplicationsTab, { countApplications, technologyApplicationsKey
 import TechnologyComplianceTab from './workspace/TechnologyComplianceTab';
 import TechnologyOperationsTab from './workspace/TechnologyOperationsTab';
 import TechnologyRelationsTab, { fetchTechnologyRelations, technologyRelationsCount, technologyRelationsKey } from './workspace/TechnologyRelationsTab';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type TabKey = 'overview' | 'servers' | 'applications' | 'operations' | 'compliance' | 'relations';
 const TAB_KEYS: TabKey[] = ['overview', 'servers', 'applications', 'operations', 'compliance', 'relations'];
@@ -71,15 +71,7 @@ function TechnologyDeleteButton({ technology, onDeleted, onError }: {
     }
   };
   return (
-    <Button
-      variant="action-danger"
-      size="small"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      onClick={() => { void handleClick(); }}
-      disabled={deleting}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => { void handleClick(); }} disabled={deleting} />
   );
 }
 

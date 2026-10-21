@@ -216,7 +216,7 @@ Wenn Sie eine Aufgabe öffnen, haben Sie eine Seitenleiste links und einen Haupt
 |--------|-----|
 | **Speichern** | Klicken Sie auf **Speichern** oder drücken Sie **Strg+S** (Cmd+S auf Mac) |
 | **In Anfrage konvertieren** | Header-Symbolleiste: stuft eine Aufgabe zu einer formalen Portfolio-Anfrage auf, wenn der Umfang wächst |
-| **Link senden** | Header-Symbolleiste: einen Link per E-Mail an Kollegen oder externe Kontakte senden |
+| **Teilen** | Header-Symbolleiste: einen Link per E-Mail an Kollegen oder externe Kontakte senden |
 | **Zeit inline erfassen** | Im Kommentare-Tab einen Kommentar + Statusänderung + Zeiteintrag in einem Schritt absenden |
 | **Referenz kopieren** | Auf den Referenz-Chip klicken (z. B. T-42), um ihn in die Zwischenablage zu kopieren |
 
