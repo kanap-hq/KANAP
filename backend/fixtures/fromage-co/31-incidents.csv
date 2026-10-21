@@ -1,0 +1,37 @@
+ref;title;category;severity;status;confidential;started_at (Europe/Paris);detected_at (Europe/Paris);resolved_at (Europe/Paris);closed_at (Europe/Paris);reporter;owner;description;review;source_ref;personal_data_affected;authority_notification_required;authority_notified_at (Europe/Paris);notified_parties
+;Cave B humidity readings lost overnight;infrastructure;major;closed;false;2026-03-14 01:20;2026-03-14 06:45;2026-03-14 09:30;2026-03-20 17:00;jacques.dubois@fromage-co.example;lucas.bernard@fromage-co.example;The Cave B IoT gateway stopped forwarding sensor data. CaveGuard showed stale values for five hours and raised no alert, so the night shift did not check the Brie cave.;"## Summary
+CAVE-GW-02 froze after a firmware watchdog failure. CaveGuard kept the last readings on screen and did not flag the missing data.
+
+## Impact
+- 18 sensors of Cave B without data from 01:20 to 06:45.
+- Two Brie batches checked by hand at 07:00: humidity had dropped to 82%, within tolerance.
+
+## Root cause
+The gateway firmware had no automatic restart on watchdog failure.
+
+## Actions
+- Firmware updated on both cave gateways (done).
+- CaveGuard now alerts when a sensor sends nothing for 15 minutes (done).
+- Add the gateways to PRTG monitoring (open).";;false;false;;
+;Phishing campaign against accounts payable;security;major;closed;true;2026-04-07 08:10;2026-04-07 09:05;2026-04-07 12:30;2026-04-15 10:00;maria.casanova@fromage-co.example;lucas.bernard@fromage-co.example;"Fake supplier invoices with a link to a cloned Microsoft sign-in page reached 23 people in Finance. One user entered a password; Okta blocked the sign-in at the MFA step.";;SOC-2026-0412;false;false;;
+;SAP month-end close slowed down by host memory contention;infrastructure;major;closed;false;2026-04-30 16:00;2026-04-30 17:20;2026-05-01 09:00;2026-05-06 11:00;maria.casanova@fromage-co.example;pierre.martin@fromage-co.example;Financial close jobs ran four times slower than usual. PAR-ESX-01 was overcommitted after a host maintenance, with the S/4HANA and BW servers on the same host.;;;false;false;;
+;B2B portal down: database disk full;application;critical;closed;false;2026-06-02 07:50;2026-06-02 08:05;2026-06-02 11:10;2026-06-12 15:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;Distributors could not place orders for three hours. The PostgreSQL 13 server of the B2B portal filled its disk with write-ahead logs after the archive job failed.;"## Summary
+The WAL archive job on PAR-DB-01 had been failing for six days. The disk filled at 07:50 and PostgreSQL stopped accepting writes.
+
+## Impact
+- Fromage B2B Portal unavailable from 07:50 to 11:10.
+- About 140 orders taken by phone and keyed in afterwards.
+
+## Root cause
+The archive target changed during the SAN migration and nobody watched the job.
+
+## Actions
+- Archive job fixed and monitored (done).
+- Disk usage alert at 80% on database servers (done).
+- Upgrade PostgreSQL 13, out of support, as part of the portal roadmap (open).";;false;false;;
+;Order confirmations sent to the wrong customers;data;major;closed;false;2026-07-09 14:00;2026-07-09 15:30;2026-07-09 16:10;2026-07-24 12:00;isabelle.moreau@fromage-co.example;marc.petit@fromage-co.example;A caching bug in the online shop release sent 214 order confirmation emails with another customer name, address and order content.;;;true;true;2026-07-11 10:00;"CNIL; 214 affected customers informed by email on 10 July"
+;Veeam backup jobs failing on the backup SAN;infrastructure;minor;resolved;false;2026-08-18 22:00;2026-08-19 07:30;2026-08-21 18:00;;pierre.martin@fromage-co.example;pierre.martin@fromage-co.example;Three nights of failed backup jobs after two disk failures on PAR-SAN-02. The array reaches end of life in December 2026 and no spare disks are left under support.;;;false;false;;
+;CheeseTrack offline during SQL Server cluster failover;infrastructure;minor;resolved;false;2026-09-12 21:05;2026-09-12 21:10;2026-09-12 21:45;;jacques.dubois@fromage-co.example;pierre.martin@fromage-co.example;Patching PAR-SQL-02 triggered a failover that CheeseTrack did not follow: its connection string named the node, not the listener. Cold chain scans were queued on the handhelds and synced afterwards.;;;false;false;;
+;Microsoft Teams outage in Western Europe;supplier;low;closed;false;2026-09-24 09:30;2026-09-24 09:40;2026-09-24 12:15;2026-09-25 09:00;amelie.rousseau@fromage-co.example;sophie.laurent@fromage-co.example;Microsoft service incident: meetings and chat unavailable for most users for close to three hours. No action on our side beyond informing users.;;Microsoft 365 TM891245;false;false;;
+;Lab results cannot be saved in QualityLab LIMS;application;major;in_progress;false;2026-10-14 10:00;2026-10-14 10:20;;;catherine.blanc@fromage-co.example;sophie.laurent@fromage-co.example;The embedded SQL Server 2017 Express database reached its 10 GB limit. Results are recorded on paper until the database moves to the SQL Server cluster.;;;false;false;;
+;VPN to the Gouda site keeps dropping;infrastructure;minor;open;false;2026-10-19 08:00;2026-10-19 09:15;;;jan.bakker@kaasmeester.example;lucas.bernard@fromage-co.example;The site-to-site VPN between GOU-FW-01 and Paris renegotiates every few minutes since Sunday. Dutch users find Sage X3 slow and lose their sessions.;;;false;false;;
