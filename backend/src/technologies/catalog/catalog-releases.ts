@@ -83,6 +83,11 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   centos: { matchSegments: 1 },
   ubuntu: { matchSegments: 2 },
   sles: { matchSegments: 1 },
+  // AIX technology levels are one release (`7.3.0` covers a typed `7.3.2`). IBM i and Solaris name
+  // the branch (`7.5`, `11.4`). Twin of `VERSION_PRECISION`.
+  'ibm-aix': { matchSegments: 2 },
+  'ibm-i': { matchSegments: 2 },
+  'oracle-solaris': { matchSegments: 2 },
   // KANAP-maintained products. Twin of `cpeVersion` / `cpeVersions` in build-catalog.mjs.
   'check-point-gaia': { fromLabel: true },
   'cisco-asa': { escapedParens: true },
@@ -103,10 +108,12 @@ export function versionPrecisionOf(catalogKey: string): number | null {
 /**
  * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
  * of the former operating-system catalog of the IT settings. `eol_then_paid` (Ubuntu, RHEL and
- * its rebuilds, SLES): standard support ends with the security fixes (`eolFrom`), extended support is
- * the paid extension when published (`eoesFrom`: ESM, ELS, LTSS). `active_then_eol` (Windows Server,
- * Debian): standard is the end of mainstream or regular security support, extended the end of
- * extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
+ * its rebuilds, SLES, Alpine, AIX, IBM i, Solaris): standard support ends with the security fixes
+ * (`eolFrom`), extended support is the paid extension when published (`eoesFrom`: ESM, ELS, LTSS).
+ * IBM i and Solaris publish that extension; AIX and Alpine publish a single end. `active_then_eol`
+ * (Windows Server, Debian, Amazon Linux): standard is the end of mainstream or regular support
+ * (`eoasFrom`; Amazon Linux standard ends there and security support at `eolFrom`), extended the
+ * end of extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
  * `scripts/technologies/build-catalog.mjs`.
  */
 export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> = {
@@ -119,6 +126,11 @@ export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> 
   'oracle-linux': 'eol_then_paid',
   centos: 'eol_then_paid',
   'windows-server': 'active_then_eol',
+  'amazon-linux': 'active_then_eol',
+  'alpine-linux': 'eol_then_paid',
+  'ibm-aix': 'eol_then_paid',
+  'ibm-i': 'eol_then_paid',
+  'oracle-solaris': 'eol_then_paid',
 };
 
 /**
@@ -160,7 +172,9 @@ type OsRelease = { name: string; label: string | null; isLts: boolean };
  * script's PRODUCTS. Windows Server: the long-term releases only (the semi-annual `-sac` and annual
  * `-ac` channels are left out), the service pack dropped from the label (the newest service pack
  * comes first and takes it). Ubuntu: the LTS releases only. SLES: endoflife.date names a service
- * pack `15.5`, stored `15 SP5`, and `15.0` is `15`.
+ * pack `15.5`, stored `15 SP5`, and `15.0` is `15`. Amazon Linux drops the `AMI` prefix (`AMI 2018.03`
+ * → `2018.03`; `2` and `2023` stay). AIX collapses a technology level to the release (`7.3.4` →
+ * `7.3`, the newest level kept). Solaris stores the first Solaris 11 release as `11.0`.
  */
 const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean; label?: (release: OsRelease) => string }> = {
   'windows-server': {
@@ -183,6 +197,22 @@ const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean;
       const match = /^(\d+)\.(\d+)$/.exec(release.name);
       if (match) return match[2] === '0' ? match[1] : `${match[1]} SP${Number(match[2])}`;
       return cleanLabel(release.label, release.name);
+    },
+  },
+  'amazon-linux': {
+    label: (release) => cleanLabel(release.label, release.name).replace(/^AMI\s+/i, ''),
+  },
+  'ibm-aix': {
+    label: (release) => {
+      const match = /^(\d+\.\d+)\.\d+$/.exec(release.name);
+      if (match) return match[1];
+      return cleanLabel(release.label, release.name);
+    },
+  },
+  'oracle-solaris': {
+    label: (release) => {
+      const cleaned = cleanLabel(release.label, release.name);
+      return cleaned === '11' ? '11.0' : cleaned;
     },
   },
 };

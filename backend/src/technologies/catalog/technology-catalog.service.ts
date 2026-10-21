@@ -58,6 +58,11 @@ export type CatalogProduct = {
    * null when the page states none. Absent on an endoflife.date entry.
    */
   source_updated?: string | null;
+  /**
+   * Page where the distributor tracks vulnerabilities of an operating system. Copied into the
+   * shipped file. Absent for Windows Server, CentOS, AIX, IBM i and Solaris.
+   */
+  security_tracker?: string;
   versions: CatalogVersion[];
 };
 

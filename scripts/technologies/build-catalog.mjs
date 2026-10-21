@@ -14,11 +14,19 @@
 // Operating systems are in this catalog since lot T3. Their version labels are rewritten
 // (`versionLabel`) so they match the former IT settings catalog (`2012 R2`, `22.04 LTS`,
 // `12 (Bookworm)`, `15 SP5`). endoflife.date names a SUSE service pack `15.5`: the label stored
-// is `15 SP5`, which is what the shipped operating-system codes resolve to. An operating system
+// is `15 SP5`, which is what the shipped operating-system codes resolve to. Amazon Linux keeps
+// `2` and `2023` and drops the `AMI` prefix (`AMI 2018.03` → `2018.03`). AIX technology levels
+// collapse to the release an administrator writes (`7.3 TL4` → `7.3`). IBM i and Alpine already
+// use those labels (`7.5`, `3.22`). Solaris 11.4 does too; the first Solaris 11 release is named
+// `11`, stored `11.0`, so that one-segment label does not cover 11.4. An operating system
 // keeps every release whose support ended in 2010 or later (`OS_SUPPORT_ENDED_SINCE`), however
 // many; `keepRelease` leaves out the cycles an IT department does not run (the Windows Server
 // semi-annual and annual channels, the Ubuntu interim releases). The living catalog
 // (catalog-releases.ts) applies the same rules (`OS_RELEASE_RULES` there).
+// `security_tracker` is the page where the distributor tracks vulnerabilities of an operating
+// system. It is copied into the shipped file. Windows Server, CentOS, AIX, IBM i and Solaris
+// have none: their CVE are published under product identifiers, or the distributor no longer
+// has a tracker page. Nothing in the application reads the field yet.
 //
 // Usage: node scripts/technologies/build-catalog.mjs [--out <file>] [--today YYYY-MM-DD]
 //        node scripts/technologies/build-catalog.mjs --refresh-cpe-versions [--out <file>]
@@ -114,6 +122,8 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * `versionLabel(release)`: the label stored, when cleanLabel would not match the names KANAP
  * already shows. `keepRelease(release)`: false for a release cycle the catalog leaves out.
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
+ * `security_tracker`: the distributor's vulnerability page for an operating system, copied into
+ * the shipped file. Absent when the entry has none.
  */
 // SLES: the NVD files the major in the version and the service pack in the update component
 // (`linux_enterprise_server:15:sp5`), under five names over the years (SUSE, then Novell and the
@@ -161,33 +171,57 @@ function slesLabel(release) {
   return cleanLabel(release.label, release.name);
 }
 
+/** "2" and "2023" stay. "AMI 2018.03" → "2018.03". */
+function amazonLinuxLabel(release) {
+  return cleanLabel(release.label, release.name).replace(/^AMI\s+/i, '');
+}
+
+/** "7.3 TL4" (name `7.3.4`) → "7.3". One label per release; the newest technology level is kept. */
+function aixLabel(release) {
+  const match = /^(\d+\.\d+)\.\d+$/.exec(String(release.name));
+  if (match) return match[1];
+  return cleanLabel(release.label, release.name);
+}
+
+/**
+ * "11.4" stays. The first Solaris 11 release is named "11": a one-segment label would cover every
+ * 11.x criterion, including 11.4. Stored "11.0".
+ */
+function solarisLabel(release) {
+  const cleaned = cleanLabel(release.label, release.name);
+  return cleaned === '11' ? '11.0' : cleaned;
+}
+
 const PRODUCTS = [
   // Operating systems (lot T3). CPE identifiers checked at the NVD (lot V3). Windows Server is one
   // product per long-term release from 2003 (the build is not `cpe_version`: the year rule matches the
   // release). The others keep the version `cpeVersionOf` already derives. SLES: see SLES_CPE.
   // RHEL, Debian, Oracle Linux, AlmaLinux, Rocky Linux, CentOS and SLES are matched on the major, Ubuntu
-  // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
-  // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
+  // on YY.MM, AIX, IBM i and Solaris on the two-segment branch (`VERSION_PRECISION` in
+  // vulnerability-rules.ts, `matchSegments` in catalog-releases.ts): a version typed 9.4, 22.04.3 LTS,
+  // 7.3.2 or 11.4.2 still meets the branch the NVD publishes (9.0, 22.04, 7.3.0, 11.4).
   // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
   // October 2026: RHEL 4 to 7 also come as the Server, Workstation and Desktop editions (about 1 900 CVE
   // each); the support channels (EUS, AUS, TUS, ELS, RHUI, supplementary) are left out. Windows Server
   // also comes as `o:microsoft:windows_server` with the release as version (`2022`, 302 CVE).
   { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025', 'o:microsoft:windows_server'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
-  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
-  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'] },
-  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], versionLabel: debianLabel },
-  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], versionLabel: slesLabel },
-  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'] },
-  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'] },
-  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'] },
+  { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], security_tracker: 'https://ubuntu.com/security/cves', versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'], security_tracker: 'https://access.redhat.com/security/security-updates/cve' },
+  { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], security_tracker: 'https://security-tracker.debian.org/tracker/', versionLabel: debianLabel },
+  { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], security_tracker: 'https://www.suse.com/security/cve/', versionLabel: slesLabel },
+  { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'], security_tracker: 'https://errata.rockylinux.org/' },
+  { key: 'almalinux', slug: 'almalinux', name: 'AlmaLinux', editor: 'AlmaLinux OS Foundation', family: 'operating_system', cpe: ['o:almalinux:almalinux'], security_tracker: 'https://errata.almalinux.org/' },
+  { key: 'oracle-linux', slug: 'oracle-linux', name: 'Oracle Linux', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:linux'], security_tracker: 'https://linux.oracle.com/security/' },
+  // CentOS has no vendor vulnerability page left (centos.org/security is gone).
   { key: 'centos', slug: 'centos', name: 'CentOS', editor: 'The CentOS Project', family: 'operating_system', cpe: ['o:centos:centos'] },
   // endoflife.date, October 2026. Amazon Linux: endoflife.date also publishes `o:amazon:linux`, which names no CVE.
   // Solaris 10 stays in the catalog (extended support through 2027), so the Sun identifier is kept with it.
-  { key: 'amazon-linux', slug: 'amazon-linux', name: 'Amazon Linux', editor: 'Amazon Web Services', family: 'operating_system', cpe: ['o:amazon:amazon_linux'], cpeExclude: ['o:amazon:linux'] },
-  { key: 'alpine-linux', slug: 'alpine-linux', name: 'Alpine Linux', editor: 'Alpine', family: 'operating_system', cpe: ['o:alpinelinux:alpine_linux'] },
-  { key: 'ibm-aix', slug: 'ibm-aix', name: 'IBM AIX', editor: 'IBM', family: 'operating_system', cpe: ['o:ibm:aix'] },
+  { key: 'amazon-linux', slug: 'amazon-linux', name: 'Amazon Linux', editor: 'Amazon Web Services', family: 'operating_system', cpe: ['o:amazon:amazon_linux'], cpeExclude: ['o:amazon:linux'], security_tracker: 'https://alas.aws.amazon.com/', versionLabel: amazonLinuxLabel },
+  { key: 'alpine-linux', slug: 'alpine-linux', name: 'Alpine Linux', editor: 'Alpine', family: 'operating_system', cpe: ['o:alpinelinux:alpine_linux'], security_tracker: 'https://security.alpinelinux.org/' },
+  // AIX, IBM i and Solaris publish their CVE under the product identifiers. No distributor tracker page.
+  { key: 'ibm-aix', slug: 'ibm-aix', name: 'IBM AIX', editor: 'IBM', family: 'operating_system', cpe: ['o:ibm:aix'], versionLabel: aixLabel },
   { key: 'ibm-i', slug: 'ibm-i', name: 'IBM i', editor: 'IBM', family: 'operating_system', cpe: ['o:ibm:i', 'a:ibm:i'] },
-  { key: 'oracle-solaris', slug: 'oracle-solaris', name: 'Oracle Solaris', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:solaris', 'a:oracle:solaris', 'o:sun:solaris'] },
+  { key: 'oracle-solaris', slug: 'oracle-solaris', name: 'Oracle Solaris', editor: 'Oracle', family: 'operating_system', cpe: ['o:oracle:solaris', 'a:oracle:solaris', 'o:sun:solaris'], versionLabel: solarisLabel },
   // Databases
   { key: 'mssqlserver', slug: 'mssqlserver', name: 'Microsoft SQL Server', editor: 'Microsoft', family: 'database', cpe: ['a:microsoft:sql_server_2016', 'a:microsoft:sql_server_2017', 'a:microsoft:sql_server_2019', 'a:microsoft:sql_server_2022', 'a:microsoft:sql_server_2025'] },
   { key: 'oracle-database', slug: 'oracle-database', name: 'Oracle Database', editor: 'Oracle', family: 'database', cpe: ['a:oracle:database', 'a:oracle:database_server'], cpeVersion: 'label' },
@@ -786,6 +820,10 @@ const day = (value) => (typeof value === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(
  * extension (eoesFrom: ESM, ELS, LTSS) or nothing. active_then_eol (Windows Server, Debian):
  * standard = end of mainstream or regular security support, extended = end of extended support or
  * of Debian LTS (eolFrom). Twin of SUPPORT_RULES in backend/src/technologies/catalog/catalog-releases.ts.
+ * Amazon Linux: standard support ends at `eoasFrom`, security support at `eolFrom` (`active_then_eol`).
+ * Alpine, AIX, IBM i and Solaris: `eolFrom` is the end of regular support and `eoesFrom` the paid
+ * extension when published (`eol_then_paid`). IBM i and Solaris publish that extension; AIX and
+ * Alpine publish a single end.
  */
 const SUPPORT_RULES = {
   ubuntu: 'eol_then_paid',
@@ -797,6 +835,11 @@ const SUPPORT_RULES = {
   'oracle-linux': 'eol_then_paid',
   centos: 'eol_then_paid',
   'windows-server': 'active_then_eol',
+  'amazon-linux': 'active_then_eol',
+  'alpine-linux': 'eol_then_paid',
+  'ibm-aix': 'eol_then_paid',
+  'ibm-i': 'eol_then_paid',
+  'oracle-solaris': 'eol_then_paid',
 };
 
 /** Other products: standard = end of active support, else end of life; extended = paid extension, else end of life after an active support. */
@@ -941,6 +984,8 @@ function refreshCpeVersions(out) {
     product.cpe_products = cpe;
     if (entry?.noCpe) product.noCpe = entry.noCpe;
     else delete product.noCpe;
+    if (entry?.security_tracker) product.security_tracker = entry.security_tracker;
+    else delete product.security_tracker;
     const names = cveNamesOf(entry);
     if (names) product.cve_names = names;
     else delete product.cve_names;
@@ -1293,6 +1338,7 @@ async function main() {
       ...(names ? { cve_names: names } : {}),
       source_url: curated ? curated.lifecycle_url : (entry.slug ? `https://endoflife.date/${entry.slug}` : null),
       ...(curated ? { source_updated: curated.source_updated ?? null } : {}),
+      ...(entry.security_tracker ? { security_tracker: entry.security_tracker } : {}),
       versions: curated ? versionsOfCurated(curated, entry) : (remote ? versionsOf(remote.releases ?? [], today, entry) : []),
     });
     process.stderr.write(`${entry.key}: ${products.at(-1).versions.length} versions, ${cpe.length} CPE\n`);
