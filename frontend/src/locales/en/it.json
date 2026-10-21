@@ -1610,7 +1610,9 @@
         "noAudience": "No audience defined.",
         "addAudience": "+ Add audience",
         "removeAudienceRow": "Remove audience row",
-        "usersValue": "Users: {{value}}"
+        "usersValue": "Users: {{value}}",
+        "businessProcesses": "Business processes",
+        "addBusinessProcess": "Add a business process…"
       },
       "technical": {
         "title": "Technical information",
@@ -1684,15 +1686,8 @@
       "relations": {
         "noChildApps": "No child applications linked yet.",
         "searchTasks": "Search tasks",
-        "relevantWebsites": "Relevant websites",
-        "addUrl": "Add URL",
         "noUrls": "No URLs linked.",
         "deleteUrl": "Delete URL",
-        "newUrl": "New URL",
-        "editUrl": "Edit URL",
-        "attachments": "Attachments",
-        "dragDrop": "Drag & drop files here, or use the button to select",
-        "selectFiles": "Select files",
         "uploadingFiles_one": "Uploading {{count}} file…",
         "uploadingFiles_other": "Uploading {{count}} files…",
         "deleteAttachment": "Delete attachment \"{{name}}\"?",
@@ -1703,7 +1698,6 @@
           "requests": "Requests",
           "tasks": "Tasks",
           "technologies": "Technologies",
-          "processes": "Business processes",
           "related": "Related"
         },
         "empty": {
@@ -1712,8 +1706,7 @@
           "projects": "No project linked.",
           "requests": "No request linked.",
           "tasks": "No task linked.",
-          "technologies": "No technology linked.",
-          "processes": "No business process linked."
+          "technologies": "No technology linked."
         },
         "columns": {
           "ref": "Ref",
@@ -1735,8 +1728,7 @@
           "family": "Family",
           "version": "Version",
           "link": "Link",
-          "supportEnd": "End of support",
-          "businessOwner": "Business owner"
+          "supportEnd": "End of support"
         },
         "renewal": {
           "tacit": "Tacit",
@@ -1746,8 +1738,7 @@
           "contracts": "Search contracts",
           "projects": "Search projects",
           "requests": "Search requests",
-          "technologies": "Search technologies",
-          "processes": "Search business processes"
+          "technologies": "Search technologies"
         },
         "types": {
           "budget_line": "Budget line",

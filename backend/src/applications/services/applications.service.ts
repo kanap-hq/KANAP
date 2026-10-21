@@ -25,6 +25,8 @@ export interface ServiceOpts {
   tenantId?: string;
   accessScope?: ParticipationAccessScope;
   projectAccessScope?: ParticipationAccessScope;
+  /** The requests the caller may count (Relations badge): none without the read right on requests. */
+  requestsAccess?: { scope?: ParticipationAccessScope } | null;
 }
 
 /**

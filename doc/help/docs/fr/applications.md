@@ -151,9 +151,12 @@ Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque 
 **Dates du cycle de vie** :
 - **Mise en production**, **Fin de support**, **Date de retrait**
 
-**Responsables** :
+**Processus métier et responsables** :
+- **Processus métier** : les processus que l'application soutient. Chaque nom ouvre le processus. Tapez dans le champ pour rechercher et ajouter un processus ; survolez un nom et cliquez sur la croix pour le retirer. Chaque changement est enregistré aussitôt. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Modifier la liste demande aussi `business_processes:member` ; sans droit de lecture des processus métier, le champ est masqué.
 - **Responsables métier** : parties prenantes métier redevables de cette application (multi-sélection)
 - **Responsables IT** : membres de l'équipe IT responsables du support technique (multi-sélection)
+
+Pour retirer un responsable, survolez son nom et cliquez sur la croix en fin de ligne.
 
 **Audience** :
 - Ajoutez des lignes **Société / Départements** pour enregistrer qui utilise cette application. Choisissez une société et limitez optionnellement à des départements spécifiques.
@@ -293,7 +296,7 @@ Deux indications discrètes peuvent apparaître : des données au niveau de conf
 
 ### Relations
 
-L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches, incidents et processus métier, chacun dans son propre tableau. Les technologies sont dans l'onglet [Exploitation](#exploitation). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, incidents, sites web et pièces jointes liés.
+L'onglet Relations montre ce à quoi cette application est liée : ses lignes budgétaires, contrats, projets, demandes, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies sont dans l'onglet [Exploitation](#exploitation), les processus métier dans le [tiroir des propriétés](#tiroir-des-proprietes-panneau-de-droite). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les lignes budgétaires, contrats, projets, demandes et incidents liés, ainsi que les liens et fichiers. Les tâches ne sont pas comptées.
 
 **Composants** (uniquement lorsque « Peut avoir des apps enfants » est activé) : un tableau listant les applications enfants de cette Suite, avec leur cycle de vie et criticité. Cliquez sur une ligne pour ouvrir l'espace de travail enfant.
 
@@ -307,15 +310,14 @@ L'onglet Relations montre ce à quoi cette application est liée : ses lignes bu
 | **Demandes** | Référence (`REQ-23`), nom, statut, livraison souhaitée |
 | **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Seules les tâches liées à cette application elle-même apparaissent, pas les tâches de ses projets |
 | **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
-| **Processus métier** | Nom, responsable métier |
 
-**Processus métier** liste les processus que l'application soutient. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Le lien demande aussi `business_processes:member`.
+Un incident confidentiel n'apparaît qu'aux personnes qui peuvent le voir dans le registre des incidents, sans son titre.
 
 Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. Vous ne voyez que les sections des modules que vous pouvez lire.
 
 À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting. Une ligne dont la devise n'a pas de taux de change pour l'année affiche son montant dans sa propre devise avec une petite marque orange, et le total l'exclut. Un avertissement d'une ligne sous le tableau l'indique, par exemple « 1 ligne sans taux de change exclue : USD 2026. » Voir [Taux manuels](currencies.md#taux-manuels). Les contrats ont un total par devise, sans les contrats désactivés.
 
-**Ajouter et retirer des liens** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les incidents se lient depuis l'incident lui-même.
+**Ajouter et retirer des liens** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Lier ou délier un incident demande aussi `incidents:contributor` et s'inscrit dans le journal de l'incident. Un incident clos ou annulé ne peut être ni lié ni délié : rouvrez-le d'abord.
 
 **Apparentés** : des suggestions d'enregistrements que vous pourriez lier, chacune avec la raison de la suggestion :
 
@@ -327,9 +329,11 @@ Cliquez sur **Lier** pour ajouter la suggestion à sa section. La section est ab
 
 **Aussi relié** : une ligne sous les suggestions compte les actifs des déploiements de l'application, ses interfaces et ses documents de connaissance. Chaque nombre ouvre l'onglet ou la section correspondante.
 
-**Sites web pertinents** : ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
+**Liens et fichiers** : les liens web de l'application (portails fournisseurs, tableaux de bord de monitoring, documentation) et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `applications:member` :
 
-**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression nécessite `applications:member`.
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section : elle est surlignée pendant le glisser.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 ---
 

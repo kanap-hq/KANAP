@@ -151,9 +151,12 @@ Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter ange
 **Lebenszyklus-Daten**:
 - **Go-Live**, **Support-Ende**, **Außerbetriebnahmedatum**
 
-**Verantwortliche**:
+**Geschäftsprozesse und Verantwortliche**:
+- **Geschäftsprozesse**: die Prozesse, die die Anwendung unterstützt. Jeder Name öffnet den Prozess. Tippen Sie in das Feld, um einen Prozess zu suchen und hinzuzufügen; fahren Sie mit der Maus über einen Namen und klicken Sie auf das Kreuz, um ihn zu entfernen. Jede Änderung wird sofort gespeichert. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Ändern der Liste erfordert zusätzlich `business_processes:member`; ohne Leserecht für Geschäftsprozesse ist das Feld ausgeblendet.
 - **Business-Verantwortliche**: Geschäftliche Stakeholder, die für diese Anwendung rechenschaftspflichtig sind (Mehrfachauswahl)
 - **IT-Verantwortliche**: IT-Teammitglieder, die für den technischen Support verantwortlich sind (Mehrfachauswahl)
+
+Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen und klicken Sie auf das Kreuz am Zeilenende.
 
 **Zielgruppe**:
 - Fügen Sie Zeilen für **Unternehmen / Abteilungen** hinzu, um aufzuzeichnen, wer diese Anwendung nutzt. Wählen Sie ein Unternehmen aus und schränken Sie optional auf bestimmte Abteilungen ein.
@@ -293,7 +296,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben, Vorfälle und Geschäftsprozesse, jeweils in einer eigenen Tabelle. Die Technologien stehen im Reiter [Betrieb](#betrieb). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Vorfälle, Websites und Anhänge.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#betrieb), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -307,15 +310,14 @@ Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budg
 | **Anfragen** | Referenz (`REQ-23`), Name, Status, gewünschte Lieferung |
 | **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Es erscheinen nur die Aufgaben, die mit dieser Anwendung selbst verknüpft sind, nicht die Aufgaben ihrer Projekte |
 | **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
-| **Geschäftsprozesse** | Name, Fachverantwortlicher |
 
-**Geschäftsprozesse** listet die Prozesse, die die Anwendung unterstützt. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Verknüpfen erfordert zusätzlich `business_processes:member`.
+Ein vertraulicher Vorfall erscheint nur für die Personen, die ihn im Vorfallregister sehen dürfen, und ohne seinen Titel.
 
 Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen.
 
 Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung. Eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, zeigt ihren Betrag in ihrer eigenen Währung mit einer kleinen orangefarbenen Markierung, und die Summe lässt sie aus. Ein einzeiliger Hinweis unter der Tabelle nennt sie, zum Beispiel „1 Zeile ohne Wechselkurs ausgeschlossen: USD 2026.“ Siehe [Manuelle Kurse](currencies.md#manuelle-kurse). Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
 
-**Verknüpfungen hinzufügen und entfernen** (`applications:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Vorfälle werden vom Vorfall selbst aus verknüpft.
+**Verknüpfungen hinzufügen und entfernen** (`applications:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen oder Lösen eines Vorfalls erfordert zusätzlich `incidents:contributor` und wird im Journal des Vorfalls festgehalten. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden: Öffnen Sie ihn zuerst wieder.
 
 **Verwandt**: Vorschläge von Datensätzen, die Sie verknüpfen könnten, jeweils mit dem Grund des Vorschlags:
 
@@ -327,9 +329,11 @@ Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen
 
 **Ebenfalls verknüpft**: Eine Zeile unter den Vorschlägen zählt die Assets der Bereitstellungen der Anwendung, ihre Schnittstellen und ihre Wissensdokumente. Jede Zahl öffnet den passenden Reiter oder Abschnitt.
 
-**Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
+**Links und Dateien**: die Weblinks der Anwendung (Lieferantenportale, Monitoring-Dashboards, Dokumentation) und ihre Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `applications:member`:
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `applications:member`.
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen: Er wird während des Ziehens hervorgehoben.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ---
 

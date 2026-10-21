@@ -42,6 +42,7 @@ import {
   ApplicationsLifecycleService,
   ApplicationsRelationsService,
 } from './services';
+import { IncidentsModule } from '../incidents/incidents.module';
 
 @Module({
   imports: [
@@ -73,6 +74,7 @@ import {
     CurrencyModule,
     forwardRef(() => PortfolioModule),
     forwardRef(() => TechnologiesModule),
+    forwardRef(() => IncidentsModule),
   ],
   providers: [
     // Decomposed services (order matters for DI)

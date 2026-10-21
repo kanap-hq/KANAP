@@ -92,25 +92,46 @@ export class IncidentRelationsService extends IncidentsBaseService {
   }
 
   /**
-   * Link (`add`) or unlink one technology, from the technology's side. The incident must be visible
-   * to the viewer (404 otherwise, the same answer whether it exists or not) and open; its row is
-   * locked (FOR NO KEY UPDATE) before the set is read, so two links made at once from two
-   * technologies both stay. Linking what is linked, or unlinking what is not, changes nothing.
+   * Link (`add`) or unlink one technology, from the technology's side (`setLinkFromTarget`).
    */
-  async setTechnologyLink(incidentId: string, technologyId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
+  setTechnologyLink(incidentId: string, technologyId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
+    return this.setLinkFromTarget(TECHNOLOGY_LINK, incidentId, technologyId, add, userId, opts);
+  }
+
+  /**
+   * Link (`add`) or unlink one application, from the application's side (lot R1b, `setLinkFromTarget`).
+   */
+  setApplicationLink(incidentId: string, applicationId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
+    return this.setLinkFromTarget(APPLICATION_LINK, incidentId, applicationId, add, userId, opts);
+  }
+
+  /**
+   * Link (`add`) or unlink one object from the object's side. The incident must be visible to the
+   * viewer (404 otherwise, the same answer whether it exists or not) and open; its row is locked
+   * (FOR NO KEY UPDATE) before the set is read, so two links made at once from two objects both
+   * stay. Linking what is linked, or unlinking what is not, changes nothing.
+   */
+  private async setLinkFromTarget(
+    spec: LinkSpec,
+    incidentId: string,
+    targetId: string,
+    add: boolean,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ): Promise<{ changed: boolean }> {
     const mg = this.getManager(opts);
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
     this.assertEditable(incident);
     await mg.query(`SELECT 1 FROM incidents WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`, [tenantId, incident.id]);
     const current: Array<{ id: string }> = await mg.query(
-      `SELECT technology_id::text AS id FROM incident_technologies WHERE tenant_id = $1 AND incident_id = $2`,
+      `SELECT ${spec.linkColumn}::text AS id FROM ${spec.linkTable} WHERE tenant_id = $1 AND incident_id = $2`,
       [tenantId, incident.id],
     );
     const ids = current.map((row) => row.id);
-    if (ids.includes(technologyId) === add) return { changed: false };
-    const next = add ? [...ids, technologyId] : ids.filter((value) => value !== technologyId);
-    await this.bulkReplace(TECHNOLOGY_LINK, incident.id, next, userId, opts);
+    if (ids.includes(targetId) === add) return { changed: false };
+    const next = add ? [...ids, targetId] : ids.filter((value) => value !== targetId);
+    await this.bulkReplace(spec, incident.id, next, userId, opts);
     return { changed: true };
   }
 
@@ -177,7 +198,8 @@ export class IncidentRelationsService extends IncidentsBaseService {
       throw new BadRequestException(`One or more ${spec.label.toLowerCase()} not found`);
     }
 
-    const current = await this.listLinked(spec, incidentId, { manager: mg, tenantId });
+    // The viewer goes along: without it a confidential incident reads as missing, even to its reporter.
+    const current = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
     const currentIds = new Set(current.map((item) => item.id));
     const wantedIds = new Set(nextIds);
     const removed = current.filter((item) => !wantedIds.has(item.id));
@@ -192,7 +214,7 @@ export class IncidentRelationsService extends IncidentsBaseService {
       await repo.save(added.map((item) => repo.create({ tenant_id: tenantId, incident_id: incident.id, [spec.linkColumn]: item.id })));
     }
 
-    const next = await this.listLinked(spec, incidentId, { manager: mg, tenantId });
+    const next = await this.listLinked(spec, incidentId, { manager: mg, tenantId, viewer: opts?.viewer });
     const parts: string[] = [];
     if (added.length) parts.push(`${spec.label} linked: ${added.map(displayRef).join(', ')}`);
     if (removed.length) parts.push(`${spec.label} unlinked: ${removed.map(displayRef).join(', ')}`);

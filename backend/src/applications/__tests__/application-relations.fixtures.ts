@@ -6,6 +6,7 @@ import { ApplicationsRelationsService, type RelationsAccess, type RelationsConte
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService } from '../../technologies/technology-links.service';
 import { TechnologyReachService } from '../../technologies/technology-reach.service';
+import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 import { CAPEX_NUMBER_OFFSET } from '../../spend/__tests__/round-inputs.fixtures';
 
 // Fixtures of the Relations tab specs (lot R1): a tenant built in raw SQL, with every kind of
@@ -51,21 +52,26 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
   );
   // The technology layer is the real service (lot T2a): its reach, idempotence and audit are under test.
   const technologyLinks = new TechnologyLinksService(audit as any, new TechnologyReachService(), { getSettings: async () => ({}) } as any, cpeEvents as any);
+  // The incident side is the real service (lot R1b): its visibility, open state, row lock and journal are under test.
+  const incidents = new IncidentRelationsService(undefined as any, audit as any);
   return new ApplicationsRelationsService(
-    undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks,
+    undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks, incidents,
   );
 }
 
 export const ALL_ACCESS: RelationsAccess = {
-  budget_lines: true, contracts: true, processes: true, projects: true, requests: true, tasks: true, technologies: true,
+  budget_lines: true, contracts: true, incidents: true, processes: true, projects: true, requests: true, tasks: true, technologies: true,
 };
 export const NO_ACCESS: RelationsAccess = {
-  budget_lines: false, contracts: false, processes: false, projects: false, requests: false, tasks: false, technologies: false,
+  budget_lines: false, contracts: false, incidents: false, processes: false, projects: false, requests: false, tasks: false, technologies: false,
 };
-export const ALL_WRITES: RelationsWrites = { technologies: true, processes: true };
+export const ALL_WRITES: RelationsWrites = { technologies: true, processes: true, incidents: true };
 
 export function context(manager: EntityManager, seed: RelationsSeed, overrides: Partial<RelationsContext> = {}): RelationsContext {
-  return { manager, tenantId: seed.tenantId, userId: seed.userId, access: ALL_ACCESS, writes: ALL_WRITES, scopes: {}, ...overrides };
+  return {
+    manager, tenantId: seed.tenantId, userId: seed.userId, access: ALL_ACCESS, writes: ALL_WRITES, scopes: {},
+    incidentViewer: { userId: seed.userId, isAdmin: true }, ...overrides,
+  };
 }
 
 export async function setTenant(runner: QueryRunner | EntityManager, tenantId: string) {

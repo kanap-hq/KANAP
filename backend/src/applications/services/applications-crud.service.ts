@@ -24,7 +24,7 @@ import { fixMulterFilename } from '../../common/upload';
 import { ShareItemDto } from '../../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { projectParticipantCondition, requestParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
 
 type OwnerQueryRow = ApplicationOwner & {
@@ -313,12 +313,26 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
            AND l.tenant_id = app_current_tenant()
            AND ${projectParticipantCondition('p', '$2')}`
       : `SELECT COUNT(*) FROM application_projects l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
-    const params = opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
+    const params: unknown[] = opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
+    // Requests count only for a caller who reads them, within a Business Contributor's scope.
+    const requestScope = opts?.requestsAccess?.scope;
+    if (requestScope) params.push(requestScope.userId);
+    const requestCountSql = !opts?.requestsAccess
+      ? 'SELECT 0'
+      : requestScope
+        ? `SELECT COUNT(*)
+           FROM portfolio_request_applications l
+           JOIN portfolio_requests r ON r.id = l.request_id AND r.tenant_id = l.tenant_id
+           WHERE l.application_id = $1
+             AND l.tenant_id = app_current_tenant()
+             AND ${requestParticipantCondition('r', `$${params.length}`)}`
+        : `SELECT COUNT(*) FROM portfolio_request_applications l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
     const rows: Array<{
       opex_count: string | number;
       capex_count: string | number;
       contracts_count: string | number;
       projects_count: string | number;
+      requests_count: string | number;
       technologies_count: string | number;
       processes_count: string | number;
       links_count: string | number;
@@ -329,6 +343,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
          (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}) AS capex_count,
          (SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS contracts_count,
          (${projectCountSql}) AS projects_count,
+         (${requestCountSql}) AS requests_count,
          (SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS technologies_count,
          (SELECT COUNT(*) FROM application_business_processes l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS processes_count,
          (SELECT COUNT(*) FROM application_links l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS links_count,
@@ -340,6 +355,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex_count: string | number;
       contracts_count: string | number;
       projects_count: string | number;
+      requests_count: string | number;
       technologies_count: string | number;
       processes_count: string | number;
       links_count: string | number;
@@ -350,7 +366,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       capex: Number(row.capex_count || 0),
       contracts: Number(row.contracts_count || 0),
       projects: Number(row.projects_count || 0),
-      // Still reported. The Relations badge (`total`) leaves it out: technologies are on the Operations tab.
+      requests: Number(row.requests_count || 0),
+      // Still reported. The Relations badge (`total`) leaves these out: technologies are on the
+      // Operations tab, business processes in the properties panel (lot R1b).
       technologies: Number(row.technologies_count || 0),
       processes: Number(row.processes_count || 0),
       links: Number(row.links_count || 0),
@@ -358,7 +376,8 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     };
     return {
       ...counts,
-      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.processes + counts.links + counts.attachments,
+      // The badge counts requests and leaves tasks out (fried, 2026-10-21); the incidents are added by the page.
+      total: counts.opex + counts.capex + counts.contracts + counts.projects + counts.requests + counts.links + counts.attachments,
     };
   }
 

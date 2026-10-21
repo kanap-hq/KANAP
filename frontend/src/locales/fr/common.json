@@ -674,7 +674,8 @@
     "department": "Département",
     "departments": "Départements",
     "allDepartments": "Tous les départements",
-    "newCategoryName": "Nom de la nouvelle catégorie"
+    "newCategoryName": "Nom de la nouvelle catégorie",
+    "removeNamed": "Retirer {{name}}"
   },
   "documentEditor": {
     "expandDocument": "Agrandir le document",
@@ -1175,5 +1176,31 @@
     "name": "Nom",
     "empty": "Aucune URL liée.",
     "delete": "Supprimer l'URL"
+  },
+  "linksAndFiles": {
+    "title": "Liens et fichiers",
+    "addLink": "Ajouter un lien",
+    "attachFile": "Joindre un fichier",
+    "empty": "Aucun lien ni fichier.",
+    "uploading_one": "Envoi de {{count}} fichier…",
+    "uploading_other": "Envoi de {{count}} fichiers…",
+    "columns": {
+      "name": "Nom",
+      "detail": "Adresse ou taille",
+      "added": "Ajouté le"
+    },
+    "types": {
+      "link": "Lien",
+      "file": "Fichier"
+    },
+    "url": "URL",
+    "newLink": "Nouveau lien",
+    "editLink": "Modifier le lien",
+    "editLinkNamed": "Modifier {{name}}",
+    "removeNamed": "Retirer {{name}}",
+    "placeholders": {
+      "name": "ex. : Portail de l’éditeur",
+      "url": "ex. : https://status.example.com"
+    }
   }
 }

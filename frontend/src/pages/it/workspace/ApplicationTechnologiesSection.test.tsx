@@ -57,6 +57,7 @@ function relations(overrides: Partial<ApplicationRelationsData> = {}): Applicati
     ],
     deployment_servers: [],
     processes: [],
+    incidents: [],
     suggestions: [],
     also: { assets: 0, interfaces: 0, documents: 0 },
     ...overrides,
