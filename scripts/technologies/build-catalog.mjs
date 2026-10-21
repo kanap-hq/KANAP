@@ -353,6 +353,7 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: "Microsoft SQL Server 2017 (CU 31)", version: "2017" },
     { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 (GDR)", version: "2016" },
     { vendor: "Microsoft", product: "Microsoft SQL Server 2016 Service Pack 3 Azure Connect Feature Pack", version: "2016" },
+    { vendor: "Microsoft", product: "Microsoft SQL Server 2019 (CU 29)", version: "2019" },
   ],
   msexchange: [
     { vendor: "Microsoft", product: "Microsoft Exchange Server Subscription Edition RTM", version: "Subscription Edition" },
@@ -365,14 +366,17 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: ".NET 9.0", version: "9" },
     { vendor: "Microsoft", product: ".NET 8.0", version: "8" },
     { vendor: "Microsoft", product: ".NET 6.0", version: "6" },
+    { vendor: "Microsoft", product: ".NET 7.0", version: "7" },
   ],
   powershell: [
     { vendor: "Microsoft", product: "PowerShell 7.6", version: "7.6" },
     { vendor: "Microsoft", product: "PowerShell 7.5", version: "7.5" },
     { vendor: "Microsoft", product: "PowerShell 7.4", version: "7.4" },
+    { vendor: "Microsoft", product: "PowerShell Core" },
   ],
   "entra-id": [
     { vendor: "Microsoft", product: "Microsoft Entra" },
+    { vendor: "Microsoft", product: "Azure Active Directory" },
   ],
   "azure-kubernetes-service": [
     { vendor: "Microsoft", product: "Azure Kubernetes Service" },
@@ -386,6 +390,7 @@ const CVE_NAMES = {
   "eclipse-jetty": [
     { vendor: "Eclipse Foundation", product: "Eclipse Jetty" },
     { vendor: "Eclipse Foundation", product: "Jetty" },
+    { vendor: "The Eclipse Foundation", product: "Eclipse Jetty" },
   ],
   commvault: [
     { vendor: "Commvault", product: "Commvault Cloud" },
@@ -442,6 +447,7 @@ const CVE_NAMES = {
   ],
   "apache-artemis": [
     { vendor: "Apache Software Foundation", product: "Apache ActiveMQ Artemis" },
+    { vendor: "Apache Software Foundation", product: "Apache Artemis" },
   ],
   "apache-kafka": [
     { vendor: "Apache Software Foundation", product: "Apache Kafka" },
@@ -502,6 +508,69 @@ const CVE_NAMES = {
   ],
   traefik: [
     { vendor: "traefik", product: "traefik" },
+  ],
+  // October 2026 lot: pairs that pass the suggestion rules (at least 3 shared CVE, share 0.2,
+  // precision 0.5) on the NVD lists of the entry's identifiers.
+  centreon: [
+    { vendor: "Centreon", product: "Centreon" },
+    { vendor: "Centreon", product: "Infra Monitoring" },
+    { vendor: "Centreon", product: "web" },
+  ],
+  "citrix-vad": [
+    { vendor: "n/a", product: "Citrix Virtual Apps and Desktops" },
+  ],
+  clickhouse: [
+    { vendor: "ClickHouse", product: "ClickHouse" },
+    { vendor: "n/a", product: "ClickHouse" },
+    { vendor: "yandex", product: "clickhouse" },
+  ],
+  "docker-engine": [
+    { vendor: "moby", product: "moby" },
+  ],
+  go: [
+    { vendor: "golang", product: "go" },
+  ],
+  graylog: [
+    { vendor: "Graylog2", product: "graylog2-server" },
+  ],
+  harbor: [
+    { vendor: "n/a", product: "Harbor" },
+  ],
+  "ibm-mq": [
+    { vendor: "IBM", product: "MQ" },
+  ],
+  icinga: [
+    { vendor: "Icinga", product: "icinga2" },
+  ],
+  keycloak: [
+    { vendor: "n/a", product: "keycloak" },
+  ],
+  kubernetes: [
+    { vendor: "Kubernetes", product: "Kubernetes" },
+  ],
+  mariadb: [
+    { vendor: "MariaDB", product: "server" },
+  ],
+  "mulesoft-runtime": [
+    { vendor: "n/a", product: "Mulesoft" },
+  ],
+  mysql: [
+    { vendor: "Oracle Corporation", product: "MySQL Server" },
+  ],
+  neo4j: [
+    { vendor: "neo4j", product: "Enterprise Edition" },
+  ],
+  nginx: [
+    { vendor: "f5", product: "nginx" },
+  ],
+  opensearch: [
+    { vendor: "opensearch-project", product: "security" },
+  ],
+  opnsense: [
+    { vendor: "Opnsense", product: "OPNsense" },
+  ],
+  "veeam-one": [
+    { vendor: "Veeam", product: "One" },
   ],
 };
 for (const entry of PRODUCTS) if (CVE_NAMES[entry.key]) entry.cve_names = CVE_NAMES[entry.key];
