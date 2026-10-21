@@ -347,8 +347,58 @@ function testServiceCpe() {
   }
 }
 
+/** A few `cpe_version` values of each KANAP-maintained product, as the shipped file and the rule write them. */
+function testCuratedCpeVersions() {
+  const versionOf = (key: string, label: string) => {
+    const version = shipped.find((product) => product.key === key)?.versions.find((version) => version.label === label);
+    assert.ok(version, `${key} ${label}`);
+    return version;
+  };
+  const expectCpe = (key: string, label: string, cpe: string | null) => {
+    assert.equal(versionOf(key, label).cpe_version, cpe, `${key} ${label}`);
+    assert.equal(cpeVersionOf(label, key), cpe, `${key} ${label} rule`);
+  };
+  expectCpe('check-point-gaia', 'R81.20', 'r81.20');
+  expectCpe('check-point-gaia', 'R82', 'r82');
+  expectCpe('cisco-asa', '9.16(x)', '9.16\\(x\\)');
+  expectCpe('cisco-asa', '9.24(x)', '9.24\\(x\\)');
+  expectCpe('cisco-ftd', '7.7', null);
+  expectCpe('cisco-ftd', '6.2.3', null);
+  expectCpe('sophos-firewall', '22.0 MR1', '22.0');
+  expectCpe('sophos-firewall', '18.0', null);
+  expectCpe('ivanti-connect-secure', '25.1.3.x', '25.1.3');
+  expectCpe('ivanti-connect-secure', '9.1R18', '9.1');
+  expectCpe('ivanti-connect-secure', '22.7', null);
+  expectCpe('cisco-nx-os', '9.3(16)', '9.3\\(16\\)');
+  expectCpe('cisco-nx-os', '7.0(3)I7(x)', '7.0\\(3\\)i7\\(x\\)');
+  expectCpe('cisco-nx-os', '10.3(x)', '10.3\\(x\\)');
+  expectCpe('cisco-nx-os', '7.0(3)F3(3-5)', null);
+  expectCpe('cisco-nx-os', '7.0(3)F1/2(x)', null);
+  expectCpe('juniper-junos', '23.4', null);
+  expectCpe('juniper-junos', '12.3X48', null);
+  expectCpe('arista-eos', '4.28.x', '4.28');
+  expectCpe('netscaler-adc', '14.1', null);
+  expectCpe('dell-powerstore', '4.3.1 LTS2026', '4.3.1');
+  expectCpe('dell-powerstore', '5.0.0.2', null);
+  expectCpe('dell-powerscale', '9.15.0', null);
+  expectCpe('dell-unity', '5.5.5', null);
+  expectCpe('synology-dsm', '7.3 LTS', '7.3');
+  expectCpe('synology-dsm', '7.2', null);
+  expectCpe('veritas-netbackup', '10.4', null);
+  expectCpe('dell-data-domain', '8.8', null);
+  expectCpe('oracle-weblogic', '14.1.x', '14.1');
+  expectCpe('oracle-weblogic', '15.x', '15');
+  expectCpe('ibm-websphere', '9.0.x', '9.0');
+  expectCpe('ibm-websphere', '8.5.x', '8.5');
+  assert.deepEqual(versionOf('synology-dsm', '7.3 LTS').build_prefixes, ['7.3']);
+  assert.deepEqual(versionOf('dell-powerstore', '4.3.1 LTS2026').build_prefixes, ['4.3.1', '4.3.1.0', '4.3.1.1', '4.3.1.2']);
+  assert.deepEqual(versionOf('veritas-netbackup', '8.1').build_prefixes, ['8.1.1']);
+  assert.deepEqual(versionOf('sophos-firewall', '22.0 MR1').build_prefixes, []);
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
+  testCuratedCpeVersions();
   testVersionsOfReleases();
   testInvalidReleasesAreLeftOut();
   testCleanLabel();
