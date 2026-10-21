@@ -176,7 +176,7 @@ function amazonLinuxLabel(release) {
   return cleanLabel(release.label, release.name).replace(/^AMI\s+/i, '');
 }
 
-/** "7.3 TL4" (name `7.3.4`) → "7.3". One label per release; the newest technology level is kept. */
+/** "7.3 TL4" (name `7.3.4`) → "7.3". The version key is that label, so the next technology level updates it. */
 function aixLabel(release) {
   const match = /^(\d+\.\d+)\.\d+$/.exec(String(release.name));
   if (match) return match[1];
@@ -1100,11 +1100,13 @@ function versionsOf(releases, today, entry) {
     if (!label || seen.has(label.toLowerCase())) continue;
     seen.add(label.toLowerCase());
     const { standard, extended } = supportDates(entry.key, eoas, eol, eoes);
+    // Twin of versionsOfReleases: AIX keys the folded label. Windows keys stay the cycle name.
+    const folded = entry.key === 'ibm-aix';
     out.push({
-      key: name,
+      key: folded ? label : name,
       label,
       cpe_version: cpeVersionOf(label, entry),
-      build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
+      build_prefixes: folded ? [] : (name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : []),
       release_date: day(release.releaseDate),
       standard_support_end: standard,
       extended_support_end: extended,

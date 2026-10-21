@@ -13287,45 +13287,37 @@
       "source_url": "https://endoflife.date/ibm-aix",
       "versions": [
         {
-          "key": "7.3.4",
+          "key": "7.3",
           "label": "7.3",
           "cpe_version": null,
-          "build_prefixes": [
-            "7.3.4"
-          ],
+          "build_prefixes": [],
           "release_date": "2025-12-06",
           "standard_support_end": "2028-12-31",
           "extended_support_end": null
         },
         {
-          "key": "7.2.5",
+          "key": "7.2",
           "label": "7.2",
           "cpe_version": null,
-          "build_prefixes": [
-            "7.2.5"
-          ],
+          "build_prefixes": [],
           "release_date": "2020-11-30",
           "standard_support_end": null,
           "extended_support_end": null
         },
         {
-          "key": "7.1.5",
+          "key": "7.1",
           "label": "7.1",
           "cpe_version": null,
-          "build_prefixes": [
-            "7.1.5"
-          ],
+          "build_prefixes": [],
           "release_date": "2017-10-31",
           "standard_support_end": "2023-04-30",
           "extended_support_end": null
         },
         {
-          "key": "6.1.9",
+          "key": "6.1",
           "label": "6.1",
           "cpe_version": null,
-          "build_prefixes": [
-            "6.1.9"
-          ],
+          "build_prefixes": [],
           "release_date": "2013-11-30",
           "standard_support_end": "2017-04-30",
           "extended_support_end": null

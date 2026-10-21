@@ -251,12 +251,14 @@ function testOperatingSystemReleases() {
     { name: '2018.03', label: 'AMI 2018.03', releaseDate: '2018-04-25', eoasFrom: '2020-12-31', eolFrom: '2023-12-31' },
   ]), ['2023=2023', '2=2', '2018.03=2018.03']);
 
-  // AIX: one label per release. The newest technology level comes first and takes it.
-  assert.deepEqual(labels('ibm-aix', [
+  // AIX: one label per release, and that label is the key. The newest technology level takes it.
+  const aixCycles = versionsOfReleases([
     { name: '7.3.4', label: '7.3 TL4', releaseDate: '2025-12-06', eolFrom: '2028-12-31' },
     { name: '7.3.3', label: '7.3 TL3', releaseDate: '2024-12-06', eolFrom: '2027-12-31' },
     { name: '7.2.5', label: '7.2 TL5', releaseDate: '2020-11-30' },
-  ]), ['7.3.4=7.3', '7.2.5=7.2']);
+  ], today, 'ibm-aix');
+  assert.deepEqual(aixCycles.map((version) => `${version.key}=${version.label}`), ['7.3=7.3', '7.2=7.2']);
+  assert.ok(aixCycles.every((version) => version.build_prefixes.length === 0));
 
   // Solaris 11, the first release, is stored 11.0 so it does not cover 11.4.
   assert.deepEqual(labels('oracle-solaris', [
@@ -279,8 +281,10 @@ function testOperatingSystemReleases() {
   assert.ok(shippedLabels('oracle-solaris').includes('11.0'));
   assert.ok(!shippedLabels('oracle-solaris').includes('11'));
   const aix = byKey.get('ibm-aix')!.versions.find((version) => version.label === '7.3')!;
+  assert.equal(aix.key, '7.3');
   assert.equal(aix.cpe_version, null);
-  assert.deepEqual(aix.build_prefixes, ['7.3.4']);
+  assert.deepEqual(aix.build_prefixes, []);
+  assert.ok(byKey.get('ibm-aix')!.versions.every((version) => version.key === version.label && version.build_prefixes.length === 0));
   assert.equal(byKey.get('cortex-xdr')!.versions.find((version) => version.label === '9.3')!.cpe_version, null);
   assert.equal(byKey.get('routeros')!.versions.find((version) => version.label === 'RouterOS 7.24')!.cpe_version, '7.24');
   assert.equal(byKey.get('sharepoint')!.versions.find((version) => version.label === '2013 SP1')!.cpe_version, '2013');

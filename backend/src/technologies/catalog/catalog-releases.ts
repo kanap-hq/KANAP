@@ -174,7 +174,9 @@ type OsRelease = { name: string; label: string | null; isLts: boolean };
  * comes first and takes it). Ubuntu: the LTS releases only. SLES: endoflife.date names a service
  * pack `15.5`, stored `15 SP5`, and `15.0` is `15`. Amazon Linux drops the `AMI` prefix (`AMI 2018.03`
  * → `2018.03`; `2` and `2023` stay). AIX collapses a technology level to the release (`7.3.4` →
- * `7.3`, the newest level kept). Solaris stores the first Solaris 11 release as `11.0`.
+ * `7.3`) and stores that label as the version key, so the next level updates the same version.
+ * Windows Server also folds several cycles onto one label; those keys already shipped, so they stay
+ * the cycle name. Solaris stores the first Solaris 11 release as `11.0`.
  */
 const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean; label?: (release: OsRelease) => string }> = {
   'windows-server': {
@@ -363,11 +365,14 @@ export function versionsOfReleases(
     seenKeys.add(rawName);
     const { standard, extended } = supportDates(catalogKey, eoas, eol, eoes);
     const name = rawName;
+    // AIX: the key is the folded label (`7.3`), and nothing matches on a technology level.
+    // Windows Server folds service packs the same way; its keys shipped, so they stay the cycle name.
+    const folded = catalogKey === 'ibm-aix';
     out.push({
-      key: name,
+      key: folded ? label : name,
       label,
       cpe_version: cpeVersionOf(label, catalogKey),
-      build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
+      build_prefixes: folded ? [] : (name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : []),
       release_date: releaseDate,
       standard_support_end: standard,
       extended_support_end: extended === standard ? null : extended,
