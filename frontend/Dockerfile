@@ -19,7 +19,7 @@ RUN npm run build
 
 # Runtime stage (static assets served by nginx)
 # nginx:alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
-FROM nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+FROM nginx:alpine@sha256:892bb2152464f0c5d8972593a5f5afaf8054552580b699d95f8ff4af08c2d33d
 # Same build argument: the CSP connect-src allows the API origin when VITE_API_URL is an
 # absolute URL (http(s)://host[:port]/... or //host/...), and only the site itself otherwise.
 # When the host of an absolute URL cannot be read, the build goes on with a notice and
