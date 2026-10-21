@@ -37,17 +37,16 @@ beats coverage.
 
 Each product is `backend/src/technologies/catalog/curated/<key>.json`. The file name is the key.
 
-`family` is a code of `DEFAULT_TECHNOLOGY_FAMILIES`. Network equipment uses `network`. Security
-products use `network_security` (default label Security). The family that ships is the `family` of
-the `PRODUCTS` entry in `scripts/technologies/build-catalog.mjs`: keep the file and that entry on
-the same code.
+The family that ships is the `family` of the `PRODUCTS` entry in
+`scripts/technologies/build-catalog.mjs` (a code of `DEFAULT_TECHNOLOGY_FAMILIES`). Network
+equipment uses `network`. Security products use `network_security` (default label Security). The
+curated file does not carry a family.
 
 ```json
 {
   "key": "check-point-gaia",
   "name": "Check Point Gaia",
   "editor": "Check Point",
-  "family": "network_security",
   "lifecycle_url": "https://...",
   "source_updated": "2026-10-09",
   "version_grain": "release train as the vendor names it (R81.20)",
@@ -74,7 +73,7 @@ the same code.
 ```
 
 - `lifecycle_url`: the page or listing that covers every version. `source_url`: where this
-  version's dates are read (often the same).
+  version's dates are read (often the same). Both start with `https://`.
 - `source_updated`: the "last updated" or "as of" date `lifecycle_url` states, `null` if none;
   dates of other source pages go in the version `note`. The next
   refresh compares it.
@@ -154,7 +153,7 @@ Two dates per version, with the same meaning as for the endoflife.date entries:
 1. Step 0 (endoflife.date). Then find the official source; check it is public.
 2. Write down the column names before reading any date.
 3. Fill the file; one `source_url` per version.
-4. Register the key in `PRODUCTS` (`slug: null, curated: true`, with the same family, the editor,
+4. Register the key in `PRODUCTS` (`slug: null, curated: true`, with its family, the editor,
    the name and the CPE identifiers) and add its description in `technologies.descriptions.json`.
 5. Check the date order and the version rule. Re-read two versions against the source.
 6. Report what is unclear.
@@ -211,11 +210,13 @@ this skill. Subagents return it as text: the lead saves it.
   "Security Gateway & Management"; month only; rows can cover several versions ("Affected Versions").
 - **Cisco ASA:** no table; one end-of-life notice per train from the ASA notice listing; current
   trains have no notice. cisco.com refuses curl unless it sends full browser headers (User-Agent,
-  Accept, Accept-Encoding, Upgrade-Insecure-Requests, Sec-Fetch-*).
+  Accept, Accept-Encoding, Upgrade-Insecure-Requests, Sec-Fetch-*). Matching stays at the train
+  (`9.16(x)`): a number typed `9.16(4)` is that whole train.
 - **Cisco FTD:** compatibility guide, table "Software EOL announcements", ISO dates; lists only
   announced versions.
 - **Cisco NX-OS:** "Software Lifecycle Support Statement" (Table 2) for recent trains, Nexus 9000
-  notices for older ones; covers Nexus 3000/9000 only.
+  notices for older ones; covers Nexus 3000/9000 only. Matching stays at the train, the same rule
+  as ASA (`9.16(x)`, here `10.4(x)`): a number typed `10.4(3)` is that whole train.
 - **Arista:** EOS Life Cycle Policy page; the table is a PNG; CAPTCHA for scripts, WebFetch passes;
   older trains have their own notices under advisories-notices/end-of-support (curl gets an
   empty body, WebFetch works); "Last Updated" is printed inside the image; the image downloads
@@ -231,7 +232,8 @@ this skill. Subagents return it as text: the lead saves it.
   the version cell); EOS there means end of sale.
 - **Dell:** KB 000185734 links three public xlsx (Hardware, Software, Operating Environment),
   refreshed about monthly; Excel serials; duplicates and typos happen: cross-check product KBs
-  (PowerStoreOS Matrix 000175213). EOSL equals EOSS by Dell's definition. Data Domain: the Software xlsx has "Data Domain DD OS" rows per build
+  (PowerStoreOS Matrix 000175213). EOSL equals EOSS by Dell's definition. PowerStore is named by
+  model in CVE.org: a new model needs a new name in `CVE_NAMES` (`scripts/technologies/build-catalog.mjs`). Data Domain: the Software xlsx has "Data Domain DD OS" rows per build
   with RTS and EOSS (use it), KB 000081247 (LTS ranges) as cross-check. KB pages need headless
   Chromium (curl gets 403); the xlsx download with curl.
 - **Synology:** Software Life Cycle Policy PDF on global.download.synology.com; month only; mixes

@@ -3,6 +3,7 @@ import type { EntityManager } from 'typeorm';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
 import { languageOf, writeCsv } from '../../common/csv-sheet';
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
+import { shippedKeysWithoutPlannedEnd } from '../catalog/technology-catalog.service';
 import type { ApplicationsReach } from '../technology-links.service';
 import { assetInServiceSql, inServiceSql, TechnologyReachService } from '../technology-reach.service';
 import { onPremHostingTypes } from '../hosting-type';
@@ -312,14 +313,16 @@ export class EndOfSupportService {
       })));
     }
 
+    // A shipped version the vendor marks with no planned end is not a missing date.
     const undated: Array<{ id: string; name: string; item_number: number; label: string }> = await mg.query(
       `WITH ${USED_VERSIONS}
        SELECT t.id, t.name, t.item_number, v.label
          FROM used u
          JOIN technology_versions v ON v.tenant_id = $1 AND v.id = u.version_id
          JOIN technologies t ON t.tenant_id = $1 AND t.id = v.technology_id
-        WHERE v.standard_support_end IS NULL AND v.extended_support_end IS NULL`,
-      [tenantId],
+        WHERE v.standard_support_end IS NULL AND v.extended_support_end IS NULL
+          AND (v.catalog_key IS NULL OR v.catalog_key <> ALL($2::text[]))`,
+      [tenantId, shippedKeysWithoutPlannedEnd()],
     );
     items.push(...undated.map((r) => subject('version_without_end_date', 'technology', r.id, r.name, technologyReference(r.item_number), { version: r.label })));
 

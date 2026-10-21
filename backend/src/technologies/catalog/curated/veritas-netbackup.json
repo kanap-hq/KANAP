@@ -2,7 +2,6 @@
   "key": "veritas-netbackup",
   "name": "NetBackup",
   "editor": "Cohesity (formerly Veritas)",
-  "family": "backup",
   "lifecycle_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
   "source_updated": "2026-10-19",
   "version_grain": "release train (10.4); the matrix also lists the maintenance release of each train (10.4.0.1), which alone carries Extended and Sustaining Support. Trains up to 8.2 date every release (8.1.2): those sharing the same dates are grouped, the others split",

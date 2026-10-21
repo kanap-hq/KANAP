@@ -86,9 +86,27 @@ type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
  * (`technology-catalog-sync.service.ts`) keeps the adopted technologies up to date
  * (`technologies.catalog_key`, `technologies.catalog_state`, `technology_versions.catalog_key`).
  */
+const SHIPPED_PRODUCTS = (shipped as unknown as { products: CatalogProduct[] }).products;
+
+/**
+ * `product:version` keys whose shipped version says the vendor plans no end and stores both
+ * dates empty. The end-of-support report leaves those versions out of the missing-date gaps.
+ */
+export function shippedKeysWithoutPlannedEnd(): readonly string[] {
+  const keys: string[] = [];
+  for (const product of SHIPPED_PRODUCTS) {
+    for (const version of product.versions) {
+      if (version.no_planned_end === true && version.standard_support_end == null && version.extended_support_end == null) {
+        keys.push(`${product.key}:${version.key}`);
+      }
+    }
+  }
+  return keys;
+}
+
 @Injectable()
 export class TechnologyCatalogService {
-  private readonly products: CatalogProduct[] = (shipped as unknown as { products: CatalogProduct[] }).products;
+  private readonly products: CatalogProduct[] = SHIPPED_PRODUCTS;
   private readonly byKey = new Map(this.products.map((product) => [product.key, product]));
   private readonly descriptions = (shippedDescriptions as unknown as { descriptions: Descriptions }).descriptions;
   /** The end of the day the shipped file was read from endoflife.date (`source.retrieved_on`). */

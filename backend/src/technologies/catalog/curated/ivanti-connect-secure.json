@@ -2,7 +2,6 @@
   "key": "ivanti-connect-secure",
   "name": "Ivanti Connect Secure",
   "editor": "Ivanti",
-  "family": "security",
   "lifecycle_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
   "source_updated": "2026-10-02",
   "version_grain": "gateway release as the vendor names it (22.7, 25.1.2.x, 9.1R18)",

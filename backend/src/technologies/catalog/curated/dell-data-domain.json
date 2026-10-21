@@ -2,7 +2,6 @@
   "key": "dell-data-domain",
   "name": "Dell PowerProtect DD (DD OS)",
   "editor": "Dell Technologies",
-  "family": "backup",
   "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
   "source_updated": "2026-10-16",
   "version_grain": "release family as Dell names it (7.13.1, 8.6.0, 7.9); builds of a family share the end date, split where they differ (7.7.0 and 7.7 LTS2022); LTS name in aliases",

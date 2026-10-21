@@ -2,7 +2,6 @@
   "key": "juniper-junos",
   "name": "Juniper Junos OS",
   "editor": "HPE Juniper Networking",
-  "family": "network",
   "lifecycle_url": "https://support.juniper.net/support/eol/software/junos/",
   "source_updated": "2026-07-14",
   "version_grain": "release train as the vendor names it (Junos OS 23.4); label without the \"Junos OS\" prefix",

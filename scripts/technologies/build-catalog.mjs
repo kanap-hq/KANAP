@@ -387,7 +387,7 @@ const PRODUCTS = [
   { key: 'hpe-alletra-nimble', slug: null, name: 'HPE Alletra 5000/6000 (NimbleOS)', editor: 'HPE', family: 'storage', cpe: ['o:hpe:nimbleos'] },
   // Network and security
   { key: 'hashicorp-vault', slug: 'hashicorp-vault', name: 'HashiCorp Vault', editor: 'HashiCorp', family: 'network_security' },
-  { key: 'bind-9', slug: 'bind-9', name: 'BIND 9', editor: 'ISC', family: 'network_security', cpe: ['a:isc:bind'] },
+  { key: 'bind-9', slug: 'bind-9', name: 'BIND 9', editor: 'ISC', family: 'network', cpe: ['a:isc:bind'] },
   { key: 'opnsense', slug: 'opnsense', name: 'OPNsense', editor: 'Deciso', family: 'network_security' },
   { key: 'panos', slug: 'panos', name: 'Palo Alto PAN-OS', editor: 'Palo Alto Networks', family: 'network_security', cpe: ['o:paloaltonetworks:pan-os'] },
   { key: 'fortios', slug: 'fortios', name: 'FortiOS', editor: 'Fortinet', family: 'network_security', cpe: ['o:fortinet:fortios'] },
@@ -1287,7 +1287,7 @@ function isIsoDay(value) {
 }
 
 function isHttpUrl(value) {
-  return typeof value === 'string' && /^https?:\/\/\S+$/.test(value);
+  return typeof value === 'string' && /^https:\/\/\S+$/.test(value);
 }
 
 function curatedFileNames() {
@@ -1337,10 +1337,11 @@ function checkCuratedDocument(key, file, findings) {
     return;
   }
   if (file.key !== key) findings.push(`${key}: file key is ${JSON.stringify(file.key)}`);
-  for (const field of ['name', 'editor', 'family']) {
+  for (const field of ['name', 'editor']) {
     if (typeof file[field] !== 'string' || !file[field].trim()) findings.push(`${key}: ${field} is missing`);
   }
-  if (!isHttpUrl(file.lifecycle_url)) findings.push(`${key}: lifecycle_url must be an http(s) URL`);
+  if ('family' in file) findings.push(`${key}: family is set on the PRODUCTS entry, not in the curated file`);
+  if (!isHttpUrl(file.lifecycle_url)) findings.push(`${key}: lifecycle_url must be an https URL`);
   if (!('source_updated' in file)) findings.push(`${key}: source_updated is missing`);
   else if (file.source_updated !== null && !isIsoDay(file.source_updated)) findings.push(`${key}: source_updated must be an ISO date or null`);
   if (!Array.isArray(file.versions) || file.versions.length === 0) {
@@ -1367,7 +1368,7 @@ function checkCuratedDocument(key, file, findings) {
       else if (version[field] !== null && !isIsoDay(version[field])) findings.push(`${key}: ${place}: ${field} must be an ISO date or null`);
     }
     if (!isIsoDay(version.checked_on)) findings.push(`${key}: ${place}: checked_on must be an ISO date`);
-    if (!isHttpUrl(version.source_url)) findings.push(`${key}: ${place}: source_url must be an http(s) URL`);
+    if (!isHttpUrl(version.source_url)) findings.push(`${key}: ${place}: source_url must be an https URL`);
     if (typeof version.no_planned_end !== 'boolean') {
       findings.push(`${key}: ${place}: no_planned_end must be a boolean`);
     } else if (version.no_planned_end === true && (version.standard_support_end !== null || version.extended_support_end !== null)) {

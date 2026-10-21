@@ -2,7 +2,6 @@
   "key": "dell-powerscale",
   "name": "Dell PowerScale OneFS",
   "editor": "Dell Technologies",
-  "family": "storage",
   "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
   "source_updated": "2026-10-16",
   "version_grain": "OneFS release as the vendor names it (9.10.1)",

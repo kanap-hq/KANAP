@@ -2,7 +2,6 @@
   "key": "check-point-gaia",
   "name": "Check Point Gaia (Quantum)",
   "editor": "Check Point",
-  "family": "security",
   "lifecycle_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
   "source_updated": null,
   "version_grain": "major version as the vendor names it in the \"Security Gateway & Management\" table (R81.20); rows covering several versions keep the others in aliases",

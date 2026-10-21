@@ -39,10 +39,10 @@ function testCuratedFields() {
     if (maintained) {
       curated += 1;
       assert.equal(endoflife, false, `${product.key} source`);
-      assert.ok(product.source_url && /^https?:\/\//.test(product.source_url), `${product.key} lifecycle`);
+      assert.ok(product.source_url && /^https:\/\//.test(product.source_url), `${product.key} lifecycle`);
       assert.ok(product.versions.length > 0, product.key);
       for (const version of product.versions) {
-        assert.match(version.source_url ?? '', /^https?:\/\/\S+$/, `${product.key} ${version.label} source_url`);
+        assert.match(version.source_url ?? '', /^https:\/\/\S+$/, `${product.key} ${version.label} source_url`);
         assert.match(version.checked_on ?? '', /^\d{4}-\d{2}-\d{2}$/, `${product.key} ${version.label} checked_on`);
       }
     } else {

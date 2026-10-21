@@ -2,7 +2,6 @@
   "key": "dell-powerstore",
   "name": "Dell PowerStore OS",
   "editor": "Dell Technologies",
-  "family": "storage",
   "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
   "source_updated": "2026-10-16",
   "version_grain": "PowerStoreOS release at the third digit (4.0.1) when its builds share the same end date, the build (4.1.0.0) when Dell dates builds of one release differently; builds in aliases",

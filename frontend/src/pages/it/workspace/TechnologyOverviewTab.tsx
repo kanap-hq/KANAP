@@ -810,10 +810,12 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
           )}
           {technology.versions.map((version) => {
             if (editing === version.id) return editRow(version.id);
-            const status = supportStateOf(version.standard_support_end, version.extended_support_end);
             const source = version.catalog_source;
             // Both ends are empty together when the vendor plans no end. The phrase replaces each dash.
+            // That row has no support state: the status column stays empty.
             const noEnd = source?.no_planned_end === true;
+            const noStatus = noEnd && !version.standard_support_end && !version.extended_support_end;
+            const status = noStatus ? null : supportStateOf(version.standard_support_end, version.extended_support_end);
             const endCell = (date: string | null) => (noEnd
               ? <Box component="span" sx={{ fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>{t('workspace.technology.versions.noPlannedEnd')}</Box>
               : formatSupportDate(date, locale, '—'));
@@ -853,10 +855,12 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
                 <TableCell>{endCell(version.standard_support_end)}</TableCell>
                 <TableCell>{endCell(version.extended_support_end)}</TableCell>
                 <TableCell>
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
-                    <StatusDot color={supportStateColor(status, theme)} />
-                    {statusLabel(status, t)}
-                  </Box>
+                  {status && (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
+                      <StatusDot color={supportStateColor(status, theme)} />
+                      {statusLabel(status, t)}
+                    </Box>
+                  )}
                 </TableCell>
                 {showAlerts && (
                   <AlertsCell>

@@ -2,7 +2,6 @@
   "key": "sophos-firewall",
   "name": "Sophos Firewall (SFOS)",
   "editor": "Sophos",
-  "family": "security",
   "lifecycle_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
   "source_updated": "2026-09-24",
   "version_grain": "maintenance release as Sophos dates it (20.0 MR1); releases of one train that share the same EOL are grouped under the first one, the others in aliases",

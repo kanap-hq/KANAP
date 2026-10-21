@@ -2,7 +2,6 @@
   "key": "netscaler-adc",
   "name": "NetScaler ADC",
   "editor": "Cloud Software Group",
-  "family": "network",
   "lifecycle_url": "https://www.citrix.com/support/product-lifecycle/product-matrix.html",
   "source_updated": "2025-02-26",
   "version_grain": "firmware release as the vendor names it (14.1)",

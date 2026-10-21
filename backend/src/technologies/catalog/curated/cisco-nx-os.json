@@ -2,7 +2,6 @@
   "key": "cisco-nx-os",
   "name": "Cisco NX-OS",
   "editor": "Cisco",
-  "family": "network",
   "lifecycle_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
   "source_updated": "2026-10-09",
   "version_grain": "major release train (10.4(x)) for Nexus 3000/9000; older trains from the Nexus 9000 end-of-life notices; a notice covering several trains is one version, the others in aliases",

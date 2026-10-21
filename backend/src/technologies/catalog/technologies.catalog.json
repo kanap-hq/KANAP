@@ -10801,7 +10801,7 @@
       "key": "bind-9",
       "name": "BIND 9",
       "editor": "ISC",
-      "family": "network_security",
+      "family": "network",
       "mode": "installed",
       "cpe_products": [
         "a:isc:bind"

@@ -2,7 +2,6 @@
   "key": "synology-dsm",
   "name": "Synology DSM",
   "editor": "Synology",
-  "family": "storage",
   "lifecycle_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
   "source_updated": "2026-10-13",
   "version_grain": "minor version as Synology names it (DSM 7.2); each minor version is a separate product in the policy",

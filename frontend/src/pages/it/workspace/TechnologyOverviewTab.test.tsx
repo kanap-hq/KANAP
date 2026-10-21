@@ -139,6 +139,7 @@ describe('TechnologyOverviewTab', () => {
     });
     const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /9\.0\.x/ });
     expect(within(row).getAllByText('No end planned by the vendor')).toHaveLength(2);
+    expect(within(row).queryByText('Date unknown')).not.toBeInTheDocument();
     expect(within(row).queryByText('—')).not.toBeInTheDocument();
     expect(within(row).getByRole('link', { name: 'IBM' })).toHaveAttribute('href', 'https://www.ibm.com/support/pages/websphere-application-server90x');
   });

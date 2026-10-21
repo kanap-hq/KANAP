@@ -2,7 +2,6 @@
   "key": "dell-unity",
   "name": "Dell Unity OE",
   "editor": "Dell Technologies",
-  "family": "storage",
   "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
   "source_updated": "2026-10-16",
   "version_grain": "Unity OE release as the vendor names it (5.4.1)",

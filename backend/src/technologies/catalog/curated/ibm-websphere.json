@@ -2,7 +2,6 @@
   "key": "ibm-websphere",
   "name": "IBM WebSphere Application Server",
   "editor": "IBM",
-  "family": "application_server",
   "lifecycle_url": "https://www.ibm.com/support/pages/websphere-application-server-traditional-and-websphere-liberty-support-lifecycle-policy-and-end-ifix-eligibility",
   "source_updated": "2026-09-09",
   "version_grain": "version as IBM lifecycle pages name it (9.0.x, 8.5.x); fix packs (9.0.5.x) are not tracked",

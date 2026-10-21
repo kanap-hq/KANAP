@@ -69,6 +69,15 @@ async function seed(runner: QueryRunner, tag: string) {
   const tomcat = await technology(runner, tenantId, 2, 'Tomcat', 'application_server');
   const tomcat9 = await version(runner, tenantId, tomcat, '9');
   await installed(runner, tenantId, s2, tomcat, tomcat9);
+  // A catalog key of a dated product, with the tenant dates still empty, stays a missing date.
+  const tomcat10 = await version(runner, tenantId, tomcat, '10');
+  await runner.query(`UPDATE technology_versions SET catalog_key = 'postgresql:19' WHERE id = $1`, [tomcat10]);
+  await installed(runner, tenantId, s2, tomcat, tomcat10);
+  // WebSphere 9.0.x is shipped with no planned end: in use, and not a missing date.
+  const websphere = await technology(runner, tenantId, 10, 'WebSphere', 'application_server');
+  const was9 = await version(runner, tenantId, websphere, '9.0.x');
+  await runner.query(`UPDATE technology_versions SET catalog_key = 'ibm-websphere:9.0.x' WHERE id = $1`, [was9]);
+  await installed(runner, tenantId, s2, websphere, was9);
   const unused = await technology(runner, tenantId, 3, 'Unused', 'other');
   // An installed technology entered without any version: its link without version is a gap.
   const free = await technology(runner, tenantId, 5, 'Free', 'other');
@@ -130,7 +139,7 @@ async function seed(runner: QueryRunner, tag: string) {
   return {
     tenantId, today, soon, lastMonth, later, far,
     assets: { s1, s2, s3, s4, s5, dbEmpty, dbDisabled, vmOrphan, vmHosted, retired, vmEol, vmOnOs, vmOnHw },
-    tech: { sql, tomcat, unused, entra, free, colo, cloud, untyped, oldOs },
+    tech: { sql, tomcat, unused, entra, free, colo, cloud, untyped, oldOs, websphere },
     versions: { sql2016, sql2019, sql2022, tomcat9, oldOs: oldOsVersion },
     apps: { erp, portal, osVmApp, hwVmApp, crm, saas, dbApp, ssoBare, ssoOk },
   };
@@ -266,7 +275,12 @@ async function testGaps() {
       `link_without_version|${g.tech.sql}|${g.assets.s5}`,
       `link_without_version|${g.tech.free}|${g.assets.s2}`,
       `version_without_end_date|${g.tech.tomcat}|9`,
+      `version_without_end_date|${g.tech.tomcat}|10`,
     ].sort());
+    assert.ok(!got.some((line) => line.startsWith(`version_without_end_date|${g.tech.websphere}|`)), 'a version with no planned end is not a missing date');
+    const gapsFile = await service().csv({ list: 'gaps', language: 'en' }, { manager: runner.manager, tenantId: g.tenantId }, ALL);
+    assert.equal(gapsFile.content.includes('WebSphere'), false);
+    assert.equal(gapsFile.content.includes('Tomcat'), true);
     const link = items.find((r) => r.gap === 'link_without_version' && r.subject_id === g.tech.sql)!;
     assert.equal(link.subject_type, 'technology');
     assert.equal(link.subject_reference, 'TEC-1');

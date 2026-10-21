@@ -2,7 +2,6 @@
   "key": "oracle-weblogic",
   "name": "Oracle WebLogic Server",
   "editor": "Oracle",
-  "family": "application_server",
   "lifecycle_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
   "source_updated": "2026-04-13",
   "version_grain": "release line as the Lifetime Support Policy names it (14.1.x, 12.2.x)",

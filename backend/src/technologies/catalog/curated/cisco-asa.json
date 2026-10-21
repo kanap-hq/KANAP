@@ -2,7 +2,6 @@
   "key": "cisco-asa",
   "name": "Cisco Secure Firewall ASA",
   "editor": "Cisco",
-  "family": "security",
   "lifecycle_url": "https://www.cisco.com/c/en/us/products/security/asa-firepower-services/eos-eol-notice-listing.html",
   "source_updated": null,
   "version_grain": "major release train as Cisco names it in its end-of-life notices (9.18(x)); one notice per train",
