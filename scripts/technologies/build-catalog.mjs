@@ -210,7 +210,7 @@ const PRODUCTS = [
   { key: 'docker-engine', slug: 'docker-engine', name: 'Docker Engine', editor: 'Docker', family: 'container', cpe: ['a:docker:docker', 'a:mobyproject:moby'] },
   { key: 'containerd', slug: 'containerd', name: 'containerd', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'podman', slug: 'podman', name: 'Podman', editor: 'Red Hat', family: 'container' },
-  { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform'] },
+  { key: 'red-hat-openshift', slug: 'red-hat-openshift', name: 'Red Hat OpenShift', editor: 'Red Hat', family: 'container', cpe: ['a:redhat:openshift_container_platform', 'o:redhat:openshift'] },
   { key: 'rancher', slug: 'rancher', name: 'Rancher', editor: 'SUSE', family: 'container', cpe: ['a:rancher:rancher'] },
   { key: 'harbor', slug: 'harbor', name: 'Harbor', editor: 'Cloud Native Computing Foundation', family: 'container' },
   { key: 'amazon-eks', slug: 'amazon-eks', name: 'Amazon EKS', editor: 'Amazon Web Services', family: 'container', mode: 'subscribed', hosting_type: 'public_cloud', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under an Amazon EKS product. a:amazon:eks and a:amazon:elastic_kubernetes_service do not exist, and CVE-2026-86831 (the EKS Network Policy Agent) has no CPE criterion.' },
@@ -253,14 +253,16 @@ const PRODUCTS = [
   { key: 'icinga', slug: 'icinga', name: 'Icinga', editor: 'Icinga', family: 'monitoring' },
   { key: 'splunk', slug: 'splunk', name: 'Splunk Enterprise', editor: 'Splunk', family: 'monitoring' },
   { key: 'graylog', slug: 'graylog', name: 'Graylog', editor: 'Graylog', family: 'monitoring' },
-  { key: 'veeam-one', slug: 'veeam-one', name: 'Veeam ONE', editor: 'Veeam', family: 'monitoring', cpe: ['a:veeam:one'] },
+  { key: 'veeam-one', slug: 'veeam-one', name: 'Veeam ONE', editor: 'Veeam', family: 'monitoring', cpe: ['a:veeam:one', 'h:veeam:one'] },
   // Runtimes and frameworks
   { key: 'dotnet', slug: 'dotnet', name: '.NET', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_core'] },
   { key: 'dotnetfx', slug: 'dotnetfx', name: '.NET Framework', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_framework'] },
-  { key: 'nodejs', slug: 'nodejs', name: 'Node.js', editor: 'OpenJS Foundation', family: 'runtime' },
+  { key: 'nodejs', slug: 'nodejs', name: 'Node.js', editor: 'OpenJS Foundation', family: 'runtime', cpe: ['a:joyent:node.js'] },
   { key: 'python', slug: 'python', name: 'Python', editor: 'Python Software Foundation', family: 'runtime' },
   { key: 'php', slug: 'php', name: 'PHP', editor: 'The PHP Group', family: 'runtime' },
-  { key: 'oracle-jdk', slug: 'oracle-jdk', name: 'Oracle JDK', editor: 'Oracle', family: 'runtime' },
+  // October 2026: older spellings the NVD still files CVE under (Sun JDK and JRE: 395 and 426 CVE;
+  // Joyent Node.js 2; OpenShift 2 as an operating system 8; Satellite 3; Veeam ONE as hardware 2).
+  { key: 'oracle-jdk', slug: 'oracle-jdk', name: 'Oracle JDK', editor: 'Oracle', family: 'runtime', cpe: ['a:sun:jdk', 'a:sun:jre'] },
   { key: 'eclipse-temurin', slug: 'eclipse-temurin', name: 'Eclipse Temurin', editor: 'Eclipse Foundation', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'amazon-corretto', slug: 'amazon-corretto', name: 'Amazon Corretto', editor: 'Amazon Web Services', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'microsoft-build-of-openjdk', slug: 'microsoft-build-of-openjdk', name: 'Microsoft Build of OpenJDK', editor: 'Microsoft', family: 'runtime', cpe: OPENJDK_CPE },
@@ -277,7 +279,7 @@ const PRODUCTS = [
   // Administration
   { key: 'ansible-automation-platform', slug: 'red-hat-ansible-automation-platform', name: 'Red Hat Ansible Automation Platform', editor: 'Red Hat', family: 'administration' },
   { key: 'puppet', slug: 'puppet', name: 'Puppet', editor: 'Perforce', family: 'administration', cpe: ['a:puppetlabs:puppet'] },
-  { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite'] },
+  { key: 'redhat-satellite', slug: 'redhat-satellite', name: 'Red Hat Satellite', editor: 'Red Hat', family: 'administration', cpe: ['a:redhat:satellite', 'o:redhat:satellite'] },
   { key: 'jenkins', slug: 'jenkins', name: 'Jenkins', editor: 'Jenkins', family: 'administration', cpe: ['a:cloudbees:jenkins'] },
 ];
 

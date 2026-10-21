@@ -198,7 +198,8 @@
       "family": "administration",
       "mode": "installed",
       "cpe_products": [
-        "a:redhat:satellite"
+        "a:redhat:satellite",
+        "o:redhat:satellite"
       ],
       "source_url": "https://endoflife.date/redhat-satellite",
       "versions": [
@@ -1522,7 +1523,8 @@
       "mode": "installed",
       "cpe_products": [
         "a:redhat:openshift",
-        "a:redhat:openshift_container_platform"
+        "a:redhat:openshift_container_platform",
+        "o:redhat:openshift"
       ],
       "source_url": "https://endoflife.date/red-hat-openshift",
       "versions": [
@@ -5103,7 +5105,8 @@
       "family": "monitoring",
       "mode": "installed",
       "cpe_products": [
-        "a:veeam:one"
+        "a:veeam:one",
+        "h:veeam:one"
       ],
       "source_url": "https://endoflife.date/veeam-one",
       "versions": [
@@ -7128,6 +7131,7 @@
       "family": "runtime",
       "mode": "installed",
       "cpe_products": [
+        "a:joyent:node.js",
         "a:nodejs:node.js"
       ],
       "source_url": "https://endoflife.date/nodejs",
@@ -7222,7 +7226,9 @@
       "cpe_products": [
         "a:oracle:java_se",
         "a:oracle:jdk",
-        "a:oracle:jre"
+        "a:oracle:jre",
+        "a:sun:jdk",
+        "a:sun:jre"
       ],
       "source_url": "https://endoflife.date/oracle-jdk",
       "versions": [
