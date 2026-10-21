@@ -27,7 +27,7 @@ import { InterfacesService } from '../../interfaces/services/interfaces.service'
 import { KnowledgeService } from '../../knowledge/knowledge.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
-import { TechnologyLinksService } from '../../technologies/technology-links.service';
+import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
 
 const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
@@ -87,6 +87,8 @@ export type RelationSuggestion = {
  * and/or hosted (carried by a server the application is deployed on, or by that server's host).
  * `versions` are the known versions of every row, `version_unknown` true when a row has none;
  * `standard_support_end` is the earliest end among those versions; `via` the servers of the hosted rows.
+ * `declarations` are the application's own links (one per version declared), whose version the
+ * screen changes through `PATCH /technologies/:id/application-links/:linkId`.
  */
 export type RelatedTechnology = {
   id: string;
@@ -99,6 +101,7 @@ export type RelatedTechnology = {
   version_unknown: boolean;
   standard_support_end: string | null;
   via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
+  declarations: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };
 export type RelatedProcess = { id: string; name: string; status: string | null; owner_name: string | null };
 export type ApplicationRelations = {
@@ -110,6 +113,8 @@ export type ApplicationRelations = {
   requests: RelatedRequest[] | null;
   tasks: RelatedTask[] | null;
   technologies: RelatedTechnology[] | null;
+  /** The servers the application is deployed on, offered to record a technology on; null with `technologies`. */
+  deployment_servers: DeploymentServer[] | null;
   processes: RelatedProcess[] | null;
   suggestions: RelationSuggestion[];
   also: { assets: number; interfaces: number; documents: number };
@@ -175,6 +180,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, app.id, ctx.scopes.task) : null;
     const linkOpts = { manager: mg, tenantId, userId: ctx.userId };
     const technologies = ctx.access.technologies ? await this.listTechnologies(mg, tenantId, app.id, linkOpts) : null;
+    const deploymentServers = ctx.access.technologies ? await this.technologyLinks.deploymentServersOfApplication(app.id, linkOpts) : null;
     const processes = ctx.access.processes
       ? ((await this.technologyLinks.processesOfApplication(app.id, linkOpts)).items as any[])
         .map((row): RelatedProcess => ({ id: row.id, name: row.name, status: row.status ?? null, owner_name: row.owner_name ?? null }))
@@ -191,6 +197,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       requests,
       tasks,
       technologies,
+      deployment_servers: deploymentServers,
       processes,
       suggestions,
       also,
@@ -204,8 +211,8 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
    * badge does not count these rows.
    */
   private async listTechnologies(mg: EntityManager, tenantId: string, appId: string, linkOpts: { manager: EntityManager; tenantId: string; userId: string | null }) {
-    const declared: Array<{ technology_id: string; name: string; item_number: number | null; family: string | null; version_label: string | null; standard_support_end: string | null }> = await mg.query(
-      `SELECT d.technology_id, t.name, t.item_number, t.family, v.label AS version_label,
+    const declared: Array<{ id: string; technology_id: string; technology_version_id: string | null; name: string; item_number: number | null; family: string | null; version_label: string | null; standard_support_end: string | null }> = await mg.query(
+      `SELECT d.id, d.technology_id, d.technology_version_id, t.name, t.item_number, t.family, v.label AS version_label,
               to_char(v.standard_support_end, 'YYYY-MM-DD') AS standard_support_end
          FROM application_technologies d
          JOIN technologies t ON t.id = d.technology_id AND t.tenant_id = d.tenant_id
@@ -218,7 +225,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
       ...declared.map((row): TechnologyMergeRow => ({
         technology_id: row.technology_id, technology_name: row.name, technology_reference: technologyReference(row.item_number), family: row.family,
         kind: 'declared', version_label: row.version_label, standard_support_end: row.standard_support_end,
-        asset_id: null, asset_name: null, via_asset_name: null,
+        asset_id: null, asset_name: null, via_asset_name: null, link_id: row.id, technology_version_id: row.technology_version_id,
       })),
       ...hosted,
     ]);
@@ -426,9 +433,20 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
    * Link (`add`) or unlink one object. The application's row is locked first (the lock the
    * replacements take), the stored set is read, and the owning service replaces it with that set
    * plus or minus `targetId`: same validation, same audit, and a link made meanwhile by someone
-   * else stays. Linking what is linked, or unlinking what is not, changes nothing.
+   * else stays. Linking what is linked, or unlinking what is not, changes nothing. A technology is
+   * declared with the version of `body` (`LinkInput`) and recorded on the deployment servers of
+   * `body.asset_ids` (`TechnologyLinksService.declareApplicationTechnology`); `servers` then says
+   * how many links were added and how many servers already had the technology. Recording on a
+   * server needs `infrastructure:member`, the right the declaration already asks.
    */
-  async setLink(kind: RelationKind, appId: string, targetId: string, add: boolean, ctx: RelationsContext): Promise<{ ok: true; changed: boolean }> {
+  async setLink(
+    kind: RelationKind,
+    appId: string,
+    targetId: string,
+    add: boolean,
+    ctx: RelationsContext,
+    body: LinkInput & { asset_ids?: unknown } = {},
+  ): Promise<{ ok: true; changed: boolean; servers?: { added: number; skipped: number } }> {
     if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
     if ((kind === 'technologies' || kind === 'processes') && !ctx.writes[kind]) throw new ForbiddenException('You cannot edit this module.');
     const id = String(targetId || '').trim().toLowerCase();
@@ -441,8 +459,10 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
     // The technology layer writes its own links, idempotent and audited (`TechnologyLinksService`).
     if (kind === 'technologies') {
-      const res = await this.technologyLinks.setApplicationTechnology(app.id, id, add, {}, { manager: mg, tenantId, userId });
-      return { ok: true, changed: res.changed };
+      const linkOpts = { manager: mg, tenantId, userId };
+      if (!add) return { ok: true, changed: (await this.technologyLinks.setApplicationTechnology(app.id, id, false, {}, linkOpts)).changed };
+      const res = await this.technologyLinks.declareApplicationTechnology(app.id, id, body ?? {}, linkOpts);
+      return res.servers ? { ok: true, changed: res.changed, servers: res.servers } : { ok: true, changed: res.changed };
     }
     if (kind === 'processes') {
       const res = await this.technologyLinks.setProcessApplication(id, app.id, add, { manager: mg, tenantId, userId }, { scope: ctx.scopes.application });
@@ -591,7 +611,8 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
 type ReachingRow = Awaited<ReturnType<TechnologyLinksService['technologiesOfApplication']>>['items'][number];
 type TechnologyMergeRow = Pick<ReachingRow,
-  'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'standard_support_end' | 'asset_id' | 'asset_name' | 'via_asset_name'>;
+  'technology_id' | 'technology_name' | 'technology_reference' | 'family' | 'kind' | 'version_label' | 'standard_support_end' | 'asset_id' | 'asset_name' | 'via_asset_name'>
+  & { link_id?: string | null; technology_version_id?: string | null };
 
 /**
  * One row per technology from the rows of `technologiesOfApplication` (one per declaration, and
@@ -605,13 +626,15 @@ export function mergeTechnologies(rows: TechnologyMergeRow[]): RelatedTechnology
     if (!tech) {
       tech = {
         id: row.technology_id, reference: row.technology_reference ?? null, name: row.technology_name, family: row.family,
-        declared: false, hosted: false, versions: [], version_unknown: false, standard_support_end: null, via: [],
+        declared: false, hosted: false, versions: [], version_unknown: false, standard_support_end: null, via: [], declarations: [],
         versionSet: new Set(), viaSet: new Set(),
       };
       byId.set(row.technology_id, tech);
     }
-    if (row.kind === 'declared') tech.declared = true;
-    else tech.hosted = true;
+    if (row.kind === 'declared') {
+      tech.declared = true;
+      if (row.link_id) tech.declarations.push({ link_id: row.link_id, technology_version_id: row.technology_version_id ?? null, version_label: row.version_label });
+    } else tech.hosted = true;
     if (row.version_label) tech.versionSet.add(row.version_label);
     else tech.version_unknown = true;
     const end = row.standard_support_end;
@@ -627,6 +650,7 @@ export function mergeTechnologies(rows: TechnologyMergeRow[]): RelatedTechnology
       ...tech,
       versions: [...versionSet].sort((a, b) => a.localeCompare(b, 'en', { numeric: true })),
       via: tech.via.sort((a, b) => byName(a.asset_name, b.asset_name)),
+      declarations: tech.declarations.sort((a, b) => String(a.version_label ?? '').localeCompare(String(b.version_label ?? ''), 'en', { numeric: true })),
     }))
     .sort((a, b) => byName(a.name, b.name) || a.id.localeCompare(b.id));
 }

@@ -11,7 +11,7 @@ import type { CatalogTranslations } from '../it-ops-settings/catalog-codes';
 import { catalogFromMetadata } from '../it-ops-settings/classification-catalog';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { operatingSystemLabelSql } from './operating-system-codes';
-import { assetInServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
+import { assetInServiceSql, inServiceSql, TechnologyReachService, type ReachedAsset, type ReachingTechnology } from './technology-reach.service';
 import { readTechnology, technologyReference, UUID_RE, versionOfInput } from './technology-rows';
 
 export type LinkOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -36,6 +36,21 @@ export type LinkInput = {
 };
 
 type LinkSide = 'asset' | 'application';
+
+/**
+ * A server an application is deployed on (`app_asset_assignments` of its instances), in service, with
+ * the environments of those instances and the roles it holds there.
+ */
+export type DeploymentServer = {
+  asset_id: string;
+  name: string;
+  asset_reference: string | null;
+  environments: string[];
+  roles: string[];
+};
+
+/** At most this many servers in one declaration (the deployments of one application). */
+const SERVERS_MAX = 200;
 
 const NOTES_MAX = 2000;
 
@@ -419,6 +434,103 @@ export class TechnologyLinksService {
     const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
     const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), provenance, opts, write);
     return { ok: true, changed: res.changed, link_id: res.link_id };
+  }
+
+  /**
+   * Declare a technology for an application, from the application's side, and record it at the
+   * same version on some of its deployment servers (`asset_ids`, optional): the declaration as
+   * `setApplicationTechnology`, then one installed link per server, in the caller's transaction.
+   * Every server must be a deployment server of the application in service
+   * (`deploymentServersOfApplication`), else nothing is written (400). A server that already has
+   * the technology installed, at any version, keeps its links and counts as `skipped`: the server's
+   * page stays the place to change them. An operating system is not recorded this way (400): the
+   * server's page marks it. The new links are manual and audited like the asset side's.
+   */
+  async declareApplicationTechnology(
+    applicationId: string,
+    technologyIdOrRef: string,
+    body: LinkInput & { asset_ids?: unknown },
+    opts: LinkOpts,
+  ): Promise<{ ok: true; changed: boolean; link_id: string | null; servers?: { added: number; skipped: number } }> {
+    const { manager: mg, tenantId } = opts;
+    const appId = await this.readApplicationId(mg, tenantId, applicationId);
+    const tech = await readTechnology(mg, tenantId, technologyIdOrRef, true);
+    const serverIds = await this.deploymentServerIdsOf(mg, tenantId, appId, body?.asset_ids);
+    if (serverIds.length > 0 && tech.family === 'operating_system') {
+      throw new BadRequestException("An operating system is recorded from the server's page.");
+    }
+    const versionId = await versionOfInput(mg, tenantId, tech.id, body ?? {});
+    const res = await this.upsertLink('application', tech.id, appId, versionId, notesOf(body?.notes), MANUAL_PROVENANCE, opts);
+    if (serverIds.length === 0) return { ok: true, changed: res.changed, link_id: res.link_id };
+    const servers = await this.installOnServers(tech.id, versionId, serverIds, opts);
+    return { ok: true, changed: res.changed || servers.added > 0, link_id: res.link_id, servers };
+  }
+
+  /** The deployment servers of an application, in service, by name (`DeploymentServer`). */
+  async deploymentServersOfApplication(applicationId: string, opts: LinkOpts): Promise<DeploymentServer[]> {
+    const { manager: mg, tenantId } = opts;
+    const appId = await this.readApplicationId(mg, tenantId, applicationId);
+    return this.deploymentServers(mg, tenantId, appId);
+  }
+
+  private deploymentServers(mg: EntityManager, tenantId: string, appId: string, only?: string[]): Promise<DeploymentServer[]> {
+    // The hostings the reach counts: an instance and its application in service, a server in service.
+    return mg.query(
+      `SELECT a.id AS asset_id, a.name, a.asset_reference,
+              COALESCE(array_agg(DISTINCT i.environment) FILTER (WHERE i.environment IS NOT NULL), '{}') AS environments,
+              COALESCE(array_agg(DISTINCT x.role) FILTER (WHERE x.role IS NOT NULL), '{}') AS roles
+         FROM app_instances i
+         JOIN applications ap ON ap.tenant_id = $1 AND ap.id = i.application_id AND ${inServiceSql('ap', 'i')}
+         JOIN app_asset_assignments x ON x.tenant_id = $1 AND x.app_instance_id = i.id
+         JOIN assets a ON a.tenant_id = $1 AND a.id = x.asset_id AND ${assetInServiceSql('a')}
+        WHERE i.tenant_id = $1 AND i.application_id = $2${only ? ' AND x.asset_id = ANY($3::uuid[])' : ''}
+        GROUP BY a.id, a.name, a.asset_reference
+        ORDER BY lower(a.name), a.id`,
+      only ? [tenantId, appId, only] : [tenantId, appId],
+    );
+  }
+
+  /** The servers asked (`raw`), checked in one query: each one a deployment server of the application. */
+  private async deploymentServerIdsOf(mg: EntityManager, tenantId: string, appId: string, raw: unknown): Promise<string[]> {
+    if (raw === undefined || raw === null) return [];
+    if (!Array.isArray(raw)) throw new BadRequestException('asset_ids must be a list.');
+    const ids = Array.from(new Set(raw.map((id) => uuidOrThrow(id, 'One or more servers are not deployment servers of this application.'))));
+    if (ids.length === 0) return [];
+    if (ids.length > SERVERS_MAX) throw new BadRequestException(`At most ${SERVERS_MAX} servers at once.`);
+    const found = await this.deploymentServers(mg, tenantId, appId, ids);
+    if (found.length !== ids.length) throw new BadRequestException('One or more servers are not deployment servers of this application.');
+    return ids.sort();
+  }
+
+  /**
+   * Install the technology at `versionId` on the servers that do not have it yet, in one statement;
+   * the others are left as they are. One audit row per new link, as `upsertLink` writes it.
+   */
+  private async installOnServers(technologyId: string, versionId: string | null, assetIds: string[], opts: LinkOpts) {
+    const { manager: mg, tenantId } = opts;
+    const added: Array<{ id: string; asset_id: string; source: string; source_ref: string | null }> = await mg.query(
+      `WITH ins AS (
+         INSERT INTO asset_technologies (tenant_id, asset_id, technology_id, technology_version_id, notes, source, source_ref, observed_at)
+         SELECT $1, s.asset_id, $2, $3, NULL, $5, $6, $7
+           FROM unnest($4::uuid[]) AS s(asset_id)
+          WHERE NOT EXISTS (
+            SELECT 1 FROM asset_technologies at WHERE at.tenant_id = $1 AND at.asset_id = s.asset_id AND at.technology_id = $2
+          )
+         ON CONFLICT ON CONSTRAINT asset_technologies_key DO NOTHING
+         RETURNING id, asset_id, source, source_ref
+       )
+       SELECT id::text AS id, asset_id::text AS asset_id, source, source_ref FROM ins ORDER BY asset_id`,
+      [tenantId, technologyId, versionId, assetIds, ...provenanceParams(MANUAL_PROVENANCE)],
+    );
+    for (const row of added) {
+      await this.audit.log({
+        table: 'asset_technologies', recordId: technologyId, action: 'create', before: null,
+        after: { id: row.id, asset_id: row.asset_id, technology_version_id: versionId, notes: null, source: row.source, source_ref: row.source_ref },
+        userId: opts.userId ?? null,
+      }, { manager: mg });
+    }
+    if (added.length > 0) await this.linksChanged(mg, tenantId, technologyId);
+    return { added: added.length, skipped: assetIds.length - added.length };
   }
 
   // ==================== BUSINESS PROCESSES ====================

@@ -18,8 +18,18 @@ export type AuditEntry = { table: string; recordId?: string | null; before?: unk
 
 export type TaskReplaceCall = { applicationId: string; taskIds: string[]; scoped: boolean };
 
-export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskReplaceCall[] } = {}) {
-  const audit = { log: async (entry: AuditEntry) => void opts.audit?.push(entry) };
+/**
+ * `cpeEvents` collects the technologies whose links changed (`TechnologyCpeEvents`); `failAuditOn`
+ * makes the audit of that table throw, to stop a write half-way.
+ */
+export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskReplaceCall[]; cpeEvents?: string[]; failAuditOn?: string } = {}) {
+  const audit = {
+    log: async (entry: AuditEntry) => {
+      if (opts.failAuditOn && entry.table === opts.failAuditOn) throw new Error(`audit of ${entry.table} failed`);
+      opts.audit?.push(entry);
+    },
+  };
+  const cpeEvents = { emit: async (event: { technologyId: string }) => void opts.cpeEvents?.push(event.technologyId) };
   const instances = new ApplicationsInstancesService(undefined as any, undefined as any, audit as any);
   // Identity rates: the amounts stay in EUR, the reporting currency of a tenant without settings.
   const fxRates = {
@@ -40,7 +50,7 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
     undefined as any, undefined as any, undefined as any, undefined as any,
   );
   // The technology layer is the real service (lot T2a): its reach, idempotence and audit are under test.
-  const technologyLinks = new TechnologyLinksService(audit as any, new TechnologyReachService(), { getSettings: async () => ({}) } as any);
+  const technologyLinks = new TechnologyLinksService(audit as any, new TechnologyReachService(), { getSettings: async () => ({}) } as any, cpeEvents as any);
   return new ApplicationsRelationsService(
     undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks,
   );
