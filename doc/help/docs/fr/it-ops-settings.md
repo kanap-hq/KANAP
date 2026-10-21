@@ -134,6 +134,8 @@ Le genre de chaque technologie : base de données, hyperviseur, annuaire et iden
 
 La famille **Système d'exploitation** désigne les systèmes d'exploitation : une technologie de cette famille ajoutée à un serveur qui n'en a pas devient son système d'exploitation. Voir [Technologies](technologies.md#systemes-dexploitation).
 
+La liste par défaut a une famille **Réseau** pour les commutateurs, routeurs et répartiteurs de charge, et une famille **Sécurité** pour les pare-feu et passerelles VPN. **Sécurité** s'appelait auparavant **Réseau et sécurité**. Une liste que vous avez déjà modifiée garde ses familles et leurs noms. Un produit réseau adopté depuis le catalogue va alors dans l'ancienne famille **Réseau et sécurité**.
+
 ### Types de connexion
 
 Catalogue à deux niveaux (catégorie et entrée) des protocoles de connexion, avec les ports courants.

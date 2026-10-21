@@ -52,7 +52,7 @@ Para un producto que el catálogo no conoce, haga clic en **Introducir una tecno
 
 El sistema operativo de un servidor es una tecnología de la familia **Sistema operativo**. Añádala al servidor como cualquier otra tecnología, con su versión: si el servidor aún no tiene ninguno, pasa a ser su sistema operativo. La ficha del servidor la muestra primero en su sección **Tecnologías**, con la mención «Sistema operativo». Consulte [Activos](assets.md#sistema-operativo).
 
-El catálogo ofrece Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux y CentOS. Incluye las versiones cuyo soporte terminó en 2010 o después y, para Windows Server, solo las versiones de soporte largo.
+El catálogo ofrece Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux, Amazon Linux, Alpine Linux, CentOS, IBM AIX, IBM i y Oracle Solaris. Incluye las versiones cuyo soporte terminó en 2010 o después y, para Windows Server, solo las versiones de soporte largo.
 
 El significado de las dos fechas de soporte depende del editor:
 
@@ -64,7 +64,9 @@ El significado de las dos fechas de soporte depende del editor:
 
 Cualquier tecnología puede ser un sistema operativo: ponga VMware ESXi o FortiOS en la familia **Sistema operativo** y podrá ser el sistema operativo de un host o de un cortafuegos.
 
-Los sistemas operativos del catálogo tienen identificadores CPE de producto, y KANAP los cruza con las vulnerabilidades publicadas. SUSE Linux Enterprise Server no tiene: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable. Los sistemas operativos quedan excluidos de las alertas por defecto. El ajuste está en el espacio de trabajo de la tecnología, en la columna Alertas de vulnerabilidad de la tabla de versiones.
+Los sistemas operativos del catálogo tienen identificadores CPE de producto, y KANAP los cruza con las vulnerabilidades publicadas.
+
+Las distribuciones Linux publican sus vulnerabilidades por paquete. KANAP sigue el soporte de cada versión y cruza las vulnerabilidades que el editor asigna a la versión. No sabe qué paquetes tiene instalados un servidor, ni en qué nivel. Para las distribuciones Linux del catálogo, la tabla de versiones lleva al seguimiento de seguridad del distribuidor, donde puede comprobar cada paquete. Consulte [Versiones del catálogo](#versiones-del-catalogo).
 
 Los sistemas operativos quedan excluidos de las alertas de vulnerabilidad por defecto. KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades, la mayoría ya corregidas. Esto se aplica a una tecnología de la familia **Sistema operativo** y a un sistema operativo adoptado desde el catálogo, sea cual sea su familia. Una tecnología existente que usted adopta desde el catálogo como sistema operativo queda excluida también. Puede volver a incluirla: consulte [Alertas de vulnerabilidad](#alertas-de-vulnerabilidad).
 
@@ -169,9 +171,13 @@ Cambiar más tarde la familia o el tipo de alojamiento de una tecnología deja s
 
 Una versión que procede del catálogo muestra **Catálogo** junto a su etiqueta, y una tecnología adoptada desde el catálogo indica «Versiones y fechas mantenidas al día desde el catálogo» bajo sus versiones. KANAP consulta el catálogo cada día en la nube. En una instalación local, cada versión de KANAP trae su catálogo al arrancar, salvo que su administrador [active la comprobación diaria](on-premise/configuration.md#optional-technology-catalog).
 
-Cuando KANAP mantiene las fechas, la versión indica su fuente bajo la etiqueta: el editor, como enlace a la página donde se leyeron las fechas, y el día de la comprobación. La línea permanece mientras sus fechas coinciden con las del catálogo. Una versión sin fin previsto por el editor muestra «Ningún fin previsto por el editor» en lugar de las fechas vacías.
+Las fechas proceden de dos fuentes. La mayoría de los productos las toman de endoflife.date. Para los productos que endoflife.date no cubre, como Cisco NX-OS, Juniper Junos o Dell PowerStore, KANAP toma las fechas de las páginas oficiales del editor. Cada versión de KANAP pone al día estas fechas.
 
-Una distribución Linux añade una línea bajo la tabla. El distribuidor publica las vulnerabilidades por paquete. KANAP sigue el soporte de cada versión, y la línea lleva a su seguimiento, donde se lee la exposición de cada paquete.
+Una versión cuyas fechas tomó KANAP muestra su fuente bajo su etiqueta: «Fuente:», el editor y el día en que se verificaron las fechas. El nombre del editor lleva a la página de la que proceden las fechas. La línea permanece mientras las dos fechas de fin coincidan con el catálogo. Desaparece en cuanto usted cambia una de ellas. Cuando el editor no prevé ningún fin de soporte, como en IBM WebSphere 8.5 y 9.0, las dos columnas de fin de soporte indican «Ningún fin previsto por el editor».
+
+Algunos productos no tienen fechas públicas: HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect y PRTG Network Monitor. El catálogo los trae sin versiones. Registre usted mismo sus versiones y sus fechas.
+
+Una distribución Linux del catálogo muestra una línea bajo la tabla: «Este distribuidor publica las vulnerabilidades por paquete». La línea lleva al seguimiento de seguridad del distribuidor, por ejemplo el seguimiento de seguridad de Debian o las actualizaciones de seguridad de Red Hat. Allí verá qué paquetes afecta una vulnerabilidad y qué actualizaciones la corrigen. Consulte [Sistemas operativos](#sistemas-operativos).
 
 La comprobación añade las nuevas versiones, identificadores de producto CPE y nombres CVE.org del producto, y actualiza las fechas de fin de soporte, los identificadores y los nombres que el catálogo cambió. Nunca sobrescribe un valor que usted cambió, y nunca vuelve a crear una versión, un identificador o un nombre que usted eliminó. Una versión que registró antes de que el catálogo la conociera se vincula a él cuando las etiquetas coinciden, y se rellenan sus fechas vacías.
 
@@ -184,7 +190,7 @@ El grupo **Identificadores de vulnerabilidad**, bajo las versiones, reúne los i
 
 El cotejo se hace a nivel de la tecnología. Cada versión de la tecnología se compara con las vulnerabilidades de sus identificadores, y una versión que usted añade se coteja de inmediato. Sin identificador, KANAP no busca ninguna vulnerabilidad para ninguna versión.
 
-**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos. SUSE Linux Enterprise Server llega sin identificador: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable.
+**Identificadores de producto CPE**: los nombres que las bases de datos de seguridad dan a este producto, con la forma `part:vendor:product` (por ejemplo `a:microsoft:sql_server`). KANAP los coteja con las vulnerabilidades publicadas. Un producto puede tener varios (vSphere abarca vCenter y ESXi). Dónde encontrar este valor: busque el producto en el [Diccionario CPE del NIST](https://nvd.nist.gov/products/cpe/search) y conserve su parte, su proveedor y su producto. Cópielos como los escribe la NVD, con la barra invertida delante de un signo: `a:veeam:veeam_backup_\&_replication`. La mayoría de las entradas del catálogo llegan con sus identificadores, incluidos los sistemas operativos.
 
 **Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus propias fichas de vulnerabilidad, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. KANAP los coteja con la lista CVE.org, que también contiene vulnerabilidades que la NVD no ha analizado (consulte [Vulnerabilidades](vulnerabilities.md#como-las-encuentra-kanap)). Los nombres están bajo los identificadores de producto CPE y aparecen cuando KANAP lee la lista CVE.org. Cada nombre aparece por separado.
 

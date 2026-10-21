@@ -52,7 +52,7 @@ Für ein Produkt, das der Katalog nicht kennt, klicken Sie auf **Eine Technologi
 
 Das Betriebssystem eines Servers ist eine Technologie der Familie **Betriebssystem**. Fügen Sie sie dem Server wie jede andere Technologie hinzu, mit ihrer Version: Hat der Server noch keines, wird sie zu seinem Betriebssystem. Die Serverseite zeigt sie an erster Stelle ihres Abschnitts **Technologien**, mit dem Vermerk „Betriebssystem“. Siehe [Assets](assets.md#betriebssystem).
 
-Der Katalog bietet Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux und CentOS. Er führt die Versionen, deren Support 2010 oder später endete, und für Windows Server nur die Versionen mit langem Support.
+Der Katalog bietet Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux, Amazon Linux, Alpine Linux, CentOS, IBM AIX, IBM i und Oracle Solaris. Er führt die Versionen, deren Support 2010 oder später endete, und für Windows Server nur die Versionen mit langem Support.
 
 Was die beiden Supportdaten bedeuten, hängt vom Hersteller ab:
 
@@ -64,7 +64,9 @@ Was die beiden Supportdaten bedeuten, hängt vom Hersteller ab:
 
 Jede Technologie kann ein Betriebssystem sein: Ordnen Sie VMware ESXi oder FortiOS der Familie **Betriebssystem** zu, dann kann sie das Betriebssystem eines Hosts oder einer Firewall sein.
 
-Die Betriebssysteme des Katalogs haben CPE-Produktkennungen, und KANAP gleicht sie mit veröffentlichten Schwachstellen ab. SUSE Linux Enterprise Server hat keine: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich. Betriebssysteme sind standardmäßig von Warnungen ausgeschlossen. Die Einstellung liegt im Technologie-Arbeitsbereich, in der Spalte Warnungen zu Schwachstellen der Versionstabelle.
+Die Betriebssysteme des Katalogs haben CPE-Produktkennungen, und KANAP gleicht sie mit veröffentlichten Schwachstellen ab.
+
+Linux-Distributionen veröffentlichen ihre Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version und gleicht die Schwachstellen ab, die der Hersteller der Version zuordnet. KANAP weiß nicht, welche Pakete ein Server installiert hat und auf welchem Stand. Für die Linux-Distributionen des Katalogs führt die Versionstabelle zum Sicherheitstracker des Anbieters, in dem Sie jedes Paket prüfen können. Siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog).
 
 Betriebssysteme sind standardmäßig von den Warnungen zu Schwachstellen ausgeschlossen. KANAP kennt den Patchstand eines Servers nicht, daher würde ein Betriebssystem sehr viele Schwachstellen melden, die meisten davon bereits gepatcht. Das gilt für eine Technologie der Familie **Betriebssystem** und für ein aus dem Katalog übernommenes Betriebssystem, unabhängig von seiner Familie. Eine bestehende Technologie, die Sie als Betriebssystem aus dem Katalog übernehmen, wird ebenfalls ausgeschlossen. Sie können sie wieder einschließen: siehe [Warnungen zu Schwachstellen](#warnungen-zu-schwachstellen).
 
@@ -169,9 +171,13 @@ Eine spätere Änderung der Familie oder des Hosting-Typs lässt die Einstellung
 
 Eine Version aus dem Katalog zeigt **Katalog** neben ihrer Bezeichnung, und eine aus dem Katalog übernommene Technologie zeigt unter ihren Versionen „Versionen und Daten werden aus dem Katalog aktuell gehalten“. In der Cloud prüft KANAP den Katalog täglich. Bei einer On-Premise-Installation bringt jede KANAP-Version ihren Katalog beim Start mit, sofern Ihr Administrator nicht [die tägliche Prüfung einschaltet](on-premise/configuration.md#optional-technology-catalog).
 
-Wenn KANAP die Daten pflegt, nennt die Version ihre Quelle unter der Bezeichnung: den Hersteller als Link zur Seite, auf der die Daten gelesen wurden, und den Tag der Prüfung. Die Zeile bleibt, solange Ihre Daten denen des Katalogs entsprechen. Eine Version ohne vom Hersteller geplantes Ende zeigt „Kein Ende vom Hersteller geplant“ anstelle der leeren Daten.
+Die Daten stammen aus zwei Quellen. Die meisten Produkte beziehen sie von endoflife.date. Für die Produkte, die endoflife.date nicht abdeckt, etwa Cisco NX-OS, Juniper Junos oder Dell PowerStore, erhebt KANAP die Daten auf den offiziellen Seiten des Herstellers. Jede KANAP-Version bringt diese Daten auf den neuesten Stand.
 
-Eine Linux-Distribution ergänzt eine Zeile unter der Tabelle. Der Anbieter veröffentlicht Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version, und die Zeile führt zu seinem Tracker, in dem die Betroffenheit der Pakete steht.
+Eine Version, deren Daten KANAP erhoben hat, zeigt ihre Quelle unter ihrer Bezeichnung: „Quelle:“, den Hersteller und den Tag, an dem die Daten geprüft wurden. Der Name des Herstellers führt zur Seite, aus der die Daten stammen. Die Zeile bleibt, solange beide Enddaten dem Katalog entsprechen. Sie verschwindet, sobald Sie eines davon ändern. Wenn der Hersteller kein Supportende plant, wie bei IBM WebSphere 8.5 und 9.0, zeigen beide Supportende-Spalten „Kein Ende vom Hersteller geplant“.
+
+Einige Produkte haben keine öffentlichen Daten: HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect und PRTG Network Monitor. Der Katalog bringt sie ohne Versionen. Erfassen Sie Ihre Versionen und deren Daten selbst.
+
+Eine Linux-Distribution aus dem Katalog zeigt eine Zeile unter der Tabelle: „Dieser Anbieter veröffentlicht Schwachstellen pro Paket“. Die Zeile führt zum Sicherheitstracker des Anbieters, zum Beispiel zum Debian-Sicherheitstracker oder zu den Red Hat Sicherheitsupdates. Dort sehen Sie, welche Pakete eine Schwachstelle betrifft und welche Updates sie beheben. Siehe [Betriebssysteme](#betriebssysteme).
 
 Die Prüfung fügt die neuen Versionen, CPE-Produktkennungen und CVE.org-Namen des Produkts hinzu und aktualisiert die Supportende-Daten, Kennungen und Namen, die der Katalog geändert hat. Sie überschreibt nie einen Wert, den Sie geändert haben, und stellt nie eine Version, Kennung oder einen Namen wieder her, die Sie gelöscht haben. Eine Version, die Sie erfasst haben, bevor der Katalog sie kannte, wird ihm bei gleicher Bezeichnung zugeordnet, und ihre leeren Daten werden ergänzt.
 
@@ -184,7 +190,7 @@ Die Gruppe **Schwachstellenkennungen** unter den Versionen fasst die CPE-Produkt
 
 Der Abgleich erfolgt auf Ebene der Technologie. Jede Version der Technologie wird mit den Schwachstellen ihrer Kennungen verglichen, und eine Version, die Sie hinzufügen, wird sofort abgeglichen. Ohne Kennung sucht KANAP für keine Version nach Schwachstellen.
 
-**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen. SUSE Linux Enterprise Server kommt ohne Kennung: die NVD veröffentlicht zu wenige seiner Schwachstellen für einen verlässlichen Abgleich.
+**CPE-Produktkennungen**: die Namen, die Sicherheitsdatenbanken diesem Produkt geben, in der Form `part:vendor:product` (zum Beispiel `a:microsoft:sql_server`). KANAP gleicht sie mit den veröffentlichten Schwachstellen ab. Ein Produkt kann mehrere haben (vSphere umfasst vCenter und ESXi). Wo Sie diesen Wert finden: Suchen Sie das Produkt im [CPE-Wörterbuch des NIST](https://nvd.nist.gov/products/cpe/search) und übernehmen Sie Teil, Hersteller und Produkt. Übernehmen Sie sie so, wie die NVD sie schreibt, mit dem Backslash vor einem Zeichen: `a:veeam:veeam_backup_\&_replication`. Die meisten Katalogeinträge bringen ihre Kennungen mit, die Betriebssysteme eingeschlossen.
 
 **CVE.org-Namen**: die Hersteller- und Produktnamen, so wie der Hersteller sie in seinen eigenen Schwachstelleneinträgen schreibt, zum Beispiel Hersteller `SAP_SE` und Produkt `SAP HANA Database`. KANAP gleicht sie mit der CVE.org-Liste ab, die auch Schwachstellen enthält, die die NVD nicht analysiert hat (siehe [Schwachstellen](vulnerabilities.md#wie-kanap-sie-findet)). Die Namen stehen unter den CPE-Produktkennungen und erscheinen, wenn KANAP die CVE.org-Liste liest. Jeder Name wird einzeln aufgeführt.
 

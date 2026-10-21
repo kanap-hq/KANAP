@@ -64,4 +64,4 @@ Las filas sobre aplicaciones requieren el derecho de leer las aplicaciones.
 
 - **Resuelva primero los datos que faltan**: un servidor sin sus tecnologías, o una versión sin fecha, nunca aparece en los vencimientos.
 - **Mire a 24 meses para los presupuestos**: una migración prevista para el año próximo necesita su dinero en el presupuesto de este año.
-- **Use el catálogo**: las tecnologías añadidas desde el catálogo llegan con sus fechas de fin de soporte.
+- **Use el catálogo**: las tecnologías añadidas desde el catálogo llegan con sus fechas de fin de soporte. Proceden de endoflife.date o, para los productos que mantiene KANAP, de las páginas oficiales del editor (consulte [Versiones del catálogo](technologies.md#versiones-del-catalogo)).

@@ -52,7 +52,7 @@ For a product the catalog does not know, click **Enter a technology missing from
 
 The operating system of a server is a technology of the **Operating system** family. Add it to the server like any other technology, with its version: when the server has none yet, it becomes the server's operating system. The server page shows it first in its **Technologies** section, marked "Operating system". See [Assets](assets.md#operating-system).
 
-The catalog offers Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux and CentOS. It lists the versions whose support ended in 2010 or later, and for Windows Server the long-term releases only.
+The catalog offers Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux, Amazon Linux, Alpine Linux, CentOS, IBM AIX, IBM i and Oracle Solaris. It lists the versions whose support ended in 2010 or later, and for Windows Server the long-term releases only.
 
 What the two support dates mean depends on the publisher:
 
@@ -64,7 +64,9 @@ What the two support dates mean depends on the publisher:
 
 Any technology can be an operating system: put VMware ESXi or FortiOS in the **Operating system** family and it can be the operating system of a host or a firewall.
 
-The catalog's operating systems come with CPE product identifiers, and KANAP matches them with published vulnerabilities. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Operating systems are excluded from alerts by default. The setting is on the technology workspace, in the Vulnerability alerts column of the versions table.
+The catalog's operating systems come with CPE product identifiers, and KANAP matches them with published vulnerabilities.
+
+Linux distributions publish their vulnerabilities per package. KANAP tracks the support of each version and matches the vulnerabilities that the publisher assigns to the version. It does not know which packages a server has installed, or at which level. For the Linux distributions of the catalog, the versions table links to the distributor's security tracker, where you can check each package. See [Versions from the catalog](#versions-from-the-catalog).
 
 Operating systems are excluded from vulnerability alerts by default. KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities, most of them already patched. This applies to a technology of the **Operating system** family and to an operating system adopted from the catalog, whatever its family. An existing technology that you adopt from the catalog as an operating system becomes excluded too. You can include it again: see [Vulnerability alerts](#vulnerability-alerts).
 
@@ -169,9 +171,13 @@ Changing the family or the hosting type of a technology later leaves its setting
 
 A version that comes from the catalog shows **Catalog** next to its label, and a technology adopted from the catalog says "Versions and dates kept up to date from the catalog" under its versions. KANAP checks the catalog every day in the cloud. On an on-premise installation, each KANAP version brings its catalog at start, unless your administrator [turns on the daily check](on-premise/configuration.md#optional-technology-catalog).
 
-When KANAP maintains the dates, the version names their source under its label: the publisher, as a link to the page the dates were read from, and the day they were checked. The line stays while your dates match the catalog. A version with no end planned by the publisher shows "No end planned by the vendor" in place of the empty dates.
+The dates come from two sources. Most products take them from endoflife.date. For the products endoflife.date does not cover, such as Cisco NX-OS, Juniper Junos or Dell PowerStore, KANAP reads the dates on the publisher's official pages. Each KANAP version brings these dates up to date.
 
-A Linux distribution adds a line under the table. The distributor publishes vulnerabilities per package. KANAP tracks support for each version, and the line links to the distributor's tracker, where that package exposure is published.
+A version whose dates KANAP read shows their source under its label: "Source:", the publisher, and the day the dates were verified. The publisher's name links to the page the dates come from. The line stays while both end dates match the catalog. It goes away once you change one of them. When the publisher plans no end of support, as for IBM WebSphere 8.5 and 9.0, both end of support columns say "No end planned by the vendor".
+
+Some products have no public dates: HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect and PRTG Network Monitor. The catalog brings them without versions. Add your versions and their dates yourself.
+
+A Linux distribution from the catalog shows a line under the table: "This distributor publishes vulnerabilities per package". The line links to the distributor's security tracker, for example the Debian security tracker or Red Hat security updates. There you can see which packages a vulnerability affects and which updates fix it. See [Operating systems](#operating-systems).
 
 The check adds the new versions, CPE product identifiers and CVE.org names of the product, and updates the end of support dates, identifiers and names the catalog changed. It never overwrites a value you changed, and never brings back a version, an identifier or a name you deleted. A version you typed before the catalog knew it is attached to the catalog when the labels match, and its empty dates are filled.
 
@@ -184,7 +190,7 @@ The **Vulnerability identifiers** group, under the versions, holds the CPE produ
 
 The match is made at the level of the technology. Every version of the technology is compared with the vulnerabilities of its identifiers, and a version you add is matched at once. Without an identifier, KANAP looks up no vulnerability for any version.
 
-**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included. SUSE Linux Enterprise Server arrives without them: the NVD publishes too few of its vulnerabilities for a reliable match.
+**CPE product identifiers**: the names security databases use for this product, in the form `part:vendor:product` (for example `a:microsoft:sql_server`). KANAP matches them with the published vulnerabilities. A product can have several (vSphere covers vCenter and ESXi). Where to find this value: search the product in the [NIST CPE dictionary](https://nvd.nist.gov/products/cpe/search) and keep its part, vendor and product. Copy them as the NVD writes them, with the backslash before a sign: `a:veeam:veeam_backup_\&_replication`. Most catalog entries come with their identifiers, operating systems included.
 
 **CVE.org names**: the publisher and product names as the publisher writes them in its own vulnerability records, for example publisher `SAP_SE` and product `SAP HANA Database`. KANAP matches them with the CVE.org list, which also holds the vulnerabilities the NVD has not analysed (see [Vulnerabilities](vulnerabilities.md#how-kanap-finds-them)). The names sit under the CPE product identifiers and show when KANAP reads the CVE.org list. Each name is listed on its own.
 

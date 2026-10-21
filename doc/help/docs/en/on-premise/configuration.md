@@ -482,6 +482,7 @@ Technologies adopted from the catalog follow its new versions, end of support da
 Notes:
 
 - The API needs outbound HTTPS access to `endoflife.date`, or to your mirror (see [Firewall rules](#firewall-rules)).
+- The daily check reads endoflife.date only. The products whose dates KANAP reads on the publishers' pages are updated with each KANAP version.
 - Both modes go through the scheduled task **technology-catalog** (each day and at start). While that task is disabled in the scheduled tasks, nothing is brought up to date.
 - A value changed in KANAP, or a version deleted there, is never overwritten or brought back.
 - Restart the API after changing these values.

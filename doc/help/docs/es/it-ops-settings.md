@@ -134,6 +134,8 @@ El tipo de cada tecnología: base de datos, hipervisor, directorio e identidad, 
 
 La familia **Sistema operativo** identifica los sistemas operativos: una tecnología de esa familia añadida a un servidor que no tiene ninguno pasa a ser su sistema operativo. Consulte [Tecnologías](technologies.md#sistemas-operativos).
 
+La lista por defecto tiene una familia **Red** para conmutadores, routers y balanceadores de carga, y una familia **Seguridad** para cortafuegos y pasarelas VPN. **Seguridad** se llamaba antes **Red y seguridad**. Una lista que usted ya modificó conserva sus familias y sus nombres. Un producto de red adoptado desde el catálogo va entonces a la antigua familia **Red y seguridad**.
+
 ### Tipos de conexión
 
 Un catálogo de dos niveles (categoría y entrada) de protocolos de conexión, con los puertos típicos.
