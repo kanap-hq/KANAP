@@ -445,7 +445,7 @@ Each user opens it, confirms, then signs in to KANAP as described in [Connecting
 
 ## Optional: vulnerabilities { #optional-vulnerabilities }
 
-The [Vulnerabilities](../vulnerabilities.md) page, its email notifications and the vulnerability counts of the technologies are off by default on-premise. When on, KANAP reads two sources every 6 hours: the vulnerabilities published by the NVD (the US National Vulnerability Database), for the CPE products your technologies name, and the CVE.org list, where publishers write the records of their own products. The same switch reads the exploitation signals: the CISA catalog of known exploited vulnerabilities, ENISA's European vulnerability database (the European catalog and the EUVD identifiers) and the daily EPSS scores.
+The [Vulnerabilities](../vulnerabilities.md) page, its email notifications, the vulnerability counts of the technologies, assets and applications, the **Vulnerabilities** dashboard tile and Plaid's answers about vulnerabilities are off by default on-premise. When on, KANAP reads two sources every 6 hours: the vulnerabilities published by the NVD (the US National Vulnerability Database), for the CPE products your technologies name, and the CVE.org list, where publishers write the records of their own products. The same switch reads the exploitation signals: the CISA catalog of known exploited vulnerabilities, ENISA's European vulnerability database (the European catalog and the EUVD identifiers) and the daily EPSS scores.
 
 | Variable | Description | Default |
 |----------|-------------|---------|

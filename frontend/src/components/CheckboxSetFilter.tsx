@@ -14,6 +14,8 @@ export type CheckboxSetFilterGroup = {
 export type CheckboxSetFilterOption = {
   value: string | null;
   label?: string;
+  /** More text the search matches, never shown (a business reference next to a name shown alone). */
+  keywords?: string;
   /**
    * The groups the value sits under, root first. The list shows each group once as a heading row
    * above its values, indented by level; its box ticks or unticks every value listed below it, and a
@@ -213,7 +215,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const normalizeOptions = useCallback((incoming: CheckboxSetFilterOption[]) => {
     const map = new Map<string | null, CheckboxSetFilterOption>();
     for (const opt of incoming) {
-      const normalized = { value: opt.value ?? null, label: buildLabel(opt), groups: opt.groups };
+      const normalized = { value: opt.value ?? null, label: buildLabel(opt), keywords: opt.keywords, groups: opt.groups };
       if (!map.has(normalized.value)) map.set(normalized.value, normalized);
     }
     return Array.from(map.values());
@@ -258,7 +260,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
   const mergedOptions = useMemo(() => {
     const map = new Map<string | null, CheckboxSetFilterOption>();
     for (const opt of options) {
-      map.set(opt.value ?? null, { value: opt.value ?? null, label: buildLabel(opt), groups: opt.groups });
+      map.set(opt.value ?? null, { value: opt.value ?? null, label: buildLabel(opt), keywords: opt.keywords, groups: opt.groups });
     }
     for (const value of selectedValues) {
       if (!map.has(value)) {
@@ -324,9 +326,10 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
     excludeAllowedRef.current && (pendingRef.current ? pendingFromAllRef.current : fromAllRef.current)
   ), []);
 
-  // A value under a group matches a search on the group's name too.
+  // A value under a group matches a search on the group's name too, and on its keywords.
   const labelMatches = useCallback((option: CheckboxSetFilterOption, trimmed: string) => {
     if (buildLabel(option).toLowerCase().includes(trimmed)) return true;
+    if (option.keywords?.toLowerCase().includes(trimmed)) return true;
     return (option.groups ?? []).some((group) => group.label.toLowerCase().includes(trimmed));
   }, [buildLabel]);
 

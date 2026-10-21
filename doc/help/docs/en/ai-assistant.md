@@ -106,13 +106,15 @@ Plaid streams its answer character by character. While streaming:
 
 When the stream finishes, focus jumps back to the composer so you can keep the conversation moving without reaching for the mouse.
 
-### Tool calls
+### Tool calls { #tool-calls }
 
 Plaid uses a small set of internal tools to answer questions: `Search all`, `Search knowledge`, `Get document`, `Get entity context`, and a handful of others. Each tool call shows up as a compact line under the message ("used Search all · 8 results"). You usually do not need to read the tool details, but they are there if you want to see exactly which records the answer was based on.
 
 `Search all` finds budget lines by the names of their analytics values, and tells Plaid which values each line holds. Plaid names a budget line by its `BL-12` reference, and its links open the line.
 
 Plaid lists and reads technologies for users who can read the infrastructure. It can filter them by family, publisher, end of support or number of servers, and read a technology's versions, servers and applications. Asked about a server, an application or a technology by its name, without its reference, it also reads the related records. It cannot change a technology. Assistants connected over MCP get the same answers.
+
+When vulnerabilities are followed, Plaid also lists, counts and reads the vulnerabilities, for users who can read the infrastructure. One item is a CVE on one version of a technology, as on the [Vulnerabilities](vulnerabilities.md) page. Plaid can filter them by severity, exploitation, state, alerts, technology, publication date, asset or application, and count them by severity or technology. Unless you ask otherwise, Plaid keeps the vulnerabilities still to review that are in the alerts, as the page does. The servers and applications a vulnerability reaches follow direct links, as the page counts them (see [What KANAP counts](vulnerabilities.md#what-kanap-counts)). On assets and applications, Plaid reads how many vulnerabilities are still to review and how many are critical or high. Ask, for example: "Which critical applications are reached by an exploited CVE?" Plaid cannot change the state of a vulnerability. Assistants connected over MCP get the same answers.
 
 When Plaid adds up budget amounts, a line whose currency has no exchange rate for the year is left out of the sum. Plaid then says which currencies and years it left out. Assistants connected over MCP get the same answer.
 

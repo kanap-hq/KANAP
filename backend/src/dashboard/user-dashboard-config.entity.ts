@@ -25,10 +25,12 @@ export const DEFAULT_DASHBOARD_CONFIG: DashboardTileConfig[] = [
   { id: 'new-requests', enabled: true, order: 6, config: { limit: 5, days: 7 } },
   { id: 'knowledge-overview', enabled: true, order: 7, config: {} },
   { id: 'application-compliance', enabled: true, order: 8, config: {} },
-  { id: 'team-activity', enabled: false, order: 9, config: { limit: 5 } },
-  { id: 'global-status-changes', enabled: false, order: 10, config: { days: 5 } },
-  { id: 'stale-tasks', enabled: false, order: 11, config: { scope: 'my', thresholdDays: 90 } },
-  { id: 'netbox-sync', enabled: false, order: 12, config: {} },
+  // Shown to those who read the infrastructure, with the vulnerability feed on (frontend TILE_REGISTRY).
+  { id: 'vulnerabilities', enabled: true, order: 9, config: {} },
+  { id: 'team-activity', enabled: false, order: 10, config: { limit: 5 } },
+  { id: 'global-status-changes', enabled: false, order: 11, config: { days: 5 } },
+  { id: 'stale-tasks', enabled: false, order: 12, config: { scope: 'my', thresholdDays: 90 } },
+  { id: 'netbox-sync', enabled: false, order: 13, config: {} },
 ];
 
 export const BUDGET_AMOUNT_COLUMN_KEYS = ['budget', 'revision', 'forecast', 'follow_up', 'landing'] as const;

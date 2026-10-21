@@ -2,7 +2,6 @@ import useApplicationClassificationCatalog from '../../hooks/useApplicationClass
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { Alert, Autocomplete, Box, Button, Chip, MenuItem, Stack, Switch, TextField, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import HubOutlinedIcon from '@mui/icons-material/HubOutlined';
 import { useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
@@ -26,6 +25,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import type { ConnectionPathHop } from './workspace/ConnectionPathSection';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import { carryListFilters } from '../../lib/listContext';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type TabKey = 'overview' | 'path';
 const TAB_KEYS: TabKey[] = ['overview', 'path'];
@@ -786,15 +786,7 @@ export default function ConnectionWorkspacePage() {
         </>
       )}
       {!isCreate && canDelete && (
-        <Button
-          variant="action-danger"
-          startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-          size="small"
-          onClick={() => setDeleteDialogOpen(true)}
-          disabled={deleting}
-        >
-          {t('common:buttons.delete')}
-        </Button>
+        <DeleteIconButton onClick={() => setDeleteDialogOpen(true)} disabled={deleting} />
       )}
     </>
   );

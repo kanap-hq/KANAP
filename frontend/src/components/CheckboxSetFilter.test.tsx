@@ -82,6 +82,21 @@ describe('CheckboxSetFilter search applies to the grid', () => {
     expect(screen.getByRole('textbox')).toHaveValue('B2B');
   });
 
+  it('matches the keywords of a value without showing them', () => {
+    const values = [
+      { value: 'AST-7', label: 'PAR-DB-02', keywords: 'AST-7' },
+      { value: 'AST-12', label: 'PAR-ESX-01', keywords: 'AST-12' },
+    ];
+    const { applied } = renderFilter(undefined, { values });
+    expect(screen.queryByText('AST-12')).toBeNull();
+    typeSearch('ast-12');
+    advance();
+    expect(applied()?.values).toEqual(['AST-12']);
+    expect(screen.getByText('PAR-ESX-01')).toBeTruthy();
+    expect(screen.queryByText('PAR-DB-02')).toBeNull();
+    expect(screen.queryByText('AST-12')).toBeNull();
+  });
+
   it('widens again from the snapshot when the search is edited', () => {
     const { applied } = renderFilter();
     typeSearch('B2B');

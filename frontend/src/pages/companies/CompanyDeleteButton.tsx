@@ -1,6 +1,4 @@
 import React from 'react';
-import { Button } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
@@ -9,6 +7,7 @@ import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { recordRefusal } from '../../utils/deleteCheck';
 import { deleteFailureReason, type DeleteFailure } from '../../utils/deleteRefusal';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type Props = {
   companyId: string;
@@ -66,14 +65,6 @@ export default function CompanyDeleteButton({ companyId, companyName, onDeleted 
   };
 
   return (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => { void handleClick(); }}
-      disabled={busy}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => { void handleClick(); }} disabled={busy} />
   );
 }

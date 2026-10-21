@@ -8,6 +8,7 @@ import {
   CsvExportContext,
   CsvImportContext,
 } from '../common/csv';
+import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { assertMarkdownSize } from '../common/markdown-limits';
 import { sameStoredValues } from '../common/csv-sheet/unchanged';
 import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
@@ -516,6 +517,9 @@ export const applicationCsvConfig: CsvEntityConfig = {
       label: 'Updated At',
       group: 'Timestamps',
     },
+
+    // === VULNERABILITIES (export only, left out with the feed off) ===
+    ...vulnerabilityCsvFields('Vulnerabilities'),
   ],
 
   // Export presets

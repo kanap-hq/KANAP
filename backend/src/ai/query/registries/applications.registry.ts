@@ -2,6 +2,8 @@ import { classificationSqlExpressions } from '../../../it-ops-settings/classific
 import { linkedLineOf } from '../../../spend/budget-nature';
 const classificationSql = classificationSqlExpressions('a');
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { VULNERABILITIES_LIST_FIELD } from '../../../vulnerabilities/vulnerability-list-column';
+import { vulnerabilitiesField, vulnerabilityCountMetric } from '../ai-vulnerability-counts.util';
 
 export const applicationsRegistry: AiEntityFilterRegistry = {
   entityType: 'applications',
@@ -326,6 +328,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       groupable: false,
       aggregable: true,
     },
+    vulnerabilities: vulnerabilitiesField('application'),
     supplier: {
       ai: 'supplier',
       grid: 'supplier_name',
@@ -402,6 +405,7 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
     suites_count: 'suites_count',
     components_count: 'components_count',
     supplier: 'supplier_name',
+    vulnerabilities: VULNERABILITIES_LIST_FIELD,
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -474,6 +478,8 @@ export const applicationsRegistry: AiEntityFilterRegistry = {
       },
     },
     metricFields: {
+      open_vulnerabilities: vulnerabilityCountMetric('applications', 'open'),
+      severe_vulnerabilities: vulnerabilityCountMetric('applications', 'severe'),
       ...Object.fromEntries(['business_criticality_rank', 'cyber_criticality_rank', 'data_class_rank', 'recovery_wave_order'].map((field) => [field, { expression: classificationSql[field], type: 'number' as const }])),
       users_year: { expression: 'a.users_year', type: 'number' },
       users_override: { expression: 'a.users_override', type: 'number' },

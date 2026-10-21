@@ -106,13 +106,15 @@ Plaid streamt seine Antwort Zeichen für Zeichen. Während des Streamings:
 
 Wenn der Stream endet, springt der Fokus zurück zum Eingabefeld, sodass Sie die Konversation fortsetzen können, ohne zur Maus zu greifen.
 
-### Tool-Aufrufe
+### Tool-Aufrufe { #tool-calls }
 
 Plaid verwendet eine kleine Auswahl interner Tools, um Fragen zu beantworten: `Search all`, `Search knowledge`, `Get document`, `Get entity context` und einige weitere. Jeder Tool-Aufruf erscheint als kompakte Zeile unter der Nachricht („Alles durchsuchen verwendet · 8 Ergebnisse“). In der Regel müssen Sie die Tool-Details nicht lesen, aber sie sind vorhanden, falls Sie genau sehen möchten, auf welchen Datensätzen die Antwort beruht.
 
 `Search all` findet Budgetzeilen über die Namen ihrer Analysewerte und teilt Plaid mit, welche Werte jede Zeile hat. Plaid nennt eine Budgetzeile mit ihrer Referenz `BL-12`, und seine Links öffnen die Zeile.
 
 Plaid listet und liest Technologien für Benutzer, die die Infrastruktur lesen dürfen. Es kann sie nach Familie, Hersteller, Supportende oder Anzahl der Server filtern und die Versionen, Server und Anwendungen einer Technologie lesen. Wird es zu einem Server, einer Anwendung oder einer Technologie über den Namen ohne Referenz gefragt, liest es auch die verknüpften Datensätze. Eine Technologie kann es nicht ändern. Über MCP verbundene Assistenten erhalten dieselben Antworten.
+
+Wenn Schwachstellen verfolgt werden, listet, zählt und liest Plaid auch die Schwachstellen, für Benutzer, die die Infrastruktur lesen dürfen. Ein Element ist eine CVE auf einer Version einer Technologie, wie auf der Seite [Schwachstellen](vulnerabilities.md). Plaid kann sie nach Schweregrad, Ausnutzung, Status, Warnungen, Technologie, Veröffentlichungsdatum, Asset oder Anwendung filtern und nach Schweregrad oder Technologie zählen. Sofern Sie nichts anderes verlangen, behält Plaid die noch zu prüfenden Schwachstellen in den Warnungen, wie die Seite. Die Server und Anwendungen, die eine Schwachstelle erreicht, folgen den direkten Verknüpfungen, so wie die Seite sie zählt (siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)). Bei Assets und Anwendungen liest Plaid, wie viele Schwachstellen noch zu prüfen sind und wie viele davon kritisch oder hoch sind. Fragen Sie zum Beispiel: „Welche kritischen Anwendungen sind von einer ausgenutzten CVE betroffen?“ Plaid kann den Status einer Schwachstelle nicht ändern. Über MCP verbundene Assistenten erhalten dieselben Antworten.
 
 Wenn Plaid Budgetbeträge addiert, bleibt eine Zeile, deren Währung für das Jahr keinen Wechselkurs hat, außerhalb der Summe. Plaid nennt dann die ausgelassenen Währungen und Jahre. Über MCP verbundene Assistenten erhalten dieselbe Antwort.
 

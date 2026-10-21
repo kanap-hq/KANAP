@@ -1,5 +1,7 @@
 import { operatingSystemLabelSql } from '../../../technologies/operating-system-codes';
 import { AiEntityFilterRegistry } from '../ai-filter.types';
+import { VULNERABILITIES_LIST_FIELD } from '../../../vulnerabilities/vulnerability-list-column';
+import { vulnerabilitiesField, vulnerabilityCountMetric } from '../ai-vulnerability-counts.util';
 
 export const assetsRegistry: AiEntityFilterRegistry = {
   entityType: 'assets',
@@ -170,6 +172,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       sortable: true,
       groupable: true,
     },
+    vulnerabilities: vulnerabilitiesField('asset'),
     assignments_count: {
       ai: 'assignments_count',
       grid: 'assignments_count',
@@ -198,6 +201,7 @@ export const assetsRegistry: AiEntityFilterRegistry = {
     admin_zone: 'admin_zone',
     cluster: 'cluster',
     is_cluster: 'is_cluster',
+    vulnerabilities: VULNERABILITIES_LIST_FIELD,
     created_at: 'created_at',
     updated_at: 'updated_at',
   },
@@ -247,6 +251,8 @@ export const assetsRegistry: AiEntityFilterRegistry = {
       is_cluster: { expression: `CASE WHEN COALESCE(a.is_cluster, false) THEN 'true' ELSE 'false' END` },
     },
     metricFields: {
+      open_vulnerabilities: vulnerabilityCountMetric('assets', 'open'),
+      severe_vulnerabilities: vulnerabilityCountMetric('assets', 'severe'),
       assignments_count: {
         expression: `(SELECT COUNT(*) FROM app_asset_assignments aaa WHERE aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id)`,
         type: 'number',

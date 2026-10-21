@@ -321,6 +321,9 @@ Disable (n), Move (n), Manage X, Edit, a "new" chip in a band, Send link, Conver
 
 **Icons on pills**: 14px (`sx={{ fontSize: '14px !important' }}` on the icon). Keep `+` on "new"
 actions and the trash on delete; import and export carry no icon.
+In a record page header, Delete is the trash icon alone (`DeleteIconButton`: an `action-danger` pill
+reduced to its icon, tooltip and accessible name "Delete"), so the header keeps one line; the
+confirmation is unchanged. Elsewhere (dialogs, tables, selections) Delete keeps its label.
 
 **`variant="contained"`**: primary CTAs in create forms, composers and empty states (Submit, Save,
 "Create your first chart of accounts"):

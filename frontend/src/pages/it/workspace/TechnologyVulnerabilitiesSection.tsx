@@ -6,31 +6,15 @@ import type { TFunction } from 'i18next';
 import { Link as RouterLink, useLocation } from 'react-router-dom';
 import api from '../../../api';
 import { useFeatures } from '../../../config/FeaturesContext';
-import { StatusDot } from '../../../components/design';
-import { getDotColor, VULNERABILITY_SEVERITY_COLORS } from '../../../utils/statusColors';
 import { RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import { SEVERITIES, SeverityCell, versionText } from '../vulnerabilities/vulnerabilityTypes';
 import { TECHNOLOGY_VERSIONS_ANCHOR } from './TechnologyOverviewTab';
+import { numberSx, openSeverityColumns, type VulnerabilityOpenCounts } from './vulnerabilityOpenColumns';
 
-/** Open CVE still to review, by severity. `unknown`: no severity yet (the NVD has not scored the CVE). */
-export type VulnerabilityOpenCounts = { critical: number; high: number; medium: number; low: number; none: number; unknown: number };
+export type { VulnerabilityOpenCounts };
 
 /** The order of the open counts: the severities, then the CVE not rated yet ("Not rated", as on the Vulnerabilities page). */
 const OPEN_KEYS = [...SEVERITIES, 'unknown'] as const;
-
-/**
- * The columns of CVE to review, one per severity. A CVE rated None (CVSS 0.0) is counted with Low:
- * the table keeps five columns, and None is the bottom of the Low band.
- */
-const OPEN_COLUMNS = [
-  { key: 'critical', severity: 'critical', counts: ['critical'] },
-  { key: 'high', severity: 'high', counts: ['high'] },
-  { key: 'medium', severity: 'medium', counts: ['medium'] },
-  { key: 'low', severity: 'low', counts: ['low', 'none'] },
-  { key: 'unknown', severity: null, counts: ['unknown'] },
-] as const;
-
-const numberSx = { fontVariantNumeric: 'tabular-nums' } as const;
 
 /** One version of `GET /technologies/:id/vulnerabilities/summary`. */
 export type TechnologyVulnerabilityVersion = {
@@ -167,33 +151,12 @@ export default function TechnologyVulnerabilitiesSection({ technologyId, canEdit
       render: (row) => <Box component="span" sx={numberSx}>{row.servers}</Box>,
     },
     // The CVE still to review, by severity: the header's hint says so, apart from Total.
-    ...OPEN_COLUMNS.map((column): RelationsColumn<TechnologyVulnerabilityVersion> => {
-      const label = t(`pages.vulnerabilities.severities.${column.severity ?? 'unknown'}`);
-      const colorKey = column.severity ? VULNERABILITY_SEVERITY_COLORS[column.severity] : 'default';
-      const color = getDotColor(colorKey, mode);
-      const attention = colorKey === 'warning';
-      return {
-        key: `open-${column.key}`,
-        header: (
-          <Tooltip title={t('pages.vulnerabilities.section.columns.openHint', { severity: label })} describeChild>
-            <Box component="span" data-severity={column.severity ?? 'unknown'} sx={{ display: 'inline-flex', alignItems: 'center', gap: '5px', maxWidth: '100%' }}>
-              <StatusDot color={color} />
-              {/* A long name (Non évaluée, Nicht bewertet) wraps on two lines rather than being cut. */}
-              <Box component="span" sx={{ whiteSpace: 'normal', lineHeight: 1.2, textAlign: 'right' }}>{label}</Box>
-            </Box>
-          </Tooltip>
-        ),
-        width: 84,
-        align: 'right',
-        render: (row) => {
-          const count = column.counts.reduce((sum, key) => sum + (row.open[key] ?? 0), 0);
-          if (count === 0) return <Box component="span" data-zero="" sx={{ color: 'kanap.text.tertiary' }}>·</Box>;
-          return (
-            <Box component="span" sx={{ ...numberSx, ...(attention ? { color, fontWeight: 500 } : {}) }}>{count}</Box>
-          );
-        },
-      };
-    }),
+    ...openSeverityColumns<TechnologyVulnerabilityVersion>(
+      (row) => row.open,
+      t,
+      mode,
+      (severity) => t('pages.vulnerabilities.section.columns.openHint', { severity }),
+    ),
     {
       key: 'total',
       header: t('pages.vulnerabilities.section.columns.total'),

@@ -50,6 +50,10 @@ import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
 import ApplicationRelationsPanel from './editors/ApplicationRelationsPanel';
 import ApplicationTechnologiesSection from './workspace/ApplicationTechnologiesSection';
+import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
+import PendingMetadata from './workspace/PendingMetadata';
+import { useFeatures } from '../../config/FeaturesContext';
 import ApplicationCreateEditor, { type ApplicationCreateEditorHandle } from './editors/ApplicationCreateEditor';
 import CreateVersionDialog from './components/CreateVersionDialog';
 import ApplicationConvertButton from './components/ApplicationConvertButton';
@@ -617,22 +621,190 @@ function ApplicationProperties({
   );
 }
 
-function OverviewTab({
+function ApplicationSupportSection({
+  app,
+  canManage,
+  onPatch,
+  onRefresh,
+}: {
+  app: ApplicationDetail;
+  canManage: boolean;
+  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onRefresh: () => Promise<void>;
+}) {
+  const { t } = useTranslation(['it', 'common']);
+  const unnamedContact = t('workspace.application.technical.unnamedContact');
+  const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
+  const [contactDraft, setContactDraft] = React.useState<{ contact_id: string | null; role: string }>({ contact_id: null, role: '' });
+  const [savingContact, setSavingContact] = React.useState(false);
+  const contacts = (app.support_contacts || []) as SupportContactRow[];
+
+  const replaceContacts = React.useCallback(async (nextContacts: SupportContactRow[]) => {
+    await api.post(`/applications/${app.id}/support-contacts/bulk-replace`, {
+      contacts: nextContacts
+        .filter((item) => item.contact_id)
+        .map((item) => ({ contact_id: item.contact_id, role: item.role || null })),
+    });
+    await onRefresh();
+  }, [app.id, onRefresh]);
+
+  const addContact = React.useCallback(async () => {
+    if (!contactDraft.contact_id) return;
+    setSavingContact(true);
+    try {
+      await replaceContacts([...contacts, { contact_id: contactDraft.contact_id, role: contactDraft.role || null }]);
+      setContactDialogOpen(false);
+      setContactDraft({ contact_id: null, role: '' });
+    } finally {
+      setSavingContact(false);
+    }
+  }, [contactDraft, contacts, replaceContacts]);
+
+  const removeContact = React.useCallback(async (row: SupportContactRow) => {
+    await replaceContacts(contacts.filter((item) => item !== row));
+  }, [contacts, replaceContacts]);
+
+  return (
+    <>
+      <Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+          <SectionLabel>{t('workspace.application.technical.support')}</SectionLabel>
+          <Box sx={{ flex: 1 }} />
+          {canManage && (
+            <Button variant="action" size="small" onClick={() => setContactDialogOpen(true)}>
+              {t('workspace.application.technical.addContact')}
+            </Button>
+          )}
+        </Box>
+        <Table size="small" sx={(theme) => ({
+          '& th': { fontSize: 11, fontWeight: 500, color: theme.palette.kanap.text.tertiary, borderBottom: `1px solid ${theme.palette.kanap.border.default}` },
+          '& td': { fontSize: 13, color: theme.palette.kanap.text.primary, borderBottom: `1px solid ${theme.palette.kanap.border.soft}` },
+          '& tbody tr:hover': { bgcolor: theme.palette.kanap.bg.hover },
+          '& .hover-actions': { opacity: 0, transition: 'opacity 120ms' },
+          '& tbody tr:hover .hover-actions': { opacity: 1 },
+        })}>
+          <TableHead>
+            <TableRow>
+              <TableCell sx={{ width: 140 }}>{t('workspace.application.technical.contact')}</TableCell>
+              <TableCell sx={{ width: 180 }}>{t('workspace.application.technical.email')}</TableCell>
+              <TableCell sx={{ width: 130 }}>{t('workspace.application.technical.phone')}</TableCell>
+              <TableCell>{t('workspace.application.technical.role')}</TableCell>
+              {canManage && <TableCell align="right" sx={{ width: 52 }} />}
+            </TableRow>
+          </TableHead>
+          <TableBody>
+            {contacts.length === 0 && (
+              <TableRow>
+                <TableCell colSpan={canManage ? 5 : 4} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` })}>
+                  {t('workspace.application.technical.noSupportContacts')}
+                </TableCell>
+              </TableRow>
+            )}
+            {contacts.map((row, index) => (
+              <TableRow key={row.id || `${row.contact_id}:${index}`}>
+                <TableCell>{contactName(row, unnamedContact)}</TableCell>
+                <TableCell>{row.contact?.email || '—'}</TableCell>
+                <TableCell sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important' }}>{contactPhone(row) || '—'}</TableCell>
+                <TableCell sx={!row.role ? (theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` }) : undefined}>{row.role || '—'}</TableCell>
+                {canManage && (
+                  <TableCell align="right">
+                    <Box className="hover-actions">
+                      <IconButton aria-label={t('workspace.application.technical.removeContact', { name: contactName(row, unnamedContact) })} size="small" onClick={() => { void removeContact(row); }}>
+                        <DeleteIcon sx={{ fontSize: 16 }} />
+                      </IconButton>
+                    </Box>
+                  </TableCell>
+                )}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+
+        <Box sx={{ mt: 2.25 }}>
+          <SectionLabel>{t('workspace.application.technical.supportNotes')}</SectionLabel>
+          <TextField
+            value={app.support_notes || ''}
+            onChange={(event) => { void onPatch({ support_notes: event.target.value || null }); }}
+            variant="standard"
+            fullWidth
+            multiline
+            minRows={5}
+            disabled={!canManage}
+            placeholder={t('workspace.application.technical.supportNotesPlaceholder')}
+            sx={(theme) => ({
+              ...drawerFieldValueSx,
+              mt: 1,
+              border: `1px solid ${theme.palette.kanap.border.soft}`,
+              borderRadius: '6px',
+              px: 1.25,
+              py: 1,
+              '&:focus-within': { borderColor: theme.palette.kanap.border.default },
+            })}
+          />
+        </Box>
+      </Box>
+
+      <KanapDialog
+        open={contactDialogOpen}
+        title={t('workspace.application.technical.newSupportContact')}
+        onClose={() => setContactDialogOpen(false)}
+        onSave={addContact}
+        saveLabel={t('common:buttons.save')}
+        saveDisabled={!contactDraft.contact_id}
+        saveLoading={savingContact}
+      >
+        <Stack spacing={1.25}>
+          <PropertyRow label={t('workspace.application.technical.contact')} required>
+            <ContactSelect
+              value={contactDraft.contact_id}
+              onChange={(value) => setContactDraft((prev) => ({ ...prev, contact_id: value }))}
+              onContactChange={(contact) => setContactDraft({
+                contact_id: contact?.id || null,
+                role: contact?.job_title || '',
+              })}
+              groupByCompany={false}
+              hideLabel
+              label={t('workspace.application.technical.contact')}
+              textFieldSx={drawerFieldValueSx}
+            />
+          </PropertyRow>
+          <PropertyRow label={t('workspace.application.technical.role')}>
+            <TextField
+              value={contactDraft.role}
+              onChange={(event) => setContactDraft((prev) => ({ ...prev, role: event.target.value }))}
+              variant="standard"
+              fullWidth
+              sx={drawerFieldValueSx}
+            />
+          </PropertyRow>
+        </Stack>
+      </KanapDialog>
+    </>
+  );
+}
+
+export function OverviewTab({
   app,
   canEditManagedDocs,
   canCreateKnowledge,
+  canManage,
   editorRef,
   connections,
   onOpenApplication,
   onShowInterfaces,
+  onPatch,
+  onRefresh,
 }: {
   app: ApplicationDetail;
   canEditManagedDocs: boolean;
   canCreateKnowledge: boolean;
+  canManage: boolean;
   editorRef: React.RefObject<IntegratedDocumentEditorHandle | null>;
   connections: ConnectionsResult;
   onOpenApplication: (appId: string) => void;
   onShowInterfaces: () => void;
+  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
+  onRefresh: () => Promise<void>;
 }) {
   const { t } = useTranslation(['it', 'common']);
   const renderConnectionRow = (label: string, items: Array<{ id: string; name: string }>) => {
@@ -734,6 +906,7 @@ function OverviewTab({
       <Box id="application-knowledge" tabIndex={-1}>
         <EntityKnowledgePanel entityType="applications" entityId={app.id} canCreate={canCreateKnowledge} />
       </Box>
+      <ApplicationSupportSection app={app} canManage={canManage} onPatch={onPatch} onRefresh={onRefresh} />
     </Stack>
   );
 }
@@ -928,52 +1101,22 @@ export function OperationsTab({
   app,
   canManage,
   onPatch,
-  onRefresh,
+  vulnerabilities,
 }: {
   app: ApplicationDetail;
   canManage: boolean;
   onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
-  onRefresh: () => Promise<void>;
+  /** The application's vulnerabilities; absent while the feed is off or the application is out of service. */
+  vulnerabilities?: ReachVulnerabilities | null;
 }) {
   const { t } = useTranslation(['it', 'common']);
-  const { byField, labelFor } = useItOpsEnumOptions();
-  const unnamedContact = t('workspace.application.technical.unnamedContact');
-  const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
-  const [contactDraft, setContactDraft] = React.useState<{ contact_id: string | null; role: string }>({ contact_id: null, role: '' });
-  const [savingContact, setSavingContact] = React.useState(false);
-  const contacts = (app.support_contacts || []) as SupportContactRow[];
+  const { byField } = useItOpsEnumOptions();
   const accessOptions = byField.accessMethod || [];
   const horizontalRowSx = { display: 'grid', gridTemplateColumns: '140px minmax(0, 1fr)', columnGap: '18px', alignItems: 'center' } as const;
   const horizontalLabelSx = { pt: '3px' } as const;
 
-  const replaceContacts = React.useCallback(async (nextContacts: SupportContactRow[]) => {
-    await api.post(`/applications/${app.id}/support-contacts/bulk-replace`, {
-      contacts: nextContacts
-        .filter((item) => item.contact_id)
-        .map((item) => ({ contact_id: item.contact_id, role: item.role || null })),
-    });
-    await onRefresh();
-  }, [app.id, onRefresh]);
-
-  const addContact = React.useCallback(async () => {
-    if (!contactDraft.contact_id) return;
-    setSavingContact(true);
-    try {
-      await replaceContacts([...contacts, { contact_id: contactDraft.contact_id, role: contactDraft.role || null }]);
-      setContactDialogOpen(false);
-      setContactDraft({ contact_id: null, role: '' });
-    } finally {
-      setSavingContact(false);
-    }
-  }, [contactDraft, contacts, replaceContacts]);
-
-  const removeContact = React.useCallback(async (row: SupportContactRow) => {
-    await replaceContacts(contacts.filter((item) => item !== row));
-  }, [contacts, replaceContacts]);
-
   return (
     <Stack spacing={3.75}>
-      <ApplicationTechnologiesSection id={app.id} />
       <Box>
         <SectionLabel>{t('workspace.application.technical.sectionTitle')}</SectionLabel>
         <Stack spacing={1.5} sx={{ mt: 1.25 }}>
@@ -1018,120 +1161,22 @@ export function OperationsTab({
           </Stack>
         </Stack>
       </Box>
-
-      <Box>
-        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
-          <SectionLabel>{t('workspace.application.technical.support')}</SectionLabel>
-          <Box sx={{ flex: 1 }} />
-          {canManage && (
-            <Button variant="action" size="small" onClick={() => setContactDialogOpen(true)}>
-              {t('workspace.application.technical.addContact')}
-            </Button>
-          )}
-        </Box>
-        <Table size="small" sx={(theme) => ({
-          '& th': { fontSize: 11, fontWeight: 500, color: theme.palette.kanap.text.tertiary, borderBottom: `1px solid ${theme.palette.kanap.border.default}` },
-          '& td': { fontSize: 13, color: theme.palette.kanap.text.primary, borderBottom: `1px solid ${theme.palette.kanap.border.soft}` },
-          '& tbody tr:hover': { bgcolor: theme.palette.kanap.bg.hover },
-          '& .hover-actions': { opacity: 0, transition: 'opacity 120ms' },
-          '& tbody tr:hover .hover-actions': { opacity: 1 },
-        })}>
-          <TableHead>
-            <TableRow>
-              <TableCell sx={{ width: 140 }}>{t('workspace.application.technical.contact')}</TableCell>
-              <TableCell sx={{ width: 180 }}>{t('workspace.application.technical.email')}</TableCell>
-              <TableCell sx={{ width: 130 }}>{t('workspace.application.technical.phone')}</TableCell>
-              <TableCell>{t('workspace.application.technical.role')}</TableCell>
-              {canManage && <TableCell align="right" sx={{ width: 52 }} />}
-            </TableRow>
-          </TableHead>
-          <TableBody>
-            {contacts.length === 0 && (
-              <TableRow>
-                <TableCell colSpan={canManage ? 5 : 4} sx={(theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` })}>
-                  {t('workspace.application.technical.noSupportContacts')}
-                </TableCell>
-              </TableRow>
-            )}
-            {contacts.map((row, index) => (
-              <TableRow key={row.id || `${row.contact_id}:${index}`}>
-                <TableCell>{contactName(row, unnamedContact)}</TableCell>
-                <TableCell>{row.contact?.email || '—'}</TableCell>
-                <TableCell sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important' }}>{contactPhone(row) || '—'}</TableCell>
-                <TableCell sx={!row.role ? (theme) => ({ color: `${theme.palette.kanap.text.tertiary} !important` }) : undefined}>{row.role || '—'}</TableCell>
-                {canManage && (
-                  <TableCell align="right">
-                    <Box className="hover-actions">
-                      <IconButton aria-label={t('workspace.application.technical.removeContact', { name: contactName(row, unnamedContact) })} size="small" onClick={() => { void removeContact(row); }}>
-                        <DeleteIcon sx={{ fontSize: 16 }} />
-                      </IconButton>
-                    </Box>
-                  </TableCell>
-                )}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-
-        <Box sx={{ mt: 2.25 }}>
-          <SectionLabel>{t('workspace.application.technical.supportNotes')}</SectionLabel>
-          <TextField
-            value={app.support_notes || ''}
-            onChange={(event) => { void onPatch({ support_notes: event.target.value || null }); }}
-            variant="standard"
-            fullWidth
-            multiline
-            minRows={5}
-            disabled={!canManage}
-            placeholder={t('workspace.application.technical.supportNotesPlaceholder')}
-            sx={(theme) => ({
-              ...drawerFieldValueSx,
-              mt: 1,
-              border: `1px solid ${theme.palette.kanap.border.soft}`,
-              borderRadius: '6px',
-              px: 1.25,
-              py: 1,
-              '&:focus-within': { borderColor: theme.palette.kanap.border.default },
-            })}
+      <ApplicationTechnologiesSection
+        id={app.id}
+        after={vulnerabilities ? ({ recordOnServer }) => (
+          <ReachVulnerabilitiesSection
+            data={vulnerabilities}
+            kind="application"
+            subjectReference={app.sequential_id || app.id}
+            onRecordOnServer={recordOnServer ? (row, anchor) => recordOnServer({
+              technologyId: row.technology.id,
+              name: row.technology.name,
+              versionId: row.version_id,
+              version: row.label,
+            }, anchor) : undefined}
           />
-        </Box>
-      </Box>
-
-      <KanapDialog
-        open={contactDialogOpen}
-        title={t('workspace.application.technical.newSupportContact')}
-        onClose={() => setContactDialogOpen(false)}
-        onSave={addContact}
-        saveLabel={t('common:buttons.save')}
-        saveDisabled={!contactDraft.contact_id}
-        saveLoading={savingContact}
-      >
-        <Stack spacing={1.25}>
-          <PropertyRow label={t('workspace.application.technical.contact')} required>
-            <ContactSelect
-              value={contactDraft.contact_id}
-              onChange={(value) => setContactDraft((prev) => ({ ...prev, contact_id: value }))}
-              onContactChange={(contact) => setContactDraft({
-                contact_id: contact?.id || null,
-                role: contact?.job_title || '',
-              })}
-              groupByCompany={false}
-              hideLabel
-              label={t('workspace.application.technical.contact')}
-              textFieldSx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-          <PropertyRow label={t('workspace.application.technical.role')}>
-            <TextField
-              value={contactDraft.role}
-              onChange={(event) => setContactDraft((prev) => ({ ...prev, role: event.target.value }))}
-              variant="standard"
-              fullWidth
-              sx={drawerFieldValueSx}
-            />
-          </PropertyRow>
-        </Stack>
-      </KanapDialog>
+        ) : undefined}
+      />
     </Stack>
   );
 }
@@ -1222,6 +1267,8 @@ export default function ApplicationWorkspacePage() {
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const { byField } = useItOpsEnumOptions();
+  const { config: featuresConfig } = useFeatures();
+  const vulnerabilityFeed = featuresConfig.features.vulnerabilityFeed === true;
 
   const routeId = String(params.id || '');
   const isCreate = routeId === 'new';
@@ -1279,6 +1326,19 @@ export default function ApplicationWorkspacePage() {
     queryFn: () => fetchApplicationIncidentsCount(app!.id),
     enabled: !isCreate && !!app?.id,
   });
+  // One read for the Operations section and the badge of the metadata bar. Technology link writes
+  // and CVE state changes invalidate every `vulnerabilities` query.
+  const vulnerabilitiesQuery = useQuery({
+    queryKey: ['vulnerabilities', 'application', app?.id],
+    queryFn: async () => (await api.get<ReachVulnerabilities>(`/applications/${app!.id}/vulnerabilities`)).data,
+    enabled: vulnerabilityFeed && !isCreate && !!app?.id,
+  });
+  // Out of service (`totals: null`): nothing counts, the section and the badge disappear.
+  const vulnerabilities = vulnerabilityFeed && !isCreate && vulnerabilitiesQuery.data?.totals ? vulnerabilitiesQuery.data : null;
+  // The metadata bar appears in one go: hidden on its line until the vulnerabilities have arrived,
+  // so the severe badge does not push the header down afterwards. A failed read shows the bar
+  // without the badge. (The page shows a loading screen until the application itself arrives.)
+  const metadataPending = vulnerabilityFeed && !isCreate && !!app?.id && vulnerabilitiesQuery.isPending;
 
   const connections = React.useMemo(
     () => app ? computeConnections(app, interfacesQuery.data || [], t('workspace.application.untitled')) : { type: 'none' } as ConnectionsResult,
@@ -1448,7 +1508,7 @@ export default function ApplicationWorkspacePage() {
         } : undefined}
         onSaveShortcut={() => { void overviewEditorRef.current?.save(); }}
         metadata={!isCreate && app ? (
-          <>
+          <PendingMetadata pending={metadataPending}>
             <PortfolioStatusMetadata
               value={app.lifecycle || 'active'}
               label={lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
@@ -1466,7 +1526,15 @@ export default function ApplicationWorkspacePage() {
             <PortfolioMetadataItem label={t('workspace.application.meta.goLive')}>
               {formatShortDate(app.go_live_date, locale, { empty: t('common:selects.notSet') })}
             </PortfolioMetadataItem>
-          </>
+            {vulnerabilities?.totals && (
+              <VulnerabilitySevereBadge
+                severe={vulnerabilities.totals.severe}
+                exploitedSevere={vulnerabilities.totals.exploited_severe}
+                highestSeverity={highestSevereOf(vulnerabilities.rows)}
+                to={`/it/vulnerabilities?application=${encodeURIComponent(app?.sequential_id || app?.id || '')}`}
+              />
+            )}
+          </PendingMetadata>
         ) : undefined}
         actions={(
           <>
@@ -1527,9 +1595,12 @@ export default function ApplicationWorkspacePage() {
             canEditManagedDocs={canManage}
             canCreateKnowledge={canCreateKnowledge}
             editorRef={overviewEditorRef}
+            canManage={canManage}
             connections={connections}
             onOpenApplication={(appId) => navigate(canonicalPathFor(appId, 'overview'))}
             onShowInterfaces={() => handleTabChange('interfaces')}
+            onPatch={patchApplication}
+            onRefresh={async () => { await appQuery.refetch(); }}
           />
         )}
 
@@ -1552,7 +1623,7 @@ export default function ApplicationWorkspacePage() {
             app={app}
             canManage={canManage}
             onPatch={patchApplication}
-            onRefresh={async () => { await appQuery.refetch(); }}
+            vulnerabilities={vulnerabilities}
           />
         )}
 

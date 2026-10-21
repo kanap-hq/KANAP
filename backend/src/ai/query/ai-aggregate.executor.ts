@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, Logger, Optional } from '@nestjs/common';
 import { AiPolicyService } from '../ai-policy.service';
 import { listAiTechnologies, resolveAiApplicationsReach } from './ai-technologies.query';
+import { listAiVulnerabilities } from './ai-vulnerabilities.query';
 import { aiAmountsCurrency, isBudgetLineEntity } from './ai-amounts-currency.util';
 import { normalizeAgFilterModel, assertSetFilterModes } from '../../common/ag-grid-filtering';
 import { bilingualDocumentTsQuerySql } from '../../common/document-search-tsquery';
@@ -110,6 +111,7 @@ type SupportedAggregateEntityType =
   | 'tasks'
   | 'technologies'
   | 'users'
+  | 'vulnerabilities'
   | 'documents';
 
 const AGGREGATE_ID_COLLECTION_LIMIT = 10_000;
@@ -825,6 +827,20 @@ export class AiAggregateExecutor {
       await applyScopeToAiQuery(context, entityType, {}, scope);
       const applications = await resolveAiApplicationsReach(context, this.policy);
       const result = await listAiTechnologies(
+        context.manager,
+        context.tenantId,
+        { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },
+        applications,
+        { idsOnly: true },
+      );
+      return { ids: result.ids, total: result.total, scope: null };
+    }
+
+    if (entityType === 'vulnerabilities') {
+      // "me" and "my_team" do not apply to vulnerabilities: refused as for technologies.
+      await applyScopeToAiQuery(context, entityType, {}, scope);
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiVulnerabilities(
         context.manager,
         context.tenantId,
         { q, limit: AGGREGATE_ID_COLLECTION_LIMIT, filters: adaptedFilters },

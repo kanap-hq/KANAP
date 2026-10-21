@@ -478,7 +478,26 @@
       "netboxMissing_one": "{{count}} asset missing from Netbox",
       "netboxMissing_other": "{{count}} assets missing from Netbox",
       "netboxErrors_one": "{{count}} error",
-      "netboxErrors_other": "{{count}} errors"
+      "netboxErrors_other": "{{count}} errors",
+      "vulnerabilities": "Vulnerabilities in your estate",
+      "vulnerabilitiesSubtitle": "CVE to review on technologies in use",
+      "vulnerabilitiesLines": {
+        "applications_one": "{{level}} application with a critical or high CVE",
+        "applications_other": "{{level}} applications with a critical or high CVE",
+        "critical7_one": "critical CVE published in the last 7 days",
+        "critical7_other": "critical CVEs published in the last 7 days",
+        "critical30_one": "critical CVE published in the last 30 days",
+        "critical30_other": "critical CVEs published in the last 30 days",
+        "exploited_one": "CVE known to be exploited",
+        "exploited_other": "CVEs known to be exploited",
+        "assets_one": "asset with a critical or high CVE",
+        "assets_other": "assets with a critical or high CVE"
+      },
+      "vulnerabilitiesNone": "No critical vulnerability to review.",
+      "vulnerabilitiesStaleNvd_one": "The NVD has not been read for {{count}} day",
+      "vulnerabilitiesStaleNvd_other": "The NVD has not been read for {{count}} days",
+      "vulnerabilitiesStaleCveOrg_one": "CVE.org has not been read for {{count}} day",
+      "vulnerabilitiesStaleCveOrg_other": "CVE.org has not been read for {{count}} days"
     },
     "welcome": "Welcome",
     "budgetSettings": {
@@ -728,6 +747,7 @@
   },
   "share": {
     "sendLink": "Send link",
+    "share": "Share",
     "searchUsersOrEmail": "Search users or type an email…",
     "messageOptional": "Message (optional)",
     "addPersonalMessage": "Add a personal message…",

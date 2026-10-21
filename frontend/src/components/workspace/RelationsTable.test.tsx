@@ -77,6 +77,11 @@ describe('fitColumnWidths', () => {
     expect(fitColumnWidths([{}, { width: 140 }, { width: 130 }], 280)).toEqual({ widths: [undefined, 96, 96], minWidth: 96 + 96 + 120 });
   });
 
+  it('shrinks a column with its own minWidth no further than it, above or below 96px', () => {
+    expect(fitColumnWidths([{}, { width: 120, minWidth: 120 }, { width: 150, minWidth: 80 }], 360).widths).toEqual([undefined, 120, 120]);
+    expect(fitColumnWidths([{}, { width: 120, minWidth: 120 }, { width: 150, minWidth: 80 }], 300)).toEqual({ widths: [undefined, 120, 80], minWidth: 200 + 120 });
+  });
+
   it('asks for a minimum width once the columns are at their least', () => {
     expect(fitColumnWidths(COLUMNS, 300)).toEqual({ widths: [72, undefined, 96, 72, 96, 96, 96], minWidth: 528 + 120 });
   });

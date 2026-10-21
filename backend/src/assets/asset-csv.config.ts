@@ -11,6 +11,7 @@ import { AuditService } from '../audit/audit.service';
 import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { OperatingSystemService } from '../technologies/operating-system.service';
+import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 
 /**
  * The operating system is not a column. `beforeCommit` keeps the text here and takes it off the
@@ -371,6 +372,9 @@ export const assetCsvConfig: CsvEntityConfig = {
       label: 'IP 4 Subnet CIDR',
       group: 'IP Addresses',
     },
+
+    // === VULNERABILITIES (export only, left out with the feed off) ===
+    ...vulnerabilityCsvFields('Vulnerabilities'),
   ],
 
   // Export presets

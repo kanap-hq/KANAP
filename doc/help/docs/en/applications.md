@@ -70,7 +70,7 @@ Once you save, the workspace unlocks all tabs for detailed documentation.
 
 ---
 
-## Working with the list
+## Working with the list { #working-with-the-list }
 
 The Applications grid provides a comprehensive view of your application portfolio.
 
@@ -82,6 +82,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 
 **Default columns**:
 - **Name**: Application name with category caption and an "Included in: {suite}" badge for components of a suite
+- **Vulnerabilities to review**: the vulnerabilities still to review on the technologies the application declares or that its deployment servers have recorded, then, in orange, how many are critical or high (`5 · 2`). Empty for a disabled application or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. Present when vulnerabilities are followed. See [What KANAP counts](vulnerabilities.md#what-kanap-counts)
 - **Category**: The application's primary purpose
 - **Environments**: Coloured chips showing active environments (Prod, Pre-prod, QA, Test, Dev, Sandbox). Hover for the base URL and lifecycle.
 - **Lifecycle**: Current status
@@ -112,6 +113,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - Criticality, cyber criticality, data class and recovery wave filters list their values in catalog order (most critical first, waves in restoration order).
 - Most columns use checkbox set filters showing only values present in the current result set; the floating filter shows `All`, `None`, or `N selected` with an **x** to clear.
 - Retired applications are hidden by default; use the **Lifecycle** filter to include Retired.
+- **Vulnerabilities to review** filters on **With severe vulnerabilities**, **With vulnerabilities** or **Without**, and sorts by the critical or high vulnerabilities, then by the total. Disabled applications come last and are in none of the filter values.
 
 **Actions**:
 - **New App / Service**: Create a new entry (`applications:member`)
@@ -133,6 +135,7 @@ The header shows:
 - **Reference**: short identifier you can copy
 - **Lifecycle** chip: click to change
 - **Business criticality** chip: shows the level and opens a menu of the organization's levels
+- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the application, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the **Vulnerabilities** section of the **Operations** tab. Shown only when the application has some
 - **Version** chip (if a version is set): click to copy
 - **Go live** date
 - **Send link**: copy a shareable link to this workspace
@@ -174,6 +177,11 @@ The Overview tab is the application's narrative. It contains:
 **Connections**: A read-only summary built from the application's interfaces. For non-middleware apps it shows two rows: **Receives from** and **Sends to**. For ETL/middleware apps it shows a single **Connected to** row. Each entry is a clickable pill that opens the related application; "+ N more in Interfaces" jumps to the Interfaces tab.
 
 **Knowledge**: Linked knowledge articles. If you have `knowledge:member`, you can create new articles directly from this section.
+
+**Support**:
+- A table of support contacts pulled from your Contacts master data. Each row shows the contact name, email, phone, and a free-text role (e.g., Account Manager, L1 Support).
+- **Add contact** opens a dialog to pick a contact and set a role.
+- **Support notes**: free-form text for support arrangements (SLA, escalation paths, on-call info).
 
 ---
 
@@ -222,11 +230,17 @@ Each row shows the interface name, the counterpart application, and a **Via midd
 
 ---
 
-### Operations
+### Operations { #operations }
 
-The Operations tab captures the technologies the application depends on, how users access it and who supports it.
+The Operations tab holds, in this order, how users access the application (**Technical**), the technologies it depends on and their vulnerabilities.
 
-**Technologies** (top of the tab) lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
+**Technical**:
+- **Access methods** (multi-select): how users access this application. Options are configurable in [IT Landscape Settings](it-ops-settings.md). Defaults include Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk.
+- **External facing**: whether the application is accessible from the internet
+- **Data integration / ETL**: whether the application participates in data integration pipelines (also flips this app into "middleware" mode for the Interfaces and Connections views)
+- **Can have child apps**: turn this application into a Suite that groups other applications
+
+**Technologies** lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
 
 - **Declared**: someone linked the technology to the application, for example Entra ID for an application that signs users in through it.
 - **Hosted**: a server of one of its deployments carries the technology. **Via** names the server, and the host when the technology runs on the host of a virtual machine. Disabled deployments do not count.
@@ -239,16 +253,20 @@ A technology can be both. A dash in the version column means the version is not 
 
 To add, change or remove a declared technology, and to record it on servers, you need `applications:member` and `infrastructure:member`. A hosted technology has no cross: remove it from the server instead.
 
-**Technical**:
-- **Access methods** (multi-select): how users access this application. Options are configurable in [IT Landscape Settings](it-ops-settings.md). Defaults include Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk.
-- **External facing**: whether the application is accessible from the internet
-- **Data integration / ETL**: whether the application participates in data integration pipelines (also flips this app into "middleware" mode for the Interfaces and Connections views)
-- **Can have child apps**: turn this application into a Suite that groups other applications
+**Vulnerabilities** (when vulnerabilities are followed) lists the vulnerabilities still to review on the application, in the alerts. The count next to the title is the number of distinct vulnerabilities to review. One line per technology and version:
 
-**Support**:
-- A table of support contacts pulled from your Contacts master data. Each row shows the contact name, email, phone, and a free-text role (e.g., Account Manager, L1 Support).
-- **Add contact** opens a dialog to pick a contact and set a role.
-- **Support notes**: free-form text for support arrangements (SLA, escalation paths, on-call info).
+| Column | What it shows |
+|---|---|
+| **Technology**, **Version** | The technology and its version. **Version not recorded (potentially concerned)** when no version is named |
+| **Servers** | The deployment servers that have this technology and version recorded on themselves. **Declared** when the application declares it and no server has it. **Record on a server** then offers its deployment servers, as in **Technologies** |
+| **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
+| **Total** | The distinct vulnerabilities still to review on this line |
+
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the application and the technology. When nothing is left to review, the section says so in one line. A disabled application has no section.
+
+The section counts direct links only. A technology the **Technologies** section shows through the host of a virtual machine does not count here: it counts on the host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
+
+A user who can read applications without reading the infrastructure still sees this section, the badge in the header and the list column, for the applications they can read.
 
 ---
 
@@ -598,6 +616,10 @@ A blank classification cell preserves the existing value in both Enrich and Repl
 | `users_override` | Manual user count override |
 | `created_at` | Record creation timestamp |
 | `updated_at` | Last modification timestamp |
+| `vulnerabilities_to_review` | Vulnerabilities still to review, as the list column counts them. Empty for a disabled application |
+| `severe_vulnerabilities` | Of those, the critical or high ones. Empty for a disabled application |
+
+The two vulnerability columns are left out when vulnerabilities are not followed. The import ignores them.
 
 ### Label and code acceptance
 

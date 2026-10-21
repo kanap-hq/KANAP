@@ -263,7 +263,7 @@ Un résumé des vulnérabilités, une ligne par version installée de la technol
 | Colonne | Ce qu'elle montre |
 |---|---|
 | **Version** | La version. Une version hors des alertes est grisée et indique **Exclue des alertes**. **Version non renseignée (potentiellement concernée)** regroupe les serveurs et applications qui n'indiquent aucune version ; cette ligne n'apparaît que s'il y en a |
-| **Serveurs** | Le nombre de serveurs en service qui portent cette version |
+| **Serveurs** | Le nombre de serveurs en service qui ont cette version renseignée sur eux-mêmes. Un serveur qui tourne dans un autre n'est pas compté. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts) |
 | **Critique**, **Élevée**, **Moyenne**, **Faible**, **Non évaluée** | Une colonne par sévérité : les vulnérabilités encore à traiter. Une vulnérabilité de sévérité **Aucune** compte avec **Faible**. Un point signifie qu'il n'en reste aucune. Survolez un en-tête pour un rappel |
 | **Total** | Les vulnérabilités distinctes de cette version, tous états confondus |
 
@@ -295,7 +295,7 @@ Une section n'apparaît que si vous pouvez lire son module. **Ajouter** (`infras
 Vous pouvez indiquer qu'un serveur porte une technologie depuis l'un ou l'autre côté :
 
 - Depuis la technologie : onglet **Serveurs**, **Ajouter**, puis choisissez le serveur et la version.
-- Depuis le serveur : onglet **Technique** de l'actif, section **Technologies**, **Ajouter**, puis choisissez la technologie et la version. Voir [Actifs](assets.md#technique).
+- Depuis le serveur : onglet **Technique** de l'actif, section **Technologies**, **Ajouter**, puis choisissez la technologie et la version. Voir [Actifs](assets.md#technical).
 
 Saisissez la technologie sur le serveur où elle est installée : l'hôte pour un hyperviseur, chaque contrôleur de domaine pour Active Directory, le serveur de base de données pour SQL Server. Les serveurs qui tournent dedans, ou les membres de son cluster, l'affichent alors sans autre saisie. Une technologie dans le cloud, comme Entra ID, ne tourne sur aucun de vos serveurs : déclarez-la plutôt sur les applications.
 
@@ -353,8 +353,8 @@ Un gros fichier prend du temps à charger et retient les liens de ses technologi
 
 ## Où apparaissent les technologies
 
-- **Applications** : la section **Technologies**, en haut de l'onglet Exploitation, liste ce dont une application dépend. Voir [Applications](applications.md#exploitation).
-- **Actifs** : la section **Technologies** de l'onglet Technique d'un actif liste ce que porte le serveur, son système d'exploitation en tête. Voir [Actifs](assets.md#technique).
+- **Applications** : la section **Technologies**, en haut de l'onglet Exploitation, liste ce dont une application dépend. Voir [Applications](applications.md#operations).
+- **Actifs** : la section **Technologies** de l'onglet Technique d'un actif liste ce que porte le serveur, son système d'exploitation en tête. Voir [Actifs](assets.md#technical).
 - **Contrats**, **lignes budgétaires** et **incidents** : un champ **Technologies** dans leur onglet Relations, pour les utilisateurs qui peuvent lire l'infrastructure.
 - Rapport **Fins de support** : les versions qui atteignent leur fin de support, systèmes d'exploitation compris, et ce qu'elles touchent. Voir [Fins de support](end-of-support.md).
 - **Vulnérabilités** : les vulnérabilités connues des versions en service, et les serveurs et applications qu'elles atteignent. Voir [Vulnérabilités](vulnerabilities.md).

@@ -258,10 +258,11 @@
   },
   "/applications": {
     "params": {
-      "include": "supplier,owners,residency,hosting,counts,structure,instances"
+      "include": "supplier,owners,residency,hosting,counts,structure,instances,vulnerabilities"
     },
     "filters": {
       "name": "text",
+      "vulnerabilities_to_review": "set",
       "category": "set",
       "environments": "set",
       "suites_count": "number",
@@ -294,6 +295,7 @@
     },
     "fields": [
       "name",
+      "vulnerabilities_to_review",
       "category",
       "suites_count",
       "lifecycle",
@@ -503,6 +505,7 @@
     "filters": {
       "asset_reference": "text",
       "name": "text",
+      "vulnerabilities_to_review": "set",
       "kind": "set",
       "cluster": "set",
       "environment": "set",
@@ -519,6 +522,7 @@
     },
     "fields": [
       "name",
+      "vulnerabilities_to_review",
       "kind",
       "cluster",
       "environment",
@@ -575,6 +579,8 @@
       "version": "set",
       "source": "set",
       "editor": "set",
+      "asset": "set",
+      "application": "set",
       "state": "set",
       "published_at": "date"
     },
@@ -589,8 +595,6 @@
       "version",
       "match_sources",
       "editor",
-      "servers",
-      "applications",
       "state",
       "note",
       "published_at"

@@ -37,7 +37,7 @@ export default function SendLinkButton({
         disabled={disabled}
         startIcon={<ShareIcon sx={{ fontSize: '14px !important' }} />}
       >
-        {t('share.sendLink')}
+        {t('share.share')}
       </Button>
       <ShareDialog
         open={open}

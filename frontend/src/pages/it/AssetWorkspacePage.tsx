@@ -43,6 +43,10 @@ import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoP
 import AssetRelationsPanel, { AssetRelationsPanelHandle } from './editors/AssetRelationsPanel';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
+import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
+import VulnerabilitySevereBadge, { highestSevereOf } from './workspace/VulnerabilitySevereBadge';
+import PendingMetadata from './workspace/PendingMetadata';
+import { useFeatures } from '../../config/FeaturesContext';
 import { useAssetNav } from '../../hooks/useAssetNav';
 import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import { useAuth } from '../../auth/AuthContext';
@@ -68,6 +72,7 @@ import type { AssetExternalLink } from '../../api/endpoints/assets';
 import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
 import { NETBOX_LOCKABLE_ASSET_FIELDS, NetboxLockableField, netboxFieldLock } from './netboxManagedFields';
 import { carryListFilters } from '../../lib/listContext';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 const MarkdownEditor = React.lazy(() => import('../../components/MarkdownEditor'));
 type IpAddressEntry = { type: string; ip: string; subnet_cidr: string | null };
 
@@ -1061,6 +1066,27 @@ export default function AssetWorkspacePage() {
     queryFn: () => fetchAssetRelationsCount(id),
     enabled: !isCreate && !!id,
   });
+  // One query for the Vulnerabilities section and the severe badge. Its key sits under the asset's
+  // technologies: every change of a technology link (`invalidateTechnologyLinks`), on this asset or on
+  // the host or cluster that carries technologies to it, reads it again.
+  const { config: featuresConfig } = useFeatures();
+  const vulnerabilityFeed = featuresConfig.features.vulnerabilityFeed === true;
+  const assetVulnerabilitiesKey = React.useMemo(() => ['asset-technologies', id, 'vulnerabilities'] as const, [id]);
+  const assetVulnerabilitiesQuery = useQuery({
+    queryKey: assetVulnerabilitiesKey,
+    queryFn: async () => (await api.get<ReachVulnerabilities>(`/assets/${id}/vulnerabilities`)).data,
+    enabled: vulnerabilityFeed && !isCreate && !!id,
+  });
+  // A retired asset counts nothing (`totals: null`): no section and no badge.
+  const reachVulnerabilities = vulnerabilityFeed && !isCreate && assetVulnerabilitiesQuery.data?.totals
+    ? assetVulnerabilitiesQuery.data
+    : null;
+  // The metadata bar appears in one go: hidden on its line until the asset and its vulnerabilities
+  // have arrived, so the severe badge does not push the header down afterwards. A failed read shows
+  // the bar without the badge.
+  const assetLoading = !isCreate && !data && !error;
+  const metadataPending = assetLoading
+    || (vulnerabilityFeed && !isCreate && !!id && assetVulnerabilitiesQuery.isPending);
 
   const listContextParams = React.useMemo(() => {
     const sp = new URLSearchParams();
@@ -1108,6 +1134,8 @@ export default function AssetWorkspacePage() {
       const res = await api.patch(`/assets/${id}`, safePatch);
       setData(res.data as AssetRecord);
       setDirty(false);
+      // Retiring an asset, or bringing it back, changes what it counts.
+      if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
     } catch (e: any) {
       setError(getApiErrorMessage(e, t, t('messages.saveAssetFailed')));
       await load();
@@ -1115,7 +1143,7 @@ export default function AssetWorkspacePage() {
     } finally {
       setSaving(false);
     }
-  }, [id, isCreate, load, netboxManaged, netboxOwns, t]);
+  }, [assetVulnerabilitiesKey, id, isCreate, load, netboxManaged, netboxOwns, queryClient, t]);
 
   const handleNotesChange = React.useCallback((value: string) => {
     setNotes(value);
@@ -1250,10 +1278,7 @@ export default function AssetWorkspacePage() {
         </Button>
       )}
       {!isCreate && canDelete && (
-        <Button
-          variant="action-danger"
-          startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-          size="small"
+        <DeleteIconButton
           onClick={async () => {
             if (!id) return;
             // Asked first: an asset still in use gets the refusal and why, with Close only.
@@ -1278,9 +1303,7 @@ export default function AssetWorkspacePage() {
             }
             await handleClose();
           }}
-        >
-          {t('common:buttons.delete')}
-        </Button>
+        />
       )}
       {!isCreate && data && id && (
         <SendLinkButton
@@ -1456,8 +1479,9 @@ export default function AssetWorkspacePage() {
         itemReference={!isCreate ? data?.asset_reference || data?.id?.slice(0, 8) || null : null}
         onCopyReference={!isCreate && (data?.asset_reference || data?.id) ? () => { void navigator.clipboard?.writeText(data?.asset_reference || data?.id || ''); } : undefined}
         title={isCreate ? name : data?.name || name || ''}
-        titleFallback={isCreate ? t('workspace.asset.newAsset') : t('workspace.asset.untitled')}
-        canEditTitle={canEditNetboxField('name')}
+        // While the asset loads, an empty title keeps its line: "Untitled" is for a loaded asset without a name.
+        titleFallback={isCreate ? t('workspace.asset.newAsset') : assetLoading ? '\u00A0' : t('workspace.asset.untitled')}
+        canEditTitle={canEditNetboxField('name') && !assetLoading}
         onTitleSave={(value) => {
           const next = value.trim();
           if (!next) return;
@@ -1478,7 +1502,7 @@ export default function AssetWorkspacePage() {
         } : undefined}
         onSaveShortcut={isCreate ? () => { void handleSave(); } : undefined}
         metadata={!isCreate ? (
-          <>
+          <PendingMetadata pending={metadataPending}>
             <PortfolioStatusMetadata
               value={status || 'active'}
               label={humanize(labelFor('lifecycleStatus', status) || status, notSetLabel)}
@@ -1558,7 +1582,6 @@ export default function AssetWorkspacePage() {
                 </MenuItem>
               ))}
             </Menu>
-            {computedFqdn && <PortfolioMetadataItem mono>{computedFqdn}</PortfolioMetadataItem>}
             <PortfolioMetadataItem
               label={t('workspace.asset.meta.goLive')}
               onClick={(event) => setGoLiveAnchorEl(event.currentTarget)}
@@ -1578,7 +1601,15 @@ export default function AssetWorkspacePage() {
               onClose={() => setGoLiveAnchorEl(null)}
               allowClear
             />
-          </>
+            {reachVulnerabilities?.totals && (
+              <VulnerabilitySevereBadge
+                severe={reachVulnerabilities.totals.severe}
+                exploitedSevere={reachVulnerabilities.totals.exploited_severe}
+                highestSeverity={highestSevereOf(reachVulnerabilities.rows)}
+                to={`/it/vulnerabilities?asset=${encodeURIComponent(data?.asset_reference || id)}`}
+              />
+            )}
+          </PendingMetadata>
         ) : undefined}
         actions={actions}
         properties={properties}
@@ -1714,6 +1745,115 @@ export default function AssetWorkspacePage() {
                     surface
                   />
                 </React.Suspense>
+              </Box>
+              {/* IDENTITY SECTION */}
+              <Box>
+                <Box sx={{ mb: 1.5 }}>
+                  <SectionLabel>{t('workspace.asset.technical.identity')}</SectionLabel>
+                </Box>
+                {netboxManaged ? (
+                  <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
+                    {t('pages.netbox.assetSource.managedFields')}
+                  </Typography>
+                ) : null}
+                <Stack spacing={0} sx={{ maxWidth: 560 }}>
+                  <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
+                    <TextField
+                      value={hostname}
+                      onChange={(e) => { setHostname(e.target.value); setHostnameManuallyEdited(true); if (isCreate) setDirty(true); }}
+                      onBlur={(e) => {
+                        const next = e.currentTarget.value;
+                        const cleanHostname = next.trim().toLowerCase();
+                        const domainOpt = domainOptions.find((domainOption) => domainOption.value === domain);
+                        const nextFqdn = cleanHostname
+                          ? (!domain || domain === 'workgroup' || domain === 'n-a' || !domainOpt?.dns_suffix
+                              ? cleanHostname
+                              : `${cleanHostname}.${domainOpt.dns_suffix}`)
+                          : null;
+                        setHostname(next);
+                        if (hostnameMalformed) return;
+                        if (!isCreate && (next || '') !== (data?.hostname || '')) void patchAsset({ hostname: next || null, fqdn: nextFqdn });
+                      }}
+                      error={(!!hostnameRequired && !hostname) || hostnameMalformed}
+                      helperText={
+                        hostnameRequired && !hostname
+                          ? t('workspace.asset.technical.hostnameRequired')
+                          : hostnameMalformed
+                            ? t('workspace.asset.technical.hostnameInvalid')
+                            : undefined
+                      }
+                      placeholder={t('workspace.asset.technical.hostnamePlaceholder')}
+                      size="small"
+                      variant="standard"
+                      sx={contentFieldSx}
+                      disabled={!canEditNetboxField('hostname')}
+                    />
+                  </PropertyRow>
+                  <PropertyRow label={t('workspace.asset.technical.domain')} valueSx={{ maxWidth: 520 }}>
+                    <TextField
+                      select
+                      value={domain}
+                      onChange={(e) => {
+                        const next = e.target.value;
+                        setDomain(next);
+                        if (isCreate) setDirty(true);
+                        else void patchAsset({ domain: next || null });
+                      }}
+                      size="small"
+                      variant="standard"
+                      sx={contentFieldSx}
+                      disabled={!canEditNetboxField('domain')}
+                    >
+                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
+                      {domainOptions
+                        .filter((opt) => !opt.deprecated || opt.value === domain)
+                        .map((opt) => (
+                          <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
+                        ))}
+                    </TextField>
+                  </PropertyRow>
+                  <PropertyRow label={t('workspace.asset.technical.fqdn')} valueSx={{ maxWidth: 520 }}>
+                    <TextField
+                      value={computedFqdn}
+                      InputProps={{
+                        readOnly: true,
+                        sx: { color: 'text.secondary', '& input': { cursor: 'default' } },
+                      }}
+                      size="small"
+                      variant="standard"
+                      sx={contentFieldSx}
+                    />
+                  </PropertyRow>
+                  <Autocomplete
+                    multiple
+                    freeSolo
+                    options={[]}
+                    value={aliases}
+                    onChange={(_, newValue) => {
+                      const next = newValue.map((v) => String(v).trim().toLowerCase()).filter(Boolean);
+                      setAliases(next);
+                      if (isCreate) setDirty(true);
+                      else void patchAsset({ aliases: next.length > 0 ? next : null });
+                    }}
+                    renderTags={(value, getTagProps) =>
+                      value.map((option, index) => (
+                        <Chip size="small" label={option} {...getTagProps({ index })} key={index} />
+                      ))
+                    }
+                    renderInput={(params) => (
+                      <PropertyRow label={t('workspace.asset.technical.aliases')} valueSx={{ maxWidth: 520 }}>
+                        <TextField
+                          {...params}
+                          placeholder={aliases.length === 0 ? t('workspace.asset.technical.aliasesExamplePlaceholder') : ''}
+                          size="small"
+                          variant="standard"
+                          sx={contentFieldSx}
+                        />
+                      </PropertyRow>
+                    )}
+                    disabled={!canManage}
+                  />
+                </Stack>
               </Box>
               {!isCreate && (
                 <>
@@ -1995,120 +2135,6 @@ export default function AssetWorkspacePage() {
                 </Box>
               )}
 
-              {/* IDENTITY SECTION */}
-              <Box>
-                <Box sx={{ mb: 1.5 }}>
-                  <SectionLabel>{t('workspace.asset.technical.identity')}</SectionLabel>
-                </Box>
-                {netboxManaged ? (
-                  <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
-                    {t('pages.netbox.assetSource.managedFields')}
-                  </Typography>
-                ) : null}
-                <Stack spacing={0} sx={{ maxWidth: 560 }}>
-                  <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
-                    <TextField
-                      value={hostname}
-                      onChange={(e) => { setHostname(e.target.value); setHostnameManuallyEdited(true); if (isCreate) setDirty(true); }}
-                      onBlur={(e) => {
-                        const next = e.currentTarget.value;
-                        const cleanHostname = next.trim().toLowerCase();
-                        const domainOpt = domainOptions.find((domainOption) => domainOption.value === domain);
-                        const nextFqdn = cleanHostname
-                          ? (!domain || domain === 'workgroup' || domain === 'n-a' || !domainOpt?.dns_suffix
-                              ? cleanHostname
-                              : `${cleanHostname}.${domainOpt.dns_suffix}`)
-                          : null;
-                        setHostname(next);
-                        if (hostnameMalformed) return;
-                        if (!isCreate && (next || '') !== (data?.hostname || '')) void patchAsset({ hostname: next || null, fqdn: nextFqdn });
-                      }}
-                      error={(!!hostnameRequired && !hostname) || hostnameMalformed}
-                      helperText={
-                        hostnameRequired && !hostname
-                          ? t('workspace.asset.technical.hostnameRequired')
-                          : hostnameMalformed
-                            ? t('workspace.asset.technical.hostnameInvalid')
-                            : undefined
-                      }
-                      placeholder={t('workspace.asset.technical.hostnamePlaceholder')}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                      disabled={!canEditNetboxField('hostname')}
-                    />
-                  </PropertyRow>
-                  <PropertyRow label={t('workspace.asset.technical.domain')} valueSx={{ maxWidth: 520 }}>
-                    <TextField
-                      select
-                      value={domain}
-                      onChange={(e) => {
-                        const next = e.target.value;
-                        setDomain(next);
-                        if (isCreate) setDirty(true);
-                        else void patchAsset({ domain: next || null });
-                      }}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                      disabled={!canEditNetboxField('domain')}
-                    >
-                      <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
-                      {domainOptions
-                        .filter((opt) => !opt.deprecated || opt.value === domain)
-                        .map((opt) => (
-                          <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>
-                        ))}
-                    </TextField>
-                  </PropertyRow>
-                  <PropertyRow label={t('workspace.asset.technical.fqdn')} valueSx={{ maxWidth: 520 }}>
-                    <TextField
-                      value={computedFqdn}
-                      InputProps={{
-                        readOnly: true,
-                        sx: { color: 'text.secondary', '& input': { cursor: 'default' } },
-                      }}
-                      size="small"
-                      variant="standard"
-                      sx={contentFieldSx}
-                    />
-                  </PropertyRow>
-                  <Autocomplete
-                    multiple
-                    freeSolo
-                    options={[]}
-                    value={aliases}
-                    onChange={(_, newValue) => {
-                      const next = newValue.map((v) => String(v).trim().toLowerCase()).filter(Boolean);
-                      setAliases(next);
-                      if (isCreate) setDirty(true);
-                      else void patchAsset({ aliases: next.length > 0 ? next : null });
-                    }}
-                    renderTags={(value, getTagProps) =>
-                      value.map((option, index) => (
-                        <Chip size="small" label={option} {...getTagProps({ index })} key={index} />
-                      ))
-                    }
-                    renderInput={(params) => (
-                      <PropertyRow label={t('workspace.asset.technical.aliases')} valueSx={{ maxWidth: 520 }}>
-                        <TextField
-                          {...params}
-                          placeholder={aliases.length === 0 ? t('workspace.asset.technical.aliasesExamplePlaceholder') : ''}
-                          size="small"
-                          variant="standard"
-                          sx={contentFieldSx}
-                        />
-                      </PropertyRow>
-                    )}
-                    disabled={!canManage}
-                  />
-                </Stack>
-              </Box>
-
-              {!isCreate && id && (
-                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
-              )}
-
               {/* NETWORK INFORMATION SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
@@ -2256,6 +2282,18 @@ export default function AssetWorkspacePage() {
                   })}
                 </Stack>
               </Box>
+
+              {!isCreate && id && (
+                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+              )}
+              {reachVulnerabilities && id && (
+                <ReachVulnerabilitiesSection
+                  data={reachVulnerabilities}
+                  kind="asset"
+                  subjectReference={data?.asset_reference || id}
+                  heading={<SectionLabel>{t('pages.vulnerabilities.section.title')}</SectionLabel>}
+                />
+              )}
             </Stack>
           )}
           {tab === 'hardware' && isPhysicalAsset && !isCreate && (

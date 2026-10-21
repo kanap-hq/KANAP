@@ -28,6 +28,13 @@ import { useLocale } from '../../i18n/useLocale';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { setListFiltersParam, getWithListContext } from '../../lib/listContext';
 import { useUrlFilterModel } from '../../hooks/useListContextSearch';
+import { useFeatures } from '../../config/FeaturesContext';
+import VulnerabilityCountCell from '../../components/vulnerabilities/VulnerabilityCountCell';
+import {
+  VULNERABILITIES_FIELD,
+  vulnerabilityFilterFromSearch,
+  vulnerabilityFilterOptions,
+} from '../../components/vulnerabilities/vulnerabilityListColumn';
 const ENV_SUMMARY = [
   { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
   { value: 'pre_prod', labelKey: 'enums.environment.preProd', short: 'Pre' },
@@ -97,7 +104,35 @@ type AppRow = {
   components_count?: number;
   first_component_name?: string | null;
   instances?: AppInstanceSummary[];
+  /** CVE still to review, and those critical or high (asked with `include=vulnerabilities`; null out of service or with the feed off). */
+  vulnerabilities_to_review?: number | null;
+  vulnerabilities_severe?: number | null;
 };
+
+/** The vulnerabilities to review of an application, a link to the Vulnerabilities page filtered on it. */
+function VulnerabilitiesCell({ data }: ICellRendererParams<AppRow, any>) {
+  if (!data) return null;
+  return (
+    <VulnerabilityCountCell
+      count={data.vulnerabilities_to_review}
+      severe={data.vulnerabilities_severe}
+      to={`/it/vulnerabilities?application=${encodeURIComponent(data.sequential_id || data.id)}`}
+    />
+  );
+}
+
+/**
+ * Filters an address names outside `filters` (links from the home page): `?vulnerabilities=` on
+ * the Vulnerabilities column, `?criticality=<code>` on the Business criticality column.
+ */
+export function applicationFiltersFromSearch(search: string): Record<string, unknown> | null {
+  const criticality = new URLSearchParams(search).get('criticality');
+  const model = {
+    ...(vulnerabilityFilterFromSearch(search) || {}),
+    ...(criticality ? { criticality: { filterType: 'set', values: [criticality] } } : {}),
+  };
+  return Object.keys(model).length > 0 ? model : null;
+}
 
 /** Orders set-filter values like the catalog: most severe first (waves in restoration order); unknown codes and blanks last. */
 export function catalogRankComparator(levels: Array<{ code: string; rank?: number; order?: number }> | undefined, kind: 'rank' | 'order' = 'rank') {
@@ -123,6 +158,7 @@ function includeFlagsFor(visible: Set<string>): string {
   if (visible.has('spend_count') || visible.has('capex_count') || visible.has('contracts_count')) flags.push('counts');
   flags.push('structure');
   if (visible.has('environments')) flags.push('instances');
+  if (visible.has(VULNERABILITIES_FIELD)) flags.push('vulnerabilities');
   return flags.join(',');
 }
 
@@ -133,6 +169,8 @@ export default function ApplicationsPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const { hasLevel, profile } = useAuth();
+  const { config, isLoading: featuresLoading } = useFeatures();
+  const vulnerabilityFeed = config.features.vulnerabilityFeed === true;
   const gridApiRef = useRef<any>(null);
   const [selectedRows, setSelectedRows] = useState<AppRow[]>([]);
   const [refreshKey, setRefreshKey] = useState(0);
@@ -143,7 +181,11 @@ export default function ApplicationsPage() {
   // Read filters from URL to restore state when returning from workspace: inline, or the saved
   // filters its `ctx` stands for (filters too long for a URL), read before the grid mounts.
   const urlFilterState = useUrlFilterModel(location.search, '/applications');
-  const urlFilters = urlFilterState.model;
+  const searchFilters = useMemo(() => applicationFiltersFromSearch(location.search), [location.search]);
+  const urlFilters = useMemo(
+    () => (searchFilters ? { ...(urlFilterState.model || {}), ...searchFilters } : urlFilterState.model),
+    [searchFilters, urlFilterState.model],
+  );
   const urlAppScope = useMemo(() => {
     const params = new URLSearchParams(location.search);
     const scope = params.get('appScope');
@@ -189,11 +231,13 @@ export default function ApplicationsPage() {
     };
   }, [lifecycleDefaultValues]);
 
-  // Use URL filters if present, otherwise use default if available
+  // Restored filters (returning from a record) replace the default. A filter the address names
+  // outside `filters` (`?vulnerabilities=`, `?criticality=`) adds to it: retired stays hidden.
   const initialFilterModel = useMemo(() => {
-    if (urlFilters && typeof urlFilters === 'object') return urlFilters;
+    if (urlFilterState.model) return urlFilters || undefined;
+    if (searchFilters) return { ...(defaultFilterModel || {}), ...searchFilters };
     return defaultFilterModel || undefined;
-  }, [urlFilters, defaultFilterModel]);
+  }, [urlFilterState.model, urlFilters, searchFilters, defaultFilterModel]);
   const [suitesColVisible, setSuitesColVisible] = useState<boolean>(false);
   const [exportOpen, setExportOpen] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
@@ -628,6 +672,19 @@ export default function ApplicationsPage() {
       headerName: t('common.name'), field: 'name', minWidth: 200,
       cellRenderer: NameWithSuiteCell,
     },
+    // Hidden while the vulnerability feed is off: the counts are null then.
+    ...(vulnerabilityFeed
+      ? [{
+        headerName: t('pages.technologies.columns.vulnerabilitiesShort'),
+        field: VULNERABILITIES_FIELD as keyof AppRow,
+        width: 140,
+        headerTooltip: t('pages.technologies.columns.vulnerabilities'),
+        filter: CheckboxSetFilter,
+        floatingFilterComponent: CheckboxSetFloatingFilter,
+        filterParams: { getValues: async () => vulnerabilityFilterOptions(t), searchable: false },
+        cellRenderer: VulnerabilitiesCell,
+      }]
+      : []),
     {
       headerName: t('pages.applications.columns.category'),
       field: 'category',
@@ -842,6 +899,7 @@ export default function ApplicationsPage() {
     lifecycleLabel,
     locale,
     t,
+    vulnerabilityFeed,
   ]);
 
   const initialState = useMemo(() => {
@@ -856,17 +914,21 @@ export default function ApplicationsPage() {
   useEffect(() => {
     const api = gridApiRef.current;
     if (!api) return;
-    if (urlFilters && typeof urlFilters === 'object') return;
+    if (urlFilterState.model) return;
     if (!defaultFilterModel) return;
     if (appliedLateDefaultFilterRef.current) return;
 
+    // The default arrives after the grid: add it unless the user already chose other filters
+    // (the address filters alone do not count as a choice).
     const currentFilterModel = (api as any).getFilterModel?.() || {};
-    if (!Object.keys(currentFilterModel).length) {
-      (api as any).setFilterModel?.(defaultFilterModel);
+    const keys = Object.keys(currentFilterModel);
+    const addressOnly = keys.every((key) => !!searchFilters && key in searchFilters);
+    if (addressOnly && !keys.some((key) => key in defaultFilterModel)) {
+      (api as any).setFilterModel?.({ ...defaultFilterModel, ...currentFilterModel });
       (api as any).onFilterChanged?.();
     }
     appliedLateDefaultFilterRef.current = true;
-  }, [defaultFilterModel, urlFilters]);
+  }, [defaultFilterModel, urlFilterState.model, searchFilters]);
 
   const canCreate = hasLevel('applications', 'manager');
   const canAdmin = hasLevel('applications', 'admin');
@@ -983,7 +1045,8 @@ export default function ApplicationsPage() {
     <>
       <PageHeader title={t('pages.applications.title')} actions={actions} />
       {/* Waits for filters saved as a context (a reload, a link in a new tab). */}
-      {urlFilterState.ready && (
+      {/* A filter on the Vulnerabilities column also waits for the column: the grid drops a filter on a column it does not have. */}
+      {urlFilterState.ready && !(searchFilters?.[VULNERABILITIES_FIELD] && featuresLoading) && (
         <ServerDataGrid<AppRow>
           columns={columns}
           endpoint={'/applications'}

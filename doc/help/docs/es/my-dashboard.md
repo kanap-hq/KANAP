@@ -160,6 +160,23 @@ Los niveles son los definidos en la configuración del mapa de TI; un nivel que 
 
 ---
 
+### Vulnerabilidades { #vulnerabilities }
+
+Muestra las vulnerabilidades que requieren atención en su parque. Los recuentos siguen [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts): vulnerabilidades aún por revisar, en las alertas. Cada línea abre la lista correspondiente:
+
+- **Aplicaciones de la criticidad más alta con una CVE crítica o alta**, por ejemplo «2 aplicaciones de criticidad Crítica con una CVE crítica o alta»: las aplicaciones en el nivel de criticidad de negocio más alto de su catálogo que alcanza una vulnerabilidad crítica o alta. Abre la lista de aplicaciones filtrada por ese nivel y por **Con vulnerabilidades graves**. Requiere `applications:reader` y cuenta las aplicaciones que usted puede leer.
+- **CVE críticas publicadas en los últimos 7 días** y **en los últimos 30 días**, en tecnologías en uso en el parque: instaladas en un activo en servicio o declaradas por una aplicación en servicio. Abre la página [Vulnerabilidades](vulnerabilities.md) en esas vulnerabilidades.
+- **CVE explotadas**, en tecnologías en uso en el parque. Abre la página Vulnerabilidades en las explotadas.
+- **Activos con una CVE crítica o alta**. Abre la lista de activos filtrada por **Con vulnerabilidades graves**.
+
+Una línea en cero se oculta. Cuando todas las líneas están en cero, el mosaico muestra «Ninguna vulnerabilidad crítica por revisar.». Aparece un aviso cuando una fuente no se ha leído desde hace más de 3 días, por ejemplo «La NVD no se ha leído desde hace 4 días»: las cifras pueden estar desactualizadas. **Ver todo** abre la página Vulnerabilidades.
+
+El mosaico está activado por defecto. Solo existe cuando se siguen las vulnerabilidades. Consulte [Vulnerabilidades](vulnerabilities.md#disponibilidad).
+
+**Requiere**: `infrastructure:reader`
+
+---
+
 ### Actividad del equipo
 
 Muestra la actividad reciente de proyectos en los proyectos donde está involucrado (cambios, comentarios, decisiones). Cada fila indica el proyecto, el tipo de actividad, el autor y un breve resumen. Haga clic en un elemento para saltar a la pestaña de actividad del proyecto.

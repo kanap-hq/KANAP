@@ -60,7 +60,7 @@ import { aiAmountsCurrency } from './ai-amounts-currency.util';
 import { analyticsAxisFields, resolveAiEntityRegistry } from './registries';
 import { budgetFteFields } from './registries/budget-amount-fields';
 import { analyticsAxisLabel, AnalyticsAxisInfo, axisAppliesTo, loadAnalyticsAxes, parseAnalyticsFieldKey } from '../../analytics/analytics-axes.util';
-import { entityNotFound, resolveAiEntityReference } from '../ai-entity-reference.util';
+import { entityNotFound, isUuid, resolveAiEntityReference } from '../ai-entity-reference.util';
 import { AiPolicyService } from '../ai-policy.service';
 import {
   AiTechnologyRow,
@@ -69,6 +69,8 @@ import {
   technologyContractCount,
   technologyVersionFigures,
 } from './ai-technologies.query';
+import { AiVulnerabilityDetailRow, AiVulnerabilityRow, listAiVulnerabilities } from './ai-vulnerabilities.query';
+import { applicationVulnerabilityCounts, assetVulnerabilityCounts, VulnerabilityReachCounts } from '../../vulnerabilities/vulnerability-reach-counts';
 import { FIXED_SLOTS, FixedSlot, fteFieldKey, resolveFteField, SlotMetric, SUMMARY_COLUMNS } from '../../spend/spend-summary.builder';
 
 function toIso(value: Date | string | null | undefined): string | null {
@@ -97,6 +99,23 @@ function scalar(value: unknown): string | number | null {
   if (typeof value === 'number') return Number.isFinite(value) ? value : null;
   if (value instanceof Date) return toIso(value);
   return String(value);
+}
+
+/**
+ * The vulnerability counts of an asset or application row: as its list sets them
+ * (`vulnerabilityListFields`), or as the detail does (`vulnerabilityCountsOf`). Null retired or out
+ * of service, or with the feed off.
+ */
+function vulnerabilityCountsMetadata(row: any): { open_vulnerabilities: number | null; severe_vulnerabilities: number | null } {
+  return {
+    open_vulnerabilities: numericScalar(row.vulnerabilities_to_review ?? row.open_vulnerabilities),
+    severe_vulnerabilities: numericScalar(row.vulnerabilities_severe ?? row.severe_vulnerabilities),
+  };
+}
+
+/** The detail's counts, under the assistant's field names (shared module, one id). */
+function vulnerabilityCountsOf(counts: VulnerabilityReachCounts | undefined) {
+  return { open_vulnerabilities: counts?.open ?? null, severe_vulnerabilities: counts?.severe ?? null };
 }
 
 function numericScalar(value: unknown): number | null {
@@ -347,6 +366,8 @@ export const AI_QUERY_FAMILY_MAX_LIMIT: Partial<Record<AiQueryEntityType, number
   applications: 30,
   // A technology lists up to 10 versions in use (`versions_in_use`): about 1,500 characters a row.
   technologies: 30,
+  // A CVE row carries its summary (clipped), note and page link: about 1,200 characters.
+  vulnerabilities: 30,
 };
 
 export function aiQueryMaxLimit(entityType: AiQueryEntityType): number {
@@ -516,7 +537,7 @@ export class AiQueryExecutor {
         query.status = 'all';
       }
     } else if (entityType === 'applications') {
-      query.include = 'supplier,owners,residency,hosting,counts,structure,instances';
+      query.include = 'supplier,owners,residency,hosting,counts,structure,instances,vulnerabilities';
       query.include_inactive = true;
     } else if (
       entityType === 'spend_items'
@@ -709,6 +730,7 @@ export class AiQueryExecutor {
         contracts_count: numericScalar(row.contracts_count),
         suites_count: numericScalar(row.suites_count),
         components_count: numericScalar(row.components_count),
+        ...vulnerabilityCountsMetadata(row),
       },
     });
   }
@@ -1004,6 +1026,42 @@ export class AiQueryExecutor {
         assignments_count: numericScalar(row.assignments_count),
         go_live_date: scalar(row.go_live_date),
         end_of_life_date: scalar(row.end_of_life_date),
+        ...vulnerabilityCountsMetadata(row),
+      },
+    });
+  }
+
+  /**
+   * A vulnerability row as listed: the CVE id as label and reference (one CVE can have a row per
+   * technology version), the technology by reference and name. No id of another record.
+   */
+  private mapVulnerability(row: AiVulnerabilityRow): AiEntitySummaryDto {
+    return toEntitySummary('vulnerabilities', {
+      id: row.id,
+      reference: row.cve_id,
+      label: row.cve_id,
+      status: row.state,
+      summary: row.summary,
+      created_at: row.created_at,
+      updated_at: row.updated_at,
+      metadata: {
+        severity: scalar(row.severity),
+        cvss_score: numericScalar(row.cvss_score),
+        score_source: scalar(row.score_source),
+        exploited: row.exploited,
+        epss: numericScalar(row.epss),
+        state: row.state,
+        note: scalar(clipSummary(row.note)),
+        technology: row.technology,
+        technology_name: row.technology_name,
+        version: scalar(row.version),
+        sources: row.sources.join(', '),
+        alerts: row.alerts,
+        published_at: scalar(row.published_at),
+        detected_at: scalar(row.detected_at),
+        servers_reached: row.servers_reached,
+        applications_reached: numericScalar(row.applications_reached),
+        page_url: row.page_url,
       },
     });
   }
@@ -1711,6 +1769,25 @@ export class AiQueryExecutor {
       };
     }
 
+    if (input.entity_type === 'vulnerabilities') {
+      const applications = await resolveAiApplicationsReach(context, this.policy);
+      const result = await listAiVulnerabilities(context.manager, context.tenantId, scoped.query, applications);
+      const returned = result.items.length;
+      const truncated = result.total > ((result.page - 1) * result.limit + returned);
+      return {
+        items: result.items.map((row) => this.mapVulnerability(row)),
+        total: result.total,
+        page: result.page,
+        limit: result.limit,
+        returned,
+        truncated,
+        complete: isCompleteQueryResult(result.page, truncated),
+        filters_applied: filtersApplied,
+        filters_ignored: filtersIgnored,
+        scope: null,
+      };
+    }
+
     if (input.entity_type === 'interfaces') {
       const result = await this.interfaces.list(scoped.query, { manager: context.manager });
       const resultPage = result.page ?? page;
@@ -1788,7 +1865,8 @@ export class AiQueryExecutor {
       // The nature-specific item service resolves native and legacy references before loading.
       return value;
     }
-    if (entityType === 'documents') {
+    if (entityType === 'documents' || entityType === 'vulnerabilities') {
+      // A document and a vulnerability (a row id or a CVE id) are read by their own path.
       return value;
     }
     const resolved = await resolveAiEntityReference(context.manager, context.tenantId, entityType, value);
@@ -2292,6 +2370,7 @@ export class AiQueryExecutor {
         tenantId: context.tenantId,
         accessScope,
       }).catch(() => ({ items: [] }));
+      Object.assign(row, vulnerabilityCountsOf((await applicationVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
       return this.toDetailResult(this.mapApplication(row), row);
     }
 
@@ -2309,6 +2388,7 @@ export class AiQueryExecutor {
       row.clusters = await this.assets.listClustersForAsset(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.links = await this.assets.listLinks(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
       row.attachments = await this.assets.listAttachments(entityId, { manager: context.manager, tenantId: context.tenantId }).catch(() => []);
+      Object.assign(row, vulnerabilityCountsOf((await assetVulnerabilityCounts(context.manager, context.tenantId, [row.id])).get(row.id)));
       return this.toDetailResult(this.mapAsset(row), row);
     }
 
@@ -2416,6 +2496,10 @@ export class AiQueryExecutor {
 
     if (entityType === 'technologies') {
       return this.technologyDetail(context, entityId);
+    }
+
+    if (entityType === 'vulnerabilities') {
+      return this.vulnerabilityDetail(context, entityId);
     }
 
     if (entityType === 'interfaces') {
@@ -2535,6 +2619,45 @@ export class AiQueryExecutor {
         : null,
       created_at: record.created_at,
       updated_at: record.updated_at,
+    });
+  }
+
+  /**
+   * A vulnerability row, by its id or by a CVE id (then the CVE's first row in the list order:
+   * exploited, then most severe), with every field of the row, the CVE's signals and `rows`: each
+   * row of that CVE in the workspace (technology, version, state, alert, direct reach). References
+   * and names only: no id of another record.
+   */
+  private async vulnerabilityDetail(context: AiExecutionContextWithManager, entityId: string): Promise<AiEntityDetailDto> {
+    const value = String(entityId ?? '').trim();
+    const isId = isUuid(value);
+    let cveId = value.toUpperCase();
+    if (isId) {
+      const [row]: Array<{ cve_id: string }> = await context.manager.query(
+        `SELECT cve_id FROM technology_vulnerabilities WHERE tenant_id = $1 AND id = $2::uuid`,
+        [context.tenantId, value],
+      );
+      if (!row) throw entityNotFound('vulnerabilities', value);
+      cveId = row.cve_id;
+    } else if (!/^CVE-\d{4}-\d{4,}$/.test(cveId)) {
+      throw entityNotFound('vulnerabilities', value);
+    }
+    const applications = await resolveAiApplicationsReach(context, this.policy);
+    const { items } = await listAiVulnerabilities(context.manager, context.tenantId, { limit: 500 }, applications, { cveIds: [cveId], detail: true });
+    const row: AiVulnerabilityDetailRow | undefined = isId ? items.find((item) => item.id === value) : items[0];
+    if (!row) throw entityNotFound('vulnerabilities', value);
+    const { id: _id, created_at: _created, updated_at: _updated, ...fields } = row;
+    return this.toDetailResult(this.mapVulnerability(row), {
+      ...fields,
+      rows: items.map((item) => ({
+        technology: item.technology,
+        technology_name: item.technology_name,
+        version: item.version,
+        state: item.state,
+        alerts: item.alerts,
+        servers_reached: item.servers_reached,
+        applications_reached: item.applications_reached,
+      })),
     });
   }
 

@@ -24,7 +24,7 @@ Navigieren Sie zu **IT-Landschaft > Assets**, um Ihr Asset-Inventar zu sehen. Kl
 
 ---
 
-## Arbeiten mit der Liste
+## Arbeiten mit der Liste { #working-with-the-list }
 
 Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes Asset in Ihrem Inventar.
 
@@ -34,6 +34,7 @@ Die Asset-Liste bietet Ihnen eine filter- und sortierbare Übersicht über jedes
 |--------|---------------|
 | **#** | Asset-Referenz (z. B. `AST-123`), in Festbreitenschrift |
 | **Name** | Asset-Name (klicken, um den Arbeitsbereich zu öffnen) |
+| **Zu prüfende Schwachstellen** | Die noch zu prüfenden Schwachstellen der auf dem Asset erfassten Technologien, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für ein außer Betrieb genommenes Asset oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset. Vorhanden, wenn Schwachstellen verfolgt werden |
 | **Asset-Typ** | Der Typ des Assets (z. B. Virtuelle Maschine, Physischer Server) |
 | **Cluster** | Cluster-Mitgliedschaft oder ein „Cluster"-Badge, wenn dieses Asset selbst ein Cluster ist |
 | **Umgebung** | Prod, Pre-prod, QA, Test, Dev, Sandbox, mit einem farbigen Punkt |
@@ -69,6 +70,9 @@ Die meisten Spalten unterstützen Kontrollkästchen-Set-Filter für die schnelle
 | Netzwerkzone | Nach Netzwerksegment filtern |
 | Lebenszyklus | Nach Lebenszyklus-Status filtern |
 | Administrationszone | Enthält „(Leer)“ für Assets ohne Zone |
+| Zu prüfende Schwachstellen | **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne**. Ein außer Betrieb genommenes Asset fällt unter keinen dieser Werte |
+
+Die Sortierung nach **Zu prüfende Schwachstellen** ordnet die Assets nach ihren kritischen oder hohen Schwachstellen, dann nach ihrer Gesamtzahl. Außer Betrieb genommene Assets stehen zuletzt. Die Spalte zählt nur direkte Verknüpfungen: Eine virtuelle Maschine zählt die Schwachstellen ihres Hosts nicht. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
 
 **Tipp**: Kombinieren Sie Filter über Spalten hinweg, um die Ergebnisse einzugrenzen. Filtern Sie zum Beispiel nach Umgebung = „Prod" und Lebenszyklus = „Aktiv", um nur aktive Produktions-Assets zu sehen.
 
@@ -102,6 +106,7 @@ Die Kopfzeile zeigt:
 - **Asset-Name** (an Ort und Stelle bearbeitbar)
 - **Asset-Referenz** (z. B. `AST-123`): kopierbare Kennung
 - **Lebenszyklus**-Chip (auch über die Eigenschaftsleiste bearbeitbar)
+- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen des Assets, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet den Abschnitt **Schwachstellen** im Reiter **Technisch**. Nur angezeigt, wenn das Asset welche hat
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
 - **Löschen** (`infrastructure:admin`). Bei einem Asset, das noch verwendet wird, erscheint der Grund vor jeder Bestätigung
 - **Vorherige / Nächste** (z. B. „3 von 47"): Durch die gefilterte Liste navigieren, ohne dorthin zurückzukehren
@@ -131,6 +136,12 @@ Der Reiter Übersicht ist die Startseite des Assets.
 
 **Beschreibung**: Eine Rich-Text-Beschreibung des Assets. Speichert automatisch beim Bearbeiten.
 
+**Identität**:
+- **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
+- **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
+- **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
+- **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
+
 **Zuweisungen** (nicht für Cluster-Assets angezeigt): Listet die Anwendungen auf, die auf diesem Asset laufen. Jede Zeile zeigt:
 
 | Spalte | Was sie zeigt |
@@ -151,20 +162,28 @@ Wenn dieses Asset ein Cluster ist, ersetzt ein Inline-Hinweis die Zuweisungstabe
 
 ---
 
-### Technisch
+### Technisch { #technical }
 
-Der Reiter Technisch organisiert Cluster, Netzwerkidentität, die vom Server getragenen Technologien und IP-Konfiguration.
+Der Reiter Technisch enthält in dieser Reihenfolge den Cluster, die IP-Adressen, die vom Server getragenen Technologien und ihre Schwachstellen.
 
 **Cluster-Verwaltung**:
 - **Cluster**-Schalter: dieses Asset als Cluster markieren.
 - Wenn das Asset **ein Cluster ist**: Ein Bereich **Mitglieder** listet die Member-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf **Mitglieder bearbeiten**, um Mitglieder über einen Suchdialog hinzuzufügen oder zu entfernen.
 - Wenn das Asset **kein Cluster ist**: Ein Bereich **Cluster-Mitgliedschaft** zeigt die Cluster, zu denen dieses Asset gehört (falls vorhanden).
 
-**Identität**:
-- **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
-- **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
-- **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
-- **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
+**IP-Adressen**:
+
+Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfiguration:
+
+- Klicken Sie auf **IP-Adresse hinzufügen**, um einen neuen Eintrag hinzuzufügen.
+- **Typ**: Der Zweck der IP-Adresse (Host, IPMI, Management, iSCSI oder benutzerdefinierte Typen aus den Einstellungen)
+- **IP-Adresse**: Die Adresse selbst
+- **Subnetz**: Netzwerk-Subnetz aus der konfigurierten Liste (gefiltert nach Standort des Assets)
+- **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
+- **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
+
+So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
+
 **Technologien**: was der Server trägt, zum Beispiel Windows Server, SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
 
 - **Betriebssystem**: Das Betriebssystem des Servers ist eine seiner Technologien, aus der Familie **Betriebssystem**. Es steht an erster Stelle der Liste, mit dem Vermerk „Betriebssystem“ nach seinem Namen. Siehe [Betriebssystem](#betriebssystem) weiter unten.
@@ -189,18 +208,19 @@ Damit VMware ESXi oder FortiOS das Betriebssystem eines Hosts ist, ordnen Sie di
 
 Das Betriebssystem erscheint in der Spalte **OS** der Liste, in der Mitgliedertabelle eines Clusters und in der [Verbindungskarte](connection-map.md). Seine Versionen und Support-Enddaten kommen von der Technologie: siehe [Technologien](technologies.md).
 
-**IP-Adressen**:
+#### Schwachstellen
 
-Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfiguration:
+Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die noch zu prüfenden Schwachstellen der auf diesem Asset erfassten Technologien, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen. Eine Zeile pro Technologie und Version:
 
-- Klicken Sie auf **IP-Adresse hinzufügen**, um einen neuen Eintrag hinzuzufügen.
-- **Typ**: Der Zweck der IP-Adresse (Host, IPMI, Management, iSCSI oder benutzerdefinierte Typen aus den Einstellungen)
-- **IP-Adresse**: Die Adresse selbst
-- **Subnetz**: Netzwerk-Subnetz aus der konfigurierten Liste (gefiltert nach Standort des Assets)
-- **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
-- **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
+| Spalte | Was sie zeigt |
+|---|---|
+| **Technologie**, **Version** | Die Technologie und ihre Version. **Version nicht erfasst (möglicherweise betroffen)**, wenn das Asset keine Version nennt |
+| **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
+| **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
 
-So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf das Asset und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Ein außer Betrieb genommenes Asset hat keinen Abschnitt.
+
+**Über ein anderes Asset** listet getrennt die Technologien, die das Asset von einem anderen erhält, etwa vom Host, auf dem es läuft, oder von seinem Cluster, mit diesem Asset in der Spalte **Asset**. Diese Zeilen werden nicht gezählt, weder im Badge noch anderswo: Eine Schwachstelle zählt auf dem Asset, auf dem die Technologie erfasst ist. Ihr **Ansehen** öffnet die Seite auf diesem anderen Asset. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -367,6 +387,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 Einige Felder werden berechnet und können nicht importiert werden:
 - **Anbieter**: Automatisch vom Standort des Assets abgeleitet
 - **FQDN**: Aus Hostname + Domäne berechnet
+- **Schwachstellen**: `vulnerabilities_to_review` (die noch zu prüfenden Schwachstellen) und `severe_vulnerabilities` (die kritischen oder hohen davon), gezählt wie in der Spalte der Liste. Nur Export: Der Import ignoriert sie. Leer für ein außer Betrieb genommenes Asset. Fehlen in der Datei, wenn Schwachstellen nicht verfolgt werden
 
 ### Einschränkungen
 

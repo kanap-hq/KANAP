@@ -36,7 +36,8 @@ export type ScopedAiEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
-  | 'users';
+  | 'users'
+  | 'vulnerabilities';
 
 export type ResolvedAiScope = {
   requested: AiQueryScope;

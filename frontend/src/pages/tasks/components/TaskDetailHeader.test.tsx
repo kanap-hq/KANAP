@@ -22,7 +22,7 @@ vi.mock('./TaskMetadataBar', () => ({
 }));
 
 vi.mock('../../../components/workspace/SendLinkButton', () => ({
-  default: () => <button type="button">Send link</button>,
+  default: () => <button type="button">Share</button>,
 }));
 
 const theme = createAppTheme('dark');

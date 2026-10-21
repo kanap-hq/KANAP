@@ -1,8 +1,7 @@
 import React from 'react';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { Alert, Box, Button, Stack, TextField, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
+import { Alert, Box, Stack, TextField, Typography } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { useKanapDialogs } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
@@ -37,6 +36,7 @@ import {
   refusalField,
   type WorkingDayCalendarField,
 } from './workingDayCalendarFields';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type FieldErrors = Partial<Record<WorkingDayCalendarField, string>>;
 
@@ -184,15 +184,7 @@ export default function WorkingDayCalendarWorkspacePage() {
   }
 
   const actions = canDelete && data ? (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => void handleDelete()}
-      disabled={deleting || !!deleteBlock}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => void handleDelete()} disabled={deleting || !!deleteBlock} />
   ) : undefined;
 
   return (

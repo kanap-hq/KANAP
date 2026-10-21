@@ -24,7 +24,8 @@ export type AiQueryEntityType =
   | 'suppliers'
   | 'tasks'
   | 'technologies'
-  | 'users';
+  | 'users'
+  | 'vulnerabilities';
 
 export type AiSetFilterValue = Array<string | null>;
 /** Every value of a set field but these (exclude mode): a value created later is kept. */

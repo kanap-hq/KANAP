@@ -14,11 +14,11 @@ import { PlatformAiConfigService } from './platform/platform-ai-config.service';
 import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import {
   AI_CONTEXT_ENTITY_TYPES,
-  AI_SEARCH_ENTITY_TYPES,
+  AI_QUERY_ENTITY_TYPES,
   AiCapabilitiesDto,
   AiContextEntityType,
   AiExecutionContext,
-  AiSearchEntityType,
+  AiQueryEntityType,
   AiSettingsCapabilityDto,
   AiSurface,
   AiSurfaceCapabilityDto,
@@ -43,7 +43,7 @@ const SURFACE_RESOURCE: Record<AiSurface, 'ai_chat' | 'ai_mcp'> = {
  * reference or name, names the nature (the item service's `get` and summary, the reference and
  * relation resolvers, the task targets, the registry's `baseWhere`).
  */
-const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> = {
+const ENTITY_RESOURCE: Record<AiQueryEntityType | AiContextEntityType, string> = {
   accounts: 'accounts',
   analytics_categories: 'analytics',
   applications: 'applications',
@@ -67,13 +67,25 @@ const ENTITY_RESOURCE: Record<AiSearchEntityType | AiContextEntityType, string> 
   technologies: 'infrastructure',
   users: 'users',
   documents: 'knowledge',
+  // The CVE rows of the technologies, as the vulnerabilities page reads them.
+  vulnerabilities: 'infrastructure',
 };
 
 /** The entity types the policy knows; any other requested value is never readable. */
 const KNOWN_ENTITY_TYPES: ReadonlySet<string> = new Set<string>([
-  ...AI_SEARCH_ENTITY_TYPES,
+  ...AI_QUERY_ENTITY_TYPES,
   ...AI_CONTEXT_ENTITY_TYPES,
 ]);
+
+/**
+ * A family whose records exist only with a feature on. Off, the family is never readable: left
+ * out of the readable families, and refused with the feature's name, as its HTTP routes
+ * (`VulnerabilityFeedGuard`). `vulnerabilities` needs the vulnerability feed.
+ */
+function entityTypeFeature(entityType: string): string | null {
+  if (entityType === 'vulnerabilities' && !Features.VULNERABILITY_FEED_ENABLED) return 'vulnerabilityFeed';
+  return null;
+}
 
 type EffectivePermissionState = {
   isAdmin: boolean;
@@ -224,10 +236,10 @@ export class AiPolicyService {
    */
   async canReadEntityType(
     context: AiExecutionContext,
-    entityType: AiSearchEntityType | AiContextEntityType,
+    entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
   ): Promise<boolean> {
-    if (!KNOWN_ENTITY_TYPES.has(entityType)) return false;
+    if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) return false;
     try {
       await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
       return true;
@@ -495,23 +507,25 @@ export class AiPolicyService {
 
   async assertEntityTypeReadAccess(
     context: AiExecutionContext,
-    entityType: AiSearchEntityType | AiContextEntityType,
+    entityType: AiQueryEntityType | AiContextEntityType,
     manager: EntityManager,
   ): Promise<void> {
     await this.assertBusinessPermission(context, ENTITY_RESOURCE[entityType], 'reader', manager);
+    const feature = entityTypeFeature(entityType);
+    if (feature) throwFeatureDisabled(feature);
   }
 
   async listReadableEntityTypes(
     context: AiExecutionContext,
-    requested: Array<AiSearchEntityType | AiContextEntityType>,
+    requested: Array<AiQueryEntityType | AiContextEntityType>,
     manager: EntityManager,
-  ): Promise<Array<AiSearchEntityType | AiContextEntityType>> {
+  ): Promise<Array<AiQueryEntityType | AiContextEntityType>> {
     await this.assertSurfaceAccess(context, manager);
 
-    const readable: Array<AiSearchEntityType | AiContextEntityType> = [];
+    const readable: Array<AiQueryEntityType | AiContextEntityType> = [];
     for (const entityType of requested) {
       // Checked before the permissions: an administrator passes every permission check.
-      if (!KNOWN_ENTITY_TYPES.has(entityType)) continue;
+      if (!KNOWN_ENTITY_TYPES.has(entityType) || entityTypeFeature(entityType)) continue;
       try {
         await this.assertUserPermission(context.userId, ENTITY_RESOURCE[entityType], 'reader', manager);
         readable.push(entityType);

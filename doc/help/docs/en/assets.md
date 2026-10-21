@@ -24,7 +24,7 @@ Navigate to **IT Landscape > Assets** to see your asset inventory. Click **Add a
 
 ---
 
-## Working with the list
+## Working with the list { #working-with-the-list }
 
 The asset list gives you a filterable, sortable overview of every asset in your inventory.
 
@@ -34,6 +34,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 |--------|---------------|
 | **#** | Asset reference (e.g., `AST-123`), monospaced |
 | **Name** | Asset name (click to open workspace) |
+| **Vulnerabilities to review** | The vulnerabilities still to review on the technologies recorded on the asset, then, in orange, how many are critical or high (`5 · 2`). Empty for a retired asset or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the asset. Present when vulnerabilities are followed |
 | **Asset Type** | The asset's type (e.g., Virtual Machine, Physical Server) |
 | **Cluster** | Cluster membership, or a "Cluster" badge if this asset is itself a cluster |
 | **Environment** | Prod, Pre-prod, QA, Test, Dev, Sandbox, with a coloured dot |
@@ -69,6 +70,9 @@ Most columns support checkbox set filters for quick multi-select filtering. Filt
 | Network Zone | Filter by network segment |
 | Lifecycle | Filter by lifecycle status |
 | Administration zone | Includes "(Blank)" for assets without a zone |
+| Vulnerabilities to review | **With severe vulnerabilities**, **With vulnerabilities** or **Without**. A retired asset is in none of them |
+
+Sorting on **Vulnerabilities to review** orders the assets by their critical or high vulnerabilities, then by their total. Retired assets come last. The column counts direct links only: a virtual machine does not count the vulnerabilities of its host. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 
 **Tip**: Combine filters across columns to narrow results. For example, filter by Environment = "Prod" and Lifecycle = "Active" to see only active production assets.
 
@@ -102,6 +106,7 @@ The header shows:
 - **Asset name** (editable in place)
 - **Asset reference** (e.g., `AST-123`): copyable identifier
 - **Lifecycle** chip (also editable from the properties drawer)
+- **Severe vulnerabilities**, for example "3 severe": the critical or high vulnerabilities still to review on the asset, with the colour of the highest one. An alert icon follows when some are known to be exploited. Click it to open the **Vulnerabilities** section of the **Technical** tab. Shown only when the asset has some
 - **Send link**: copy a shareable link to this workspace
 - **Delete** (`infrastructure:admin`). For an asset still in use, the reason shows before any confirmation
 - **Previous / Next** (e.g., "3 of 47"): navigate the filtered list without returning to it
@@ -131,6 +136,12 @@ The Overview tab is the asset's home page.
 
 **Description**: A rich-text description of the asset. Autosaves as you edit.
 
+**Identity**:
+- **Hostname**: The asset's network hostname. Automatically pre-filled from the asset name on creation; you can override it at any time. Required when a domain is selected. It accepts letters, digits, hyphens and dots, with each part between dots limited to 63 characters, so a name such as `DL3.ROBOT-15MS.IE2000` is valid as it stands.
+- **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
+- **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
+- **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
+
 **Assignments** (not shown for cluster assets): Lists the applications running on this asset. Each row shows:
 
 | Column | What it shows |
@@ -151,20 +162,28 @@ If this asset is a cluster, an inline notice replaces the assignments table and 
 
 ---
 
-### Technical
+### Technical { #technical }
 
-The Technical tab organizes cluster, network identity, the technologies the server carries and IP configuration.
+The Technical tab holds, in this order, the cluster, the IP addresses, the technologies the server carries and their vulnerabilities.
 
 **Cluster management**:
 - **Cluster** toggle: mark this asset as a cluster.
 - If the asset **is a cluster**: a **Members** section lists the member assets (Name, Environment, Status, Operating system). Click **Edit members** to add or remove members through a search dialog.
 - If the asset **is not a cluster**: a **Cluster membership** section shows the clusters this asset belongs to (if any).
 
-**Identity**:
-- **Hostname**: The asset's network hostname. Automatically pre-filled from the asset name on creation; you can override it at any time. Required when a domain is selected. It accepts letters, digits, hyphens and dots, with each part between dots limited to 63 characters, so a name such as `DL3.ROBOT-15MS.IE2000` is valid as it stands.
-- **Domain**: The Active Directory or DNS domain the asset belongs to. Choose from domains configured in **IT Landscape > Settings**. System options include "Workgroup" (standalone) and "N/A" (not applicable).
-- **FQDN**: Fully Qualified Domain Name, automatically computed from hostname and domain DNS suffix. Read-only.
-- **Aliases**: Additional DNS names or aliases for this asset. Type and press Enter to add.
+**IP addresses**:
+
+Assets support multiple IP addresses, each with its own network configuration:
+
+- Click **Add IP address** to add a new entry.
+- **Type**: The purpose of the IP address (Host, IPMI, Management, iSCSI, or custom types from Settings)
+- **IP address**: The address itself
+- **Subnet**: Network subnet from the configured list (filtered to the asset's location)
+- **Network zone**: Automatically derived from the selected subnet (read-only)
+- **VLAN**: Automatically derived from the selected subnet (read-only)
+
+This lets you document multiple network interfaces per asset, for example a physical server with both a host IP and an IPMI management address on different subnets.
+
 **Technologies**: what the server carries, for example Windows Server, SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and, when the server carries a technology through another one, **Via**.
 
 - **Operating system**: the server's operating system is one of its technologies, of the **Operating system** family. It comes first in the list, with "Operating system" after its name. See [Operating system](#operating-system) below.
@@ -189,18 +208,19 @@ To make VMware ESXi or FortiOS the operating system of a host, put that technolo
 
 The operating system shows in the **OS** column of the list, in the cluster members table and on the [Connection Map](connection-map.md). Its versions and end of support dates come from the technology: see [Technologies](technologies.md).
 
-**IP addresses**:
+#### Vulnerabilities
 
-Assets support multiple IP addresses, each with its own network configuration:
+When vulnerabilities are followed, the last section of the tab lists the vulnerabilities still to review on the technologies recorded on this asset, in the alerts. The count next to the title is the number of distinct vulnerabilities to review. One line per technology and version:
 
-- Click **Add IP address** to add a new entry.
-- **Type**: The purpose of the IP address (Host, IPMI, Management, iSCSI, or custom types from Settings)
-- **IP address**: The address itself
-- **Subnet**: Network subnet from the configured list (filtered to the asset's location)
-- **Network zone**: Automatically derived from the selected subnet (read-only)
-- **VLAN**: Automatically derived from the selected subnet (read-only)
+| Column | What it shows |
+|---|---|
+| **Technology**, **Version** | The technology and its version. **Version not recorded (potentially concerned)** when the asset names no version |
+| **Critical**, **High**, **Medium**, **Low**, **Not rated** | One column per severity: the vulnerabilities still to review. A vulnerability rated **None** counts with **Low** |
+| **Total** | The distinct vulnerabilities still to review on this line |
 
-This lets you document multiple network interfaces per asset, for example a physical server with both a host IP and an IPMI management address on different subnets.
+**See** opens the [Vulnerabilities](vulnerabilities.md) page filtered on the asset and the technology. When nothing is left to review, the section says so in one line. A retired asset has no section.
+
+**Through another asset** lists apart the technologies the asset gets from another one, such as the host it runs on or its cluster, with that asset in the **Asset** column. These lines are not counted, in the badge or anywhere else: a vulnerability counts on the asset where the technology is recorded. Their **See** opens the page on that other asset. See [What KANAP counts](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -367,6 +387,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 Some fields are computed and cannot be imported:
 - **Provider**: Automatically derived from the asset's location
 - **FQDN**: Computed from hostname + domain
+- **Vulnerabilities**: `vulnerabilities_to_review` (the vulnerabilities still to review) and `severe_vulnerabilities` (those critical or high), as the list column counts them. Export only: the import ignores them. Empty for a retired asset. Left out of the file when vulnerabilities are not followed
 
 ### Limitations
 

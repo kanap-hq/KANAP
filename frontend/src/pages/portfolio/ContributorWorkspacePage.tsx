@@ -29,6 +29,7 @@ import ContributorPropertiesDrawer, {
 } from './components/ContributorPropertiesDrawer';
 import { orderContributors } from './contributorsOrdering';
 import { buildItemPath, formatItemRef } from '../../utils/item-ref';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 interface ContributorConfig {
   id: string | null;
@@ -619,9 +620,7 @@ export default function ContributorWorkspacePage() {
         </Button>
       )}
       {canDelete && (
-        <Button variant="action-danger" onClick={handleDelete}>
-          {t('common:buttons.delete')}
-        </Button>
+        <DeleteIconButton onClick={handleDelete} />
       )}
     </>
   ) : undefined;

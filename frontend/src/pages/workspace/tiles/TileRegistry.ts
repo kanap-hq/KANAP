@@ -1,4 +1,8 @@
 import type { ComponentType } from 'react';
+import type { FeaturesConfig } from '../../../config/FeaturesContext';
+
+/** A runtime feature flag of `GET /config/public`. */
+export type Features = FeaturesConfig['features'];
 
 export type PermissionLevel = 'reader' | 'contributor' | 'member' | 'admin';
 
@@ -26,6 +30,8 @@ export interface TileDefinition {
     resource: string;
     level: PermissionLevel;
   }>;
+  /** The tile exists only while this feature flag is on (absent from the dashboard and its settings otherwise). */
+  requiredFeature?: keyof Features;
 }
 
 // Lazy load tile components to avoid circular imports
@@ -42,6 +48,7 @@ const LazyStaleTasksTile = () => import('./StaleTasksTile').then((m) => m.defaul
 const LazyKnowledgeOverviewTile = () => import('./KnowledgeOverviewTile').then((m) => m.default);
 const LazyApplicationComplianceTile = () => import('./ApplicationComplianceTile').then((m) => m.default);
 const LazyNetboxSyncTile = () => import('./NetboxSyncTile').then((m) => m.default);
+const LazyVulnerabilitiesTile = () => import('./VulnerabilitiesTile').then((m) => m.default);
 
 // We'll use a placeholder component initially, then replace with lazy-loaded ones
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -143,6 +150,16 @@ export const TILE_REGISTRY: Record<string, TileDefinition> = {
     configSchema: {},
     requiredPermissions: [{ resource: 'infrastructure', level: 'admin' }],
   },
+  vulnerabilities: {
+    component: Placeholder,
+    title: 'Vulnerabilities in your estate',
+    titleKey: 'dashboard.tiles.vulnerabilities',
+    icon: 'GppMaybe',
+    defaultConfig: {},
+    configSchema: {},
+    requiredPermissions: [{ resource: 'infrastructure', level: 'reader' }],
+    requiredFeature: 'vulnerabilityFeed',
+  },
   // Phase 2 tiles
   'team-activity': {
     component: Placeholder,
@@ -192,6 +209,7 @@ export const TILE_LOADERS = {
   'knowledge-overview': LazyKnowledgeOverviewTile,
   'application-compliance': LazyApplicationComplianceTile,
   'netbox-sync': LazyNetboxSyncTile,
+  vulnerabilities: LazyVulnerabilitiesTile,
   'team-activity': LazyTeamActivityTile,
   'global-status-changes': LazyGlobalStatusChangesTile,
   'stale-tasks': LazyStaleTasksTile,

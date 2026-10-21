@@ -2,7 +2,6 @@ import React from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Alert, Box, Button, Stack, Switch, TextField, Typography } from '@mui/material';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -43,6 +42,7 @@ import { lineTypeUsageConflict, parseLineTypeUsage, type LineType } from '../../
 import { axisListColumn, oneOffListLink } from '../reports/reportListLink';
 import { dropValues, keepValues } from '../reports/reportAggregates';
 import ListLinkAnchor from '../reports/ListLinkAnchor';
+import DeleteIconButton from '../../components/workspace/DeleteIconButton';
 
 type FieldErrors = Partial<Record<AnalyticsField, string>>;
 /** `title` is the click-to-edit name in the header: its refusals show above the workspace. */
@@ -179,15 +179,7 @@ export default function AnalyticsDimensionWorkspacePage() {
 
   // The default dimension is never deleted: no button, its reason sits under the lifecycle.
   const actions = canDelete && data && !isDefault ? (
-    <Button
-      variant="action-danger"
-      startIcon={<DeleteIcon sx={{ fontSize: '14px !important' }} />}
-      size="small"
-      onClick={() => setConfirmOpen(true)}
-      disabled={deleting}
-    >
-      {t('common:buttons.delete')}
-    </Button>
+    <DeleteIconButton onClick={() => setConfirmOpen(true)} disabled={deleting} />
   ) : undefined;
 
   return (

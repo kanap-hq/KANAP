@@ -70,7 +70,7 @@ Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte
 
 ---
 
-## Arbeiten mit der Liste
+## Arbeiten mit der Liste { #working-with-the-list }
 
 Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
@@ -82,6 +82,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 
 **Standardspalten**:
 - **Name**: Anwendungsname mit Kategorie-Beschriftung und einem Badge „Enthalten in: {Suite}" für Komponenten einer Suite
+- **Zu prüfende Schwachstellen**: die noch zu prüfenden Schwachstellen der Technologien, die die Anwendung deklariert oder die ihre Bereitstellungsserver erfasst haben, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für eine deaktivierte Anwendung oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Vorhanden, wenn Schwachstellen verfolgt werden. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)
 - **Kategorie**: Der Hauptzweck der Anwendung
 - **Umgebungen**: Farbige Chips, die aktive Umgebungen zeigen (Prod, Pre-prod, QA, Test, Dev, Sandbox). Bewegen Sie den Mauszeiger darüber für Basis-URL und Lebenszyklus.
 - **Lebenszyklus**: Aktueller Status
@@ -112,6 +113,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - Die Filter für Kritikalität, Cyberkritikalität, Datenklasse und Wiederanlaufwelle listen ihre Werte in Katalogreihenfolge (die kritischste zuerst, Wellen in Wiederherstellungsreihenfolge).
 - Die meisten Spalten verwenden Kontrollkästchen-Set-Filter, die nur Werte anzeigen, die im aktuellen Ergebnissatz vorhanden sind; der schwebende Filter zeigt `Alle`, `Keine` oder `N ausgewählt` mit einem **x** zum Löschen.
 - Außer Betrieb genommene Anwendungen sind standardmäßig ausgeblendet; verwenden Sie den **Lebenszyklus**-Filter, um Außer Betrieb einzuschließen.
+- **Zu prüfende Schwachstellen** filtert nach **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne** und sortiert nach den kritischen oder hohen Schwachstellen, dann nach der Gesamtzahl. Deaktivierte Anwendungen stehen zuletzt und fallen unter keinen Filterwert.
 
 **Aktionen**:
 - **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
@@ -133,6 +135,7 @@ Die Kopfzeile zeigt:
 - **Referenz**: kurze Kennung, die Sie kopieren können
 - **Lebenszyklus**-Chip: klicken zum Ändern
 - **Geschäftskritikalitäts**-Chip: zeigt die Stufe und öffnet ein Menü mit den Stufen der Organisation
+- **Schwerwiegende Schwachstellen**, zum Beispiel „3 schwerwiegend“: die noch zu prüfenden kritischen oder hohen Schwachstellen der Anwendung, in der Farbe der höchsten. Ein Warnsymbol folgt, wenn einige als ausgenutzt bekannt sind. Ein Klick öffnet den Abschnitt **Schwachstellen** im Reiter **Betrieb**. Nur angezeigt, wenn die Anwendung welche hat
 - **Versions**-Chip (wenn eine Version festgelegt ist): klicken zum Kopieren
 - **Go-Live**-Datum
 - **Link senden**: Einen teilbaren Link zu diesem Arbeitsbereich kopieren
@@ -174,6 +177,11 @@ Der Reiter Übersicht ist die Erzählung der Anwendung. Er enthält:
 **Verbindungen**: Eine schreibgeschützte Zusammenfassung, die aus den Schnittstellen der Anwendung erstellt wird. Bei Nicht-Middleware-Apps zeigt sie zwei Zeilen: **Empfängt von** und **Sendet an**. Bei ETL/Middleware-Apps zeigt sie eine einzelne Zeile **Verbunden mit**. Jeder Eintrag ist eine anklickbare Pille, die die zugehörige Anwendung öffnet; „+ N weitere in Schnittstellen" springt zum Reiter Schnittstellen.
 
 **Wissensdatenbank**: Verknüpfte Wissensartikel. Mit `knowledge:member` können Sie neue Artikel direkt aus diesem Bereich erstellen.
+
+**Support**:
+- Eine Tabelle mit Supportkontakten, die aus Ihren Kontakte-Stammdaten gezogen werden. Jede Zeile zeigt den Kontaktnamen, die E-Mail, das Telefon und eine Freitext-Rolle (z. B. Account-Manager, L1-Support).
+- **Kontakt hinzufügen** öffnet einen Dialog zur Auswahl eines Kontakts und zur Festlegung einer Rolle.
+- **Support-Notizen**: Freitext für Supportvereinbarungen (SLA, Eskalationspfade, Bereitschaftsinformationen).
 
 ---
 
@@ -222,11 +230,17 @@ Jede Zeile zeigt den Schnittstellennamen, die Gegenanwendung und einen Indikator
 
 ---
 
-### Betrieb
+### Betrieb { #operations }
 
-Der Reiter Betrieb erfasst die Technologien, von denen die Anwendung abhängt, wie Benutzer auf sie zugreifen und wer sie unterstützt.
+Der Reiter Betrieb enthält in dieser Reihenfolge, wie Benutzer auf die Anwendung zugreifen (**Technik**), die Technologien, von denen sie abhängt, und ihre Schwachstellen.
 
-**Technologien** (oben im Reiter) listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
+**Technik**:
+- **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.
+- **Extern erreichbar**: Ob die Anwendung aus dem Internet zugänglich ist
+- **Datenintegration / ETL**: Ob die Anwendung an Datenintegrations-Pipelines teilnimmt (versetzt diese App auch in den „Middleware"-Modus für die Schnittstellen- und Verbindungsansichten)
+- **Kann Unteranwendungen haben**: Diese Anwendung in eine Suite verwandeln, die andere Anwendungen gruppiert
+
+**Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
 
 - **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
 - **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
@@ -239,16 +253,20 @@ Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, da
 
 Um eine deklarierte Technologie hinzuzufügen, zu ändern oder zu entfernen und sie auf Servern zu erfassen, brauchen Sie `applications:member` und `infrastructure:member`. Eine gehostete Technologie hat kein Kreuz: Entfernen Sie sie am Server.
 
-**Technisch**:
-- **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.
-- **Extern erreichbar**: Ob die Anwendung aus dem Internet zugänglich ist
-- **Datenintegration / ETL**: Ob die Anwendung an Datenintegrations-Pipelines teilnimmt (versetzt diese App auch in den „Middleware"-Modus für die Schnittstellen- und Verbindungsansichten)
-- **Kann Unteranwendungen haben**: Diese Anwendung in eine Suite verwandeln, die andere Anwendungen gruppiert
+**Schwachstellen** (wenn Schwachstellen verfolgt werden) listet die noch zu prüfenden Schwachstellen der Anwendung, in den Warnungen. Die Zahl neben dem Titel ist die Zahl der verschiedenen zu prüfenden Schwachstellen. Eine Zeile pro Technologie und Version:
 
-**Support**:
-- Eine Tabelle mit Supportkontakten, die aus Ihren Kontakte-Stammdaten gezogen werden. Jede Zeile zeigt den Kontaktnamen, die E-Mail, das Telefon und eine Freitext-Rolle (z. B. Account-Manager, L1-Support).
-- **Kontakt hinzufügen** öffnet einen Dialog zur Auswahl eines Kontakts und zur Festlegung einer Rolle.
-- **Support-Notizen**: Freitext für Supportvereinbarungen (SLA, Eskalationspfade, Bereitschaftsinformationen).
+| Spalte | Was sie zeigt |
+|---|---|
+| **Technologie**, **Version** | Die Technologie und ihre Version. **Version nicht erfasst (möglicherweise betroffen)**, wenn keine Version genannt ist |
+| **Server** | Die Bereitstellungsserver, die diese Technologie und Version selbst erfasst haben. **Deklariert**, wenn die Anwendung sie deklariert und kein Server sie hat. **Auf einem Server erfassen** bietet dann ihre Bereitstellungsserver an, wie in **Technologien** |
+| **Kritisch**, **Hoch**, **Mittel**, **Niedrig**, **Nicht bewertet** | Eine Spalte pro Schweregrad: die noch zu prüfenden Schwachstellen. Eine mit **Keine** bewertete Schwachstelle zählt bei **Niedrig** |
+| **Gesamt** | Die verschiedenen noch zu prüfenden Schwachstellen dieser Zeile |
+
+**Ansehen** öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung und die Technologie. Wenn nichts mehr zu prüfen ist, sagt der Abschnitt es in einer Zeile. Eine deaktivierte Anwendung hat keinen Abschnitt.
+
+Der Abschnitt zählt nur direkte Verknüpfungen. Eine Technologie, die der Abschnitt **Technologien** über den Host einer virtuellen Maschine zeigt, zählt hier nicht: Sie zählt auf dem Host. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts).
+
+Wer Anwendungen lesen darf, aber nicht die Infrastruktur, sieht diesen Abschnitt, das Badge in der Kopfzeile und die Spalte der Liste trotzdem, für die Anwendungen, die er lesen darf.
 
 ---
 
@@ -296,7 +314,7 @@ Zwei dezente Hinweise können erscheinen: Daten auf der höchsten Vertraulichkei
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#betrieb), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
+Der Reiter Verknüpfungen zeigt, womit diese Anwendung verknüpft ist: ihre Budgetzeilen, Verträge, Projekte, Anfragen, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach ihre Links und Dateien. Die Technologien stehen im Reiter [Betrieb](#operations), die Geschäftsprozesse in der [Eigenschaftsleiste](#eigenschaftsleiste-rechtes-panel). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Budgetzeilen, Verträge, Projekte, Anfragen und Vorfälle sowie die Links und Dateien. Aufgaben werden nicht gezählt.
 
 **Komponenten** (nur wenn „Kann Unteranwendungen haben" aktiviert ist): eine Tabelle, die die Unteranwendungen dieser Suite mit ihrem Lebenszyklus und ihrer Kritikalität auflistet. Klicken Sie auf eine Zeile, um den Arbeitsbereich der Unteranwendung zu öffnen.
 
@@ -598,6 +616,10 @@ Eine leere Klassifizierungszelle behält im Modus Anreichern und Ersetzen den vo
 | `users_override` | Manuelle Benutzeranzahl-Überschreibung |
 | `created_at` | Zeitstempel der Datensatzerstellung |
 | `updated_at` | Zeitstempel der letzten Änderung |
+| `vulnerabilities_to_review` | Noch zu prüfende Schwachstellen, gezählt wie in der Spalte der Liste. Leer für eine deaktivierte Anwendung |
+| `severe_vulnerabilities` | Davon die kritischen oder hohen. Leer für eine deaktivierte Anwendung |
+
+Die beiden Schwachstellenspalten fehlen, wenn Schwachstellen nicht verfolgt werden. Der Import ignoriert sie.
 
 ### Akzeptanz von Bezeichnungen und Codes
 

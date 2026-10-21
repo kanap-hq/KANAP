@@ -24,7 +24,7 @@ Navegue a **Panorama IT > Activos** para ver su inventario de activos. Haga clic
 
 ---
 
-## Trabajar con la lista
+## Trabajar con la lista { #working-with-the-list }
 
 La lista de activos le ofrece una visión filtrable y ordenable de cada activo de su inventario.
 
@@ -34,6 +34,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 |---------|-------------|
 | **#** | Referencia del activo (p. ej., `AST-123`), monoespaciado |
 | **Nombre** | Nombre del activo (haga clic para abrir el espacio de trabajo) |
+| **Vulnerabilidades por revisar** | Las vulnerabilidades aún por revisar en las tecnologías registradas en el activo y, en naranja, cuántas son críticas o altas (`5 · 2`). Vacía para un activo retirado o cuando no queda ninguna. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo. Presente cuando se siguen las vulnerabilidades |
 | **Tipo de activo** | El tipo del activo (p. ej., Máquina Virtual, Servidor Físico) |
 | **Clúster** | Pertenencia a clúster, o una insignia "Clúster" si este activo es un clúster |
 | **Entorno** | Prod, Pre-prod, QA, Test, Dev, Sandbox, con un punto de color |
@@ -69,6 +70,9 @@ La mayoría de columnas admiten filtros de conjunto de casillas para un filtrado
 | Zona de red | Filtrar por segmento de red |
 | Ciclo de vida | Filtrar por estado del ciclo de vida |
 | Zona de administración | Incluye "(Vacío)" para los activos sin zona |
+| Vulnerabilidades por revisar | **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**. Un activo retirado no entra en ninguno de estos valores |
+
+Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulnerabilidades críticas o altas y luego por su total. Los activos retirados van al final. La columna solo cuenta vínculos directos: una máquina virtual no cuenta las vulnerabilidades de su host. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
 
 **Consejo**: Combine filtros entre columnas para acotar resultados. Por ejemplo, filtre por Entorno = "Prod" y Ciclo de vida = "Activo" para ver solo los activos activos de producción.
 
@@ -102,6 +106,7 @@ El encabezado muestra:
 - **Nombre del activo** (editable en línea)
 - **Referencia del activo** (p. ej., `AST-123`): identificador copiable
 - Chip de **Ciclo de vida** (también editable desde el panel de propiedades)
+- **Vulnerabilidades graves**, por ejemplo «3 graves»: las vulnerabilidades críticas o altas aún por revisar en el activo, con el color de la más alta. Un icono de alerta aparece cuando algunas se conocen como explotadas. Haga clic para abrir la sección **Vulnerabilidades** de la pestaña **Técnico**. Solo se muestra cuando el activo tiene alguna
 - **Enviar enlace**: copiar un enlace compartible a este espacio de trabajo
 - **Eliminar** (`infrastructure:admin`). Para un activo todavía en uso, el motivo aparece antes de cualquier confirmación
 - **Anterior / Siguiente** (p. ej., "3 de 47"): navegar por la lista filtrada sin volver a ella
@@ -131,6 +136,12 @@ La pestaña Visión general es la página de inicio del activo.
 
 **Descripción**: Una descripción enriquecida del activo. Se guarda automáticamente mientras edita.
 
+**Identidad**:
+- **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
+- **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
+- **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
+- **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
+
 **Asignaciones** (no se muestra para activos clúster): Lista las aplicaciones que se ejecutan en este activo. Cada fila muestra:
 
 | Columna | Qué muestra |
@@ -151,20 +162,28 @@ Si este activo es un clúster, un aviso en línea reemplaza la tabla de asignaci
 
 ---
 
-### Técnico
+### Técnico { #technical }
 
-La pestaña Técnico organiza el clúster, la identidad de red, las tecnologías que lleva el servidor y la configuración de IP.
+La pestaña Técnico reúne, en este orden, el clúster, las direcciones IP, las tecnologías que lleva el servidor y sus vulnerabilidades.
 
 **Gestión de clúster**:
 - Conmutador **Clúster**: marcar este activo como clúster.
 - Si el activo **es un clúster**: una sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en **Editar miembros** para añadir o quitar miembros mediante un diálogo de búsqueda.
 - Si el activo **no es un clúster**: una sección **Pertenencia a clúster** muestra los clústeres a los que pertenece este activo (si los hay).
 
-**Identidad**:
-- **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
-- **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
-- **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
-- **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
+**Direcciones IP**:
+
+Los activos admiten múltiples direcciones IP, cada una con su propia configuración de red:
+
+- Haga clic en **Añadir dirección IP** para añadir una nueva entrada.
+- **Tipo**: El propósito de la dirección IP (Host, IPMI, Gestión, iSCSI o tipos personalizados de Configuración)
+- **Dirección IP**: La dirección en sí
+- **Subred**: Subred de red de la lista configurada (filtrada por la ubicación del activo)
+- **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
+- **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
+
+Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
+
 **Tecnologías**: lo que lleva el servidor, por ejemplo Windows Server, SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
 
 - **Sistema operativo**: el sistema operativo del servidor es una de sus tecnologías, de la familia **Sistema operativo**. Aparece primero en la lista, con la mención «Sistema operativo» tras su nombre. Consulte [Sistema operativo](#sistema-operativo) más abajo.
@@ -189,18 +208,19 @@ Para que VMware ESXi o FortiOS sea el sistema operativo de un host, ponga esa te
 
 El sistema operativo aparece en la columna **OS** de la lista, en la tabla de miembros de un clúster y en el [Mapa de conexiones](connection-map.md). Sus versiones y fechas de fin de soporte vienen de la tecnología: consulte [Tecnologías](technologies.md).
 
-**Direcciones IP**:
+#### Vulnerabilidades
 
-Los activos admiten múltiples direcciones IP, cada una con su propia configuración de red:
+Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista las vulnerabilidades aún por revisar en las tecnologías registradas en este activo, en las alertas. El número junto al título es el de vulnerabilidades distintas por revisar. Una línea por tecnología y versión:
 
-- Haga clic en **Añadir dirección IP** para añadir una nueva entrada.
-- **Tipo**: El propósito de la dirección IP (Host, IPMI, Gestión, iSCSI o tipos personalizados de Configuración)
-- **Dirección IP**: La dirección en sí
-- **Subred**: Subred de red de la lista configurada (filtrada por la ubicación del activo)
-- **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
-- **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
+| Columna | Qué muestra |
+|---|---|
+| **Tecnología**, **Versión** | La tecnología y su versión. **Versión no registrada (potencialmente afectada)** cuando el activo no indica ninguna versión |
+| **Crítica**, **Alta**, **Media**, **Baja**, **Sin evaluar** | Una columna por gravedad: las vulnerabilidades aún por revisar. Una vulnerabilidad calificada **Ninguna** cuenta con **Baja** |
+| **Total** | Las vulnerabilidades distintas aún por revisar en esta línea |
 
-Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
+**Ver** abre la página [Vulnerabilidades](vulnerabilities.md) filtrada por el activo y la tecnología. Cuando no queda nada por revisar, la sección lo dice en una línea. Un activo retirado no tiene sección.
+
+**A través de otro activo** lista aparte las tecnologías que el activo recibe de otro, como el host en el que se ejecuta o su clúster, con ese activo en la columna **Activo**. Estas líneas no se cuentan, ni en la insignia ni en otro lugar: una vulnerabilidad cuenta en el activo donde la tecnología está registrada. Su **Ver** abre la página en ese otro activo. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts).
 
 ---
 
@@ -367,6 +387,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 Algunos campos se calculan y no pueden importarse:
 - **Proveedor**: Derivado automáticamente de la ubicación del activo
 - **FQDN**: Calculado a partir del nombre de host + dominio
+- **Vulnerabilidades**: `vulnerabilities_to_review` (las vulnerabilidades aún por revisar) y `severe_vulnerabilities` (las críticas o altas), contadas como en la columna de la lista. Solo exportación: la importación las ignora. Vacías para un activo retirado. Ausentes del archivo cuando no se siguen las vulnerabilidades
 
 ### Limitaciones
 
