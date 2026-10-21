@@ -283,8 +283,7 @@ Les fiches liées à la technologie, une section par genre :
 - **Contrats** : fournisseur, date de fin et montant annuel, avec un total par devise.
 - **Projets** : statut et fin prévue.
 - **Incidents** : sévérité, statut et date de détection. Lier un incident demande `incidents:contributor`. Un incident clos ou annulé ne peut être ni lié ni délié.
-- **Documents** : les fichiers déposés sur la technologie, avec leur taille et leur date. **Ajouter** dépose des fichiers ; cliquez sur un nom pour le télécharger.
-- **Liens web** : un nom et une adresse, comme les notes de version de l'éditeur. Cliquez sur le nom pour l'ouvrir ; survolez une ligne pour la modifier. Les adresses commencent par `http://` ou `https://` ; une adresse sans préfixe s'ouvre en `https://`.
+- **Liens et fichiers** : les liens web de la technologie et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `infrastructure:member`, **Ajouter un lien** et **Joindre un fichier** ajoutent une ligne, et les fichiers peuvent aussi être déposés sur la section. Survolez une ligne pour modifier un lien ou retirer une ligne. La suppression d'un fichier demande une confirmation. Une adresse sans `http://` ou `https://` s'ouvre en `https://`.
 
 Une section n'apparaît que si vous pouvez lire son module. **Ajouter** (`infrastructure:member`) ouvre une recherche sur place ; la croix au bout d'une ligne retire le lien.
 

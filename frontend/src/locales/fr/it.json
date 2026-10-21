@@ -2308,29 +2308,11 @@
         "alreadyListed": "Ce contact est déjà dans la liste. Son rôle reste inchangé."
       },
       "relations": {
-        "sections": {
-          "documents": "Documents",
-          "links": "Liens web"
-        },
         "empty": {
-          "documents": "Aucun document.",
-          "links": "Aucun lien web.",
           "incidents": "Aucun incident lié."
         },
         "search": {
           "incidents": "Rechercher des incidents"
-        },
-        "columns": {
-          "size": "Taille",
-          "added": "Ajouté le",
-          "url": "Adresse"
-        },
-        "newLink": "Nouveau lien web",
-        "editLink": "Modifier {{name}}",
-        "editLinkTitle": "Modifier le lien web",
-        "placeholders": {
-          "linkName": "ex. : Notes de version",
-          "url": "ex. : https://learn.microsoft.com/sql"
         }
       },
       "servers": {
