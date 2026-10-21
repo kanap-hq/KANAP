@@ -6,6 +6,7 @@ import { contractTermsSql, SQL_TODAY_UTC } from '../../contracts/contract-terms'
 import { renewalDecisionSql } from '../../contracts/contract-renewal';
 import { readDecisionWindowDays } from '../../contracts/contract-settings.service';
 import type { FxRateService } from '../../currency/fx-rate.service';
+import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } from '../../incidents/incident-visibility';
 
 /**
  * The linked objects a Relations tab lists (lot R1, `applications-relations.service.ts`), shared by
@@ -43,6 +44,17 @@ export type RelatedContract = {
   status: string;
 };
 export type RelatedProject = { id: string; item_number: number | null; name: string; status: string | null; planned_end: string | null };
+export type RelatedIncident = {
+  id: string;
+  item_number: number;
+  title: string | null;
+  status: string;
+  severity: string;
+  detected_at: string | null;
+};
+
+/** The owner's incident link table (`incident_applications`, `incident_technologies`). Column names come from the callers' constants. */
+export type IncidentLinkTable = { table: string; column: string };
 
 /** `$n` placeholders over a growing parameter list. */
 export function binder(params: unknown[]) {
@@ -148,6 +160,30 @@ export async function listRelatedProjects(
      JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
      WHERE l.tenant_id = $1 AND l.${t.owner} = $2 ${scopeSql}
      ORDER BY p.planned_end ASC NULLS LAST, lower(p.name), p.id`,
+    params,
+  );
+}
+
+/**
+ * Incidents linked through `link` that the caller may see. Confidential ones follow the register
+ * (`incidentVisibilitySql`) and carry no title.
+ */
+export async function listRelatedIncidents(
+  mg: EntityManager,
+  tenantId: string,
+  link: IncidentLinkTable,
+  ownerId: string,
+  viewer: IncidentViewer,
+): Promise<RelatedIncident[]> {
+  const params: unknown[] = [tenantId, ownerId];
+  const visible = incidentVisibilitySql('i', viewer, params);
+  return mg.query(
+    `SELECT i.id, i.item_number, ${incidentRelatedTitleSql('i')} AS title, i.status::text AS status, i.severity::text AS severity,
+            ${dateText('i.detected_at')} AS detected_at
+       FROM ${link.table} l
+       JOIN incidents i ON i.id = l.incident_id AND i.tenant_id = l.tenant_id
+      WHERE l.tenant_id = $1 AND l.${link.column} = $2${visible}
+      ORDER BY i.detected_at DESC NULLS LAST, i.item_number DESC`,
     params,
   );
 }

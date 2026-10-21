@@ -11,6 +11,7 @@ import {
   listRelatedProjects,
   type RelatedBudgetLine,
   type RelatedContract,
+  type RelatedIncident,
   type RelatedProject,
 } from '../common/relations/related-objects';
 import { FxRateService } from '../currency/fx-rate.service';
@@ -40,15 +41,6 @@ export type TechnologyRelationsContext = {
   projectScope?: ParticipationAccessScope;
   /** Confidential incidents show only to their reporter, owner and the registry admins. */
   incidentViewer: IncidentViewer;
-};
-
-export type RelatedIncident = {
-  id: string;
-  item_number: number;
-  title: string | null;
-  status: string;
-  severity: string;
-  detected_at: string | null;
 };
 
 export type TechnologyRelations = {

@@ -29,11 +29,11 @@ import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { PortfolioRequestsService } from '../../portfolio/portfolio-requests.service';
 import { TechnologyLinksService, type DeploymentServer, type LinkInput } from '../../technologies/technology-links.service';
 import { technologyReference } from '../../technologies/technology-rows';
-import type { RelatedIncident } from '../../technologies/technologies-relations.service';
+import type { RelatedIncident } from '../../common/relations/related-objects';
+import { UUID_RE } from '../../common/relations/relation-target';
 import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } from '../../incidents/incident-visibility';
 import { IncidentRelationsService } from '../../incidents/services/incident-relations.service';
 
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 /** At most this many suggestions per rule. */
 export const SUGGESTIONS_PER_RULE = 20;
 
@@ -72,7 +72,6 @@ export type RelationsContext = {
   incidentViewer: IncidentViewer;
 };
 
-export type { RelatedBudgetLine, RelatedContract, RelatedIncident, RelatedProject };
 export type RelatedRequest = { id: string; item_number: number | null; name: string; status: string | null; target_delivery_date: string | null };
 export type RelatedTask = {
   id: string;
