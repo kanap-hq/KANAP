@@ -445,7 +445,7 @@ Jeder Benutzer öffnet ihn, bestätigt und meldet sich dann bei KANAP an, wie un
 
 ## Optional: Schwachstellen { #optional-vulnerabilities }
 
-Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen. Derselbe Schalter liest die Ausnutzungssignale: den CISA-Katalog bekannter ausgenutzter Schwachstellen, die europäische Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Kennungen) und die täglichen EPSS-Werte.
+Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigungen und die Schwachstellenzähler der Technologien sind On-Premise standardmäßig aus. Eingeschaltet liest KANAP alle 6 Stunden zwei Quellen: die von der NVD (der US-amerikanischen National Vulnerability Database) veröffentlichten Schwachstellen, für die CPE-Produkte, die Ihre Technologien nennen, und die CVE.org-Liste, in der die Hersteller die Einträge ihrer eigenen Produkte schreiben. Derselbe Schalter liest die Ausnutzungssignale: den CISA-Katalog bekannter ausgenutzter Schwachstellen, die europäische Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Kennungen) und die täglichen EPSS-Werte.
 
 | Variable | Beschreibung | Standard |
 |----------|-------------|---------|
@@ -455,10 +455,17 @@ Die Seite [Schwachstellen](../vulnerabilities.md), ihre E-Mail-Benachrichtigunge
 | `KEV_FEED_URL` | Adresse eines Spiegels des CISA-Katalogs bekannter ausgenutzter Schwachstellen. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Adresse eines Spiegels der täglichen EPSS-Werte. EPSS ist bei [FIRST](https://www.first.org/epss) beschrieben. | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Adresse eines Spiegels der europäischen Schwachstellendatenbank der ENISA (europäischer Katalog und EUVD-Zuordnung). | `https://euvdservices.enisa.europa.eu` |
+| `CVE_LIST_FEED_ENABLED` | Schaltet nur die CVE.org-Liste aus (`false`), während die anderen Quellen weiterlaufen. | Der Wert von `VULNERABILITY_FEED_ENABLED` |
+| `CVE_LIST_EXPORT_URL` | Ein Spiegel der CVE.org-Liste: eine http(s)-Adresse oder der absolute Pfad einer Datei, die im Container `api` eingebunden ist. Er bezeichnet das Zip des vollständigen Exports von cvelistV5: die Datei `*_all_CVEs_at_midnight.zip.zip` der GitHub-Releases oder das Zip, das sie enthält. KANAP liest die ganze Datei bei jeder Änderung neu, ohne die täglichen Änderungen dazwischen. | *nicht gesetzt* |
+| `CVE_LIST_RELEASES_URL` | Adresse der GitHub-Releases-API der CVE.org-Liste. Nur hinter einem Proxy ändern, der sie umschreibt. | `https://api.github.com/repos/CVEProject/cvelistV5/releases` |
+| `CVE_LIST_DOWNLOAD_URL` | Adresse, von der die Release-Dateien geladen werden. Nur hinter einem Proxy ändern, der sie umschreibt. | `https://github.com/CVEProject/cvelistV5/releases/download` |
 
 Hinweise:
 
 - Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` und `euvdservices.enisa.europa.eu`, oder auf Ihre Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Ohne Spiegel kommt die CVE.org-Liste aus den GitHub-Releases: beim ersten Lesen der vollständige Export (etwa 640 MB, in etwa einer Minute gelesen), danach die täglichen Änderungen, 0,5 bis 13 MB pro Tag. Die API braucht ausgehenden HTTPS-Zugriff, Port 443, auf `api.github.com`, `github.com` und `release-assets.githubusercontent.com`.
+- Die CVE.org-Liste belegt etwa 700 MB zusätzlich in der Datenbank. Während des ersten Lesens braucht der Container `api` etwa 1,4 GB temporären Speicherplatz.
+- Ein Server ohne Netzzugang liest die Liste aus einer Datei: Tragen Sie ihren Pfad in `CVE_LIST_EXPORT_URL` ein und legen Sie dort so oft Sie möchten einen neuen Export ab. Die Daten sind so aktuell wie die zuletzt abgelegte Datei.
 - Eine leere Spiegeladresse behält die öffentliche Adresse. Eine Quelle, die der Server nicht erreicht, lässt ihre Spalten unverändert und wird in der Zusammenfassung der Aufgabe genannt. Die anderen Quellen laufen weiter.
 - Die E-Mail-Benachrichtigungen setzen außerdem einen eingerichteten E-Mail-Versand voraus (Resend oder SMTP).
 - Starten Sie die API nach einer Änderung dieser Werte neu.
@@ -602,6 +609,8 @@ S3_FORCE_PATH_STYLE=false
 # KEV_FEED_URL=
 # EPSS_FEED_URL=
 # EUVD_BASE_URL=
+# CVE_LIST_FEED_ENABLED=
+# CVE_LIST_EXPORT_URL=
 
 # TECHNOLOGIEKATALOG (optional - standardmäßig aus)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -670,6 +679,7 @@ Nur erforderlich, wenn die entsprechende Funktion aktiviert ist.
 | `www.cisa.gov` oder Ihr Spiegel | 443 | CISA-Katalog bekannter ausgenutzter Schwachstellen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com` oder Ihr Spiegel | 443 | Tägliche EPSS-Werte | Wenn `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu` oder Ihr Spiegel | 443 | Europäische Schwachstellendatenbank (ENISA): europäischer Katalog und EUVD-Kennungen | Wenn `VULNERABILITY_FEED_ENABLED=true` |
+| `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | Die CVE.org-Liste (von den Herstellern geschriebene Einträge) | Wenn `VULNERABILITY_FEED_ENABLED=true`, außer bei `CVE_LIST_FEED_ENABLED=false` oder wenn `CVE_LIST_EXPORT_URL` einen Spiegel nennt |
 | `endoflife.date` oder Ihr Spiegel | 443 | Versionen und Supportende-Daten des Technologiekatalogs | Wenn `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Jährliche Wechselkurse | Optional |
 | `open.er-api.com` | 443 | Tageswechselkurse | Optional |

@@ -684,7 +684,7 @@ async function testRoutes() {
 
   const csv = csvService();
   const controller = new TechnologiesController(
-    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, csv,
+    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, csv, undefined as any,
   );
   const res = { setHeader() {}, send() {} };
   await assert.rejects(() => controller.exportAssetLinks('nope', 'en', res as any, {} as any), /scope must be/);
@@ -882,7 +882,7 @@ async function testApplicationRoutes() {
   let called = false;
   const spy = new Proxy({}, { get: () => () => { called = true; } }) as any;
   const controller = new TechnologiesController(
-    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, spy,
+    undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, undefined as any, spy, undefined as any,
   );
   const noApplications = { tenantId: 'x', permissions: { infrastructure: 'member' }, manager: {} } as any;
   await assert.rejects(() => controller.exportApplicationLinks('data', 'en', {} as any, noApplications), /cannot read applications/);

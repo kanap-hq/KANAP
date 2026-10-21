@@ -14,6 +14,7 @@ import { Features } from '../config/features';
 import { TechnologyReachService } from './technology-reach.service';
 import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
+import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
 import { defaultVulnerabilityAlerts, vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
 import {
   BUILD_PREFIX_RE,
@@ -44,7 +45,7 @@ const SORTS: Record<string, string> = {
 /** Fields a create or a PATCH may carry; anything else in the body is ignored. */
 type TechnologyInput = Partial<{
   name: unknown; editor: unknown; family: unknown; hosting_type: unknown; lifecycle: unknown; description: unknown; notes: unknown;
-  support_notes: unknown; cpe_products: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
+  support_notes: unknown; cpe_products: unknown; cve_names: unknown; replaced_by_id: unknown; cyber_criticality: unknown; recovery_wave: unknown;
   rto_minutes: unknown; rpo_minutes: unknown; admin_zone: unknown;
   /**
    * Create only. Absent: an operating system is excluded, every other family is included.
@@ -64,6 +65,20 @@ type VersionInput = Partial<{
 }>;
 
 const LINK_URL_MAX = 2000;
+
+/** `cve_names` is jsonb: the value is JSON text and the statement casts it. */
+function bindColumn(key: string, index: number): string {
+  return key === 'cve_names' ? `$${index}::jsonb` : `$${index}`;
+}
+
+/** Names stored on a technology: the normaliser's rules, then vendor, product, version, without case. */
+function cveNamesOf(input: unknown): ReturnType<typeof sortCveNames> {
+  try {
+    return sortCveNames(normalizeCveNames(input));
+  } catch (error) {
+    throw new BadRequestException(error instanceof Error ? error.message : 'Invalid CVE names.');
+  }
+}
 
 /** A scheme before the address (`javascript:`, `ftp:`), not a port after a host (`intranet:8080`). */
 const URL_SCHEME_RE = /^([a-z][a-z0-9+.-]*):(?!\d)/i;
@@ -314,7 +329,7 @@ export class TechnologiesService {
     const columns = ['tenant_id', 'item_number', ...Object.keys(values)];
     const params = [tenantId, itemNumber, ...Object.values(values)];
     const [created]: Array<{ id: string }> = await mg.query(
-      `INSERT INTO technologies (${columns.join(', ')}) VALUES (${columns.map((_, i) => `$${i + 1}`).join(', ')}) RETURNING id`,
+      `INSERT INTO technologies (${columns.join(', ')}) VALUES (${columns.map((key, i) => bindColumn(key, i + 1)).join(', ')}) RETURNING id`,
       params,
     );
     const row = await readTechnology(mg, tenantId, created.id);
@@ -334,7 +349,7 @@ export class TechnologiesService {
     const keys = Object.keys(values);
     if (keys.length) {
       await mg.query(
-        `UPDATE technologies SET ${keys.map((key, i) => `${key} = $${i + 3}`).join(', ')}, updated_at = now()
+        `UPDATE technologies SET ${keys.map((key, i) => `${key} = ${bindColumn(key, i + 3)}`).join(', ')}, updated_at = now()
           WHERE tenant_id = $1 AND id = $2`,
         [tenantId, before.id, ...Object.values(values)],
       );
@@ -427,6 +442,7 @@ export class TechnologiesService {
     if (has('support_notes')) out.support_notes = optionalText(body.support_notes, 'Support notes', 20000);
     // `catalog_key` is written by the adoption only: a typed technology cannot take a catalog entry's key.
     if (has('cpe_products')) out.cpe_products = textList(body.cpe_products, 'CPE product', CPE_PRODUCT_RE);
+    if (has('cve_names')) out.cve_names = JSON.stringify(cveNamesOf(body.cve_names));
     for (const key of ['rto_minutes', 'rpo_minutes'] as const) {
       if (!has(key)) continue;
       const raw = body[key];

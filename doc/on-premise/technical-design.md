@@ -384,7 +384,7 @@ Optional in both modes: true when `ENTRA_CLIENT_ID` is configured. Per-tenant ac
 
 #### Living catalog of technologies (`Features.TECHNOLOGY_CATALOG_SYNC_ENABLED`)
 
-The living catalog reads the release cycles of endoflife.date (`https://endoflife.date/api/v1`, or a mirror in `ENDOFLIFE_API_BASE_URL`) for the catalog entries the technologies were adopted from. `TECHNOLOGY_CATALOG_SYNC_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. Off, nothing leaves for endoflife.date: the scheduled task `technology-catalog` still runs at each start and daily (while it is enabled in the scheduled tasks), the cache is not read, and the task brings the catalog shipped with the installed version to the adopted technologies (new versions, dates and CPE identifiers, the withdrawal of an identifier `shipped_cpe` listed, that `cpe_written` records as written by the catalog, and that the shipped file no longer lists (a file that lists no identifier without `noCpe` withdraws nothing, a cache identifier stays while the cache omits it, and an identifier the tenant typed is kept), and a description the catalog wrote in `description_language` when that language's text changes and the technology still holds the same characters (a change of the tenant's language rewrites nothing, and a state without `description_language` takes the language whose catalog text equals the remembered description or is left unchanged when none does)). A value the tenant typed stays. The frontend shows nothing different.
+The living catalog reads the release cycles of endoflife.date (`https://endoflife.date/api/v1`, or a mirror in `ENDOFLIFE_API_BASE_URL`) for the catalog entries the technologies were adopted from. `TECHNOLOGY_CATALOG_SYNC_ENABLED` is true by default in the cloud and false by default on-premise; set either way, it wins. Off, nothing leaves for endoflife.date: the scheduled task `technology-catalog` still runs at each start and daily (while it is enabled in the scheduled tasks), the cache is not read, and the task brings the catalog shipped with the installed version to the adopted technologies (new versions, dates and CPE identifiers, the withdrawal of an identifier `shipped_cpe` listed, that `cpe_written` records as written by the catalog, and that the shipped file no longer lists (a file that lists no identifier without `noCpe` withdraws nothing, a cache identifier stays while the cache omits it, and an identifier the tenant typed is kept), and a description the catalog wrote in `description_language` when that language's text changes and the technology still holds the same characters (a change of the tenant's language rewrites nothing, and a state without `description_language` takes the language whose catalog text equals the remembered description or is left unchanged when none does)). CVE.org names follow the same pass: a name the catalog gains is added, a name the tenant removed stays removed, and a name is removed only when `cve_names_written` lists it, `shipped_cve_names` listed it and the shipped file no longer does. A state without those keys removes nothing. An empty name list withdraws the names that rule names. A value the tenant typed stays. The frontend shows nothing different.
 
 | File | Line | What | Behavior |
 |------|------|------|----------|
@@ -412,6 +412,21 @@ The NVD feed needs the way out to the NVD (`https://services.nvd.nist.gov`) or t
 | `frontend/src/pages/it/TechnologiesPage.tsx` | 230 | "Vulnerabilities to review" column, and the publisher's link to the page | Hidden when off (the publisher opens the technology) |
 | `frontend/src/pages/settings/NotificationsTab.tsx` | 508 | Technologies group of the notification preferences | Hidden when off |
 | `frontend/src/pages/it/workspace/TechnologyVulnerabilitiesSection.tsx` | 41 | Vulnerabilities section of the technology record | Renders nothing and reads nothing when off |
+
+#### CVE.org names (`Features.CVE_LIST_FEED_ENABLED`)
+
+The CVE.org list (cvelistV5) fills the platform cache of published records. `CVE_LIST_FEED_ENABLED` defaults to the vulnerability feed; a value set either way wins. `cveListEnabled()` is the two switches together, so the collector and the name routes stay idle while the vulnerability feed is off. With the list off and the feed on, `GET /vulnerabilities/cve-names` and `GET /technologies/:id/cve-names/suggestions` answer 403 `FEATURE_DISABLED` for `cveNames`. With the vulnerability feed off, the vulnerabilities controller answers for `vulnerabilityFeed` before the directory handler; the suggestions route answers for `cveNames`. The screen that reads `features.cveNames` is Technologies › Overview, section CVE.org names, and arrives in the following run.
+
+| File | Line | What | Behavior |
+|------|------|------|----------|
+| `config/features.ts` | 31 | `CVE_LIST_FEED_ENABLED` | Env value when set, otherwise the vulnerability feed |
+| `vulnerabilities/cve-list-feed.service.ts` | 101 | `cveListEnabled()` | True when the vulnerability feed and the CVE.org list are both on |
+| `vulnerabilities/cve-list-feed.service.ts` | 132 | `collect` inside the 6-hour vulnerability pass | Returns a disabled summary and fetches nothing when `cveListEnabled()` is false |
+| `vulnerabilities/cve-names.service.ts` | 42 | Directory and suggestions | 403 `FEATURE_DISABLED` (`cveNames`) when `cveListEnabled()` is false |
+| `vulnerabilities/vulnerabilities.controller.ts` | 85 | `GET /vulnerabilities/cve-names` | `infrastructure:reader`. The feed guard answers first when the vulnerability feed is off |
+| `technologies/technologies.controller.ts` | 301 | `GET /technologies/:id/cve-names/suggestions` | `infrastructure:reader`, the same right as reading the technology |
+| `config/config.controller.ts` | 29 | `cveNames` | `cveListEnabled()` in `GET /config/public`, beside `vulnerabilityFeed` |
+| `frontend/src/config/FeaturesContext.tsx` | 21 | `features.cveNames` | False until `GET /config/public` says otherwise. Technologies › Overview, section CVE.org names, arrives in the following run |
 
 #### Outbound target guard (`backend/src/common/ssrf-guard.ts`)
 

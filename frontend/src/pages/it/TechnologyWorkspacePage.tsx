@@ -142,11 +142,11 @@ export default function TechnologyWorkspacePage() {
 
   // Edits are saved one after the other, each on the latest record.
   const saveQueue = React.useRef<Promise<void>>(Promise.resolve());
-  const patchTechnology = React.useCallback((patch: TechnologyPatch) => {
+  const patchTechnology = React.useCallback((patch: TechnologyPatch): Promise<void> => {
     const id = technology?.id;
-    if (!id) return;
+    if (!id) return Promise.resolve();
     setCache((prev) => ({ ...prev, ...patch }));
-    saveQueue.current = saveQueue.current.then(async () => {
+    const run = saveQueue.current.then(async () => {
       setError(null);
       try {
         const res = await api.patch<TechnologyDetail>(`/technologies/${id}`, patch);
@@ -157,8 +157,12 @@ export default function TechnologyWorkspacePage() {
           ? t('workspace.technology.messages.duplicateName')
           : getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
         await technologyQuery.refetch();
+        throw err;
       }
     });
+    // A caller that ignores the promise still leaves the rejection handled. The next edit waits for this one.
+    saveQueue.current = run.then(() => undefined, () => undefined);
+    return run;
   }, [queryClient, setCache, t, technology?.id, technologyQuery]);
 
   const lifecycleOptions = React.useMemo(() => (byField.lifecycleStatus || []).map((option) => ({

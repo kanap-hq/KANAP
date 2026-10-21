@@ -445,7 +445,7 @@ Cada usuario lo abre, confirma y luego inicia sesión en KANAP como se describe 
 
 ## Opcional: vulnerabilidades { #optional-vulnerabilities }
 
-La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo y los recuentos de vulnerabilidades de las tecnologías están desactivados por defecto en una instalación local. Una vez activados, KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías. El mismo interruptor lee las señales de explotación: el catálogo de la CISA de vulnerabilidades explotadas conocidas, la base europea de vulnerabilidades de la ENISA (catálogo europeo e identificadores EUVD) y las puntuaciones EPSS del día.
+La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por correo y los recuentos de vulnerabilidades de las tecnologías están desactivados por defecto en una instalación local. Una vez activados, KANAP lee dos fuentes cada 6 horas: las vulnerabilidades publicadas por la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos), para los productos CPE que nombran sus tecnologías, y la lista CVE.org, donde los editores redactan las fichas de sus propios productos. El mismo interruptor lee las señales de explotación: el catálogo de la CISA de vulnerabilidades explotadas conocidas, la base europea de vulnerabilidades de la ENISA (catálogo europeo e identificadores EUVD) y las puntuaciones EPSS del día.
 
 | Variable | Descripción | Valor predeterminado |
 |----------|-------------|---------|
@@ -455,10 +455,17 @@ La página [Vulnerabilidades](../vulnerabilities.md), sus notificaciones por cor
 | `KEV_FEED_URL` | Dirección de una réplica del catálogo de la CISA de vulnerabilidades explotadas conocidas. | `https://www.cisa.gov/sites/default/files/feeds/known_exploited_vulnerabilities.json` |
 | `EPSS_FEED_URL` | Dirección de una réplica de las puntuaciones EPSS del día. EPSS se describe en [FIRST](https://www.first.org/epss). | `https://epss.empiricalsecurity.com/epss_scores-current.csv.gz` |
 | `EUVD_BASE_URL` | Dirección de una réplica de la base europea de vulnerabilidades de la ENISA (catálogo europeo y correspondencia EUVD). | `https://euvdservices.enisa.europa.eu` |
+| `CVE_LIST_FEED_ENABLED` | Desactiva solo la lista CVE.org (`false`), mientras las demás fuentes siguen. | El valor de `VULNERABILITY_FEED_ENABLED` |
+| `CVE_LIST_EXPORT_URL` | Una réplica de la lista CVE.org: una dirección http(s) o la ruta absoluta de un archivo montado en el contenedor `api`. Designa el zip de la exportación completa de cvelistV5: el archivo `*_all_CVEs_at_midnight.zip.zip` de las releases de GitHub, o el zip que contiene. KANAP vuelve a leer todo el archivo cada vez que cambia, sin los cambios diarios intermedios. | *sin definir* |
+| `CVE_LIST_RELEASES_URL` | Dirección de la API de releases de GitHub de la lista CVE.org. Cámbiela solo detrás de un proxy que la reescriba. | `https://api.github.com/repos/CVEProject/cvelistV5/releases` |
+| `CVE_LIST_DOWNLOAD_URL` | Dirección desde la que se descargan los archivos de las releases. Cámbiela solo detrás de un proxy que la reescriba. | `https://github.com/CVEProject/cvelistV5/releases/download` |
 
 Notas:
 
 - La API necesita acceso HTTPS saliente, puerto 443, a `services.nvd.nist.gov`, `www.cisa.gov`, `epss.empiricalsecurity.com` y `euvdservices.enisa.europa.eu`, o a sus réplicas (consulte [Reglas de cortafuegos](#reglas-de-cortafuegos)).
+- Sin réplica, la lista CVE.org procede de las releases de GitHub: la exportación completa en la primera lectura (unos 640 MB, leídos en aproximadamente un minuto), y después los cambios diarios, de 0,5 a 13 MB al día. La API necesita acceso HTTPS saliente, puerto 443, a `api.github.com`, `github.com` y `release-assets.githubusercontent.com`.
+- La lista CVE.org ocupa unos 700 MB más en la base de datos. Durante la primera lectura, el contenedor `api` necesita unos 1,4 GB de espacio temporal en disco.
+- Un servidor sin acceso a la red lee la lista desde un archivo: indique su ruta en `CVE_LIST_EXPORT_URL` y deposite allí una nueva exportación con la frecuencia que prefiera. Los datos están tan al día como el último archivo depositado.
 - Una dirección de réplica vacía conserva la dirección pública. Una fuente que el servidor no alcanza deja sus columnas como están y aparece en el resumen de la tarea. Las demás fuentes continúan.
 - Las notificaciones por correo requieren además que el envío de correo esté configurado (Resend o SMTP).
 - Reinicie la API después de cambiar estos valores.
@@ -602,6 +609,8 @@ S3_FORCE_PATH_STYLE=false
 # KEV_FEED_URL=
 # EPSS_FEED_URL=
 # EUVD_BASE_URL=
+# CVE_LIST_FEED_ENABLED=
+# CVE_LIST_EXPORT_URL=
 
 # CATÁLOGO DE TECNOLOGÍAS (opcional - desactivado por defecto)
 # TECHNOLOGY_CATALOG_SYNC_ENABLED=false
@@ -670,6 +679,7 @@ Solo es necesario si la función correspondiente está activada.
 | `www.cisa.gov`, o su réplica | 443 | Catálogo de la CISA de vulnerabilidades explotadas conocidas | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `epss.empiricalsecurity.com`, o su réplica | 443 | Puntuaciones EPSS del día | Si `VULNERABILITY_FEED_ENABLED=true` |
 | `euvdservices.enisa.europa.eu`, o su réplica | 443 | Base europea de vulnerabilidades (ENISA): catálogo europeo e identificadores EUVD | Si `VULNERABILITY_FEED_ENABLED=true` |
+| `api.github.com`, `github.com`, `release-assets.githubusercontent.com` | 443 | La lista CVE.org (fichas redactadas por los editores) | Si `VULNERABILITY_FEED_ENABLED=true`, salvo con `CVE_LIST_FEED_ENABLED=false` o si `CVE_LIST_EXPORT_URL` designa una réplica |
 | `endoflife.date`, o su réplica | 443 | Versiones y fechas de fin de soporte del catálogo de tecnologías | Si `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` |
 | `api.worldbank.org` | 443 | Tipos de cambio anuales | Opcional |
 | `open.er-api.com` | 443 | Tipos de cambio al contado | Opcional |

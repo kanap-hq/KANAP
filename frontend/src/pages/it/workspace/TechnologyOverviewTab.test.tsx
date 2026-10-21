@@ -8,7 +8,7 @@ import { KanapDialogProvider } from '../../../components/design';
 import { createAppTheme } from '../../../config/ThemeContext';
 import TechnologyOverviewTab, { type TechnologyDetail } from './TechnologyOverviewTab';
 
-const features = vi.hoisted(() => ({ vulnerabilityFeed: true }));
+const features = vi.hoisted(() => ({ vulnerabilityFeed: true, cveNames: false }));
 vi.mock('../../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
 
 vi.mock('../../../api', () => ({
@@ -378,5 +378,112 @@ describe('TechnologyOverviewTab', () => {
       expect(headers.reduce((sum, cell) => sum + pixelWidth(cell), 0)).toBeLessThan(1000);
       view.unmount();
     }
+  });
+
+  describe('vulnerability identifiers', () => {
+    const NAMES = [
+      { vendor: 'Microsoft', product: 'SQL Server 2019', version: null },
+      { vendor: 'Microsoft', product: 'SQL Server 2022', version: null },
+      { vendor: 'Microsoft', product: 'SQL Server 2017', version: '14' },
+    ];
+    const BARE = { ...TECHNOLOGY, cpe_products: [], cve_names: [] } as TechnologyDetail;
+    const WARNING = 'Without a CPE identifier or a CVE.org name, no vulnerability is looked up for this technology.';
+    const UNMATCHED = 'These versions will not be matched to any vulnerability until the technology has an identifier.';
+
+    function withCveNames(run: () => Promise<void> | void) {
+      return async () => {
+        features.cveNames = true;
+        try { await run(); } finally { features.cveNames = false; }
+      };
+    }
+
+    it('folds the group of a technology with identifiers and says what it holds', withCveNames(async () => {
+      renderTab({ ...TECHNOLOGY, cpe_products: ['a:microsoft:sql_server', 'a:microsoft:sql_server_2019'], cve_names: NAMES });
+      const toggle = screen.getByRole('button', { name: /Vulnerability identifiers/ });
+      expect(toggle).toHaveAttribute('aria-expanded', 'false');
+      expect(toggle).toHaveTextContent('Vulnerability identifiers · 2 CPE identifiers · 3 CVE.org names');
+      expect(screen.queryByRole('heading', { name: 'CPE product identifiers' })).not.toBeInTheDocument();
+      expect(screen.queryByText(WARNING)).not.toBeInTheDocument();
+      expect(screen.queryByText(UNMATCHED)).not.toBeInTheDocument();
+      fireEvent.click(toggle);
+      expect(toggle).toHaveAttribute('aria-expanded', 'true');
+      expect(screen.getByRole('heading', { name: 'CPE product identifiers' })).toBeInTheDocument();
+      expect(screen.getByRole('heading', { name: 'CVE.org names' })).toBeInTheDocument();
+      await waitFor(() => expect(api.get).toHaveBeenCalled());
+    }));
+
+    it('opens the group with a warning when the technology has no identifier', withCveNames(() => {
+      for (const mode of ['light', 'dark'] as const) {
+        const view = renderTab(BARE, true, mode);
+        const toggle = screen.getByRole('button', { name: /Vulnerability identifiers/ });
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(toggle).toHaveTextContent(/^Vulnerability identifiers$/);
+        const warning = screen.getByText(WARNING);
+        const theme = createAppTheme(mode);
+        const expected = mode === 'dark' ? theme.palette.warning.main : theme.palette.warning.dark;
+        const probe = document.createElement('span');
+        probe.style.color = expected;
+        expect(getComputedStyle(warning).color).toBe(probe.style.color);
+        expect(screen.getByRole('heading', { name: 'CPE product identifiers' })).toBeInTheDocument();
+        expect(screen.getByRole('heading', { name: 'CVE.org names' })).toBeInTheDocument();
+        view.unmount();
+      }
+    }));
+
+    it('names only the CPE identifiers without the CVE.org list', () => {
+      renderTab(BARE);
+      expect(screen.getByText('Without a CPE identifier, no vulnerability is looked up for this technology.')).toBeInTheDocument();
+      expect(screen.queryByRole('heading', { name: 'CVE.org names' })).not.toBeInTheDocument();
+    });
+
+    it('keeps the group open while its first identifier is added', withCveNames(() => {
+      const client = new QueryClient();
+      const tree = (technology: TechnologyDetail) => (
+        <QueryClientProvider client={client}>
+          <ThemeProvider theme={createAppTheme('light')}>
+            <KanapDialogProvider>
+              <TechnologyOverviewTab technology={technology} canManage onPatch={vi.fn()} onVersionsChanged={vi.fn(async () => undefined)} onError={vi.fn()} />
+            </KanapDialogProvider>
+          </ThemeProvider>
+        </QueryClientProvider>
+      );
+      const view = render(tree(BARE));
+      view.rerender(tree({ ...BARE, cpe_products: ['a:postgresql:postgresql'] }));
+      expect(screen.getByRole('button', { name: /Vulnerability identifiers/ })).toHaveAttribute('aria-expanded', 'true');
+      view.rerender(tree({ ...BARE, id: 'tech-2', cpe_products: ['a:postgresql:postgresql'] }));
+      expect(screen.getByRole('button', { name: /Vulnerability identifiers/ })).toHaveAttribute('aria-expanded', 'false');
+    }));
+
+    it('opens the group and brings it into view from the Versions section', withCveNames(() => {
+      const scrollIntoView = vi.fn();
+      const original = Element.prototype.scrollIntoView;
+      Element.prototype.scrollIntoView = scrollIntoView;
+      try {
+        renderTab(BARE);
+        const toggle = screen.getByRole('button', { name: /Vulnerability identifiers/ });
+        fireEvent.click(toggle);
+        expect(toggle).toHaveAttribute('aria-expanded', 'false');
+        expect(screen.getByText(UNMATCHED)).toBeInTheDocument();
+        fireEvent.click(screen.getByRole('button', { name: 'Add an identifier' }));
+        expect(toggle).toHaveAttribute('aria-expanded', 'true');
+        expect(screen.getByRole('heading', { name: 'CPE product identifiers' })).toBeInTheDocument();
+        expect(scrollIntoView).toHaveBeenCalledTimes(1);
+        expect(scrollIntoView.mock.contexts[0]).toBe(document.getElementById('technology-vulnerability-identifiers'));
+        expect(toggle).toHaveFocus();
+      } finally {
+        Element.prototype.scrollIntoView = original;
+      }
+    }));
+
+    it('says nothing about matching without the vulnerability feed', () => {
+      features.vulnerabilityFeed = false;
+      try {
+        renderTab(BARE);
+        expect(screen.queryByText(UNMATCHED)).not.toBeInTheDocument();
+        expect(screen.queryByText(/no vulnerability is looked up/)).not.toBeInTheDocument();
+      } finally {
+        features.vulnerabilityFeed = true;
+      }
+    });
   });
 });

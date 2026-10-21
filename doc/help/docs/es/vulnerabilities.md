@@ -6,23 +6,32 @@ La página Vulnerabilidades lista las vulnerabilidades publicadas (CVE) que afec
 
 ## Disponibilidad
 
-Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) o una réplica de ella. El mismo interruptor lee también tres fuentes de explotación, o una réplica de cada una: el catálogo de la CISA, la base europea de vulnerabilidades de la ENISA y las puntuaciones EPSS del día. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
+Las vulnerabilidades se siguen por defecto en la nube. En una instalación local están desactivadas hasta que su administrador [las activa](on-premise/configuration.md#optional-vulnerabilities), y el servidor debe entonces alcanzar la NVD (la base de datos nacional de vulnerabilidades de Estados Unidos) y la lista CVE.org, o una réplica de cada una. El mismo interruptor lee también tres fuentes de explotación, o una réplica de cada una: el catálogo de la CISA, la base europea de vulnerabilidades de la ENISA y las puntuaciones EPSS del día. Mientras están desactivadas, KANAP no muestra nada de ello: ni página, ni columna en la lista de tecnologías, ni sección en una tecnología, ni ajuste de notificación, ni correo.
 
 ## Cómo las encuentra KANAP
 
-KANAP lee cada 6 horas las vulnerabilidades publicadas por la NVD y las compara con sus tecnologías:
+KANAP lee dos fuentes cada 6 horas y las compara con sus tecnologías:
 
-- **Productos**: una tecnología se compara por sus identificadores de producto CPE (consulte [Tecnologías](technologies.md#resumen)). Una tecnología sin ninguno no recibe ninguna vulnerabilidad. Los sistemas operativos del catálogo también los tienen. SUSE Linux Enterprise Server no tiene: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable. Las tecnologías retiradas quedan fuera.
+- **La NVD**: las vulnerabilidades analizadas por la base de datos nacional de vulnerabilidades de Estados Unidos. La NVD no analiza todas las vulnerabilidades. Muchas se quedan mucho tiempo sin identificador de producto, y algunas no lo reciben nunca.
+- **La lista CVE.org**: las fichas que los editores redactan ellos mismos para sus propios productos. Una vulnerabilidad que su editor ha publicado aparece aunque la NVD no la haya analizado.
+
+Estas fichas proceden de la lista CVE (CVE.org), según las [condiciones de uso del programa CVE](https://www.cve.org/Legal/TermsOfUse).
+
+Cada tecnología se compara así:
+
+- **Productos**: una tecnología se compara por sus identificadores de producto CPE y sus nombres CVE.org (consulte [Tecnologías](technologies.md#identificadores-de-vulnerabilidad)). Los identificadores CPE también sirven para las fichas CVE.org que los llevan, como las de Red Hat. Una tecnología sin ninguno de los dos no recibe ninguna vulnerabilidad. Los sistemas operativos del catálogo también tienen identificadores CPE. SUSE Linux Enterprise Server no tiene: la NVD publica demasiado pocas de sus vulnerabilidades para un cotejo fiable. Las tecnologías retiradas quedan fuera.
+- **Nombres CVE.org**: los nombres de editor y de producto tal como el editor los escribe en sus fichas, por ejemplo el editor `SAP_SE` y el producto `SAP HANA Database`. La comparación ignora mayúsculas, minúsculas y puntuación, y por lo demás exige el nombre exacto. Un nombre parecido no coincide, así que cada variante de un producto se declara por separado. Un nombre puede llevar una versión: entonces solo vale para las versiones de la tecnología cuya etiqueta empieza por esa versión, por ejemplo `2019` para `Windows Server 2019`. Cuando una etiqueta empieza por varias de ellas, solo cuenta la más larga: `2012 R2` lleva `2012` y `2012 R2`, y solo recibe el nombre de `2012 R2`.
 - **Versiones**: solo cuentan las versiones en uso: instaladas en un servidor en servicio, o usadas por una aplicación en servicio.
 - **Números de versión**: las versiones se comparan por sus números, parte por parte. `2016 SP3` cuenta como 2016 y `19c` como 19. Una versión de menos de tres números vale por toda su rama: `9.0` abarca todas las `9.0.x`. Una versión que KANAP no puede comparar, como una etiqueta sin número, cuenta como afectada.
+- **Versiones de las fichas del editor**: las mismas reglas se aplican a las versiones que lista una ficha CVE.org. Una versión que KANAP no puede comparar con las del editor cuenta como afectada, y la columna **Match** de la exportación indica «Version not comparable». Ocurre cuando su versión lleva el nombre de un año y el editor numera sus componentes, por ejemplo `2021` frente a `106`. Compruebe entonces en la ficha del editor si su versión está afectada.
 - **Sistemas operativos**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux y CentOS se comparan por su versión principal, y Ubuntu por su año y mes, tal como los publica la NVD: `9.4` recibe las vulnerabilidades de `9`, y `22.04.3 LTS` las de `22.04`. Windows Server se compara solo por su año, porque KANAP no sabe qué actualizaciones tiene un servidor: una versión `2019` está afectada por todas las vulnerabilidades de Windows Server 2019, incluidas las que una actualización ya corrigió. 2012 y 2012 R2 se distinguen por su etiqueta, igual que 2008 y 2008 R2.
 - **Versión desconocida**: un servidor o una aplicación que no indica ninguna versión está potencialmente afectado por todas las vulnerabilidades del producto. Su fila muestra **Sin registrar** en la columna **Versión**.
 
 Algunas vulnerabilidades solo se aplican cuando dos productos funcionan juntos, por ejemplo Tomcat en Windows. KANAP las muestra para el producto vulnerable solo, de modo que una puede aparecer para una instalación a la que no afecta. Márquela como **No afectada**.
 
-Una vulnerabilidad que la NVD aún no ha analizado aparece en cuanto se analiza.
+Una fila existe en cuanto una de las dos fuentes la coteja. Cuando la NVD y el editor no dicen lo mismo, la fila se queda. Una vulnerabilidad que CVE.org o la NVD rechaza deja de cotejarse.
 
-Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
+Los cambios cuentan de inmediato. Cuando añade una tecnología o un identificador de producto CPE, KANAP busca enseguida ese producto en la NVD; la sección **Vulnerabilidades** de la tecnología indica «Búsqueda de vulnerabilidades en curso…» hasta que termina la búsqueda. Cuando cambia un nombre CVE.org, una versión, un servidor o una aplicación de una tecnología, KANAP vuelve a cotejar la tecnología en cuanto se guarda el cambio. **Actualizar**, en la sección **Vulnerabilidades** de la tecnología, hace lo mismo a mano.
 
 ## Alertas
 
@@ -30,7 +39,7 @@ Cada tecnología y cada versión está en las alertas de vulnerabilidad o fuera 
 
 Dos tipos de tecnologías están fuera de las alertas por defecto:
 
-- **Sistemas operativos**: KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades.
+- **Sistemas operativos**: KANAP no conoce el nivel de parches de un servidor, así que un sistema operativo generaría un número muy grande de vulnerabilidades. La lista CVE.org añade muchas más: los editores de sistemas operativos listan la versión entera como afectada.
 - **Servicios en la nube gestionados por un proveedor**: una tecnología alojada en cloud público o como SaaS, o una entrada del catálogo que el proveedor ejecuta. El proveedor corrige un servicio en línea, así que sus vulnerabilidades no le piden ninguna acción. Una tecnología en un cloud privado sigue en las alertas.
 
 Puede volver a incluirlas en la tecnología.
@@ -45,7 +54,7 @@ Una versión fuera de las alertas se sigue cotejando con las vulnerabilidades. S
 
 La lista usa la cuadrícula estándar: una fila por tecnología, versión y vulnerabilidad. Las vulnerabilidades explotadas activamente van primero, y después las más graves. Una vulnerabilidad que afecta a tres versiones de SQL Server da tres filas, cada una con su propio estado. Se abre en las filas **Por revisar** que están en las alertas: vacíe el filtro de la columna **Estado** para ver los demás estados.
 
-**Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación en la NVD: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** devuelve la página a su estado de apertura: las filas **Por revisar**, las vulnerabilidades explotadas activamente primero, **Alertas** en **Incluidas**, **Publicada** en todas las fechas y **Solo explotadas** desactivado. La exportación y un cambio de estado en bloque siguen estos tres ajustes.
+**Alertas**, **Publicada** y **Solo explotadas** están encima de la cuadrícula. **Alertas** elige las filas según su ajuste de alertas: **Incluidas** (por defecto), **Excluidas** o **Todas**. En **Todas**, las filas fuera de las alertas aparecen atenuadas. Cuando ninguna fila está en las alertas y algunas están excluidas, la lista vacía propone **Mostrar las excluidas**. **Publicada** conserva las vulnerabilidades según su fecha de publicación: **Todas** (por defecto), **Menos de 7 días**, **Menos de 30 días**, **Menos de 90 días**, **Menos de un año** o **Más de un año**. El período se cuenta desde hoy, así que un enlace guardado o compartido sigue mostrando las más recientes. **Solo explotadas** conserva las vulnerabilidades incluidas como explotadas activamente. La dirección lleva `exploited=1`. **Restablecer filtros** devuelve la página a su estado de apertura: las filas **Por revisar**, las vulnerabilidades explotadas activamente primero, **Alertas** en **Incluidas**, **Publicada** en todas las fechas y **Solo explotadas** desactivado. La exportación y un cambio de estado en bloque siguen estos tres ajustes.
 
 **Columnas**:
 
@@ -56,7 +65,7 @@ La lista usa la cuadrícula estándar: una fila por tecnología, versión y vuln
 | **Explotada** | **Sí** o **No**. Oculta por defecto: el icono de **Gravedad** muestra el mismo hecho |
 | **Puntuación** | La puntuación CVSS. Oculta por defecto |
 | **EPSS (%)** | La probabilidad de explotación en los próximos 30 días, como porcentaje en el idioma de su pantalla. Por ejemplo, 15,3 %. El panel lateral añade el percentil |
-| **Resumen** | La descripción de la NVD |
+| **Resumen** | La descripción de la vulnerabilidad |
 | **Tecnología** | La tecnología afectada |
 | **Versión** | La versión afectada. **Sin registrar** cuando un servidor o una aplicación usa la tecnología sin indicar su versión: la fila está entonces potencialmente afectada |
 | **Editor** | El editor de la tecnología. Oculta por defecto |
@@ -107,7 +116,7 @@ Establezca el estado de cada versión:
 
 La nota registra cómo, por ejemplo «parcheado el 12 de marzo, cambio CHG-123». Se guarda al salir del campo. El registro de auditoría conserva quién cambió un estado y cuándo.
 
-KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, la NVD cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
+KANAP nunca cambia un estado que usted eligió. Cuando una versión deja de coincidir (la actualizó, la tecnología se retiró, una fuente cambió sus datos), una fila aún **Por revisar** desaparece. Una fila que usted revisó se queda, en gris, con su estado; vuelve tal cual si la versión coincide de nuevo.
 
 ## Explotación { #exploitation }
 
@@ -130,7 +139,7 @@ El correo a los responsables de TI anuncia una vulnerabilidad explotada de cualq
 Tras cada comprobación, los responsables de TI de una tecnología reciben un correo sobre sus nuevas vulnerabilidades aún por revisar, en las versiones en las alertas. El correo incluye una vulnerabilidad crítica o alta, o con explotación conocida de cualquier gravedad:
 
 - **Qué se anuncia**: una vulnerabilidad publicada en los últimos 30 días sobre un producto con el que la tecnología ya se comparaba, cuando es crítica, alta o está incluida como explotada, o una vulnerabilidad conocida que acaba de pasar a crítica o alta.
-- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE que acaba de añadir, es silenciosa. Sus resultados esperan en esta página.
+- **Qué no**: la primera comparación de una tecnología, o de un identificador CPE o un nombre CVE.org que acaba de añadir, es silenciosa. También lo es la primera comparación de una tecnología con la lista CVE.org. Sus resultados esperan en esta página.
 - **Cuánto**: 25 líneas como máximo, una por tecnología y vulnerabilidad, y después un enlace a la página, filtrada en las vulnerabilidades publicadas en los últimos 30 días.
 - **Cuántas veces**: cada persona recibe aviso de una vulnerabilidad en una tecnología una sola vez. Una vulnerabilidad no anunciada en su comprobación no se anuncia nunca más tarde.
 
@@ -144,5 +153,6 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 ## Consejos
 
 - **Rellene los identificadores CPE**: la mayoría de las tecnologías del catálogo ya los traen, incluidos los sistemas operativos. SUSE Linux Enterprise Server no tiene. Para las demás, busque el producto en el diccionario CPE del NIST.
+- **Añada los nombres CVE.org**: aportan vulnerabilidades que la NVD no ha analizado. Muchas tecnologías del catálogo ya los traen.
 - **Registre las versiones**: un servidor o una aplicación sin versión está potencialmente afectado por todo, lo que oculta la exposición real.
 - **Escriba la nota**: quien lea la vulnerabilidad después verá lo que se hizo.

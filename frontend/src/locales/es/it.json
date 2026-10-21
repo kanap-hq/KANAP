@@ -2069,6 +2069,17 @@
         "cpe": "p. ej., a:microsoft:sql_server",
         "noAdminZone": "Sin zona"
       },
+      "identifiers": {
+        "title": "Identificadores de vulnerabilidad",
+        "cpeCount_one": "{{count, count}} identificador CPE",
+        "cpeCount_other": "{{count, count}} identificadores CPE",
+        "cveNameCount_one": "{{count, count}} nombre de CVE.org",
+        "cveNameCount_other": "{{count, count}} nombres de CVE.org",
+        "missing": "Sin identificador CPE ni nombre de CVE.org, no se busca ninguna vulnerabilidad para esta tecnología.",
+        "missingCpe": "Sin identificador CPE, no se busca ninguna vulnerabilidad para esta tecnología.",
+        "versionsUnmatched": "Estas versiones no se vincularán a ninguna vulnerabilidad mientras la tecnología no tenga identificador.",
+        "add": "Añadir un identificador"
+      },
       "cpe": {
         "title": "Identificadores de producto CPE",
         "empty": "Aún no hay identificadores.",
@@ -2077,6 +2088,34 @@
         "invalid": "Use la forma parte:proveedor:producto, p. ej., a:microsoft:sql_server. Copie el identificador como lo escribe la NVD, con la barra invertida delante de un signo: veeam_backup_\\&_replication.",
         "hint": "Dónde encontrar este valor: busque el producto en el diccionario CPE del NIST y conserve su parte, proveedor y producto.",
         "dictionary": "Diccionario CPE del NIST"
+      },
+      "cveNames": {
+        "title": "Nombres de CVE.org",
+        "empty": "Aún no hay ningún nombre.",
+        "remove": "Quitar {{value}}",
+        "search": "Nombre de CVE.org",
+        "searchPlaceholder": "p. ej., SAP HANA",
+        "version": "Versión (opcional)",
+        "versionPlaceholder": "p. ej., 2019",
+        "duplicate": "Este nombre ya está indicado.",
+        "saveFailed": "No se pudo guardar el nombre.",
+        "searchFailed": "No se pudieron buscar los nombres.",
+        "searchTooShort": "Escriba al menos 2 caracteres.",
+        "noMatch": "Ningún nombre coincidente.",
+        "optionMeta_one": "{{count, count}} vulnerabilidad, la última el {{date}}",
+        "optionMeta_other": "{{count, count}} vulnerabilidades, la última el {{date}}",
+        "optionCount_one": "{{count, count}} vulnerabilidad",
+        "optionCount_other": "{{count, count}} vulnerabilidades",
+        "suggestions": "Vistos en las vulnerabilidades de sus identificadores CPE",
+        "suggestionMeta_one": "{{count, count}} vulnerabilidad ({{share}})",
+        "suggestionMeta_other": "{{count, count}} vulnerabilidades ({{share}})",
+        "addSuggestion": "Añadir {{vendor}} · {{product}}",
+        "seeMore_one": "Ver el otro",
+        "seeMore_other": "Ver los {{count}} otros",
+        "suggestionsFailed": "No se pudieron cargar las sugerencias.",
+        "hint": "Escriba parte del nombre del producto: la lista propone los nombres exactos que los editores escriben en sus fichas, con su número de vulnerabilidades. Un nombre debe ser idéntico al de la ficha, en su sección Product status en",
+        "site": "cve.org",
+        "versionHint": "Una versión limita el nombre a las versiones de la tecnología cuya etiqueta empieza por ella, p. ej., 2019."
       },
       "versions": {
         "title": "Versiones",

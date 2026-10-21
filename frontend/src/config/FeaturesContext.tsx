@@ -17,6 +17,8 @@ export type FeaturesConfig = {
     technologyCatalogSync: boolean;
     /** IT › Vulnerabilities, its list column and sections (VULNERABILITY_FEED_ENABLED). */
     vulnerabilityFeed: boolean;
+    /** Technologies › Overview, section CVE.org names (CVE_LIST_FEED_ENABLED, and the vulnerability feed). */
+    cveNames: boolean;
   };
   version: string;
   tenantSlug?: string;
@@ -42,6 +44,8 @@ const CLOUD_DEFAULTS: FeaturesConfig = {
     // Off until the server says otherwise, as the sample data.
     technologyCatalogSync: false,
     vulnerabilityFeed: false,
+    // Off until the server says otherwise, as the vulnerability feed.
+    cveNames: false,
   },
   version: 'unknown',
 };

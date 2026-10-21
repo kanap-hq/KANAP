@@ -5,8 +5,9 @@ import { DataSource, EntityManager } from 'typeorm';
 import { ScheduledTasksService } from '../admin/scheduled-tasks/scheduled-tasks.service';
 import { withTenant } from '../common/tenant-runner';
 import { Features } from '../config/features';
-import { VulnerabilityMatchService, type MatchResult } from './vulnerability-match.service';
-import { VulnerabilityNotificationsService } from './vulnerability-notifications.service';
+import { CveListFeedService, type CveListSummary } from './cve-list-feed.service';
+import { VulnerabilityMatchService } from './vulnerability-match.service';
+import { ANNOUNCED_WITHIN_DAYS, VulnerabilityNotificationsService } from './vulnerability-notifications.service';
 import { VulnerabilitySignalsService } from './vulnerability-signals.service';
 import { resolveConfiguredAppBaseUrl } from '../common/url';
 import { cpeProduct } from './vulnerability-rules';
@@ -158,6 +159,8 @@ export type FeedSummary = {
   tenants_matched: number;
   rows_added: number;
   rows_removed: number;
+  /** The CVE.org pass of this run, when that service is wired. */
+  cve_org?: CveListSummary;
 };
 
 export function defaultRuntime(): FeedRuntime {
@@ -204,8 +207,11 @@ function serviceFailure(error: unknown): boolean {
  * - A CVE without CPE configuration yet (frequent since 2024) is kept with no criterion: it matches
  *   at the run that follows its analysis, when its `lastModified` brings it back.
  * Scheduled task `vulnerability-feed` (model: `cleanup/lifecycle-status-sync.service.ts`),
- * registered only while `VULNERABILITY_FEED_ENABLED`. The scheduler awaits the handler and records a
- * failure; nothing here is started without being awaited.
+ * registered only while `VULNERABILITY_FEED_ENABLED`. The same pass reads the CVE.org list
+ * (`CveListFeedService`) after the NVD and before the workspaces are matched. Every workspace is
+ * matched, then the signals already downloaded are stamped, then the owners are told. A failure of
+ * CVE.org is named in the summary and does not stop the NVD collection or the matching.
+ * The scheduler awaits the handler and records a failure; nothing here is started without being awaited.
  */
 @Injectable()
 export class NvdFeedService implements OnModuleInit {
@@ -238,6 +244,8 @@ export class NvdFeedService implements OnModuleInit {
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
     /** Stamps exploitation signals already downloaded onto CVE this collection just cached. */
     @Optional() private readonly signals?: VulnerabilitySignalsService,
+    /** The CVE.org list. Specs that build the service by hand leave it out. */
+    @Optional() private readonly cveList?: CveListFeedService,
   ) {}
 
   onModuleInit() {
@@ -246,7 +254,7 @@ export class NvdFeedService implements OnModuleInit {
     if (!Features.VULNERABILITY_FEED_ENABLED) return;
     this.scheduledTasks.register({
       name: NVD_FEED_TASK_NAME,
-      description: 'Reads the published vulnerabilities (NVD) of the products the technologies name, and matches them with each workspace',
+      description: 'Reads the published vulnerabilities from the NVD and from CVE.org, and matches them with each workspace',
       defaultCron: '20 */6 * * *',
       handler: () => this.run(),
     });
@@ -288,28 +296,42 @@ export class NvdFeedService implements OnModuleInit {
     return new Set(rows.map((r) => r.id));
   }
 
-  /** The scheduled run: collect, then match every tenant and tell the owners what is new. */
+  /** The scheduled run: collect the NVD, then CVE.org, match every tenant, stamp the signals, then tell the owners what is new. */
   async run(runtime: FeedRuntime = defaultRuntime()): Promise<FeedSummary> {
     this.raisedCves = new Set();
     // The rows detected from now on, whatever writes them, are this run's news (notifications).
     const [{ started }]: Array<{ started: Date }> = await this.dataSource.query(`SELECT clock_timestamp() AS started`);
     const summary = await this.collect(runtime);
-    // The CVE just cached carry the exploitation signals before they are matched and announced:
-    // a new medium CVE already exploited is announced at this run, not left to the signals task.
-    await this.applyKnownSignals();
+    // CVE.org is its own pass. A failure here is recorded and does not skip the matching below,
+    // nor does it undo the NVD collection that just finished.
+    try {
+      const cveOrg = await this.cveList?.collect();
+      if (cveOrg) {
+        summary.cve_org = cveOrg;
+        for (const error of cveOrg.errors) summary.errors.push(`CVE.org: ${error}`);
+      }
+    } catch (error: any) {
+      summary.errors.push(`CVE.org: ${String(error?.message ?? error).slice(0, 300)}`);
+    }
     const raised = Array.from(this.raisedCves);
     const notified = await this.notifiedTenantIds();
+    const matched: string[] = [];
     for (const tenantId of await this.tenantIds()) {
-      let result: MatchResult;
       try {
-        result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
+        const result = await withTenant(this.dataSource, tenantId, (mg) => this.matcher.matchTenant(mg, tenantId));
         summary.tenants_matched += 1;
         summary.rows_added += result.added;
         summary.rows_removed += result.removed;
+        matched.push(tenantId);
       } catch (error: any) {
         summary.errors.push(`Matching of tenant ${tenantId}: ${error?.message ?? error}`);
-        continue;
       }
+    }
+    // After every match: a CVE only CVE.org put in the cache receives the signals already
+    // downloaded, before the mails read them. A new medium CVE already exploited is announced
+    // at this run, not left to the signals task.
+    await this.applyKnownSignals();
+    for (const tenantId of matched) {
       if (!notified.has(tenantId)) continue;
       try {
         // Claimed once the matching has committed, in its own transaction; sent without awaiting.
@@ -560,8 +582,10 @@ export class NvdFeedService implements OnModuleInit {
   }
 
   /**
-   * The CVE just cached take the signals already downloaded, without a second fetch. A failure
-   * does not fail the collection: the next signals run stamps them.
+   * The CVE just cached take the signals already downloaded, without a second fetch. The scheduled
+   * run calls this after matching every tenant and before the mails, so a CVE only CVE.org put in
+   * the cache is flagged before it is announced. A collection on demand still calls it before the
+   * rematch. A failure does not fail the collection: the next signals run stamps them.
    */
   private async applyKnownSignals(): Promise<void> {
     try {
@@ -727,6 +751,8 @@ export class NvdFeedService implements OnModuleInit {
   /**
    * Upserts the CVE of one page and replaces their criteria, in one transaction. Returns the CVE
    * already in the cache whose severity rose to critical or high (lot T6b: announced once).
+   * A row CVE.org wrote (`nvd_status` null) counts only when the CVE was published within
+   * `ANNOUNCED_WITHIN_DAYS`. A row the NVD already wrote keeps the rule at any age.
    */
   async store(mg: EntityManager, cves: ParsedCve[]): Promise<string[]> {
     // In cve_id order: the upsert locks its rows in the order the signals task locks them
@@ -736,7 +762,7 @@ export class NvdFeedService implements OnModuleInit {
     // Every step of the statement reads the same snapshot: `old` holds the severities before the upsert.
     const raised: Array<{ cve_id: string }> = await mg.query(
       `WITH old AS (
-         SELECT cve_id, severity FROM vulnerability_cves
+         SELECT cve_id, severity, nvd_status, published_at FROM vulnerability_cves
           WHERE cve_id IN (SELECT i.cve_id FROM jsonb_to_recordset($1::jsonb) AS i(cve_id text))
        ), up AS (
        INSERT INTO vulnerability_cves AS c (cve_id, summary, cvss_score, severity, cvss_version, cvss_vector, published_at, last_modified_at, nvd_status, reference_urls, fetched_at)
@@ -753,15 +779,17 @@ export class NvdFeedService implements OnModuleInit {
          cvss_version = EXCLUDED.cvss_version, cvss_vector = EXCLUDED.cvss_vector, published_at = EXCLUDED.published_at,
          last_modified_at = EXCLUDED.last_modified_at, nvd_status = EXCLUDED.nvd_status,
          reference_urls = EXCLUDED.reference_urls, fetched_at = now()
-       RETURNING c.cve_id, c.severity
+       RETURNING c.cve_id, c.severity, c.published_at
        )
        SELECT up.cve_id FROM up JOIN old ON old.cve_id = up.cve_id
-        WHERE up.severity IN ('critical', 'high') AND (old.severity IS NULL OR old.severity NOT IN ('critical', 'high'))`,
+        WHERE up.severity IN ('critical', 'high') AND (old.severity IS NULL OR old.severity NOT IN ('critical', 'high'))
+          AND (old.nvd_status IS NOT NULL
+               OR COALESCE(up.published_at, old.published_at) >= now() - make_interval(days => $2::int))`,
       [JSON.stringify(unique.map(({ matches: _matches, ...cve }) => ({
         ...cve,
         published_at: utc(cve.published_at),
         last_modified_at: utc(cve.last_modified_at),
-      })))],
+      }))), ANNOUNCED_WITHIN_DAYS],
     );
     await mg.query(`DELETE FROM vulnerability_cve_matches WHERE cve_id = ANY($1::text[])`, [unique.map((c) => c.cve_id)]);
     const matches = unique.flatMap((c) => c.matches.map((m) => ({ cve_id: c.cve_id, ...m })));
