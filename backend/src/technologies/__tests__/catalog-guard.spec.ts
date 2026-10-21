@@ -14,7 +14,7 @@ const FAMILY_CODES = new Set(DEFAULT_TECHNOLOGY_FAMILIES.map((item) => item.code
 function testUniqueKeys() {
   const keys = shipped.map((product) => product.key);
   assert.equal(new Set(keys).size, keys.length, 'product keys');
-  assert.ok(keys.length >= 117, `the shipped catalog has its products (${keys.length})`);
+  assert.ok(keys.length >= 186, `the shipped catalog has its products (${keys.length})`);
   for (const product of shipped) {
     const versionKeys = product.versions.map((version) => version.key);
     assert.equal(new Set(versionKeys).size, versionKeys.length, `${product.key} version keys`);
@@ -56,6 +56,33 @@ function testCuratedFields() {
   assert.equal(curated, 17);
 }
 
+/**
+ * The page where the distributor tracks vulnerabilities. Windows Server, CentOS, AIX, IBM i and
+ * Solaris have none. No other family carries the field.
+ */
+function testSecurityTrackers() {
+  const trackers: Record<string, string> = {
+    ubuntu: 'https://ubuntu.com/security/cves',
+    rhel: 'https://access.redhat.com/security/security-updates/cve',
+    debian: 'https://security-tracker.debian.org/tracker/',
+    sles: 'https://www.suse.com/security/cve/',
+    'rocky-linux': 'https://errata.rockylinux.org/',
+    almalinux: 'https://errata.almalinux.org/',
+    'oracle-linux': 'https://linux.oracle.com/security/',
+    'amazon-linux': 'https://alas.aws.amazon.com/',
+    'alpine-linux': 'https://security.alpinelinux.org/',
+  };
+  const none = new Set(['windows-server', 'centos', 'ibm-aix', 'ibm-i', 'oracle-solaris']);
+  for (const product of shipped) {
+    if (product.family !== 'operating_system') {
+      assert.equal(product.security_tracker, undefined, product.key);
+      continue;
+    }
+    if (none.has(product.key)) assert.equal(product.security_tracker, undefined, product.key);
+    else assert.equal(product.security_tracker, trackers[product.key], product.key);
+  }
+}
+
 /** `a:purestorage:purity\/\/fa` read from a criterion that writes the slash the same way. */
 function testEscapedSlashIdentifier() {
   const stored = 'a:purestorage:purity\\/\\/fa';
@@ -69,6 +96,7 @@ function main() {
   testUniqueKeys();
   testFamilies();
   testCuratedFields();
+  testSecurityTrackers();
   testEscapedSlashIdentifier();
   console.log('catalog-guard.spec: ok');
 }
