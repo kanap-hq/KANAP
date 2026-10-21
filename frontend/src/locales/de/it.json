@@ -1679,7 +1679,18 @@
         "remove": "Verknüpfung mit {{name}} lösen",
         "suggestions_one": "{{count}} Vorschlag",
         "suggestions_other": "{{count}} Vorschläge",
-        "total": "Gesamt"
+        "total": "Gesamt",
+        "technologyServers": {
+          "proposal": "{{technology}} {{version}} auch erfassen auf",
+          "proposalUnknown": "{{technology}} (Version unbekannt) auch erfassen auf",
+          "add": "Hinzufügen",
+          "recordOn_one": "Auf {{count}} Server erfassen",
+          "recordOn_other": "Auf {{count}} Servern erfassen",
+          "already": "Bereits erfasst",
+          "action": "Auf einem Server erfassen",
+          "actionNamed": "{{name}} auf einem Server erfassen",
+          "changeVersion": "Version von {{name}} ändern"
+        }
       },
       "untitled": "Unbenannte Anwendung",
       "previous": "Vorherige Anwendung",

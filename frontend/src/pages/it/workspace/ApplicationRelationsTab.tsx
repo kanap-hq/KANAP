@@ -46,7 +46,11 @@ export type TechnologyRow = {
   version_unknown: boolean;
   standard_support_end: string | null;
   via: Array<{ asset_id: string; asset_name: string | null; host_name: string | null }>;
+  /** The application's own links of the technology, one per version declared. */
+  declarations?: Array<{ link_id: string; technology_version_id: string | null; version_label: string | null }>;
 };
+/** A server the application is deployed on, in service, with the environments and roles it has there. */
+export type DeploymentServer = { asset_id: string; name: string; asset_reference: string | null; environments: string[]; roles: string[] };
 type ProcessRow = { id: string; name: string; status: string | null; owner_name: string | null };
 type Suggestion = {
   type: 'budget_line' | 'contract' | 'project';
@@ -65,6 +69,7 @@ export type ApplicationRelationsData = {
   requests: RequestRow[] | null;
   tasks: TaskRow[] | null;
   technologies: TechnologyRow[] | null;
+  deployment_servers?: DeploymentServer[] | null;
   processes: ProcessRow[] | null;
   suggestions: Suggestion[];
   also: { assets: number; interfaces: number; documents: number };

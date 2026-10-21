@@ -1679,7 +1679,18 @@
         "remove": "Desvincular {{name}}",
         "suggestions_one": "{{count}} sugerencia",
         "suggestions_other": "{{count}} sugerencias",
-        "total": "Total"
+        "total": "Total",
+        "technologyServers": {
+          "proposal": "Registrar también {{technology}} {{version}} en",
+          "proposalUnknown": "Registrar también {{technology}} (versión desconocida) en",
+          "add": "Añadir",
+          "recordOn_one": "Registrar en {{count}} servidor",
+          "recordOn_other": "Registrar en {{count}} servidores",
+          "already": "Ya registrada",
+          "action": "Registrar en un servidor",
+          "actionNamed": "Registrar {{name}} en un servidor",
+          "changeVersion": "Cambiar la versión de {{name}}"
+        }
       },
       "untitled": "Aplicación sin nombre",
       "previous": "Aplicación anterior",
