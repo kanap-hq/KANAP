@@ -102,11 +102,12 @@ const OPENJDK_CPE = ['a:oracle:jdk', 'a:oracle:openjdk'];
  * Both are twins of `OS_RELEASE_RULES` in catalog-releases.ts.
  */
 // SLES: the NVD files the major in the version and the service pack in the update component
-// (`linux_enterprise_server:15:sp5`), under four names over the years (SUSE, then Novell and the
-// openSUSE project for SLES 10 to 12). The matching compares the major and, when a criterion names
+// (`linux_enterprise_server:15:sp5`), under five names over the years (SUSE, then Novell and the
+// openSUSE project for SLES 10 to 12). `o:suse:suse_linux` and `o:novell:suse_linux` are left out:
+// they also name the former SUSE Linux desktop releases (9.0, 10.1), which would meet SLES 10 and 11. The matching compares the major and, when a criterion names
 // a service pack, that service pack (`SERVICE_PACK_PRODUCTS` in vulnerability-rules.ts).
 // `o:suse:sles`, the identifier endoflife.date publishes, names no CVE.
-const SLES_CPE = ['o:suse:linux_enterprise_server', 'o:suse:suse_linux_enterprise_server', 'o:novell:suse_linux_enterprise_server', 'o:opensuse_project:suse_linux_enterprise_server'];
+const SLES_CPE = ['o:suse:linux_enterprise_server', 'o:suse:suse_linux_enterprise_server', 'o:novell:suse_linux_enterprise_server', 'o:opensuse_project:suse_linux_enterprise_server', 'o:opensuse:suse_linux_enterprise_server'];
 
 /**
  * "Windows Server 2019 (LTSC)" → "2019"; "Windows Server 2012 R2 (LTSC)" → "2012 R2"; the service
@@ -154,9 +155,12 @@ const PRODUCTS = [
   // on YY.MM (`VERSION_PRECISION` in vulnerability-rules.ts, `matchSegments` in catalog-releases.ts):
   // a version typed 9.4 or 22.04.3 LTS still meets the branch the NVD publishes (9.0, 22.04).
   // Rocky Linux: endoflife.date publishes `o:rocky:rocky`, which the NVD does not use.
-  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
+  // October 2026: RHEL 4 to 7 also come as the Server, Workstation and Desktop editions (about 1 900 CVE
+  // each); the support channels (EUS, AUS, TUS, ELS, RHUI, supplementary) are left out. Windows Server
+  // also comes as `o:microsoft:windows_server` with the release as version (`2022`, 302 CVE).
+  { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025', 'o:microsoft:windows_server'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
   { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
-  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux'] },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'] },
   { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], versionLabel: debianLabel },
   { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], versionLabel: slesLabel },
   { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'] },
@@ -302,6 +306,39 @@ const CVE_NAMES = {
     { vendor: "Microsoft", product: "Windows Server 2008 R2 Service Pack 1 (Server Core installation)", version: "2008 R2" },
     { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2", version: "2008" },
     { vendor: "Microsoft", product: "Windows Server 2008 Service Pack 2 (Server Core installation)", version: "2008" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008 R2 Systems Service Pack 1", version: "2008 R2" },
+    { vendor: "Microsoft", product: "Windows Server 2008", version: "2008" },
+  ],
+  // Operating systems (October 2026 lot): Canonical and SUSE publish the release in the product name.
+  // SLES names keep the major only: the matching compares the major, and a service pack name
+  // (`15 SP5`) would hide the names of the whole major from that service pack (the longest
+  // release wins).
+  ubuntu: [
+    { vendor: "Canonical", product: "Ubuntu Linux" },
+    { vendor: "Canonical", product: "Ubuntu" },
+    { vendor: "Canonical", product: "Ubuntu 26.04 LTS", version: "26.04" },
+    { vendor: "Canonical", product: "Ubuntu 24.04 LTS", version: "24.04" },
+    { vendor: "Canonical", product: "Ubuntu 22.04 LTS", version: "22.04" },
+    { vendor: "Canonical", product: "Ubuntu 20.04 LTS", version: "20.04" },
+    { vendor: "Canonical", product: "Ubuntu 18.04 LTS", version: "18.04" },
+    { vendor: "Canonical", product: "Ubuntu 16.04 LTS", version: "16.04" },
+  ],
+  sles: [
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP1", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP4-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP5-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP6", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP6-LTSS", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 15 SP7", version: "15" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12-SP4", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 12-SP5", version: "12" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 11", version: "11" },
+    { vendor: "SUSE", product: "SUSE Linux Enterprise Server 11-SP4-LTSS", version: "11" },
   ],
   mssqlserver: [
     { vendor: "Microsoft", product: "Microsoft SQL Server 2025 for x64-based Systems (GDR)", version: "2025" },

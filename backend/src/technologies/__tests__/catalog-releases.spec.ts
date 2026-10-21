@@ -253,7 +253,7 @@ function testOperatingSystemCpe() {
   const byKey = new Map(shipped.map((p) => [p.key, p]));
   const ids = (key: string) => byKey.get(key)!.cpe_products;
   assert.deepEqual(ids('ubuntu'), ['o:canonical:ubuntu_linux']);
-  assert.deepEqual(ids('rhel'), ['o:redhat:enterprise_linux']);
+  assert.deepEqual(ids('rhel'), ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation']);
   assert.deepEqual(ids('debian'), ['o:debian:debian_linux']);
   assert.deepEqual(ids('almalinux'), ['o:almalinux:almalinux']);
   assert.deepEqual(ids('oracle-linux'), ['o:oracle:linux']);
@@ -261,11 +261,13 @@ function testOperatingSystemCpe() {
   assert.deepEqual(ids('rocky-linux'), ['o:resf:rocky_linux']);
   assert.deepEqual(ids('sles'), [
     'o:novell:suse_linux_enterprise_server',
+    'o:opensuse:suse_linux_enterprise_server',
     'o:opensuse_project:suse_linux_enterprise_server',
     'o:suse:linux_enterprise_server',
     'o:suse:suse_linux_enterprise_server',
   ], 'the major in the version, the service pack in the update (SERVICE_PACK_PRODUCTS)');
   assert.deepEqual(ids('windows-server'), [
+    'o:microsoft:windows_server',
     'o:microsoft:windows_server_2003',
     'o:microsoft:windows_server_2008',
     'o:microsoft:windows_server_2012',
