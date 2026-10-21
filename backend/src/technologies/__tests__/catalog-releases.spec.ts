@@ -299,7 +299,8 @@ function testOperatingSystemCpe() {
   const byKey = new Map(shipped.map((p) => [p.key, p]));
   const ids = (key: string) => byKey.get(key)!.cpe_products;
   assert.deepEqual(ids('ubuntu'), ['o:canonical:ubuntu_linux']);
-  assert.deepEqual(ids('rhel'), ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation']);
+  assert.deepEqual(ids('rhel'), ['a:redhat:enterprise_linux', 'o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation']);
+  assert.deepEqual(byKey.get('redhat-build-of-openjdk')!.cpe_products, ['a:oracle:jdk', 'a:oracle:openjdk', 'a:redhat:openjdk', 'a:redhat:openjdk_els']);
   assert.deepEqual(ids('debian'), ['o:debian:debian_linux']);
   assert.deepEqual(ids('almalinux'), ['o:almalinux:almalinux']);
   assert.deepEqual(ids('oracle-linux'), ['o:oracle:linux']);

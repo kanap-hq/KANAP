@@ -92,12 +92,38 @@ function testEscapedSlashIdentifier() {
   assert.equal(parsed!.product, stored);
 }
 
+/**
+ * No public lifecycle table: empty versions and no curated date fields, as Active Directory.
+ * The user types the versions.
+ */
+function testHandTypedProducts() {
+  const expected: Record<string, { cpe: string[]; names: number }> = {
+    'active-directory': { cpe: [], names: 0 },
+    'aruba-aos-cx': { cpe: ['o:hpe:arubaos-cx'], names: 1 },
+    'pure-purity-fa': { cpe: ['a:purestorage:purity', 'a:purestorage:purity\\/\\/fa'], names: 1 },
+    'hpe-alletra-nimble': { cpe: ['o:hpe:nimbleos'], names: 0 },
+    'rubrik-cdm': { cpe: ['a:rubrik:cdm', 'a:rubrik:cloud_data_management'], names: 0 },
+    'cohesity-dataprotect': { cpe: ['a:cohesity:cohesity_dataplatform', 'a:cohesity:dataplatform'], names: 0 },
+    prtg: { cpe: ['a:paessler:prtg_network_monitor'], names: 0 },
+  };
+  for (const [key, want] of Object.entries(expected)) {
+    const product = shipped.find((item) => item.key === key);
+    assert.ok(product, key);
+    assert.equal(product.source_url, null, key);
+    assert.equal(Object.prototype.hasOwnProperty.call(product, 'source_updated'), false, key);
+    assert.deepEqual(product.versions, [], key);
+    assert.deepEqual(product.cpe_products, want.cpe, key);
+    assert.equal(product.cve_names?.length ?? 0, want.names, key);
+  }
+}
+
 function main() {
   testUniqueKeys();
   testFamilies();
   testCuratedFields();
   testSecurityTrackers();
   testEscapedSlashIdentifier();
+  testHandTypedProducts();
   console.log('catalog-guard.spec: ok');
 }
 

@@ -175,6 +175,12 @@
       "de": "Repository-Manager von JFrog, der Build-Artefakte, Pakete und Container-Images vieler Formate speichert und bereitstellt.",
       "es": "Gestor de repositorios de JFrog que almacena y distribuye artefactos de compilación, paquetes e imágenes de contenedores de muchos formatos."
     },
+    "aruba-aos-cx": {
+      "en": "HPE operating system for Aruba CX campus and data center switches, with a built-in database and programmable interfaces.",
+      "fr": "Système d’exploitation de HPE pour les commutateurs Aruba CX de campus et de centre de données, avec base de données intégrée et interfaces programmables.",
+      "de": "Betriebssystem von HPE für Aruba-CX-Switches in Campus und Rechenzentrum, mit integrierter Datenbank und programmierbaren Schnittstellen.",
+      "es": "Sistema operativo de HPE para los conmutadores Aruba CX de campus y centro de datos, con base de datos integrada e interfaces programables."
+    },
     "authentik": {
       "en": "Open-source identity provider: single sign-on, multi-factor authentication and user management over SAML, OAuth2 and LDAP.",
       "fr": "Fournisseur d’identité open source : authentification unique, authentification multifacteur et gestion des utilisateurs via SAML, OAuth2 et LDAP.",
@@ -312,6 +318,12 @@
       "fr": "Base de données orientée colonnes et open source pour des requêtes analytiques rapides sur de gros volumes de données.",
       "de": "Spaltenorientierte Open-Source-Datenbank für schnelle Analyseabfragen auf großen Datenmengen.",
       "es": "Base de datos columnar de código abierto para consultas analíticas rápidas sobre grandes volúmenes de datos."
+    },
+    "cohesity-dataprotect": {
+      "en": "Cohesity backup software: backup, recovery and immutable copies of virtual machines, databases, files and SaaS applications.",
+      "fr": "Logiciel de sauvegarde de Cohesity : sauvegarde, restauration et copies immuables des machines virtuelles, bases de données, fichiers et applications SaaS.",
+      "de": "Backup-Software von Cohesity: Sicherung, Wiederherstellung und unveränderliche Kopien von virtuellen Maschinen, Datenbanken, Dateien und SaaS-Anwendungen.",
+      "es": "Software de copia de seguridad de Cohesity: copia, recuperación y copias inmutables de máquinas virtuales, bases de datos, archivos y aplicaciones SaaS."
     },
     "commvault": {
       "en": "Data protection software: backup, recovery and archiving of servers, databases, applications and cloud workloads.",
@@ -510,6 +522,12 @@
       "fr": "Plateforme d’Omnissa (anciennement VMware Horizon) qui met à disposition des utilisateurs des postes virtuels et des applications Windows depuis le centre de données ou le cloud.",
       "de": "Plattform von Omnissa (früher VMware Horizon), die Benutzern virtuelle Desktops und Windows-Anwendungen aus dem Rechenzentrum oder der Cloud bereitstellt.",
       "es": "Plataforma de Omnissa (antes VMware Horizon) que pone a disposición de los usuarios escritorios virtuales y aplicaciones Windows desde el centro de datos o la nube."
+    },
+    "hpe-alletra-nimble": {
+      "en": "Operating system of HPE Alletra 5000 and 6000 arrays (formerly Nimble Storage): block storage with snapshots, replication and predictive support.",
+      "fr": "Système d’exploitation des baies HPE Alletra 5000 et 6000 (anciennement Nimble Storage) : stockage bloc avec instantanés, réplication et support prédictif.",
+      "de": "Betriebssystem der HPE-Alletra-5000- und -6000-Arrays (früher Nimble Storage): Blockspeicher mit Snapshots, Replikation und vorausschauendem Support.",
+      "es": "Sistema operativo de las cabinas HPE Alletra 5000 y 6000 (antes Nimble Storage): almacenamiento de bloques con instantáneas, replicación y soporte predictivo."
     },
     "ibm-aix": {
       "en": "IBM UNIX operating system for its Power servers, used for critical databases and business applications.",
@@ -847,11 +865,23 @@
       "de": "Open-Source-Virtualisierungsplattform von Proxmox für virtuelle KVM-Maschinen und LXC-Container, verwaltet über eine Weboberfläche.",
       "es": "Plataforma de virtualización de código abierto de Proxmox que ejecuta máquinas virtuales KVM y contenedores LXC, administrada desde una interfaz web."
     },
+    "prtg": {
+      "en": "Paessler monitoring software for networks, servers and applications, based on sensors, with alerts and maps.",
+      "fr": "Logiciel de supervision de Paessler pour les réseaux, serveurs et applications, basé sur des capteurs, avec alertes et cartes.",
+      "de": "Überwachungssoftware von Paessler für Netzwerke, Server und Anwendungen, auf Sensorbasis, mit Alarmen und Karten.",
+      "es": "Software de supervisión de Paessler para redes, servidores y aplicaciones, basado en sensores, con alertas y mapas."
+    },
     "puppet": {
       "en": "Configuration management tool that keeps servers in a declared state: packages, files, services and settings.",
       "fr": "Outil de gestion de configuration qui maintient les serveurs dans un état déclaré : paquets, fichiers, services et paramètres.",
       "de": "Konfigurationsmanagement-Werkzeug, das Server in einem deklarierten Zustand hält: Pakete, Dateien, Dienste und Einstellungen.",
       "es": "Herramienta de gestión de la configuración que mantiene los servidores en un estado declarado: paquetes, archivos, servicios y parámetros."
+    },
+    "pure-purity-fa": {
+      "en": "Operating system of Pure Storage FlashArray all-flash arrays: block and file storage, data reduction, snapshots and replication.",
+      "fr": "Système d’exploitation des baies 100 % flash FlashArray de Pure Storage : stockage bloc et fichier, réduction des données, instantanés et réplication.",
+      "de": "Betriebssystem der All-Flash-Arrays FlashArray von Pure Storage: Block- und Dateispeicher, Datenreduktion, Snapshots und Replikation.",
+      "es": "Sistema operativo de las cabinas all-flash FlashArray de Pure Storage: almacenamiento de bloques y archivos, reducción de datos, instantáneas y replicación."
     },
     "python": {
       "en": "General-purpose programming language and interpreter, used for scripts, automation, web services and data processing.",
@@ -918,6 +948,12 @@
       "fr": "Système d’exploitation de MikroTik pour ses routeurs et commutateurs : routage, pare-feu, VPN, sans-fil et gestion de la bande passante.",
       "de": "Betriebssystem von MikroTik für seine Router und Switches: Routing, Firewall, VPN, WLAN und Bandbreitenverwaltung.",
       "es": "Sistema operativo de MikroTik para sus enrutadores y conmutadores: enrutamiento, cortafuegos, VPN, red inalámbrica y gestión del ancho de banda."
+    },
+    "rubrik-cdm": {
+      "en": "Rubrik backup software running on its cluster appliances: backup, recovery and immutable copies of virtual machines, databases and files.",
+      "fr": "Logiciel de sauvegarde de Rubrik exécuté sur ses appliances en grappe : sauvegarde, restauration et copies immuables des machines virtuelles, bases de données et fichiers.",
+      "de": "Backup-Software von Rubrik auf seinen Cluster-Appliances: Sicherung, Wiederherstellung und unveränderliche Kopien von virtuellen Maschinen, Datenbanken und Dateien.",
+      "es": "Software de copia de seguridad de Rubrik que funciona en sus appliances en clúster: copia, recuperación y copias inmutables de máquinas virtuales, bases de datos y archivos."
     },
     "ruby": {
       "en": "Dynamic programming language and interpreter, used notably by the Ruby on Rails web framework.",

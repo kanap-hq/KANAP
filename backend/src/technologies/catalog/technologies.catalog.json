@@ -101,6 +101,13 @@
       "cpe_products": [
         "o:microsoft:azure_devops_server"
       ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Azure DevOps Server 2022",
+          "version": "2022"
+        }
+      ],
       "source_url": "https://endoflife.date/azure-devops-server",
       "versions": [
         {
@@ -201,6 +208,13 @@
         "a:atlassian:bitbucket",
         "a:atlassian:bitbucket_data_center",
         "a:atlassian:bitbucket_server"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Atlassian",
+          "product": "Bitbucket Data Center",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/bitbucket",
       "versions": [
@@ -320,6 +334,18 @@
         "a:atlassian:confluence_data_center",
         "a:atlassian:confluence_server"
       ],
+      "cve_names": [
+        {
+          "vendor": "Atlassian",
+          "product": "Confluence Data Center",
+          "version": null
+        },
+        {
+          "vendor": "Atlassian",
+          "product": "Confluence Server",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/confluence",
       "versions": [
         {
@@ -405,6 +431,13 @@
       "cpe_products": [
         "a:gitlab:gitlab"
       ],
+      "cve_names": [
+        {
+          "vendor": "GitLab",
+          "product": "GitLab",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/gitlab",
       "versions": [
         {
@@ -489,6 +522,18 @@
       "mode": "installed",
       "cpe_products": [
         "a:hashicorp:consul"
+      ],
+      "cve_names": [
+        {
+          "vendor": "HashiCorp",
+          "product": "Consul",
+          "version": null
+        },
+        {
+          "vendor": "HashiCorp",
+          "product": "Consul Enterprise",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/consul",
       "versions": [
@@ -668,6 +713,13 @@
       "cpe_products": [
         "a:jfrog:artifactory"
       ],
+      "cve_names": [
+        {
+          "vendor": "jfrog",
+          "product": "artifactory",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/artifactory",
       "versions": [
         {
@@ -753,6 +805,18 @@
       "cpe_products": [
         "a:atlassian:jira_service_desk",
         "a:atlassian:jira_service_management"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Atlassian",
+          "product": "Jira Service Management Data Center",
+          "version": null
+        },
+        {
+          "vendor": "Atlassian",
+          "product": "Jira Service Management Server",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/jira-service-management",
       "versions": [
@@ -841,6 +905,18 @@
         "a:atlassian:jira_data_center",
         "a:atlassian:jira_server",
         "a:atlassian:jira_software_data_center"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Atlassian",
+          "product": "Jira Data Center",
+          "version": null
+        },
+        {
+          "vendor": "Atlassian",
+          "product": "Jira Server",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/jira-software",
       "versions": [
@@ -1161,6 +1237,13 @@
       "cpe_products": [
         "a:sonarsource:sonarqube"
       ],
+      "cve_names": [
+        {
+          "vendor": "SonarSource",
+          "product": "SonarQube",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/sonarqube-server",
       "versions": [
         {
@@ -1245,6 +1328,18 @@
       "mode": "installed",
       "cpe_products": [
         "a:sonatype:nexus_repository_manager"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Sonatype",
+          "product": "Nexus Repository",
+          "version": null
+        },
+        {
+          "vendor": "Sonatype",
+          "product": "Nexus Repository 3",
+          "version": "3"
+        }
       ],
       "source_url": "https://endoflife.date/nexus",
       "versions": [
@@ -1481,6 +1576,13 @@
       "cpe_products": [
         "a:drupal:drupal"
       ],
+      "cve_names": [
+        {
+          "vendor": "Drupal",
+          "product": "Drupal core",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/drupal",
       "versions": [
         {
@@ -1642,6 +1744,13 @@
       "cpe_products": [
         "a:ibm:websphere_application_server"
       ],
+      "cve_names": [
+        {
+          "vendor": "IBM",
+          "product": "WebSphere Application Server",
+          "version": null
+        }
+      ],
       "source_url": "https://www.ibm.com/support/pages/websphere-application-server-traditional-and-websphere-liberty-support-lifecycle-policy-and-end-ifix-eligibility",
       "source_updated": "2026-09-09",
       "versions": [
@@ -1679,6 +1788,18 @@
       "mode": "installed",
       "cpe_products": [
         "a:oracle:weblogic_server"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Oracle Corporation",
+          "product": "Oracle WebLogic Server",
+          "version": null
+        },
+        {
+          "vendor": "Oracle Corporation",
+          "product": "WebLogic Server",
+          "version": null
+        }
       ],
       "source_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
       "source_updated": "2026-04-13",
@@ -1773,6 +1894,13 @@
       "cpe_products": [
         "a:wordpress:wordpress"
       ],
+      "cve_names": [
+        {
+          "vendor": "WordPress",
+          "product": "WordPress",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/wordpress",
       "versions": [
         {
@@ -1848,6 +1976,19 @@
           "extended_support_end": null
         }
       ]
+    },
+    {
+      "key": "cohesity-dataprotect",
+      "name": "Cohesity DataProtect",
+      "editor": "Cohesity",
+      "family": "backup",
+      "mode": "installed",
+      "cpe_products": [
+        "a:cohesity:cohesity_dataplatform",
+        "a:cohesity:dataplatform"
+      ],
+      "source_url": null,
+      "versions": []
     },
     {
       "key": "commvault",
@@ -1946,6 +2087,28 @@
         "o:dell:data_domain_operating_system",
         "o:dell:emc_data_domain_os",
         "o:emc:data_domain_os"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Dell",
+          "product": "PowerProtect Data Domain",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerProtect Data Domain with Data Domain Operating System (DD OS) LTS2023",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerProtect Data Domain with Data Domain Operating System (DD OS) LTS2024",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerProtect Data Domain with Data Domain Operating System (DD OS) of Feature Release",
+          "version": null
+        }
       ],
       "source_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
       "source_updated": "2026-10-16",
@@ -2570,6 +2733,19 @@
           "extended_support_end": null
         }
       ]
+    },
+    {
+      "key": "rubrik-cdm",
+      "name": "Rubrik CDM",
+      "editor": "Rubrik",
+      "family": "backup",
+      "mode": "installed",
+      "cpe_products": [
+        "a:rubrik:cdm",
+        "a:rubrik:cloud_data_management"
+      ],
+      "source_url": null,
+      "versions": []
     },
     {
       "key": "veeam-backup-and-replication",
@@ -3442,6 +3618,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:istio:istio"
+      ],
+      "cve_names": [
+        {
+          "vendor": "istio",
+          "product": "istio",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/istio",
       "versions": [
@@ -4524,6 +4707,13 @@
       "cpe_products": [
         "a:apache:solr"
       ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Solr",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/solr",
       "versions": [
         {
@@ -4590,6 +4780,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:apache:spark"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Spark",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/apache-spark",
       "versions": [
@@ -6968,6 +7165,13 @@
       "cpe_products": [
         "a:apache:airflow"
       ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Airflow",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/apache-airflow",
       "versions": [
         {
@@ -7209,6 +7413,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:apache:zookeeper"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache ZooKeeper",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/zookeeper",
       "versions": [
@@ -7872,6 +8083,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:exim:exim"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Exim",
+          "product": "Exim",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/exim",
       "versions": [
@@ -8860,6 +9078,13 @@
       "cpe_products": [
         "a:elastic:kibana"
       ],
+      "cve_names": [
+        {
+          "vendor": "Elastic",
+          "product": "Kibana",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/kibana",
       "versions": [
         {
@@ -8944,6 +9169,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:elastic:logstash"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Elastic",
+          "product": "Logstash",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/logstash",
       "versions": [
@@ -9112,6 +9344,18 @@
           "extended_support_end": null
         }
       ]
+    },
+    {
+      "key": "prtg",
+      "name": "PRTG Network Monitor",
+      "editor": "Paessler",
+      "family": "monitoring",
+      "mode": "installed",
+      "cpe_products": [
+        "a:paessler:prtg_network_monitor"
+      ],
+      "source_url": null,
+      "versions": []
     },
     {
       "key": "splunk",
@@ -9400,6 +9644,13 @@
       "cpe_products": [
         "o:arista:eos"
       ],
+      "cve_names": [
+        {
+          "vendor": "Arista Networks",
+          "product": "EOS",
+          "version": null
+        }
+      ],
       "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
       "source_updated": "2026-04-15",
       "versions": [
@@ -9595,6 +9846,13 @@
         "a:cisco:ios_xe",
         "o:cisco:ios_xe"
       ],
+      "cve_names": [
+        {
+          "vendor": "Cisco",
+          "product": "Cisco IOS XE Software",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/cisco-ios-xe",
       "versions": [
         {
@@ -9680,6 +9938,13 @@
       "cpe_products": [
         "a:cisco:nx-os",
         "o:cisco:nx-os"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Cisco",
+          "product": "Cisco NX-OS Software",
+          "version": null
+        }
       ],
       "source_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
       "source_updated": "2026-10-09",
@@ -9881,6 +10146,13 @@
         "a:f5:big-ip_domain_name_system",
         "a:f5:big-ip_local_traffic_manager"
       ],
+      "cve_names": [
+        {
+          "vendor": "F5",
+          "product": "BIG-IP",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/big-ip",
       "versions": [
         {
@@ -9958,6 +10230,25 @@
       ]
     },
     {
+      "key": "aruba-aos-cx",
+      "name": "HPE Aruba Networking AOS-CX",
+      "editor": "HPE",
+      "family": "network",
+      "mode": "installed",
+      "cpe_products": [
+        "o:hpe:arubaos-cx"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Hewlett Packard Enterprise (HPE)",
+          "product": "AOS-CX",
+          "version": null
+        }
+      ],
+      "source_url": null,
+      "versions": []
+    },
+    {
       "key": "juniper-junos",
       "name": "Juniper Junos OS",
       "editor": "HPE Juniper Networking",
@@ -9966,6 +10257,18 @@
       "cpe_products": [
         "o:juniper:junos",
         "o:juniper:junos_os_evolved"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Juniper Networks",
+          "product": "Junos OS",
+          "version": null
+        },
+        {
+          "vendor": "Juniper Networks",
+          "product": "Junos OS Evolved",
+          "version": null
+        }
       ],
       "source_url": "https://support.juniper.net/support/eol/software/junos/",
       "source_updated": "2026-07-14",
@@ -10305,6 +10608,13 @@
       "cpe_products": [
         "o:mikrotik:routeros"
       ],
+      "cve_names": [
+        {
+          "vendor": "Mikrotik",
+          "product": "RouterOS",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/routeros",
       "versions": [
         {
@@ -10411,6 +10721,28 @@
         "a:citrix:netscaler_gateway",
         "o:citrix:netscaler_application_delivery_controller_firmware",
         "o:citrix:netscaler_gateway_firmware"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Citrix NetScaler",
+          "product": "ADC",
+          "version": null
+        },
+        {
+          "vendor": "Citrix NetScaler",
+          "product": "Gateway",
+          "version": null
+        },
+        {
+          "vendor": "NetScaler",
+          "product": "ADC",
+          "version": null
+        },
+        {
+          "vendor": "NetScaler",
+          "product": "Gateway",
+          "version": null
+        }
       ],
       "source_url": "https://www.citrix.com/support/product-lifecycle/product-matrix.html",
       "source_updated": "2025-02-26",
@@ -10534,6 +10866,23 @@
         "o:checkpoint:gaia_os",
         "o:checkpoint:quantum_security_gateway_firmware"
       ],
+      "cve_names": [
+        {
+          "vendor": "checkpoint",
+          "product": "Check Point Mobile Access",
+          "version": null
+        },
+        {
+          "vendor": "checkpoint",
+          "product": "Quantum Security Gateway",
+          "version": null
+        },
+        {
+          "vendor": "checkpoint",
+          "product": "Quantum Security Management",
+          "version": null
+        }
+      ],
       "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
       "source_updated": null,
       "versions": [
@@ -10656,6 +11005,23 @@
       "cpe_products": [
         "a:cisco:adaptive_security_appliance_software",
         "o:cisco:adaptive_security_appliance_software"
+      ],
+      "cve_names": [
+        {
+          "vendor": "cisco",
+          "product": "adaptive_security_appliance_software",
+          "version": null
+        },
+        {
+          "vendor": "Cisco",
+          "product": "Cisco Adaptive Security Appliance (ASA) Software",
+          "version": null
+        },
+        {
+          "vendor": "Cisco",
+          "product": "Cisco Secure Firewall Adaptive Security Appliance (ASA) Software",
+          "version": null
+        }
       ],
       "source_url": "https://www.cisco.com/c/en/us/products/security/asa-firepower-services/eos-eol-notice-listing.html",
       "source_updated": null,
@@ -10901,6 +11267,23 @@
         "a:cisco:secure_firewall_threat_defense",
         "o:cisco:firepower_threat_defense"
       ],
+      "cve_names": [
+        {
+          "vendor": "Cisco",
+          "product": "Cisco Firepower Threat Defense Software",
+          "version": null
+        },
+        {
+          "vendor": "Cisco",
+          "product": "Cisco Secure Firewall Threat Defense (FTD) Software",
+          "version": null
+        },
+        {
+          "vendor": "cisco",
+          "product": "firepower_threat_defense_software",
+          "version": null
+        }
+      ],
       "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
       "source_updated": "2026-09-22",
       "versions": [
@@ -11144,6 +11527,13 @@
         "a:paloaltonetworks:cortex_xdr_agent",
         "a:paloaltonetworks:traps"
       ],
+      "cve_names": [
+        {
+          "vendor": "Palo Alto Networks",
+          "product": "Cortex XDR Agent",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/cortex-xdr",
       "versions": [
         {
@@ -11228,6 +11618,13 @@
       "mode": "installed",
       "cpe_products": [
         "o:fortinet:fortios"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Fortinet",
+          "product": "FortiOS",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/fortios",
       "versions": [
@@ -11402,6 +11799,13 @@
       "cpe_products": [
         "a:ivanti:connect_secure",
         "a:pulsesecure:pulse_connect_secure"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Ivanti",
+          "product": "Connect Secure",
+          "version": null
+        }
       ],
       "source_url": "https://hub.ivanti.com/s/article/Granular-Software-Release-EOL-Timelines-and-Support-Matrix?language=en_US",
       "source_updated": "2026-10-02",
@@ -11665,6 +12069,18 @@
       "cpe_products": [
         "a:paloaltonetworks:globalprotect"
       ],
+      "cve_names": [
+        {
+          "vendor": "Palo Alto Networks",
+          "product": "GlobalProtect App",
+          "version": null
+        },
+        {
+          "vendor": "Palo Alto Networks",
+          "product": "GlobalProtect UWP App",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/pangp",
       "versions": [
         {
@@ -11740,6 +12156,13 @@
       "mode": "installed",
       "cpe_products": [
         "o:paloaltonetworks:pan-os"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Palo Alto Networks",
+          "product": "PAN-OS",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/panos",
       "versions": [
@@ -11828,6 +12251,13 @@
         "o:sophos:firewall_firmware",
         "o:sophos:sfos",
         "o:sophos:xg_firewall_firmware"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Sophos",
+          "product": "Sophos Firewall",
+          "version": null
+        }
       ],
       "source_url": "https://support.sophos.com/support/s/article/KBA-000003353?language=en_US",
       "source_updated": "2026-09-24",
@@ -12071,6 +12501,13 @@
       "cpe_products": [
         "a:stormshield:network_security",
         "a:stormshield:stormshield_network_security"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Stormshield",
+          "product": "Stormshield Network Security",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/sns-firmware",
       "versions": [
@@ -12840,6 +13277,13 @@
       "cpe_products": [
         "o:ibm:aix"
       ],
+      "cve_names": [
+        {
+          "vendor": "IBM",
+          "product": "AIX",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/ibm-aix",
       "versions": [
         {
@@ -12897,6 +13341,13 @@
       "cpe_products": [
         "a:ibm:i",
         "o:ibm:i"
+      ],
+      "cve_names": [
+        {
+          "vendor": "IBM",
+          "product": "i",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/ibm-i",
       "versions": [
@@ -13060,6 +13511,13 @@
         "o:oracle:solaris",
         "o:sun:solaris"
       ],
+      "cve_names": [
+        {
+          "vendor": "Oracle Corporation",
+          "product": "Oracle Solaris",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/oracle-solaris",
       "versions": [
         {
@@ -13145,6 +13603,7 @@
       "family": "operating_system",
       "mode": "installed",
       "cpe_products": [
+        "a:redhat:enterprise_linux",
         "o:redhat:enterprise_linux",
         "o:redhat:enterprise_linux_desktop",
         "o:redhat:enterprise_linux_server",
@@ -14007,6 +14466,23 @@
         "a:microsoft:sharepoint_enterprise_server",
         "a:microsoft:sharepoint_server"
       ],
+      "cve_names": [
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SharePoint Enterprise Server 2016",
+          "version": "2016"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SharePoint Server 2019",
+          "version": "2019"
+        },
+        {
+          "vendor": "Microsoft",
+          "product": "Microsoft SharePoint Server Subscription Edition",
+          "version": "Subscription Edition"
+        }
+      ],
       "source_url": "https://endoflife.date/sharepoint",
       "versions": [
         {
@@ -14318,6 +14794,13 @@
       "cpe_products": [
         "a:apache:log4j"
       ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Log4j Core",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/log4j",
       "versions": [
         {
@@ -14339,6 +14822,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:apache:struts"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Apache Software Foundation",
+          "product": "Apache Struts",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/apache-struts",
       "versions": [
@@ -15351,7 +15841,9 @@
       "mode": "installed",
       "cpe_products": [
         "a:oracle:jdk",
-        "a:oracle:openjdk"
+        "a:oracle:openjdk",
+        "a:redhat:openjdk",
+        "a:redhat:openjdk_els"
       ],
       "source_url": "https://endoflife.date/redhat-build-of-openjdk",
       "versions": [
@@ -15497,6 +15989,13 @@
       "cpe_products": [
         "a:vmware:spring_boot"
       ],
+      "cve_names": [
+        {
+          "vendor": "Spring",
+          "product": "Spring Boot",
+          "version": null
+        }
+      ],
       "source_url": "https://endoflife.date/spring-boot",
       "versions": [
         {
@@ -15583,6 +16082,13 @@
         "a:pivotal_software:spring_framework",
         "a:springsource:spring_framework",
         "a:vmware:spring_framework"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Spring",
+          "product": "Spring Framework",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/spring-framework",
       "versions": [
@@ -15723,6 +16229,13 @@
         "o:dell:emc_powerscale_onefs",
         "o:dell:powerscale_onefs",
         "o:emc:isilon_onefs"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Dell",
+          "product": "PowerScale OneFS",
+          "version": null
+        }
       ],
       "source_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
       "source_updated": "2026-10-16",
@@ -15990,6 +16503,68 @@
       "cpe_products": [
         "o:dell:emc_powerstore_firmware",
         "o:dell:powerstoreos"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 1000T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 1200T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 3000T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 3200Q",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 3200T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 5000T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 500T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 5200Q",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 5200T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 7000T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 9000T",
+          "version": null
+        },
+        {
+          "vendor": "Dell",
+          "product": "PowerStore 9200T",
+          "version": null
+        }
       ],
       "source_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
       "source_updated": "2026-10-16",
@@ -16357,6 +16932,13 @@
         "a:dell:unity_xt_operating_environment",
         "a:dell:unityvsa_operating_environment"
       ],
+      "cve_names": [
+        {
+          "vendor": "Dell",
+          "product": "Unity",
+          "version": null
+        }
+      ],
       "source_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
       "source_updated": "2026-10-16",
       "versions": [
@@ -16687,6 +17269,18 @@
       ]
     },
     {
+      "key": "hpe-alletra-nimble",
+      "name": "HPE Alletra 5000/6000 (NimbleOS)",
+      "editor": "HPE",
+      "family": "storage",
+      "mode": "installed",
+      "cpe_products": [
+        "o:hpe:nimbleos"
+      ],
+      "source_url": null,
+      "versions": []
+    },
+    {
       "key": "netapp-ontap",
       "name": "NetApp ONTAP",
       "editor": "NetApp",
@@ -16696,6 +17290,13 @@
         "a:netapp:clustered_data_ontap",
         "a:netapp:ontap",
         "o:netapp:clustered_data_ontap"
+      ],
+      "cve_names": [
+        {
+          "vendor": "NetApp",
+          "product": "ONTAP 9",
+          "version": "9"
+        }
       ],
       "source_url": "https://endoflife.date/netapp-ontap",
       "versions": [
@@ -16858,6 +17459,26 @@
       ]
     },
     {
+      "key": "pure-purity-fa",
+      "name": "Pure Storage Purity//FA",
+      "editor": "Pure Storage",
+      "family": "storage",
+      "mode": "installed",
+      "cpe_products": [
+        "a:purestorage:purity",
+        "a:purestorage:purity\\/\\/fa"
+      ],
+      "cve_names": [
+        {
+          "vendor": "PureStorage",
+          "product": "FlashArray",
+          "version": null
+        }
+      ],
+      "source_url": null,
+      "versions": []
+    },
+    {
       "key": "synology-dsm",
       "name": "Synology DSM",
       "editor": "Synology",
@@ -16866,6 +17487,13 @@
       "cpe_products": [
         "a:synology:diskstation_manager",
         "o:synology:diskstation_manager"
+      ],
+      "cve_names": [
+        {
+          "vendor": "Synology",
+          "product": "DiskStation Manager (DSM)",
+          "version": null
+        }
       ],
       "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
       "source_updated": "2026-10-13",
@@ -17075,6 +17703,13 @@
       "mode": "installed",
       "cpe_products": [
         "a:envoyproxy:envoy"
+      ],
+      "cve_names": [
+        {
+          "vendor": "envoyproxy",
+          "product": "envoy",
+          "version": null
+        }
       ],
       "source_url": "https://endoflife.date/envoy",
       "versions": [

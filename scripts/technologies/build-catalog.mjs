@@ -204,9 +204,11 @@ const PRODUCTS = [
   // October 2026: RHEL 4 to 7 also come as the Server, Workstation and Desktop editions (about 1 900 CVE
   // each); the support channels (EUS, AUS, TUS, ELS, RHUI, supplementary) are left out. Windows Server
   // also comes as `o:microsoft:windows_server` with the release as version (`2022`, 302 CVE).
+  // RHEL 8 and 9 AppStream CVE carry only `a:redhat:enterprise_linux`. The matching compares that
+  // form on the major, as it does for `o:` (`VERSION_PRECISION`).
   { key: 'windows-server', slug: 'windows-server', name: 'Windows Server', editor: 'Microsoft', family: 'operating_system', cpe: ['o:microsoft:windows_server_2003', 'o:microsoft:windows_server_2008', 'o:microsoft:windows_server_2012', 'o:microsoft:windows_server_2016', 'o:microsoft:windows_server_2019', 'o:microsoft:windows_server_2022', 'o:microsoft:windows_server_2025', 'o:microsoft:windows_server'], versionLabel: windowsServerLabel, keepRelease: windowsServerRelease },
   { key: 'ubuntu', slug: 'ubuntu', name: 'Ubuntu', editor: 'Canonical', family: 'operating_system', cpe: ['o:canonical:ubuntu_linux'], security_tracker: 'https://ubuntu.com/security/cves', versionLabel: ubuntuLabel, keepRelease: ubuntuRelease },
-  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'], security_tracker: 'https://access.redhat.com/security/security-updates/cve' },
+  { key: 'rhel', slug: 'rhel', name: 'Red Hat Enterprise Linux', editor: 'Red Hat', family: 'operating_system', cpe: ['a:redhat:enterprise_linux', 'o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation'], security_tracker: 'https://access.redhat.com/security/security-updates/cve' },
   { key: 'debian', slug: 'debian', name: 'Debian', editor: 'Debian', family: 'operating_system', cpe: ['o:debian:debian_linux'], security_tracker: 'https://security-tracker.debian.org/tracker/', versionLabel: debianLabel },
   { key: 'sles', slug: 'sles', name: 'SUSE Linux Enterprise Server', editor: 'SUSE', family: 'operating_system', cpe: SLES_CPE, cpeExclude: ['o:suse:sles'], security_tracker: 'https://www.suse.com/security/cve/', versionLabel: slesLabel },
   { key: 'rocky-linux', slug: 'rocky-linux', name: 'Rocky Linux', editor: 'Rocky Enterprise Software Foundation', family: 'operating_system', cpe: ['o:resf:rocky_linux'], cpeExclude: ['o:rocky:rocky'], security_tracker: 'https://errata.rockylinux.org/' },
@@ -330,6 +332,9 @@ const PRODUCTS = [
   { key: 'proxmox-backup-server', slug: 'proxmox-backup-server', name: 'Proxmox Backup Server', editor: 'Proxmox', family: 'backup', cpe: ['a:proxmox:backup_server'] },
   { key: 'vmware-srm', slug: 'vmware-srm', name: 'VMware Live Site Recovery', editor: 'Broadcom', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a VMware Site Recovery Manager product. a:vmware:site_recovery_manager and a:vmware:srm do not exist, and no keyword search of the CPE dictionary finds the product.' },
   { key: 'zerto', slug: 'zerto', name: 'Zerto', editor: 'HPE', family: 'backup', noCpe: 'Verified on 2026-10-20: the NVD names no CVE under a Zerto product. a:zerto:zerto_virtual_manager and a:hpe:zerto do not exist, and the CPE dictionary holds no Zerto entry.' },
+  // No public lifecycle table (October 2026). The user types the versions.
+  { key: 'rubrik-cdm', slug: null, name: 'Rubrik CDM', editor: 'Rubrik', family: 'backup', cpe: ['a:rubrik:cdm', 'a:rubrik:cloud_data_management'] },
+  { key: 'cohesity-dataprotect', slug: null, name: 'Cohesity DataProtect', editor: 'Cohesity', family: 'backup', cpe: ['a:cohesity:cohesity_dataplatform', 'a:cohesity:dataplatform'] },
   // Monitoring
   { key: 'zabbix', slug: 'zabbix', name: 'Zabbix', editor: 'Zabbix', family: 'monitoring', cpe: ['a:zabbix:zabbix_server'] },
   { key: 'grafana', slug: 'grafana', name: 'Grafana', editor: 'Grafana Labs', family: 'monitoring' },
@@ -343,6 +348,8 @@ const PRODUCTS = [
   { key: 'kibana', slug: 'kibana', name: 'Kibana', editor: 'Elastic', family: 'monitoring', cpe: ['a:elastic:kibana'] },
   { key: 'logstash', slug: 'logstash', name: 'Logstash', editor: 'Elastic', family: 'monitoring', cpe: ['a:elastic:logstash'] },
   { key: 'grafana-loki', slug: 'grafana-loki', name: 'Grafana Loki', editor: 'Grafana Labs', family: 'monitoring', cpe: ['a:grafana:loki'] },
+  // No public lifecycle table (October 2026). The user types the versions.
+  { key: 'prtg', slug: null, name: 'PRTG Network Monitor', editor: 'Paessler', family: 'monitoring', cpe: ['a:paessler:prtg_network_monitor'] },
   // Runtimes and frameworks
   { key: 'dotnet', slug: 'dotnet', name: '.NET', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_core'] },
   { key: 'dotnetfx', slug: 'dotnetfx', name: '.NET Framework', editor: 'Microsoft', family: 'runtime', cpe: ['a:microsoft:.net_framework'] },
@@ -359,7 +366,8 @@ const PRODUCTS = [
   { key: 'azul-zulu', slug: 'azul-zulu', name: 'Azul Zulu', editor: 'Azul', family: 'runtime', cpe: ['a:azul:zulu', ...OPENJDK_CPE] },
   { key: 'bellsoft-liberica', slug: 'bellsoft-liberica', name: 'BellSoft Liberica JDK', editor: 'BellSoft', family: 'runtime', cpe: OPENJDK_CPE },
   { key: 'ibm-semeru-runtime', slug: 'ibm-semeru-runtime', name: 'IBM Semeru Runtime', editor: 'IBM', family: 'runtime', cpe: ['a:ibm:semeru_runtime', ...OPENJDK_CPE] },
-  { key: 'redhat-build-of-openjdk', slug: 'redhat-build-of-openjdk', name: 'Red Hat build of OpenJDK', editor: 'Red Hat', family: 'runtime', cpe: OPENJDK_CPE },
+  // Red Hat files its own build under these two identifiers, besides the Oracle ones the other builds share.
+  { key: 'redhat-build-of-openjdk', slug: 'redhat-build-of-openjdk', name: 'Red Hat build of OpenJDK', editor: 'Red Hat', family: 'runtime', cpe: ['a:redhat:openjdk', 'a:redhat:openjdk_els', ...OPENJDK_CPE] },
   { key: 'spring-boot', slug: 'spring-boot', name: 'Spring Boot', editor: 'Broadcom', family: 'runtime', cpe: ['a:vmware:spring_boot'] },
   // Three successive publisher names. The Pivotal and SpringSource ones cover the versions up to 5.x.
   { key: 'spring-framework', slug: 'spring-framework', name: 'Spring Framework', editor: 'Broadcom', family: 'runtime', cpe: ['a:vmware:spring_framework', 'a:pivotal_software:spring_framework', 'a:springsource:spring_framework'] },
@@ -374,6 +382,9 @@ const PRODUCTS = [
   { key: 'netapp-ontap', slug: 'netapp-ontap', name: 'NetApp ONTAP', editor: 'NetApp', family: 'storage', cpe: ['a:netapp:ontap', 'a:netapp:clustered_data_ontap', 'o:netapp:clustered_data_ontap'] },
   // The NVD only names TrueNAS CORE up to 13.0 (`truenas_firmware`, 3 CVE, newest CVE-2024-11946). The catalog follows 24.x and 25.x. Kept: the identifier names CVE.
   { key: 'truenas', slug: 'truenas', name: 'TrueNAS', editor: 'iXsystems', family: 'storage', cpe: ['o:ixsystems:truenas_firmware'] },
+  // No public lifecycle table (October 2026). The user types the versions. The Purity identifier keeps the escaped slash the NVD writes.
+  { key: 'pure-purity-fa', slug: null, name: 'Pure Storage Purity//FA', editor: 'Pure Storage', family: 'storage', cpe: ['a:purestorage:purity\\/\\/fa', 'a:purestorage:purity'] },
+  { key: 'hpe-alletra-nimble', slug: null, name: 'HPE Alletra 5000/6000 (NimbleOS)', editor: 'HPE', family: 'storage', cpe: ['o:hpe:nimbleos'] },
   // Network and security
   { key: 'hashicorp-vault', slug: 'hashicorp-vault', name: 'HashiCorp Vault', editor: 'HashiCorp', family: 'network_security' },
   { key: 'bind-9', slug: 'bind-9', name: 'BIND 9', editor: 'ISC', family: 'network_security', cpe: ['a:isc:bind'] },
@@ -388,6 +399,8 @@ const PRODUCTS = [
   { key: 'cisco-ios-xe', slug: 'cisco-ios-xe', name: 'Cisco IOS XE', editor: 'Cisco', family: 'network', cpe: ['o:cisco:ios_xe', 'a:cisco:ios_xe'] },
   { key: 'routeros', slug: 'routeros', name: 'MikroTik RouterOS', editor: 'MikroTik', family: 'network', cpe: ['o:mikrotik:routeros'] },
   { key: 'big-ip', slug: 'big-ip', name: 'F5 BIG-IP', editor: 'F5', family: 'network', cpe: ['a:f5:big-ip_local_traffic_manager', 'a:f5:big-ip_access_policy_manager', 'a:f5:big-ip_application_security_manager', 'a:f5:big-ip_advanced_web_application_firewall', 'a:f5:big-ip_advanced_firewall_manager', 'a:f5:big-ip_domain_name_system', 'a:f5:big-ip_dns'] },
+  // No public lifecycle table (October 2026). The user types the versions.
+  { key: 'aruba-aos-cx', slug: null, name: 'HPE Aruba Networking AOS-CX', editor: 'HPE', family: 'network', cpe: ['o:hpe:arubaos-cx'] },
   // Administration
   { key: 'ansible-automation-platform', slug: 'red-hat-ansible-automation-platform', name: 'Red Hat Ansible Automation Platform', editor: 'Red Hat', family: 'administration' },
   { key: 'puppet', slug: 'puppet', name: 'Puppet', editor: 'Perforce', family: 'administration', cpe: ['a:puppetlabs:puppet'] },
@@ -722,6 +735,211 @@ const CVE_NAMES = {
   ],
   "veeam-one": [
     { vendor: "Veeam", product: "One" },
+  ],
+  // October 2026, catalogue enrichi: publisher names from CVE.org
+  // (planning/catalogue-enrichi/cve-names.json). A name that carries a release keeps its
+  // version. Stormshield is added by hand: ten CVE in the window, a precise name, and the
+  // thresholds could not be measured without an NVD analysis.
+  "apache-airflow": [
+    { vendor: "Apache Software Foundation", product: "Apache Airflow", version: null },
+  ],
+  "apache-spark": [
+    { vendor: "Apache Software Foundation", product: "Apache Spark", version: null },
+  ],
+  "apache-struts": [
+    { vendor: "Apache Software Foundation", product: "Apache Struts", version: null },
+  ],
+  "arista-eos": [
+    { vendor: "Arista Networks", product: "EOS", version: null },
+  ],
+  "artifactory": [
+    { vendor: "jfrog", product: "artifactory", version: null },
+  ],
+  "aruba-aos-cx": [
+    { vendor: "Hewlett Packard Enterprise (HPE)", product: "AOS-CX", version: null },
+  ],
+  "azure-devops-server": [
+    { vendor: "Microsoft", product: "Azure DevOps Server 2022", version: "2022" },
+  ],
+  "big-ip": [
+    { vendor: "F5", product: "BIG-IP", version: null },
+  ],
+  "bitbucket": [
+    { vendor: "Atlassian", product: "Bitbucket Data Center", version: null },
+  ],
+  "check-point-gaia": [
+    { vendor: "checkpoint", product: "Quantum Security Gateway", version: null },
+    { vendor: "checkpoint", product: "Quantum Security Management", version: null },
+    { vendor: "checkpoint", product: "Check Point Mobile Access", version: null },
+  ],
+  "cisco-asa": [
+    { vendor: "Cisco", product: "Cisco Secure Firewall Adaptive Security Appliance (ASA) Software", version: null },
+    { vendor: "Cisco", product: "Cisco Adaptive Security Appliance (ASA) Software", version: null },
+    { vendor: "cisco", product: "adaptive_security_appliance_software", version: null },
+  ],
+  "cisco-ftd": [
+    { vendor: "Cisco", product: "Cisco Secure Firewall Threat Defense (FTD) Software", version: null },
+    { vendor: "Cisco", product: "Cisco Firepower Threat Defense Software", version: null },
+    { vendor: "cisco", product: "firepower_threat_defense_software", version: null },
+  ],
+  "cisco-ios-xe": [
+    { vendor: "Cisco", product: "Cisco IOS XE Software", version: null },
+  ],
+  "cisco-nx-os": [
+    { vendor: "Cisco", product: "Cisco NX-OS Software", version: null },
+  ],
+  "confluence": [
+    { vendor: "Atlassian", product: "Confluence Data Center", version: null },
+    { vendor: "Atlassian", product: "Confluence Server", version: null },
+  ],
+  "consul": [
+    { vendor: "HashiCorp", product: "Consul", version: null },
+    { vendor: "HashiCorp", product: "Consul Enterprise", version: null },
+  ],
+  "cortex-xdr": [
+    { vendor: "Palo Alto Networks", product: "Cortex XDR Agent", version: null },
+  ],
+  "dell-data-domain": [
+    { vendor: "Dell", product: "PowerProtect Data Domain", version: null },
+    { vendor: "Dell", product: "PowerProtect Data Domain with Data Domain Operating System (DD OS) LTS2023", version: null },
+    { vendor: "Dell", product: "PowerProtect Data Domain with Data Domain Operating System (DD OS) LTS2024", version: null },
+    { vendor: "Dell", product: "PowerProtect Data Domain with Data Domain Operating System (DD OS) of Feature Release", version: null },
+  ],
+  "dell-powerscale": [
+    { vendor: "Dell", product: "PowerScale OneFS", version: null },
+  ],
+  "dell-powerstore": [
+    { vendor: "Dell", product: "PowerStore 500T", version: null },
+    { vendor: "Dell", product: "PowerStore 1000T", version: null },
+    { vendor: "Dell", product: "PowerStore 1200T", version: null },
+    { vendor: "Dell", product: "PowerStore 3000T", version: null },
+    { vendor: "Dell", product: "PowerStore 3200Q", version: null },
+    { vendor: "Dell", product: "PowerStore 3200T", version: null },
+    { vendor: "Dell", product: "PowerStore 5000T", version: null },
+    { vendor: "Dell", product: "PowerStore 5200Q", version: null },
+    { vendor: "Dell", product: "PowerStore 5200T", version: null },
+    { vendor: "Dell", product: "PowerStore 7000T", version: null },
+    { vendor: "Dell", product: "PowerStore 9000T", version: null },
+    { vendor: "Dell", product: "PowerStore 9200T", version: null },
+  ],
+  "dell-unity": [
+    { vendor: "Dell", product: "Unity", version: null },
+  ],
+  "drupal": [
+    { vendor: "Drupal", product: "Drupal core", version: null },
+  ],
+  "envoy": [
+    { vendor: "envoyproxy", product: "envoy", version: null },
+  ],
+  "exim": [
+    { vendor: "Exim", product: "Exim", version: null },
+  ],
+  "fortios": [
+    { vendor: "Fortinet", product: "FortiOS", version: null },
+  ],
+  "gitlab": [
+    { vendor: "GitLab", product: "GitLab", version: null },
+  ],
+  "ibm-aix": [
+    { vendor: "IBM", product: "AIX", version: null },
+  ],
+  "ibm-i": [
+    { vendor: "IBM", product: "i", version: null },
+  ],
+  "ibm-websphere": [
+    { vendor: "IBM", product: "WebSphere Application Server", version: null },
+  ],
+  "istio": [
+    { vendor: "istio", product: "istio", version: null },
+  ],
+  "ivanti-connect-secure": [
+    { vendor: "Ivanti", product: "Connect Secure", version: null },
+  ],
+  "jira-service-management": [
+    { vendor: "Atlassian", product: "Jira Service Management Data Center", version: null },
+    { vendor: "Atlassian", product: "Jira Service Management Server", version: null },
+  ],
+  "jira-software": [
+    { vendor: "Atlassian", product: "Jira Server", version: null },
+    { vendor: "Atlassian", product: "Jira Data Center", version: null },
+  ],
+  "juniper-junos": [
+    { vendor: "Juniper Networks", product: "Junos OS", version: null },
+    { vendor: "Juniper Networks", product: "Junos OS Evolved", version: null },
+  ],
+  "kibana": [
+    { vendor: "Elastic", product: "Kibana", version: null },
+  ],
+  "log4j": [
+    { vendor: "Apache Software Foundation", product: "Apache Log4j Core", version: null },
+  ],
+  "logstash": [
+    { vendor: "Elastic", product: "Logstash", version: null },
+  ],
+  "netapp-ontap": [
+    { vendor: "NetApp", product: "ONTAP 9", version: "9" },
+  ],
+  "netscaler-adc": [
+    { vendor: "NetScaler", product: "ADC", version: null },
+    { vendor: "NetScaler", product: "Gateway", version: null },
+    { vendor: "Citrix NetScaler", product: "ADC", version: null },
+    { vendor: "Citrix NetScaler", product: "Gateway", version: null },
+  ],
+  "nexus": [
+    { vendor: "Sonatype", product: "Nexus Repository 3", version: "3" },
+    { vendor: "Sonatype", product: "Nexus Repository", version: null },
+  ],
+  "oracle-solaris": [
+    { vendor: "Oracle Corporation", product: "Oracle Solaris", version: null },
+  ],
+  "oracle-weblogic": [
+    { vendor: "Oracle Corporation", product: "Oracle WebLogic Server", version: null },
+    { vendor: "Oracle Corporation", product: "WebLogic Server", version: null },
+  ],
+  "pangp": [
+    { vendor: "Palo Alto Networks", product: "GlobalProtect App", version: null },
+    { vendor: "Palo Alto Networks", product: "GlobalProtect UWP App", version: null },
+  ],
+  "panos": [
+    { vendor: "Palo Alto Networks", product: "PAN-OS", version: null },
+  ],
+  "pure-purity-fa": [
+    { vendor: "PureStorage", product: "FlashArray", version: null },
+  ],
+  "routeros": [
+    { vendor: "Mikrotik", product: "RouterOS", version: null },
+  ],
+  "sharepoint": [
+    { vendor: "Microsoft", product: "Microsoft SharePoint Server Subscription Edition", version: "Subscription Edition" },
+    { vendor: "Microsoft", product: "Microsoft SharePoint Server 2019", version: "2019" },
+    { vendor: "Microsoft", product: "Microsoft SharePoint Enterprise Server 2016", version: "2016" },
+  ],
+  "sns-firmware": [
+    { vendor: "Stormshield", product: "Stormshield Network Security", version: null },
+  ],
+  "solr": [
+    { vendor: "Apache Software Foundation", product: "Apache Solr", version: null },
+  ],
+  "sonarqube-server": [
+    { vendor: "SonarSource", product: "SonarQube", version: null },
+  ],
+  "sophos-firewall": [
+    { vendor: "Sophos", product: "Sophos Firewall", version: null },
+  ],
+  "spring-boot": [
+    { vendor: "Spring", product: "Spring Boot", version: null },
+  ],
+  "spring-framework": [
+    { vendor: "Spring", product: "Spring Framework", version: null },
+  ],
+  "synology-dsm": [
+    { vendor: "Synology", product: "DiskStation Manager (DSM)", version: null },
+  ],
+  "wordpress": [
+    { vendor: "WordPress", product: "WordPress", version: null },
+  ],
+  "zookeeper": [
+    { vendor: "Apache Software Foundation", product: "Apache ZooKeeper", version: null },
   ],
 };
 for (const entry of PRODUCTS) if (CVE_NAMES[entry.key]) entry.cve_names = CVE_NAMES[entry.key];
