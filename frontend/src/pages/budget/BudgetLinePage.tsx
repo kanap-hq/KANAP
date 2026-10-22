@@ -59,6 +59,7 @@ import { isoToLocalDateInput } from '../../lib/datetime';
 import { analyticsValueOptions, itemReferences, matching, ownerName } from '../../components/finance/itemReferences';
 import type { ItemAnalyticsValue } from '../../services/analytics';
 import type { CostCenterNode } from '../../services/costCenters';
+import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 
 /** The list this workspace belongs to (its saved list contexts). */
 
@@ -591,28 +592,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     await autosave.flush();
   }, [isCreate, uuid, stale, noteLineChange, baseFor, patchBuffer, autosave, flushPending]);
 
-  // The server refuses a company on another chart of accounts than the line's account, and the
-  // account picker only lists the current company's chart: clear the account in the same write,
-  // so the Account row asks for one on the new chart.
-  const changePayingCompany = React.useCallback(async (companyId: string) => {
-    const accountId = form.account_id;
-    let clearAccount = false;
-    if (accountId && companyId && companyId !== form.paying_company_id) {
-      try {
-        const [company, account] = await Promise.all([
-          api.get(`/companies/${companyId}`),
-          api.get(`/accounts/${accountId}`),
-        ]);
-        const companyCoa = company.data?.coa_id || null;
-        const accountCoa = account.data?.coa_id || null;
-        clearAccount = !!companyCoa && !!accountCoa && companyCoa !== accountCoa;
-      } catch {
-        // Unknown charts: send the company alone and let the server decide.
-      }
-    }
-    await patchNow(clearAccount ? { paying_company_id: companyId, account_id: '' } : { paying_company_id: companyId });
-  }, [form.account_id, form.paying_company_id, patchNow]);
-
   // Debounced persist — long-form notes / description while typing.
   const patchDebounced = React.useCallback((patch: Partial<BudgetLineForm>) => {
     if (isCreate || !uuid || stale) return;
@@ -977,6 +956,44 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   // new reference (the pickers would then load the tree to name it).
   const shownCostCenterId = data?.id && form.id !== data.id ? (data.cost_center_id || '') : form.cost_center_id;
   const analyticsOptions = React.useMemo(() => analyticsValueOptions(data), [data]);
+  // The chosen cost center's company: a new paying company drops a cost center of another company.
+  const chosenCostCenterId = isCreate ? createForm.cost_center_id : shownCostCenterId;
+  const chosenCostCenter = useCostCenterNode(
+    chosenCostCenterId || null,
+    isCreate ? null : matching(references.cost_center, chosenCostCenterId),
+  );
+  const costCenterElsewhere = React.useCallback((companyId: string) => (
+    !!companyId && !!chosenCostCenter?.company_id && chosenCostCenter.id === chosenCostCenterId
+      && chosenCostCenter.company_id !== companyId
+  ), [chosenCostCenter, chosenCostCenterId]);
+
+  // The server refuses a company on another chart of accounts than the line's account, and the
+  // account picker only lists the current company's chart: clear the account in the same write,
+  // so the Account row asks for one on the new chart. The cost center picker only lists the new
+  // company's cost centers: a cost center of another company goes in the same write.
+  const changePayingCompany = React.useCallback(async (companyId: string) => {
+    const accountId = form.account_id;
+    let clearAccount = false;
+    if (accountId && companyId && companyId !== form.paying_company_id) {
+      try {
+        const [company, account] = await Promise.all([
+          api.get(`/companies/${companyId}`),
+          api.get(`/accounts/${accountId}`),
+        ]);
+        const companyCoa = company.data?.coa_id || null;
+        const accountCoa = account.data?.coa_id || null;
+        clearAccount = !!companyCoa && !!accountCoa && companyCoa !== accountCoa;
+      } catch {
+        // Unknown charts: send the company alone and let the server decide.
+      }
+    }
+    await patchNow({
+      paying_company_id: companyId,
+      ...(clearAccount ? { account_id: '' } : {}),
+      ...(costCenterElsewhere(companyId) ? { cost_center_id: '' } : {}),
+    });
+  }, [costCenterElsewhere, form.account_id, form.paying_company_id, patchNow]);
+
 
   const reference = data?.item_number ? formatItemRef('budget', data.item_number) : null;
   React.useEffect(() => {
@@ -1126,6 +1143,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             mode="create"
             supplierId={createForm.supplier_id}
             payingCompanyId={createForm.paying_company_id}
+            companyFollowsCostCenter={createCompanyFromCostCenter && !createForm.account_id}
             accountId={createForm.account_id}
             currency={createForm.currency}
             analyticsValues={createForm.analytics_values}
@@ -1139,7 +1157,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             onSupplierChange={(v) => updateCreateForm({ supplier_id: v })}
             onPayingCompanyChange={(v) => {
               setCreateCompanyFromCostCenter(false);
-              updateCreateForm({ paying_company_id: v });
+              updateCreateForm({ paying_company_id: v, ...(costCenterElsewhere(v) ? { cost_center_id: '' } : {}) });
             }}
             onAccountChange={(v) => updateCreateForm({ account_id: v })}
             onCurrencyChange={(v) => {

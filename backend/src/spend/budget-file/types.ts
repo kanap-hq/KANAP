@@ -197,6 +197,16 @@ export interface BudgetFileSnapshotLine {
   years: Array<{ year: number; versionId: string; budgetRev: number }>;
 }
 
+export interface CostCenterCompanyWarning {
+  line: number;
+  /** Translation code of the sentence (frontend `errors` namespace); `message` is its English text. */
+  code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY';
+  costCenter: string;
+  company: string;
+  costCenterCompany: string;
+  message: string;
+}
+
 export interface BudgetFileReport {
   ok: boolean;
   scope: BudgetFileScope;
@@ -234,6 +244,8 @@ export interface BudgetFileReport {
     duplicates: Array<{ line: number; message: string }>;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number; message: string }>;
+    /** company_name names another company than the cost center's: accepted, said once per line. */
+    costCenterCompanies: CostCenterCompanyWarning[];
   };
   creates: {
     dimensionValues: Array<{ dimension: string; names: string[] }>;

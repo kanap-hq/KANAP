@@ -104,6 +104,15 @@ export type BudgetFileReport = {
     duplicates: Array<{ line: number; message: string }>;
     ignoredColumns: string[];
     supplierNames: Array<{ line: number; message: string }>;
+    /** company_name of another company than the cost center's; `code` names the sentence in `errors`. */
+    costCenterCompanies?: Array<{
+      line: number;
+      code: string;
+      costCenter: string;
+      company: string;
+      costCenterCompany: string;
+      message: string;
+    }>;
     /** Cells the load does not read, by line and column (the description of a CAPEX line). */
     ignoredCells: Array<{ line: number; column: string; message: string }>;
   };

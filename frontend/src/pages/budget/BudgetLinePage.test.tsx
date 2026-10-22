@@ -61,7 +61,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
   return { default: (props: {
     costCenterId?: string;
     nature: string; onNatureChange: (v: string) => void; onChangeType?: () => void;
-    mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
+    mode: string; payingCompanyId: string; companyFollowsCostCenter?: boolean; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
@@ -72,6 +72,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
     <div
       data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
+      data-company-follows={String(!!props.companyFollowsCostCenter)}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
       data-analytics-options={JSON.stringify(props.analyticsOptions ?? null)}
@@ -321,11 +322,36 @@ describe('BudgetLinePage create', () => {
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-2');
+    // While the company follows, the cost center list is not narrowed to it.
+    expect(drawer()).toHaveAttribute('data-company-follows', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-3');
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-3');
+  });
+
+  it('empties a cost center of another company when the user picks a company', async () => {
+    const node = (id: string, company: string) => ({
+      id, code: id.toUpperCase(), name: id, kind: 'cost_center', parent_id: null, company_id: company, company_name: company,
+      owner_user_id: null, owner_name: null, status: 'enabled', disabled_at: null, sort_order: 0, depth: 0, path: id, path_ids: [id],
+    });
+    mocked.get.mockImplementation(async (url: string) => (url === '/cost-centers/tree'
+      ? { data: { items: [node('cc-2', 'company-2'), node('cc-3', 'company-3')] } }
+      : { data: {} }));
+    renderAt(`/ops/budget/new/overview`);
+    const drawer = () => document.querySelector('[data-mode="create"]');
+    fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-2');
+    // The tree names the cost center's company once it has loaded.
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/cost-centers/tree'));
+    await act(async () => { await new Promise((resolve) => setTimeout(resolve, 0)); });
+    fireEvent.click(screen.getByRole('button', { name: 'pick other company' }));
+    expect(drawer()).toHaveAttribute('data-cost-center', 'cc-2');
+    fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    expect(drawer()).toHaveAttribute('data-company', 'company-1');
+    expect(drawer()).toHaveAttribute('data-cost-center', '');
   });
 
   it('stops following the cost center once the user picks a company', async () => {
@@ -333,6 +359,7 @@ describe('BudgetLinePage create', () => {
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-1');
   });
@@ -473,6 +500,37 @@ describe('BudgetLinePage edit', () => {
     });
     // The Account row now asks for an account on the new chart.
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-account', '');
+  });
+
+  it("drops a cost center of another company in the same write as the new company", async () => {
+    charts.company2 = 'coa-a';
+    const base = {
+      id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', notes: 'Renewal',
+      paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01',
+    };
+    const center = (company: string) => ({
+      id: 'cc-1', code: 'CC-1', name: 'Centre', kind: 'cost_center', status: 'enabled',
+      company_id: company, company_name: company, owner_user_id: null, owner_name: null,
+    });
+    const withCenter = (company: string) => async (url: string) => (url === `/budget-lines/${ITEM_ID}`
+      ? { data: { ...base, cost_center_id: 'cc-1', references: { cost_center: center(company) } } }
+      : url === '/companies/company-2' ? { data: { id: 'company-2', coa_id: 'coa-a' } }
+        : url === '/accounts/account-1' ? { data: { id: 'account-1', coa_id: 'coa-a' } } : { data: {} });
+
+    mocked.get.mockImplementation(withCenter('company-1'));
+    const { unmount } = renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick other company');
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, {
+      paying_company_id: 'company-2', cost_center_id: null, base: { paying_company_id: 'company-1', cost_center_id: 'cc-1' },
+    });
+    unmount();
+
+    // The new company's own cost center stays.
+    mocked.patch.mockClear();
+    mocked.get.mockImplementation(withCenter('company-2'));
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    await clickOnceLoaded('pick other company');
+    expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { paying_company_id: 'company-2', base: { paying_company_id: 'company-1' } });
   });
 
   it('keeps the account when the new company uses the same chart', async () => {

@@ -679,6 +679,7 @@
     "server": "Server",
     "costCenter": "Cost center",
     "noCostCenterYet": "No cost center yet.",
+    "noCostCenterForCompany": "No cost center for this company.",
     "createCostCenter": "Create one",
     "noCostCentersFound": "No cost centers found",
     "costCentersLoadFailed": "Cost centers could not be loaded.",

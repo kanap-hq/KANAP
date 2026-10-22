@@ -51,7 +51,7 @@ Las columnas de detalle son las mismas para los dos tipos de línea.
 | `item_number` | La referencia de la línea: `BL-12`, o `12`. También se leen los números `OPX-12` y `CPX-3` de archivos anteriores | Vacío: la fila añade una línea |
 | `name` | El título de la línea, que aparece en la columna **Nombre del producto** de la lista | Obligatorio |
 | `description` | La descripción larga | Opcional |
-| `company_name` | Empresa pagadora | Obligatorio salvo que la línea tenga un centro de coste |
+| `company_name` | Empresa pagadora. Vacía en una línea nueva: la empresa del centro de coste. Se acepta una empresa distinta de la del centro de coste, con una advertencia | Obligatorio salvo que la línea tenga un centro de coste |
 | `supplier_name` | Nombre del proveedor | Opcional |
 | `supplier_erp_id` | El ID del proveedor en su ERP | Opcional |
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
@@ -122,7 +122,7 @@ Una columna ausente conserva todos los valores guardados de esa columna. Un arch
 | **Errores** | Las filas que la carga rechaza, por fila del archivo con la columna cuando la conoce. Un archivo con un solo error no carga nada |
 | **Cambios** | Las líneas que se crearán, las que se actualizarán y las que el archivo deja tal como están |
 | **Modificadas en KANAP desde la exportación** | Las líneas que alguien modificó después de su exportación, con quién y cuándo. Cargar el archivo escribe sus valores sobre esos cambios |
-| **Advertencias** | Una fila que se parece a otra línea, columnas y celdas que el archivo ignora |
+| **Advertencias** | Una fila que se parece a otra línea, un `company_name` distinto de la empresa del centro de coste de la fila, columnas y celdas que el archivo ignora |
 | **Creados por la carga** | Los proveedores y los valores de dimensión que la carga añadiría |
 
 3. Haga clic en **Cargar**. La carga escribe todo o nada.
