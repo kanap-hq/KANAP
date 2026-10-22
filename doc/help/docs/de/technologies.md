@@ -31,7 +31,7 @@ Eine Technologie umfasst ein Produkt als Ganzes. „SQL Server" steht für alle 
 
 Navigieren Sie zu **IT-Landschaft > Technologien** und klicken Sie auf **Neue Technologie**.
 
-Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Der Katalog bietet nur Produkte an, die Sie noch nicht hinzugefügt haben.
+Das Fenster öffnet sich auf dem **Katalog**: einer Liste gängiger Produkte mit einer kurzen Beschreibung, Hersteller, Familie und Hosting-Typ. Suchen Sie nach dem Namen und klicken Sie auf einen Eintrag. KANAP legt die Technologie sofort mit Hersteller, Familie, Hosting-Typ, CPE-Produktkennungen, CVE.org-Namen, ihren Versionen samt Supportende-Daten und der kurzen Beschreibung in Ihrer Sprache an und öffnet sie. Ein Eintrag bleibt angeboten, wenn eine Technologie desselben Namens von Hand erfasst wurde. Das Hinzufügen ergänzt diese Technologie, und der Eintrag weist darauf hin (Ergänzt TEC-10).
 
 Eine aus dem Katalog übernommene Technologie bleibt aktuell: Wenn der Hersteller eine neue Version veröffentlicht oder ein Datum ändert, fügt KANAP die Version hinzu und verschiebt das Datum (siehe [Versionen aus dem Katalog](#versionen-aus-dem-katalog)).
 

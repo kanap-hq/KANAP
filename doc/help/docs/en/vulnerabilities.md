@@ -45,6 +45,8 @@ Two kinds of technologies are out of the alerts by default:
 
 You can include them again on the technology. To follow a single version of an operating system, for example the one your most exposed servers run, turn on its switch in the **Alerts** column of the versions table. The other versions stay out of the alerts.
 
+On SUSE Linux Enterprise Server, turning the switch of a base version also turns the switches of its service packs the same way, and a service pack can then be changed on its own.
+
 A version out of the alerts is still matched with the vulnerabilities. It stays in the technology's **Vulnerabilities** section, and its rows stay on this page under the **Alerts** filter. They are left out of everything else:
 
 - This page shows only the rows in the alerts by default.

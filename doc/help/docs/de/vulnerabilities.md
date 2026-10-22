@@ -45,6 +45,8 @@ Zwei Arten von Technologien sind standardmäßig außerhalb der Warnungen:
 
 Sie können sie bei der Technologie wieder aufnehmen. Um eine einzelne Version eines Betriebssystems zu verfolgen, etwa die Ihrer am stärksten exponierten Server, schalten Sie ihren Schalter in der Spalte **Warnungen** der Versionstabelle ein. Die anderen Versionen bleiben außerhalb der Warnungen.
 
+Bei SUSE Linux Enterprise Server schaltet der Schalter einer Basisversion auch die Schalter ihrer Service Packs auf dieselbe Weise, und ein Service Pack kann danach einzeln geändert werden.
+
 Eine Version außerhalb der Warnungen wird weiter mit den Schwachstellen abgeglichen. Sie bleibt im Abschnitt **Schwachstellen** der Technologie, und ihre Zeilen bleiben auf dieser Seite über den Filter **Warnungen**. Überall sonst fehlen sie:
 
 - Diese Seite zeigt standardmäßig nur die Zeilen in den Warnungen.

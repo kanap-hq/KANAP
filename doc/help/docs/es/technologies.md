@@ -31,7 +31,7 @@ Una tecnología abarca un producto en su conjunto. "SQL Server" representa todos
 
 Navegue a **Panorama IT > Tecnologías** y haga clic en **Nueva tecnología**.
 
-La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. KANAP crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus nombres CVE.org, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. El catálogo solo ofrece los productos que aún no ha añadido.
+La ventana se abre en el **Catálogo**: una lista de productos habituales con una descripción breve, su editor, su familia y su tipo de alojamiento. Busque por nombre y haga clic en una entrada. KANAP crea al instante la tecnología con su editor, su familia, su tipo de alojamiento, sus identificadores de producto CPE, sus nombres CVE.org, sus versiones con sus fechas de fin de soporte y la descripción breve en su idioma, y la abre. Una entrada sigue ofreciéndose cuando una tecnología del mismo nombre se ha escrito a mano. Añadirla completa esa tecnología, y la entrada lo indica (Completa TEC-10).
 
 Una tecnología adoptada desde el catálogo se mantiene al día: cuando el editor publica una nueva versión o cambia una fecha, KANAP añade la versión y mueve la fecha (consulte [Versiones del catálogo](#versiones-del-catalogo)).
 

@@ -45,6 +45,8 @@ Deux sortes de technologies sont hors des alertes par défaut :
 
 Vous pouvez les inclure de nouveau sur la technologie. Pour suivre une seule version d'un système d'exploitation, par exemple celle de vos serveurs les plus exposés, activez son interrupteur dans la colonne **Alertes** de la table des versions. Les autres versions restent hors des alertes.
 
+Sur SUSE Linux Enterprise Server, basculer l'interrupteur d'une version de base bascule de la même façon les interrupteurs de ses service packs, et un service pack peut ensuite être changé seul.
+
 Une version hors des alertes reste rapprochée des vulnérabilités. Elle reste dans la section **Vulnérabilités** de la technologie, et ses lignes restent sur cette page, avec le filtre **Alertes**. Tout le reste les écarte :
 
 - Cette page ne montre par défaut que les lignes dans les alertes.
