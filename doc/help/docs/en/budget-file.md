@@ -21,7 +21,7 @@ One file holds both kinds of line. Its `nature` column says whether a row is an 
 | Setting | What it does |
 |---|---|
 | **Lines** | The lines the list shows, with its search, filters and status scope. **All lines** exports every line instead, ended lines included, without the list's filters |
-| **Years** | **First year** and **Last year**, up to twelve years. The default is the current year, the year before and the year after |
+| **Years** | **First year** and **Last year**, up to twelve years. The default is the current year, the year before and the year after. Tick **Current year** to export the current year alone |
 | **Columns** | The budget columns to write. The columns your organisation shows are ticked, and a hidden one is marked **hidden**. Its header is shown under the name, for example `budget_2027` |
 | **Detail** | **Yearly totals**: one column per column and year. **Months**: one column per column, year and month |
 

@@ -21,7 +21,7 @@ Eine Datei enthält beide Arten von Budgetzeilen. Ihre Spalte `nature` gibt an, 
 | Einstellung | Wirkung |
 |---|---|
 | **Zeilen** | Die Budgetzeilen, die die Liste zeigt, mit ihrer Suche, ihren Filtern und ihrem Statusumfang. **Alle Zeilen** exportiert stattdessen alle Budgetzeilen, beendete eingeschlossen, ohne die Filter der Liste |
-| **Jahre** | **Erstes Jahr** und **Letztes Jahr**, bis zu zwölf Jahre. Standard: das laufende Jahr, das davor und das danach |
+| **Jahre** | **Erstes Jahr** und **Letztes Jahr**, bis zu zwölf Jahre. Standard: das laufende Jahr, das davor und das danach. Aktivieren Sie **Laufendes Jahr**, um nur das laufende Jahr zu exportieren |
 | **Spalten** | Die zu schreibenden Budgetspalten. Die Spalten, die Ihre Organisation zeigt, sind angehakt, und eine ausgeblendete Spalte ist mit **ausgeblendet** markiert. Ihre Überschrift steht unter dem Namen, zum Beispiel `budget_2027` |
 | **Detail** | **Jahressummen**: eine Spalte pro Budgetspalte und Jahr. **Monate**: eine Spalte pro Budgetspalte, Jahr und Monat |
 

@@ -21,7 +21,7 @@ Un seul fichier contient les deux types de ligne. Sa colonne `nature` indique si
 | Réglage | Effet |
 |---|---|
 | **Lignes** | Les lignes budgétaires affichées par la liste, avec sa recherche, ses filtres et sa portée de statut. **Toutes les lignes** exporte toutes les lignes à la place, y compris les lignes budgétaires terminées, sans les filtres de la liste |
-| **Années** | **Première année** et **Dernière année**, jusqu'à douze années. Par défaut : l'année en cours, la précédente et la suivante |
+| **Années** | **Première année** et **Dernière année**, jusqu'à douze années. Par défaut : l'année en cours, la précédente et la suivante. Cochez **Année en cours** pour n'exporter que l'année en cours |
 | **Colonnes** | Les colonnes budgétaires à écrire. Les colonnes que votre organisation affiche sont cochées, et une colonne masquée est marquée **masquée**. Son en-tête est indiqué sous le nom, par exemple `budget_2027` |
 | **Détail** | **Totaux annuels** : une colonne par colonne budgétaire et par année. **Mois** : une colonne par colonne budgétaire, année et mois |
 
