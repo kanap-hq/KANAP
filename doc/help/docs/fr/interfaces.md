@@ -195,13 +195,21 @@ Le tableau de mappage résume chaque règle en listant les liaisons source, une 
 
 ### Relations
 
-L'onglet Relations rassemble les liens de cette interface vers d'autres éléments.
+L'onglet Relations montre ce dont cette interface dépend et ce qui dépend d'elle, avec ses liens et ses fichiers. Les documents de connaissance liés à l'interface viennent en premier, puis les interfaces en amont, les interfaces en aval, et les liens et fichiers. Le badge de l'onglet compte les interfaces en amont et en aval, et les liens et fichiers. Les documents de connaissance ne sont pas comptés.
 
-- **Dépendances d'interface** : Interfaces amont et aval. Utilisez-les pour documenter les ordres tels que « Sync Commandes doit s'exécuter avant Sync Factures ».
-- **URL externes** : Liens vers la documentation dans Confluence, SharePoint, etc. Ajoutez une description et une URL ; l'icône d'ouverture dans un nouvel onglet vous emmène directement au lien.
-- **Pièces jointes** : Glissez-déposez des fichiers dans la zone de téléversement ou utilisez **Sélectionner des fichiers** pour attacher des documents de spécification directement à l'interface. Cliquez sur une pastille de pièce jointe pour la télécharger ; cliquez sur l'icône poubelle pour la supprimer (nécessite `applications:member`).
+**Interfaces en amont** et **Interfaces en aval** : un tableau chacune, avec la référence (`INT-4`), le nom, l'application source, l'application cible et le cycle de vie. Cliquez sur une ligne pour ouvrir l'interface. Une interface retirée reste listée, sa ligne grisée. Utilisez ces sections pour documenter un ordre, par exemple « Sync Commandes doit s'exécuter avant Sync Factures ».
 
-Une section Connaissances est réservée pour la future liaison croisée des connaissances ; elle affiche actuellement un placeholder informatif.
+Une dépendance va dans un seul sens. Si vous ajoutez l'interface B en amont de l'interface A, B apparaît en amont sur A uniquement. A n'apparaît pas en aval sur B.
+
+**Ajouter et retirer des interfaces** (`applications:member`) : **Ajouter**, à droite d'une section, ouvre une recherche d'interfaces. Saisissez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. La recherche exclut cette interface et les interfaces déjà présentes dans la section. Pour retirer un lien, survolez la ligne et cliquez sur la croix au bout. Retirer un lien ne supprime aucune des deux interfaces. Les lecteurs voient les tableaux en lecture seule.
+
+**Liens et fichiers** : les liens web de l'interface (spécifications, pages de documentation, tableaux de bord de supervision) et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et la date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `applications:member` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom facultatif ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
+
+**Astuce** : Joignez la spécification et les documents de mapping à l'interface, pour que les personnes qui l'exploitent les trouvent au même endroit.
 
 ---
 

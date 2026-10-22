@@ -15,7 +15,7 @@ import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } f
 
 /**
  * The linked objects a Relations tab lists (lot R1, `applications-relations.service.ts`), shared by
- * every object that has one (applications, technologies, portfolio projects and requests). Each
+ * every object that has one (applications, technologies, portfolio projects and requests, incidents). Each
  * listing reads one link table of the owner (`links`, owner column `owner`) over the owner's id:
  * one query per section, `tenant_id` on each table and join besides RLS. Table and column names
  * come from the callers' constants only.

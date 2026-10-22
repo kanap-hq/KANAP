@@ -178,12 +178,25 @@ Reopening an incident changes none of that. The versions stay, the closure entry
 
 ### Relations
 
-- **Assets**: the servers, VMs or devices involved. Search and select; linking and unlinking is journaled
-- **Applications**: the applications and services affected, same behaviour
-- **Technologies**: the technologies involved, such as a directory or a database engine, same behaviour. Shown, and counted in the tab badge, only for users who can read the infrastructure
-- **Tasks**: the follow-up work. Create a task directly from the incident, and it stays attached to it. The task shows "Incident · INC-14" in its own sidebar, and the incident's Tasks column counts it
+The Relations tab shows what the incident touches: its assets, applications and technologies, each in its own table, then suggestions and tasks. Click a row to open the record. The tab badge counts the linked assets, applications and technologies you can see, and the tasks.
 
-Linking is done from the incident side only. A linked asset or application shows the incident in a read-only **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble.
+**Linked records**, one table each:
+
+| Section | Columns |
+|---|---|
+| **Assets** | Reference (`AST-12`), name, type, environment, status |
+| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality |
+| **Technologies** | Reference (`TEC-5`), name, family, vendor |
+
+You only see the sections of the modules you can read. Assets and technologies need a read of the infrastructure. A Business Contributor only sees the applications they take part in.
+
+**Adding and removing links** (`incidents:contributor`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once and the journal records it. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else and is also journaled. A closed or cancelled incident is read only: reopen it to change its links.
+
+**Related**: technologies carried by the linked assets and applications that the incident does not list yet. The reason names the source, for example "technology of the asset AST-12" or "technology of the application APP-3". Click **Link** to add the suggestion to the Technologies section. The suggestions need a read of the infrastructure, show at most 20 technologies, and are absent on a closed or cancelled incident.
+
+**Tasks**: the follow-up work. Create a task directly from the incident, and it stays attached to it. The task shows "Incident · INC-14" in its own sidebar, and the incident's Tasks column counts it.
+
+Linking is done from the incident side only. A linked asset, application or technology shows the incident in a read-only **Incidents** section on its own Relations tab, so anyone looking at a server sees its history of trouble. Documents and attachments have their own tabs.
 
 ---
 

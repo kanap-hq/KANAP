@@ -20,6 +20,7 @@ import {
   InterfacesBaseService,
   ServiceOpts,
 } from './interfaces-base.service';
+import { readInterfaceRelations, setInterfaceRelation, type InterfaceRelationsDeps } from '../interface-relations';
 
 /**
  * Service for managing interface bindings and related operations.
@@ -762,7 +763,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(InterfaceLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
+    const existing = await repo.findOne({ where: { id: linkId, interface_id: interfaceId } });
     if (!existing) throw new NotFoundException('Link not found');
     const before = { ...existing };
     if (body.kind !== undefined) {
@@ -796,7 +797,7 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
   ) {
     const mg = opts?.manager ?? this.repo.manager;
     const repo = mg.getRepository(InterfaceLink);
-    const existing = await repo.findOne({ where: { id: linkId } });
+    const existing = await repo.findOne({ where: { id: linkId, interface_id: interfaceId } });
     if (!existing) return { ok: true };
     await repo.delete({ id: linkId } as any);
     await this.audit.log(
@@ -804,5 +805,20 @@ export class InterfaceBindingsManagementService extends InterfacesBaseService {
       { manager: mg },
     );
     return { ok: true };
+  }
+
+  /** The Relations tab: upstream and downstream interfaces (`interface-relations.ts`). */
+  relations(ref: string, opts?: ServiceOpts) {
+    return readInterfaceRelations(this.relationDeps(opts), ref);
+  }
+
+  /** Link or unlink one upstream or downstream interface, under the interface lock. */
+  setRelation(kind: string, ref: string, targetId: string, add: boolean, userId: string | null, opts?: ServiceOpts) {
+    return setInterfaceRelation(this.relationDeps(opts), kind, ref, targetId, add, userId);
+  }
+
+  private relationDeps(opts?: ServiceOpts): InterfaceRelationsDeps {
+    const manager = opts?.manager ?? this.repo.manager;
+    return { manager, audit: this.audit, resolve: (ref) => this.resolveInterfaceIdentifier(ref, manager) };
   }
 }

@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, EntityTarget, In, ObjectLiteral, Repository } from 'typeorm';
 import { Incident } from '../incident.entity';
@@ -6,6 +6,19 @@ import { IncidentAsset } from '../incident-asset.entity';
 import { IncidentApplication } from '../incident-application.entity';
 import { IncidentTechnology } from '../incident-technology.entity';
 import { AuditService } from '../../audit/audit.service';
+import {
+  applicationParticipantCondition,
+  type ParticipationAccessScope,
+} from '../../auth/business-contributor-scope';
+import {
+  binder,
+  listRelatedApplications,
+  listRelatedAssets,
+  listRelatedTechnologies,
+  type RelationLinkTable,
+} from '../../common/relations/related-objects';
+import { parseTargetId } from '../../common/relations/relation-target';
+import { isFrozenIncidentStatus } from '../incident-visibility';
 import { IncidentsBaseService, ServiceOpts } from './incidents-base.service';
 
 export type IncidentLinkedObject = { id: string; name: string; reference: string | null };
@@ -21,6 +34,42 @@ type LinkSpec = {
   targetTable: 'assets' | 'applications' | 'technologies';
   /** Business reference shown next to the name, as SQL over the target table aliased `t`. */
   reference: string;
+  /** 404 when the target id is a uuid of another tenant, or of no row. */
+  notFound: string;
+};
+
+export const INCIDENT_RELATION_KINDS = ['assets', 'applications', 'technologies'] as const;
+export type IncidentRelationKind = (typeof INCIDENT_RELATION_KINDS)[number];
+
+/** 404 for a relation kind the incident tab does not write. */
+export function incidentRelationKindOrThrow(value: string): IncidentRelationKind {
+  if (!(INCIDENT_RELATION_KINDS as readonly string[]).includes(value)) {
+    throw new NotFoundException('Unknown relation type.');
+  }
+  return value as IncidentRelationKind;
+}
+
+/** One list of suggested technologies, not one cap per source. A constant, never a request value. */
+const SUGGESTION_LIMIT = 20;
+
+const INCIDENT_ASSET_ROWS: RelationLinkTable & { target: string } = {
+  links: 'incident_assets', owner: 'incident_id', target: 'asset_id',
+};
+const INCIDENT_APPLICATION_ROWS: RelationLinkTable & { target: string } = {
+  links: 'incident_applications', owner: 'incident_id', target: 'application_id',
+};
+const INCIDENT_TECHNOLOGY_ROWS: RelationLinkTable & { target: string } = {
+  links: 'incident_technologies', owner: 'incident_id', target: 'technology_id',
+};
+
+export type IncidentTechnologySuggestion = {
+  type: 'technology';
+  id: string;
+  reference: string;
+  name: string;
+  family: string;
+  vendor: string | null;
+  via: { kind: 'asset_technology' | 'application_technology'; label: string };
 };
 
 const ASSET_LINK: LinkSpec = {
@@ -31,6 +80,7 @@ const ASSET_LINK: LinkSpec = {
   linkColumn: 'asset_id',
   targetTable: 'assets',
   reference: 't.asset_reference',
+  notFound: 'Asset not found.',
 };
 
 const APPLICATION_LINK: LinkSpec = {
@@ -41,6 +91,7 @@ const APPLICATION_LINK: LinkSpec = {
   linkColumn: 'application_id',
   targetTable: 'applications',
   reference: 't.sequential_id',
+  notFound: 'Application not found.',
 };
 
 const TECHNOLOGY_LINK: LinkSpec = {
@@ -51,6 +102,13 @@ const TECHNOLOGY_LINK: LinkSpec = {
   linkColumn: 'technology_id',
   targetTable: 'technologies',
   reference: `'TEC-' || t.item_number`,
+  notFound: 'Technology not found.',
+};
+
+const LINK_BY_KIND: Record<IncidentRelationKind, LinkSpec> = {
+  assets: ASSET_LINK,
+  applications: APPLICATION_LINK,
+  technologies: TECHNOLOGY_LINK,
 };
 
 const displayRef = (item: IncidentLinkedObject): string => item.reference || item.name;
@@ -103,6 +161,68 @@ export class IncidentRelationsService extends IncidentsBaseService {
    */
   setApplicationLink(incidentId: string, applicationId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
     return this.setLinkFromTarget(APPLICATION_LINK, incidentId, applicationId, add, userId, opts);
+  }
+
+  /**
+   * The Relations tab in one round trip. `assets` and `technologies` are null without a read of
+   * the infrastructure (`opts.technologies`); `applications` is null without a read of applications.
+   * A Business Contributor's `applicationScope` narrows the applications. `editable` is false on a
+   * closed or cancelled incident, and that incident has no suggestions (nothing can be linked).
+   */
+  async getRelations(incidentId: string, opts?: ServiceOpts) {
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
+    const editable = !isFrozenIncidentStatus(incident.status);
+    const readsInfrastructure = opts?.technologies === true;
+    const readsApplications = opts?.applications === true;
+    const assets = readsInfrastructure
+      ? await listRelatedAssets(mg, INCIDENT_ASSET_ROWS, tenantId, incident.id)
+      : null;
+    const applications = readsApplications
+      ? await listRelatedApplications(mg, INCIDENT_APPLICATION_ROWS, tenantId, incident.id, opts?.applicationScope)
+      : null;
+    const technologies = readsInfrastructure
+      ? await listRelatedTechnologies(mg, INCIDENT_TECHNOLOGY_ROWS, tenantId, incident.id)
+      : null;
+    const suggestions = editable && readsInfrastructure
+      ? await this.suggestTechnologies(mg, tenantId, incident.id, readsApplications, opts?.applicationScope)
+      : [];
+    return { assets, applications, technologies, editable, suggestions };
+  }
+
+  /**
+   * Link (`add`) or unlink one asset, application or technology from the incident's side.
+   * The caller has already checked the module read. A uuid that is not a row of the tenant is
+   * 404. A closed or cancelled incident is refused before that check. Linking what is linked,
+   * or unlinking what is not, changes nothing: no journal entry and no audit row. The write
+   * itself is `setLinkFromTarget` (lock, `link_change`, audit).
+   */
+  async setLink(
+    kind: IncidentRelationKind,
+    incidentId: string,
+    targetId: string,
+    add: boolean,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ): Promise<{ ok: true; changed: boolean }> {
+    const spec = LINK_BY_KIND[kind];
+    const id = parseTargetId(targetId);
+    const mg = this.getManager(opts);
+    const tenantId = this.ensureTenantId(opts?.tenantId);
+    const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
+    this.assertEditable(incident);
+    // A Business Contributor links and unlinks only the applications they take part in; any other reads as missing.
+    const params: unknown[] = [tenantId, id];
+    const scope = kind === 'applications' ? opts?.applicationScope : undefined;
+    const inScope = scope ? ` AND ${applicationParticipantCondition('t', binder(params)(scope.userId))}` : '';
+    const found: unknown[] = await mg.query(
+      `SELECT 1 FROM ${spec.targetTable} t WHERE t.tenant_id = $1 AND t.id = $2${inScope}`,
+      params,
+    );
+    if (found.length === 0) throw new NotFoundException(spec.notFound);
+    const res = await this.setLinkFromTarget(spec, incident.id, id, add, userId, opts);
+    return { ok: true, changed: res.changed };
   }
 
   /**
@@ -162,6 +282,90 @@ export class IncidentRelationsService extends IncidentsBaseService {
         author_id: userId,
       });
     }
+  }
+
+  /**
+   * Technologies of the assets linked to the incident, and of the applications the caller can
+   * see, that the incident does not list yet. At most `SUGGESTION_LIMIT`. When several sources
+   * carry one technology, the first source reference in alphabetical order wins (`APP-1` before
+   * `AST-2`). A source with no reference is left out.
+   */
+  private async suggestTechnologies(
+    mg: EntityManager,
+    tenantId: string,
+    incidentId: string,
+    includeApplications: boolean,
+    scope?: ParticipationAccessScope,
+  ): Promise<IncidentTechnologySuggestion[]> {
+    const params: unknown[] = [tenantId, incidentId];
+    const bind = binder(params);
+    const applicationBranch = includeApplications
+      ? `UNION ALL
+         SELECT apt.technology_id,
+                'application_technology'::text AS via_kind,
+                a.sequential_id AS via_label
+           FROM incident_applications l
+           JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
+           JOIN application_technologies apt
+             ON apt.application_id = a.id AND apt.tenant_id = a.tenant_id
+          WHERE l.tenant_id = $1 AND l.incident_id = $2
+            AND a.sequential_id IS NOT NULL
+            ${scope ? `AND ${applicationParticipantCondition('a', bind(scope.userId))}` : ''}`
+      : '';
+    const rows: Array<{
+      id: string;
+      reference: string;
+      name: string;
+      family: string;
+      vendor: string | null;
+      via_kind: IncidentTechnologySuggestion['via']['kind'];
+      via_label: string;
+    }> = await mg.query(
+      `SELECT id, reference, name, family, vendor, via_kind, via_label
+         FROM (
+           SELECT t.id,
+                  'TEC-' || t.item_number AS reference,
+                  t.name,
+                  t.family,
+                  t.editor AS vendor,
+                  src.via_kind,
+                  src.via_label,
+                  row_number() OVER (
+                    PARTITION BY t.id
+                    ORDER BY src.via_label ASC NULLS LAST, src.via_kind ASC
+                  ) AS rn
+             FROM (
+               SELECT at.technology_id,
+                      'asset_technology'::text AS via_kind,
+                      s.asset_reference AS via_label
+                 FROM incident_assets l
+                 JOIN assets s ON s.id = l.asset_id AND s.tenant_id = l.tenant_id
+                 JOIN asset_technologies at
+                   ON at.asset_id = s.id AND at.tenant_id = s.tenant_id
+                WHERE l.tenant_id = $1 AND l.incident_id = $2
+                  AND s.asset_reference IS NOT NULL
+               ${applicationBranch}
+             ) src
+             JOIN technologies t ON t.id = src.technology_id AND t.tenant_id = $1
+            WHERE NOT EXISTS (
+              SELECT 1 FROM incident_technologies it
+               WHERE it.tenant_id = $1 AND it.incident_id = $2 AND it.technology_id = t.id
+            )
+         ) ranked
+        WHERE rn = 1
+        ORDER BY lower(name), id
+        LIMIT ${SUGGESTION_LIMIT}`,
+      params,
+    );
+    return rows.map((row) => ({
+      type: 'technology',
+      id: row.id,
+      reference: row.reference,
+      name: row.name,
+      family: row.family,
+      vendor: row.vendor ?? null,
+      via: { kind: row.via_kind, label: row.via_label },
+    }));
   }
 
   private async listLinked(spec: LinkSpec, incidentId: string, opts?: ServiceOpts): Promise<IncidentLinkedObject[]> {

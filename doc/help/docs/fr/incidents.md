@@ -178,12 +178,25 @@ La réouverture ne change rien à cela. Les versions restent, l'entrée de clôt
 
 ### Relations
 
-- **Actifs** : les serveurs, VM ou équipements concernés. Recherchez et sélectionnez ; les liaisons et déliaisons sont consignées au journal
-- **Applications** : les applications et services touchés, même comportement
-- **Technologies** : les technologies en cause, comme un annuaire ou un moteur de base de données, même comportement. Visibles, et comptées dans le badge de l'onglet, seulement pour les utilisateurs qui peuvent lire l'infrastructure
-- **Tâches** : le travail de suivi. Créez une tâche directement depuis l'incident, elle y reste rattachée. La tâche affiche « Incident · INC-14 » dans sa propre barre latérale, et la colonne Tâches de l'incident la compte
+L'onglet Relations montre ce que touche l'incident : ses actifs, applications et technologies, chacun dans son propre tableau, puis des suggestions et les tâches. Cliquez sur une ligne du tableau pour ouvrir l'enregistrement. Le badge de l'onglet compte les actifs, applications et technologies liés que vous pouvez voir, ainsi que les tâches.
 
-La liaison se fait uniquement depuis l'incident. Un actif ou une application liés affichent l'incident dans une section **Incidents** en lecture seule de leur propre onglet Relations : celui qui consulte un serveur voit son historique d'incidents.
+**Enregistrements liés**, un tableau chacun :
+
+| Section | Colonnes |
+|---|---|
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
+| **Technologies** | Référence (`TEC-5`), nom, famille, éditeur |
+
+Vous ne voyez que les sections des modules que vous pouvez lire. Les actifs et les technologies demandent de pouvoir lire l'infrastructure. Un Contributeur métier ne voit que les applications auxquelles il participe.
+
+**Ajouter et retirer des liens** (`incidents:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt et le journal le consigne. Lier demande aussi de pouvoir lire le module visé : **Ajouter** est absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre et figure aussi au journal. Un incident clôturé ou annulé est en lecture seule : rouvrez-le pour modifier ses liens.
+
+**Apparentés** : les technologies portées par les actifs et les applications liés que l'incident ne liste pas encore. La raison indique la source, par exemple « technologie de l'actif AST-12 » ou « technologie de l'application APP-3 ». Cliquez sur **Lier** pour ajouter la suggestion à la section Technologies. Les suggestions demandent de pouvoir lire l'infrastructure, montrent au plus 20 technologies et sont absentes d'un incident clôturé ou annulé.
+
+**Tâches** : le travail de suivi. Créez une tâche directement depuis l'incident, elle y reste rattachée. La tâche affiche « Incident · INC-14 » dans sa propre barre latérale, et la colonne Tâches de l'incident la compte.
+
+La liaison se fait uniquement depuis l'incident. Un actif, une application ou une technologie liés affichent l'incident dans une section **Incidents** en lecture seule de leur propre onglet Relations : celui qui consulte un serveur voit son historique d'incidents. Les documents et les pièces jointes ont leurs propres onglets.
 
 ---
 

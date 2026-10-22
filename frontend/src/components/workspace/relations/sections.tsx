@@ -22,6 +22,7 @@ import type {
   ContractRow,
   ConversionRow,
   IncidentLinkRow,
+  InterfaceRelationRow,
   ProjectRow,
   SectionSpec,
   TechnologyRelationRow,
@@ -539,5 +540,60 @@ export function conversionSection({
       },
     ],
     search: async () => [],
+  };
+}
+
+/**
+ * Interfaces linked to the owner, upstream or downstream (`kind`). A retired interface stays listed,
+ * its name muted. The picker searches the interfaces list and never offers the owner itself.
+ */
+export function interfacesSection({
+  t,
+  kind,
+  title,
+  empty,
+  rows,
+  ownerId,
+  lifecycleLabel,
+}: {
+  t: TFunction;
+  kind: string;
+  title: string;
+  empty: string;
+  rows: InterfaceRelationRow[] | null;
+  ownerId: string;
+  lifecycleLabel: CodeLabel;
+}): SectionSpec<InterfaceRelationRow> {
+  return {
+    kind,
+    title,
+    empty,
+    searchPlaceholder: t('workspace.interface.relations.search'),
+    rows,
+    href: (row) => `${buildItemPath('interface', row.reference || row.id)}/overview`,
+    label: (row) => row.name,
+    muted: (row) => row.lifecycle === 'retired',
+    linkedIds: (linked) => new Set([ownerId, ...linked.map((row) => row.id)]),
+    columns: [
+      storedRefColumn<InterfaceRelationRow>(columnsT(t, 'ref')),
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      { key: 'source', header: t('pages.interfaces.columns.sourceApp'), width: 150, hideOrder: 2, render: (row) => row.source_application_name || DASH },
+      { key: 'target', header: t('pages.interfaces.columns.targetApp'), width: 150, hideOrder: 1, render: (row) => row.target_application_name || DASH },
+      { key: 'lifecycle', header: t('common.lifecycle'), width: 120, render: (row) => lifecycleLabel(row.lifecycle) },
+    ],
+    search: async (q, signal) => {
+      const res = await api.get<{ items: Array<{ id: string; name: string; interface_reference: string | null; source_application_name?: string | null; target_application_name?: string | null }> }>('/interfaces', {
+        params: { page: 1, limit: PAGE, sort: 'name:ASC', ...(q ? { q } : {}) },
+        signal,
+      });
+      return (res.data?.items || []).map((row) => ({
+        id: row.id,
+        label: row.name,
+        ref: row.interface_reference ?? null,
+        hint: row.source_application_name && row.target_application_name
+          ? `${row.source_application_name} → ${row.target_application_name}`
+          : null,
+      }));
+    },
   };
 }

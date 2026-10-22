@@ -1,5 +1,6 @@
 import { BadRequestException, ForbiddenException } from '@nestjs/common';
 import { EntityManager, Repository } from 'typeorm';
+import type { ParticipationAccessScope } from '../../auth/business-contributor-scope';
 import { Incident } from '../incident.entity';
 import { incidentNotFound } from '../../common/resolve-item-id';
 import { IncidentChangedFields, IncidentEntry, IncidentEntryKind } from '../incident-entry.entity';
@@ -17,8 +18,17 @@ export interface ServiceOpts {
   manager?: EntityManager;
   tenantId?: string;
   viewer?: IncidentViewer;
-  /** The caller reads the infrastructure: the incident's technologies are counted for it only (`counts.technologies`). */
+  /**
+   * The caller reads the infrastructure. The Relations tab then lists assets and technologies,
+   * and the detail counts them (`counts.assets`, `counts.technologies`).
+   */
   technologies?: boolean;
+  /**
+   * The caller reads applications. The Relations tab then lists them, and the detail counts them
+   * (`counts.applications`), inside `applicationScope` when the caller is a Business Contributor.
+   */
+  applications?: boolean;
+  applicationScope?: ParticipationAccessScope;
 }
 
 /** Re-exported for the existing import sites; the text lives in `incident-visibility.ts`. */
