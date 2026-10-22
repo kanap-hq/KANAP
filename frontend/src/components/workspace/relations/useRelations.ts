@@ -16,6 +16,13 @@ export type UseRelationsOptions = {
    * Applications only.
    */
   dropLinkedSuggestion?: boolean;
+  /**
+   * The key of the object that holds this kind's rows, when they sit one level down
+   * (an asset's `assets.contains`). Undefined: the rows are at the top (`data[kind]`).
+   */
+  groupOf?: (kind: string) => string | undefined;
+  /** `GET` reads this route instead of `path`, when the tab's read has its own (`/assets/:id/relations-tab`). */
+  readPath?: string;
 };
 
 type WithSuggestions = { suggestions?: Array<{ id: string }> };
@@ -29,6 +36,8 @@ export function useRelations<TData extends object>({
   queryKey,
   onChange,
   dropLinkedSuggestion = false,
+  groupOf,
+  readPath,
 }: UseRelationsOptions) {
   const { t } = useTranslation('it');
   const queryClient = useQueryClient();
@@ -36,7 +45,7 @@ export function useRelations<TData extends object>({
 
   const { data } = useQuery({
     queryKey,
-    queryFn: async () => (await api.get<TData>(path)).data,
+    queryFn: async () => (await api.get<TData>(readPath ?? path)).data,
   });
 
   const refresh = React.useCallback(async () => {
@@ -71,8 +80,12 @@ export function useRelations<TData extends object>({
     const previous = queryClient.getQueryData<TData>(queryKey);
     queryClient.setQueryData<TData>(queryKey, (prev) => {
       if (!prev) return prev;
-      const rows = (prev as Record<string, unknown>)[kind] as AnyRow[] | null | undefined;
-      return { ...prev, [kind]: rows ? rows.filter((row) => row.id !== targetId) : rows };
+      const group = groupOf?.(kind);
+      const holder = (group ? (prev as Record<string, unknown>)[group] : prev) as Record<string, unknown> | null | undefined;
+      if (!holder) return prev;
+      const rows = holder[kind] as AnyRow[] | null | undefined;
+      const next = { ...holder, [kind]: rows ? rows.filter((row) => row.id !== targetId) : rows };
+      return group ? { ...prev, [group]: next } : (next as TData);
     });
     try {
       await api.delete(`${path}/${kind}/${targetId}`);
@@ -82,7 +95,7 @@ export function useRelations<TData extends object>({
       return;
     }
     await refresh();
-  }, [failed, path, queryClient, queryKey, refresh]);
+  }, [failed, groupOf, path, queryClient, queryKey, refresh]);
 
   return { data, error, setError, link, unlink, refresh };
 }
