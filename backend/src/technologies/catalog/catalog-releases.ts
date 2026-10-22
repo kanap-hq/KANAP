@@ -262,8 +262,8 @@ export function cleanLabel(label: unknown, name: unknown): string {
 /** One version whose parentheses the NVD escapes (`9.16(4.51)` → `9.16\(4.51\)`), or null. */
 function escapedParensVersion(text: string): string | null {
   const lower = text.toLowerCase();
-  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]+\d*)+$/.test(lower)) return null;
-  return lower.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]\d*)+$/.test(lower)) return null;
+  return lower.replace(/[()\\]/g, (char) => `\\${char}`);
 }
 
 /** The NVD version of a release label (`cpeVersionOf` of the script): null when the label is the version. */

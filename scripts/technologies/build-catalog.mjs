@@ -1010,8 +1010,8 @@ function cleanLabel(label, name) {
  */
 function escapedParensVersion(text) {
   const lower = text.toLowerCase();
-  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]+\d*)+$/.test(lower)) return null;
-  return lower.replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]\d*)+$/.test(lower)) return null;
+  return lower.replace(/[()\\]/g, (char) => `\\${char}`);
 }
 
 function cpeVersionOf(label, entry) {
