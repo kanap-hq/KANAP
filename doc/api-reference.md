@@ -756,6 +756,19 @@ The CVE published by the NVD matched with the tenant's technologies (lot T6a of 
   - Validation errors: headcount must be non‑negative integer
   - Freeze: edits are rejected when the departments scope is frozen for that year
 
+## Location relations
+
+GET `/locations/:id/relations` (`locations:reader`) returns the Relations tab of a location in one round trip. `:id` is a UUID or `LOC-n`. A missing location is `404` "Location not found". Both sections are read only: an asset's location is set on the asset. A section the caller cannot read is `null`. Web links stay on `/locations/:id/links`.
+
+| Field | Read | Contents |
+|---|---|---|
+| `assets` | `infrastructure` | Assets at the location: `{ id, reference, name, kind, environment, status, provider, sub_location_id, sub_location_name }` (`reference` is `AST-n`), ordered by name |
+| `applications` | `applications` | Applications with an instance on one of those assets: `{ id, reference, name, lifecycle, status, environments }` (`reference` is `APP-n`, `environments` the sorted environments of those instances). A Business Contributor sees the applications they own |
+
+GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: the tab badge. It counts the assets for a reader of `infrastructure`, the applications for a reader of `applications` (inside a Business Contributor's participation), and the web links.
+
+The older GET `/locations/:id/servers` and `/locations/:id/applications` stay, under `locations:reader` alone.
+
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
 

@@ -19,6 +19,11 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import { sortedFindQuery } from '../common/list-sort';
 import { duplicateNameException } from '../common/duplicate-name';
+import {
+  readLocationRelationCounts,
+  readLocationRelations,
+  type LocationRelationsContext,
+} from './location-relations';
 
 type HostingCategory = 'on_prem' | 'cloud';
 
@@ -929,6 +934,18 @@ export class LocationsService {
         ? row.environments.filter((env) => env && env.length > 0)
         : [],
     }));
+  }
+
+  /** The Relations tab (`location-relations.ts`). `id` is a uuid or a `LOC-n` reference. */
+  async relations(id: string, ctx: LocationRelationsContext, opts: { manager: EntityManager; tenantId?: string }) {
+    const resolved = await this.resolveLocationIdentifier(id, opts);
+    return readLocationRelations(opts.manager, resolved, ctx);
+  }
+
+  /** The Relations tab badge. */
+  async relationCounts(id: string, ctx: LocationRelationsContext, opts: { manager: EntityManager; tenantId?: string }) {
+    const resolved = await this.resolveLocationIdentifier(id, opts);
+    return readLocationRelationCounts(opts.manager, resolved, ctx);
   }
 
   // ── Sub-item CRUD ──────────────────────────────────────────────────

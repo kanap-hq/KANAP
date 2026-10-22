@@ -18,6 +18,11 @@ import { LocationsService } from './locations.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
+import { EntityManager } from 'typeorm';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
+import { buildRelationsAccess } from '../common/relations/relations-access';
+import { LOCATION_RELATION_READS, type LocationRelationsContext } from './location-relations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('locations')
@@ -281,6 +286,38 @@ export class LocationsController {
   @Get(':id/applications')
   listApplications(@Param('id') id: string, @Req() req: any) {
     return this.svc.listApplications(id, { manager: req?.queryRunner?.manager });
+  }
+
+  /**
+   * The Relations tab in one round trip: the assets at the location and the applications that run
+   * on them, read only. A section is null without a read of its module (`LOCATION_RELATION_READS`).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('locations', 'reader')
+  @Get(':id/relations')
+  async relations(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    const manager = ctx.manager as EntityManager;
+    return this.svc.relations(id, await this.relationsContext(ctx), { manager, tenantId: ctx.tenantId });
+  }
+
+  /** The Relations tab badge: assets, applications and web links the caller can see. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('locations', 'reader')
+  @Get(':id/relation-counts')
+  async relationCounts(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    const manager = ctx.manager as EntityManager;
+    return this.svc.relationCounts(id, await this.relationsContext(ctx), { manager, tenantId: ctx.tenantId });
+  }
+
+  /** What the tab may show. A Business Contributor's scope hides an application they do not take part in. */
+  private async relationsContext(ctx: TenantRequest): Promise<LocationRelationsContext> {
+    const manager = ctx.manager as EntityManager;
+    const { access } = buildRelationsAccess(ctx, { read: LOCATION_RELATION_READS });
+    const applicationScope = await resolveBusinessContributorScopeForUser(
+      { manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin === true },
+      'applications',
+    );
+    return { access, applicationScope };
   }
 
   @UseGuards(PermissionGuard)
