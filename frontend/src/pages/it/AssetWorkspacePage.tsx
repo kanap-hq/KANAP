@@ -40,7 +40,7 @@ import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
 import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareInfoPanel';
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
-import AssetRelationsPanel, { AssetRelationsPanelHandle } from './editors/AssetRelationsPanel';
+import AssetRelationsTab from './workspace/AssetRelationsTab';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
@@ -278,7 +278,6 @@ export default function AssetWorkspacePage() {
   // Refs for panel components
   const hardwareRef = React.useRef<HardwareInfoPanelHandle>(null);
   const supportRef = React.useRef<SupportInfoPanelHandle>(null);
-  const relationsRef = React.useRef<AssetRelationsPanelHandle>(null);
   const notesSaveTimerRef = React.useRef<number | null>(null);
 
   const [data, setData] = React.useState<AssetRecord | null>(null);
@@ -869,7 +868,6 @@ export default function AssetWorkspacePage() {
         // Save panel data if they have changes
         try { await hardwareRef.current?.save(); } catch { /* panel handles error */ }
         try { await supportRef.current?.save(); } catch { /* panel handles error */ }
-        try { await relationsRef.current?.save(); } catch { /* panel handles error */ }
         setDirty(false);
         await load();
       }
@@ -2310,9 +2308,8 @@ export default function AssetWorkspacePage() {
               assetId={id}
             />
           )}
-          {tab === 'relations' && !isCreate && (
-            <AssetRelationsPanel
-              ref={relationsRef}
+          {tab === 'relations' && !isCreate && !!id && (
+            <AssetRelationsTab
               assetId={id}
               onRelationsChange={() => {
                 void assetRelationsCountQuery.refetch();

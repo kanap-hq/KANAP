@@ -2167,33 +2167,17 @@
         "contactRolePlaceholder": "ex. : responsable de compte"
       },
       "relations": {
-        "assetRelations": "Relations entre actifs",
         "dependsOn": "Dépend de",
-        "searchDependsOn": "Rechercher des dépendances",
         "contains": "Contient",
-        "searchContains": "Rechercher des actifs contenus",
         "containedBy": "Contenu dans",
-        "containedByAssets": "Actifs qui le contiennent",
         "dependedOnBy": "Requis par",
-        "dependedOnByAssets": "Actifs qui en dépendent",
-        "contracts": "Contrats",
-        "searchContracts": "Rechercher des contrats",
-        "projects": "Projets",
-        "searchProjects": "Rechercher des projets",
-        "tasks": "Tâches",
-        "searchTasks": "Rechercher des tâches",
-        "relevantWebsites": "Sites web pertinents",
-        "addUrl": "Ajouter une URL",
-        "attachments": "Pièces jointes",
-        "dropHint": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour sélectionner",
-        "selectFiles": "Sélectionner des fichiers",
-        "uploading_one": "Téléversement de {{count}} fichier…",
-        "uploading_other": "Téléversement de {{count}} fichiers…",
         "deleteAttachmentConfirm": "Supprimer la pièce jointe « {{name}} » ?",
-        "newUrl": "Nouvelle URL",
-        "editUrl": "Modifier l'URL",
-        "websiteNamePlaceholder": "ex. : portail de support",
-        "url": "URL"
+        "empty": {
+          "contains": "Ne contient aucun actif.",
+          "containedBy": "Contenu dans aucun actif.",
+          "dependsOn": "Ne dépend d'aucun actif.",
+          "dependedOnBy": "Aucun actif ne dépend de celui-ci."
+        }
       }
     },
     "technology": {
