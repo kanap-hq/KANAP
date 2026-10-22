@@ -249,7 +249,8 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 - Cuando la empresa pagadora está elegida, la lista muestra solo los centros de coste de esa empresa, con los grupos por encima de ellos. Una línea que ya tiene un centro de coste de otra empresa lo conserva en la lista. Cuando la empresa no tiene ningún centro de coste, la lista lo indica
 - Un centro de coste desactivado aparece marcado como **Desactivado**. Se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
 - Cuando crea una línea y la empresa pagadora está vacía, la lista muestra todos los centros de coste. Elegir uno completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, la lista conserva todos los centros de coste y elegir otro también actualiza la empresa
-- Cuando la empresa pagadora difiere de la empresa del centro de coste, se conservan ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
+- Cuando cambia la empresa pagadora, un centro de coste de otra empresa se borra en el mismo guardado. **Centro de coste** muestra entonces los centros de coste de la nueva empresa
+- Una línea cuyo centro de coste pertenece a otra empresa, desde un archivo CSV o la API, conserva ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
 - Una línea guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos CSV, consulte [Importación/exportación CSV](#importacionexportacion-csv)
 
 **Run o build**: **Run**, **Build** o **Sin definir**. Úselo para repartir el presupuesto entre mantener los servicios en funcionamiento y modificarlos.

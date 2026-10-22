@@ -249,7 +249,8 @@ When the line replaces another one, or was replaced from a later year after a ty
 - When the paying company is chosen, the list shows only that company's cost centers, with the groups above them. A line that already has a cost center of another company keeps it in the list. When the company has no cost center, the list says so
 - A disabled cost center is marked **Disabled**. It stays on the lines that already have it, and cannot be picked for another line
 - When you create a line and the paying company is empty, the list shows every cost center. Picking one fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, the list keeps every cost center and choosing another one updates the company too
-- When the paying company differs from the cost center's company, both are kept. A hint under the field says "This cost center belongs to" followed by the company name
+- When you change the paying company, a cost center of another company is cleared in the same save. **Cost center** then lists the new company's cost centers
+- A line whose cost center belongs to another company, from a CSV file or the API, keeps both. A hint under the field says "This cost center belongs to" followed by the company name
 - A line saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
 
 **Run or build**: **Run**, **Build**, or **Not set**. Use it to split the budget between keeping services running and changing them.

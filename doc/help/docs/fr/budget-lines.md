@@ -249,7 +249,8 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 - Lorsque la société payeuse est choisie, la liste présente uniquement les centres de coûts de cette société, avec les groupes au-dessus d'eux. Une ligne qui a déjà un centre de coûts d'une autre société le conserve dans la liste. Lorsque la société n'a aucun centre de coûts, la liste l'indique
 - Un centre de coûts désactivé est marqué **Désactivé**. Il reste sur les lignes qui l'ont déjà et ne peut pas être choisi pour une autre ligne
 - Lorsque vous créez une ligne et que la société payeuse est vide, la liste présente tous les centres de coûts. En choisir un remplit la société payeuse avec la société du centre de coûts : la liste **Compte** s'ouvre alors sur le plan comptable de cette société. Tant que vous n'avez pas choisi vous-même une société ou un compte, la liste conserve tous les centres de coûts et choisir un autre centre de coûts met aussi à jour la société
-- Lorsque la société payeuse diffère de la société du centre de coûts, les deux sont conservées. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
+- Lorsque vous changez la société payeuse, un centre de coûts d'une autre société est effacé dans le même enregistrement. **Centre de coûts** présente alors les centres de coûts de la nouvelle société
+- Une ligne dont le centre de coûts appartient à une autre société, depuis un fichier CSV ou l'API, conserve les deux. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
 - Une ligne enregistrée via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers CSV, voir [Import/export CSV](#importexport-csv)
 
 **Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.
