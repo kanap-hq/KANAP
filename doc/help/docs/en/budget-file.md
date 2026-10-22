@@ -56,6 +56,7 @@ The detail columns are the same for both kinds of line.
 | `supplier_erp_id` | The supplier's ID in your ERP | Optional |
 | `account_number` | Account number, in the paying company's chart of accounts | Required |
 | `cost_center_code` | Cost center code. A group is refused | Optional |
+| `cost_center_path` | The cost center's place in the tree, from its top group down to the cost center, names separated by ` / `, for example `IT / Infrastructure / Network`. Empty for a cost center at the top of the tree or a line without one. Use it to filter or group lines by department in your spreadsheet | Export only, ignored on import |
 | `run_build` | `run` or `build` | Optional |
 | `analytics:<code>` | The value's name in the dimension whose code it is, regardless of case. One column per enabled dimension, the default dimension included. A dimension used for one kind of line only takes a value on the rows of that kind and stays empty on the others. In a new workspace, the recommended dimensions are in `analytics:default` (the cost pool), `analytics:it_tower`, `analytics:purpose` and `analytics:priority`, for example `Software`, `Application`, `Replacement` or `High` | Optional, except for a required dimension of the line's kind, such as the PP&E type of a CAPEX line in a workspace created before the recommended dimensions. A value that does not exist is created by the load |
 | `owner_it_email` | Email of an active user | Optional |

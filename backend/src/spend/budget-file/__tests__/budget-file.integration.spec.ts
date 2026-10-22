@@ -688,6 +688,46 @@ async function testCostCenterCells(runner: { query: Function; manager: EntityMan
 }
 
 /**
+ * The cost_center_path column: written right after cost_center_code, the centre's names from its
+ * root group joined with ` / `, empty for a root centre or no centre. The import never reads it:
+ * an export reads back unchanged with no ignored column, and an edited path changes nothing.
+ */
+async function testCostCenterPath(runner: { query: Function; manager: EntityManager }, kind: Kind) {
+  const tenantId = await seedTenant(runner as any, `csv-cc-path-${kind}`);
+  const company = await seedCompany(runner as any, tenantId, 'File company');
+  const top = await seedCostCenter(runner as any, tenantId, { code: 'DSI', name: 'DSI', kind: 'group' });
+  const infra = await seedCostCenter(runner as any, tenantId, { code: 'INFRA', name: 'Direction Infrastructures', kind: 'group', parentId: top });
+  await seedCostCenter(runner as any, tenantId, { code: 'NET', name: 'Réseau', parentId: infra, companyId: company.companyId });
+  await seedCostCenter(runner as any, tenantId, { code: 'ROOT', name: 'Root center', companyId: company.companyId });
+  const created = await loadBudgetFile(runner.manager, kind, tenantId, csvOf(newLineColumns(kind, ['cost_center_code']), [
+    newLine(kind, 'Deep', { cost_center_code: 'NET' }),
+    newLine(kind, 'At the root', { cost_center_code: 'ROOT' }),
+    newLine(kind, 'No center'),
+  ]));
+  assert.equal((created as any).inserted, 3, `${kind}: ${JSON.stringify((created as any).errors)}`);
+  const lines = await linesByName(runner, kind, tenantId);
+  const ids = ['Deep', 'At the root', 'No center'].map((name) => lines.get(name).id);
+
+  const exported = await exportBudgetFile(runner.manager, kind, tenantId, ids);
+  const header = exported.replace(/^\uFEFF/, '').split('\n')[0].split(',');
+  assert.equal(header.indexOf('cost_center_path'), header.indexOf('cost_center_code') + 1, `${kind}: the path follows the code`);
+  const paths = new Map(fileRows(exported).map((row) => [row.name, [row.cost_center_code, row.cost_center_path]]));
+  assert.deepEqual(paths.get('Deep'), ['NET', 'DSI / Direction Infrastructures / Réseau'], `${kind}: two levels deep`);
+  assert.deepEqual(paths.get('At the root'), ['ROOT', ''], `${kind}: a root centre has no path`);
+  assert.deepEqual(paths.get('No center'), ['', ''], `${kind}: no centre, no path`);
+
+  const roundTrip = await preflightBudgetFile(runner.manager, kind, tenantId, exported);
+  assert.deepEqual(
+    [roundTrip.ok, roundTrip.changes.unchanged, roundTrip.changes.updated, roundTrip.errors, roundTrip.headerErrors, roundTrip.warnings.ignoredColumns],
+    [true, 3, 0, [], [], []],
+    `${kind}: an export reads back unchanged, cost_center_path is no ignored column`,
+  );
+  const edited = withCell(exported, 'cost_center_path', 'Somewhere / Else', (cells) => cells.name === 'Deep');
+  const editedRun = await preflightBudgetFile(runner.manager, kind, tenantId, edited);
+  assert.deepEqual([editedRun.ok, editedRun.changes.unchanged, editedRun.errors], [true, 3, []], `${kind}: the import never reads the path`);
+}
+
+/**
  * The analytics:<code> cells: an unknown or disabled dimension refuses the
  * file by its header; a value matches by name in its own dimension, any case;
  * an unknown name is created in that dimension only; a disabled value is
@@ -1459,6 +1499,7 @@ async function main() {
       await testPreciseEndOfValidity(runner, kind);
       await testExportAmountSwitch(runner, kind);
       await testCostCenterCells(runner, kind);
+      await testCostCenterPath(runner, kind);
       await testDimensionCells(runner, kind);
       await testRequiredDimensionCells(runner, kind);
       await testNewDimensionValuesGoLast(runner, kind);

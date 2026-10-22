@@ -43,6 +43,7 @@ function line(patch: Partial<StoredLine> = {}): StoredLine {
     accountNumber: null,
     costCenterId: null,
     costCenterCode: null,
+    costCenterPath: null,
     runBuild: null,
     analytics: {},
     ownerItEmail: null,
@@ -460,9 +461,9 @@ async function testExportShape() {
   const headers = buildBudgetExport({
     language: 'en', years: [YEAR], columns: ['budget'], detail: 'yearly', lines: [], dimensions,
   }).headers;
-  assert.deepEqual(headers.slice(0, 15), [
+  assert.deepEqual(headers.slice(0, 16), [
     'nature', 'item_number', 'name', 'description',
-    'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
+    'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'cost_center_path', 'run_build',
     'analytics:default', 'analytics:ppe_type', 'analytics:investment_type', 'analytics:priority', 'owner_it_email',
   ], 'one file for both natures: nature first, every enabled dimension after run_build');
   const both = buildBudgetExport({

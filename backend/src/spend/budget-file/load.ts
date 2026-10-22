@@ -5,6 +5,7 @@ import { budgetColumnName, readBudgetColumns } from '../../budget-columns/budget
 import { ItemAnalyticsValue, loadItemAnalyticsValues } from '../item-analytics.util';
 import { BUDGET_NATURES, natureAnd, naturesAnd, type BudgetNature } from '../budget-nature';
 import { AMOUNT_MEASURES } from '../amounts-write.util';
+import { buildCostCenterTree, CostCenterTreeRow } from '../../cost-centers/cost-center-tree.util';
 import { columnOfMeasure } from './columns';
 import { ItemNumberCell } from './interpret';
 import {
@@ -182,6 +183,20 @@ interface ItemSql {
   notes: string | null;
 }
 
+/**
+ * Each centre's names from its root group, joined with ` / ` (`DSI / Infrastructures / Réseau`).
+ * A root centre has no path: the file's `cost_center_path` is there to group lines by their groups.
+ */
+function costCenterPaths(rows: CostCenterTreeRow[]): Map<string, string> {
+  const nameById = new Map(rows.map((row) => [row.id, row.name]));
+  const paths = new Map<string, string>();
+  for (const node of buildCostCenterTree(rows)) {
+    if (node.path_ids.length < 2) continue;
+    paths.set(node.id, node.path_ids.map((id) => nameById.get(id) ?? '').join(' / '));
+  }
+  return paths;
+}
+
 /** The rows' details, values and versions. The rows were read with their nature predicate. */
 async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]): Promise<StoredLine[]> {
   if (rows.length === 0) return [];
@@ -202,8 +217,10 @@ async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]
   const accounts: Array<{ id: string; account_number: string }> = await manager.query(
     `SELECT id::text AS id, account_number::text AS account_number FROM accounts WHERE tenant_id = $1`, [tenantId],
   );
-  const centers: Array<{ id: string; code: string }> = await manager.query(
-    `SELECT id::text AS id, code FROM cost_centers WHERE tenant_id = $1`, [tenantId],
+  const centers: CostCenterTreeRow[] = await manager.query(
+    `SELECT id::text AS id, code, name, kind::text AS kind, parent_id::text AS parent_id, company_id::text AS company_id,
+            disabled_at, sort_order
+       FROM cost_centers WHERE tenant_id = $1`, [tenantId],
   );
   const users: Array<{ id: string; email: string }> = await manager.query(
     `SELECT id::text AS id, email FROM users WHERE tenant_id = $1`, [tenantId],
@@ -215,6 +232,7 @@ async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]
   const supplierById = new Map(suppliers.map((row) => [row.id, row]));
   const accountNumber = new Map(accounts.map((row) => [row.id, row.account_number]));
   const centerCode = new Map(centers.map((row) => [row.id, row.code]));
+  const centerPath = costCenterPaths(centers);
   const email = new Map(users.map((row) => [row.id, row.email]));
   const projectNumber = new Map(projects.map((row) => [row.id, Number(row.item_number)]));
   return rows.map((row) => {
@@ -240,6 +258,7 @@ async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]
       accountNumber: row.account_id ? accountNumber.get(row.account_id) ?? null : null,
       costCenterId: row.cost_center_id,
       costCenterCode: row.cost_center_id ? centerCode.get(row.cost_center_id) ?? null : null,
+      costCenterPath: row.cost_center_id ? centerPath.get(row.cost_center_id) ?? null : null,
       runBuild: run,
       analytics: byCode,
       ownerItEmail: row.owner_it_id ? email.get(row.owner_it_id) ?? null : null,
