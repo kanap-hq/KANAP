@@ -64,4 +64,4 @@ Die Zeilen zu Anwendungen erfordern das Recht, Anwendungen zu lesen.
 
 - **Zuerst die fehlenden Daten klären**: Ein Server ohne seine Technologien oder eine Version ohne Datum erscheint nie in den Fristen.
 - **Für Budgets 24 Monate vorausschauen**: Eine Migration im nächsten Jahr braucht ihr Geld im Budget dieses Jahres.
-- **Den Katalog nutzen**: Aus dem Katalog hinzugefügte Technologien bringen ihre Supportende-Daten mit.
+- **Den Katalog nutzen**: Aus dem Katalog hinzugefügte Technologien bringen ihre Supportende-Daten mit. Sie stammen von endoflife.date oder, für die von KANAP gepflegten Produkte, von den offiziellen Seiten des Herstellers (siehe [Versionen aus dem Katalog](technologies.md#versionen-aus-dem-katalog)).

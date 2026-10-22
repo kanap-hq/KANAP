@@ -31,7 +31,7 @@ Une technologie couvre un produit dans son ensemble. « SQL Server » désigne t
 
 Rendez-vous dans **Cartographie SI > Technologies** et cliquez sur **Nouvelle technologie**.
 
-La fenêtre s'ouvre sur le **Catalogue** : une liste de produits courants avec une description courte, leur éditeur, leur famille et leur type d'hébergement. Cherchez par nom, puis cliquez sur une entrée. KANAP crée aussitôt la technologie avec son éditeur, sa famille, son type d'hébergement, ses identifiants CPE produit, ses noms CVE.org, ses versions avec leurs dates de fin de support et la description courte dans votre langue, puis l'ouvre. Le catalogue ne propose que les produits que vous n'avez pas encore ajoutés.
+La fenêtre s'ouvre sur le **Catalogue** : une liste de produits courants avec une description courte, leur éditeur, leur famille et leur type d'hébergement. Cherchez par nom, puis cliquez sur une entrée. KANAP crée aussitôt la technologie avec son éditeur, sa famille, son type d'hébergement, ses identifiants CPE produit, ses noms CVE.org, ses versions avec leurs dates de fin de support et la description courte dans votre langue, puis l'ouvre. Une entrée reste proposée lorsqu'une technologie du même nom a été saisie à la main. L'ajout la complète, et l'entrée l'indique (Complète TEC-10).
 
 Une technologie adoptée depuis le catalogue reste à jour : quand l'éditeur publie une nouvelle version ou change une date, KANAP ajoute la version et déplace la date (voir [Versions issues du catalogue](#versions-issues-du-catalogue)).
 
@@ -52,7 +52,7 @@ Pour un produit que le catalogue ne connaît pas, cliquez sur **Saisir une techn
 
 Le système d'exploitation d'un serveur est une technologie de la famille **Système d'exploitation**. Ajoutez-la au serveur comme toute autre technologie, avec sa version : quand le serveur n'en a pas encore, elle devient son système d'exploitation. La fiche du serveur l'affiche en tête de sa section **Technologies**, avec la mention « Système d'exploitation ». Voir [Actifs](assets.md#systeme-dexploitation).
 
-Le catalogue propose Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux et CentOS. Il liste les versions dont le support a pris fin en 2010 ou après, et pour Windows Server les seules versions à support long.
+Le catalogue propose Windows Server, Ubuntu, Red Hat Enterprise Linux, Debian, SUSE Linux Enterprise Server, Rocky Linux, AlmaLinux, Oracle Linux, Amazon Linux, Alpine Linux, CentOS, IBM AIX, IBM i et Oracle Solaris. Il liste les versions dont le support a pris fin en 2010 ou après, et pour Windows Server les seules versions à support long.
 
 Le sens des deux dates de support dépend de l'éditeur :
 
@@ -64,7 +64,9 @@ Le sens des deux dates de support dépend de l'éditeur :
 
 Toute technologie peut être un système d'exploitation : placez VMware ESXi ou FortiOS dans la famille **Système d'exploitation** et elle peut devenir le système d'exploitation d'un hôte ou d'un pare-feu.
 
-Les systèmes d'exploitation du catalogue ont des identifiants CPE produit : KANAP les rapproche des vulnérabilités publiées. SUSE Linux Enterprise Server n'en a pas : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable. Les systèmes d'exploitation sont exclus des alertes par défaut. Le réglage est sur la fiche technologie, dans la colonne Alertes de vulnérabilité de la table des versions.
+Les systèmes d'exploitation du catalogue ont des identifiants CPE produit : KANAP les rapproche des vulnérabilités publiées.
+
+Les distributions Linux publient leurs vulnérabilités par paquet. KANAP suit le support de chaque version et rapproche les vulnérabilités que l'éditeur attribue à la version. Il ne sait pas quels paquets un serveur a installés, ni à quel niveau. Pour les distributions Linux du catalogue, la table des versions mène au suivi de sécurité du distributeur, où vous pouvez vérifier chaque paquet. Voir [Versions issues du catalogue](#versions-issues-du-catalogue).
 
 Les systèmes d'exploitation sont exclus des alertes de vulnérabilité par défaut. KANAP ne connaît pas le niveau de correctifs d'un serveur : un système d'exploitation remonterait un très grand nombre de vulnérabilités, la plupart déjà corrigées. Cela vaut pour une technologie de la famille **Système d'exploitation** et pour un système d'exploitation adopté depuis le catalogue, quelle que soit sa famille. Une technologie existante que vous adoptez depuis le catalogue comme système d'exploitation passe exclue elle aussi. Vous pouvez la réinclure : voir [Alertes de vulnérabilité](#alertes-de-vulnerabilite).
 
@@ -169,6 +171,14 @@ Changer plus tard la famille ou le type d'hébergement d'une technologie laisse 
 
 Une version issue du catalogue affiche **Catalogue** à côté de son libellé, et une technologie adoptée depuis le catalogue indique « Versions et dates tenues à jour depuis le catalogue » sous ses versions. KANAP consulte le catalogue chaque jour dans le cloud. Sur une installation sur site, chaque version de KANAP apporte son catalogue au démarrage, sauf si votre administrateur [active la consultation quotidienne](on-premise/configuration.md#optional-technology-catalog).
 
+Les dates viennent de deux sources. La plupart des produits les tiennent d'endoflife.date. Pour les produits qu'endoflife.date ne couvre pas, comme Cisco NX-OS, Juniper Junos ou Dell PowerStore, KANAP relève les dates sur les pages officielles de l'éditeur. Chaque version de KANAP met ces dates à jour.
+
+Une version dont KANAP a relevé les dates affiche leur source sous son libellé : « Source : », l'éditeur et le jour où les dates ont été vérifiées. Le nom de l'éditeur mène à la page d'où viennent les dates. La ligne reste tant que les deux dates de fin correspondent au catalogue. Elle disparaît dès que vous en changez une. Quand l'éditeur ne prévoit aucune fin de support, comme pour IBM WebSphere 8.5 et 9.0, les deux colonnes de fin de support indiquent « Aucune fin prévue par l'éditeur ».
+
+Certains produits n'ont pas de dates publiques : HPE Aruba Networking AOS-CX, Pure Storage Purity//FA, HPE Alletra 5000/6000 (NimbleOS), Rubrik CDM, Cohesity DataProtect et PRTG Network Monitor. Le catalogue les apporte sans versions. Saisissez vous-même vos versions et leurs dates.
+
+Une distribution Linux du catalogue affiche une ligne sous le tableau : « Ce distributeur publie ses vulnérabilités par paquet ». La ligne mène au suivi de sécurité du distributeur, par exemple le suivi de sécurité Debian ou les mises à jour de sécurité Red Hat. Vous y voyez quels paquets une vulnérabilité touche et quelles mises à jour la corrigent. Voir [Systèmes d'exploitation](#systemes-dexploitation).
+
 La consultation ajoute les nouvelles versions, les nouveaux identifiants CPE produit et les nouveaux noms CVE.org du produit, et met à jour les dates de fin de support, les identifiants et les noms que le catalogue a changés. Elle n'écrase jamais une valeur que vous avez changée, et ne recrée jamais une version, un identifiant ou un nom que vous avez supprimé. Une version saisie avant que le catalogue ne la connaisse lui est rattachée quand les libellés correspondent, et ses dates vides sont remplies.
 
 #### Identifiants de vulnérabilité
@@ -180,7 +190,7 @@ Le groupe **Identifiants de vulnérabilité**, sous les versions, réunit les id
 
 Le rapprochement se fait au niveau de la technologie. Chaque version de la technologie est comparée aux vulnérabilités de ses identifiants, et une version que vous ajoutez est rapprochée aussitôt. Sans identifiant, KANAP ne recherche aucune vulnérabilité, pour aucune version.
 
-**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. La plupart des entrées du catalogue arrivent avec leurs identifiants, systèmes d'exploitation compris. SUSE Linux Enterprise Server arrive sans identifiant : la NVD publie trop peu de ses vulnérabilités pour un rapprochement fiable.
+**Identifiants CPE produit** : les noms que les bases de sécurité donnent à ce produit, sous la forme `part:vendor:product` (par exemple `a:microsoft:sql_server`). KANAP les rapproche des vulnérabilités publiées. Un produit peut en avoir plusieurs (vSphere couvre vCenter et ESXi). Où trouver cette valeur : cherchez le produit dans le [Dictionnaire CPE du NIST](https://nvd.nist.gov/products/cpe/search) et gardez sa partie, son éditeur et son produit. Recopiez-les comme la NVD les écrit, avec la barre oblique inverse devant un signe : `a:veeam:veeam_backup_\&_replication`. La plupart des entrées du catalogue arrivent avec leurs identifiants, systèmes d'exploitation compris.
 
 **Noms CVE.org** : les noms d'éditeur et de produit tels que l'éditeur les écrit dans ses propres fiches de vulnérabilité, par exemple l'éditeur `SAP_SE` et le produit `SAP HANA Database`. KANAP les rapproche de la liste CVE.org, qui contient aussi des vulnérabilités que la NVD n'a pas analysées (voir [Vulnérabilités](vulnerabilities.md#comment-kanap-les-trouve)). Les noms se trouvent sous les identifiants CPE produit et s'affichent quand KANAP lit la liste CVE.org. Chaque nom est listé à part.
 

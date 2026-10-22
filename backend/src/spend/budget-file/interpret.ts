@@ -2,7 +2,7 @@ import { CENTS_LIMIT } from '../../common/amount';
 import { CsvDateOrder, CsvLanguage, CsvParsedDate, CsvReadResult, DecimalMark, readCsv } from '../../common/csv-sheet';
 import { AmountMeasure } from '../amounts-write.util';
 import { LEGACY_PREFIX, type BudgetNature } from '../budget-nature';
-import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
+import { budgetFileSchema, CRITERIA_COLUMNS_MESSAGE, EXPORT_ONLY_COLUMNS, hasCriteriaColumns, isOldBudgetLayout, OLD_BUDGET_FILE_MESSAGE, schemaFields } from './columns';
 import { parseToken, ParsedToken } from './token';
 
 export type FieldCell =
@@ -111,7 +111,7 @@ export function interpretBudgetFile(read: CsvReadResult, scope: BudgetNature): I
     const errors = row.errors.map((error) => ({ column: error.column, message: error.message }));
     const cells: Record<string, FieldCell> = {};
     for (const field of fields) {
-      if (field === 'kanap_token') continue;
+      if (field === 'kanap_token' || EXPORT_ONLY_COLUMNS.has(field)) continue;
       cells[field] = presentFields.has(field) ? fieldCell(row.cells[field] ?? '') : { kind: 'absent' };
     }
     const analytics: Record<string, FieldCell> = {};

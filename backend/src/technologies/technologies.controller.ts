@@ -18,6 +18,7 @@ import { CveNamesService } from '../vulnerabilities/cve-names.service';
 import { TechnologiesService, type Opts } from './technologies.service';
 import { TechnologiesDeleteService } from './technologies-delete.service';
 import { TechnologiesRelationsService, technologyRelationKindOrThrow, type TechnologyRelationsContext } from './technologies-relations.service';
+import { attachCatalogScreen, type CatalogScreen } from './catalog/catalog-screen';
 import { TechnologyCatalogService } from './catalog/technology-catalog.service';
 import { TechnologyLinksCsvService } from './technology-links-csv.service';
 import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
@@ -287,11 +288,18 @@ export class TechnologiesController {
 
   // ==================== RECORD ====================
 
+  /**
+   * The record, plus what this screen reads from the shipped catalog: the source of a version's
+   * dates, and the distributor's vulnerability tracker. The service record stays free of both,
+   * so the list, the export and the assistant do not carry them.
+   */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')
   @Get(':id')
-  get(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
-    return this.svc.get(id, this.opts(ctx));
+  async get(@Param('id') id: string, @Tenant() ctx: TenantRequest): Promise<CatalogScreen<Awaited<ReturnType<TechnologiesService['get']>>>> {
+    const record = await this.svc.get(id, this.opts(ctx));
+    const product = record.catalog_key ? this.catalog.shippedProduct(record.catalog_key) : undefined;
+    return attachCatalogScreen(record, product);
   }
 
   /** CVE.org names seen on the CVE of this technology's CPE products. Same right as reading the technology. */

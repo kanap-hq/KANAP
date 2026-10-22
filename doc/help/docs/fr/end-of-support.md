@@ -64,4 +64,4 @@ Les lignes qui concernent des applications demandent le droit de lire les applic
 
 - **Commencez par les données manquantes** : un serveur sans ses technologies, ou une version sans date, n'apparaît jamais dans les échéances.
 - **Regardez à 24 mois pour les budgets** : une migration prévue l'an prochain a besoin de son budget cette année.
-- **Utilisez le catalogue** : les technologies ajoutées depuis le catalogue arrivent avec leurs dates de fin de support.
+- **Utilisez le catalogue** : les technologies ajoutées depuis le catalogue arrivent avec leurs dates de fin de support. Elles viennent d'endoflife.date, ou des pages officielles de l'éditeur pour les produits que KANAP tient à jour (voir [Versions issues du catalogue](technologies.md#versions-issues-du-catalogue)).

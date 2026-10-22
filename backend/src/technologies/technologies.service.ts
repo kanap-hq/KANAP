@@ -15,6 +15,7 @@ import { sortVersions } from './version-order';
 import { DEFAULT_TECHNOLOGY_HOSTING_TYPE, isCloudHostingType, resolveHostingType } from './hosting-type';
 import { normalizeCveNames, sortCveNames } from '../vulnerabilities/cve-affected-rules';
 import { defaultVulnerabilityAlerts } from '../vulnerabilities/vulnerability-alerts';
+import { SERVICE_PACK_PRODUCTS, servicePackLabelsOf } from '../vulnerabilities/vulnerability-rules';
 import { countingRowSql, rowJoinsSql, severeSql, vulnerabilityCountsEnabled } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   BUILD_PREFIX_RE,
@@ -592,7 +593,12 @@ export class TechnologiesService {
     return version;
   }
 
-  async updateVersion(idOrRef: string, versionId: string, body: VersionInput, opts: Opts) {
+  async updateVersion(
+    idOrRef: string,
+    versionId: string,
+    body: VersionInput,
+    opts: Opts,
+  ): Promise<TechnologyVersionRow & { updated_versions?: TechnologyVersionRow[] }> {
     const { manager: mg, tenantId } = opts;
     const tech = await readTechnology(mg, tenantId, idOrRef, true);
     const before = await this.readVersion(mg, tenantId, tech.id, versionId);
@@ -614,13 +620,72 @@ export class TechnologiesService {
       );
       const after = await this.readVersion(mg, tenantId, tech.id, before.id);
       await this.audit.log({ table: 'technology_versions', recordId: tech.id, action: 'update', before, after, userId: opts.userId ?? null }, { manager: mg });
-      // The alert setting does not take part in the matching: a change of it alone matches nothing again.
+      // A base release carries its service packs. The alert column is read when the page and the
+      // counts run: a change of it alone matches nothing again, on the base release and on each pack.
+      const propagated = 'vulnerability_alerts' in values
+        ? await this.propagateServicePackAlerts(mg, tenantId, tech, before.id, merged.label, values.vulnerability_alerts as boolean | null, opts.userId ?? null)
+        : [];
       if (keys.some((key) => key !== 'vulnerability_alerts')) {
         await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId: tech.id, products: [] });
       }
-      return after;
+      return propagated.length ? { ...after, updated_versions: [after, ...propagated] } : after;
     }
     return before;
+  }
+
+  /**
+   * The service packs of a base release (`11` → `11 SP1`, `15.5`) take the same alert setting,
+   * in this transaction: one read of the technology's versions, one update of the batch, one
+   * read back, and one audit entry per pack that changed, as a PATCH of that pack writes it.
+   * A pack changed on its own, a product outside `SERVICE_PACK_PRODUCTS`, and `2012` next to
+   * `2012 R2` write nothing else. The label decides (`servicePackOf`); the CPE version does not.
+   */
+  private async propagateServicePackAlerts(
+    mg: EntityManager,
+    tenantId: string,
+    tech: TechnologyRow,
+    rootId: string,
+    rootLabel: string,
+    value: boolean | null,
+    userId: string | null,
+  ): Promise<TechnologyVersionRow[]> {
+    const products = Array.isArray(tech.cpe_products) ? tech.cpe_products : [];
+    if (!products.some((product) => SERVICE_PACK_PRODUCTS.has(String(product).toLowerCase()))) return [];
+    const rows: TechnologyVersionRow[] = await mg.query(
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id <> $3
+        ORDER BY v.id`,
+      [tenantId, tech.id, rootId],
+    );
+    const wanted = new Set(servicePackLabelsOf(rootLabel, rows.map((row) => row.label)));
+    const targets = rows.filter((row) => wanted.has(row.label) && row.vulnerability_alerts !== value);
+    if (!targets.length) return [];
+    const ids = targets.map((row) => row.id);
+    await mg.query(
+      `UPDATE technology_versions SET vulnerability_alerts = $4, updated_at = now()
+        WHERE tenant_id = $1 AND technology_id = $2 AND id = ANY($3::uuid[])`,
+      [tenantId, tech.id, ids, value],
+    );
+    const written: TechnologyVersionRow[] = await mg.query(
+      `SELECT ${VERSION_COLUMNS} FROM technology_versions v
+         JOIN technologies t ON t.tenant_id = v.tenant_id AND t.id = v.technology_id
+        WHERE v.tenant_id = $1 AND v.technology_id = $2 AND v.id = ANY($3::uuid[])
+        ORDER BY v.id`,
+      [tenantId, tech.id, ids],
+    );
+    const afterById = new Map(written.map((row) => [row.id, row]));
+    const updated: TechnologyVersionRow[] = [];
+    for (const row of targets) {
+      const after = afterById.get(row.id);
+      if (!after) continue;
+      await this.audit.log(
+        { table: 'technology_versions', recordId: tech.id, action: 'update', before: row, after, userId },
+        { manager: mg },
+      );
+      updated.push(after);
+    }
+    return updated;
   }
 
   /**

@@ -234,7 +234,8 @@
         "searchPlaceholder": "ex. SQL Server",
         "noMatch": "Aucune entrée du catalogue ne correspond.",
         "manualLink": "Saisir une technologie absente du catalogue",
-        "backToCatalog": "Revenir au catalogue"
+        "backToCatalog": "Revenir au catalogue",
+        "completes": "Complète {{reference}}"
       }
     },
     "connections": {
@@ -2283,6 +2284,22 @@
         "fromCatalog": "Catalogue",
         "fromCatalogHint": "Issue du catalogue",
         "catalogNote": "Versions et dates tenues à jour depuis le catalogue",
+        "dateSource": "Source : <editor>{{editor}}</editor>, vérifié le {{date}}",
+        "noPlannedEnd": "Aucune fin prévue par l’éditeur",
+        "securityTrackerNote": "Ce distributeur publie ses vulnérabilités par paquet. KANAP suit le support de chaque version. L’exposition paquet par paquet se lit dans son suivi : <tracker>{{name}}</tracker>",
+        "securityTrackerOf": "suivi de sécurité de {{editor}}",
+        "securityTracker": "Suivi de sécurité",
+        "trackers": {
+          "ubuntu": "suivi CVE Ubuntu",
+          "redhat": "mises à jour de sécurité Red Hat",
+          "debian": "suivi de sécurité Debian",
+          "suse": "suivi CVE SUSE",
+          "rocky": "errata Rocky Linux",
+          "alma": "errata AlmaLinux",
+          "oracle": "sécurité Oracle Linux",
+          "amazon": "sécurité Amazon Linux",
+          "alpine": "suivi de sécurité Alpine"
+        },
         "edit": "Modifier la version {{label}}",
         "remove": "Supprimer la version {{label}}",
         "deleteTitle": "Supprimer la version {{label}} ?",
@@ -2297,6 +2314,8 @@
         "alertsColumnHint": "Inclut cette version dans les alertes de vulnérabilité : la page Vulnérabilités, les compteurs et le courriel récapitulatif. Chaque version suit le réglage de la technologie, sauf si un point signale un réglage propre.",
         "includeInAlerts": "Inclure dans les alertes de vulnérabilité",
         "alertsFor": "Alertes de vulnérabilité pour {{label}}",
+        "alertsServicePacks_one": "Inclut le service pack {{from}}",
+        "alertsServicePacks_other": "Inclut les service packs {{from}} à {{to}}",
         "alertsHint": "Réglage de la technologie : vaut pour les versions sans réglage propre, les versions à venir et les liens sans version.",
         "alertsOwn": "Réglage propre à cette version",
         "alertsConfirmTitle": "Alertes de vulnérabilité",
@@ -3549,7 +3568,8 @@
       "monitoring": "Supervision",
       "runtime": "Environnement d’exécution et framework",
       "storage": "Stockage",
-      "network_security": "Réseau et sécurité",
+      "network": "Réseau",
+      "network_security": "Sécurité",
       "administration": "Administration",
       "other": "Autre"
     },

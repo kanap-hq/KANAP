@@ -64,4 +64,4 @@ The rows about applications need the right to read applications.
 
 - **Clear the missing data first**: a server without its technologies, or a version without a date, never shows up in the deadlines.
 - **Look 24 months ahead for budgets**: a migration planned next year needs its money in this year's budget.
-- **Use the catalog**: technologies added from the catalog come with their end of support dates.
+- **Use the catalog**: technologies added from the catalog come with their end of support dates. They come from endoflife.date, or from the publisher's official pages for the products KANAP maintains (see [Versions from the catalog](technologies.md#versions-from-the-catalog)).

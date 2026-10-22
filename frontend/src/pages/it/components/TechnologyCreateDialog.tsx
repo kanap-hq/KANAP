@@ -22,6 +22,8 @@ type CatalogEntry = {
   latest_version: string | null;
   /** What the product is and what it is for, in the screen language. */
   description?: string | null;
+  /** Reference (`TEC-n`) of the technology typed by hand under this name, or null. */
+  completes: string | null;
 };
 
 type Props = {
@@ -70,6 +72,7 @@ const catalogRowSx = (busy: boolean) => (theme: Theme) => ({
 /**
  * One catalog product. The hosting type is chosen at adoption and stays off this line.
  * The description is the delayed tooltip (and the accessible description), never a third line.
+ * A reference this entry would complete shares the editor's line.
  */
 function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
   entry: CatalogEntry;
@@ -77,8 +80,12 @@ function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
   busy: boolean;
   onAdopt: (entry: CatalogEntry) => void;
 }) {
+  const { t } = useTranslation('it');
   const hintId = React.useId();
   const description = entry.description?.trim() || '';
+  const completesLabel = entry.completes
+    ? t('pages.technologies.create.completes', { reference: entry.completes })
+    : '';
   const row = (
     <Box
       role="listitem"
@@ -101,10 +108,28 @@ function CatalogRow({ entry, familyLabel, busy, onAdopt }: {
           </Box>
         ) : null}
       </Box>
-      {/* Always present, so a product without an editor stays the same height as the others. */}
-      <Box component="span" className="kanap-autocomplete-option-secondary" sx={{ ...optionLineSx, display: 'block' }}>
-        {entry.editor || '\u00a0'}
-      </Box>
+      {/* Always present, so a product without an editor stays the same height as the others.
+          The completion mention stays on this line, after the editor. */}
+      {completesLabel ? (
+        <Box
+          component="span"
+          className="kanap-autocomplete-option-secondary"
+          sx={{ display: 'flex', alignItems: 'baseline', gap: 1, width: '100%', minWidth: 0 }}
+        >
+          <Box component="span" sx={{ ...optionLineSx, flex: '1 1 auto' }}>
+            {entry.editor || completesLabel}
+          </Box>
+          {entry.editor ? (
+            <Box component="span" sx={{ flex: '0 0 auto', whiteSpace: 'nowrap' }}>
+              {completesLabel}
+            </Box>
+          ) : null}
+        </Box>
+      ) : (
+        <Box component="span" className="kanap-autocomplete-option-secondary" sx={{ ...optionLineSx, display: 'block' }}>
+          {entry.editor || '\u00a0'}
+        </Box>
+      )}
       {description ? <span id={hintId} hidden>{description}</span> : null}
     </Box>
   );
@@ -162,7 +187,8 @@ export function EditorField({ value, onChange, disabled, placeholder, onBlur }: 
 
 /**
  * Creation of a technology: the catalog first (entries the tenant has not adopted; one click adopts
- * it with its versions), then a free entry for a product the catalog does not know.
+ * it with its versions, or completes the technology already typed under that name), then a free
+ * entry for a product the catalog does not know.
  */
 export default function TechnologyCreateDialog({ open, onClose, onCreated }: Props) {
   const { t, i18n } = useTranslation(['it', 'common']);

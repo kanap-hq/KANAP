@@ -1,5 +1,5 @@
 import i18n from 'i18next';
-import type { CatalogDefaults, DefaultCopy } from './catalogLocalization';
+import type { CatalogDefaults, DefaultCopy, FormerCopy } from './catalogLocalization';
 
 /**
  * The IT Ops catalog values every tenant starts with, by list and code, with the English label the
@@ -174,7 +174,8 @@ const SHIPPED_LABELS: Record<string, Record<string, string>> = {
     monitoring: 'Monitoring',
     runtime: 'Runtime and framework',
     storage: 'Storage',
-    network_security: 'Network and security',
+    network: 'Network',
+    network_security: 'Security',
     administration: 'Administration',
     other: 'Other',
   },
@@ -186,6 +187,22 @@ const SHIPPED_LABELS: Record<string, Record<string, string>> = {
   domains: {
     workgroup: 'Workgroup',
     'n-a': 'N/A',
+  },
+};
+
+/**
+ * Labels a tenant may still store after a shipped rename. Shown and accepted on import while the
+ * stored label equals `source`. Kept out of `SHIPPED_LABELS`, so a new tenant does not receive them.
+ */
+const FORMER_LABELS: Record<string, Record<string, readonly FormerCopy[]>> = {
+  technologyFamilies: {
+    network_security: [{
+      source: 'Network and security',
+      en: 'Network and security',
+      fr: 'Réseau et sécurité',
+      de: 'Netzwerk und Sicherheit',
+      es: 'Red y seguridad',
+    }],
   },
 };
 
@@ -213,6 +230,7 @@ export function itOpsCatalogDefaults(list: string): CatalogDefaults | undefined 
   if (!source) return undefined;
   return {
     source,
+    ...(FORMER_LABELS[list] ? { former: FORMER_LABELS[list] } : {}),
     translated: (locale, code) => {
       const label = i18n.getResource(locale, 'it', `catalogDefaults.${list}.${code}`);
       if (typeof label !== 'string') return undefined;

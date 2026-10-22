@@ -21,7 +21,7 @@ export const CATALOG_SYNC_TASK_NAME = 'technology-catalog';
 export const ENDOFLIFE_DEFAULT_BASE_URL = 'https://endoflife.date/api/v1';
 /** A product read successfully less than this long ago is not read again (a restart, a manual run). */
 const FRESH_MS = 20 * 60 * 60 * 1000;
-/** endoflife.date publishes no rate: one request a second stays polite (about 90 products at most). */
+/** endoflife.date publishes no rate: one request a second stays polite (167 products, about three minutes). */
 const SPACING_MS = 1000;
 const ATTEMPTS = 3;
 const RETRY_DELAY_MS = 30_000;

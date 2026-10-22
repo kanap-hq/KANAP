@@ -134,6 +134,8 @@ What kind of technology each one is: database, hypervisor, directory and identit
 
 The **Operating system** family marks the operating systems: a technology of that family added to a server without one becomes its operating system. See [Technologies](technologies.md#operating-systems).
 
+The default list has a **Network** family for switches, routers and load balancers, and a **Security** family for firewalls and VPN gateways. **Security** was called **Network and security** before. A list you already changed keeps its families and their names. A network product adopted from the catalog then goes to the former **Network and security** family.
+
 ### Connection types
 
 A two-level catalog (category and entry) of connection protocols, with typical ports.

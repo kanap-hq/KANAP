@@ -2,7 +2,7 @@ import * as assert from 'node:assert/strict';
 import { assetCsvConfig } from '../../assets/asset-csv.config';
 import { findCatalogOption, resolveCatalogCode } from '../catalog-resolve';
 import { resolveClassificationOption } from '../classification-catalog';
-import { withShippedLabels } from '../catalog-shipped-labels';
+import { shippedLabelIn, withShippedLabels } from '../catalog-shipped-labels';
 
 // Imports accept a shipped catalog value under the label the app shows for it in any language
 // ("Serveur physique" for the shipped "Physical Server") while the tenant keeps the shipped label.
@@ -39,6 +39,21 @@ async function run() {
   assert.equal(findCatalogOption("Point d'accès", shipped.serverKinds)?.code, 'borne', 'a tenant value named like a translation wins');
   assert.equal(resolveCatalogCode('Machine virtuelle', shipped.serverKinds), 'Machine virtuelle', 'an unknown value is returned as typed, as before');
   assert.equal(findCatalogOption('Serveur physique', settings.serverKinds), null, 'the raw catalogs carry no shipped labels');
+
+  // A tenant that saved the family before it was renamed to Security still stores "Network and security".
+  const oldFamily = { code: 'network_security', label: 'Network and security' };
+  assert.equal(shippedLabelIn('technologyFamilies', oldFamily, 'fr'), 'Réseau et sécurité');
+  assert.equal(shippedLabelIn('technologyFamilies', oldFamily, 'de'), 'Netzwerk und Sicherheit');
+  assert.equal(shippedLabelIn('technologyFamilies', oldFamily, 'es'), 'Red y seguridad');
+  assert.equal(shippedLabelIn('technologyFamilies', oldFamily, 'en'), 'Network and security');
+  assert.equal(shippedLabelIn('technologyFamilies', { code: 'network_security', label: 'Security' }, 'fr'), 'Sécurité');
+  assert.equal(shippedLabelIn('technologyFamilies', { code: 'network_security', label: 'Security renamed' }, 'fr'), null);
+  const kept = withShippedLabels({ technologyFamilies: [oldFamily] } as any);
+  assert.equal(findCatalogOption('Réseau et sécurité', kept.technologyFamilies)?.code, 'network_security');
+  assert.equal(findCatalogOption('Sécurité', kept.technologyFamilies), null, 'the current translation applies only while the stored label is the current source');
+  const current = withShippedLabels({ technologyFamilies: [{ code: 'network_security', label: 'Security' }] } as any);
+  assert.equal(findCatalogOption('Sécurité', current.technologyFamilies)?.code, 'network_security');
+  assert.equal(findCatalogOption('Réseau et sécurité', current.technologyFamilies), null, 'a former label applies only while the stored label is that former source');
 
   assert.equal(resolveClassificationOption('Confidentiel', shipped.dataClasses), 'confidential', 'classification levels too');
 

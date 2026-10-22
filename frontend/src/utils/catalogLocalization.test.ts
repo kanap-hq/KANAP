@@ -30,6 +30,19 @@ describe('catalog localization', () => {
     expect(localizeCatalogList(list, 'fr')).not.toBe(list);
   });
 
+  it('shows a former shipped label in the locale, and keeps the current translation for the current source', () => {
+    const withFormer: CatalogDefaults = {
+      ...defaults,
+      former: { high: [{ source: 'Critical', en: 'Critical', fr: 'Critique', de: 'Kritisch', es: 'Crítico' }] },
+    };
+    expect(localizeCatalogItem({ code: 'high', label: 'Critical' }, 'fr', withFormer).label).toBe('Critique');
+    expect(localizeCatalogItem({ code: 'high', label: 'Critical' }, 'de', withFormer).label).toBe('Kritisch');
+    expect(localizeCatalogItem({ code: 'high', label: 'High' }, 'fr', withFormer).label).toBe('Élevée');
+    expect(localizeCatalogItem({ code: 'high', label: 'Tier 1' }, 'fr', withFormer).label).toBe('Tier 1');
+    const translated = { code: 'high', label: 'Critical', translations: { fr: { label: 'Maison' } } };
+    expect(localizeCatalogItem(translated, 'fr', withFormer).label).toBe('Maison');
+  });
+
   it('previews what a field will display with a candidate translation set', () => {
     const item = { code: 'high', label: 'High', description: 'Up to one day.' };
     expect(previewCatalogField(item, 'fr', 'label', undefined, defaults)).toBe('Élevée');

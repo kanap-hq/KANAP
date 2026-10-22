@@ -1247,6 +1247,54 @@ async function testCveNames() {
   });
 }
 
+/**
+ * AIX keys the release (`7.3`), not the technology level. A later level keeps that key and
+ * refreshes the dates, instead of inserting a row the label constraint drops.
+ */
+async function testAixTechnologyLevel() {
+  await inRolledBackTransaction(async (runner) => {
+    const { catalog, sync } = syncService();
+    const tenantId = await seedTenant(runner, 'cat-aix-tl');
+    const { technology } = await catalog.adopt('ibm-aix', { manager: runner.manager, tenantId });
+    const before = await versionsOf(runner, technology.id);
+    assert.equal(before.get('7.3')!.catalog_key, 'ibm-aix:7.3');
+    assert.equal(before.get('7.3')!.standard_support_end, '2028-12-31');
+    const [stored] = await runner.query(
+      `SELECT build_prefixes FROM technology_versions WHERE technology_id = $1 AND label = '7.3'`,
+      [technology.id],
+    );
+    assert.deepEqual(stored.build_prefixes, []);
+
+    const shipped = catalog.shippedProduct('ibm-aix')!;
+    const newer = versionsOfReleases(
+      [{ name: '7.3.5', label: '7.3 TL5', releaseDate: '2026-10-01', eolFrom: '2031-12-31' }],
+      shippedDay(1),
+      'ibm-aix',
+    );
+    assert.deepEqual(
+      newer.map((version) => [version.key, version.label, version.build_prefixes, version.standard_support_end]),
+      [['7.3', '7.3', [], '2031-12-31']],
+    );
+    const living: CatalogProduct = {
+      ...shipped,
+      versions: [newer[0], ...shipped.versions.filter((version) => version.key !== '7.3')],
+    };
+    const result = await sync.syncTenant(runner.manager, tenantId, new Map([['ibm-aix', living]]));
+    assert.equal(result.versions_added, 0, 'the new technology level does not insert a second 7.3');
+    assert.equal(result.versions_updated, 1);
+    const after = await versionsOf(runner, technology.id);
+    assert.equal(after.size, before.size);
+    assert.deepEqual(after.get('7.3'), {
+      label: '7.3',
+      standard_support_end: '2031-12-31',
+      extended_support_end: null,
+      catalog_key: 'ibm-aix:7.3',
+    });
+    assert.equal(after.get('7.2')!.catalog_key, 'ibm-aix:7.2');
+    assert.equal(after.get('7.2')!.standard_support_end, before.get('7.2')!.standard_support_end);
+  });
+}
+
 async function main() {
   const fake = await serve();
   baseUrl = fake.baseUrl;
@@ -1254,6 +1302,7 @@ async function main() {
     await runSpecs('technology catalog sync', [
       ['clean start', cleanCache],
       ['sync of a tenant', testSyncOfATenant],
+      ['AIX technology level updates 7.3', testAixTechnologyLevel],
       ['technology adopted before the living catalog', testTechnologyAdoptedBefore],
       ['unreadable catalog state', testMalformedState],
       ['empty cpe_version completed', testEmptyCpeVersion],

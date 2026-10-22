@@ -1,0 +1,367 @@
+{
+  "key": "dell-powerscale",
+  "name": "Dell PowerScale OneFS",
+  "editor": "Dell Technologies",
+  "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
+  "source_updated": "2026-10-16",
+  "version_grain": "OneFS release as the vendor names it (9.10.1)",
+  "versions": [
+    {
+      "label": "9.15.0",
+      "aliases": [],
+      "release_date": "2026-08-11",
+      "standard_support_end": "2028-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.14.0",
+      "aliases": [],
+      "release_date": "2026-04-07",
+      "standard_support_end": "2028-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.13.1",
+      "aliases": [],
+      "release_date": "2026-04-27",
+      "standard_support_end": "2028-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.13.0",
+      "aliases": [],
+      "release_date": "2025-12-16",
+      "standard_support_end": "2027-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.12.0",
+      "aliases": [],
+      "release_date": "2025-08-18",
+      "standard_support_end": "2027-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.11.0",
+      "aliases": [],
+      "release_date": "2025-04-08",
+      "standard_support_end": "2027-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.10.1",
+      "aliases": [],
+      "release_date": "2025-03-11",
+      "standard_support_end": "2028-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.10.0",
+      "aliases": [],
+      "release_date": "2024-12-10",
+      "standard_support_end": "2027-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.9.0",
+      "aliases": [],
+      "release_date": "2024-08-13",
+      "standard_support_end": "2027-08-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.8.0",
+      "aliases": [],
+      "release_date": "2024-04-09",
+      "standard_support_end": "2027-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.7.1",
+      "aliases": [],
+      "release_date": "2024-05-15",
+      "standard_support_end": "2027-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.7.0",
+      "aliases": [],
+      "release_date": "2023-12-13",
+      "standard_support_end": "2026-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.5.1",
+      "aliases": [],
+      "release_date": "2024-06-25",
+      "standard_support_end": "2026-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.5.0",
+      "aliases": [],
+      "release_date": "2023-01-24",
+      "standard_support_end": "2026-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.4.0",
+      "aliases": [],
+      "release_date": "2022-04-04",
+      "standard_support_end": "2025-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.3.0",
+      "aliases": [],
+      "release_date": "2021-10-18",
+      "standard_support_end": "2024-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.2.1",
+      "aliases": [],
+      "release_date": "2021-05-28",
+      "standard_support_end": "2024-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.2.0",
+      "aliases": [],
+      "release_date": "2021-05-03",
+      "standard_support_end": "2024-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.1.0",
+      "aliases": [],
+      "release_date": "2020-10-02",
+      "standard_support_end": "2023-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "9.0.0",
+      "aliases": [],
+      "release_date": "2020-06-16",
+      "standard_support_end": "2023-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon/PowerScale OneFS\". The Extended Support 1st/2nd Year columns are empty for OneFS."
+    },
+    {
+      "label": "8.2",
+      "aliases": [],
+      "release_date": "2019-05-03",
+      "standard_support_end": "2022-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Software-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row \"Isilon OneFS\" (the OneFS 8.x and older rows carry this name). The Extended Support 1st/2nd Year columns are empty. The separate \"IsilonSD Edge/Flex\" 8.2 row (end 2022-02-28) is a software-defined variant and is not tracked."
+    }
+  ]
+}

@@ -1,0 +1,265 @@
+{
+  "key": "arista-eos",
+  "name": "Arista EOS",
+  "editor": "Arista Networks",
+  "lifecycle_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+  "source_updated": "2026-04-15",
+  "version_grain": "release train (4.32.x)",
+  "versions": [
+    {
+      "label": "4.36.x",
+      "aliases": [],
+      "release_date": "2026-04-08",
+      "standard_support_end": "2029-04-08",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.35.x",
+      "aliases": [],
+      "release_date": "2025-10-06",
+      "standard_support_end": "2028-10-06",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.34.x",
+      "aliases": [],
+      "release_date": "2025-04-25",
+      "standard_support_end": "2028-04-25",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.33.x",
+      "aliases": [],
+      "release_date": "2024-10-10",
+      "standard_support_end": "2027-10-10",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form. Platform exceptions (Maintenance Phase): 7280R/7280R2 only 2026-12-20; 7500R/7500R2 only 2027-06-20; 7020R only 2028-06-30."
+    },
+    {
+      "label": "4.32.x",
+      "aliases": [],
+      "release_date": "2024-04-09",
+      "standard_support_end": "2027-04-09",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.31.x",
+      "aliases": [],
+      "release_date": "2023-10-13",
+      "standard_support_end": "2026-10-13",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.30.x",
+      "aliases": [],
+      "release_date": "2023-04-14",
+      "standard_support_end": "2026-04-14",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.29.x",
+      "aliases": [],
+      "release_date": "2022-10-31",
+      "standard_support_end": "2025-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.28.x",
+      "aliases": [],
+      "release_date": "2022-04-18",
+      "standard_support_end": "2025-04-18",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form. Platform exceptions (Maintenance Phase): 7050X/7050X2 only 2025-03-20; 7300X only 2026-04-01; 7010T only 2026-06-30."
+    },
+    {
+      "label": "4.27.x",
+      "aliases": [],
+      "release_date": "2021-09-27",
+      "standard_support_end": "2024-09-27",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.26.x",
+      "aliases": [],
+      "release_date": "2021-04-15",
+      "standard_support_end": "2024-04-15",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/product-documentation/eos-life-cycle-policy",
+      "source_terms": {
+        "release_date": "Initial Release Date",
+        "standard_support_end": "End of Support Date (+36 months from initial release)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Dates read from the table image EOS-Life-Cycle-Policy-April-2026.png on the page (\"Last Updated: April 15, 2026\"); the table has no text form."
+    },
+    {
+      "label": "4.25.x",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-10-22",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/advisories-notices/end-of-support/18440-end-of-software-support-for-eos-4-25",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "reach the 36 month timeline",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Not in the life cycle table. Notice dated October 21st, 2023: End of Support for all product families."
+    },
+    {
+      "label": "4.24.x",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-04-05",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/advisories-notices/end-of-support/16945-end-of-software-support-for-eos-4-24",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "reach the 36 month timeline",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Not in the life cycle table. Notice dated January 25th, 2023: End of Support for all product families."
+    },
+    {
+      "label": "4.23.x",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-09-27",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/advisories-notices/end-of-support/15647-end-of-software-support-for-eos-4-23",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "reach the 36 month timeline",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Not in the life cycle table. Notice dated May 31st, 2022 (modified November 8th, 2023). Platform exception: 7150 series bug fixes and support on 4.23 extended to 2023-12-01, TAC-only support to 2024-12-01."
+    },
+    {
+      "label": "4.22.x",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-05-14",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.arista.com/en/support/advisories-notices/end-of-support/13445-end-of-software-support-for-eos-4-22",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "reach the 36 month timeline",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Not in the life cycle table. Notice dated January 5, 2022."
+    }
+  ]
+}

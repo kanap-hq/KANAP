@@ -40,6 +40,13 @@ type CpeVersionRule = {
   fromLabel?: boolean;
   patterns?: Array<[RegExp, string]>;
   /**
+   * One ASA or NX-OS version: lower case, parentheses escaped (`9.16(4)` → `9.16\(4\)`).
+   * A label that is not a single version stays on the default rule.
+   */
+  escapedParens?: boolean;
+  /** A train label `4.36.x` or `15.x` gives `4.36` or `15`. Other labels use the default rule. */
+  stripTrain?: boolean;
+  /**
    * The CPE product the NVD gives each release of the entry, `{year}` standing for the year that
    * starts its label: SQL Server since 2024 (`a:microsoft:sql_server_2022`) and Windows Server
    * (`o:microsoft:windows_server_2022`). The matching applies such a product to the versions whose
@@ -76,6 +83,21 @@ const CPE_VERSION_RULES: Record<string, CpeVersionRule> = {
   centos: { matchSegments: 1 },
   ubuntu: { matchSegments: 2 },
   sles: { matchSegments: 1 },
+  // AIX technology levels are one release (`7.3.0` covers a typed `7.3.2`). IBM i and Solaris name
+  // the branch (`7.5`, `11.4`). Twin of `VERSION_PRECISION`.
+  'ibm-aix': { matchSegments: 2 },
+  'ibm-i': { matchSegments: 2 },
+  'oracle-solaris': { matchSegments: 2 },
+  // KANAP-maintained products. Twin of `cpeVersion` / `cpeVersions` in build-catalog.mjs.
+  'check-point-gaia': { fromLabel: true },
+  'cisco-asa': { escapedParens: true },
+  'cisco-nx-os': { escapedParens: true },
+  'ivanti-connect-secure': { stripTrain: true, patterns: [[/^9\.1R\d+$/i, '9.1']] },
+  'arista-eos': { stripTrain: true },
+  'oracle-weblogic': { stripTrain: true },
+  'ibm-websphere': { stripTrain: true },
+  // Cortex XDR community edition: the label `7.9.103-ce` is the NVD version `7.9.103`.
+  'cortex-xdr': { patterns: [[/^7\.9\.103-ce$/i, '7.9.103']] },
 };
 
 /** Leading segments the matching compares for this catalog entry, or null when it compares in full. */
@@ -86,10 +108,12 @@ export function versionPrecisionOf(catalogKey: string): number | null {
 /**
  * How an operating system reads the support dates of endoflife.date, so that they keep the meaning
  * of the former operating-system catalog of the IT settings. `eol_then_paid` (Ubuntu, RHEL and
- * its rebuilds, SLES): standard support ends with the security fixes (`eolFrom`), extended support is
- * the paid extension when published (`eoesFrom`: ESM, ELS, LTSS). `active_then_eol` (Windows Server,
- * Debian): standard is the end of mainstream or regular security support, extended the end of
- * extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
+ * its rebuilds, SLES, Alpine, AIX, IBM i, Solaris): standard support ends with the security fixes
+ * (`eolFrom`), extended support is the paid extension when published (`eoesFrom`: ESM, ELS, LTSS).
+ * IBM i and Solaris publish that extension; AIX and Alpine publish a single end. `active_then_eol`
+ * (Windows Server, Debian, Amazon Linux): standard is the end of mainstream or regular support
+ * (`eoasFrom`; Amazon Linux standard ends there and security support at `eolFrom`), extended the
+ * end of extended support or of Debian LTS (`eolFrom`; the paid ESU and ELTS are left out). The twin of `SUPPORT_RULES` in
  * `scripts/technologies/build-catalog.mjs`.
  */
 export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> = {
@@ -102,6 +126,11 @@ export const SUPPORT_RULES: Record<string, 'eol_then_paid' | 'active_then_eol'> 
   'oracle-linux': 'eol_then_paid',
   centos: 'eol_then_paid',
   'windows-server': 'active_then_eol',
+  'amazon-linux': 'active_then_eol',
+  'alpine-linux': 'eol_then_paid',
+  'ibm-aix': 'eol_then_paid',
+  'ibm-i': 'eol_then_paid',
+  'oracle-solaris': 'eol_then_paid',
 };
 
 /**
@@ -143,7 +172,11 @@ type OsRelease = { name: string; label: string | null; isLts: boolean };
  * script's PRODUCTS. Windows Server: the long-term releases only (the semi-annual `-sac` and annual
  * `-ac` channels are left out), the service pack dropped from the label (the newest service pack
  * comes first and takes it). Ubuntu: the LTS releases only. SLES: endoflife.date names a service
- * pack `15.5`, stored `15 SP5`, and `15.0` is `15`.
+ * pack `15.5`, stored `15 SP5`, and `15.0` is `15`. Amazon Linux drops the `AMI` prefix (`AMI 2018.03`
+ * → `2018.03`; `2` and `2023` stay). AIX collapses a technology level to the release (`7.3.4` →
+ * `7.3`) and stores that label as the version key, so the next level updates the same version.
+ * Windows Server also folds several cycles onto one label; those keys already shipped, so they stay
+ * the cycle name. Solaris stores the first Solaris 11 release as `11.0`.
  */
 const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean; label?: (release: OsRelease) => string }> = {
   'windows-server': {
@@ -166,6 +199,22 @@ const OS_RELEASE_RULES: Record<string, { keep?: (release: OsRelease) => boolean;
       const match = /^(\d+)\.(\d+)$/.exec(release.name);
       if (match) return match[2] === '0' ? match[1] : `${match[1]} SP${Number(match[2])}`;
       return cleanLabel(release.label, release.name);
+    },
+  },
+  'amazon-linux': {
+    label: (release) => cleanLabel(release.label, release.name).replace(/^AMI\s+/i, ''),
+  },
+  'ibm-aix': {
+    label: (release) => {
+      const match = /^(\d+\.\d+)\.\d+$/.exec(release.name);
+      if (match) return match[1];
+      return cleanLabel(release.label, release.name);
+    },
+  },
+  'oracle-solaris': {
+    label: (release) => {
+      const cleaned = cleanLabel(release.label, release.name);
+      return cleaned === '11' ? '11.0' : cleaned;
     },
   },
 };
@@ -210,12 +259,27 @@ export function cleanLabel(label: unknown, name: unknown): string {
   return text || String(name);
 }
 
+/** One version whose parentheses the NVD escapes (`9.16(4.51)` → `9.16\(4.51\)`), or null. */
+function escapedParensVersion(text: string): string | null {
+  const lower = text.toLowerCase();
+  if (!/^\d+(?:\.\d+)*(?:\([0-9a-z]+\)|[a-z]\d*)+$/.test(lower)) return null;
+  return lower.replace(/[()\\]/g, (char) => `\\${char}`);
+}
+
 /** The NVD version of a release label (`cpeVersionOf` of the script): null when the label is the version. */
 export function cpeVersionOf(label: string, catalogKey: string): string | null {
   const text = String(label ?? '').trim();
   const rule = CPE_VERSION_RULES[catalogKey];
   if (rule?.fromLabel) return text.toLowerCase() || null;
   for (const [pattern, version] of rule?.patterns ?? []) if (pattern.test(text)) return version;
+  if (rule?.escapedParens) {
+    const escaped = escapedParensVersion(text);
+    if (escaped) return escaped;
+  }
+  if (rule?.stripTrain) {
+    const train = /^(\d+(?:\.\d+)*)\.x$/i.exec(text);
+    if (train) return train[1];
+  }
   if (/^v?\d+(\.\d+)*[a-z]*$/i.test(text)) return null;
   return text.split(/\s+/).find((token) => /^\d+(\.\d+)*$/.test(token)) ?? null;
 }
@@ -301,11 +365,14 @@ export function versionsOfReleases(
     seenKeys.add(rawName);
     const { standard, extended } = supportDates(catalogKey, eoas, eol, eoes);
     const name = rawName;
+    // AIX: the key is the folded label (`7.3`), and nothing matches on a technology level.
+    // Windows Server folds service packs the same way; its keys shipped, so they stay the cycle name.
+    const folded = catalogKey === 'ibm-aix';
     out.push({
-      key: name,
+      key: folded ? label : name,
       label,
       cpe_version: cpeVersionOf(label, catalogKey),
-      build_prefixes: name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : [],
+      build_prefixes: folded ? [] : (name !== label && /^\d+(\.\d+)*$/.test(name) ? [name] : []),
       release_date: releaseDate,
       standard_support_end: standard,
       extended_support_end: extended === standard ? null : extended,
@@ -371,6 +438,21 @@ export function validCatalogVersion(value: unknown): value is CatalogVersion {
     && Array.isArray(v.build_prefixes) && v.build_prefixes.every((p) => typeof p === 'string' && p.length <= 100)
     && date(v.release_date) && date(v.standard_support_end) && date(v.extended_support_end)
     && !(v.standard_support_end && v.extended_support_end && (v.extended_support_end as string) < (v.standard_support_end as string));
+}
+
+/**
+ * The family an adoption writes. The catalog family when the tenant lists it. A catalog family
+ * `network` falls back to `network_security` when the tenant still has that code (a list saved
+ * before `network` existed). Any other family missing from the tenant list is `other`.
+ */
+export function catalogFamilyForTenant(
+  catalogFamily: string,
+  tenantFamilies: readonly { code: string }[] | null | undefined,
+): string {
+  const codes = new Set((tenantFamilies ?? []).map((item) => item.code));
+  if (codes.has(catalogFamily)) return catalogFamily;
+  if (catalogFamily === 'network' && codes.has('network_security')) return 'network_security';
+  return 'other';
 }
 
 /** The endoflife.date product of an entry, read from its `source_url`; null for an entry written by hand. */

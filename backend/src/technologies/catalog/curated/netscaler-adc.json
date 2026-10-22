@@ -1,0 +1,78 @@
+{
+  "key": "netscaler-adc",
+  "name": "NetScaler ADC",
+  "editor": "Cloud Software Group",
+  "lifecycle_url": "https://www.citrix.com/support/product-lifecycle/product-matrix.html",
+  "source_updated": "2025-02-26",
+  "version_grain": "firmware release as the vendor names it (14.1)",
+  "versions": [
+    {
+      "label": "14.1",
+      "aliases": [],
+      "release_date": "2023-08-08",
+      "standard_support_end": "2029-08-08",
+      "extended_support_end": "2030-08-08",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.citrix.com/support/product-lifecycle/product-matrix.html",
+      "source_terms": {
+        "release_date": "GA (in the Version / Model cell)",
+        "standard_support_end": "EOM",
+        "extended_support_end": "EOL"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Row \"NetScaler ADC and Gateway Firmware\". Release cycle explained in CTX241500 (https://support.citrix.com/external/article/241500)."
+    },
+    {
+      "label": "13.1",
+      "aliases": [],
+      "release_date": "2021-09-15",
+      "standard_support_end": "2026-09-15",
+      "extended_support_end": "2027-09-15",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.citrix.com/support/product-lifecycle/product-matrix.html",
+      "source_terms": {
+        "release_date": "GA (in the Version / Model cell)",
+        "standard_support_end": "EOM",
+        "extended_support_end": "EOL"
+      },
+      "checked_on": "2026-10-20",
+      "note": "EOL marked \"*\" on the matrix: for the SDX 14K FIPS platform, Citrix supports the 13.1 SVM with security fixes until 2028-03-01. 13.1 FIPS has the same dates. Dates confirmed by CTX241500."
+    },
+    {
+      "label": "13.0",
+      "aliases": [],
+      "release_date": "2019-05-15",
+      "standard_support_end": "2023-07-15",
+      "extended_support_end": "2024-07-15",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.citrix.com/support/product-lifecycle/legacy-product-matrix.html",
+      "source_terms": {
+        "release_date": "GA (in the Version / Model cell)",
+        "standard_support_end": "EOM",
+        "extended_support_end": "EOL"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed on the Legacy Product Matrix. Legacy Product Matrix \"Last updated: April 15, 2024\"."
+    },
+    {
+      "label": "12.1",
+      "aliases": [],
+      "release_date": "2018-05-25",
+      "standard_support_end": "2022-05-30",
+      "extended_support_end": "2023-05-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.citrix.com/support/product-lifecycle/legacy-product-matrix.html",
+      "source_terms": {
+        "release_date": "GA (in the Version / Model cell)",
+        "standard_support_end": "EOM",
+        "extended_support_end": "EOL"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed on the Legacy Product Matrix. Variants with later dates: 12.1 NDcPP (EOM 2023-12-31, EOL 2024-12-31) and 12.1 FIPS (EOM 2024-12-31, EOL 2025-12-31). Legacy Product Matrix \"Last updated: April 15, 2024\"."
+    }
+  ]
+}

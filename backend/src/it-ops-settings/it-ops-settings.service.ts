@@ -47,7 +47,8 @@ export const DEFAULT_TECHNOLOGY_FAMILIES: ItOpsEnumOption[] = [
   { code: 'monitoring', label: 'Monitoring' },
   { code: 'runtime', label: 'Runtime and framework' },
   { code: 'storage', label: 'Storage' },
-  { code: 'network_security', label: 'Network and security' },
+  { code: 'network', label: 'Network' },
+  { code: 'network_security', label: 'Security' },
   { code: 'administration', label: 'Administration' },
   { code: 'other', label: 'Other' },
 ];

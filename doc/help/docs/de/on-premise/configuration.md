@@ -482,6 +482,7 @@ Aus dem Katalog übernommene Technologien folgen seinen neuen Versionen, Support
 Hinweise:
 
 - Die API braucht ausgehenden HTTPS-Zugriff auf `endoflife.date` oder auf Ihren Spiegel (siehe [Firewall-Regeln](#firewall-regeln)).
+- Die tägliche Prüfung liest nur endoflife.date. Die Produkte, deren Daten KANAP auf den Seiten der Hersteller erhebt, werden mit jeder KANAP-Version aktualisiert.
 - Beide Modi laufen über die geplante Aufgabe **technology-catalog** (täglich und beim Start). Solange diese Aufgabe in den geplanten Aufgaben deaktiviert ist, wird nichts aktualisiert.
 - Ein in KANAP geänderter Wert oder eine dort gelöschte Version wird nie überschrieben oder wiederhergestellt.
 - Starten Sie die API nach einer Änderung dieser Werte neu.

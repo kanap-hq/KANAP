@@ -1,0 +1,469 @@
+{
+  "key": "juniper-junos",
+  "name": "Juniper Junos OS",
+  "editor": "HPE Juniper Networking",
+  "lifecycle_url": "https://support.juniper.net/support/eol/software/junos/",
+  "source_updated": "2026-07-14",
+  "version_grain": "release train as the vendor names it (Junos OS 23.4); label without the \"Junos OS\" prefix",
+  "versions": [
+    {
+      "label": "26.2",
+      "aliases": [],
+      "release_date": "2026-06-29",
+      "standard_support_end": "2031-06-29",
+      "extended_support_end": "2031-12-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "25.4",
+      "aliases": [],
+      "release_date": "2025-12-22",
+      "standard_support_end": "2030-12-22",
+      "extended_support_end": "2031-06-22",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "25.2",
+      "aliases": [],
+      "release_date": "2025-06-30",
+      "standard_support_end": "2030-06-30",
+      "extended_support_end": "2030-12-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "24.4",
+      "aliases": [],
+      "release_date": "2024-12-29",
+      "standard_support_end": "2029-12-29",
+      "extended_support_end": "2030-06-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "24.2",
+      "aliases": [],
+      "release_date": "2024-07-19",
+      "standard_support_end": "2029-07-19",
+      "extended_support_end": "2030-01-19",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "23.4",
+      "aliases": [],
+      "release_date": "2023-12-26",
+      "standard_support_end": "2028-12-26",
+      "extended_support_end": "2029-06-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 21: End of Engineering extended to 2029-09-15 and End of Support to 2031-09-15 for MX2008 SKUs listed in TSB106476."
+    },
+    {
+      "label": "23.2",
+      "aliases": [],
+      "release_date": "2023-06-23",
+      "standard_support_end": "2028-06-23",
+      "extended_support_end": "2028-12-23",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "23.1",
+      "aliases": [],
+      "release_date": "2023-03-31",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": "2024-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release), not EEOL."
+    },
+    {
+      "label": "22.4",
+      "aliases": [],
+      "release_date": "2022-12-22",
+      "standard_support_end": "2025-12-22",
+      "extended_support_end": "2026-06-22",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 19: End of Support extended to 2028-10-22 for PTX1000 and PTX10002-60C, to 2029-04-03 for PTX10008/PTX10016 and some line cards; FIPS mode 22.4R3 extended to 2026-12-31 (TSB107107)."
+    },
+    {
+      "label": "22.3",
+      "aliases": [],
+      "release_date": "2022-09-28",
+      "standard_support_end": "2024-09-28",
+      "extended_support_end": "2025-03-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release). Footnote 20: FIPS mode 22.3R3 extended to 2026-12-31 (TSB107107)."
+    },
+    {
+      "label": "22.2",
+      "aliases": [],
+      "release_date": "2022-06-23",
+      "standard_support_end": "2025-06-23",
+      "extended_support_end": "2025-12-23",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 16: per-platform extensions (EX9200 to 2027-03-31, some SRX SKUs to 2028-03-15, 22.2R3 on shipping QFX and EX4400 to 2027-12, FIPS mode 22.2R3 to 2026-12-31)."
+    },
+    {
+      "label": "22.1",
+      "aliases": [],
+      "release_date": "2022-03-24",
+      "standard_support_end": "2024-03-24",
+      "extended_support_end": "2024-09-24",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release), not EEOL."
+    },
+    {
+      "label": "21.4",
+      "aliases": [],
+      "release_date": "2021-12-20",
+      "standard_support_end": "2024-12-20",
+      "extended_support_end": "2025-06-20",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 12: per-platform extensions (SRX5k 2nd generation EOE 2025-09-15 and EOS 2027-09-15; EX4300-48MP mixed VC and EX4300-P/T EOE 2027-03-31 and EOS 2029-03-31; QFX5100 SKUs EOS 2027-07-01 or 2027-12-31 per TSB17913 and TSB69612)."
+    },
+    {
+      "label": "21.3",
+      "aliases": [],
+      "release_date": "2021-09-23",
+      "standard_support_end": "2023-09-23",
+      "extended_support_end": "2024-03-23",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release), not EEOL."
+    },
+    {
+      "label": "21.2",
+      "aliases": [],
+      "release_date": "2021-06-29",
+      "standard_support_end": "2024-06-29",
+      "extended_support_end": "2024-12-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 14: EOS extended to 2026-06-30 for MX5/10/40/80 and MX chassis affected by TSB17733; EOE 2025-12-31 and EOS 2028-03-15 for MX104."
+    },
+    {
+      "label": "21.1",
+      "aliases": [],
+      "release_date": "2021-03-25",
+      "standard_support_end": "2023-03-25",
+      "extended_support_end": "2023-09-25",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release). Footnote 17: EOS extended to 2026-10-15 for QFX5200-48Y."
+    },
+    {
+      "label": "20.4",
+      "aliases": [],
+      "release_date": "2020-12-25",
+      "standard_support_end": "2023-12-25",
+      "extended_support_end": "2024-06-25",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 13: EOS extended to 2027-03-31 for PTX3000BASE."
+    },
+    {
+      "label": "20.3",
+      "aliases": [],
+      "release_date": "2020-09-29",
+      "standard_support_end": "2022-09-29",
+      "extended_support_end": "2023-03-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release), not EEOL."
+    },
+    {
+      "label": "20.2",
+      "aliases": [],
+      "release_date": "2020-06-30",
+      "standard_support_end": "2023-06-30",
+      "extended_support_end": "2023-12-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 15: FIPS mode 20.2R3 EOE and EOS extended to 2026-12-30 (TSB70153)."
+    },
+    {
+      "label": "20.1",
+      "aliases": [],
+      "release_date": "2020-03-27",
+      "standard_support_end": "2022-03-27",
+      "extended_support_end": "2022-09-27",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Release type EOL (short-lived release), not EEOL."
+    },
+    {
+      "label": "19.4",
+      "aliases": [],
+      "release_date": "2019-12-26",
+      "standard_support_end": "2022-12-26",
+      "extended_support_end": "2023-06-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 15: FIPS mode 19.4R3 EOE and EOS extended to 2025-09-30 (TSB70153); 19.4R2-S2 on ACX6360-OR EOE 2023-06-22 and EOS 2027-09-01."
+    },
+    {
+      "label": "19.3",
+      "aliases": [],
+      "release_date": "2019-09-26",
+      "standard_support_end": "2022-09-26",
+      "extended_support_end": "2023-03-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 15: FIPS mode 19.3R3 EOE and EOS extended to 2026-09-30 (TSB70153)."
+    },
+    {
+      "label": "19.2",
+      "aliases": [],
+      "release_date": "2019-06-26",
+      "standard_support_end": "2022-06-26",
+      "extended_support_end": "2022-12-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 15: FIPS mode 19.2R3 EOE and EOS extended to 2026-09-30 (TSB70153)."
+    },
+    {
+      "label": "19.1",
+      "aliases": [],
+      "release_date": "2019-03-27",
+      "standard_support_end": "2022-03-27",
+      "extended_support_end": "2022-09-27",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 15: FIPS mode 19.1R3 EOE and EOS extended to 2026-09-30 (TSB70153)."
+    },
+    {
+      "label": "18.4",
+      "aliases": [],
+      "release_date": "2018-12-22",
+      "standard_support_end": "2021-12-22",
+      "extended_support_end": "2022-06-22",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Footnote 18: 18.4R1-S8 on ACX6360-OX EOE 2022-06-22 and EOS 2027-09-01."
+    },
+    {
+      "label": "18.3",
+      "aliases": [],
+      "release_date": "2018-09-26",
+      "standard_support_end": "2021-09-26",
+      "extended_support_end": "2022-03-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "12.3X48",
+      "aliases": [],
+      "release_date": "2015-03-06",
+      "standard_support_end": "2020-06-30",
+      "extended_support_end": "2022-06-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://support.juniper.net/support/eol/software/junos/",
+      "source_terms": {
+        "release_date": "FRS Date",
+        "standard_support_end": "End of Engineering",
+        "extended_support_end": "End of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Security device release (SRX), footnotes 1, 2 and 4: EOS extended to 2022-12-31 for SRX5K SKUs (TSB17796), to 2023-12-01 for SRX1400/3400/3600 and to 2024-11-30 for SRX100/200/500/600."
+    }
+  ]
+}

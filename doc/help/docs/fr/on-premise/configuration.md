@@ -482,6 +482,7 @@ Les technologies adoptées depuis le catalogue suivent ses nouvelles versions, s
 Remarques :
 
 - L'API a besoin d'un accès HTTPS sortant vers `endoflife.date`, ou vers votre miroir (voir [Règles de pare-feu](#regles-de-pare-feu)).
+- La vérification quotidienne lit uniquement endoflife.date. Les produits dont KANAP relève les dates sur les pages des éditeurs sont mis à jour à chaque version de KANAP.
 - Les deux modes passent par la tâche planifiée **technology-catalog** (chaque jour et au démarrage). Tant que cette tâche est désactivée dans les tâches planifiées, rien n'est mis à jour.
 - Une valeur changée dans KANAP, ou une version qui y a été supprimée, n'est jamais écrasée ni recréée.
 - Redémarrez l'API après avoir changé ces valeurs.

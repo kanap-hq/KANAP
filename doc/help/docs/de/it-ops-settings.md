@@ -134,6 +134,8 @@ Die Art jeder Technologie: Datenbank, Hypervisor, Verzeichnis und Identität usw
 
 Die Familie **Betriebssystem** kennzeichnet die Betriebssysteme: Eine Technologie dieser Familie, die einem Server ohne Betriebssystem hinzugefügt wird, wird zu seinem Betriebssystem. Siehe [Technologien](technologies.md#betriebssysteme).
 
+Die Standardliste hat eine Familie **Netzwerk** für Switches, Router und Load Balancer und eine Familie **Sicherheit** für Firewalls und VPN-Gateways. **Sicherheit** hieß früher **Netzwerk und Sicherheit**. Eine Liste, die Sie bereits geändert haben, behält ihre Familien und deren Namen. Ein aus dem Katalog übernommenes Netzwerkprodukt kommt dann in die frühere Familie **Netzwerk und Sicherheit**.
+
 ### Verbindungstypen
 
 Ein zweistufiger Katalog (Kategorie und Eintrag) von Verbindungsprotokollen, mit typischen Ports.
