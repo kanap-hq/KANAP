@@ -2702,25 +2702,13 @@
         "deprecated": "{{label}} (deprecated)"
       },
       "relations": {
-        "dependencies": "Interface dependencies",
         "upstream": "Upstream interfaces",
-        "selectUpstream": "Select upstream interfaces",
         "downstream": "Downstream interfaces",
-        "selectDownstream": "Select downstream interfaces",
-        "externalUrls": "External URLs",
-        "addLink": "Add link",
-        "noLinks": "No links added yet.",
-        "description": "Description",
-        "openLink": "Open link",
-        "attachments": "Attachments",
-        "dropHint": "Drag and drop files here, or use the button to select them",
-        "selectFiles": "Select files",
-        "saveFirst": "Save the interface once before uploading attachments.",
-        "uploading_one": "Uploading {{count}} file…",
-        "uploading_other": "Uploading {{count}} files…",
-        "noAttachments": "No attachments uploaded yet.",
-        "deleteAttachmentTitle": "Delete attachment",
-        "deleteAttachmentMessage": "Delete this attachment from the interface."
+        "empty": {
+          "upstream": "No upstream interface linked.",
+          "downstream": "No downstream interface linked."
+        },
+        "search": "Search interfaces"
       },
       "mapping": {
         "operations": {

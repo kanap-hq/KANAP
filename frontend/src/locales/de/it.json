@@ -2702,25 +2702,13 @@
         "deprecated": "{{label}} (veraltet)"
       },
       "relations": {
-        "dependencies": "Schnittstellenabhängigkeiten",
         "upstream": "Vorgelagerte Schnittstellen",
-        "selectUpstream": "Vorgelagerte Schnittstellen auswählen",
         "downstream": "Nachgelagerte Schnittstellen",
-        "selectDownstream": "Nachgelagerte Schnittstellen auswählen",
-        "externalUrls": "Externe URLs",
-        "addLink": "Link hinzufügen",
-        "noLinks": "Noch keine Links hinzugefügt.",
-        "description": "Beschreibung",
-        "openLink": "Link öffnen",
-        "attachments": "Anhänge",
-        "dropHint": "Ziehen Sie Dateien hierher oder wählen Sie sie über die Schaltfläche aus",
-        "selectFiles": "Dateien auswählen",
-        "saveFirst": "Speichern Sie die Schnittstelle einmal, bevor Sie Anhänge hochladen.",
-        "uploading_one": "{{count}} Datei wird hochgeladen…",
-        "uploading_other": "{{count}} Dateien werden hochgeladen…",
-        "noAttachments": "Noch keine Anhänge hochgeladen.",
-        "deleteAttachmentTitle": "Anhang löschen",
-        "deleteAttachmentMessage": "Diesen Anhang aus der Schnittstelle löschen."
+        "empty": {
+          "upstream": "Keine vorgelagerte Schnittstelle verknüpft.",
+          "downstream": "Keine nachgelagerte Schnittstelle verknüpft."
+        },
+        "search": "Schnittstellen suchen"
       },
       "mapping": {
         "operations": {

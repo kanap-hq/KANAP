@@ -39,6 +39,7 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { ShareRateLimit } from '../notifications/share-rate-limit';
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
+import { interfaceRelationKindOrThrow } from './interface-relations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('interfaces')
@@ -528,6 +529,47 @@ export class InterfacesController {
       ctx.userId || null,
       { manager: ctx.manager },
     );
+  }
+
+  /** The Relations tab: upstream and downstream interfaces in one round trip. `:id` is a uuid or `INT-n`. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
+  @Get(':id/relations')
+  async relations(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    await this.assertUnrestrictedApplicationReader(ctx);
+    return this.svc.relations(id, { manager: ctx.manager });
+  }
+
+  /** Link one upstream or downstream interface (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, String(body?.id ?? ''), true, ctx);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'member')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, targetId, false, ctx);
+  }
+
+  /** An unknown kind is 404 before the access scope is read. */
+  private async writeRelation(kind: string, ref: string, targetId: string, add: boolean, ctx: TenantRequest) {
+    interfaceRelationKindOrThrow(kind);
+    await this.assertUnrestrictedApplicationReader(ctx);
+    return this.svc.setRelation(kind, ref, targetId, add, ctx.userId || null, { manager: ctx.manager });
   }
 
   // Key identifiers
