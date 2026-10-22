@@ -1543,14 +1543,6 @@
           "reviewImported": "Revue d’incident importée"
         }
       },
-      "relations": {
-        "assets": "Actifs",
-        "assetsPlaceholder": "Rechercher des actifs",
-        "applications": "Applications",
-        "applicationsPlaceholder": "Rechercher des applications",
-        "technologies": "Technologies",
-        "technologiesPlaceholder": "Rechercher des technologies"
-      },
       "drawer": {
         "category": "Catégorie",
         "noCategory": "Aucune catégorie",
@@ -1582,7 +1574,6 @@
         "saveFailed": "Échec de l'enregistrement de l'incident",
         "createFailed": "Échec de la création de l'incident",
         "entryFailed": "Échec de l'ajout de l'entrée de journal",
-        "relationsFailed": "Échec de l'enregistrement des liens",
         "attachmentsFailed": "Échec de la mise à jour des pièces jointes",
         "exportPdfFailed": "Impossible d'exporter le rapport PDF.",
         "confidentialityFailed": "Impossible de mettre à jour l'accès",
@@ -1800,13 +1791,16 @@
           "contract": "Contrat",
           "project": "Projet",
           "application": "Application",
-          "asset": "Actif"
+          "asset": "Actif",
+          "technology": "Technologie"
         },
         "via": {
           "same_supplier": "même fournisseur",
           "contract": "via le contrat {{label}}",
           "project": "via le projet {{label}}",
-          "task": "porte la tâche {{label}}"
+          "task": "porte la tâche {{label}}",
+          "asset_technology": "technologie de l'actif {{label}}",
+          "application_technology": "technologie de l'application {{label}}"
         },
         "viaHost": "{{server}} (sur {{host}})",
         "technologyLink": {
@@ -2708,25 +2702,13 @@
         "deprecated": "{{label}} (obsolète)"
       },
       "relations": {
-        "dependencies": "Dépendances de l'interface",
         "upstream": "Interfaces en amont",
-        "selectUpstream": "Sélectionner les interfaces en amont",
         "downstream": "Interfaces en aval",
-        "selectDownstream": "Sélectionner les interfaces en aval",
-        "externalUrls": "URL externes",
-        "addLink": "Ajouter un lien",
-        "noLinks": "Aucun lien ajouté pour le moment.",
-        "description": "Description",
-        "openLink": "Ouvrir le lien",
-        "attachments": "Pièces jointes",
-        "dropHint": "Glissez-déposez des fichiers ici, ou utilisez le bouton pour les sélectionner",
-        "selectFiles": "Sélectionner des fichiers",
-        "saveFirst": "Enregistrez l'interface une première fois avant d'ajouter des pièces jointes.",
-        "uploading_one": "Envoi de {{count}} fichier…",
-        "uploading_other": "Envoi de {{count}} fichiers…",
-        "noAttachments": "Aucune pièce jointe pour le moment.",
-        "deleteAttachmentTitle": "Supprimer la pièce jointe",
-        "deleteAttachmentMessage": "Supprimer cette pièce jointe de l'interface."
+        "empty": {
+          "upstream": "Aucune interface en amont liée.",
+          "downstream": "Aucune interface en aval liée."
+        },
+        "search": "Rechercher des interfaces"
       },
       "mapping": {
         "operations": {

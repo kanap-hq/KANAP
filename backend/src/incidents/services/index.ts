@@ -1,7 +1,7 @@
 export { IncidentsService } from './incidents.service';
 export { IncidentEntriesService } from './incident-entries.service';
-export { IncidentRelationsService } from './incident-relations.service';
-export type { IncidentLinkedObject } from './incident-relations.service';
+export { IncidentRelationsService, incidentRelationKindOrThrow } from './incident-relations.service';
+export type { IncidentLinkedObject, IncidentRelationKind } from './incident-relations.service';
 export { IncidentsAttachmentsService } from './incidents-attachments.service';
 export { IncidentRecordService } from './incident-record.service';
 export type { IncidentRecordOpts } from './incident-record.service';

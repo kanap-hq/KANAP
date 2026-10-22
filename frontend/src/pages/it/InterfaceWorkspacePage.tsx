@@ -418,69 +418,6 @@ export default function InterfaceWorkspacePage() {
     }
   }, [applyLocalPatch, canManage, getCurrentState, interfaceApiId, isCreate, replaceCurrent, t]);
 
-  const persistDependencies = React.useCallback(async (rows: InterfaceDependency[]) => {
-    if (isCreate) {
-      applyLocalPatch({ dependencies: rows }, { markCreateDirty: true });
-      return;
-    }
-    if (!canManage) {
-      throw new Error(t('messages.saveInterfaceFailed'));
-    }
-    if (!interfaceApiId) {
-      throw new Error(t('messages.saveInterfaceFailed'));
-    }
-
-    const upstreamIds = rows
-      .filter((item) => item.direction === 'upstream')
-      .map((item) => item.related_interface_id)
-      .filter(Boolean);
-    const downstreamIds = rows
-      .filter((item) => item.direction === 'downstream')
-      .map((item) => item.related_interface_id)
-      .filter(Boolean);
-    const previous = cloneState(getCurrentState());
-    applyLocalPatch({ dependencies: rows });
-    try {
-      await api.post(`/interfaces/${interfaceApiId}/dependencies/bulk-replace`, {
-        upstream_ids: upstreamIds,
-        downstream_ids: downstreamIds,
-      });
-    } catch (saveError) {
-      replaceCurrent(previous);
-      throw saveError;
-    }
-  }, [applyLocalPatch, canManage, getCurrentState, interfaceApiId, isCreate, replaceCurrent, t]);
-
-  const persistLinks = React.useCallback(async (rows: InterfaceLink[]) => {
-    const nextRows = rows
-      .filter((item) => String(item.url || '').trim())
-      .map((item) => ({
-        kind: String(item.kind || 'functional').trim() || 'functional',
-        description: String(item.description || '').trim() || null,
-        url: normalizeUrl(item.url),
-      }));
-
-    if (isCreate) {
-      applyLocalPatch({ links: nextRows as InterfaceLink[] }, { markCreateDirty: true });
-      return;
-    }
-    if (!canManage) {
-      throw new Error(t('messages.saveInterfaceFailed'));
-    }
-    if (!interfaceApiId) {
-      throw new Error(t('messages.saveInterfaceFailed'));
-    }
-
-    const previous = cloneState(getCurrentState());
-    applyLocalPatch({ links: rows });
-    try {
-      await api.post(`/interfaces/${interfaceApiId}/links/bulk-replace`, { links: nextRows });
-    } catch (saveError) {
-      replaceCurrent(previous);
-      throw saveError;
-    }
-  }, [applyLocalPatch, canManage, getCurrentState, interfaceApiId, isCreate, replaceCurrent, t]);
-
   const persistLegs = React.useCallback(async (nextLegs: InterfaceLeg[]) => {
     if (isCreate) {
       applyLocalPatch({ legs: nextLegs }, { markCreateDirty: true });
@@ -638,7 +575,14 @@ export default function InterfaceWorkspacePage() {
     navigate(`/it/interfaces/${targetId}/${routeTab}${qs ? `?${qs}` : ''}`);
   }, [navigate, routeTab, searchParams]);
 
-  const relationCount = (current?.dependencies?.length || 0) + (current?.links?.length || 0) + (current?.attachments?.length || 0);
+  // The tab reports what it lists once open; until then the detail's own lists count.
+  const [tabRelationCount, setTabRelationCount] = React.useState<{ key: string; count: number } | null>(null);
+  const relationCount = tabRelationCount?.key === routeEntityKey
+    ? tabRelationCount.count
+    : (current?.dependencies?.length || 0) + (current?.links?.length || 0) + (current?.attachments?.length || 0);
+  const handleRelationCount = React.useCallback((count: number) => {
+    setTabRelationCount({ key: routeEntityKey, count });
+  }, [routeEntityKey]);
 
   const tabs: PortfolioDetailWorkspaceTab[] = React.useMemo(() => [
     { key: 'overview', label: t('workspace.interface.tabs.overview') },
@@ -830,15 +774,8 @@ export default function InterfaceWorkspacePage() {
           </Box>
         )}
 
-        {routeTab === 'relations' && !isCreate && (
-          <InterfaceRelationsTab
-            canManage={canManage}
-            data={current}
-            update={applyLocalPatch}
-            markDirty={() => undefined}
-            onReplaceDependencies={persistDependencies}
-            onReplaceLinks={persistLinks}
-          />
+        {routeTab === 'relations' && !isCreate && current?.id && (
+          <InterfaceRelationsTab key={current.id} interfaceId={current.id} onCountChange={handleRelationCount} />
         )}
       </PortfolioDetailWorkspaceShell>
 

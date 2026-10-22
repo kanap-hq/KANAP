@@ -60,9 +60,11 @@ async function testReviewIsNotCounted() {
   });
 }
 
-// The incident's technologies (lot T2b) belong to the infrastructure: a caller who cannot read it
-// gets `counts.technologies` null, a 403 on their list and on their replacement, and no link is
-// removed. A reader of the infrastructure gets the count and the list.
+// Relations the tab shows are counted for a reader of their module only. Assets and technologies
+// need the infrastructure, applications need applications. A caller who cannot read a module gets
+// that count null (a linked row still there, so null is not zero). Technologies still refuse their
+// old list and replacement, and no link is removed. A reader of the infrastructure gets the count
+// and the list.
 async function testTechnologiesNeedTheInfrastructure() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seed(runner, 'incdoc-tech');
@@ -71,6 +73,17 @@ async function testTechnologiesNeedTheInfrastructure() {
       [s.tenantId],
     );
     await runner.query(`INSERT INTO incident_technologies (tenant_id, incident_id, technology_id) VALUES ($1, $2, $3)`, [s.tenantId, s.incidentId, techId]);
+    const [{ id: assetId }] = await runner.query(
+      `INSERT INTO assets (tenant_id, name, kind, environment, status, created_at, updated_at)
+       VALUES ($1, 'DB server', 'physical_server', 'prod', 'active', now(), now()) RETURNING id`,
+      [s.tenantId],
+    );
+    await runner.query(`INSERT INTO incident_assets (tenant_id, incident_id, asset_id) VALUES ($1, $2, $3)`, [s.tenantId, s.incidentId, assetId]);
+    const [{ id: appId }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Billing') RETURNING id`,
+      [s.tenantId],
+    );
+    await runner.query(`INSERT INTO incident_applications (tenant_id, incident_id, application_id) VALUES ($1, $2, $3)`, [s.tenantId, s.incidentId, appId]);
     const relations = new IncidentRelationsService(undefined as any, { log: async () => undefined } as any);
     const args: any[] = Array.from({ length: 12 }, () => undefined);
     args[0] = service(runner);
@@ -79,7 +92,10 @@ async function testTechnologiesNeedTheInfrastructure() {
     const ctx = (permissions: Record<string, string>): any => ({ manager: runner.manager, tenantId: s.tenantId, userId: null, isAdmin: false, permissions });
 
     const incidentsOnly = ctx({ incidents: 'contributor' });
-    assert.equal(((await controller.get(s.incidentId, incidentsOnly)) as any).counts.technologies, null);
+    const hidden = ((await controller.get(s.incidentId, incidentsOnly)) as any).counts;
+    assert.equal(hidden.assets, null);
+    assert.equal(hidden.applications, null);
+    assert.equal(hidden.technologies, null);
     for (const call of [
       () => controller.listTechnologies(s.incidentId, incidentsOnly),
       () => controller.bulkReplaceTechnologies(s.incidentId, { technology_ids: [] }, incidentsOnly),
@@ -91,12 +107,21 @@ async function testTechnologiesNeedTheInfrastructure() {
     assert.equal(n, 1, 'no link removed');
 
     const reader = ctx({ incidents: 'contributor', infrastructure: 'reader' });
-    assert.equal(((await controller.get(s.incidentId, reader)) as any).counts.technologies, 1);
+    const shown = ((await controller.get(s.incidentId, reader)) as any).counts;
+    assert.equal(shown.assets, 1);
+    assert.equal(shown.applications, null, 'a linked application stays null without the applications read');
+    assert.equal(shown.technologies, 1);
     assert.deepEqual((await controller.listTechnologies(s.incidentId, reader)).map((row) => row.reference), ['TEC-1']);
+
+    const applications = ctx({ incidents: 'reader', applications: 'reader' });
+    const appCounts = ((await controller.get(s.incidentId, applications)) as any).counts;
+    assert.equal(appCounts.applications, 1);
+    assert.equal(appCounts.assets, null);
+    assert.equal(appCounts.technologies, null);
   });
 }
 
 void runSpecs('incident-documents-count', [
   ['the review is not counted among the incident documents', testReviewIsNotCounted],
-  ['the technologies need the right to read the infrastructure', testTechnologiesNeedTheInfrastructure],
+  ['relation counts follow the module the tab shows', testTechnologiesNeedTheInfrastructure],
 ]);

@@ -151,7 +151,7 @@ const incident: Incident = {
   asset_count: 0,
   application_count: 0,
   task_count: 0,
-  counts: { entries: 0, assets: 0, applications: 0, tasks: 0, documents: 0, attachments: 0 },
+  counts: { entries: 0, assets: 0, applications: 0, technologies: 0, tasks: 0, documents: 0, attachments: 0 },
 };
 
 function renderPage(tab = 'overview') {
@@ -480,6 +480,23 @@ describe('IncidentWorkspacePage — delete', () => {
     renderPage();
     await screen.findByText('workspace.incident.actions.exportPdf');
     expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  });
+});
+
+describe('IncidentWorkspacePage — Relations badge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    authLevel.incidents = 'admin';
+    vi.mocked(api.get).mockResolvedValue({ data: { id: 'doc-1', item_number: 12, item_ref: 'DOC-12', content_markdown: '', revision: 1, edit_lock: null } } as any);
+  });
+
+  it('sums each visible section and counts a hidden one as zero', async () => {
+    vi.mocked(incidentsApi.get).mockResolvedValue({
+      ...incident,
+      counts: { ...incident.counts, assets: 2, applications: null, technologies: null, tasks: 3 },
+    });
+    renderPage();
+    await waitFor(() => expect(screen.getByTestId('tab-relations')).toHaveTextContent('5'));
   });
 });
 

@@ -1543,14 +1543,6 @@
           "reviewImported": "Incident review imported"
         }
       },
-      "relations": {
-        "assets": "Assets",
-        "assetsPlaceholder": "Search assets",
-        "applications": "Applications",
-        "applicationsPlaceholder": "Search applications",
-        "technologies": "Technologies",
-        "technologiesPlaceholder": "Search technologies"
-      },
       "drawer": {
         "category": "Category",
         "noCategory": "No category",
@@ -1582,7 +1574,6 @@
         "saveFailed": "Failed to save incident",
         "createFailed": "Failed to create incident",
         "entryFailed": "Failed to add the journal entry",
-        "relationsFailed": "Failed to save links",
         "attachmentsFailed": "Failed to update attachments",
         "exportPdfFailed": "Could not export the PDF report.",
         "confidentialityFailed": "Failed to update access",
@@ -1800,13 +1791,16 @@
           "contract": "Contract",
           "project": "Project",
           "application": "Application",
-          "asset": "Asset"
+          "asset": "Asset",
+          "technology": "Technology"
         },
         "via": {
           "same_supplier": "same supplier",
           "contract": "via the contract {{label}}",
           "project": "via the project {{label}}",
-          "task": "carries the task {{label}}"
+          "task": "carries the task {{label}}",
+          "asset_technology": "technology of the asset {{label}}",
+          "application_technology": "technology of the application {{label}}"
         },
         "viaHost": "{{server}} (on {{host}})",
         "technologyLink": {
@@ -2708,25 +2702,13 @@
         "deprecated": "{{label}} (deprecated)"
       },
       "relations": {
-        "dependencies": "Interface dependencies",
         "upstream": "Upstream interfaces",
-        "selectUpstream": "Select upstream interfaces",
         "downstream": "Downstream interfaces",
-        "selectDownstream": "Select downstream interfaces",
-        "externalUrls": "External URLs",
-        "addLink": "Add link",
-        "noLinks": "No links added yet.",
-        "description": "Description",
-        "openLink": "Open link",
-        "attachments": "Attachments",
-        "dropHint": "Drag and drop files here, or use the button to select them",
-        "selectFiles": "Select files",
-        "saveFirst": "Save the interface once before uploading attachments.",
-        "uploading_one": "Uploading {{count}} file…",
-        "uploading_other": "Uploading {{count}} files…",
-        "noAttachments": "No attachments uploaded yet.",
-        "deleteAttachmentTitle": "Delete attachment",
-        "deleteAttachmentMessage": "Delete this attachment from the interface."
+        "empty": {
+          "upstream": "No upstream interface linked.",
+          "downstream": "No downstream interface linked."
+        },
+        "search": "Search interfaces"
       },
       "mapping": {
         "operations": {

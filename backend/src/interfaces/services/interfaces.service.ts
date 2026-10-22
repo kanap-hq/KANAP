@@ -160,6 +160,14 @@ export class InterfacesService {
     return this.bindingsService.bulkReplaceDependencies(interfaceId, upstreamIds, downstreamIds, userId, opts);
   }
 
+  relations(ref: string, opts?: ServiceOpts) {
+    return this.bindingsService.relations(ref, opts);
+  }
+
+  setRelation(kind: string, ref: string, targetId: string, add: boolean, userId: string | null, opts?: ServiceOpts) {
+    return this.bindingsService.setRelation(kind, ref, targetId, add, userId, opts);
+  }
+
   // =========================================================================
   // Key Identifier Operations (delegated to InterfaceBindingsManagementService)
   // =========================================================================

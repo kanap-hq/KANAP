@@ -25,12 +25,15 @@ import { StorageService } from '../common/storage/storage.service';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { canReadResource } from '../common/record-usages';
 import { resolveToUuid } from '../common/resolve-item-id';
+import { parseTargetId } from '../common/relations/relation-target';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import { KnowledgeService } from '../knowledge/knowledge.service';
 import { InlineImageResolverService } from '../knowledge/inline-image-resolver.service';
 import {
   IncidentEntriesService,
   IncidentRelationsService,
+  incidentRelationKindOrThrow,
   IncidentReportService,
   IncidentsAttachmentsService,
   IncidentsDeleteService,
@@ -73,7 +76,28 @@ export class IncidentsController {
   }
 
   private opts(ctx: TenantRequest) {
-    return { manager: ctx.manager, tenantId: ctx.tenantId, viewer: incidentViewerFromContext(ctx), technologies: canReadResource(ctx, 'infrastructure') };
+    return {
+      manager: ctx.manager,
+      tenantId: ctx.tenantId,
+      viewer: incidentViewerFromContext(ctx),
+      technologies: canReadResource(ctx, 'infrastructure'),
+      applications: canReadResource(ctx, 'applications'),
+    };
+  }
+
+  /**
+   * The detail and the Relations tab. A Business Contributor who reads applications is limited
+   * to the applications they take part in. List, journal and attachment routes stay on `opts`.
+   */
+  private async viewOpts(ctx: TenantRequest) {
+    const base = this.opts(ctx);
+    if (!base.applications || !ctx.manager) return base;
+    const applicationScope = await resolveBusinessContributorScopeForUser(
+      { manager: ctx.manager, userId: ctx.userId || '', tenantId: ctx.tenantId, isAdmin: ctx.isAdmin },
+      'applications',
+      'reader',
+    );
+    return applicationScope ? { ...base, applicationScope } : base;
   }
 
   private async visibleId(idOrRef: string, ctx: TenantRequest): Promise<string> {
@@ -322,6 +346,55 @@ export class IncidentsController {
   ) {
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, this.opts(ctx));
+  }
+
+  /** Assets, applications and technologies, in one round trip. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'reader')
+  @Get(':id/relations')
+  async getRelations(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    const id = await this.visibleId(idOrRef, ctx);
+    return this.relations.getRelations(id, await this.viewOpts(ctx));
+  }
+
+  /** Link one asset, application or technology (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'contributor')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, idOrRef, String(body?.id ?? ''), true, ctx);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('incidents', 'contributor')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, idOrRef, targetId, false, ctx);
+  }
+
+  /**
+   * Unknown kind first (404), then the target module (403), then the id (400), then the incident.
+   * A bad id must not reveal whether the module or the incident exists.
+   */
+  private async writeRelation(kindRaw: string, idOrRef: string, rawTarget: string, add: boolean, ctx: TenantRequest) {
+    const kind = incidentRelationKindOrThrow(kindRaw);
+    const moduleName = kind === 'applications' ? 'applications' : 'infrastructure';
+    if (!canReadResource(ctx, moduleName)) {
+      throw new ForbiddenException(kind === 'technologies' ? 'You cannot read technologies.' : 'You cannot read this module.');
+    }
+    parseTargetId(rawTarget);
+    const id = await this.visibleId(idOrRef, ctx);
+    return this.relations.setLink(kind, id, rawTarget, add, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   // Documents (knowledge relations live on the knowledge side)
@@ -593,7 +666,7 @@ export class IncidentsController {
   async reopen(@Param('id') idOrRef: string, @Body() body: IncidentReasonInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
     const { reason } = parseIncidentReason(body);
-    return this.svc.reopen(id, reason, ctx.userId || null, this.opts(ctx));
+    return this.svc.reopen(id, reason, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -602,7 +675,7 @@ export class IncidentsController {
   async cancel(@Param('id') idOrRef: string, @Body() body: IncidentReasonInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
     const { reason } = parseIncidentReason(body);
-    return this.svc.cancel(id, reason, ctx.userId || null, this.opts(ctx));
+    return this.svc.cancel(id, reason, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -615,7 +688,7 @@ export class IncidentsController {
   ) {
     const id = await this.visibleId(idOrRef, ctx);
     const { confidential } = parseIncidentConfidentiality(body);
-    return this.svc.setConfidentiality(id, confidential, ctx.userId || null, this.opts(ctx));
+    return this.svc.setConfidentiality(id, confidential, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   // Delete (admin). What a delete removes or refuses, for the confirmation; before ':id'.
@@ -651,14 +724,14 @@ export class IncidentsController {
   @Get(':id')
   async get(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
-    return this.svc.get(id, this.opts(ctx));
+    return this.svc.get(id, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
   @Post()
-  create(@Body() body: CreateIncidentInput, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, ctx.userId || null, this.opts(ctx));
+  async create(@Body() body: CreateIncidentInput, @Tenant() ctx: TenantRequest) {
+    return this.svc.create(body, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -666,6 +739,6 @@ export class IncidentsController {
   @Patch(':id')
   async update(@Param('id') idOrRef: string, @Body() body: UpdateIncidentInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
-    return this.svc.update(id, body, ctx.userId || null, this.opts(ctx));
+    return this.svc.update(id, body, ctx.userId || null, await this.viewOpts(ctx));
   }
 }
