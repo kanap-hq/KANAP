@@ -18,6 +18,7 @@ const camel = (code: string) => code.replace(/_([a-z])/g, (_, letter: string) =>
 /**
  * The labels of the application, asset and technology sections, from the same helpers as the lists.
  * An empty value is "—". The factories stay free of hooks and receive these functions.
+ * Import this file directly: the catalogs load the i18n instance, which the relations barrel must not.
  */
 export function useRelationLabels() {
   const { t } = useTranslation('it');

@@ -160,8 +160,18 @@ describe('ContractWorkspacePage', () => {
           },
         };
       }
-      if (url === '/contracts/c-1/applications') return { data: { items: [{ id: 'app-1', name: 'SAP S/4HANA' }] } };
-      if (url === '/contracts/c-1/assets') return { data: { items: [{ id: 'as-1', name: 'sap-prd-db01' }] } };
+      if (url === '/contracts/c-1/relations') {
+        return {
+          data: {
+            applications: [{ id: 'app-1', reference: 'APP-1', name: 'SAP S/4HANA', lifecycle: 'active', business_criticality: 'high', status: 'enabled' }],
+            assets: [{ id: 'as-1', reference: 'AST-1', name: 'sap-prd-db01', kind: 'physical_server', environment: 'prod', status: 'active' }],
+            technologies: [],
+            suggestions: [],
+          },
+        };
+      }
+      if (url === '/contracts/c-1/links') return { data: [{ id: 'l-1', description: 'Vendor portal', url: 'https://me.example.com', created_at: '2026-10-01T10:00:00.000Z' }] };
+      if (url === '/contracts/c-1/attachments') return { data: [{ id: 'a-1', original_filename: 'contract.pdf', size: 2048, uploaded_at: '2026-10-01T10:00:00.000Z' }] };
       if (url === '/contracts/c-1/contacts') return { data: [] };
       if (url === '/budget-columns') {
         return { data: { labels: { planned: null, committed: 'Revised', forecast: null, actual: null, expected_landing: null }, enabled: { planned: true, committed: true, forecast: false, actual: true, expected_landing: true }, group_spread: {}, default_column: 'planned' } };
@@ -512,7 +522,7 @@ describe('ContractWorkspacePage', () => {
     expect(await screen.findByText('SAP S/4HANA')).toBeInTheDocument();
     expect(await screen.findByText('sap-prd-db01')).toBeInTheDocument();
     expect(screen.getByText('contract.pdf')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: 'contracts.relations.addFiles' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: 'linksAndFiles.attachFile' })).toBeInTheDocument();
     expect(screen.getByText('Vendor portal')).toBeInTheDocument();
     expect(await screen.findByRole('button', { name: 'contacts.syncFromSupplier' })).toBeInTheDocument();
   });

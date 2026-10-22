@@ -627,30 +627,6 @@
         "hintEnds": "Nada queda comprometido después del fin del contrato el {{date}}."
       }
     },
-    "relations": {
-      "applications": "Aplicaciones",
-      "assets": "Activos",
-      "technologies": "Tecnologías",
-      "selectApplications": "Seleccionar aplicaciones",
-      "selectAssets": "Seleccionar activos",
-      "selectTechnologies": "Seleccionar tecnologías",
-      "relevantWebsites": "Sitios web relevantes",
-      "addUrl": "Agregar URL",
-      "linkName": "Nombre",
-      "linkUrl": "URL",
-      "linkNamePlaceholder": "p. ej., portal del proveedor",
-      "noWebsites": "No se han agregado sitios web",
-      "deleteWebsite": "Eliminar enlace",
-      "addLinkTitle": "Agregar enlace",
-      "editLinkTitle": "Editar enlace",
-      "attachments": "Adjuntos",
-      "addFiles": "Agregar archivos",
-      "noAttachments": "Sin adjuntos",
-      "noAttachmentsDrop": "Sin adjuntos. Suelte archivos aquí para adjuntarlos.",
-      "uploadingFiles_one": "Subiendo {{count}} archivo…",
-      "uploadingFiles_other": "Subiendo {{count}} archivos…",
-      "deleteAttachment": "Eliminar adjunto"
-    },
     "compliance": {
       "title": "Requisitos",
       "subtitle": "deducidos de las aplicaciones y activos vinculados",
