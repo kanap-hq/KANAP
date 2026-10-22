@@ -5,8 +5,19 @@ import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
-/** The kinds `setOwnedLink` writes one row at a time. Incidents stay with their own service. */
-export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects';
+/**
+ * The kinds `setOwnedLink` writes one row at a time. Incidents stay with their own service.
+ * `applications`, `assets` and `technologies` are the contract tab's targets (lot R2b): a row of
+ * that table in the tenant, or 400 with the caller's `notFound`.
+ */
+export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies';
+
+/** Existence of an application, an asset or a technology. The table names come only from here. */
+const ROW_TARGETS = {
+  applications: 'applications',
+  assets: 'assets',
+  technologies: 'technologies',
+} as const;
 
 /** The owner row, locked FOR NO KEY UPDATE. Table and column names come from the callers' constants. */
 export type OwnedRelationOwner = { table: string; idColumn: string };
@@ -53,11 +64,13 @@ export async function assertProjectVisible(
 }
 
 /**
- * Link (`add`) or unlink one budget line, contract or project the owner holds.
+ * Link (`add`) or unlink one budget line, contract, project, application, asset or technology
+ * the owner holds.
  *
  * (1) `allowed` false → 403. (2) A bad target id → 400, before the owner is read.
  * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE. (5) A budget line's nature,
- * or 400. (6) A contract's existence. (7) A project's visibility. (8) The stored set
+ * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset or a
+ * technology exists in the tenant, or 400 with `notFound`. (8) The stored set
  * (a budget line: the links of that nature only). (9) Linking what is linked, or unlinking
  * what is not, changes nothing and writes no audit row. Otherwise one INSERT or DELETE and
  * one audit row: `recordId` the owner, before and after the sorted ids.
@@ -106,8 +119,14 @@ export async function setOwnedLink(args: {
   } else if (args.kind === 'contracts') {
     const rows: unknown[] = await args.manager.query(`SELECT 1 FROM contracts WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
     if (rows.length === 0) throw new BadRequestException(args.link.notFound);
-  } else {
+  } else if (args.kind === 'projects') {
     await assertProjectVisible(args.manager, tenantId, id, args.projectScope, args.link.notFound);
+  } else {
+    const rows: unknown[] = await args.manager.query(
+      `SELECT 1 FROM ${ROW_TARGETS[args.kind]} WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, id],
+    );
+    if (rows.length === 0) throw new BadRequestException(args.link.notFound);
   }
 
   const scopeSql = nature ? linkedLineOf('l.tenant_id', `l.${args.link.targetColumn}`, nature) : '';
