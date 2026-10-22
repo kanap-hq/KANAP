@@ -1,13 +1,15 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { EntityManager } from 'typeorm';
+import { UUID_RE } from '../common/relations/relation-target';
 import { vulnerabilityAlertsSql } from '../vulnerabilities/vulnerability-alerts';
+
+export { UUID_RE };
 
 /**
  * Shared reads and input checks of the technologies module: the row of a technology by id or
  * reference (TEC-n) under the tenant, its row lock, and the resolution of a version label.
  */
 
-export const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const TEC_REF_RE = /^TEC-(\d+)$/i;
 
 export type TechnologyRow = {

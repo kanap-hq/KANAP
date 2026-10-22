@@ -55,7 +55,7 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
   // The incident side is the real service (lot R1b): its visibility, open state, row lock and journal are under test.
   const incidents = new IncidentRelationsService(undefined as any, audit as any);
   return new ApplicationsRelationsService(
-    undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks, incidents,
+    undefined as any, instances, fxRates as any, interfaces as any, knowledge as any, tasks as any, requests, technologyLinks, incidents, audit as any,
   );
 }
 

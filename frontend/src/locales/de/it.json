@@ -2308,29 +2308,11 @@
         "alreadyListed": "Dieser Kontakt ist bereits aufgeführt. Seine Rolle bleibt unverändert."
       },
       "relations": {
-        "sections": {
-          "documents": "Dokumente",
-          "links": "Weblinks"
-        },
         "empty": {
-          "documents": "Kein Dokument.",
-          "links": "Kein Weblink.",
           "incidents": "Kein Vorfall verknüpft."
         },
         "search": {
           "incidents": "Vorfälle suchen"
-        },
-        "columns": {
-          "size": "Größe",
-          "added": "Hinzugefügt",
-          "url": "Adresse"
-        },
-        "newLink": "Neuer Weblink",
-        "editLink": "{{name}} bearbeiten",
-        "editLinkTitle": "Weblink bearbeiten",
-        "placeholders": {
-          "linkName": "z. B. Versionshinweise",
-          "url": "z. B. https://learn.microsoft.com/sql"
         }
       },
       "servers": {

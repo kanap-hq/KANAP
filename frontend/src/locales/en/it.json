@@ -2308,29 +2308,11 @@
         "alreadyListed": "This contact is already listed. Its role stays as it is."
       },
       "relations": {
-        "sections": {
-          "documents": "Documents",
-          "links": "Web links"
-        },
         "empty": {
-          "documents": "No document.",
-          "links": "No web link.",
           "incidents": "No incident linked."
         },
         "search": {
           "incidents": "Search incidents"
-        },
-        "columns": {
-          "size": "Size",
-          "added": "Added",
-          "url": "Address"
-        },
-        "newLink": "New web link",
-        "editLink": "Edit {{name}}",
-        "editLinkTitle": "Edit web link",
-        "placeholders": {
-          "linkName": "e.g., Release notes",
-          "url": "e.g., https://learn.microsoft.com/sql"
         }
       },
       "servers": {
