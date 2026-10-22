@@ -2501,51 +2501,6 @@
         "detailedNotes": "Detailed notes for {{dimension}}"
       }
     },
-    "relations": {
-      "actions": {
-        "addUrl": "Add URL",
-        "deleteLink": "Delete link",
-        "selectFiles": "Select files"
-      },
-      "confirmations": {
-        "deleteAttachment": "Delete attachment \"{{name}}\"?"
-      },
-      "dialogs": {
-        "addExternalLink": {
-          "title": "Add external link"
-        },
-        "editExternalLink": {
-          "title": "Edit external link"
-        }
-      },
-      "fields": {
-        "linkDescription": "Link description",
-        "name": "Name",
-        "url": "URL"
-      },
-      "messages": {
-        "dragDropFiles": "Drag & drop files here, or use the button to select",
-        "loadFailed": "Failed to load relations",
-        "saveFailed": "Failed to save relations",
-        "uploadingFiles_one": "Uploading {{count}} file…",
-        "uploadingFiles_other": "Uploading {{count}} files…"
-      },
-      "placeholders": {
-        "applications": "Search applications",
-        "assets": "Search assets",
-        "linkDescription": "Optional",
-        "url": "https://example.com"
-      },
-      "sections": {
-        "appsAndAssets": "Apps and assets",
-        "attachments": "Attachments",
-        "budgetItems": "Budget lines",
-        "externalLinks": "Relevant websites"
-      },
-      "states": {
-        "noExternalLinks": "No external links added."
-      }
-    },
     "scoring": {
       "columns": {
         "criterion": "Criterion",

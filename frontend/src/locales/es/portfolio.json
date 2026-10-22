@@ -2501,51 +2501,6 @@
         "detailedNotes": "Notas detalladas para {{dimension}}"
       }
     },
-    "relations": {
-      "actions": {
-        "addUrl": "Agregar URL",
-        "deleteLink": "Eliminar enlace",
-        "selectFiles": "Seleccionar archivos"
-      },
-      "confirmations": {
-        "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?"
-      },
-      "dialogs": {
-        "addExternalLink": {
-          "title": "Agregar enlace externo"
-        },
-        "editExternalLink": {
-          "title": "Editar enlace externo"
-        }
-      },
-      "fields": {
-        "linkDescription": "Descripción del enlace",
-        "name": "Nombre",
-        "url": "URL"
-      },
-      "messages": {
-        "dragDropFiles": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
-        "loadFailed": "Error al cargar las relaciones",
-        "saveFailed": "Error al guardar las relaciones",
-        "uploadingFiles_one": "Subiendo {{count}} archivo…",
-        "uploadingFiles_other": "Subiendo {{count}} archivos…"
-      },
-      "placeholders": {
-        "applications": "Buscar aplicaciones",
-        "assets": "Buscar activos",
-        "linkDescription": "Opcional",
-        "url": "https://example.com"
-      },
-      "sections": {
-        "appsAndAssets": "Aplicaciones y activos",
-        "attachments": "Adjuntos",
-        "budgetItems": "Líneas presupuestarias",
-        "externalLinks": "Sitios web relevantes"
-      },
-      "states": {
-        "noExternalLinks": "No se han agregado enlaces externos."
-      }
-    },
     "scoring": {
       "columns": {
         "criterion": "Criterio",

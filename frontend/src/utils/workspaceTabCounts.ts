@@ -45,29 +45,6 @@ export async function fetchApplicationIncidentsCount(applicationId: string): Pro
   return itemCount(res.data);
 }
 
-export async function fetchPortfolioRelationsCount(
-  entityType: 'request' | 'project',
-  entityId: string,
-  dependenciesCount = 0,
-): Promise<number> {
-  const base = entityType === 'request' ? `/portfolio/requests/${entityId}` : `/portfolio/projects/${entityId}`;
-  const [entity, applications, assets] = await Promise.allSettled([
-    api.get(base, { params: { include: 'opex,capex,urls,attachments' } }),
-    api.get(`${base}/applications`),
-    api.get(`${base}/assets`),
-  ]);
-
-  const entityData = entity.status === 'fulfilled' ? entity.value.data || {} : {};
-
-  return dependenciesCount
-    + (entityData.opex_items?.length || 0)
-    + (entityData.capex_items?.length || 0)
-    + (entityData.urls?.length || 0)
-    + (entityData.attachments?.length || 0)
-    + settledItemCount(applications)
-    + settledItemCount(assets);
-}
-
 export async function fetchProjectTasksCount(projectId: string): Promise<number> {
   const res = await api.get(`/portfolio/projects/${projectId}/tasks/status-summary`);
   return itemCount(res.data);
