@@ -14,6 +14,8 @@ function testNumbersDescending() {
 function testQualifiersAndTies() {
   assert.deepEqual(order(['2016', '2016 SP3', '2017']), ['2017', '2016 SP3', '2016']);
   assert.deepEqual(order(['19c', '21c', '12.2']), ['21c', '19c', '12.2']);
+  assert.deepEqual(order(['R80', 'R81.20', 'R80.40', 'R82']), ['R82', 'R81.20', 'R80.40', 'R80'], 'Check Point releases read past their r');
+  assert.equal(versionNumber('rc1'), null, 'an r not followed by a digit is no prefix');
   assert.equal(compareVersionLabels('9', '9.0') !== 0, true, 'a tie keeps a stable order on the label');
   assert.equal(Math.sign(compareVersionLabels('9', '9.0')), -Math.sign(compareVersionLabels('9.0', '9')));
 }
