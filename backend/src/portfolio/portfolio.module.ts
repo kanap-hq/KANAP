@@ -122,6 +122,8 @@ import { CsvModule } from '../common/csv';
 import { CommonModule } from '../common/common.module';
 import { NotificationsModule } from '../notifications/notifications.module';
 import { KnowledgeModule } from '../knowledge/knowledge.module';
+import { CurrencyModule } from '../currency/currency.module';
+import { PortfolioRelationsService } from './portfolio-relations.service';
 
 const entities = [
   PortfolioRequest,
@@ -173,6 +175,7 @@ const entities = [
     CommonModule,
     NotificationsModule,
     KnowledgeModule,
+    CurrencyModule,
   ],
   providers: [
     // Non-decomposed services
@@ -210,6 +213,7 @@ const entities = [
     UserTimeAggregateService,
     // Main facade service
     PortfolioProjectsService,
+    PortfolioRelationsService,
   ],
   controllers: [
     PortfolioRequestsController,

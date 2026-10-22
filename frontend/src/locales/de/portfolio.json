@@ -2501,51 +2501,6 @@
         "detailedNotes": "Detaillierte Anmerkungen für {{dimension}}"
       }
     },
-    "relations": {
-      "actions": {
-        "addUrl": "URL hinzufügen",
-        "deleteLink": "Link löschen",
-        "selectFiles": "Dateien auswählen"
-      },
-      "confirmations": {
-        "deleteAttachment": "Anhang «{{name}}» löschen?"
-      },
-      "dialogs": {
-        "addExternalLink": {
-          "title": "Externen Link hinzufügen"
-        },
-        "editExternalLink": {
-          "title": "Externen Link bearbeiten"
-        }
-      },
-      "fields": {
-        "linkDescription": "Linkbeschreibung",
-        "name": "Name",
-        "url": "URL"
-      },
-      "messages": {
-        "dragDropFiles": "Dateien hierher ziehen oder den Button zum Auswählen verwenden",
-        "loadFailed": "Beziehungen konnten nicht geladen werden",
-        "saveFailed": "Beziehungen konnten nicht gespeichert werden",
-        "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
-        "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…"
-      },
-      "placeholders": {
-        "applications": "Anwendungen suchen",
-        "assets": "Assets suchen",
-        "linkDescription": "Optional",
-        "url": "https://example.com"
-      },
-      "sections": {
-        "appsAndAssets": "Apps und Assets",
-        "attachments": "Anhänge",
-        "budgetItems": "Budgetzeilen",
-        "externalLinks": "Relevante Websites"
-      },
-      "states": {
-        "noExternalLinks": "Keine externen Links hinzugefügt."
-      }
-    },
     "scoring": {
       "columns": {
         "criterion": "Kriterium",

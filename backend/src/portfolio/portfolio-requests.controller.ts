@@ -30,6 +30,12 @@ import { KnowledgeService } from '../knowledge/knowledge.service';
 import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie.util';
 import { resolveBusinessContributorScope, taskParticipantCondition } from '../auth/business-contributor-scope';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
+import {
+  PortfolioRelationsService,
+  REQUEST_RELATION_READS,
+  requestRelationKindOrThrow,
+} from './portfolio-relations.service';
 
 const RANK: Record<PermissionLevel, number> = {
   reader: 1,
@@ -50,6 +56,7 @@ export class PortfolioRequestsController {
     private readonly knowledge: KnowledgeService,
     private readonly integratedDocuments: IntegratedDocumentsService,
     private readonly dataSource: DataSource,
+    private readonly relations: PortfolioRelationsService,
   ) {}
 
   private resolve(idOrRef: string, req: any): Promise<string> {
@@ -65,6 +72,43 @@ export class PortfolioRequestsController {
     const accessScope = await this.requestAccessScope(req, level);
     await this.svc.assertVisible(id, accessScope, { manager: req?.queryRunner?.manager });
     return { id, accessScope };
+  }
+
+  /**
+   * What the Relations tab may show. One scope query after the other: the request's connection
+   * runs them in turn. A Business Contributor's scope hides an application or a resulting project
+   * they do not take part in.
+   */
+  private async requestRelationsContext(req: any) {
+    const manager = req?.queryRunner?.manager;
+    if (!manager) throw new ForbiddenException('Tenant context is not available');
+    const accessCtx = { isAdmin: req?.isAdmin === true, permissions: req?.permissions };
+    const rights = buildRelationsAccess(accessCtx, {
+      read: REQUEST_RELATION_READS,
+      write: { processes: 'business_processes' },
+    });
+    const applicationScope = await resolveBusinessContributorScope(req, 'applications');
+    const projectScope = await resolveBusinessContributorScope(req, 'portfolio_projects');
+    return {
+      manager,
+      tenantId: String(req?.tenant?.id ?? ''),
+      userId: req?.user?.sub ?? null,
+      access: rights.access,
+      writes: { processes: rights.writes.processes },
+      applicationScope,
+      projectScope,
+    };
+  }
+
+  /** A process link needs a read of business processes, then the right to manage them. */
+  private assertProcessWrite(req: any): void {
+    const accessCtx = { isAdmin: req?.isAdmin === true, permissions: req?.permissions };
+    if (!hasLevel(accessCtx, 'business_processes', 'reader')) {
+      throw new ForbiddenException('You cannot read this module.');
+    }
+    if (!hasLevel(accessCtx, 'business_processes', 'member')) {
+      throw new ForbiddenException('You cannot edit this module.');
+    }
   }
 
   private async ensureTasksMemberPermission(req: any): Promise<void> {
@@ -645,6 +689,54 @@ export class PortfolioRequestsController {
       manager: req?.queryRunner?.manager,
       userId: req.user?.sub ?? null,
     });
+  }
+
+  // ==================== RELATIONS ====================
+
+  /** Budget lines, applications, assets, processes and resulting projects, in one round trip. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_requests', 'reader')
+  @Get(':id/relations')
+  async getRelations(@Param('id') idOrRef: string, @Req() req: any) {
+    const { id } = await this.resolveForAccess(idOrRef, req, 'reader');
+    return this.relations.getRequestRelations(id, await this.requestRelationsContext(req));
+  }
+
+  /** Link one budget line, application, asset or business process (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_requests', 'contributor')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Req() req: any,
+  ) {
+    return this.writeRelation(kind, idOrRef, String(body?.id ?? ''), true, req);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_requests', 'contributor')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Req() req: any,
+  ) {
+    return this.writeRelation(kind, idOrRef, targetId, false, req);
+  }
+
+  /** `processes` is refused before the service when the caller cannot manage business processes. */
+  private writeRelation(kind: string, idOrRef: string, targetId: string, add: boolean, req: any) {
+    const relation = requestRelationKindOrThrow(kind);
+    if (relation === 'processes') this.assertProcessWrite(req);
+    return this.requestRelationsContext(req).then((relCtx) =>
+      this.relations.setRequestLink(relation, targetId, add, relCtx, async () => {
+        const { id } = await this.resolveForAccess(idOrRef, req, 'contributor');
+        return { id, tenantId: String(req?.tenant?.id ?? '') };
+      }),
+    );
   }
 
   // ==================== LINKED APPLICATIONS ====================

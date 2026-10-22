@@ -24,7 +24,7 @@ function makeController() {
     },
   };
   const controller = new PortfolioProjectsController(
-    svc as any, {} as any, {} as any, {} as any, {} as any, {} as any,
+    svc as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
   );
   const ctx = {
     userId: USER_ID,

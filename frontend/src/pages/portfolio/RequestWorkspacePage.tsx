@@ -46,7 +46,7 @@ import {
 import { useLocale } from '../../i18n/useLocale';
 import { useTenant } from '../../tenant/TenantContext';
 import { getScoreColor } from '../tasks/theme/taskDetailTokens';
-import { fetchPortfolioRelationsCount } from '../../utils/workspaceTabCounts';
+import { portfolioLinksKey, usePortfolioRelationsBadge } from './workspace/portfolioRelations';
 import { KanapDialog, useKanapDialogs } from '../../components/design';
 import { carryListFilters } from '../../lib/listContext';
 import DeleteIconButton from '../../components/workspace/DeleteIconButton';
@@ -102,7 +102,7 @@ function formatDate(locale: string, value?: string | null) {
 const RequestAnalysisTab = React.lazy(() => import('./workspace/request/RequestAnalysisTab'));
 const RequestActivityTab = React.lazy(() => import('./workspace/request/RequestActivityTab'));
 const RequestScoringTab = React.lazy(() => import('./workspace/request/RequestScoringTab'));
-const RequestRelationsPanel = React.lazy(() => import('./editors/RequestRelationsPanel'));
+const PortfolioRelationsTab = React.lazy(() => import('./workspace/PortfolioRelationsTab'));
 const RequestKnowledgeTab = React.lazy(() => import('./workspace/request/RequestKnowledgeTab'));
 
 export default function RequestWorkspacePage() {
@@ -259,11 +259,7 @@ export default function RequestWorkspacePage() {
   const [purposeDirty, setPurposeDirty] = React.useState(false);
   const [risksDirty, setRisksDirty] = React.useState(false);
   const requestDependenciesCount = Array.isArray(form?.dependencies) ? form.dependencies.length : 0;
-  const requestRelationsCountQuery = useQuery({
-    queryKey: ['request-workspace-relations-count', form?.id, requestDependenciesCount],
-    queryFn: () => fetchPortfolioRelationsCount('request', form.id, requestDependenciesCount),
-    enabled: !isCreate && !!form?.id,
-  });
+  const relationsBadge = usePortfolioRelationsBadge('request', !isCreate ? form?.id : undefined, requestDependenciesCount);
   const requestKnowledgeContextQuery = useQuery<{ total?: number }>({
     queryKey: ['entity-knowledge-context', 'requests', form?.id],
     queryFn: async () => {
@@ -419,7 +415,6 @@ export default function RequestWorkspacePage() {
         target_id: target.id,
       });
       queryClient.invalidateQueries({ queryKey: ['portfolio-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['request-workspace-relations-count', requestId] });
     } catch (error) {
       setSaveError(getApiErrorMessage(error, t, t('portfolio:workspace.request.messages.savePanelFailed')));
       await refetch();
@@ -441,7 +436,6 @@ export default function RequestWorkspacePage() {
     try {
       await api.delete(`/portfolio/requests/${requestId}/dependencies/${targetType}/${targetId}`);
       queryClient.invalidateQueries({ queryKey: ['portfolio-requests'] });
-      queryClient.invalidateQueries({ queryKey: ['request-workspace-relations-count', requestId] });
     } catch (error) {
       setSaveError(getApiErrorMessage(error, t, t('portfolio:workspace.request.messages.savePanelFailed')));
       await refetch();
@@ -935,7 +929,7 @@ export default function RequestWorkspacePage() {
         tabs={tabs.map((tab) => ({
           ...tab,
           badge: tab.key === 'relations'
-            ? requestRelationsCountQuery.data ?? 0
+            ? relationsBadge ?? 0
             : tab.key === 'knowledge'
               ? Number(requestKnowledgeContextQuery.data?.total || 0)
               : undefined,
@@ -1191,11 +1185,11 @@ export default function RequestWorkspacePage() {
                   disabled={!canManage}
                 />
               </Stack>
-              <RequestRelationsPanel
+              <PortfolioRelationsTab
+                entity="request"
                 id={form.id}
-                autoSave
                 onRelationsChange={() => {
-                  void requestRelationsCountQuery.refetch();
+                  void queryClient.invalidateQueries({ queryKey: portfolioLinksKey('request', form.id) });
                 }}
               />
             </Stack>

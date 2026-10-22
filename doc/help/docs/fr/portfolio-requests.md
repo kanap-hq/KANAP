@@ -12,6 +12,7 @@ Les Demandes du portefeuille sont la couche d'intake pour les travaux proposés.
 | Autorisation | Ce qu'elle permet |
 | --- | --- |
 | `portfolio_requests:reader` | Ouvrir la liste des demandes et consulter les espaces de travail des demandes |
+| `portfolio_requests:contributor` | Lier et délier des lignes budgétaires, applications, actifs et processus métier dans l'onglet **Relations** |
 | `portfolio_requests:member` | Créer des demandes, mettre à jour les données de demande, modifier les documents managés (Objectif, Risques et atténuations), maintenir l'équipe et les relations, ajouter commentaires et décisions, changer le statut, soumettre des recommandations d'analyse et modifier l'évaluation |
 | `portfolio_requests:admin` | Supprimer des demandes, utiliser l'import/export CSV et enregistrer les remplacements de priorité |
 
@@ -126,7 +127,7 @@ Ces assignations pilotent la visibilité partagée et clarifient qui est censé 
 
 Une liste en lecture seule des projets produits depuis cette demande après conversion. Cliquez sur une entrée pour naviguer vers l'espace de travail du projet.
 
-Pour les dépendances et autres types de relations, voir l'onglet **Relations**.
+Les mêmes projets figurent aussi dans l'onglet **Relations**, avec les dépendances, les lignes budgétaires, applications, actifs et processus métier liés, et les liens et fichiers de la demande.
 
 D'anciens favoris peuvent encore pointer vers `overview`, `team` ou `relations`. L'espace de travail actuel place ce contenu sous **Synthèse**, le tiroir Propriétés et l'onglet **Relations**.
 
@@ -250,7 +251,7 @@ Une fois qu'une demande est **Convertie**, l'évaluation devient en lecture seul
 
 ## Relations
 
-L'onglet **Relations** rassemble les liens qui expliquent comment la demande se connecte au reste du portefeuille. Le badge de l'onglet affiche le nombre d'éléments liés.
+L'onglet **Relations** rassemble les liens qui expliquent comment la demande se connecte au reste du portefeuille : d'abord les dépendances, puis un tableau par type d'enregistrement lié, puis les liens et fichiers. Le badge de l'onglet compte les dépendances, les enregistrements liés que vous voyez, les liens web et les fichiers.
 
 ### Dépendances
 
@@ -258,11 +259,31 @@ Les dépendances identifient le travail qui doit exister, se terminer ou rester 
 
 Une demande avec des données de dépendance faibles peut sembler inoffensive jusqu'à ce qu'elle entre en collision avec le travail existant.
 
-### Autres relations
+### Enregistrements liés
 
-Sous les dépendances, l'onglet Relations vous permet également de maintenir d'autres liens de portefeuille, par exemple demandes liées, projets liés, ou autres objets métier et techniques connectés. Chaque relation est sauvegardée automatiquement.
+Sous les dépendances, chaque type d'enregistrement a son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement.
 
-Pour les projets produits depuis cette demande après conversion, voir le groupe **Projets résultants** dans le tiroir Propriétés.
+| Section | Colonnes |
+|---|---|
+| **Lignes budgétaires** | Référence (`BL-4`), nom, type (OPEX ou CAPEX), fournisseur, montant de l'année dans la colonne budgétaire par défaut. Une ligne de total apparaît dès deux lignes |
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
+| **Processus métier** | Nom, responsable du processus |
+| **Projets résultants** | Référence (`PRJ-7`), nom, statut. Lecture seule : la conversion de la demande en projet écrit ce lien |
+
+Une section est absente si vous ne pouvez pas lire son module : les lignes budgétaires demandent le budget, les applications les applications, les actifs l'infrastructure, les processus métier les processus métier, les projets résultants les projets. Un Contributeur métier ne voit que les applications et les projets auxquels il participe. Une ligne budgétaire ou un processus désactivé, ou une application ou un actif désactivé ou retiré, reste affiché avec son nom grisé.
+
+**Ajouter et retirer des liens** (`portfolio_requests:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche sous le bouton. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Il n'y a pas de confirmation, et retirer un lien ne supprime rien d'autre. Lier un processus métier demande aussi `business_processes:member`. Les lecteurs voient les tableaux en lecture seule.
+
+Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'**Historique** de la demande.
+
+### Liens et fichiers
+
+**Liens et fichiers** termine l'onglet : les liens web de la demande et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `portfolio_requests:member` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 ## Connaissances
 

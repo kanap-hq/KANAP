@@ -35,6 +35,12 @@ import { REFRESH_TOKEN_COOKIE_NAME, parseCookieValue } from '../auth/auth-cookie
 import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { PermissionLevel } from '../permissions/permissions.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
+import {
+  PortfolioRelationsService,
+  PROJECT_RELATION_READS,
+  projectRelationKindOrThrow,
+} from './portfolio-relations.service';
 
 // `access=contributor` narrows the list to the projects the user may write to (time entries).
 function listAccessLevel(query: ListProjectsQueryInput): PermissionLevel {
@@ -51,6 +57,7 @@ export class PortfolioProjectsController {
     private readonly knowledge: KnowledgeService,
     private readonly integratedDocuments: IntegratedDocumentsService,
     private readonly dataSource: DataSource,
+    private readonly relations: PortfolioRelationsService,
   ) {}
 
   /**
@@ -85,6 +92,27 @@ export class PortfolioProjectsController {
     const accessScope = await this.projectAccessScope(ctx, level);
     await this.svc.assertVisible(id, accessScope, { manager: ctx.manager });
     return { id, accessScope };
+  }
+
+  /**
+   * What the Relations tab may show. One query after the other: the request's connection runs them
+   * in turn. A Business Contributor's scope hides an application or a source request they do not
+   * take part in.
+   */
+  private async projectRelationsContext(ctx: TenantRequest) {
+    const manager = this.requireManager(ctx);
+    const who = { manager, userId: ctx.userId, tenantId: ctx.tenantId };
+    const { access } = buildRelationsAccess(ctx, { read: PROJECT_RELATION_READS });
+    const applicationScope = await resolveBusinessContributorScopeForUser(who, 'applications', 'reader');
+    const requestScope = await resolveBusinessContributorScopeForUser(who, 'portfolio_requests', 'reader');
+    return {
+      manager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId ?? null,
+      access,
+      applicationScope,
+      requestScope,
+    };
   }
 
   // ==================== CRUD ====================
@@ -661,6 +689,56 @@ export class PortfolioProjectsController {
     return this.svc.bulkReplaceContacts(id, body?.contact_ids ?? [], {
       manager: ctx.manager,
     });
+  }
+
+  // ==================== RELATIONS ====================
+
+  /** Budget lines, applications, assets, technologies and source requests, in one round trip. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'reader')
+  @Get(':id/relations')
+  async getRelations(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    const { id } = await this.resolveForAccess(idOrRef, ctx, 'reader');
+    return this.relations.getProjectRelations(id, await this.projectRelationsContext(ctx));
+  }
+
+  /** Link one budget line, application, asset or technology (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'contributor')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, idOrRef, String(body?.id ?? ''), true, ctx);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('portfolio_projects', 'contributor')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') idOrRef: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, idOrRef, targetId, false, ctx);
+  }
+
+  /** `technologies` also needs a read of the infrastructure, before the service runs. */
+  private writeRelation(kind: string, idOrRef: string, targetId: string, add: boolean, ctx: TenantRequest) {
+    const relation = projectRelationKindOrThrow(kind);
+    if (relation === 'technologies' && !hasLevel(ctx, 'infrastructure', 'reader')) {
+      throw new ForbiddenException('You cannot read technologies.');
+    }
+    return this.projectRelationsContext(ctx).then((relCtx) =>
+      this.relations.setProjectLink(relation, targetId, add, relCtx, async () => {
+        const { id } = await this.resolveForAccess(idOrRef, ctx, 'contributor');
+        return { id, tenantId: ctx.tenantId };
+      }),
+    );
   }
 
   // ==================== LINKED APPLICATIONS ====================
