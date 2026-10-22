@@ -127,7 +127,7 @@ export default function LinksAndFilesSection({
     },
     { key: 'name', header: t('linksAndFiles.columns.name'), render: (row) => nameOf(row) },
     {
-      key: 'detail', header: t('linksAndFiles.columns.detail'), width: 180, hideOrder: 2,
+      key: 'detail', header: linksOnly ? t('linksAndFiles.columns.address') : t('linksAndFiles.columns.detail'), width: 180, hideOrder: 2,
       render: (row) => (
         <Box component="span" sx={{ color: 'kanap.text.secondary' }} title={row.kind === 'link' ? row.link.url : undefined}>
           {row.kind === 'link' ? urlDomain(row.link.url) : row.file.size != null ? formatFileSize(row.file.size, lang) : '—'}

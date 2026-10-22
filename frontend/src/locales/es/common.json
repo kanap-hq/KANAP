@@ -1208,6 +1208,7 @@
     "columns": {
       "name": "Nombre",
       "detail": "Dirección o tamaño",
+      "address": "Dirección",
       "added": "Añadido"
     },
     "types": {
