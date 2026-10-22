@@ -1742,6 +1742,7 @@
           "technologies": "Technologien",
           "applications": "Anwendungen",
           "assets": "Assets",
+          "processes": "Geschäftsprozesse",
           "related": "Verwandt"
         },
         "empty": {
@@ -1752,7 +1753,10 @@
           "tasks": "Keine Aufgabe verknüpft.",
           "technologies": "Keine Technologie verknüpft.",
           "applications": "Keine Anwendung verknüpft.",
-          "assets": "Kein Asset verknüpft."
+          "assets": "Kein Asset verknüpft.",
+          "processes": "Kein Geschäftsprozess verknüpft.",
+          "sourceRequests": "Keine Quellanfrage verknüpft.",
+          "resultingProjects": "Kein resultierendes Projekt verknüpft."
         },
         "columns": {
           "ref": "Ref.",
@@ -1774,7 +1778,8 @@
           "family": "Familie",
           "version": "Version",
           "link": "Verknüpfung",
-          "supportEnd": "Supportende"
+          "supportEnd": "Supportende",
+          "owner": "Prozessverantwortlicher"
         },
         "renewal": {
           "tacit": "Stillschweigend",
@@ -1786,7 +1791,8 @@
           "requests": "Anfragen suchen",
           "technologies": "Technologien suchen",
           "applications": "Anwendungen suchen",
-          "assets": "Assets suchen"
+          "assets": "Assets suchen",
+          "processes": "Geschäftsprozesse suchen"
         },
         "types": {
           "budget_line": "Budgetzeile",

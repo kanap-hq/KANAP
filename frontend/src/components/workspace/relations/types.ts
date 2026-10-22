@@ -16,6 +16,14 @@ export type BudgetLineRow = {
   fx_missing?: { currency: string; amount: number };
 };
 
+/** A project or a request linked by conversion: reference, name and status. Read only. */
+export type ConversionRow = {
+  id: string;
+  item_number: number | null;
+  name: string;
+  status: string | null;
+};
+
 export type ContractRow = {
   id: string;
   name: string;
@@ -72,6 +80,14 @@ export type TechnologyRelationRow = {
   name: string;
   family: string;
   vendor: string | null;
+};
+
+/** A business process linked to the owner, with its business owner. */
+export type BusinessProcessRow = {
+  id: string;
+  name: string;
+  status: string | null;
+  owner_name: string | null;
 };
 
 /** A row the shared sections can link and unlink. */

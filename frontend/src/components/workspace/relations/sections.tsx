@@ -18,7 +18,9 @@ import type {
   ApplicationRelationRow,
   AssetRelationRow,
   BudgetLineRow,
+  BusinessProcessRow,
   ContractRow,
+  ConversionRow,
   IncidentLinkRow,
   ProjectRow,
   SectionSpec,
@@ -457,5 +459,85 @@ export function technologiesSection({
       });
       return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: row.reference, hint: row.editor }));
     },
+  };
+}
+
+/**
+ * Business processes linked to the owner: the name, and the process owner.
+ * A disabled process stays listed, its name muted. `rows` null leaves the section out.
+ * The picker searches `/business-processes/lookup`. `editable` is the right to manage processes.
+ */
+export function processesSection({
+  t,
+  rows,
+  editable = true,
+}: {
+  t: TFunction;
+  rows: BusinessProcessRow[] | null;
+  editable?: boolean;
+}): SectionSpec<BusinessProcessRow> {
+  return {
+    kind: 'processes',
+    title: t('workspace.application.relations.sections.processes'),
+    empty: t('workspace.application.relations.empty.processes'),
+    searchPlaceholder: t('workspace.application.relations.search.processes'),
+    rows,
+    editable,
+    href: (row) => `/master-data/business-processes/${row.id}/overview`,
+    label: (row) => row.name,
+    muted: (row) => row.status === 'disabled',
+    columns: [
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      { key: 'owner', header: columnsT(t, 'owner'), width: 180, hideOrder: 1, render: (row) => row.owner_name || DASH },
+    ],
+    search: async (q, signal) => {
+      const res = await api.get<{ items: Array<{ id: string; name: string }> }>('/business-processes/lookup', {
+        params: { limit: PAGE, ...(q ? { q } : {}) },
+        signal,
+      });
+      return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name }));
+    },
+  };
+}
+
+/**
+ * A conversion list (a project's source requests, a request's resulting projects).
+ * Conversion writes these links: the section is read only, with no search.
+ */
+export function conversionSection({
+  t,
+  kind,
+  type,
+  title,
+  empty,
+  rows,
+}: {
+  t: TFunction;
+  kind: string;
+  type: 'request' | 'project';
+  title: string;
+  empty: string;
+  rows: ConversionRow[] | null;
+}): SectionSpec<ConversionRow> {
+  return {
+    kind,
+    title,
+    empty,
+    searchPlaceholder: '',
+    rows,
+    editable: false,
+    href: (row) => pathOf(type, row),
+    label: (row) => row.name,
+    columns: [
+      relationRefColumn<ConversionRow>(type, columnsT(t, 'ref')),
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      {
+        key: 'status',
+        header: columnsT(t, 'status'),
+        width: 140,
+        render: (row) => (row.status ? t(`portfolio:statuses.${type}.${row.status}`, { defaultValue: row.status }) : DASH),
+      },
+    ],
+    search: async () => [],
   };
 }
