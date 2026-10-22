@@ -25,7 +25,7 @@ L'espace de travail s'ouvre en mode création, intitulé **Nouvelle ligne OPEX**
 **Optionnel mais utile** :
 
 - **Fournisseur** : À qui vous payez. Lié à vos fournisseurs dans les données de référence
-- **Centre de coûts** : Qui porte la dépense. Voir [Centres de coûts](cost-centers.md). Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
+- **Centre de coûts** : Qui porte la dépense. Voir [Centres de coûts](cost-centers.md). Une fois la société payeuse choisie, la liste présente les centres de coûts de cette société. Lorsque la société payeuse est encore vide, choisir un centre de coûts la remplit avec la société du centre de coûts
 - **Run ou build** : **Run** pour une dépense qui maintient les services existants, **Build** pour une dépense qui les crée ou les fait évoluer
 - **Dimensions analytiques** : Un champ par dimension utilisée pour le type de la ligne, à son nom, pour des regroupements personnalisés dans les rapports (ex. : **Logiciel** sur **Nature de coût**). La dimension par défaut s'affiche comme **Dimension analytique** tant qu'elle n'est pas renommée. Voir [Dimensions analytiques](analytics.md)
 - **Fin de validité** : La date à laquelle cette ligne s'arrête. Laissez-la vide s'il n'y a pas de fin. Après cette date, la ligne est désactivée et les années suivantes ne comptent plus dans les vues budgétaires
@@ -246,9 +246,11 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 **Centre de coûts** :
 
 - La liste présente l'arbre des centres de coûts. Les groupes s'affichent pour vous aider à vous repérer et ne peuvent pas être choisis. Recherchez par code, nom ou nom de groupe
+- Lorsque la société payeuse est choisie, la liste présente uniquement les centres de coûts de cette société, avec les groupes au-dessus d'eux. Une ligne qui a déjà un centre de coûts d'une autre société le conserve dans la liste. Lorsque la société n'a aucun centre de coûts, la liste l'indique
 - Un centre de coûts désactivé est marqué **Désactivé**. Il reste sur les lignes qui l'ont déjà et ne peut pas être choisi pour une autre ligne
-- Lorsque vous créez une ligne et que la société payeuse est vide, choisir un centre de coûts remplit la société payeuse avec la société du centre de coûts : la liste **Compte** s'ouvre alors sur le plan comptable de cette société. Tant que vous n'avez pas choisi vous-même une société ou un compte, choisir un autre centre de coûts met aussi à jour la société
-- Lorsque la société payeuse diffère de la société du centre de coûts, les deux sont conservées. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
+- Lorsque vous créez une ligne et que la société payeuse est vide, la liste présente tous les centres de coûts. En choisir un remplit la société payeuse avec la société du centre de coûts : la liste **Compte** s'ouvre alors sur le plan comptable de cette société. Tant que vous n'avez pas choisi vous-même une société ou un compte, la liste conserve tous les centres de coûts et choisir un autre centre de coûts met aussi à jour la société
+- Lorsque vous changez la société payeuse, un centre de coûts d'une autre société est effacé dans le même enregistrement. **Centre de coûts** présente alors les centres de coûts de la nouvelle société
+- Une ligne dont le centre de coûts appartient à une autre société, depuis un fichier CSV ou l'API, conserve les deux. Une indication sous le champ affiche « Ce centre de coûts appartient à » suivi du nom de la société
 - Une ligne enregistrée via l'API avec un centre de coûts et sans société payeuse prend la société du centre de coûts. Pour les fichiers CSV, voir [Import/export CSV](#importexport-csv)
 
 **Run ou build** : **Run**, **Build** ou **Non défini**. Utilisez-le pour répartir le budget entre le maintien des services et leur évolution.

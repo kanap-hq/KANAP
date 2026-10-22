@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, Button, Stack, Typography, useTheme } from '@mui/material';
+import { Alert, Box, Stack, Typography, useTheme } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import api from '../../../api';
@@ -16,6 +16,7 @@ import {
   refOf,
   relationDate,
   relationRefColumn,
+  RelationSuggestions,
   searchRelationItems,
   todayYmd,
   useRelations,
@@ -25,7 +26,6 @@ import {
   type ProjectRow,
   type SectionSpec,
 } from '../../../components/workspace/relations';
-import { RelationRef, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 
 export type RelationKind = 'budget_lines' | 'contracts' | 'projects' | 'requests' | 'tasks' | 'technologies' | 'processes' | 'incidents';
 
@@ -172,27 +172,6 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
     }),
   ];
 
-  const suggestionColumns: Array<RelationsColumn<Suggestion>> = [
-    { key: 'type', header: t('workspace.application.relations.columns.type'), width: 130, render: (row) => t(`workspace.application.relations.types.${row.type}`) },
-    {
-      key: 'object', header: t('workspace.application.relations.columns.object'),
-      render: (row) => {
-        const ref = row.type === 'budget_line' ? refOf('budget', row.item_number) : row.type === 'project' ? refOf('project', row.item_number) : null;
-        return <>{ref && <><RelationRef>{ref}</RelationRef>{'  '}</>}{row.name}</>;
-      },
-    },
-    {
-      key: 'via', header: t('workspace.application.relations.columns.via'), width: 200, hideOrder: 1,
-      render: (row) => (
-        <Box component="span" sx={{ color: 'kanap.text.secondary' }}>
-          {t(`workspace.application.relations.via.${row.via.kind}`, { label: row.via.label ?? '' })}
-        </Box>
-      ),
-    },
-  ];
-  const suggestionHref = (row: Suggestion) => (
-    row.type === 'contract' ? `/ops/contracts/${row.id}/overview` : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row)
-  );
   const suggestions = data?.suggestions ?? [];
   const also = data?.also;
 
@@ -222,31 +201,13 @@ export default function ApplicationRelationsTab({ id, onRelationsChange, onOpenK
         onUnlink={(kind, targetId) => { void unlink(kind, targetId); }}
       />
 
-      {suggestions.length > 0 && (
-        <RelationsSection title={t('workspace.application.relations.sections.related')} count={t('workspace.application.relations.suggestions', { count: suggestions.length })}>
-          <RelationsTable
-            ariaLabel={t('workspace.application.relations.sections.related')}
-            columns={suggestionColumns}
-            rows={suggestions}
-            rowKey={(row) => `${row.type}:${row.id}`}
-            rowHref={suggestionHref}
-            action={canEdit ? {
-              width: 56,
-              render: (row) => (
-                <Button
-                  variant="text"
-                  size="small"
-                  onClick={() => { void link(SUGGESTION_KIND[row.type], row.id); }}
-                  aria-label={t('workspace.application.relations.linkNamed', { name: row.name })}
-                  sx={{ fontSize: 12, minWidth: 0, p: '0 4px' }}
-                >
-                  {t('workspace.application.relations.link')}
-                </Button>
-              ),
-            } : undefined}
-          />
-        </RelationsSection>
-      )}
+      <RelationSuggestions
+        suggestions={suggestions}
+        canEdit={canEdit}
+        referenceOf={(row) => (row.type === 'budget_line' ? refOf('budget', row.item_number) : row.type === 'project' ? refOf('project', row.item_number) : null)}
+        href={(row) => (row.type === 'contract' ? `/ops/contracts/${row.id}/overview` : pathOf(row.type === 'budget_line' ? 'budget' : 'project', row))}
+        onLink={(row) => { void link(SUGGESTION_KIND[row.type], row.id); }}
+      />
 
       {alsoParts.length > 0 && (
         <Typography

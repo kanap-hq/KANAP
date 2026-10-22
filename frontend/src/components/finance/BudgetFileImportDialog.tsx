@@ -354,8 +354,9 @@ function ReportView({
   const hasErrors = report.fileErrors.length > 0 || report.headerErrors.length > 0 || report.errorCount > 0
     || report.missing.length > 0 || report.deletedCount > 0 || !!report.supplierMessage;
   const ignoredCells = report.warnings.ignoredCells ?? [];
+  const costCenterCompanies = report.warnings.costCenterCompanies ?? [];
   const hasWarnings = report.warnings.duplicates.length > 0 || report.warnings.ignoredColumns.length > 0
-    || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0;
+    || report.warnings.supplierNames.length > 0 || ignoredCells.length > 0 || costCenterCompanies.length > 0;
   const hasCreates = report.creates.suppliers.length > 0 || report.creates.dimensionValues.length > 0;
 
   return (
@@ -440,6 +441,16 @@ function ReportView({
         <Section title={t(`${K}warningsTitle`)}>
           {report.warnings.duplicates.map((warning) => <Line key={`w-${warning.line}`} text={warning.message} />)}
           {report.warnings.supplierNames.map((warning) => <Line key={`s-${warning.line}`} text={warning.message} />)}
+          {costCenterCompanies.map((warning) => (
+            <Line
+              key={`cc-${warning.line}`}
+              text={t(`${K}rowColumn`, {
+                line: warning.line,
+                column: 'company_name',
+                message: t(`errors:${warning.code}`, { ...warning, defaultValue: warning.message }),
+              })}
+            />
+          ))}
           {ignoredCells.map((warning) => (
             <Line key={`c-${warning.line}-${warning.column}`} text={t(`${K}rowColumn`, { line: warning.line, column: warning.column, message: warning.message })} />
           ))}

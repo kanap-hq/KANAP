@@ -16,6 +16,7 @@ import {
   BudgetFileScope,
   BudgetFileSnapshotLine,
   CatalogCostCenter,
+  CostCenterCompanyWarning,
   CatalogSupplier,
   CatalogUser,
   LineHint,
@@ -115,6 +116,7 @@ interface Bag {
   dimensions: Map<string, Map<string, string>>;
   duplicates: Array<{ line: number; message: string }>;
   supplierNames: Array<{ line: number; message: string }>;
+  costCenterCompanies: CostCenterCompanyWarning[];
   deleted: Array<{ line: number; itemNumber: string }>;
   changed: BudgetFileReport['changedSinceExport'];
   snapshot: BudgetFileSnapshotLine[];
@@ -427,6 +429,21 @@ function resolveCompany(
     const changed = !!(live && found.row.id !== live.companyId);
     if (changed) changes.push('company_name');
     writeField(draft, creating, changed, 'paying_company_id', found.row.id);
+    // Another company than the cost center's is accepted, as in the app; the check says so.
+    if (costCenter?.companyId && costCenter.companyId !== found.row.id) {
+      const center = input.catalog.costCenters.find((node) => node.id === costCenter.id);
+      const owner = input.catalog.companies.find((company) => company.id === costCenter.companyId);
+      if (center && owner) {
+        bag.costCenterCompanies.push({
+          line: row.line,
+          code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY',
+          costCenter: center.code,
+          company: found.row.name,
+          costCenterCompany: owner.name,
+          message: `Cost center ${center.code} belongs to ${owner.name}. The line is paid by ${found.row.name}.`,
+        });
+      }
+    }
     return { id: found.row.id, known: true };
   }
   if (creating) {
@@ -1102,6 +1119,7 @@ function emptyBag(): Bag {
     dimensions: new Map(),
     duplicates: [],
     supplierNames: [],
+    costCenterCompanies: [],
     deleted: [],
     changed: [],
     snapshot: [],
@@ -1157,6 +1175,7 @@ function finish(input: PreflightInput, errors: Bag['errors'], bag: Bag, supplier
       duplicates: bag.duplicates.slice(0, PREFLIGHT_LIST_LIMIT),
       ignoredColumns: input.read.ignoredColumns,
       supplierNames: bag.supplierNames.slice(0, PREFLIGHT_LIST_LIMIT),
+      costCenterCompanies: bag.costCenterCompanies.slice(0, PREFLIGHT_LIST_LIMIT),
     },
     creates: {
       dimensionValues: [...bag.dimensions.entries()].map(([dimension, names]) => ({

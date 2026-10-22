@@ -45,6 +45,35 @@ export type IncidentLinkRow = {
   detected_at: string | null;
 };
 
+/** An application linked to the owner. `reference` is already `APP-n`. */
+export type ApplicationRelationRow = {
+  id: string;
+  reference: string;
+  name: string;
+  lifecycle: string;
+  business_criticality: string | null;
+  status: string;
+};
+
+/** An asset linked to the owner. `reference` is already `AST-n`. */
+export type AssetRelationRow = {
+  id: string;
+  reference: string;
+  name: string;
+  kind: string;
+  environment: string;
+  status: string;
+};
+
+/** A technology linked to the owner. `reference` is already `TEC-n`. */
+export type TechnologyRelationRow = {
+  id: string;
+  reference: string;
+  name: string;
+  family: string;
+  vendor: string | null;
+};
+
 /** A row the shared sections can link and unlink. */
 export type AnyRow = { id: string };
 

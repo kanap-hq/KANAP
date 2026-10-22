@@ -14,7 +14,16 @@ import { getDotColor, INCIDENT_SEVERITY_COLORS } from '../../../utils/statusColo
 import type { RelationOption } from '../RelationAddPicker';
 import { RelationRef, type RelationsColumn } from '../RelationsTable';
 import { DASH, PAGE, pathOf, refOf, relationDate } from './helpers';
-import type { BudgetLineRow, ContractRow, IncidentLinkRow, ProjectRow, SectionSpec } from './types';
+import type {
+  ApplicationRelationRow,
+  AssetRelationRow,
+  BudgetLineRow,
+  ContractRow,
+  IncidentLinkRow,
+  ProjectRow,
+  SectionSpec,
+  TechnologyRelationRow,
+} from './types';
 
 type NamedHit = { id: string; item_number: number | null; name?: string | null; title?: string | null };
 
@@ -297,6 +306,156 @@ export function incidentsSection({
       return (res.data?.items || [])
         .filter((row) => !locked(row.status))
         .map((row) => ({ id: row.id, label: row.title, ref: formatItemRef('incident', row.item_number) }));
+    },
+  };
+}
+
+type CodeLabel = (code: string | null) => string;
+
+/** The reference the server already formatted (`APP-4`, `AST-2`, `TEC-9`). */
+function storedRefColumn<T extends { reference: string | null }>(header: string): RelationsColumn<T> {
+  return {
+    key: 'ref',
+    header,
+    width: 72,
+    render: (row) => <RelationRef>{row.reference || DASH}</RelationRef>,
+  };
+}
+
+const recordHref = (type: 'application' | 'asset' | 'technology', row: { id: string; reference: string | null }) => (
+  `${buildItemPath(type, row.reference || row.id)}/overview`
+);
+
+async function searchNamed(
+  endpoint: string,
+  q: string,
+  signal: AbortSignal | undefined,
+  sorted: boolean,
+): Promise<Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }>> {
+  const res = await api.get<{ items: Array<{ id: string; name: string; sequential_id?: string | null; asset_reference?: string | null }> }>(endpoint, {
+    params: { page: 1, limit: PAGE, ...(sorted ? { sort: 'name:ASC' } : {}), ...(q ? { q } : {}) },
+    signal,
+  });
+  return res.data?.items || [];
+}
+
+/**
+ * Applications linked to the owner. A disabled or retired application stays listed, its name muted.
+ * The picker searches the applications list (there is no lookup route).
+ */
+export function applicationsSection({
+  t,
+  rows,
+  lifecycleLabel,
+  criticalityLabel,
+}: {
+  t: TFunction;
+  rows: ApplicationRelationRow[] | null;
+  lifecycleLabel: CodeLabel;
+  criticalityLabel: CodeLabel;
+}): SectionSpec<ApplicationRelationRow> {
+  return {
+    kind: 'applications',
+    title: t('workspace.application.relations.sections.applications'),
+    empty: t('workspace.application.relations.empty.applications'),
+    searchPlaceholder: t('workspace.application.relations.search.applications'),
+    rows,
+    href: (row) => recordHref('application', row),
+    label: (row) => row.name,
+    muted: (row) => row.status === 'disabled' || row.lifecycle === 'retired',
+    columns: [
+      storedRefColumn<ApplicationRelationRow>(columnsT(t, 'ref')),
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      { key: 'lifecycle', header: t('common.lifecycle'), width: 120, render: (row) => lifecycleLabel(row.lifecycle) },
+      {
+        key: 'criticality',
+        header: t('classification.business_criticality'),
+        width: 140,
+        hideOrder: 1,
+        render: (row) => criticalityLabel(row.business_criticality),
+      },
+    ],
+    search: async (q, signal) => {
+      const items = await searchNamed('/applications', q, signal, true);
+      return items.map((row) => ({ id: row.id, label: row.name, ref: row.sequential_id ?? null }));
+    },
+  };
+}
+
+/**
+ * Assets linked to the owner. A disabled or retired asset stays listed, its name muted.
+ * The picker searches the assets list.
+ */
+export function assetsSection({
+  t,
+  rows,
+  kindLabel,
+  environmentLabel,
+  statusLabel,
+}: {
+  t: TFunction;
+  rows: AssetRelationRow[] | null;
+  kindLabel: CodeLabel;
+  environmentLabel: CodeLabel;
+  statusLabel: CodeLabel;
+}): SectionSpec<AssetRelationRow> {
+  return {
+    kind: 'assets',
+    title: t('workspace.application.relations.sections.assets'),
+    empty: t('workspace.application.relations.empty.assets'),
+    searchPlaceholder: t('workspace.application.relations.search.assets'),
+    rows,
+    href: (row) => recordHref('asset', row),
+    label: (row) => row.name,
+    muted: (row) => row.status === 'retired' || row.status === 'disabled',
+    columns: [
+      storedRefColumn<AssetRelationRow>(columnsT(t, 'ref')),
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      { key: 'type', header: columnsT(t, 'type'), width: 140, render: (row) => kindLabel(row.kind) },
+      { key: 'environment', header: t('pages.assets.columns.environment'), width: 120, hideOrder: 1, render: (row) => environmentLabel(row.environment) },
+      { key: 'status', header: columnsT(t, 'status'), width: 110, render: (row) => statusLabel(row.status) },
+    ],
+    search: async (q, signal) => {
+      const items = await searchNamed('/assets', q, signal, true);
+      return items.map((row) => ({ id: row.id, label: row.name, ref: row.asset_reference ?? null }));
+    },
+  };
+}
+
+/**
+ * Technologies linked to the owner. The payload has no lifecycle, so a row is never muted.
+ * `rows` null (the caller cannot read the infrastructure) leaves the section out.
+ * The picker searches `/technologies/lookup`.
+ */
+export function technologiesSection({
+  t,
+  rows,
+  familyLabel,
+}: {
+  t: TFunction;
+  rows: TechnologyRelationRow[] | null;
+  familyLabel: CodeLabel;
+}): SectionSpec<TechnologyRelationRow> {
+  return {
+    kind: 'technologies',
+    title: t('workspace.application.relations.sections.technologies'),
+    empty: t('workspace.application.relations.empty.technologies'),
+    searchPlaceholder: t('workspace.application.relations.search.technologies'),
+    rows,
+    href: (row) => recordHref('technology', row),
+    label: (row) => row.name,
+    columns: [
+      storedRefColumn<TechnologyRelationRow>(columnsT(t, 'ref')),
+      { key: 'name', header: columnsT(t, 'name'), render: (row) => row.name },
+      { key: 'family', header: columnsT(t, 'family'), width: 140, render: (row) => familyLabel(row.family) },
+      { key: 'vendor', header: t('pages.technologies.columns.editor'), width: 140, hideOrder: 1, render: (row) => row.vendor || DASH },
+    ],
+    search: async (q, signal) => {
+      const res = await api.get<{ items: Array<{ id: string; name: string; reference: string | null; editor: string | null }> }>('/technologies/lookup', {
+        params: { limit: PAGE, ...(q ? { q } : {}) },
+        signal,
+      });
+      return (res.data?.items || []).map((row) => ({ id: row.id, label: row.name, ref: row.reference, hint: row.editor }));
     },
   };
 }

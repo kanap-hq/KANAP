@@ -1740,6 +1740,8 @@
           "requests": "Anfragen",
           "tasks": "Aufgaben",
           "technologies": "Technologien",
+          "applications": "Anwendungen",
+          "assets": "Assets",
           "related": "Verwandt"
         },
         "empty": {
@@ -1748,7 +1750,9 @@
           "projects": "Kein Projekt verknüpft.",
           "requests": "Keine Anfrage verknüpft.",
           "tasks": "Keine Aufgabe verknüpft.",
-          "technologies": "Keine Technologie verknüpft."
+          "technologies": "Keine Technologie verknüpft.",
+          "applications": "Keine Anwendung verknüpft.",
+          "assets": "Kein Asset verknüpft."
         },
         "columns": {
           "ref": "Ref.",
@@ -1780,12 +1784,16 @@
           "contracts": "Verträge suchen",
           "projects": "Projekte suchen",
           "requests": "Anfragen suchen",
-          "technologies": "Technologien suchen"
+          "technologies": "Technologien suchen",
+          "applications": "Anwendungen suchen",
+          "assets": "Assets suchen"
         },
         "types": {
           "budget_line": "Budgetzeile",
           "contract": "Vertrag",
-          "project": "Projekt"
+          "project": "Projekt",
+          "application": "Anwendung",
+          "asset": "Asset"
         },
         "via": {
           "same_supplier": "gleicher Lieferant",

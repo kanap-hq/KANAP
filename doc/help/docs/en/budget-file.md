@@ -51,7 +51,7 @@ The detail columns are the same for both kinds of line.
 | `item_number` | The line's reference: `BL-12`, or `12`. The `OPX-12` and `CPX-3` numbers of earlier files are read too | Empty: the row adds a line |
 | `name` | The title of the line, shown in the **Product name** column of the list | Required |
 | `description` | The long description | Optional |
-| `company_name` | Paying company | Required unless the line has a cost center |
+| `company_name` | Paying company. Empty on a new line: the cost center's company. A company other than the cost center's is accepted, with a warning | Required unless the line has a cost center |
 | `supplier_name` | Supplier name | Optional |
 | `supplier_erp_id` | The supplier's ID in your ERP | Optional |
 | `account_number` | Account number, in the paying company's chart of accounts | Required |
@@ -123,7 +123,7 @@ An absent column keeps every stored value of that column. A file holding only `i
 | **Errors** | The rows the load refuses, by line of the file with the column when it knows it. A file with one error loads nothing |
 | **Changes** | The lines to create, the lines to update and the lines the file leaves as they are |
 | **Changed in KANAP since the export** | The lines someone changed after your export, with who and when. Loading the file writes your values over those changes |
-| **Warnings** | A row that looks like another line, columns and cells the file ignores |
+| **Warnings** | A row that looks like another line, a `company_name` other than the company of the row's cost center, columns and cells the file ignores |
 | **Created by the load** | The suppliers and the dimension values the load would add |
 
 3. Click **Load**. The load writes everything or nothing.

@@ -30,6 +30,11 @@ export type CostCenterSelectProps = {
    */
   selectedOption?: CostCenterRef | null;
   selectable?: CostCenterSelectable;
+  /**
+   * With `cost_centers`: list only this company's cost centers, and the groups above them. The current
+   * value stays listed and pickable whatever its company. Empty: every cost center.
+   */
+  companyId?: string | null;
   /** Nodes left out of the list (e.g. a node's own subtree when picking its parent). */
   excludeIds?: ReadonlySet<string> | string[];
   disabled?: boolean;
@@ -60,12 +65,12 @@ function matches(node: CostCenterNode, needle: string): boolean {
 }
 
 /** One line for a tenant that has nothing to pick yet, with a way to the page for people who can create. */
-function NoCostCenterLine() {
+function NoCostCenterLine({ forCompany = false }: { forCompany?: boolean }) {
   const { t } = useTranslation('common');
   const { hasLevel } = useAuth();
   return (
     <Box component="span">
-      {t('selects.noCostCenterYet')}
+      {t(forCompany ? 'selects.noCostCenterForCompany' : 'selects.noCostCenterYet')}
       {hasLevel('cost_centers', 'member') && (
         <>
           {' '}
@@ -115,6 +120,7 @@ export default function CostCenterSelect({
   onChange,
   selectedOption,
   selectable = 'cost_centers',
+  companyId,
   excludeIds,
   disabled,
   error,
@@ -143,11 +149,21 @@ export default function CostCenterSelect({
     return excludeIds instanceof Set ? excludeIds : new Set(excludeIds as string[]);
   }, [excludeIds]);
 
+  const byCompany = selectable === 'cost_centers' && !!companyId;
   const options = React.useMemo(() => {
     const list = excluded ? tree.nodes.filter((node) => !excluded.has(node.id)) : tree.nodes;
     // Parent picking only needs the groups; their tree order and depth stay meaningful.
-    return selectable === 'groups' ? list.filter((node) => node.kind === 'group') : list;
-  }, [excluded, selectable, tree.nodes]);
+    if (selectable === 'groups') return list.filter((node) => node.kind === 'group');
+    if (!byCompany) return list;
+    // The company's cost centers (and the current value), with the groups above them for navigation.
+    const keep = new Set<string>();
+    for (const node of list) {
+      if (node.kind !== 'cost_center' || (node.company_id !== companyId && node.id !== value)) continue;
+      for (const id of node.path_ids) keep.add(id);
+      keep.add(node.id);
+    }
+    return list.filter((node) => keep.has(node.id));
+  }, [byCompany, companyId, excluded, selectable, tree.nodes, value]);
 
   const isPickable = React.useCallback(
     (node: CostCenterNode) => {
@@ -168,7 +184,7 @@ export default function CostCenterSelect({
   const hasPickable = React.useMemo(() => options.some(isPickable), [isPickable, options]);
   const loading = needsTree && !tree.ready;
   const footer = tree.ready && !tree.isError && options.length > 0 && !hasPickable && selectable === 'cost_centers'
-    ? <NoCostCenterLine />
+    ? <NoCostCenterLine forCompany={byCompany} />
     : null;
 
   const control = (
@@ -244,7 +260,9 @@ export default function CostCenterSelect({
       noOptionsText={
         tree.isError
           ? t('selects.costCentersLoadFailed')
-          : tree.hasAny ? t('selects.noCostCentersFound') : <NoCostCenterLine />
+          : !tree.hasAny ? <NoCostCenterLine />
+            : byCompany && options.length === 0 ? <NoCostCenterLine forCompany />
+            : t('selects.noCostCentersFound')
       }
       ListboxProps={{ sx: listboxSx } as React.HTMLAttributes<HTMLUListElement>}
       PaperComponent={FooterPaper}

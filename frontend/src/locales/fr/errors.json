@@ -70,6 +70,7 @@
   "CSV_FILE_OPENDOCUMENT": "Ce fichier est un classeur OpenDocument, pas un CSV. Dans LibreOffice Calc : Fichier › Enregistrer sous › Texte CSV.",
   "CSV_FILE_NOT_TEXT": "Ce fichier n'est pas un fichier CSV. Enregistrez-le au format CSV UTF-8, puis importez-le de nouveau.",
   "CSV_FILE_EMPTY": "Le fichier est vide.",
+  "BUDGET_FILE_COST_CENTER_OTHER_COMPANY": "Le centre de coûts {{costCenter}} appartient à {{costCenterCompany}}. La ligne est payée par {{company}}.",
   "CSV_HEADER_IGNORED_COLUMNS": "Ces colonnes ne sont pas importées : {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Fuseau horaire inconnu dans la colonne {{column}} : {{zone}}. Utilisez un fuseau comme Europe/Paris ou UTC.",
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Heures sans fuseau lues en UTC : {{columns}}. Nommez le fuseau après la colonne, par exemple {{example}} (Europe/Paris).",

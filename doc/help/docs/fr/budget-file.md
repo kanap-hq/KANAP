@@ -51,7 +51,7 @@ Les colonnes de détail sont les mêmes pour les deux types de ligne.
 | `item_number` | La référence de la ligne budgétaire : `BL-12`, ou `12`. Les numéros `OPX-12` et `CPX-3` des fichiers antérieurs sont lus aussi | Vide : la ligne du fichier crée une ligne budgétaire |
 | `name` | Le titre de la ligne, affiché dans la colonne **Nom du produit** de la liste | Obligatoire |
 | `description` | La description longue | Facultative |
-| `company_name` | Société payeuse | Obligatoire sauf si la ligne a un centre de coûts |
+| `company_name` | Société payeuse. Vide sur une nouvelle ligne : la société du centre de coûts. Une société autre que celle du centre de coûts est acceptée, avec un avertissement | Obligatoire sauf si la ligne a un centre de coûts |
 | `supplier_name` | Nom du fournisseur | Facultatif |
 | `supplier_erp_id` | L'ID du fournisseur dans votre ERP | Facultatif |
 | `account_number` | Numéro de compte, dans le plan comptable de la société payeuse | Obligatoire |
@@ -123,7 +123,7 @@ Une colonne absente conserve toutes les valeurs enregistrées de cette colonne. 
 | **Erreurs** | Les lignes que le chargement refuse, par ligne du fichier avec la colonne lorsqu'elle est connue. Un fichier avec une seule erreur ne charge rien |
 | **Modifications** | Les lignes budgétaires à créer, les lignes budgétaires à mettre à jour et les lignes budgétaires que le fichier laisse telles quelles |
 | **Modifiés dans KANAP depuis l'export** | Les lignes budgétaires modifiées par quelqu'un après votre export, avec qui et quand. Charger le fichier écrit vos valeurs à la place de ces modifications |
-| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, des colonnes et des cellules que le fichier ignore |
+| **Avertissements** | Une ligne du fichier qui ressemble à une autre ligne budgétaire, un `company_name` différent de la société du centre de coûts de la ligne, des colonnes et des cellules que le fichier ignore |
 | **Créés par le chargement** | Les fournisseurs et les valeurs de dimension que le chargement ajouterait |
 
 3. Cliquez sur **Charger**. Le chargement écrit tout ou rien.

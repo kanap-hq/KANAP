@@ -51,7 +51,7 @@ Die Detailspalten sind für beide Arten von Budgetzeilen gleich.
 | `item_number` | Die Referenz der Budgetzeile: `BL-12` oder `12`. Die Nummern `OPX-12` und `CPX-3` früherer Dateien werden ebenfalls gelesen | Leer: Die Zeile legt eine Budgetzeile an |
 | `name` | Der Titel der Budgetzeile, angezeigt in der Spalte **Produktname** der Liste | Erforderlich |
 | `description` | Die ausführliche Beschreibung | Optional |
-| `company_name` | Zahlendes Unternehmen | Erforderlich, außer die Budgetzeile hat eine Kostenstelle |
+| `company_name` | Zahlendes Unternehmen. Leer bei einer neuen Zeile: das Unternehmen der Kostenstelle. Ein anderes Unternehmen als das der Kostenstelle wird mit einer Warnung akzeptiert | Erforderlich, außer die Budgetzeile hat eine Kostenstelle |
 | `supplier_name` | Name des Lieferanten | Optional |
 | `supplier_erp_id` | Die ID des Lieferanten in Ihrem ERP | Optional |
 | `account_number` | Kontonummer, im Kontenplan des zahlenden Unternehmens | Erforderlich |
@@ -123,7 +123,7 @@ Eine fehlende Spalte behält alle gespeicherten Werte dieser Spalte. Eine Datei,
 | **Fehler** | Die Zeilen, die das Laden ablehnt, nach Zeile der Datei mit der Spalte, wenn sie bekannt ist. Eine Datei mit einem einzigen Fehler lädt nichts |
 | **Änderungen** | Die anzulegenden Budgetzeilen, die zu aktualisierenden Budgetzeilen und die Budgetzeilen, die die Datei unverändert lässt |
 | **Seit dem Export in KANAP geändert** | Die Budgetzeilen, die jemand nach Ihrem Export geändert hat, mit wer und wann. Das Laden der Datei schreibt Ihre Werte über diese Änderungen |
-| **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, Spalten und Zellen, die die Datei ignoriert |
+| **Warnungen** | Eine Zeile, die einer anderen Budgetzeile ähnelt, ein `company_name`, der vom Unternehmen der Kostenstelle der Zeile abweicht, Spalten und Zellen, die die Datei ignoriert |
 | **Beim Laden angelegt** | Die Lieferanten und Dimensionswerte, die das Laden hinzufügen würde |
 
 3. Klicken Sie auf **Laden**. Das Laden schreibt alles oder nichts.
