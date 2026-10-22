@@ -7,16 +7,17 @@ import { parseTargetId } from './relation-target';
 
 /**
  * The kinds `setOwnedLink` writes one row at a time. Incidents stay with their own service.
- * `applications`, `assets` and `technologies` are the contract tab's targets (lot R2b): a row of
- * that table in the tenant, or 400 with the caller's `notFound`.
+ * `applications`, `assets`, `technologies` and `processes` are a row of that table in the tenant,
+ * or 400 with the caller's `notFound`.
  */
-export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies';
+export type OwnedRelationKind = 'budget_lines' | 'contracts' | 'projects' | 'applications' | 'assets' | 'technologies' | 'processes';
 
-/** Existence of an application, an asset or a technology. The table names come only from here. */
+/** Existence of an application, an asset, a technology or a business process. The table names come only from here. */
 const ROW_TARGETS = {
   applications: 'applications',
   assets: 'assets',
   technologies: 'technologies',
+  processes: 'business_processes',
 } as const;
 
 /** The owner row, locked FOR NO KEY UPDATE. Table and column names come from the callers' constants. */
@@ -64,13 +65,13 @@ export async function assertProjectVisible(
 }
 
 /**
- * Link (`add`) or unlink one budget line, contract, project, application, asset or technology
- * the owner holds.
+ * Link (`add`) or unlink one budget line, contract, project, application, asset, technology or
+ * business process the owner holds.
  *
  * (1) `allowed` false → 403. (2) A bad target id → 400, before the owner is read.
  * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE. (5) A budget line's nature,
- * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset or a
- * technology exists in the tenant, or 400 with `notFound`. (8) The stored set
+ * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset, a
+ * technology or a business process exists in the tenant, or 400 with `notFound`. (8) The stored set
  * (a budget line: the links of that nature only). (9) Linking what is linked, or unlinking
  * what is not, changes nothing and writes no audit row. Otherwise one INSERT or DELETE and
  * one audit row: `recordId` the owner, before and after the sorted ids.

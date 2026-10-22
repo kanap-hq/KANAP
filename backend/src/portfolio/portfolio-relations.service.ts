@@ -10,17 +10,20 @@ import {
   listRelatedApplications,
   listRelatedAssets,
   listRelatedBudgetLines,
+  listRelatedBusinessProcesses,
   listRelatedPortfolioItems,
   listRelatedTechnologies,
   type RelatedApplication,
   type RelatedAsset,
   type RelatedBudgetLine,
+  type RelatedBusinessProcess,
   type RelatedPortfolioItem,
   type RelatedTechnology,
 } from '../common/relations/related-objects';
 import { FxRateService } from '../currency/fx-rate.service';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../spend/budget-nature';
 import { lockProject } from './project-budget-links.util';
+import { PortfolioRequestsService } from './portfolio-requests.service';
 import { PortfolioProjectsService } from './services/portfolio-projects.service';
 
 /**
@@ -33,6 +36,11 @@ import { PortfolioProjectsService } from './services/portfolio-projects.service'
  * the OPEX or the CAPEX replacement (`project-budget-links.util.ts`).
  * A technology has no such effect: `setOwnedLink` writes one row and one audit entry on
  * `technology_projects`. Source requests are read only: the conversion of a request writes them.
+ *
+ * A request's applications, assets and budget lines keep the same activity, through the request's
+ * own replacement, under a lock of the request row. Its business processes have no activity on
+ * that replacement: `setOwnedLink` writes one row and one audit entry on
+ * `portfolio_request_business_processes`. Resulting projects are read only.
  */
 
 export const PROJECT_RELATION_KINDS = ['budget_lines', 'applications', 'assets', 'technologies'] as const;
@@ -89,15 +97,73 @@ const TECHNOLOGY_LINK = {
   notFound: TECHNOLOGY_NOT_FOUND,
 } as const;
 
+export const REQUEST_RELATION_KINDS = ['budget_lines', 'applications', 'assets', 'processes'] as const;
+export type RequestRelationKind = (typeof REQUEST_RELATION_KINDS)[number];
+
+/** The module a request section reads. */
+export const REQUEST_RELATION_READS = {
+  budget_lines: 'budget',
+  applications: 'applications',
+  assets: 'infrastructure',
+  processes: 'business_processes',
+  resulting_projects: 'portfolio_projects',
+} as const;
+
+export type RequestRelationsAccess = Record<keyof typeof REQUEST_RELATION_READS, boolean>;
+
+export type RequestRelationsContext = {
+  manager: EntityManager;
+  tenantId: string;
+  userId: string | null;
+  access: RequestRelationsAccess;
+  /** `business_processes:member`. A process link needs it on top of the read. */
+  writes: { processes: boolean };
+  /** A Business Contributor's application scope. Absent for everyone else. */
+  applicationScope?: ParticipationAccessScope;
+  /** A Business Contributor's project scope, for the projects the request produced. */
+  projectScope?: ParticipationAccessScope;
+};
+
+export type RequestRelations = {
+  year: number;
+  budget_column: { key: string; label: string };
+  budget_lines: RelatedBudgetLine[] | null;
+  applications: RelatedApplication[] | null;
+  assets: RelatedAsset[] | null;
+  processes: RelatedBusinessProcess[] | null;
+  resulting_projects: RelatedPortfolioItem[] | null;
+};
+
+const REQUEST_LINES = { links: 'portfolio_request_opex', owner: 'request_id', target: 'opex_id' };
+const REQUEST_APPLICATIONS = { links: 'portfolio_request_applications', owner: 'request_id', target: 'application_id' };
+const REQUEST_ASSETS = { links: 'portfolio_request_assets', owner: 'request_id', target: 'asset_id' };
+const REQUEST_PROCESSES = { links: 'portfolio_request_business_processes', owner: 'request_id', target: 'business_process_id' };
+const REQUEST_PROJECTS = { links: 'portfolio_request_projects', owner: 'request_id', target: 'project_id' };
+
+const PROCESSES_NOT_FOUND = 'One or more business processes were not found.';
+
+const PROCESS_LINK = {
+  table: 'portfolio_request_business_processes',
+  ownerColumn: 'request_id',
+  targetColumn: 'business_process_id',
+  notFound: PROCESSES_NOT_FOUND,
+} as const;
+
 export function projectRelationKindOrThrow(value: string): ProjectRelationKind {
   if (!(PROJECT_RELATION_KINDS as readonly string[]).includes(value)) throw new NotFoundException('Unknown relation type.');
   return value as ProjectRelationKind;
+}
+
+export function requestRelationKindOrThrow(value: string): RequestRelationKind {
+  if (!(REQUEST_RELATION_KINDS as readonly string[]).includes(value)) throw new NotFoundException('Unknown relation type.');
+  return value as RequestRelationKind;
 }
 
 @Injectable()
 export class PortfolioRelationsService {
   constructor(
     private readonly projects: PortfolioProjectsService,
+    private readonly requests: PortfolioRequestsService,
     private readonly fxRates: FxRateService,
     private readonly audit: AuditService,
   ) {}
@@ -268,5 +334,115 @@ export class PortfolioRelationsService {
     const next = (add ? [...current, id] : current.filter((value) => value !== id)).sort();
     await replace(next);
     return { ok: true, changed: true };
+  }
+
+  /** The request's tab in one round trip. The request must exist in the tenant (404 otherwise). */
+  async getRequestRelations(requestId: string, ctx: RequestRelationsContext): Promise<RequestRelations> {
+    const mg = ctx.manager;
+    const request = await this.readRequest(mg, ctx.tenantId, requestId);
+    const tenantId = request.tenant_id;
+    const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
+    const budgetLines = ctx.access.budget_lines
+      ? await listRelatedBudgetLines(mg, this.fxRates, REQUEST_LINES, tenantId, request.id, year, measure)
+      : null;
+    const applications = ctx.access.applications
+      ? await listRelatedApplications(mg, REQUEST_APPLICATIONS, tenantId, request.id, ctx.applicationScope)
+      : null;
+    const assets = ctx.access.assets ? await listRelatedAssets(mg, REQUEST_ASSETS, tenantId, request.id) : null;
+    const processes = ctx.access.processes
+      ? await listRelatedBusinessProcesses(mg, REQUEST_PROCESSES, tenantId, request.id)
+      : null;
+    const resultingProjects = ctx.access.resulting_projects
+      ? await listRelatedPortfolioItems(mg, REQUEST_PROJECTS, 'portfolio_projects', tenantId, request.id, ctx.projectScope)
+      : null;
+    return {
+      year,
+      budget_column,
+      budget_lines: budgetLines,
+      applications,
+      assets,
+      processes,
+      resulting_projects: resultingProjects,
+    };
+  }
+
+  /**
+   * Link or unlink one row of a request. A business process also needs `writes.processes`
+   * (`business_processes:member`): 403 `You cannot edit this module.` with the read alone.
+   * The same order as a project: a bad id is 400 before a missing request is 404.
+   */
+  async setRequestLink(
+    kind: RequestRelationKind,
+    targetId: string,
+    add: boolean,
+    ctx: RequestRelationsContext,
+    loadOwner: () => Promise<{ id: string; tenantId: string }>,
+  ): Promise<{ ok: true; changed: boolean }> {
+    if (!ctx.access[kind]) throw new ForbiddenException('You cannot read this module.');
+    if (kind === 'processes') {
+      if (!ctx.writes.processes) throw new ForbiddenException('You cannot edit this module.');
+      return setOwnedLink({
+        manager: ctx.manager,
+        userId: ctx.userId,
+        kind,
+        targetId,
+        add,
+        allowed: true,
+        loadOwner,
+        owner: { table: 'portfolio_requests', idColumn: 'id' },
+        ownerNotFound: 'Request not found',
+        link: PROCESS_LINK,
+        audit: this.audit,
+      });
+    }
+    const id = parseTargetId(targetId);
+    const owner = await loadOwner();
+    const mg = ctx.manager;
+    if (!(await this.lockRequest(mg, owner.tenantId, owner.id))) throw new NotFoundException('Request not found');
+    if (kind === 'budget_lines') return this.setRequestBudgetLine(mg, owner.tenantId, owner.id, id, add, ctx.userId);
+    if (kind === 'applications') {
+      await this.assertApplicationVisible(mg, owner.tenantId, id, ctx.applicationScope);
+      const current = await this.linkIds(mg, REQUEST_APPLICATIONS, owner.tenantId, owner.id);
+      return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceApplications(owner.id, next, { manager: mg, userId: ctx.userId }));
+    }
+    await this.assertAssetExists(mg, owner.tenantId, id);
+    const current = await this.linkIds(mg, REQUEST_ASSETS, owner.tenantId, owner.id);
+    return this.replaceOne(current, id, add, (next) => this.requests.bulkReplaceAssets(owner.id, next, { manager: mg, userId: ctx.userId }));
+  }
+
+  private async readRequest(mg: EntityManager, tenantId: string, requestId: string): Promise<{ id: string; tenant_id: string }> {
+    const rows: Array<{ id: string; tenant_id: string }> = await mg.query(
+      `SELECT id, tenant_id FROM portfolio_requests WHERE tenant_id = $1 AND id = $2`,
+      [tenantId, requestId],
+    );
+    if (!rows[0]) throw new NotFoundException('Request not found');
+    return rows[0];
+  }
+
+  /** Locks the request (FOR NO KEY UPDATE); false when it is gone. */
+  private async lockRequest(mg: EntityManager, tenantId: string, requestId: string): Promise<boolean> {
+    const rows: unknown[] = await mg.query(
+      `SELECT 1 FROM portfolio_requests WHERE tenant_id = $1 AND id = $2 FOR NO KEY UPDATE`,
+      [tenantId, requestId],
+    );
+    return rows.length > 0;
+  }
+
+  /** The line's nature, or 400. The link is then written by the replacement of that nature only. */
+  private async setRequestBudgetLine(
+    mg: EntityManager,
+    tenantId: string,
+    requestId: string,
+    id: string,
+    add: boolean,
+    userId: string | null,
+  ): Promise<{ ok: true; changed: boolean }> {
+    const nature = await this.budgetNature(mg, tenantId, id);
+    if (!nature) throw new BadRequestException(BUDGET_LINE_NOT_FOUND);
+    const current = await this.linkIds(mg, REQUEST_LINES, tenantId, requestId, linkedLineOf('l.tenant_id', 'l.opex_id', nature));
+    const replace = nature === 'opex'
+      ? (next: string[]) => this.requests.bulkReplaceOpex(requestId, next, { manager: mg, userId })
+      : (next: string[]) => this.requests.bulkReplaceCapex(requestId, next, { manager: mg, userId });
+    return this.replaceOne(current, id, add, replace);
   }
 }
