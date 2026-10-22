@@ -429,6 +429,117 @@ describe('TechnologyOverviewTab', () => {
     expect(api.patch).toHaveBeenCalledTimes(1);
   });
 
+  function versionRow(id: string, label: string, alerts: boolean | null = null, effective = false) {
+    return {
+      ...VERSION,
+      id,
+      label,
+      standard_support_end: null,
+      catalog_key: null,
+      vulnerability_alerts: alerts,
+      vulnerability_alerts_effective: effective,
+    };
+  }
+
+  const SLES = {
+    ...TECHNOLOGY,
+    name: 'SUSE Linux Enterprise Server',
+    cpe_products: ['o:suse:linux_enterprise_server'],
+    vulnerability_alerts: false,
+    versions: [
+      versionRow('v-11', '11'),
+      versionRow('v-sp4', '11 SP4'),
+      versionRow('v-sp1', '11 SP1'),
+      versionRow('v-sp2', '11 SP2'),
+      versionRow('v-12', '12 SP1'),
+    ],
+  } as TechnologyDetail;
+
+  it('names the service packs a base release switch includes, from the first to the last', async () => {
+    renderTab(SLES);
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Includes the service packs 11 SP1 to 11 SP4');
+  });
+
+  it('names a single service pack in the singular', async () => {
+    renderTab({ ...SLES, versions: [versionRow('v-11', '11'), versionRow('v-sp1', '11 SP1')] });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Includes the service pack 11 SP1');
+  });
+
+  it('leaves the service-pack hint off a pack, off Windows, and off a product that does not file packs', async () => {
+    const view = renderTab(SLES);
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+    view.unmount();
+
+    const windows = renderTab({
+      ...TECHNOLOGY,
+      cpe_products: ['o:microsoft:windows_server_2012'],
+      vulnerability_alerts: false,
+      versions: [versionRow('v-2012', '2012'), versionRow('v-r2', '2012 R2')],
+    });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 2012' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+    windows.unmount();
+
+    renderTab({
+      ...TECHNOLOGY,
+      cpe_products: ['o:microsoft:windows_server'],
+      vulnerability_alerts: false,
+      versions: [versionRow('v-11', '11'), versionRow('v-sp1', '11 SP1')],
+    });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+  });
+
+  it('shows every service pack the base release switch just wrote', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({
+      data: {
+        id: 'v-11',
+        vulnerability_alerts: true,
+        vulnerability_alerts_effective: true,
+        updated_versions: [
+          { id: 'v-11', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp1', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp2', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp4', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+        ],
+      },
+    });
+    const { onVersionsChanged } = renderTab(SLES);
+    expect(screen.queryAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/technologies/tech-1/versions/v-11',
+      { vulnerability_alerts: true },
+    ));
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP2' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP4' })).toBeChecked();
+    });
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 12 SP1' })).not.toBeChecked();
+    expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(4);
+    expect(onVersionsChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates only the service pack whose switch was changed', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({
+      data: { id: 'v-sp1', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+    });
+    renderTab(SLES);
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' })).toBeChecked());
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' })).not.toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP2' })).not.toBeChecked();
+    expect(api.patch).toHaveBeenCalledWith('/technologies/tech-1/versions/v-sp1', { vulnerability_alerts: true });
+  });
+
   it('keeps every alert switch at the same place, with or without the own-setting dot', () => {
     renderTab({
       ...ALERT_VERSIONS,

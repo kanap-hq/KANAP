@@ -2306,6 +2306,8 @@
         "alertsColumnHint": "Nimmt diese Version in die Schwachstellenwarnungen auf: die Seite Schwachstellen, die Zähler und die E-Mail mit der Zusammenfassung. Jede Version folgt der Einstellung der Technologie, außer ein Punkt kennzeichnet eine eigene Einstellung.",
         "includeInAlerts": "In Schwachstellenwarnungen aufnehmen",
         "alertsFor": "Warnungen zu Schwachstellen für {{label}}",
+        "alertsServicePacks_one": "Umfasst das Service Pack {{from}}",
+        "alertsServicePacks_other": "Umfasst die Service Packs {{from}} bis {{to}}",
         "alertsHint": "Einstellung der Technologie: gilt für Versionen ohne eigene Einstellung, für spätere Versionen und für Verknüpfungen ohne Version.",
         "alertsOwn": "Eigene Einstellung dieser Version",
         "alertsConfirmTitle": "Warnungen zu Schwachstellen",

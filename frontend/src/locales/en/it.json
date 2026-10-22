@@ -2306,6 +2306,8 @@
         "alertsColumnHint": "Includes this version in vulnerability alerts: the Vulnerabilities page, the counts and the summary email. Each version follows the technology setting unless a dot marks its own setting.",
         "includeInAlerts": "Include in vulnerability alerts",
         "alertsFor": "Vulnerability alerts for {{label}}",
+        "alertsServicePacks_one": "Includes the service pack {{from}}",
+        "alertsServicePacks_other": "Includes the service packs {{from}} to {{to}}",
         "alertsHint": "Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.",
         "alertsOwn": "Own setting for this version",
         "alertsConfirmTitle": "Vulnerability alerts",

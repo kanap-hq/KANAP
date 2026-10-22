@@ -567,6 +567,64 @@ function securityTrackerName(url: string, editor: string | null, t: TFunction): 
     : t('workspace.technology.versions.securityTracker');
 }
 
+/**
+ * Products that file a service pack apart from the base release. The same set as
+ * `SERVICE_PACK_PRODUCTS` in `backend/src/vulnerabilities/vulnerability-rules.ts`.
+ */
+const SERVICE_PACK_PRODUCTS = new Set([
+  'o:suse:linux_enterprise_server',
+  'o:suse:suse_linux_enterprise_server',
+  'o:novell:suse_linux_enterprise_server',
+  'o:opensuse_project:suse_linux_enterprise_server',
+  'o:opensuse:suse_linux_enterprise_server',
+]);
+
+/** `15 SP5` → 5, `15.5` → 5; null for `15` or `2012 R2`. Same rule as `servicePackOf`. */
+function servicePackOf(raw: string): number | null {
+  const text = raw.trim();
+  const named = /^\d+\s*sp\s*(\d+)\b/i.exec(text);
+  if (named) return Number(named[1]);
+  const dotted = /^(\d+)\.(\d+)$/.exec(text);
+  return dotted ? Number(dotted[2]) : null;
+}
+
+/** `15`, `15 SP5` and `15.5` share 15. Null when the label is neither. */
+function servicePackMajor(raw: string): number | null {
+  const text = raw.trim();
+  const named = /^(\d+)\s*sp\s*\d+\b/i.exec(text);
+  if (named) return Number(named[1]);
+  const dotted = /^(\d+)\.(\d+)$/.exec(text);
+  if (dotted) return Number(dotted[1]);
+  const bare = /^(\d+)$/.exec(text);
+  return bare ? Number(bare[1]) : null;
+}
+
+/** Service packs of a base release, lowest pack first. Empty when the product does not file them. */
+function servicePackLabels(products: readonly string[] | undefined, versions: readonly { label: string }[], rootLabel: string): string[] {
+  if (!products?.some((product) => SERVICE_PACK_PRODUCTS.has(product.toLowerCase()))) return [];
+  if (servicePackOf(rootLabel) !== null) return [];
+  const major = servicePackMajor(rootLabel);
+  if (major == null) return [];
+  return versions
+    .map((version) => version.label)
+    .filter((label) => servicePackOf(label) != null && servicePackMajor(label) === major)
+    .sort((a, b) => (servicePackOf(a)! - servicePackOf(b)!) || a.localeCompare(b, 'en'));
+}
+
+/** "Includes the service packs 11 SP1 to 11 SP4", or the singular when there is one. */
+function servicePackTooltip(products: readonly string[] | undefined, versions: readonly { label: string }[], label: string, t: TFunction): string | undefined {
+  const packs = servicePackLabels(products, versions, label);
+  if (!packs.length) return undefined;
+  return t('workspace.technology.versions.alertsServicePacks', { count: packs.length, from: packs[0], to: packs[packs.length - 1] });
+}
+
+type VersionAlertWrite = {
+  id?: string;
+  vulnerability_alerts?: boolean | null;
+  vulnerability_alerts_effective?: boolean;
+  updated_versions?: Array<{ id?: string; vulnerability_alerts?: boolean | null; vulnerability_alerts_effective?: boolean }>;
+};
+
 /** Neutral at rest: a link inside a table cell turns teal only on hover. */
 const catalogSourceLinkSx = {
   color: 'inherit',
@@ -599,6 +657,14 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
   const [alertsBusy, setAlertsBusy] = React.useState(false);
   const alertsBusyRef = React.useRef(false);
   const technologyAlerts = technology.vulnerability_alerts === true;
+  // The answer of the switch lists every version it wrote. Shown until the record is read again.
+  const versionAlertStamp = `${String(technology.vulnerability_alerts)}|${technology.versions.map((version) => `${version.id}:${String(version.vulnerability_alerts)}:${String(version.vulnerability_alerts_effective)}`).join(',')}`;
+  const [alertOverrides, setAlertOverrides] = React.useState<Record<string, { vulnerability_alerts: boolean | null; vulnerability_alerts_effective: boolean }>>({});
+  React.useEffect(() => { setAlertOverrides({}); }, [versionAlertStamp]);
+  const shownVersions = technology.versions.map((version) => {
+    const over = alertOverrides[version.id];
+    return over ? { ...version, vulnerability_alerts: over.vulnerability_alerts, vulnerability_alerts_effective: over.vulnerability_alerts_effective } : version;
+  });
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -662,7 +728,23 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
     setAlertsBusy(true);
     const value = next === technologyAlerts ? null : next;
     try {
-      await api.patch(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      const written = await api.patch<VersionAlertWrite>(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      const listed = Array.isArray(written.data?.updated_versions) ? written.data.updated_versions : [];
+      const rows = listed.length > 0 ? listed : (written.data?.id ? [written.data] : []);
+      if (rows.length > 0) {
+        setAlertOverrides((prev) => {
+          const nextOverrides = { ...prev };
+          for (const row of rows) {
+            if (!row.id || row.vulnerability_alerts === undefined) continue;
+            const own = row.vulnerability_alerts;
+            nextOverrides[row.id] = {
+              vulnerability_alerts: own,
+              vulnerability_alerts_effective: row.vulnerability_alerts_effective ?? (own != null ? own : technologyAlerts),
+            };
+          }
+          return nextOverrides;
+        });
+      }
       await alertsWritten();
     } catch (err) {
       onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
@@ -808,7 +890,7 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
               </TableCell>
             </TableRow>
           )}
-          {technology.versions.map((version) => {
+          {shownVersions.map((version) => {
             if (editing === version.id) return editRow(version.id);
             const source = version.catalog_source;
             // Both ends are empty together when the vendor plans no end. The phrase replaces each dash.
@@ -868,6 +950,7 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
                       checked={version.vulnerability_alerts_effective ?? technologyAlerts}
                       disabled={!canManage || alertsBusy}
                       label={t('workspace.technology.versions.alertsFor', { label: version.label })}
+                      tooltip={servicePackTooltip(technology.cpe_products, technology.versions, version.label, t)}
                       onChange={(next) => { void setVersionAlerts(version, next); }}
                     />
                     <OwnSettingMark visible={version.vulnerability_alerts != null} />

@@ -2306,6 +2306,8 @@
         "alertsColumnHint": "Incluye esta versión en las alertas de vulnerabilidad: la página Vulnerabilidades, los contadores y el correo de resumen. Cada versión sigue el ajuste de la tecnología, salvo que un punto señale un ajuste propio.",
         "includeInAlerts": "Incluir en las alertas de vulnerabilidad",
         "alertsFor": "Alertas de vulnerabilidad de {{label}}",
+        "alertsServicePacks_one": "Incluye el service pack {{from}}",
+        "alertsServicePacks_other": "Incluye los service packs {{from}} a {{to}}",
         "alertsHint": "Ajuste de la tecnología: se aplica a las versiones sin ajuste propio, a las versiones futuras y a los vínculos sin versión.",
         "alertsOwn": "Ajuste propio de esta versión",
         "alertsConfirmTitle": "Alertas de vulnerabilidad",

@@ -2306,6 +2306,8 @@
         "alertsColumnHint": "Inclut cette version dans les alertes de vulnérabilité : la page Vulnérabilités, les compteurs et le courriel récapitulatif. Chaque version suit le réglage de la technologie, sauf si un point signale un réglage propre.",
         "includeInAlerts": "Inclure dans les alertes de vulnérabilité",
         "alertsFor": "Alertes de vulnérabilité pour {{label}}",
+        "alertsServicePacks_one": "Inclut le service pack {{from}}",
+        "alertsServicePacks_other": "Inclut les service packs {{from}} à {{to}}",
         "alertsHint": "Réglage de la technologie : vaut pour les versions sans réglage propre, les versions à venir et les liens sans version.",
         "alertsOwn": "Réglage propre à cette version",
         "alertsConfirmTitle": "Alertes de vulnérabilité",
