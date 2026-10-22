@@ -14,7 +14,7 @@ For portfolio-wide sequencing and roadmap work, use [Portfolio Planning](portfol
 ## Permissions
 
 - `portfolio_projects:reader`: open the list and view project workspaces
-- `portfolio_projects:contributor`: update the managed **Purpose** document and log time on the project (project-overhead entries and project task entries)
+- `portfolio_projects:contributor`: update the managed **Purpose** document, log time on the project (project-overhead entries and project task entries), and maintain dependencies, linked records, links and files on the **Relations** tab
 - `portfolio_projects:member`: create projects and manage project data, status, team, relations, timeline, progress, tasks, scoring, comments, and decisions
 - `portfolio_projects:admin`: includes member capabilities and can also import/export CSV, save priority overrides and maintain other users' project-overhead time entries
 - Knowledge viewing also requires Knowledge access
@@ -150,7 +150,7 @@ If leads and contributors are wrong, your effort planning will also be wrong.
 
 A read-only list of the request records that produced the project. Click an entry to navigate to the source request workspace.
 
-For dependencies, related projects, and related business/technical objects, see the **Relations** tab.
+The same requests also appear on the **Relations** tab, with dependencies, linked budget lines, applications, assets and technologies, and the project's links and files.
 
 ## Summary
 
@@ -309,7 +309,7 @@ If scoring drifts away from delivery reality, portfolio discussions become harde
 
 ## Relations
 
-The **Relations** tab brings together the links that explain how the project fits into the rest of the portfolio. The tab badge shows the count of related items.
+The **Relations** tab brings together the links that explain how the project fits into the rest of the portfolio: dependencies first, then one table per type of linked record, then links and files. The tab badge counts the dependencies, the linked records you can see, the web links and the files.
 
 ### Dependencies
 
@@ -317,9 +317,31 @@ Track delivery dependencies on other requests or projects. Use the search field 
 
 Dependencies are operational, not cosmetic. They shape how delays and sequencing should be interpreted.
 
-### Other relations
+### Linked records
 
-Below dependencies, the Relations tab also lets you maintain links to related business and technical context (for example, related applications, business processes, or other portfolio items). Each relation is autosaved.
+Below dependencies, each type of record has its own table. Click a row to open the record.
+
+| Section | Columns |
+|---|---|
+| **Budget lines** | Reference (`BL-4`), name, type (OPEX or CAPEX), supplier, amount for the year in the default budget column. A total row appears from two lines |
+| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality |
+| **Assets** | Reference (`AST-12`), name, type, environment, status |
+| **Technologies** | Reference (`TEC-5`), name, family, vendor |
+| **Source requests** | Reference (`REQ-2`), name, status. Read-only: converting a request into the project writes this link |
+
+A section is absent when you cannot read its module: budget lines need the budget, applications the applications, assets and technologies the infrastructure, source requests the requests. A Business Contributor only sees the applications and the requests they take part in. A disabled budget line, or a disabled or retired application or asset, stays listed with its name greyed out.
+
+**Adding and removing links** (`portfolio_projects:contributor`): **Add** at the right of a section opens a search below the button. Type a name or a reference and pick a result: the link is saved at once. To remove a link, hover the row and click the cross at its end. There is no confirmation, and removing a link deletes nothing else. Linking a technology also needs a read of the infrastructure. Readers see the tables read-only.
+
+Links to budget lines, applications and assets are recorded in the project's **History**.
+
+### Links and files
+
+**Links and files** closes the tab: the web links of the project and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `portfolio_projects:contributor`:
+
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
 ## Knowledge
 

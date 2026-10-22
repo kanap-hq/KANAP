@@ -12,6 +12,7 @@ Portfolio-Anfragen sind die Erfassungsebene für vorgeschlagene Arbeit. Eine Anf
 | Berechtigung | Was sie erlaubt |
 | --- | --- |
 | `portfolio_requests:reader` | Die Anfragenliste öffnen und Anfragen-Arbeitsbereiche anzeigen |
+| `portfolio_requests:contributor` | Budgetzeilen, Anwendungen, Assets und Geschäftsprozesse im Reiter **Verknüpfungen** verknüpfen und lösen |
 | `portfolio_requests:member` | Anfragen erstellen, Anfragendaten aktualisieren, die verwalteten Dokumente (Zweck, Risiken & Mitigationen) bearbeiten, Team und Beziehungen pflegen, Kommentare und Entscheidungen hinzufügen, Status ändern, Analyseempfehlungen einreichen und Bewertung bearbeiten |
 | `portfolio_requests:admin` | Anfragen löschen, CSV-Import/-Export verwenden und Prioritäts-Überschreibungen speichern |
 
@@ -126,7 +127,7 @@ Diese Zuweisungen treiben die geteilte Sichtbarkeit an und machen klar, wer vora
 
 Eine schreibgeschützte Liste der Projekte, die nach der Konvertierung aus dieser Anfrage erstellt wurden. Klicken Sie auf einen Eintrag, um zum Projekt-Arbeitsbereich zu navigieren.
 
-Für Abhängigkeiten und andere Beziehungstypen siehe den Reiter **Verknüpfungen**.
+Dieselben Projekte erscheinen auch im Reiter **Verknüpfungen**, zusammen mit den Abhängigkeiten, den verknüpften Budgetzeilen, Anwendungen, Assets und Geschäftsprozessen sowie den Links und Dateien der Anfrage.
 
 Ältere Lesezeichen können noch auf `overview`, `team` oder `relations` verweisen. Der aktuelle Arbeitsbereich platziert diesen Inhalt unter **Zusammenfassung**, der Eigenschaftsleiste und dem Reiter **Verknüpfungen**.
 
@@ -250,7 +251,7 @@ Sobald eine Anfrage **Konvertiert** ist, wird die Bewertung schreibgeschützt. Z
 
 ## Verknüpfungen
 
-Der Reiter **Verknüpfungen** bringt die Verknüpfungen zusammen, die erklären, wie sich die Anfrage mit dem Rest des Portfolios verbindet. Das Reiter-Badge zeigt die Anzahl der verwandten Elemente.
+Der Reiter **Verknüpfungen** bringt die Verknüpfungen zusammen, die erklären, wie sich die Anfrage mit dem Rest des Portfolios verbindet: zuerst die Abhängigkeiten, dann eine Tabelle je Typ verknüpfter Datensätze, dann die Links und Dateien. Das Reiter-Badge zählt die Abhängigkeiten, die verknüpften Datensätze, die Sie sehen, die Weblinks und die Dateien.
 
 ### Abhängigkeiten
 
@@ -258,11 +259,31 @@ Abhängigkeiten identifizieren Arbeit, die existieren, abgeschlossen sein oder a
 
 Eine Anfrage mit schwachen Abhängigkeitsdaten kann harmlos aussehen, bis sie mit vorhandener Arbeit kollidiert.
 
-### Andere Beziehungen
+### Verknüpfte Datensätze
 
-Unter Abhängigkeiten ermöglicht der Reiter Verknüpfungen Ihnen auch, andere Portfolio-Verknüpfungen zu pflegen, zum Beispiel verwandte Anfragen, verwandte Projekte oder andere verbundene geschäftliche und technische Objekte. Jede Beziehung wird automatisch gespeichert.
+Unter den Abhängigkeiten hat jeder Datensatztyp seine eigene Tabelle. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen.
 
-Für die Projekte, die nach der Konvertierung aus dieser Anfrage erstellt wurden, siehe die Gruppe **Resultierende Projekte** in der Eigenschaftsleiste.
+| Abschnitt | Spalten |
+|---|---|
+| **Budgetzeilen** | Referenz (`BL-4`), Name, Typ (OPEX oder CAPEX), Lieferant, Betrag des Jahres in der Standard-Budgetspalte. Ab zwei Zeilen erscheint eine Summenzeile |
+| **Anwendungen** | Referenz (`APP-3`), Name, Lebenszyklus, Geschäftskritikalität |
+| **Assets** | Referenz (`AST-12`), Name, Typ, Umgebung, Status |
+| **Geschäftsprozesse** | Name, Prozessverantwortlicher |
+| **Resultierende Projekte** | Referenz (`PRJ-7`), Name, Status. Schreibgeschützt: Die Umwandlung der Anfrage in ein Projekt schreibt diese Verknüpfung |
+
+Ein Abschnitt fehlt, wenn Sie sein Modul nicht lesen dürfen: Budgetzeilen erfordern das Budget, Anwendungen die Anwendungen, Assets die Infrastruktur, Geschäftsprozesse die Geschäftsprozesse, resultierende Projekte die Projekte. Ein Fachbereichs-Mitwirkender sieht nur die Anwendungen und Projekte, an denen er beteiligt ist. Eine deaktivierte Budgetzeile oder ein deaktivierter Prozess sowie eine deaktivierte oder ausgemusterte Anwendung oder ein solches Asset bleiben mit ausgegrautem Namen aufgeführt.
+
+**Verknüpfungen hinzufügen und entfernen** (`portfolio_requests:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche unter der Schaltfläche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Es gibt keine Bestätigung, und das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen eines Geschäftsprozesses erfordert zusätzlich `business_processes:member`. Leser sehen die Tabellen schreibgeschützt.
+
+Verknüpfungen mit Budgetzeilen, Anwendungen und Assets werden in der **Historie** der Anfrage erfasst.
+
+### Links und Dateien
+
+**Links und Dateien** schließt den Reiter ab: die Weblinks der Anfrage und ihre Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `portfolio_requests:member`:
+
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ## Wissensdatenbank
 

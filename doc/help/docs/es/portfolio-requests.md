@@ -12,6 +12,7 @@ Las Solicitudes del portafolio son la capa de recepción para el trabajo propues
 | Permiso | Qué permite |
 | --- | --- |
 | `portfolio_requests:reader` | Abrir la lista de solicitudes y ver los espacios de trabajo de solicitud |
+| `portfolio_requests:contributor` | Vincular y desvincular líneas presupuestarias, aplicaciones, activos y procesos de negocio en la pestaña **Relaciones** |
 | `portfolio_requests:member` | Crear solicitudes, actualizar datos de solicitud, editar los documentos gestionados (Propósito, Riesgos y mitigaciones), mantener equipo y relaciones, añadir comentarios y decisiones, cambiar el estado, enviar recomendaciones de análisis y editar la evaluación |
 | `portfolio_requests:admin` | Eliminar solicitudes, usar importación/exportación CSV y guardar sobrescrituras de prioridad |
 
@@ -126,7 +127,7 @@ Estas asignaciones impulsan la visibilidad compartida y dejan claro quién se es
 
 Una lista de solo lectura de los proyectos producidos a partir de esta solicitud después de la conversión. Haga clic en una entrada para navegar al espacio de trabajo del proyecto.
 
-Para dependencias y otros tipos de relación, consulte la pestaña **Relaciones**.
+Los mismos proyectos aparecen también en la pestaña **Relaciones**, junto con las dependencias, las líneas presupuestarias, aplicaciones, activos y procesos de negocio vinculados, y los enlaces y archivos de la solicitud.
 
 Los marcadores antiguos pueden seguir apuntando a `overview`, `team` o `relations`. El espacio de trabajo actual coloca este contenido bajo **Resumen**, el panel de Propiedades y la pestaña **Relaciones**.
 
@@ -250,7 +251,7 @@ Una vez que una solicitud está **Convertida**, la evaluación se vuelve de solo
 
 ## Relaciones
 
-La pestaña **Relaciones** reúne los vínculos que explican cómo se conecta la solicitud con el resto del portafolio. La insignia de la pestaña muestra el conteo de elementos relacionados.
+La pestaña **Relaciones** reúne los vínculos que explican cómo se conecta la solicitud con el resto del portafolio: primero las dependencias, después una tabla por tipo de registro vinculado y, por último, los enlaces y archivos. La insignia de la pestaña cuenta las dependencias, los registros vinculados que usted ve, los enlaces web y los archivos.
 
 ### Dependencias
 
@@ -258,11 +259,31 @@ Las dependencias identifican el trabajo que debe existir, terminarse o permanece
 
 Una solicitud con datos débiles de dependencia puede parecer inofensiva hasta que choca con el trabajo existente.
 
-### Otras relaciones
+### Registros vinculados
 
-Debajo de las dependencias, la pestaña Relaciones también le permite mantener otros vínculos del portafolio, por ejemplo, solicitudes relacionadas, proyectos relacionados u otros objetos de negocio y técnicos conectados. Cada relación se autoguarda.
+Debajo de las dependencias, cada tipo de registro tiene su propia tabla. Haga clic en una fila para abrir el registro.
 
-Para los proyectos producidos a partir de esta solicitud después de la conversión, consulte el grupo **Proyectos resultantes** en el panel de Propiedades.
+| Sección | Columnas |
+|---|---|
+| **Líneas presupuestarias** | Referencia (`BL-4`), nombre, tipo (OPEX o CAPEX), proveedor, importe del año en la columna presupuestaria por defecto. Una fila de total aparece a partir de dos líneas |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
+| **Procesos de negocio** | Nombre, responsable del proceso |
+| **Proyectos resultantes** | Referencia (`PRJ-7`), nombre, estado. Solo lectura: la conversión de la solicitud en proyecto escribe este vínculo |
+
+Una sección no aparece si usted no puede leer su módulo: las líneas presupuestarias requieren el presupuesto, las aplicaciones las aplicaciones, los activos la infraestructura, los procesos de negocio los procesos de negocio, los proyectos resultantes los proyectos. Un Colaborador de negocio solo ve las aplicaciones y los proyectos en los que participa. Una línea presupuestaria o un proceso desactivado, o una aplicación o un activo desactivado o retirado, sigue en la lista con el nombre atenuado.
+
+**Añadir y quitar vínculos** (`portfolio_requests:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda bajo el botón. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. No hay confirmación, y quitar un vínculo no elimina nada más. Vincular un proceso de negocio requiere también `business_processes:member`. Los lectores ven las tablas en solo lectura.
+
+Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en el **Historial** de la solicitud.
+
+### Enlaces y archivos
+
+**Enlaces y archivos** cierra la pestaña: los enlaces web de la solicitud y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `portfolio_requests:member`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 ## Conocimiento
 

@@ -14,7 +14,7 @@ Para la secuenciación a nivel de portafolio y el trabajo de hoja de ruta, use [
 ## Permisos
 
 - `portfolio_projects:reader`: abrir la lista y ver los espacios de trabajo de proyecto
-- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito** y registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto)
+- `portfolio_projects:contributor`: actualizar el documento gestionado **Propósito**, registrar tiempo en el proyecto (entradas de gastos generales del proyecto y entradas en tareas del proyecto) y mantener las dependencias, los registros vinculados, los enlaces y los archivos de la pestaña **Relaciones**
 - `portfolio_projects:member`: crear proyectos y gestionar datos del proyecto, estado, equipo, relaciones, cronograma, progreso, tareas, evaluación, comentarios y decisiones
 - `portfolio_projects:admin`: incluye las capacidades del nivel miembro y también puede importar/exportar CSV, guardar sobrescrituras de prioridad y mantener entradas de tiempo de gastos generales de otros usuarios
 - La visualización del conocimiento también requiere acceso a Base de conocimiento
@@ -150,7 +150,7 @@ Si los responsables y colaboradores son incorrectos, su planificación de esfuer
 
 Una lista de solo lectura de los registros de solicitud que produjeron el proyecto. Haga clic en una entrada para navegar al espacio de trabajo de la solicitud de origen.
 
-Para dependencias, proyectos relacionados y objetos de negocio/técnicos relacionados, consulte la pestaña **Relaciones**.
+Las mismas solicitudes aparecen también en la pestaña **Relaciones**, junto con las dependencias, las líneas presupuestarias, aplicaciones, activos y tecnologías vinculados, y los enlaces y archivos del proyecto.
 
 ## Resumen
 
@@ -309,7 +309,7 @@ Si la evaluación se desvía de la realidad de la entrega, las discusiones del p
 
 ## Relaciones
 
-La pestaña **Relaciones** reúne los vínculos que explican cómo encaja el proyecto en el resto del portafolio. La insignia de la pestaña muestra el conteo de elementos relacionados.
+La pestaña **Relaciones** reúne los vínculos que explican cómo encaja el proyecto en el resto del portafolio: primero las dependencias, después una tabla por tipo de registro vinculado y, por último, los enlaces y archivos. La insignia de la pestaña cuenta las dependencias, los registros vinculados que usted ve, los enlaces web y los archivos.
 
 ### Dependencias
 
@@ -317,9 +317,31 @@ Haga seguimiento de las dependencias de entrega con otras solicitudes o proyecto
 
 Las dependencias son operativas, no cosméticas. Dan forma a cómo deben interpretarse los retrasos y la secuenciación.
 
-### Otras relaciones
+### Registros vinculados
 
-Debajo de las dependencias, la pestaña Relaciones también le permite mantener vínculos con contexto de negocio y técnico relacionado (por ejemplo, aplicaciones relacionadas, procesos de negocio u otros elementos del portafolio). Cada relación se autoguarda.
+Debajo de las dependencias, cada tipo de registro tiene su propia tabla. Haga clic en una fila para abrir el registro.
+
+| Sección | Columnas |
+|---|---|
+| **Líneas presupuestarias** | Referencia (`BL-4`), nombre, tipo (OPEX o CAPEX), proveedor, importe del año en la columna presupuestaria por defecto. Una fila de total aparece a partir de dos líneas |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
+| **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor |
+| **Solicitudes de origen** | Referencia (`REQ-2`), nombre, estado. Solo lectura: la conversión de una solicitud en este proyecto escribe este vínculo |
+
+Una sección no aparece si usted no puede leer su módulo: las líneas presupuestarias requieren el presupuesto, las aplicaciones las aplicaciones, los activos y las tecnologías la infraestructura, las solicitudes de origen las solicitudes. Un Colaborador de negocio solo ve las aplicaciones y las solicitudes en las que participa. Una línea presupuestaria desactivada, o una aplicación o un activo desactivado o retirado, sigue en la lista con el nombre atenuado.
+
+**Añadir y quitar vínculos** (`portfolio_projects:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda bajo el botón. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. No hay confirmación, y quitar un vínculo no elimina nada más. Vincular una tecnología requiere también poder leer la infraestructura. Los lectores ven las tablas en solo lectura.
+
+Los vínculos con líneas presupuestarias, aplicaciones y activos quedan registrados en el **Historial** del proyecto.
+
+### Enlaces y archivos
+
+**Enlaces y archivos** cierra la pestaña: los enlaces web del proyecto y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `portfolio_projects:contributor`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 ## Conocimiento
 

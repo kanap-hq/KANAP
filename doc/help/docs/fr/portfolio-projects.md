@@ -14,7 +14,7 @@ Pour le séquencement à l'échelle du portefeuille et le travail de roadmap, ut
 ## Autorisations
 
 - `portfolio_projects:reader` : ouvrir la liste et consulter les espaces de travail des projets
-- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé et saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet)
+- `portfolio_projects:contributor` : mettre à jour le document **Objectif** managé, saisir du temps sur le projet (saisies de gestion de projet et saisies sur les tâches du projet), et maintenir les dépendances, les enregistrements liés, les liens et les fichiers de l'onglet **Relations**
 - `portfolio_projects:member` : créer des projets et gérer les données du projet, statut, équipe, relations, planning, avancement, tâches, évaluation, commentaires et décisions
 - `portfolio_projects:admin` : inclut les capacités du niveau membre et peut également importer/exporter en CSV, enregistrer les remplacements de priorité et maintenir les saisies de temps de gestion de projet d'autres utilisateurs
 - La consultation des connaissances nécessite également un accès Connaissances
@@ -150,7 +150,7 @@ Si les responsables et contributeurs sont incorrects, votre planification de cha
 
 Une liste en lecture seule des enregistrements de demande qui ont produit le projet. Cliquez sur une entrée pour naviguer vers l'espace de travail de la demande source.
 
-Pour les dépendances, projets liés et autres objets métier/techniques liés, voir l'onglet **Relations**.
+Les mêmes demandes figurent aussi dans l'onglet **Relations**, avec les dépendances, les lignes budgétaires, applications, actifs et technologies liés, et les liens et fichiers du projet.
 
 ## Synthèse
 
@@ -309,7 +309,7 @@ Si l'évaluation s'éloigne de la réalité de livraison, les discussions de por
 
 ## Relations
 
-L'onglet **Relations** rassemble les liens qui expliquent comment le projet s'intègre au reste du portefeuille. Le badge de l'onglet affiche le nombre d'éléments liés.
+L'onglet **Relations** rassemble les liens qui expliquent comment le projet s'intègre au reste du portefeuille : d'abord les dépendances, puis un tableau par type d'enregistrement lié, puis les liens et fichiers. Le badge de l'onglet compte les dépendances, les enregistrements liés que vous voyez, les liens web et les fichiers.
 
 ### Dépendances
 
@@ -317,9 +317,31 @@ Suivez les dépendances de livraison sur d'autres demandes ou projets. Utilisez 
 
 Les dépendances sont opérationnelles, pas cosmétiques. Elles façonnent la manière dont les retards et le séquencement doivent être interprétés.
 
-### Autres relations
+### Enregistrements liés
 
-Sous les dépendances, l'onglet Relations vous permet également de maintenir des liens vers le contexte métier et technique connexe (par exemple, applications liées, processus métier ou autres éléments de portefeuille). Chaque relation est sauvegardée automatiquement.
+Sous les dépendances, chaque type d'enregistrement a son propre tableau. Cliquez sur une ligne pour ouvrir l'enregistrement.
+
+| Section | Colonnes |
+|---|---|
+| **Lignes budgétaires** | Référence (`BL-4`), nom, type (OPEX ou CAPEX), fournisseur, montant de l'année dans la colonne budgétaire par défaut. Une ligne de total apparaît dès deux lignes |
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
+| **Technologies** | Référence (`TEC-5`), nom, famille, éditeur |
+| **Demandes sources** | Référence (`REQ-2`), nom, statut. Lecture seule : la conversion d'une demande en ce projet écrit ce lien |
+
+Une section est absente si vous ne pouvez pas lire son module : les lignes budgétaires demandent le budget, les applications les applications, les actifs et les technologies l'infrastructure, les demandes sources les demandes. Un Contributeur métier ne voit que les applications et les demandes auxquelles il participe. Une ligne budgétaire désactivée, ou une application ou un actif désactivé ou retiré, reste affiché avec son nom grisé.
+
+**Ajouter et retirer des liens** (`portfolio_projects:contributor`) : **Ajouter**, à droite d'une section, ouvre une recherche sous le bouton. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Il n'y a pas de confirmation, et retirer un lien ne supprime rien d'autre. Lier une technologie demande aussi de pouvoir lire l'infrastructure. Les lecteurs voient les tableaux en lecture seule.
+
+Les liens vers les lignes budgétaires, les applications et les actifs sont notés dans l'**Historique** du projet.
+
+### Liens et fichiers
+
+**Liens et fichiers** termine l'onglet : les liens web du projet et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `portfolio_projects:contributor` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 ## Connaissances
 
