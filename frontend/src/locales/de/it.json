@@ -1543,14 +1543,6 @@
           "reviewImported": "Vorfallanalyse importiert"
         }
       },
-      "relations": {
-        "assets": "Assets",
-        "assetsPlaceholder": "Assets suchen",
-        "applications": "Anwendungen",
-        "applicationsPlaceholder": "Anwendungen suchen",
-        "technologies": "Technologien",
-        "technologiesPlaceholder": "Technologien suchen"
-      },
       "drawer": {
         "category": "Kategorie",
         "noCategory": "Keine Kategorie",
@@ -1582,7 +1574,6 @@
         "saveFailed": "Fehler beim Speichern des Vorfalls",
         "createFailed": "Fehler beim Erstellen des Vorfalls",
         "entryFailed": "Fehler beim Hinzufügen des Verlaufseintrags",
-        "relationsFailed": "Fehler beim Speichern der Verknüpfungen",
         "attachmentsFailed": "Fehler beim Aktualisieren der Anhänge",
         "exportPdfFailed": "Der PDF-Bericht konnte nicht exportiert werden.",
         "confidentialityFailed": "Zugriff konnte nicht aktualisiert werden",
@@ -1800,13 +1791,16 @@
           "contract": "Vertrag",
           "project": "Projekt",
           "application": "Anwendung",
-          "asset": "Asset"
+          "asset": "Asset",
+          "technology": "Technologie"
         },
         "via": {
           "same_supplier": "gleicher Lieferant",
           "contract": "über den Vertrag {{label}}",
           "project": "über das Projekt {{label}}",
-          "task": "enthält die Aufgabe {{label}}"
+          "task": "enthält die Aufgabe {{label}}",
+          "asset_technology": "Technologie des Assets {{label}}",
+          "application_technology": "Technologie der Anwendung {{label}}"
         },
         "viaHost": "{{server}} (auf {{host}})",
         "technologyLink": {

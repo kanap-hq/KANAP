@@ -1543,14 +1543,6 @@
           "reviewImported": "Revue d’incident importée"
         }
       },
-      "relations": {
-        "assets": "Actifs",
-        "assetsPlaceholder": "Rechercher des actifs",
-        "applications": "Applications",
-        "applicationsPlaceholder": "Rechercher des applications",
-        "technologies": "Technologies",
-        "technologiesPlaceholder": "Rechercher des technologies"
-      },
       "drawer": {
         "category": "Catégorie",
         "noCategory": "Aucune catégorie",
@@ -1582,7 +1574,6 @@
         "saveFailed": "Échec de l'enregistrement de l'incident",
         "createFailed": "Échec de la création de l'incident",
         "entryFailed": "Échec de l'ajout de l'entrée de journal",
-        "relationsFailed": "Échec de l'enregistrement des liens",
         "attachmentsFailed": "Échec de la mise à jour des pièces jointes",
         "exportPdfFailed": "Impossible d'exporter le rapport PDF.",
         "confidentialityFailed": "Impossible de mettre à jour l'accès",
@@ -1800,13 +1791,16 @@
           "contract": "Contrat",
           "project": "Projet",
           "application": "Application",
-          "asset": "Actif"
+          "asset": "Actif",
+          "technology": "Technologie"
         },
         "via": {
           "same_supplier": "même fournisseur",
           "contract": "via le contrat {{label}}",
           "project": "via le projet {{label}}",
-          "task": "porte la tâche {{label}}"
+          "task": "porte la tâche {{label}}",
+          "asset_technology": "technologie de l'actif {{label}}",
+          "application_technology": "technologie de l'application {{label}}"
         },
         "viaHost": "{{server}} (sur {{host}})",
         "technologyLink": {
