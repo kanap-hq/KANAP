@@ -83,7 +83,7 @@ Jeder Unter-Standort hat:
 
 Unter-Standorte sind verfügbar, sobald der Standort existiert (nachdem Sie auf **Erstellen** geklickt haben). Jede Zeile wird einzeln gespeichert, wenn Sie das Feld verlassen, und das Löschen eines Unter-Standorts muss zuerst bestätigt werden.
 
-Assets können einem bestimmten Unter-Standort innerhalb eines Standorts zugewiesen werden, um genau zu verfolgen, wo Hardware steht. Wenn Unter-Standorte existieren, zeigt der Reiter Verknüpfungen, welchem Unter-Standort jedes Asset zugeordnet ist.
+Assets können einem bestimmten Unter-Standort innerhalb eines Standorts zugewiesen werden, um genau zu verfolgen, wo Hardware steht. Der Reiter Verknüpfungen zeigt den Unter-Standort jedes Assets, das einen hat.
 
 ---
 
@@ -103,11 +103,21 @@ Dieser Reiter organisiert die Personen und Referenzen, die mit einem Standort ve
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen zeigt Entitäten, die mit diesem Standort verknüpft sind. Er ist schreibgeschützt. Beziehungen werden von den verknüpften Datensätzen selbst verwaltet.
+Der Reiter Verknüpfungen zeigt die Assets an diesem Standort und die Anwendungen, die darauf laufen, danach die Weblinks des Standorts. Klicken Sie auf eine Zeile, um das Asset oder die Anwendung zu öffnen. Das Badge des Reiters zählt die Assets und Anwendungen, die Sie sehen dürfen, und die Weblinks.
 
-**Assets**: Eine Tabelle der an diesem Standort gehosteten Assets mit Name, Umgebung, Typ, Anbieter, Region/Zone und Status. Wenn der Standort Unter-Standorte hat, erscheint eine zusätzliche Spalte **Unter-Standort**, die zeigt, welchem Unter-Standort jedes Asset zugewiesen ist. Klicken Sie auf einen Asset-Namen, um zu seinem Arbeitsbereich zu springen.
+| Abschnitt | Spalten |
+|---|---|
+| **Assets** | Referenz (`AST-12`), Name, Unterstandort, Typ, Umgebung, Anbieter, Status |
+| **Anwendungen** | Referenz (`APP-3`), Name, Umgebungen, Lebenszyklus |
 
-**Anwendungen**: Eine Tabelle der Anwendungen, die Infrastruktur an diesem Standort haben, mit Name und Umgebungen. Klicken Sie auf einen Anwendungsnamen, um zu seinem Arbeitsbereich zu springen.
+**Assets** listet die Assets an diesem Standort. Die Spalte **Unterstandort** erscheint nur, wenn mindestens ein Asset einen Unter-Standort hat. Der Abschnitt ist schreibgeschützt: Den Standort eines Assets legen Sie am Asset selbst fest. Er erfordert Leserechte auf die Infrastruktur.
+
+**Anwendungen** listet die Anwendungen mit einer Instanz auf einem dieser Assets. **Umgebungen** zeigt die Umgebungen dieser Instanzen. Der Abschnitt ist schreibgeschützt und erfordert Leserechte auf die Anwendungen. Ein Fachbereichs-Mitwirkender sieht nur die Anwendungen, an denen er beteiligt ist.
+
+**Weblinks**: die Links des Standorts (Anbieterportale, Einrichtungsdokumentation, Statusseiten), je eine Zeile mit Name, der Domain des Links und dem Datum, an dem er hinzugefügt wurde. Es sind dieselben Links wie die **Relevanten Websites** im Reiter Kontakte & Support. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen. Mit `locations:member`:
+
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- Um einen Link zu entfernen, fahren Sie mit der Maus über seine Zeile und klicken Sie auf das Kreuz.
 
 ---
 

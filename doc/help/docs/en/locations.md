@@ -83,7 +83,7 @@ Each sub-location has:
 
 Sub-locations are available once the location exists (after you click **Create**). Each row saves on its own when you leave the field, and deleting a sub-location asks for confirmation first.
 
-Assets can be assigned to a specific sub-location within a location, which lets you track exactly where hardware sits. When sub-locations exist, the Relations tab shows which sub-location each asset belongs to.
+Assets can be assigned to a specific sub-location within a location, which lets you track exactly where hardware sits. The Relations tab shows the sub-location of each asset that has one.
 
 ---
 
@@ -103,11 +103,21 @@ Changes save automatically. Adding a contact or a link saves it at once, and a r
 
 ### Relations
 
-The Relations tab shows entities that are linked to this location. It is read-only. Relationships are managed from the related records themselves.
+The Relations tab shows the assets at this location and the applications that run on them, then the web links of the location. Click a row to open the asset or the application. The tab badge counts the assets and applications you can see, and the web links.
 
-**Assets**: A table of assets hosted at this location, showing Name, Environment, Type, Provider, Region/Zone, and Status. When the location has sub-locations, an additional **Sub-location** column appears showing which sub-location each asset is assigned to. Click an asset name to jump to its workspace.
+| Section | Columns |
+|---|---|
+| **Assets** | Reference (`AST-12`), name, sub-location, type, environment, provider, status |
+| **Applications** | Reference (`APP-3`), name, environments, lifecycle |
 
-**Applications**: A table of applications that have infrastructure at this location, showing Name and Environments. Click an application name to jump to its workspace.
+**Assets** lists the assets placed at this location. The **Sub-location** column appears only when at least one asset has a sub-location. The section is read only: you set an asset's location on the asset itself. It needs a read of the infrastructure.
+
+**Applications** lists the applications with an instance on one of those assets. **Environments** shows the environments of those instances. The section is read only and needs a read of the applications. A Business Contributor only sees the applications they take part in.
+
+**Web links**: the links of the location (provider portals, facility documentation, status pages), one row each with its name, the domain of the link and the date it was added. They are the same links as the **Relevant websites** of the Contacts & Support tab. Click a link to open it in a new tab. With `locations:member`:
+
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- To remove a link, hover its row and click the cross.
 
 ---
 

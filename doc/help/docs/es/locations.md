@@ -83,7 +83,7 @@ Cada sub-ubicación tiene:
 
 Las sub-ubicaciones están disponibles en cuanto la ubicación existe (después de hacer clic en **Crear**). Cada fila se guarda por sí sola al salir del campo, y eliminar una sub-ubicación pide confirmación primero.
 
-Los activos pueden asignarse a una sub-ubicación específica dentro de una ubicación, lo que le permite rastrear exactamente dónde se encuentra el hardware. Cuando existen sub-ubicaciones, la pestaña Relaciones muestra a qué sub-ubicación pertenece cada activo.
+Los activos pueden asignarse a una sub-ubicación específica dentro de una ubicación, lo que le permite rastrear exactamente dónde se encuentra el hardware. La pestaña Relaciones muestra la sub-ubicación de cada activo que tiene una.
 
 ---
 
@@ -103,11 +103,21 @@ Los cambios se guardan automáticamente. Añadir un contacto o un enlace lo guar
 
 ### Relaciones
 
-La pestaña Relaciones muestra las entidades vinculadas a esta ubicación. Es de solo lectura: las relaciones se gestionan desde los propios registros relacionados.
+La pestaña Relaciones muestra los activos de esta ubicación y las aplicaciones que se ejecutan en ellos, y después los enlaces web de la ubicación. Haga clic en una fila para abrir el activo o la aplicación. La insignia de la pestaña cuenta los activos y las aplicaciones que puede ver, y los enlaces web.
 
-**Activos**: Una tabla de activos alojados en esta ubicación, mostrando Nombre, Entorno, Tipo, Proveedor, Región/Zona y Estado. Cuando la ubicación tiene sub-ubicaciones, aparece una columna adicional de **Sub-ubicación** mostrando a qué sub-ubicación está asignado cada activo. Haga clic en el nombre de un activo para ir a su espacio de trabajo.
+| Sección | Columnas |
+|---|---|
+| **Activos** | Referencia (`AST-12`), nombre, sub-ubicación, tipo, entorno, proveedor, estado |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, entornos, ciclo de vida |
 
-**Aplicaciones**: Una tabla de aplicaciones que tienen infraestructura en esta ubicación, mostrando Nombre y Entornos. Haga clic en el nombre de una aplicación para ir a su espacio de trabajo.
+**Activos** lista los activos situados en esta ubicación. La columna **Sub-ubicación** solo aparece cuando al menos un activo tiene una sub-ubicación. La sección es de solo lectura: la ubicación de un activo se elige en el propio activo. Requiere poder leer la infraestructura.
+
+**Aplicaciones** lista las aplicaciones con una instancia en uno de esos activos. **Entornos** muestra los entornos de esas instancias. La sección es de solo lectura y requiere poder leer las aplicaciones. Un Colaborador de negocio solo ve las aplicaciones en las que participa.
+
+**Enlaces web**: los enlaces de la ubicación (portales de proveedores, documentación de instalaciones, páginas de estado), una fila cada uno con su nombre, el dominio del enlace y la fecha en que se añadió. Son los mismos enlaces que los **Sitios web relevantes** de la pestaña Contactos y soporte. Haga clic en un enlace para abrirlo en una pestaña nueva. Con `locations:member`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- Para quitar un enlace, pase el cursor sobre su fila y haga clic en la cruz.
 
 ---
 
