@@ -122,3 +122,13 @@ export type SectionSpec<T extends AnyRow> = {
   /** A line under the table (what its totals leave out). */
   notice?: (rows: T[]) => React.ReactNode;
 };
+
+/** An interface linked to the owner (upstream or downstream). `reference` is already `INT-n`. */
+export type InterfaceRelationRow = {
+  id: string;
+  reference: string | null;
+  name: string;
+  source_application_name: string | null;
+  target_application_name: string | null;
+  lifecycle: string;
+};

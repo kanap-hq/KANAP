@@ -31,3 +31,5 @@ export {
   searchRelationItems,
   technologiesSection,
 } from './sections';
+export type { InterfaceRelationRow } from './types';
+export { interfacesSection } from './sections';

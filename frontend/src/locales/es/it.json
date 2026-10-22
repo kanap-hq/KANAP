@@ -2708,25 +2708,13 @@
         "deprecated": "{{label}} (obsoleto)"
       },
       "relations": {
-        "dependencies": "Dependencias de la interfaz",
         "upstream": "Interfaces anteriores",
-        "selectUpstream": "Seleccionar interfaces anteriores",
         "downstream": "Interfaces posteriores",
-        "selectDownstream": "Seleccionar interfaces posteriores",
-        "externalUrls": "URL externas",
-        "addLink": "Añadir enlace",
-        "noLinks": "Aún no se han añadido enlaces.",
-        "description": "Descripción",
-        "openLink": "Abrir el enlace",
-        "attachments": "Archivos adjuntos",
-        "dropHint": "Arrastre y suelte archivos aquí, o use el botón para seleccionarlos",
-        "selectFiles": "Seleccionar archivos",
-        "saveFirst": "Guarde la interfaz una vez antes de subir archivos adjuntos.",
-        "uploading_one": "Subiendo {{count}} archivo…",
-        "uploading_other": "Subiendo {{count}} archivos…",
-        "noAttachments": "Aún no se han subido archivos adjuntos.",
-        "deleteAttachmentTitle": "Eliminar archivo adjunto",
-        "deleteAttachmentMessage": "Eliminar este archivo adjunto de la interfaz."
+        "empty": {
+          "upstream": "Ninguna interfaz anterior vinculada.",
+          "downstream": "Ninguna interfaz posterior vinculada."
+        },
+        "search": "Buscar interfaces"
       },
       "mapping": {
         "operations": {
