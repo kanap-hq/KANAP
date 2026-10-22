@@ -178,12 +178,25 @@ Das Wiederöffnen eines Vorfalls ändert daran nichts. Die Versionen bleiben, de
 
 ### Beziehungen
 
-- **Assets**: die betroffenen Server, VMs oder Geräte. Suchen und auswählen; Verknüpfen und Lösen wird im Journal festgehalten
-- **Anwendungen**: die betroffenen Anwendungen und Dienste, gleiches Verhalten
-- **Technologien**: die beteiligten Technologien, etwa ein Verzeichnisdienst oder eine Datenbank-Engine, gleiches Verhalten. Nur für Benutzer sichtbar und im Reiter-Badge gezählt, die die Infrastruktur lesen dürfen
-- **Aufgaben**: die Folgearbeit. Legen Sie eine Aufgabe direkt aus dem Vorfall heraus an, sie bleibt daran gebunden. Die Aufgabe zeigt „Vorfall · INC-14" in ihrer eigenen Seitenleiste, und die Spalte Aufgaben des Vorfalls zählt sie mit
+Der Reiter Beziehungen zeigt, was der Vorfall betrifft: seine Assets, Anwendungen und Technologien, jeweils in einer eigenen Tabelle, danach Vorschläge und die Aufgaben. Klicken Sie auf eine Tabellenzeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Assets, Anwendungen und Technologien, die Sie sehen dürfen, sowie die Aufgaben.
 
-Verknüpft wird ausschließlich von der Vorfallsseite aus. Ein verknüpftes Asset oder eine verknüpfte Anwendung zeigt den Vorfall in einem schreibgeschützten Abschnitt **Vorfälle** auf dem eigenen Tab Beziehungen: Wer einen Server ansieht, sieht dessen Störungsgeschichte.
+**Verknüpfte Datensätze**, jeweils eine Tabelle:
+
+| Abschnitt | Spalten |
+|---|---|
+| **Assets** | Referenz (`AST-12`), Name, Typ, Umgebung, Status |
+| **Anwendungen** | Referenz (`APP-3`), Name, Lebenszyklus, Geschäftskritikalität |
+| **Technologien** | Referenz (`TEC-5`), Name, Familie, Hersteller |
+
+Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen. Assets und Technologien erfordern Leserechte auf die Infrastruktur. Ein Fachbereichs-Mitwirkender sieht nur die Anwendungen, an denen er beteiligt ist.
+
+**Verknüpfungen hinzufügen und entfernen** (`incidents:contributor`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert und im Journal festgehalten. Das Verknüpfen erfordert zusätzlich Leserechte auf das Zielmodul. **Hinzufügen** fehlt daher in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes und wird ebenfalls im Journal festgehalten. Ein geschlossener oder abgebrochener Vorfall ist schreibgeschützt: Öffnen Sie ihn erneut, um seine Verknüpfungen zu ändern.
+
+**Verwandt**: die Technologien der verknüpften Assets und Anwendungen, die der Vorfall noch nicht aufführt. Der Grund nennt die Quelle, zum Beispiel „Technologie des Assets AST-12“ oder „Technologie der Anwendung APP-3“. Klicken Sie auf **Verknüpfen**, um den Vorschlag dem Abschnitt Technologien hinzuzufügen. Die Vorschläge erfordern Leserechte auf die Infrastruktur, zeigen höchstens 20 Technologien und fehlen bei einem geschlossenen oder abgebrochenen Vorfall.
+
+**Aufgaben**: die Folgearbeit. Legen Sie eine Aufgabe direkt aus dem Vorfall heraus an, sie bleibt daran gebunden. Die Aufgabe zeigt „Vorfall · INC-14“ in ihrer eigenen Seitenleiste, und die Spalte Aufgaben des Vorfalls zählt sie mit.
+
+Verknüpft wird ausschließlich von der Vorfallsseite aus. Ein verknüpftes Asset, eine verknüpfte Anwendung oder Technologie zeigt den Vorfall in einem schreibgeschützten Abschnitt **Vorfälle** auf dem eigenen Reiter Beziehungen: Wer einen Server ansieht, sieht dessen Störungsgeschichte. Dokumente und Anhänge haben eigene Reiter.
 
 ---
 
