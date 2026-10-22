@@ -1,339 +1,249 @@
 import React from 'react';
+import { Alert, Stack } from '@mui/material';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import {
-  Alert, Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, IconButton, LinearProgress, Stack, TextField, Typography,
-} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import DeleteIcon from '@mui/icons-material/Delete';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
-import { useAuth } from '../../../auth/AuthContext';
 import ItemContactsSection from '../../../components/contacts/ItemContactsSection';
-import { RelevantWebsitesList, useKanapDialogs } from '../../../components/design';
-import { denseTableFrameSx, denseTableSx } from '../../../components/EntityTasksSection';
-import RelationLookupPicker, { type NamedRelation } from '../../../components/workspace/RelationLookupPicker';
-import RelationsSectionTitle from '../../portfolio/components/RelationsSectionTitle';
+import { useKanapDialogs } from '../../../components/design';
+import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import {
+  RelationSections,
+  RelationSuggestions,
+  applicationsSection,
+  assetsSection,
+  technologiesSection,
+  useRelations,
+  type ApplicationRelationRow,
+  type AssetRelationRow,
+  type SectionSpec,
+  type TechnologyRelationRow,
+} from '../../../components/workspace/relations';
+import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import type { ContractAttachment } from '../contractForm';
+import { buildItemPath } from '../../../utils/item-ref';
 
-type LinkItem = { id: string; description: string | null; url: string };
-type RelationSet = 'applications' | 'assets' | 'technologies';
-
-/**
- * Where each picker searches (the list or lookup routes, whose access rules apply), where a chip
- * leads, the body key of the replacement and the placeholder.
- */
-const PICKERS: Record<RelationSet, { endpoint: string; sorted: boolean; href: (row: NamedRelation) => string; idsKey: string; placeholder: string }> = {
-  applications: { endpoint: '/applications', sorted: true, href: (row) => `/it/applications/${row.id}/overview`, idsKey: 'application_ids', placeholder: 'selectApplications' },
-  assets: { endpoint: '/assets', sorted: true, href: (row) => `/it/assets/${row.id}/overview`, idsKey: 'asset_ids', placeholder: 'selectAssets' },
-  technologies: { endpoint: '/technologies/lookup', sorted: false, href: (row) => `/it/technologies/${row.id}/overview`, idsKey: 'technology_ids', placeholder: 'selectTechnologies' },
+type Suggestion = {
+  type: 'application' | 'asset';
+  id: string;
+  reference: string;
+  name: string;
+  via: { kind: 'same_supplier'; label: string | null };
 };
 
-export const contractRelationKey = (contractId: string, set: string) => ['contract-relations', contractId, set] as const;
+type ContractRelationsData = {
+  applications: ApplicationRelationRow[];
+  assets: AssetRelationRow[];
+  /** Null when the caller cannot read the infrastructure. */
+  technologies: TechnologyRelationRow[] | null;
+  suggestions: Suggestion[];
+};
 
-const sectionWidthSx = { maxWidth: 640 } as const;
+type WebLinkRow = { id: string; description: string | null; url: string; created_at: string | null };
+type AttachmentRow = { id: string; original_filename: string; size: number | null; uploaded_at: string | null };
 
-function formatSize(bytes: number | null | undefined, locale: string): string {
-  if (!bytes || bytes <= 0) return '';
-  const units = ['B', 'KB', 'MB', 'GB'];
-  let value = bytes;
-  let unit = 0;
-  while (value >= 1024 && unit < units.length - 1) { value /= 1024; unit += 1; }
-  return `${new Intl.NumberFormat(locale, { maximumFractionDigits: unit === 0 ? 0 : 1 }).format(value)} ${units[unit]}`;
-}
-
-/** One set of links (applications, assets or technologies), saved on each change. */
-function RelationSetSection({ contractId, set, readOnly, onChanged }: { contractId: string; set: RelationSet; readOnly: boolean; onChanged: () => void }) {
-  const { t } = useTranslation(['ops', 'common']);
-  const queryClient = useQueryClient();
-  const query = useQuery({
-    queryKey: contractRelationKey(contractId, set),
-    // `items: null`: the caller cannot read the set (technologies without the infrastructure right).
-    queryFn: async ({ signal }) => (await api.get<{ items: NamedRelation[] | null }>(`/contracts/${contractId}/${set}`, { signal })).data.items,
-    staleTime: 0,
-  });
-  const [value, setValue] = React.useState<NamedRelation[] | null>(null);
-  const [error, setError] = React.useState<string | null>(null);
-  const chainRef = React.useRef<Promise<unknown>>(Promise.resolve());
-  const pendingRef = React.useRef(0);
-  React.useEffect(() => {
-    if (query.data && pendingRef.current === 0) setValue(query.data);
-  }, [query.data]);
-
-  const save = (next: NamedRelation[]) => {
-    setValue(next);
-    setError(null);
-    pendingRef.current += 1;
-    const run = async () => {
-      try {
-        await api.post(`/contracts/${contractId}/${set}/bulk-replace`, { [PICKERS[set].idsKey]: next.map((row) => row.id) });
-        onChanged();
-      } catch (e) {
-        setError(getApiErrorMessage(e, t, t('contracts.messages.saveFailed')));
-      } finally {
-        pendingRef.current -= 1;
-        if (pendingRef.current === 0) await queryClient.invalidateQueries({ queryKey: contractRelationKey(contractId, set) });
-      }
-    };
-    chainRef.current = chainRef.current.then(run, run);
-  };
-
-  const title = t(`contracts.relations.${set}`);
-  // A set the server refuses to show is not shown, and never saved.
-  if (query.data === null) return null;
-  return (
-    <Stack spacing={1.25}>
-      <RelationsSectionTitle>{title}</RelationsSectionTitle>
-      {error && <Alert severity="error" onClose={() => setError(null)} sx={sectionWidthSx}>{error}</Alert>}
-      <RelationLookupPicker
-        endpoint={PICKERS[set].endpoint}
-        scope={PICKERS[set].sorted ? { sort: 'name:ASC' } : undefined}
-        href={PICKERS[set].href}
-        placeholder={t(`contracts.relations.${PICKERS[set].placeholder}`)}
-        ariaLabel={title}
-        value={value ?? query.data ?? []}
-        onChange={save}
-        // A set read for this visit only: a save replaces the whole set.
-        disabled={readOnly || !query.isFetchedAfterMount || query.isError}
-      />
-    </Stack>
-  );
-}
+const SUGGESTION_KIND: Record<Suggestion['type'], 'applications' | 'assets'> = {
+  application: 'applications',
+  asset: 'assets',
+};
 
 /**
- * The Relations tab of a contract, aligned on the other pages: applications, assets and
- * technologies pickers (technologies for a reader of the infrastructure only), contacts, relevant
- * websites and attachments. Every change saves at once.
+ * The Relations tab of a contract: applications, assets and technologies in one round trip
+ * (`GET /contracts/:id/relations`), then suggestions, contacts, and links and files.
+ * A row opens its record. Editors add from a server search and unlink on hover, each saved at once.
+ * Technologies are absent when the caller cannot read the infrastructure (`technologies: null`).
  */
 export default function ContractRelationsTab({
   contractId,
   readOnly,
-  links,
-  attachments,
   onChanged,
 }: {
   contractId: string;
   readOnly: boolean;
-  links: LinkItem[];
-  attachments: ContractAttachment[];
   /** The contract's detail and tab counts are read again. */
   onChanged: () => void;
 }) {
-  const { t, i18n } = useTranslation(['ops', 'common']);
-  const { hasLevel } = useAuth();
+  const { t } = useTranslation(['it', 'common', 'ops']);
   const dialogs = useKanapDialogs();
-  const [error, setError] = React.useState<string | null>(null);
-  const [linkDialog, setLinkDialog] = React.useState<{ index: number | null; description: string; url: string } | null>(null);
+  const queryClient = useQueryClient();
+  const labels = useRelationLabels();
+  const canEdit = !readOnly;
   const [uploading, setUploading] = React.useState(0);
-  const [dragOver, setDragOver] = React.useState(false);
-  const fileInputRef = React.useRef<HTMLInputElement | null>(null);
-  const locale = i18n.resolvedLanguage || i18n.language || 'en';
+  const key = ['contract-relations', contractId] as const;
+  const { data, error, setError, link, unlink } = useRelations<ContractRelationsData>({
+    path: `/contracts/${contractId}/relations`,
+    queryKey: key,
+    onChange: onChanged,
+    dropLinkedSuggestion: true,
+  });
 
-  const run = async (task: () => Promise<unknown>) => {
+  const linksKey = ['contract-links', contractId] as const;
+  const attachmentsKey = ['contract-attachments', contractId] as const;
+  const linksQuery = useQuery({
+    queryKey: linksKey,
+    queryFn: async () => (await api.get<WebLinkRow[]>(`/contracts/${contractId}/links`)).data || [],
+  });
+  const attachmentsQuery = useQuery({
+    queryKey: attachmentsKey,
+    queryFn: async () => (await api.get<AttachmentRow[]>(`/contracts/${contractId}/attachments`)).data || [],
+  });
+
+  const failed = React.useCallback((e: unknown) => {
+    setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
+  }, [setError, t]);
+
+  const links: LinksAndFilesLink[] = (linksQuery.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.description,
+    url: row.url,
+    added_at: row.created_at,
+  }));
+  const files: LinksAndFilesFile[] = (attachmentsQuery.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.original_filename,
+    size: row.size,
+    added_at: row.uploaded_at,
+  }));
+
+  const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
+    const body = { description: draft.name, url: draft.url };
     try {
-      await task();
-      onChanged();
+      if (linkRow) await api.patch(`/contracts/${contractId}/links/${linkRow.id}`, body);
+      else await api.post(`/contracts/${contractId}/links`, body);
     } catch (e) {
-      setError(getApiErrorMessage(e, t, t('contracts.messages.saveFailed')));
+      failed(e);
+      throw e;
+    }
+    await queryClient.invalidateQueries({ queryKey: linksKey });
+    onChanged();
+  };
+
+  const removeLink = async (linkRow: LinksAndFilesLink) => {
+    setError(null);
+    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
+    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
+    try {
+      await api.delete(`/contracts/${contractId}/links/${linkRow.id}`);
+    } catch (e) {
+      if (previous) queryClient.setQueryData(linksKey, previous);
+      failed(e);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: linksKey });
+    onChanged();
+  };
+
+  const uploadFiles = async (chosen: File[]) => {
+    setError(null);
+    setUploading(chosen.length);
+    let landed = false;
+    try {
+      for (const file of chosen) {
+        const form = new FormData();
+        form.append('file', file);
+        await api.post(`/contracts/${contractId}/attachments`, form);
+        landed = true;
+      }
+    } catch (e) {
+      failed(e);
+    } finally {
+      setUploading(0);
+    }
+    if (!landed) return;
+    await queryClient.invalidateQueries({ queryKey: attachmentsKey });
+    onChanged();
+  };
+
+  const openFile = async (file: LinksAndFilesFile) => {
+    try {
+      const res = await api.get(`/contracts/attachments/${file.id}`, { responseType: 'blob' });
+      const url = window.URL.createObjectURL(new Blob([res.data]));
+      const anchor = document.createElement('a');
+      anchor.href = url;
+      anchor.download = file.name;
+      anchor.click();
+      window.URL.revokeObjectURL(url);
+    } catch (e) {
+      failed(e);
     }
   };
 
-  const saveLink = (event: React.FormEvent) => {
-    event.preventDefault();
-    if (!linkDialog) return;
-    const url = linkDialog.url.trim();
-    if (!url) return;
-    const description = linkDialog.description.trim() || null;
-    const existing = linkDialog.index === null ? null : links[linkDialog.index];
-    setLinkDialog(null);
-    void run(() => (existing
-      ? api.patch(`/contracts/${contractId}/links/${existing.id}`, { description, url })
-      : api.post(`/contracts/${contractId}/links`, { description, url })));
-  };
-
-  const upload = async (files: File[]) => {
-    if (readOnly || files.length === 0) return;
-    setUploading(files.length);
-    await run(async () => {
-      for (const file of files) {
-        const fd = new FormData();
-        fd.append('file', file);
-        await api.post(`/contracts/${contractId}/attachments`, fd);
-      }
-    });
-    setUploading(0);
-  };
-
-  const download = async (attachment: ContractAttachment) => {
-    const res = await api.get(`/contracts/attachments/${attachment.id}`, { responseType: 'blob' });
-    const url = window.URL.createObjectURL(new Blob([res.data]));
-    const el = document.createElement('a');
-    el.href = url;
-    el.download = attachment.original_filename;
-    el.click();
-    window.URL.revokeObjectURL(url);
-  };
-
-  const removeAttachment = async (attachment: ContractAttachment) => {
+  // Deleting a file removes the stored document: it keeps its confirmation.
+  const removeFile = async (file: LinksAndFilesFile) => {
     const ok = await dialogs.confirm({
-      message: t('confirmations.deleteAttachment', { name: attachment.original_filename }),
+      message: t('ops:confirmations.deleteAttachment', { name: file.name }),
       confirmLabel: t('common:buttons.delete'),
       intent: 'danger',
     });
-    if (ok) await run(() => api.patch(`/contracts/attachments/${attachment.id}/delete`, {}));
+    if (!ok) return;
+    setError(null);
+    try {
+      await api.patch(`/contracts/attachments/${file.id}/delete`, {});
+    } catch (e) {
+      failed(e);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: attachmentsKey });
+    onChanged();
   };
 
+  const sections: Array<SectionSpec<any>> = [
+    applicationsSection({
+      t,
+      rows: data ? data.applications : [],
+      lifecycleLabel: labels.lifecycle,
+      criticalityLabel: labels.criticality,
+    }),
+    assetsSection({
+      t,
+      rows: data ? data.assets : [],
+      kindLabel: labels.assetKind,
+      environmentLabel: labels.environment,
+      statusLabel: labels.status,
+    }),
+    technologiesSection({
+      t,
+      rows: data ? data.technologies : null,
+      familyLabel: labels.family,
+    }),
+  ];
+
   return (
-    <>
-      <Stack spacing={3} sx={{ pt: 1 }}>
-        {error && <Alert severity="error" onClose={() => setError(null)} sx={sectionWidthSx}>{error}</Alert>}
+    <Stack spacing={3}>
+      {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-        <RelationSetSection contractId={contractId} set="applications" readOnly={readOnly} onChanged={onChanged} />
-        <RelationSetSection contractId={contractId} set="assets" readOnly={readOnly} onChanged={onChanged} />
-        {hasLevel('infrastructure', 'reader') && (
-          <RelationSetSection contractId={contractId} set="technologies" readOnly={readOnly} onChanged={onChanged} />
-        )}
+      <RelationSections
+        sections={sections}
+        loaded={!!data}
+        canEdit={canEdit}
+        searchKeyPrefix="contract"
+        onLink={(kind, targetId) => { void link(kind, targetId); }}
+        onUnlink={(kind, targetId) => { void unlink(kind, targetId); }}
+      />
 
-        <ItemContactsSection itemType="contracts" itemId={contractId} canManage={!readOnly} syncFromSupplier onChanged={onChanged} />
+      <RelationSuggestions
+        suggestions={data?.suggestions ?? []}
+        canEdit={canEdit}
+        referenceOf={(row) => row.reference}
+        href={(row) => `${buildItemPath(row.type, row.reference || row.id)}/overview`}
+        onLink={(row) => { void link(SUGGESTION_KIND[row.type], row.id); }}
+      />
 
-        <Stack spacing={1}>
-          <Stack direction="row" alignItems="center" spacing={1} sx={sectionWidthSx}>
-            <RelationsSectionTitle>{t('contracts.relations.relevantWebsites')}</RelationsSectionTitle>
-            {!readOnly && (
-              <Button size="small" startIcon={<AddIcon />} onClick={() => setLinkDialog({ index: null, description: '', url: '' })}>
-                {t('contracts.relations.addUrl')}
-              </Button>
-            )}
-          </Stack>
-          <RelevantWebsitesList
-            items={links.map((link) => ({ id: link.id, name: String(link.description || '').trim() || link.url, url: link.url }))}
-            nameHeader={t('contracts.relations.linkName')}
-            urlHeader={t('contracts.relations.linkUrl')}
-            emptyLabel={t('contracts.relations.noWebsites')}
-            deleteLabel={t('contracts.relations.deleteWebsite')}
-            canEdit={!readOnly}
-            canDelete={!readOnly}
-            onEdit={(index) => {
-              const link = links[index];
-              if (link) setLinkDialog({ index, description: link.description || '', url: link.url });
-            }}
-            onDelete={(index) => {
-              const link = links[index];
-              if (link) void run(() => api.delete(`/contracts/${contractId}/links/${link.id}`));
-            }}
-            sx={sectionWidthSx}
-          />
-        </Stack>
+      <ItemContactsSection itemType="contracts" itemId={contractId} canManage={canEdit} syncFromSupplier onChanged={onChanged} />
 
-        {/* Files dropped anywhere on the section are attached; no drop zone stays on screen. */}
-        <Stack
-          spacing={1}
-          data-testid="contract-attachments"
-          onDragOver={(event) => { if (!readOnly) { event.preventDefault(); setDragOver(true); } }}
-          onDragLeave={() => setDragOver(false)}
-          onDrop={(event) => {
-            if (readOnly) return;
-            event.preventDefault();
-            setDragOver(false);
-            void upload(Array.from(event.dataTransfer.files || []));
-          }}
-          sx={(theme) => ({
-            ...sectionWidthSx,
-            borderRadius: '8px',
-            outline: dragOver ? `1px dashed ${theme.palette.kanap.teal}` : 'none',
-            outlineOffset: '6px',
-          })}
-        >
-          <Stack direction="row" alignItems="center" spacing={1}>
-            <RelationsSectionTitle>{t('contracts.relations.attachments')}</RelationsSectionTitle>
-            {!readOnly && (
-              <Button size="small" startIcon={<AddIcon />} onClick={() => fileInputRef.current?.click()} disabled={uploading > 0}>
-                {t('contracts.relations.addFiles')}
-              </Button>
-            )}
-            <input
-              ref={fileInputRef}
-              type="file"
-              hidden
-              multiple
-              aria-label={t('contracts.relations.addFiles')}
-              onChange={(event) => {
-                const input = event.currentTarget;
-                void upload(Array.from(input.files || [])).finally(() => { input.value = ''; });
-              }}
-            />
-          </Stack>
-          {uploading > 0 && (
-            <>
-              <LinearProgress />
-              <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>{t('contracts.relations.uploadingFiles', { count: uploading })}</Typography>
-            </>
-          )}
-          {attachments.length === 0 ? (
-            <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-              {readOnly ? t('contracts.relations.noAttachments') : t('contracts.relations.noAttachmentsDrop')}
-            </Typography>
-          ) : (
-            <Box sx={denseTableFrameSx}>
-              <Box component="table" sx={[denseTableSx, { '& tbody tr:hover .attachment-delete': { opacity: 1 } }]}>
-                <tbody>
-                  {attachments.map((attachment) => (
-                    <tr key={attachment.id} className="clickable" tabIndex={0} onClick={() => { void download(attachment); }} onKeyDown={(event) => { if (event.key === 'Enter') void download(attachment); }}>
-                      <Box component="td" sx={{ width: '100%', maxWidth: 420, overflow: 'hidden', textOverflow: 'ellipsis' }} title={attachment.original_filename}>{attachment.original_filename}</Box>
-                      <Box component="td" sx={{ color: 'kanap.text.tertiary !important', textAlign: 'right' }}>{formatSize(attachment.size, locale)}</Box>
-                      <Box component="td" sx={{ width: 40, py: '0 !important', textAlign: 'right' }}>
-                        {!readOnly && (
-                          <IconButton
-                            className="attachment-delete"
-                            size="small"
-                            aria-label={t('contracts.relations.deleteAttachment')}
-                            onClick={(event) => { event.stopPropagation(); void removeAttachment(attachment); }}
-                            sx={{ opacity: 0, transition: 'opacity 120ms', color: 'kanap.text.tertiary', '&:hover': { color: 'kanap.danger' }, '&:focus-visible': { opacity: 1 } }}
-                          >
-                            <DeleteIcon fontSize="small" />
-                          </IconButton>
-                        )}
-                      </Box>
-                    </tr>
-                  ))}
-                </tbody>
-              </Box>
-            </Box>
-          )}
-        </Stack>
-      </Stack>
-
-      <Dialog open={!!linkDialog} onClose={() => setLinkDialog(null)} fullWidth maxWidth="xs">
-        <Box component="form" onSubmit={saveLink}>
-          <DialogTitle>{linkDialog?.index === null ? t('contracts.relations.addLinkTitle') : t('contracts.relations.editLinkTitle')}</DialogTitle>
-          <DialogContent>
-            <Stack spacing={2} sx={{ pt: 1 }}>
-              <TextField
-                autoFocus
-                variant="standard"
-                inputProps={{ 'aria-label': t('contracts.relations.linkName') }}
-                placeholder={t('contracts.relations.linkNamePlaceholder')}
-                value={linkDialog?.description ?? ''}
-                onChange={(event) => setLinkDialog((prev) => (prev ? { ...prev, description: event.target.value } : prev))}
-              />
-              <TextField
-                variant="standard"
-                inputProps={{ 'aria-label': t('contracts.relations.linkUrl') }}
-                placeholder="https://..."
-                value={linkDialog?.url ?? ''}
-                onChange={(event) => setLinkDialog((prev) => (prev ? { ...prev, url: event.target.value } : prev))}
-              />
-            </Stack>
-          </DialogContent>
-          <DialogActions>
-            <Button variant="action" onClick={() => setLinkDialog(null)}>{t('common:buttons.cancel')}</Button>
-            <Button type="submit" variant="action-primary" disabled={!linkDialog?.url.trim()}>
-              {linkDialog?.index === null ? t('common:buttons.add') : t('common:buttons.save')}
-            </Button>
-          </DialogActions>
-        </Box>
-      </Dialog>
-    </>
+      <LinksAndFilesSection
+        links={links}
+        files={files}
+        loaded={linksQuery.isSuccess && attachmentsQuery.isSuccess}
+        canEdit={canEdit}
+        uploading={uploading}
+        onAddLink={(draft) => saveLink(null, draft)}
+        onEditLink={(linkRow, draft) => saveLink(linkRow, draft)}
+        onRemoveLink={(linkRow) => { void removeLink(linkRow); }}
+        onUploadFiles={(chosen) => { void uploadFiles(chosen); }}
+        onOpenFile={(file) => { void openFile(file); }}
+        onRemoveFile={(file) => { void removeFile(file); }}
+      />
+    </Stack>
   );
 }

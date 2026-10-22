@@ -213,13 +213,35 @@ Vincular o quitar una aplicación o un activo en **Relaciones** actualiza la pes
 
 ### Relaciones
 
-- **Aplicaciones** y **Activos**: vincule las aplicaciones y los activos que cubre este contrato. Los selectores buscan entre las aplicaciones y los activos que usted puede ver. Estos vínculos alimentan la pestaña [Conformidad](#conformidad). Un activo cuyo contrato de soporte es este, indicado en la ficha del activo, no aparece aquí. Cuenta igualmente para la conformidad
-- **Tecnologías**: vincule las tecnologías que paga este contrato, como una suscripción a Microsoft 365 para Entra ID. Solo visible si puede leer la infraestructura. Las tecnologías retiradas no se ofrecen
-- **Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic
-- **Sitios web relevantes**: enlaces a documentos externos como el PDF firmado o el portal del proveedor
-- **Adjuntos**: una lista de archivos. Use **Agregar archivos** o suelte archivos sobre la sección. Haga clic en un archivo para descargarlo
+La pestaña Relaciones muestra lo que cubre este contrato: sus aplicaciones, activos y tecnologías, cada uno en su propia tabla, y después sugerencias, los contactos, y los enlaces y archivos. Haga clic en una fila para abrir el registro. Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuesto).
 
-Las líneas presupuestarias se vinculan en la pestaña [Presupuesto](#presupuesto).
+**Registros vinculados**, una tabla cada uno:
+
+| Sección | Columnas |
+|---|---|
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
+| **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor. Solo visible si puede leer la infraestructura |
+
+Una aplicación o un activo desactivado o retirado sigue en la lista con el nombre atenuado. Las aplicaciones y los activos alimentan la pestaña [Conformidad](#conformidad). Un activo cuyo contrato de soporte es este, indicado en la ficha del activo, no aparece aquí. Cuenta igualmente para la conformidad.
+
+**Añadir y quitar vínculos** (`contracts:member`): **Agregar**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. La búsqueda ofrece las aplicaciones y los activos que usted puede ver. Las tecnologías retiradas no se ofrecen. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Vincular una tecnología requiere también poder leer la infraestructura. Los lectores ven las tablas en solo lectura.
+
+**Relacionados**: las aplicaciones y los activos del proveedor del contrato que aún no están vinculados, con el motivo «mismo proveedor». Un activo pertenece al proveedor por su proveedor de soporte. Haga clic en **Vincular** para añadir la sugerencia a su sección. Las sugerencias muestran:
+
+- las aplicaciones en servicio, si puede leer las aplicaciones. Un Colaborador de negocio solo ve las aplicaciones en las que participa;
+- los activos que no están retirados, si puede leer la infraestructura;
+- 20 como máximo de cada tipo.
+
+La sección no aparece cuando no hay nada que sugerir.
+
+**Contactos**: personas de este contrato, cada una con un rol (Comercial, Técnico, Soporte u Otro). **Agregar los contactos del proveedor** copia los contactos del proveedor con un clic.
+
+**Enlaces y archivos**: los enlaces web del contrato (el PDF firmado en línea, el portal del proveedor) y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `contracts:member`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 ### Eliminar un contrato
 

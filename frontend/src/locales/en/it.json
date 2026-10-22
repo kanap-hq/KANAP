@@ -1740,6 +1740,8 @@
           "requests": "Requests",
           "tasks": "Tasks",
           "technologies": "Technologies",
+          "applications": "Applications",
+          "assets": "Assets",
           "related": "Related"
         },
         "empty": {
@@ -1748,7 +1750,9 @@
           "projects": "No project linked.",
           "requests": "No request linked.",
           "tasks": "No task linked.",
-          "technologies": "No technology linked."
+          "technologies": "No technology linked.",
+          "applications": "No application linked.",
+          "assets": "No asset linked."
         },
         "columns": {
           "ref": "Ref",
@@ -1780,12 +1784,16 @@
           "contracts": "Search contracts",
           "projects": "Search projects",
           "requests": "Search requests",
-          "technologies": "Search technologies"
+          "technologies": "Search technologies",
+          "applications": "Search applications",
+          "assets": "Search assets"
         },
         "types": {
           "budget_line": "Budget line",
           "contract": "Contract",
-          "project": "Project"
+          "project": "Project",
+          "application": "Application",
+          "asset": "Asset"
         },
         "via": {
           "same_supplier": "same supplier",

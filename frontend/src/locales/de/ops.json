@@ -627,30 +627,6 @@
         "hintEnds": "Nach dem Vertragsende am {{date}} ist nichts verpflichtet."
       }
     },
-    "relations": {
-      "applications": "Anwendungen",
-      "assets": "Assets",
-      "technologies": "Technologien",
-      "selectApplications": "Anwendungen auswählen",
-      "selectAssets": "Assets auswählen",
-      "selectTechnologies": "Technologien auswählen",
-      "relevantWebsites": "Relevante Websites",
-      "addUrl": "URL hinzufügen",
-      "linkName": "Name",
-      "linkUrl": "URL",
-      "linkNamePlaceholder": "z. B. Lieferantenportal",
-      "noWebsites": "Keine Websites hinzugefügt",
-      "deleteWebsite": "Link löschen",
-      "addLinkTitle": "Link hinzufügen",
-      "editLinkTitle": "Link bearbeiten",
-      "attachments": "Anhänge",
-      "addFiles": "Dateien hinzufügen",
-      "noAttachments": "Keine Anhänge",
-      "noAttachmentsDrop": "Keine Anhänge. Legen Sie Dateien hier ab, um sie anzuhängen.",
-      "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
-      "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
-      "deleteAttachment": "Anhang löschen"
-    },
     "compliance": {
       "title": "Anforderungen",
       "subtitle": "abgeleitet aus den verknüpften Anwendungen und Assets",

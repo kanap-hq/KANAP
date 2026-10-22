@@ -627,30 +627,6 @@
         "hintEnds": "Rien n'est engagé après la fin du contrat le {{date}}."
       }
     },
-    "relations": {
-      "applications": "Applications",
-      "assets": "Actifs",
-      "technologies": "Technologies",
-      "selectApplications": "Sélectionner des applications",
-      "selectAssets": "Sélectionner des actifs",
-      "selectTechnologies": "Sélectionner des technologies",
-      "relevantWebsites": "Sites web pertinents",
-      "addUrl": "Ajouter une URL",
-      "linkName": "Nom",
-      "linkUrl": "URL",
-      "linkNamePlaceholder": "Ex. : portail fournisseur",
-      "noWebsites": "Aucun site ajouté",
-      "deleteWebsite": "Supprimer le lien",
-      "addLinkTitle": "Ajouter un lien",
-      "editLinkTitle": "Modifier le lien",
-      "attachments": "Pièces jointes",
-      "addFiles": "Ajouter des fichiers",
-      "noAttachments": "Aucune pièce jointe",
-      "noAttachmentsDrop": "Aucune pièce jointe. Déposez des fichiers ici pour les joindre.",
-      "uploadingFiles_one": "Envoi de {{count}} fichier…",
-      "uploadingFiles_other": "Envoi de {{count}} fichiers…",
-      "deleteAttachment": "Supprimer la pièce jointe"
-    },
     "compliance": {
       "title": "Exigences",
       "subtitle": "attentes déduites des applications et actifs liés",
