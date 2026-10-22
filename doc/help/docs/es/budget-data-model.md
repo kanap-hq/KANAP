@@ -81,7 +81,7 @@ Una línea no tiene un estado propio que cargar. Está activa hasta su fin de va
 
 ### Cambiar el tipo de una línea
 
-Una línea pasa de OPEX a CAPEX, o al revés, en su espacio de trabajo (**Cambiar el tipo...** en el menú **...**, consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Un archivo de presupuesto nunca cambia el tipo. El cambio empieza el 1 de enero de un año:
+Una línea pasa de OPEX a CAPEX, o al revés, en su espacio de trabajo (**Cambiar el tipo...** junto a **Tipo** en el panel **Propiedades**, consulte [Cambiar el tipo](budget-lines.md#cambiar-el-tipo)). Un archivo de presupuesto nunca cambia el tipo. El cambio empieza el 1 de enero de un año:
 
 - **A partir del primer año de la línea**, la propia línea cambia de tipo. Conserva su número `BL`, sus años presupuestarios, asignaciones, vínculos, adjuntos y tareas
 - **A partir de un año posterior**, la línea termina el 31 de diciembre del año anterior y conserva sus años presupuestarios anteriores. Una nueva línea del otro tipo, con su propio número `BL`, lleva los años presupuestarios posteriores, los contactos y los vínculos con aplicaciones, activos, contratos, proyectos y solicitudes. La nueva línea registra la línea a la que sucede, y cada una muestra la otra

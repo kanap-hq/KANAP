@@ -81,7 +81,7 @@ A line has no status of its own to load. It is enabled until its end of validity
 
 ### Changing the type of a line
 
-A line changes from OPEX to CAPEX, or back, in its workspace (**Change type...** in the **...** menu, see [Changing the type](budget-lines.md#changing-the-type)). A budget file never changes it. The change starts on 1 January of a year:
+A line changes from OPEX to CAPEX, or back, in its workspace (**Change type...** next to **Type** in the **Properties** panel, see [Changing the type](budget-lines.md#changing-the-type)). A budget file never changes it. The change starts on 1 January of a year:
 
 - **From the line's first year**, the line itself changes type. It keeps its `BL` number, its budget years, allocations, links, attachments and tasks
 - **From a later year**, the line ends on 31 December of the year before and keeps its earlier budget years. A new line of the other type, with its own `BL` number, carries the later budget years, the contacts and the links to applications, assets, contracts, projects and requests. The new line records the line it follows, and each line shows the other

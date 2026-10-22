@@ -81,7 +81,7 @@ Eine Budgetzeile hat keinen eigenen Status zum Laden. Sie ist aktiv bis zum Ende
 
 ### Den Typ einer Budgetzeile ändern
 
-Eine Budgetzeile wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** im Menü **...**, siehe [Typ ändern](budget-lines.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
+Eine Budgetzeile wechselt in ihrem Arbeitsbereich von OPEX zu CAPEX oder zurück (**Typ ändern...** neben **Typ** im Bereich **Eigenschaften**, siehe [Typ ändern](budget-lines.md#typ-andern)). Eine Budgetdatei ändert den Typ nie. Die Änderung beginnt am 1. Januar eines Jahres:
 
 - **Ab dem ersten Jahr der Zeile** ändert die Budgetzeile selbst ihren Typ. Sie behält ihre `BL`-Nummer, ihre Budgetjahre, Zuordnungen, Verknüpfungen, Anhänge und Aufgaben
 - **Ab einem späteren Jahr** endet die Budgetzeile am 31. Dezember des Vorjahres und behält ihre früheren Budgetjahre. Eine neue Budgetzeile des anderen Typs mit eigener `BL`-Nummer übernimmt die späteren Budgetjahre, die Kontakte und die Verknüpfungen zu Anwendungen, Assets, Verträgen, Projekten und Anfragen. Die neue Budgetzeile verzeichnet die Budgetzeile, auf die sie folgt, und jede der beiden Budgetzeilen zeigt die andere an

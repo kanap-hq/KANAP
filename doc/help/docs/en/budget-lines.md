@@ -194,10 +194,10 @@ A column layout you saved keeps its own choice of columns. The layout you had sa
 
 Click any row in the list to open the workspace. Its address names the line by its reference, for example `/ops/budget/BL-12/overview`. It has four parts:
 
-- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, the **...** menu (**Change type...**, see [Changing the type](#changing-the-type)), and the close button
+- **Header**: the line reference (e.g., `BL-12`) with a copy button, the line's title (click it to rename the line), **Prev** / **Next**, **Share**, and the close button
 - **Metadata bar** under the title: **Status**, **IT owner**, and **Business owner**, each editable in place. When the line's cost center has a budget holder, **Budget holder** follows them. It is read only and derived from the cost center, not stored on the line: hover it to see which cost center it comes from, and change it on the cost center (see [Cost centers](cost-centers.md#budget-holder-on-budget-lines))
 - **Four tabs**: **Overview**, **Budget**, **Allocations**, and **Relations** (the Relations tab shows how many links the line has)
-- **Properties panel** on the right: the line's main fields, starting with **Type**. Open or close it with the properties button; the workspace remembers your choice
+- **Properties panel** on the right: the line's main fields, starting with **Type** (with **Change type...** next to it on an existing line, see [Changing the type](#changing-the-type)). Open or close it with the properties button; the workspace remembers your choice
 
 **Autosave**:
 
@@ -237,7 +237,7 @@ When the line replaces another one, or was replaced from a later year after a ty
 
 **Properties panel**:
 
-- **Type**: **OPEX** or **CAPEX**. On an existing line, **Change type...** next to it opens the same dialog as the **...** menu
+- **Type**: **OPEX** or **CAPEX**. On an existing line, **Change type...** next to it opens the dialog described in [Changing the type](#changing-the-type)
 - **Supplier**, **Cost center**, **Paying company**, **Account** (filtered by the paying company's chart of accounts and the line's type), **Currency** (only the currencies allowed in your workspace), one field per analytics dimension used for the line's type, **Run or build**, and **Effective start**
 - **Lifecycle**: the status switch, labelled with the current state (**Enabled** or **Disabled**), and the **End of validity** date. See [Status and lifecycle](#status-and-lifecycle)
 - **Created** and **Updated** dates (read only)
@@ -555,54 +555,41 @@ The Allocations tab distributes the spend of a year across your companies and de
 
 ### Relations
 
-The Relations tab links the line to related objects: Projects, Applications, Technologies, Contracts, Contacts, Relevant websites, and Attachments. Everything on this tab saves automatically.
+The Relations tab shows what this line pays for: its projects, applications, technologies, contracts and assets, each in its own table, then suggestions, contacts, and links and files. Click a row to open the record. The tab badge counts the linked projects, applications, technologies, contracts and assets, and the links and files. Contacts are not counted. Technologies and assets count only if you can read the infrastructure.
 
-**Projects**:
+**Linked records**, one table each:
 
-- Use the autocomplete to link one or more projects from your Portfolio
-- This helps group spend by project in reports and enables project accounting
-- The project names appear in the list's **Project** column, and the quick search finds them
-- Remove a project by clicking the X on its chip
+| Section | Columns |
+|---|---|
+| **Projects** | Reference (`PRJ-7`), name, status, planned end |
+| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality |
+| **Technologies** | Reference (`TEC-5`), name, family, vendor |
+| **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
+| **Assets** | Reference (`AST-12`), name, type, environment, status |
 
-**Applications**:
+You only see the sections of the modules you can read. Technologies and assets need a read of the infrastructure. A Business Contributor only sees the projects and applications they take part in. The project names also appear in the list's **Project** column, where the quick search finds them. The contract names appear in its **Contract** column.
 
-- Use the autocomplete to link one or more applications or services from your IT catalogue
-- This helps track which lines fund which applications or services
-- Remove an application by clicking the X on its chip
+An end date in orange is a contract whose renewal decision is due within your contract decision window. A disabled contract, or a retired or disabled asset, stays listed with its name greyed out. From two rows on, the contracts end with one total per currency, without the disabled ones.
 
-**Technologies**:
+**Adding and removing links** (`budget:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Readers see the tables read-only.
 
-- Use the autocomplete to link the technologies the line pays for, such as database licences or a hypervisor subscription
-- Shown only if you can read the infrastructure
-- Remove a technology by clicking the X on its chip
+**Related**: applications and contracts of the line's supplier that are not linked yet, with the reason "same supplier". Click **Link** to add the suggestion to its section. The suggestions show:
 
-**Contracts**:
+- applications in service, if you can read the applications. A Business Contributor only sees the applications they take part in;
+- active contracts, if you can read the contracts;
+- at most 20 of each.
 
-- Use the autocomplete to link one or more contracts
-- When linked, the contract name appears in the list's **Contract** column for quick reference
-- A contract can link to several lines (many-to-many relationship)
-- Remove a contract by clicking the X on its chip
+The section is absent when the line has no supplier or there is nothing to suggest.
 
-**Contacts**:
+**Contacts**: people for this line, each with a role (**Commercial**, **Technical**, **Support** or **Other**). Pick a contact, then pick its role: choosing the role adds the contact. The table shows the role, first name, last name, job title, email and mobile. Hover the role to see whether the contact comes from the supplier or was added manually. Remove a contact with the remove icon.
 
-- Link contacts to the line: pick a contact, then pick its role (**Commercial**, **Technical**, **Support**, or **Other**). Choosing the role adds the contact
-- The table shows the role, first name, last name, job title, email, and mobile. Hover the role to see whether the contact comes from the supplier or was added manually
-- Remove a contact with the remove icon
-- Useful for tracking who to reach out to for renewals, support issues, or negotiations
+**Links and files**: the web links of the line (vendor portals, documentation, admin consoles) and its files (quotes, invoices, approval memos), one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `budget:member`:
 
-**Relevant websites**:
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
-- Click **Add URL** to add a link (e.g., vendor portals, documentation, admin consoles, internal wikis). Each link has a **Name** and a **URL**
-- Click a link row to edit it, or use the delete icon to remove it
-
-**Attachments**:
-
-- Upload files related to the line (e.g., contracts, invoices, quotes, SOWs, approval memos, technical specs)
-- Drag and drop files into the attachment area, or click **Select files** to browse
-- Click a file chip to download the file
-- Delete an attachment with the delete icon on its chip (you confirm first; requires `budget:member`)
-
-**Tip**: Link contracts to track renewals across several lines. Add vendor portal URLs for quick access. Upload quotes and invoices as attachments to keep all the documents of a line in one place.
+**Tip**: Link contracts to track renewals across several lines. Attach quotes and invoices to keep all the documents of a line in one place.
 
 ---
 
@@ -654,7 +641,7 @@ Every line has a **status** (Enabled or Disabled) and an optional **End of valid
 
 ## Changing the type
 
-An OPEX line that turns out to be an investment becomes a CAPEX line, and a CAPEX line that turns out to be operating spend becomes an OPEX line. Use **Change type...** in the **...** menu of the workspace header, or next to **Type** in the **Properties** panel. You need the Member level on Budget (`budget:member`). Edits not saved yet are saved before the dialog opens.
+An OPEX line that turns out to be an investment becomes a CAPEX line, and a CAPEX line that turns out to be operating spend becomes an OPEX line. Click **Change type...** next to **Type** in the **Properties** panel. You need the Member level on Budget (`budget:member`). Edits not saved yet are saved before the dialog opens.
 
 **From** sets where the change starts:
 
@@ -683,9 +670,9 @@ A budget file never changes the type of a line. See [Load a budget from a spread
 
 4. **Link applications**: Associate lines with the applications or services they fund. This provides a clear cost-to-application mapping.
 
-5. **Upload documentation**: Use the Attachments feature to store vendor contracts, quotes, invoices, approval memos and SOWs.
+5. **Upload documentation**: Use **Attach file** in **Links and files** on the Relations tab to store vendor contracts, quotes, invoices, approval memos and SOWs.
 
-6. **Add vendor portal links**: Use Relevant websites to link to vendor admin consoles, support portals, and documentation for quick access.
+6. **Add vendor portal links**: Use **Add link** in **Links and files** to link to vendor admin consoles, support portals, and documentation for quick access.
 
 7. **Track contacts**: Add supplier contacts with roles (Commercial, Technical, Support) so your team knows who to call for each line.
 
