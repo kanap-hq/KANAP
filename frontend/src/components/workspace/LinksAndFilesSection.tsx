@@ -36,6 +36,8 @@ type Props = {
   onUploadFiles: (files: File[]) => void;
   onOpenFile: (file: LinksAndFilesFile) => void;
   onRemoveFile: (file: LinksAndFilesFile) => void;
+  /** Web links only (a location): no file chooser, no drop, the section is titled "Web links". */
+  linksOnly?: boolean;
 };
 
 /** A file size in the user's language (`12 kB`, `1.4 MB`). */
@@ -65,7 +67,7 @@ const dragHasFiles = (event: React.DragEvent) => Array.from(event.dataTransfer?.
  */
 export default function LinksAndFilesSection({
   links, files, loaded = true, canEdit, uploading = 0,
-  onAddLink, onEditLink, onRemoveLink, onUploadFiles, onOpenFile, onRemoveFile,
+  onAddLink, onEditLink, onRemoveLink, onUploadFiles, onOpenFile, onRemoveFile, linksOnly = false,
 }: Props) {
   const { t, i18n } = useTranslation('common');
   const lang = i18n.language;
@@ -79,7 +81,8 @@ export default function LinksAndFilesSection({
   const dragDepth = React.useRef(0);
   const nameInput = React.useRef<HTMLInputElement | null>(null);
 
-  const title = t('linksAndFiles.title');
+  const title = linksOnly ? t('linksAndFiles.linksTitle') : t('linksAndFiles.title');
+  const withFiles = canEdit && !linksOnly;
   const rows: Row[] = [
     ...links.map((link): Row => ({ kind: 'link', key: `link:${link.id}`, link })),
     ...files.map((file): Row => ({ kind: 'file', key: `file:${file.id}`, file })),
@@ -137,7 +140,7 @@ export default function LinksAndFilesSection({
     },
   ];
 
-  const dropHandlers = canEdit ? {
+  const dropHandlers = withFiles ? {
     onDragEnter: (event: React.DragEvent) => {
       if (!dragHasFiles(event)) return;
       event.preventDefault();
@@ -182,11 +185,13 @@ export default function LinksAndFilesSection({
         actions={canEdit ? (
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Button variant="text" size="small" onClick={() => openDialog(null)} sx={textButtonSx}>{t('linksAndFiles.addLink')}</Button>
-            <Button variant="text" size="small" disabled={uploading > 0} onClick={() => fileInput.current?.click()} sx={textButtonSx}>{t('linksAndFiles.attachFile')}</Button>
+            {!linksOnly && (
+              <Button variant="text" size="small" disabled={uploading > 0} onClick={() => fileInput.current?.click()} sx={textButtonSx}>{t('linksAndFiles.attachFile')}</Button>
+            )}
           </Box>
         ) : undefined}
       >
-        {canEdit && (
+        {withFiles && (
           <input
             ref={fileInput}
             type="file"
@@ -201,7 +206,7 @@ export default function LinksAndFilesSection({
           />
         )}
         {rows.length === 0 ? (
-          <RelationsEmpty>{t('linksAndFiles.empty')}</RelationsEmpty>
+          <RelationsEmpty>{linksOnly ? t('linksAndFiles.linksEmpty') : t('linksAndFiles.empty')}</RelationsEmpty>
         ) : (
           <RelationsTable
             ariaLabel={title}

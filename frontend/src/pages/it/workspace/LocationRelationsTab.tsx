@@ -1,202 +1,209 @@
 import React from 'react';
-import { Alert, Box, Typography } from '@mui/material';
-import { useNavigate } from 'react-router-dom';
+import { Alert, Stack } from '@mui/material';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
-import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { useAuth } from '../../../auth/AuthContext';
+import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
+import {
+  RelationSections,
+  applicationsSection,
+  assetsSection,
+  useRelations,
+  type AssetRelationRow,
+  type SectionSpec,
+} from '../../../components/workspace/relations';
+import { useRelationLabels } from '../../../components/workspace/relations/labels';
+import type { RelationsColumn } from '../../../components/workspace/RelationsTable';
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
+import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 
-type AssetRow = {
-  id: string;
-  name: string;
-  kind: string;
-  provider: string;
-  environment: string;
-  region: string | null;
-  zone: string | null;
-  status: string;
-  sub_location_id?: string | null;
-  sub_location_name?: string | null;
+/** An asset at the location, with its provider and sub-location. */
+type LocationAssetRow = AssetRelationRow & {
+  provider: string | null;
+  sub_location_id: string | null;
+  sub_location_name: string | null;
 };
 
-type ApplicationRow = {
+/** An application with an instance on an asset of the location. */
+type LocationApplicationRow = {
   id: string;
+  reference: string;
   name: string;
+  lifecycle: string;
+  status: string;
   environments: string[];
 };
 
-type Props = {
-  locationId: string;
+type LocationRelationsData = {
+  assets: LocationAssetRow[] | null;
+  applications: LocationApplicationRow[] | null;
 };
 
-const headerSx = {
-  fontSize: 12,
-  fontWeight: 500,
-  color: 'kanap.text.tertiary',
-  textTransform: 'none',
-  letterSpacing: 0,
-  pb: 1,
-} as const;
+type WebLinkRow = { id: string; description: string | null; url: string; created_at: string | null };
 
-const cellSx = {
-  fontSize: 13,
-  color: 'kanap.text.primary',
-  py: '8px',
-  verticalAlign: 'top',
-} as const;
+const DASH = '—';
 
-export default function LocationRelationsTab({ locationId }: Props) {
+/** The factory's columns, in `keys` order, with the extra ones of this tab in between. */
+function pick<T>(columns: Array<RelationsColumn<any>>, keys: Array<string | RelationsColumn<T>>): Array<RelationsColumn<T>> {
+  return keys.map((key) => (typeof key === 'string' ? columns.find((column) => column.key === key)! : key));
+}
+
+/**
+ * The Relations tab of a location: the assets placed there and the applications that run on them,
+ * read only (`GET /locations/:id/relations`; an asset's location is chosen on the asset), then the
+ * location's web links. A row opens its record. A section the response leaves null is absent. A
+ * member adds, edits and removes a web link, each saved at once.
+ */
+export default function LocationRelationsTab({
+  locationId,
+  onRelationsChange,
+}: {
+  locationId: string;
+  /** The page reads the relations badge again. */
+  onRelationsChange?: () => void;
+}) {
   const { t } = useTranslation(['it', 'common']);
-  const navigate = useNavigate();
+  const { hasLevel } = useAuth();
+  const queryClient = useQueryClient();
+  const labels = useRelationLabels();
   const { labelFor } = useItOpsEnumOptions();
-  const [assets, setAssets] = React.useState<AssetRow[]>([]);
-  const [applications, setApplications] = React.useState<ApplicationRow[]>([]);
-  const [hasSubLocations, setHasSubLocations] = React.useState(false);
-  const [error, setError] = React.useState<string | null>(null);
+  const canEdit = hasLevel('locations', 'member');
+  const linksKey = ['location-links', locationId] as const;
+  const { data, error, setError } = useRelations<LocationRelationsData>({
+    path: `/locations/${locationId}/relations`,
+    queryKey: ['location-relations', locationId],
+  });
+  const linksQuery = useQuery({
+    queryKey: linksKey,
+    queryFn: async ({ signal }) => (await api.get<WebLinkRow[]>(`/locations/${locationId}/links`, { signal })).data || [],
+  });
 
-  const load = React.useCallback(async () => {
+  const failed = React.useCallback((e: unknown) => {
+    setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
+  }, [setError, t]);
+
+  const links: LinksAndFilesLink[] = (linksQuery.data ?? []).map((row) => ({
+    id: row.id,
+    name: row.description,
+    url: row.url,
+    added_at: row.created_at,
+  }));
+
+  const saveLink = async (linkRow: LinksAndFilesLink | null, draft: LinkDraft) => {
     setError(null);
+    const body = { description: draft.name, url: draft.url };
     try {
-      const [assetRes, appRes, subRes] = await Promise.all([
-        api.get(`/locations/${locationId}/servers`),
-        api.get(`/locations/${locationId}/applications`),
-        api.get(`/locations/${locationId}/sub-items`),
-      ]);
-      setAssets((assetRes.data || []) as AssetRow[]);
-      const apps = (appRes.data || []) as ApplicationRow[];
-      setApplications(apps.map((app) => ({
-        ...app,
-        environments: Array.isArray(app.environments) ? app.environments : [],
-      })));
-      setHasSubLocations(Array.isArray(subRes.data) && subRes.data.length > 0);
-    } catch (e: any) {
-      setError(getApiErrorMessage(e, t, t('messages.loadRelationsFailed')));
+      if (linkRow) await api.patch(`/locations/${locationId}/links/${linkRow.id}`, body);
+      else await api.post(`/locations/${locationId}/links`, body);
+    } catch (e) {
+      failed(e);
+      throw e;
     }
-  }, [locationId, t]);
+    await queryClient.invalidateQueries({ queryKey: linksKey });
+    onRelationsChange?.();
+  };
 
-  React.useEffect(() => { void load(); }, [load]);
+  const removeLink = async (linkRow: LinksAndFilesLink) => {
+    setError(null);
+    const previous = queryClient.getQueryData<WebLinkRow[]>(linksKey);
+    queryClient.setQueryData<WebLinkRow[]>(linksKey, (rows) => (rows ? rows.filter((row) => row.id !== linkRow.id) : rows));
+    try {
+      await api.delete(`/locations/${locationId}/links/${linkRow.id}`);
+    } catch (e) {
+      if (previous) queryClient.setQueryData(linksKey, previous);
+      failed(e);
+      return;
+    }
+    await queryClient.invalidateQueries({ queryKey: linksKey });
+    onRelationsChange?.();
+  };
+
+  const assets = data?.assets ?? null;
+  const hasSubLocations = !!assets?.some((row) => row.sub_location_id);
+  const assetBase = assetsSection({
+    t,
+    rows: assets,
+    kindLabel: labels.assetKind,
+    environmentLabel: labels.environment,
+    statusLabel: labels.status,
+  });
+  const assetSection: SectionSpec<LocationAssetRow> = {
+    ...(assetBase as unknown as SectionSpec<LocationAssetRow>),
+    empty: t('workspace.location.relations.noAssets'),
+    columns: pick<LocationAssetRow>(assetBase.columns, [
+      'ref',
+      'name',
+      ...(hasSubLocations ? [{
+        key: 'subLocation',
+        header: t('workspace.location.relations.subLocation'),
+        width: 130,
+        hideOrder: 2,
+        render: (row: LocationAssetRow) => row.sub_location_name || DASH,
+      }] : []),
+      'type',
+      'environment',
+      {
+        key: 'provider',
+        header: t('workspace.location.relations.provider'),
+        width: 130,
+        hideOrder: 3,
+        render: (row: LocationAssetRow) => (row.provider ? labelFor('serverProvider', row.provider) || row.provider : DASH),
+      },
+      'status',
+    ]),
+  };
+
+  const appBase = applicationsSection({
+    t,
+    rows: null,
+    lifecycleLabel: labels.lifecycle,
+    criticalityLabel: labels.criticality,
+  });
+  const applicationSection: SectionSpec<LocationApplicationRow> = {
+    ...(appBase as unknown as SectionSpec<LocationApplicationRow>),
+    rows: data?.applications ?? null,
+    empty: t('workspace.location.relations.noApplications'),
+    columns: pick<LocationApplicationRow>(appBase.columns, [
+      'ref',
+      'name',
+      {
+        key: 'environments',
+        header: t('workspace.location.relations.environments'),
+        width: 180,
+        hideOrder: 1,
+        render: (row: LocationApplicationRow) => row.environments.map(labels.environment).join(', ') || DASH,
+      },
+      'lifecycle',
+    ]),
+  };
 
   return (
-    <Box sx={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
-      {error && <Alert severity="error">{error}</Alert>}
+    <Stack spacing={3}>
+      {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
-      <Box>
-        <Typography sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
-          {t('it:workspace.location.relations.assetsTitle')}
-        </Typography>
-        {assets.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            {t('it:workspace.location.relations.noAssets')}
-          </Typography>
-        ) : (
-          <Box
-            component="table"
-            sx={(theme) => ({
-              width: '100%',
-              borderCollapse: 'collapse',
-              '& th': {
-                ...headerSx,
-                textAlign: 'left',
-                borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-              },
-              '& td': {
-                ...cellSx,
-                borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
-              },
-              '& tbody tr': {
-                cursor: 'pointer',
-              },
-              '& tbody tr:hover': {
-                backgroundColor: theme.palette.kanap.bg.hover,
-              },
-            })}
-          >
-            <Box component="thead">
-              <Box component="tr">
-                <Box component="th">{t('it:common.name')}</Box>
-                {hasSubLocations && <Box component="th">{t('it:workspace.location.relations.subLocation')}</Box>}
-                <Box component="th">{t('it:common.environment')}</Box>
-                <Box component="th">{t('it:workspace.location.relations.type')}</Box>
-                <Box component="th">{t('it:workspace.location.relations.provider')}</Box>
-                <Box component="th">{t('it:workspace.location.relations.regionZone')}</Box>
-                <Box component="th">{t('it:workspace.location.relations.status')}</Box>
-              </Box>
-            </Box>
-            <Box component="tbody">
-              {assets.map((server) => (
-                <Box
-                  component="tr"
-                  key={server.id}
-                  onClick={() => navigate(`/it/assets/${server.id}/overview`)}
-                >
-                  <Box component="td">{server.name}</Box>
-                  {hasSubLocations && (
-                    <Box component="td" sx={{ color: 'kanap.text.secondary' }}>
-                      {server.sub_location_name || '—'}
-                    </Box>
-                  )}
-                  <Box component="td">{server.environment || '—'}</Box>
-                  <Box component="td">{labelFor('serverKind', server.kind) || server.kind || '—'}</Box>
-                  <Box component="td">{labelFor('serverProvider', server.provider) || server.provider || '—'}</Box>
-                  <Box component="td">{[server.region, server.zone].filter(Boolean).join(' / ') || '—'}</Box>
-                  <Box component="td" sx={{ color: 'kanap.text.secondary' }}>{server.status}</Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
-      </Box>
+      <RelationSections
+        sections={[assetSection, applicationSection]}
+        loaded={!!data}
+        canEdit={false}
+        searchKeyPrefix="location"
+        onLink={() => undefined}
+        onUnlink={() => undefined}
+      />
 
-      <Box>
-        <Typography sx={{ fontSize: 16, fontWeight: 500, color: 'kanap.text.primary', mb: 1 }}>
-          {t('it:workspace.location.relations.applicationsTitle')}
-        </Typography>
-        {applications.length === 0 ? (
-          <Typography sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
-            {t('it:workspace.location.relations.noApplications')}
-          </Typography>
-        ) : (
-          <Box
-            component="table"
-            sx={(theme) => ({
-              width: '100%',
-              borderCollapse: 'collapse',
-              '& th': {
-                ...headerSx,
-                textAlign: 'left',
-                borderBottom: `1px solid ${theme.palette.kanap.border.default}`,
-              },
-              '& td': {
-                ...cellSx,
-                borderBottom: `1px solid ${theme.palette.kanap.border.soft}`,
-              },
-              '& tbody tr': { cursor: 'pointer' },
-              '& tbody tr:hover': { backgroundColor: theme.palette.kanap.bg.hover },
-            })}
-          >
-            <Box component="thead">
-              <Box component="tr">
-                <Box component="th">{t('it:common.name')}</Box>
-                <Box component="th">{t('it:workspace.location.relations.environments')}</Box>
-              </Box>
-            </Box>
-            <Box component="tbody">
-              {applications.map((app) => (
-                <Box
-                  component="tr"
-                  key={app.id}
-                  onClick={() => navigate(`/it/applications/${app.id}/overview`)}
-                >
-                  <Box component="td">{app.name}</Box>
-                  <Box component="td" sx={{ color: 'kanap.text.secondary' }}>
-                    {app.environments.filter(Boolean).join(', ') || '—'}
-                  </Box>
-                </Box>
-              ))}
-            </Box>
-          </Box>
-        )}
-      </Box>
-    </Box>
+      <LinksAndFilesSection
+        linksOnly
+        links={links}
+        files={[]}
+        loaded={linksQuery.isSuccess}
+        canEdit={canEdit}
+        onAddLink={(draft) => saveLink(null, draft)}
+        onEditLink={(linkRow, draft) => saveLink(linkRow, draft)}
+        onRemoveLink={(linkRow) => { void removeLink(linkRow); }}
+        onUploadFiles={() => undefined}
+        onOpenFile={() => undefined}
+        onRemoveFile={() => undefined}
+      />
+    </Stack>
   );
 }

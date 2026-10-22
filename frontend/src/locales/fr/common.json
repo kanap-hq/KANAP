@@ -1222,6 +1222,8 @@
     "placeholders": {
       "name": "ex. : Portail de l’éditeur",
       "url": "ex. : https://status.example.com"
-    }
+    },
+    "linksTitle": "Liens web",
+    "linksEmpty": "Aucun lien web."
   }
 }

@@ -1222,6 +1222,8 @@
     "placeholders": {
       "name": "z. B. Herstellerportal",
       "url": "z. B. https://status.example.com"
-    }
+    },
+    "linksTitle": "Weblinks",
+    "linksEmpty": "Kein Weblink."
   }
 }

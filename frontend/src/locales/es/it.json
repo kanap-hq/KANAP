@@ -2998,14 +2998,9 @@
         "addWebsite": "+ Añadir sitio web"
       },
       "relations": {
-        "assetsTitle": "Activos en esta ubicación",
         "noAssets": "No hay activos vinculados a esta ubicación.",
         "subLocation": "Sub-ubicación",
-        "type": "Tipo",
         "provider": "Proveedor",
-        "regionZone": "Región / zona",
-        "status": "Estado",
-        "applicationsTitle": "Aplicaciones en esta ubicación",
         "noApplications": "No se detectaron aplicaciones para esta ubicación.",
         "environments": "Entornos"
       },
