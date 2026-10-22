@@ -269,7 +269,13 @@ async function testAdoption() {
     assert.ok(!after.items.some((item) => item.key === 'mssqlserver'), 'an adopted entry is no longer offered');
     // A technology typed before under the same name receives the key instead of a duplicate.
     await technology(runner, tenantId, 50, 'PostgreSQL', 'database');
-    assert.ok((await catalog.notAdopted({ q: 'postgres' }, opts)).items.some((item) => item.key === 'postgresql'), 'a technology typed by hand keeps its catalog entry on offer');
+    const offered = await catalog.notAdopted({ q: 'postgres' }, opts);
+    const pg = offered.items.find((item) => item.key === 'postgresql');
+    assert.ok(pg, 'a technology typed by hand keeps its catalog entry on offer');
+    assert.equal(pg.completes, 'TEC-50');
+    const other = offered.items.find((item) => item.key !== 'postgresql');
+    assert.ok(other, 'the search also offers an entry with no hand-typed namesake');
+    assert.equal(other.completes, null);
     const merged = await catalog.adopt('postgresql', opts);
     assert.equal(merged.created, false);
     assert.equal(merged.technology.reference, 'TEC-50');

@@ -177,19 +177,25 @@ export class TechnologyCatalogService {
   /**
    * The entries the tenant has not adopted: no technology with its catalog key, nor a technology of
    * its name already tied to the catalog. A technology typed by hand under the entry's name keeps the
-   * entry on offer: adopting it completes that technology (`adopt`).
+   * entry on offer: adopting it completes that technology (`adopt`). Each item carries `completes`,
+   * the reference (`TEC-<item_number>`) of that hand-typed technology, compared without case, or null.
    * Filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
    * would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list is offered
    * under the code the tenant would actually receive.
    */
   async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
-    const rows: Array<{ catalog_key: string | null; name: string }> = await opts.manager.query(
-      `SELECT catalog_key, name FROM technologies WHERE tenant_id = $1`,
+    const rows: Array<{ catalog_key: string | null; name: string; item_number: number | null }> = await opts.manager.query(
+      `SELECT catalog_key, name, item_number FROM technologies WHERE tenant_id = $1`,
       [opts.tenantId],
     );
     const keys = new Set(rows.map((row) => row.catalog_key).filter(Boolean));
     const names = new Set(rows.filter((row) => row.catalog_key).map((row) => row.name.trim().toLowerCase()));
+    const completesByName = new Map<string, string | null>();
+    for (const row of rows) {
+      if (row.catalog_key) continue;
+      completesByName.set(row.name.trim().toLowerCase(), technologyReference(row.item_number));
+    }
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
     const { hostingTypes, technologyFamilies } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
@@ -210,6 +216,7 @@ export class TechnologyCatalogService {
         versions: product.versions.length,
         latest_version: product.versions[0]?.label ?? null,
         description: this.description(product.key, language),
+        completes: completesByName.get(product.name.trim().toLowerCase()) ?? null,
       }));
     return { items };
   }
