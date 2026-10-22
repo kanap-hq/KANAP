@@ -1161,7 +1161,6 @@
       "yPlus2": "Y+2"
     },
     "changeType": {
-      "menuItem": "Change type…",
       "title": "Change the type of {{reference}}",
       "subtitle": {
         "capex": "This OPEX line becomes a CAPEX line.",

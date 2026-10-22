@@ -38,7 +38,6 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
-import WorkspaceMoreMenu from '../../components/workspace/WorkspaceMoreMenu';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -1104,9 +1103,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 itemName={form.product_name || t('budget.line')}
                 itemRef={reference}
               />
-            )}
-            {canChangeType && (
-              <WorkspaceMoreMenu items={[{ key: 'change-type', label: t('ops:shared.changeType.menuItem'), onClick: () => { void openChangeType(); } }]} />
             )}
             {isCreate && (
               <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={createSubmitting}>

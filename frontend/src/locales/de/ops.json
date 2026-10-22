@@ -1161,7 +1161,6 @@
       "yPlus2": "J+2"
     },
     "changeType": {
-      "menuItem": "Typ ändern…",
       "title": "Typ von {{reference}} ändern",
       "subtitle": {
         "capex": "Diese OPEX-Zeile wird zu einer CAPEX-Zeile.",
