@@ -293,8 +293,7 @@ Los registros vinculados a la tecnología, una sección por tipo:
 - **Contratos**: proveedor, fecha de fin e importe anual, con un total por moneda.
 - **Proyectos**: estado y fin previsto.
 - **Incidentes**: gravedad, estado y fecha de detección. Vincular un incidente requiere `incidents:contributor`. Un incidente cerrado o cancelado no se puede vincular ni desvincular.
-- **Documentos**: los archivos subidos a la tecnología, con su tamaño y su fecha. **Añadir** sube archivos; haga clic en un nombre para descargarlo.
-- **Enlaces web**: un nombre y una dirección, como las notas de la versión del editor. Haga clic en el nombre para abrirlo; pase el ratón por una fila para editarla. Las direcciones empiezan por `http://` o `https://`; una dirección sin prefijo se abre como `https://`.
+- **Enlaces y archivos**: los enlaces web de la tecnología y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `infrastructure:member`, **Añadir enlace** y **Adjuntar archivo** añaden una fila, y los archivos también se pueden soltar sobre la sección. Pase el cursor sobre una fila para editar un enlace o quitar una fila. Eliminar un archivo pide una confirmación. Una dirección sin `http://` o `https://` se abre como `https://`.
 
 Una sección solo aparece si puede leer su módulo. **Añadir** (`infrastructure:member`) abre una búsqueda en el sitio; la cruz al final de una fila quita el vínculo.
 

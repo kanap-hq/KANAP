@@ -213,13 +213,35 @@ Lier ou retirer une application ou un actif dans **Relations** met l'onglet à j
 
 ### Relations
 
-- **Applications** et **Actifs** : liez les applications et les actifs que couvre ce contrat. Les sélecteurs cherchent parmi les applications et les actifs que vous pouvez voir. Ces liens alimentent l'onglet [Conformité](#conformite). Un actif dont le contrat de support est celui-ci, renseigné sur la fiche de l'actif, n'apparaît pas ici. Il compte quand même pour la conformité
-- **Technologies** : liez les technologies que ce contrat paie, comme un abonnement Microsoft 365 pour Entra ID. Visible seulement si vous pouvez lire l'infrastructure. Les technologies retirées ne sont pas proposées
-- **Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic
-- **Sites web pertinents** : des liens vers des documents externes, comme le PDF signé ou le portail du fournisseur
-- **Pièces jointes** : une liste de fichiers. Utilisez **Ajouter des fichiers** ou déposez des fichiers sur la section. Cliquez sur un fichier pour le télécharger
+L'onglet Relations montre ce que couvre ce contrat : ses applications, actifs et technologies, chacun dans son propre tableau, puis des suggestions, les contacts, et les liens et fichiers. Cliquez sur une ligne pour ouvrir l'enregistrement. Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
 
-Les lignes budgétaires se lient dans l'onglet [Budget](#budget).
+**Enregistrements liés**, un tableau chacun :
+
+| Section | Colonnes |
+|---|---|
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
+| **Technologies** | Référence (`TEC-5`), nom, famille, éditeur. Visible seulement si vous pouvez lire l'infrastructure |
+
+Une application ou un actif désactivé ou retiré reste affiché, son nom grisé. Les applications et les actifs alimentent l'onglet [Conformité](#conformite). Un actif dont le contrat de support est celui-ci, renseigné sur la fiche de l'actif, n'apparaît pas ici. Il compte quand même pour la conformité.
+
+**Ajouter et retirer des liens** (`contracts:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. La recherche propose les applications et les actifs que vous pouvez voir. Les technologies retirées ne sont pas proposées. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Lier une technologie demande aussi de pouvoir lire l'infrastructure. Les lecteurs voient les tableaux en lecture seule.
+
+**Apparentés** : les applications et les actifs du fournisseur du contrat qui ne sont pas encore liés, avec la raison « même fournisseur ». Un actif appartient au fournisseur par son fournisseur de support. Cliquez sur **Lier** pour ajouter la suggestion à sa section. Les suggestions montrent :
+
+- les applications en service, si vous pouvez lire les applications. Un Contributeur métier ne voit que les applications auxquelles il participe ;
+- les actifs qui ne sont pas retirés, si vous pouvez lire l'infrastructure ;
+- 20 au plus de chaque type.
+
+La section est absente quand il n'y a rien à suggérer.
+
+**Contacts** : les personnes liées à ce contrat, chacune avec un rôle (Commercial, Technique, Support ou Autre). **Reprendre les contacts du fournisseur** copie les contacts du fournisseur en un clic.
+
+**Liens et fichiers** : les liens web du contrat (le PDF signé en ligne, le portail du fournisseur) et ses fichiers, une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `contracts:member` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 ### Supprimer un contrat
 

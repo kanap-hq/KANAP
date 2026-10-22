@@ -293,8 +293,7 @@ Die mit der Technologie verknüpften Datensätze, ein Abschnitt pro Art:
 - **Verträge**: Lieferant, Enddatum und Jahresbetrag, mit einer Summe pro Währung.
 - **Projekte**: Status und geplantes Ende.
 - **Vorfälle**: Schweregrad, Status und Erkennungsdatum. Das Verknüpfen eines Vorfalls erfordert `incidents:contributor`. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden.
-- **Dokumente**: die zur Technologie hochgeladenen Dateien mit Größe und Datum. **Hinzufügen** lädt Dateien hoch; ein Klick auf einen Namen lädt die Datei herunter.
-- **Weblinks**: ein Name und eine Adresse, etwa die Release Notes des Herstellers. Ein Klick auf den Namen öffnet sie; fahren Sie über eine Zeile, um sie zu bearbeiten. Adressen beginnen mit `http://` oder `https://`; eine Adresse ohne Präfix öffnet sich als `https://`.
+- **Links und Dateien**: die Weblinks der Technologie und ihre Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `infrastructure:member` fügen **Link hinzufügen** und **Datei anhängen** eine Zeile hinzu, und Dateien können auch auf den Abschnitt gezogen werden. Fahren Sie über eine Zeile, um einen Link zu bearbeiten oder eine Zeile zu entfernen. Das Löschen einer Datei fragt nach einer Bestätigung. Eine Adresse ohne `http://` oder `https://` öffnet sich als `https://`.
 
 Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** (`infrastructure:member`) öffnet eine Suche an Ort und Stelle; das Kreuz am Ende einer Zeile entfernt die Verknüpfung.
 

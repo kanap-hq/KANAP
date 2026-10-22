@@ -5,6 +5,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ApplicationsService, ApplicationsRelationsService } from './services';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
 import { ApplicationsCsvService } from './applications-csv.service';
@@ -110,10 +111,20 @@ export class ApplicationsController {
    * permission level), each under the caller's participation scope when it is a Business Contributor.
    */
   private async relationsContext(ctx: TenantRequest): Promise<RelationsContext> {
-    const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
-    const reads = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.reader;
-    const edits = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.member;
-    const contributes = (resource: string) => ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK.contributor;
+    const rights = buildRelationsAccess(ctx, {
+      read: {
+        budget_lines: 'budget',
+        contracts: 'contracts',
+        incidents: 'incidents',
+        processes: 'business_processes',
+        projects: 'portfolio_projects',
+        requests: 'portfolio_requests',
+        tasks: 'tasks',
+        technologies: 'infrastructure',
+      },
+      write: { technologies: 'infrastructure', processes: 'business_processes' },
+      contribute: { incidents: 'incidents' },
+    });
     const [application, project, request, task] = await Promise.all([
       this.participationScope(ctx, 'applications'),
       this.readProjectScope(ctx),
@@ -124,17 +135,12 @@ export class ApplicationsController {
       manager: this.requireManager(ctx),
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
-      access: {
-        budget_lines: reads('budget'),
-        contracts: reads('contracts'),
-        incidents: reads('incidents'),
-        processes: reads('business_processes'),
-        projects: reads('portfolio_projects'),
-        requests: reads('portfolio_requests'),
-        tasks: reads('tasks'),
-        technologies: reads('infrastructure'),
+      access: rights.access,
+      writes: {
+        technologies: rights.writes.technologies,
+        processes: rights.writes.processes,
+        incidents: rights.contributes.incidents,
       },
-      writes: { technologies: edits('infrastructure'), processes: edits('business_processes'), incidents: contributes('incidents') },
       scopes: { application, project, request, task },
       incidentViewer: incidentViewerFromContext(ctx),
     };
@@ -851,8 +857,7 @@ export class ApplicationsController {
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ opex: number; capex: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
-    const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
-    const readsRequests = ctx.isAdmin === true || (RANK[ctx.permissions?.portfolio_requests ?? ''] ?? 0) >= RANK.reader;
+    const readsRequests = hasLevel(ctx, 'portfolio_requests', 'reader');
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
       projectAccessScope: await this.readProjectScope(ctx),

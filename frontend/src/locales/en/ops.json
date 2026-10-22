@@ -627,30 +627,6 @@
         "hintEnds": "Nothing is committed after the contract ends on {{date}}."
       }
     },
-    "relations": {
-      "applications": "Applications",
-      "assets": "Assets",
-      "technologies": "Technologies",
-      "selectApplications": "Select applications",
-      "selectAssets": "Select assets",
-      "selectTechnologies": "Select technologies",
-      "relevantWebsites": "Relevant websites",
-      "addUrl": "Add URL",
-      "linkName": "Name",
-      "linkUrl": "URL",
-      "linkNamePlaceholder": "e.g., vendor portal",
-      "noWebsites": "No websites added",
-      "deleteWebsite": "Delete link",
-      "addLinkTitle": "Add link",
-      "editLinkTitle": "Edit link",
-      "attachments": "Attachments",
-      "addFiles": "Add files",
-      "noAttachments": "No attachments",
-      "noAttachmentsDrop": "No attachments. Drop files here to attach them.",
-      "uploadingFiles_one": "Uploading {{count}} file…",
-      "uploadingFiles_other": "Uploading {{count}} files…",
-      "deleteAttachment": "Delete attachment"
-    },
     "compliance": {
       "title": "Requirements",
       "subtitle": "expected from the linked applications and assets",

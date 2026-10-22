@@ -1741,6 +1741,8 @@
           "requests": "Anfragen",
           "tasks": "Aufgaben",
           "technologies": "Technologien",
+          "applications": "Anwendungen",
+          "assets": "Assets",
           "related": "Verwandt"
         },
         "empty": {
@@ -1749,7 +1751,9 @@
           "projects": "Kein Projekt verknüpft.",
           "requests": "Keine Anfrage verknüpft.",
           "tasks": "Keine Aufgabe verknüpft.",
-          "technologies": "Keine Technologie verknüpft."
+          "technologies": "Keine Technologie verknüpft.",
+          "applications": "Keine Anwendung verknüpft.",
+          "assets": "Kein Asset verknüpft."
         },
         "columns": {
           "ref": "Ref.",
@@ -1781,12 +1785,16 @@
           "contracts": "Verträge suchen",
           "projects": "Projekte suchen",
           "requests": "Anfragen suchen",
-          "technologies": "Technologien suchen"
+          "technologies": "Technologien suchen",
+          "applications": "Anwendungen suchen",
+          "assets": "Assets suchen"
         },
         "types": {
           "budget_line": "Budgetzeile",
           "contract": "Vertrag",
-          "project": "Projekt"
+          "project": "Projekt",
+          "application": "Anwendung",
+          "asset": "Asset"
         },
         "via": {
           "same_supplier": "gleicher Lieferant",
@@ -2327,29 +2335,11 @@
         "alreadyListed": "Dieser Kontakt ist bereits aufgeführt. Seine Rolle bleibt unverändert."
       },
       "relations": {
-        "sections": {
-          "documents": "Dokumente",
-          "links": "Weblinks"
-        },
         "empty": {
-          "documents": "Kein Dokument.",
-          "links": "Kein Weblink.",
           "incidents": "Kein Vorfall verknüpft."
         },
         "search": {
           "incidents": "Vorfälle suchen"
-        },
-        "columns": {
-          "size": "Größe",
-          "added": "Hinzugefügt",
-          "url": "Adresse"
-        },
-        "newLink": "Neuer Weblink",
-        "editLink": "{{name}} bearbeiten",
-        "editLinkTitle": "Weblink bearbeiten",
-        "placeholders": {
-          "linkName": "z. B. Versionshinweise",
-          "url": "z. B. https://learn.microsoft.com/sql"
         }
       },
       "servers": {

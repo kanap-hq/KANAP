@@ -13,6 +13,7 @@ import { languageOf, type CsvLanguage } from '../common/csv-sheet';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { attachmentMulterOptions, csvImportMulterOptions } from '../common/upload';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
 import { CveNamesService } from '../vulnerabilities/cve-names.service';
 import { TechnologiesService, type Opts } from './technologies.service';
 import { TechnologiesDeleteService } from './technologies-delete.service';
@@ -23,6 +24,8 @@ import { TechnologyLinksCsvService } from './technology-links-csv.service';
 import { TechnologyLinksService, type ApplicationsReach, type LinkInput } from './technology-links.service';
 import { requireManager } from './technology-rows';
 
+export { hasLevel };
+
 /** The picker of technologies (`useLookupPicker`): name first, the editor and reference searched too; retired ones not offered. */
 export const TECHNOLOGY_LOOKUP: LookupSpec = {
   table: 'technologies',
@@ -31,13 +34,6 @@ export const TECHNOLOGY_LOOKUP: LookupSpec = {
   search: ['t.editor', `'TEC-' || t.item_number`],
   offered: `t.lifecycle <> 'retired'`,
 };
-
-const RANK: Record<string, number> = { reader: 1, contributor: 2, member: 3, admin: 4 };
-
-/** The caller holds `level` or more on `resource` (an administrator holds everything). */
-export function hasLevel(ctx: TenantRequest, resource: string, level: keyof typeof RANK): boolean {
-  return ctx.isAdmin === true || (RANK[ctx.permissions?.[resource] ?? ''] ?? 0) >= RANK[level];
-}
 
 /** `dry_run=true` on the query, or `dry_run: true` in the body. The query wins when it is sent. */
 function dryRunRequested(query: string | undefined, body: unknown): boolean {
@@ -122,15 +118,18 @@ export class TechnologiesController {
   }
 
   private async relationsContext(ctx: TenantRequest): Promise<TechnologyRelationsContext> {
-    const reads = (resource: string) => hasLevel(ctx, resource, 'reader');
+    const rights = buildRelationsAccess(ctx, {
+      read: { budget_lines: 'budget', contracts: 'contracts', projects: 'portfolio_projects', incidents: 'incidents' },
+      contribute: { incidents: 'incidents' },
+    });
     const manager = requireManager(ctx.manager);
     const projectScope = await resolveBusinessContributorScopeForUser({ manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin }, 'portfolio_projects', 'reader');
     return {
       manager,
       tenantId: ctx.tenantId,
       userId: ctx.userId || null,
-      access: { budget_lines: reads('budget'), contracts: reads('contracts'), projects: reads('portfolio_projects'), incidents: reads('incidents') },
-      writeIncidents: hasLevel(ctx, 'incidents', 'contributor'),
+      access: rights.access,
+      writeIncidents: rights.contributes.incidents,
       projectScope,
       incidentViewer: incidentViewerFromContext(ctx),
     };

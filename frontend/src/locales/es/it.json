@@ -1741,6 +1741,8 @@
           "requests": "Solicitudes",
           "tasks": "Tareas",
           "technologies": "Tecnologías",
+          "applications": "Aplicaciones",
+          "assets": "Activos",
           "related": "Relacionados"
         },
         "empty": {
@@ -1749,7 +1751,9 @@
           "projects": "Ningún proyecto vinculado.",
           "requests": "Ninguna solicitud vinculada.",
           "tasks": "Ninguna tarea vinculada.",
-          "technologies": "Ninguna tecnología vinculada."
+          "technologies": "Ninguna tecnología vinculada.",
+          "applications": "Ninguna aplicación vinculada.",
+          "assets": "Ningún activo vinculado."
         },
         "columns": {
           "ref": "Ref.",
@@ -1781,12 +1785,16 @@
           "contracts": "Buscar contratos",
           "projects": "Buscar proyectos",
           "requests": "Buscar solicitudes",
-          "technologies": "Buscar tecnologías"
+          "technologies": "Buscar tecnologías",
+          "applications": "Buscar aplicaciones",
+          "assets": "Buscar activos"
         },
         "types": {
           "budget_line": "Línea presupuestaria",
           "contract": "Contrato",
-          "project": "Proyecto"
+          "project": "Proyecto",
+          "application": "Aplicación",
+          "asset": "Activo"
         },
         "via": {
           "same_supplier": "mismo proveedor",
@@ -2327,29 +2335,11 @@
         "alreadyListed": "Este contacto ya figura en la lista. Su rol no cambia."
       },
       "relations": {
-        "sections": {
-          "documents": "Documentos",
-          "links": "Enlaces web"
-        },
         "empty": {
-          "documents": "Ningún documento.",
-          "links": "Ningún enlace web.",
           "incidents": "Ningún incidente vinculado."
         },
         "search": {
           "incidents": "Buscar incidentes"
-        },
-        "columns": {
-          "size": "Tamaño",
-          "added": "Añadido",
-          "url": "Dirección"
-        },
-        "newLink": "Nuevo enlace web",
-        "editLink": "Editar {{name}}",
-        "editLinkTitle": "Editar enlace web",
-        "placeholders": {
-          "linkName": "p. ej., Notas de la versión",
-          "url": "p. ej., https://learn.microsoft.com/sql"
         }
       },
       "servers": {

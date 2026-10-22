@@ -452,8 +452,6 @@ function ContractEditor({ id, tab }: { id: string; tab: TabKey }) {
             key={form.id}
             contractId={form.id}
             readOnly={!editable}
-            links={(shownData.links ?? []).map((link) => ({ id: link.id, description: link.description, url: link.url }))}
-            attachments={shownData.attachments ?? []}
             onChanged={refreshRelations}
           />
         )}

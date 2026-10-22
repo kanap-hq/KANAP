@@ -213,13 +213,35 @@ Das Verknüpfen oder Entfernen einer Anwendung oder eines Assets unter **Verknü
 
 ### Verknüpfungen
 
-- **Anwendungen** und **Assets**: Verknüpfen Sie die Anwendungen und Assets, die dieser Vertrag abdeckt. Die Auswahlfelder durchsuchen die Anwendungen und Assets, die Sie sehen dürfen. Diese Verknüpfungen speisen den Reiter [Konformität](#konformitat). Ein Asset, dessen Supportvertrag auf der Asset-Seite auf diesen Vertrag gesetzt ist, erscheint hier nicht. Für die Konformität zählt es trotzdem
-- **Technologien**: Verknüpfen Sie die Technologien, die dieser Vertrag bezahlt, etwa ein Microsoft-365-Abonnement für Entra ID. Nur sichtbar, wenn Sie die Infrastruktur lesen dürfen. Ausgemusterte Technologien werden nicht angeboten
-- **Kontakte**: Personen zu diesem Vertrag, jede mit einer Rolle (Vertrieb, Technik, Support oder Sonstige). **Kontakte des Lieferanten übernehmen** übernimmt die Kontakte des Lieferanten mit einem Klick
-- **Relevante Websites**: Links zu externen Dokumenten wie dem unterschriebenen PDF oder dem Lieferantenportal
-- **Anhänge**: eine Liste von Dateien. Nutzen Sie **Dateien hinzufügen** oder ziehen Sie Dateien auf den Abschnitt. Klicken Sie auf eine Datei, um sie herunterzuladen
+Der Reiter Verknüpfungen zeigt, was dieser Vertrag abdeckt: seine Anwendungen, Assets und Technologien, jeweils in einer eigenen Tabelle, danach Vorschläge, die Kontakte sowie Links und Dateien. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
 
-Budgetzeilen werden im Reiter [Budget](#budget) verknüpft.
+**Verknüpfte Datensätze**, jeweils eine Tabelle:
+
+| Abschnitt | Spalten |
+|---|---|
+| **Anwendungen** | Referenz (`APP-3`), Name, Lebenszyklus, Geschäftskritikalität |
+| **Assets** | Referenz (`AST-12`), Name, Typ, Umgebung, Status |
+| **Technologien** | Referenz (`TEC-5`), Name, Familie, Hersteller. Nur sichtbar, wenn Sie die Infrastruktur lesen dürfen |
+
+Eine deaktivierte oder ausgemusterte Anwendung oder ein solches Asset bleibt mit ausgegrautem Namen aufgeführt. Die Anwendungen und Assets speisen den Reiter [Konformität](#konformitat). Ein Asset, dessen Supportvertrag auf der Asset-Seite auf diesen Vertrag gesetzt ist, erscheint hier nicht. Für die Konformität zählt es trotzdem.
+
+**Verknüpfungen hinzufügen und entfernen** (`contracts:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Die Suche bietet die Anwendungen und Assets an, die Sie sehen dürfen. Ausgemusterte Technologien werden nicht angeboten. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Das Verknüpfen einer Technologie erfordert zusätzlich Leserechte auf die Infrastruktur. Leser sehen die Tabellen schreibgeschützt.
+
+**Verwandt**: die Anwendungen und Assets des Lieferanten des Vertrags, die noch nicht verknüpft sind, mit dem Grund „gleicher Lieferant“. Ein Asset gehört über seinen Supportlieferanten zum Lieferanten. Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen. Die Vorschläge zeigen:
+
+- Anwendungen in Betrieb, wenn Sie die Anwendungen lesen dürfen. Ein Fachbereichs-Mitwirkender sieht nur die Anwendungen, an denen er beteiligt ist;
+- Assets, die nicht ausgemustert sind, wenn Sie die Infrastruktur lesen dürfen;
+- höchstens 20 je Typ.
+
+Der Abschnitt fehlt, wenn es nichts vorzuschlagen gibt.
+
+**Kontakte**: Personen zu diesem Vertrag, jede mit einer Rolle (Vertrieb, Technik, Support oder Sonstige). **Kontakte des Lieferanten übernehmen** übernimmt die Kontakte des Lieferanten mit einem Klick.
+
+**Links und Dateien**: die Weblinks des Vertrags (das unterschriebene PDF online, das Lieferantenportal) und seine Dateien, je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `contracts:member`:
+
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ### Einen Vertrag löschen
 

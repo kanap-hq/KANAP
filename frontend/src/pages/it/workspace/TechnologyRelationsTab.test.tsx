@@ -58,6 +58,8 @@ function Location() {
 function renderTab(data: TechnologyRelationsData) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/technologies/tec-1/relations') return { data } as never;
+    if (url === '/technologies/tec-1/links') return { data: data.links } as never;
+    if (url === '/technologies/tec-1/attachments') return { data: data.documents } as never;
     if (url === '/contracts/lookup') return { data: { items: [{ id: 'ct-1', name: 'Enterprise agreement' }, { id: 'ct-2', name: 'Premier support' }] } } as never;
     if (url === '/incidents') {
       return { data: { items: [
@@ -97,11 +99,10 @@ describe('TechnologyRelationsTab', () => {
     expect(screen.getByText('BL-12')).toBeTruthy();
     expect(screen.getByText('column:budget 2026 (EUR)')).toBeTruthy();
     expect(screen.getByText('INC-4')).toBeTruthy();
-    expect(screen.getByRole('region', { name: 'workspace.technology.relations.sections.documents' })).toBeTruthy();
-    expect(screen.getByText('runbook.pdf')).toBeTruthy();
-    const link = screen.getByRole('link', { name: 'Lifecycle policy' });
-    expect(link.getAttribute('href')).toBe('https://learn.microsoft.com/lifecycle');
-    expect(link.getAttribute('target')).toBe('_blank');
+    const files = screen.getByRole('region', { name: 'linksAndFiles.title' });
+    expect(within(files).getByText('runbook.pdf')).toBeTruthy();
+    expect(within(files).getByText('Lifecycle policy')).toBeTruthy();
+    expect(within(files).getByText('learn.microsoft.com')).toBeTruthy();
     expect(screen.queryByRole('region', { name: 'pages.vulnerabilities.section.title' })).toBeNull();
   });
 
@@ -180,44 +181,46 @@ describe('TechnologyRelationsTab', () => {
     mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
     renderTab(relations());
     await screen.findByText('Lifecycle policy');
-    const section = screen.getByRole('region', { name: 'workspace.technology.relations.sections.links' });
-    fireEvent.click(within(section).getByText('workspace.application.relations.add'));
-    fireEvent.change(await screen.findByLabelText('workspace.application.relations.columns.name'), { target: { value: 'Release notes' } });
-    fireEvent.change(screen.getByLabelText('workspace.technology.relations.columns.url'), { target: { value: ' https://example.test/notes ' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.add' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.addLink' }));
+    fireEvent.change(await screen.findByLabelText('linksAndFiles.columns.name'), { target: { value: 'Release notes' } });
+    fireEvent.change(screen.getByLabelText('linksAndFiles.url'), { target: { value: ' https://example.test/notes ' } });
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.add' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/technologies/tec-1/links', { url: 'https://example.test/notes', description: 'Release notes' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    fireEvent.click(within(section).getByRole('button', { name: 'workspace.application.relations.remove(name=Lifecycle policy)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Lifecycle policy)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/tec-1/links/lnk-1'));
   });
 
   it('edits a web link in the same dialog, filled with the link', async () => {
     mocked.patch.mockResolvedValue({ data: { id: 'lnk-1' } } as never);
     renderTab(relations());
-    fireEvent.click(await screen.findByRole('button', { name: 'workspace.technology.relations.editLink(name=Lifecycle policy)' }));
-    expect(await screen.findByText('workspace.technology.relations.editLinkTitle')).toBeTruthy();
-    const name = screen.getByLabelText('workspace.application.relations.columns.name');
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.editLinkNamed(name=Lifecycle policy)' }));
+    expect(await screen.findByText('linksAndFiles.editLink')).toBeTruthy();
+    const name = screen.getByLabelText('linksAndFiles.columns.name');
     expect(name).toHaveProperty('value', 'Lifecycle policy');
     fireEvent.change(name, { target: { value: 'Support policy' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.save' }));
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.save' }));
     await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/technologies/tec-1/links/lnk-1', { url: 'https://learn.microsoft.com/lifecycle', description: 'Support policy' }));
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
   it('opens a web link at an absolute http or https address, as the other lists of websites', async () => {
+    const open = vi.spyOn(window, 'open').mockReturnValue(null);
     renderTab(relations({ links: [
       { id: 'lnk-1', description: 'VMware support', url: 'www.vmware.com/support', created_at: '2026-10-01T10:00:00Z' },
       { id: 'lnk-2', description: 'Script', url: 'javascript:alert(document.domain)', created_at: '2026-10-01T10:00:00Z' },
     ] }));
-    expect((await screen.findByRole('link', { name: 'VMware support' })).getAttribute('href')).toBe('https://www.vmware.com/support');
-    expect(screen.getByRole('link', { name: 'Script' }).getAttribute('href')).toBe('https://javascript:alert(document.domain)');
+    fireEvent.click(await screen.findByText('VMware support'));
+    expect(open).toHaveBeenCalledWith('https://www.vmware.com/support', '_blank', 'noopener,noreferrer');
+    fireEvent.click(screen.getByText('Script'));
+    expect(open).toHaveBeenCalledWith('https://javascript:alert(document.domain)', '_blank', 'noopener,noreferrer');
   });
 
   it('deletes a document after a confirmation', async () => {
     mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
     renderTab(relations());
-    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=runbook.pdf)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeNamed(name=runbook.pdf)' }));
     expect(mocked.delete).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/attachments/doc-1'));

@@ -1741,6 +1741,8 @@
           "requests": "Demandes",
           "tasks": "Tâches",
           "technologies": "Technologies",
+          "applications": "Applications",
+          "assets": "Actifs",
           "related": "Apparentés"
         },
         "empty": {
@@ -1749,7 +1751,9 @@
           "projects": "Aucun projet lié.",
           "requests": "Aucune demande liée.",
           "tasks": "Aucune tâche liée.",
-          "technologies": "Aucune technologie liée."
+          "technologies": "Aucune technologie liée.",
+          "applications": "Aucune application liée.",
+          "assets": "Aucun actif lié."
         },
         "columns": {
           "ref": "Réf.",
@@ -1781,12 +1785,16 @@
           "contracts": "Rechercher des contrats",
           "projects": "Rechercher des projets",
           "requests": "Rechercher des demandes",
-          "technologies": "Rechercher des technologies"
+          "technologies": "Rechercher des technologies",
+          "applications": "Rechercher des applications",
+          "assets": "Rechercher des actifs"
         },
         "types": {
           "budget_line": "Ligne budgétaire",
           "contract": "Contrat",
-          "project": "Projet"
+          "project": "Projet",
+          "application": "Application",
+          "asset": "Actif"
         },
         "via": {
           "same_supplier": "même fournisseur",
@@ -2327,29 +2335,11 @@
         "alreadyListed": "Ce contact est déjà dans la liste. Son rôle reste inchangé."
       },
       "relations": {
-        "sections": {
-          "documents": "Documents",
-          "links": "Liens web"
-        },
         "empty": {
-          "documents": "Aucun document.",
-          "links": "Aucun lien web.",
           "incidents": "Aucun incident lié."
         },
         "search": {
           "incidents": "Rechercher des incidents"
-        },
-        "columns": {
-          "size": "Taille",
-          "added": "Ajouté le",
-          "url": "Adresse"
-        },
-        "newLink": "Nouveau lien web",
-        "editLink": "Modifier {{name}}",
-        "editLinkTitle": "Modifier le lien web",
-        "placeholders": {
-          "linkName": "ex. : Notes de version",
-          "url": "ex. : https://learn.microsoft.com/sql"
         }
       },
       "servers": {

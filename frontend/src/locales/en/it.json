@@ -1741,6 +1741,8 @@
           "requests": "Requests",
           "tasks": "Tasks",
           "technologies": "Technologies",
+          "applications": "Applications",
+          "assets": "Assets",
           "related": "Related"
         },
         "empty": {
@@ -1749,7 +1751,9 @@
           "projects": "No project linked.",
           "requests": "No request linked.",
           "tasks": "No task linked.",
-          "technologies": "No technology linked."
+          "technologies": "No technology linked.",
+          "applications": "No application linked.",
+          "assets": "No asset linked."
         },
         "columns": {
           "ref": "Ref",
@@ -1781,12 +1785,16 @@
           "contracts": "Search contracts",
           "projects": "Search projects",
           "requests": "Search requests",
-          "technologies": "Search technologies"
+          "technologies": "Search technologies",
+          "applications": "Search applications",
+          "assets": "Search assets"
         },
         "types": {
           "budget_line": "Budget line",
           "contract": "Contract",
-          "project": "Project"
+          "project": "Project",
+          "application": "Application",
+          "asset": "Asset"
         },
         "via": {
           "same_supplier": "same supplier",
@@ -2327,29 +2335,11 @@
         "alreadyListed": "This contact is already listed. Its role stays as it is."
       },
       "relations": {
-        "sections": {
-          "documents": "Documents",
-          "links": "Web links"
-        },
         "empty": {
-          "documents": "No document.",
-          "links": "No web link.",
           "incidents": "No incident linked."
         },
         "search": {
           "incidents": "Search incidents"
-        },
-        "columns": {
-          "size": "Size",
-          "added": "Added",
-          "url": "Address"
-        },
-        "newLink": "New web link",
-        "editLink": "Edit {{name}}",
-        "editLinkTitle": "Edit web link",
-        "placeholders": {
-          "linkName": "e.g., Release notes",
-          "url": "e.g., https://learn.microsoft.com/sql"
         }
       },
       "servers": {

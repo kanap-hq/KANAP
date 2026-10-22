@@ -7,8 +7,7 @@ import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { assertScopeNatures, auditTableOf, linkedLineOf, natureAnd, type BudgetNature } from '../../spend/budget-nature';
-
-const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+import { UUID_RE } from '../../common/relations/relation-target';
 
 type LinkedItemKind = 'spend' | 'capex' | 'contract' | 'project';
 

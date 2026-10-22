@@ -213,13 +213,35 @@ Linking or removing an application or an asset in **Relations** updates the tab 
 
 ### Relations
 
-- **Applications** and **Assets**: link the applications and assets this contract covers. The pickers search the applications and assets you can see. These links feed the [Compliance](#compliance) tab. An asset whose support contract is set to this one on the asset page is not listed here. It still counts for compliance
-- **Technologies**: link the technologies this contract pays for, such as a Microsoft 365 subscription for Entra ID. Shown only if you can read the infrastructure. Retired technologies are not offered
-- **Contacts**: people for this contract, each with a role (Commercial, Technical, Support or Other). **Add the supplier's contacts** copies the supplier's contacts in one click
-- **Relevant websites**: links to external documents such as the signed PDF or the vendor portal
-- **Attachments**: a list of files. Use **Add files** or drop files on the section. Click a file to download it
+The Relations tab shows what this contract covers: its applications, assets and technologies, each in its own table, then suggestions, contacts, and links and files. Click a row to open the record. Budget lines are linked on the [Budget](#budget) tab.
 
-Budget lines are linked on the [Budget](#budget) tab.
+**Linked records**, one table each:
+
+| Section | Columns |
+|---|---|
+| **Applications** | Reference (`APP-3`), name, lifecycle, business criticality |
+| **Assets** | Reference (`AST-12`), name, type, environment, status |
+| **Technologies** | Reference (`TEC-5`), name, family, vendor. Shown only if you can read the infrastructure |
+
+A disabled or retired application or asset stays listed with its name greyed out. The applications and assets feed the [Compliance](#compliance) tab. An asset whose support contract is set to this one on the asset page is not listed here. It still counts for compliance.
+
+**Adding and removing links** (`contracts:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. The search offers the applications and assets you can see. Retired technologies are not offered. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Linking a technology also needs a read of the infrastructure. Readers see the tables read-only.
+
+**Related**: applications and assets of the contract's supplier that are not linked yet, with the reason "same supplier". An asset belongs to the supplier through its support vendor. Click **Link** to add the suggestion to its section. The suggestions show:
+
+- applications in service, if you can read the applications. A Business Contributor only sees the applications they take part in;
+- assets that are not retired, if you can read the infrastructure;
+- at most 20 of each.
+
+The section is absent when there is nothing to suggest.
+
+**Contacts**: people for this contract, each with a role (Commercial, Technical, Support or Other). **Add the supplier's contacts** copies the supplier's contacts in one click.
+
+**Links and files**: the web links of the contract (the signed PDF online, the vendor portal) and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `contracts:member`:
+
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
 ### Deleting a contract
 
