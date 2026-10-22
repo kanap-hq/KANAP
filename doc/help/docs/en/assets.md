@@ -258,7 +258,7 @@ Tracks vendor support and contact information.
 
 ### Relations
 
-The Relations tab connects this asset to other records across KANAP. The tab badge counts all linked items. Most fields save automatically.
+The Relations tab shows what stops with this asset, then what it is linked to: other assets, budget lines, contracts, projects, tasks and incidents, each in its own table, then its links and files. The technologies of the asset are on the [Technical](#technical) tab. Click a row to open the record. The tab badge counts the linked records you can see, plus the links and files.
 
 **If this server goes down**: the tab opens on what stops with this asset. A summary line counts the applications, assets, clusters and business processes affected, then one table per kind:
 
@@ -267,23 +267,43 @@ The Relations tab connects this asset to other records across KANAP. The tab bad
 - **Clusters**: clusters with a fallen member. **Down** when no member stands, otherwise **Degraded** with the number of members down. The applications of a cluster that is down fall with it.
 - **Business processes**: the processes of the affected applications.
 
-Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates once you save the asset relations below.
+Retired assets stop the chain: nothing falls through them. Each table shows its first 50 rows and counts the rest. The applications and the processes need the right to read them. The section updates as soon as you add or remove a relation between assets below.
 
-**Asset relations**:
-- **Depends on**: Other assets this one depends on (e.g., a database server)
-- **Contains**: Assets contained within this one (e.g., servers in a rack)
-- **Contained by** / **Depended on by**: Read-only reverse views, shown only when other assets reference this one
+**Relations between assets**, one table per direction:
 
-**Financials & projects**:
-- **Budget lines**: Link to OPEX and CAPEX lines, in one list. Search by title or reference (`BL-12`); each suggestion shows its type
-- **Contracts**: Link to contract records
-- **Projects**: Link to portfolio projects related to this asset
+| Section | Meaning |
+|---|---|
+| **Contains** | The assets inside this one, for example the servers in a rack |
+| **Contained by** | The assets this one sits in |
+| **Depends on** | The assets this one needs to run, for example a database server |
+| **Depended on by** | The assets that need this one |
 
-**Tasks**: Tasks linked to this asset. Read-only here: tasks gain or lose this link when you set the **Asset** field on a task in the Tasks page.
+Each table shows the reference (`AST-12`), name, type, environment and status. A retired or disabled asset stays listed with its name greyed out.
 
-**Relevant websites**: Add URLs with optional names, useful for vendor portals, monitoring dashboards, or documentation links. **Add URL** opens a dialog; existing entries can be edited or deleted.
+**Linked records**, one table each:
 
-**Attachments**: Drag and drop files or click **Select files** to upload. Click an attachment chip to download it. Delete needs `infrastructure:member`.
+| Section | Columns |
+|---|---|
+| **Budget lines** | Reference (`BL-12`), name, type (OPEX or CAPEX), supplier, and the amount of the current year in your default budget column, in the reporting currency. A dash means the line has no budget for the year |
+| **Contracts** | Name, supplier, end of the current term, yearly amount in the contract currency, renewal (tacit or manual) |
+| **Projects** | Reference (`PRJ-7`), name, status, planned end |
+| **Tasks** | Reference (`T-118`), title, status, assignee, due date. Open tasks come first |
+| **Incidents** | Reference (`INC-14`), title, severity, status, detection date |
+
+You only see the sections of the modules you can read: budget, contracts, portfolio projects, tasks and incidents. A Business Contributor only sees the projects and tasks they take part in. A confidential incident appears only to the people who can see it in the incident register, without its title.
+
+Dates in orange need attention: a contract whose renewal decision is due within your contract decision window, or an open task past its due date. A disabled budget line or contract stays listed with its name greyed out. From two rows on, the budget lines and the contracts end with a total line. The budget line total is in the reporting currency and leaves out a line whose currency has no exchange rate for the year: a one-line warning under the table names it. Contracts get one total per currency, without the disabled ones.
+
+**Adding and removing links** (`infrastructure:member`): **Add** at the right of a section opens a search. Type a name or a reference and pick a result: the link is saved at once. Linking also needs a read of the target module, so **Add** is absent from a section you cannot read. To remove a link, hover the row and click the cross at its end. Removing a link deletes nothing else. Readers see the tables read-only.
+
+- A task you link or unlink here also shows in the task's activity.
+- Linking or unlinking an incident also needs `incidents:contributor` and is recorded in the incident's journal. A closed or cancelled incident cannot be linked or unlinked: reopen it first.
+
+**Links and files**: the web links of the asset (vendor portals, monitoring dashboards, documentation) and its files (configuration files, diagrams, vendor documents), one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `infrastructure:member`:
+
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
 
 ---
 
@@ -422,5 +442,5 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Link to locations**: Assign assets to locations so hosting type, country and city are populated automatically.
 - **Assign to applications**: Use the Overview tab to link assets to application deployments. The same assignments appear under the application's Deployments tab.
 - **Use the Relations tab**: Connect assets to budget lines, contracts, and projects for financial visibility.
-- **Tasks come from the Tasks page**: To attach a task to an asset, set the Asset field on the task itself; it will then appear under Relations > Tasks.
+- **Link tasks here**: Add a task under Relations > Tasks. The link also shows in the task's activity.
 - **Attach documentation**: Upload configuration files, architecture diagrams, or vendor docs directly to the Relations tab.

@@ -2161,33 +2161,17 @@
         "contactRolePlaceholder": "p. ej., gestor de cuenta"
       },
       "relations": {
-        "assetRelations": "Relaciones entre activos",
         "dependsOn": "Depende de",
-        "searchDependsOn": "Buscar dependencias",
         "contains": "Contiene",
-        "searchContains": "Buscar activos contenidos",
         "containedBy": "Contenido en",
-        "containedByAssets": "Activos que lo contienen",
         "dependedOnBy": "Requerido por",
-        "dependedOnByAssets": "Activos que dependen de él",
-        "contracts": "Contratos",
-        "searchContracts": "Buscar contratos",
-        "projects": "Proyectos",
-        "searchProjects": "Buscar proyectos",
-        "tasks": "Tareas",
-        "searchTasks": "Buscar tareas",
-        "relevantWebsites": "Sitios web relevantes",
-        "addUrl": "Agregar URL",
-        "attachments": "Adjuntos",
-        "dropHint": "Arrastre y suelte archivos aquí, o use el botón para seleccionar",
-        "selectFiles": "Seleccionar archivos",
-        "uploading_one": "Subiendo {{count}} archivo…",
-        "uploading_other": "Subiendo {{count}} archivos…",
         "deleteAttachmentConfirm": "¿Eliminar el adjunto «{{name}}»?",
-        "newUrl": "Nueva URL",
-        "editUrl": "Editar URL",
-        "websiteNamePlaceholder": "p. ej., portal de soporte",
-        "url": "URL"
+        "empty": {
+          "contains": "No contiene ningún activo.",
+          "containedBy": "No está contenido en ningún activo.",
+          "dependsOn": "No depende de ningún activo.",
+          "dependedOnBy": "Ningún activo depende de este."
+        }
       }
     },
     "technology": {

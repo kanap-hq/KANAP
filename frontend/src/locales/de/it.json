@@ -2161,33 +2161,17 @@
         "contactRolePlaceholder": "z. B. Kundenbetreuer"
       },
       "relations": {
-        "assetRelations": "Asset-Beziehungen",
         "dependsOn": "Hängt ab von",
-        "searchDependsOn": "Abhängigkeiten suchen",
         "contains": "Enthält",
-        "searchContains": "Enthaltene Assets suchen",
         "containedBy": "Enthalten in",
-        "containedByAssets": "Assets, die dieses Asset enthalten",
         "dependedOnBy": "Benötigt von",
-        "dependedOnByAssets": "Assets, die von diesem Asset abhängen",
-        "contracts": "Verträge",
-        "searchContracts": "Verträge suchen",
-        "projects": "Projekte",
-        "searchProjects": "Projekte suchen",
-        "tasks": "Aufgaben",
-        "searchTasks": "Aufgaben suchen",
-        "relevantWebsites": "Relevante Websites",
-        "addUrl": "URL hinzufügen",
-        "attachments": "Anhänge",
-        "dropHint": "Dateien hierher ziehen oder über die Schaltfläche auswählen",
-        "selectFiles": "Dateien auswählen",
-        "uploading_one": "{{count}} Datei wird hochgeladen…",
-        "uploading_other": "{{count}} Dateien werden hochgeladen…",
         "deleteAttachmentConfirm": "Anhang „{{name}}“ löschen?",
-        "newUrl": "Neue URL",
-        "editUrl": "URL bearbeiten",
-        "websiteNamePlaceholder": "z. B. Support-Portal",
-        "url": "URL"
+        "empty": {
+          "contains": "Enthält kein Asset.",
+          "containedBy": "In keinem Asset enthalten.",
+          "dependsOn": "Hängt von keinem Asset ab.",
+          "dependedOnBy": "Kein Asset hängt von diesem ab."
+        }
       }
     },
     "technology": {

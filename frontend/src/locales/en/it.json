@@ -2161,33 +2161,17 @@
         "contactRolePlaceholder": "e.g., Account manager"
       },
       "relations": {
-        "assetRelations": "Asset relations",
         "dependsOn": "Depends on",
-        "searchDependsOn": "Search dependencies",
         "contains": "Contains",
-        "searchContains": "Search contained assets",
         "containedBy": "Contained by",
-        "containedByAssets": "Contained by assets",
         "dependedOnBy": "Depended on by",
-        "dependedOnByAssets": "Depended on by assets",
-        "contracts": "Contracts",
-        "searchContracts": "Search contracts",
-        "projects": "Projects",
-        "searchProjects": "Search projects",
-        "tasks": "Tasks",
-        "searchTasks": "Search tasks",
-        "relevantWebsites": "Relevant websites",
-        "addUrl": "Add URL",
-        "attachments": "Attachments",
-        "dropHint": "Drag & drop files here, or use the button to select",
-        "selectFiles": "Select files",
-        "uploading_one": "Uploading {{count}} file…",
-        "uploading_other": "Uploading {{count}} files…",
         "deleteAttachmentConfirm": "Delete attachment \"{{name}}\"?",
-        "newUrl": "New URL",
-        "editUrl": "Edit URL",
-        "websiteNamePlaceholder": "e.g., Support portal",
-        "url": "URL"
+        "empty": {
+          "contains": "Contains no asset.",
+          "containedBy": "Contained in no asset.",
+          "dependsOn": "Depends on no asset.",
+          "dependedOnBy": "No asset depends on this one."
+        }
       }
     },
     "technology": {

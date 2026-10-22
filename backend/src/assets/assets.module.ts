@@ -27,6 +27,9 @@ import { TasksModule } from '../tasks/tasks.module';
 import { TechnologiesModule } from '../technologies/technologies.module';
 import { AssetTechnologiesController } from './asset-technologies.controller';
 import { AssetImpactService } from './services/asset-impact.service';
+import { AssetRelationsTabService } from './asset-relations-tab.service';
+import { CurrencyModule } from '../currency/currency.module';
+import { IncidentsModule } from '../incidents/incidents.module';
 
 // Decomposed services
 import {
@@ -66,6 +69,8 @@ import {
     NotificationsModule,
     TasksModule,
     TechnologiesModule,
+    CurrencyModule,
+    IncidentsModule,
   ],
   providers: [
     // Validation service (no dependencies on other asset services)
@@ -78,6 +83,7 @@ import {
     AssetsRelationsService,
     AssetsAttachmentsService,
     AssetImpactService,
+    AssetRelationsTabService,
     // Main facade service
     AssetsService,
     // Delete service (unchanged)

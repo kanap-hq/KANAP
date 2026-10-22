@@ -214,6 +214,68 @@ export class AssetsRelationsService extends AssetsBaseService {
   }
 
   /**
+   * Removes one relation and leaves every other relation of the asset as it is, the reverse of
+   * `addRelation`: the same refusals, the same lock on the source asset, and the same audit entry
+   * (`asset_relations`, `recordId` the source asset, `{ relations }` before and after). Returns
+   * false when the relation was not there, which writes nothing and logs nothing.
+   */
+  async removeRelation(
+    assetId: string,
+    relatedAssetId: string,
+    relationType: 'contains' | 'depends_on',
+    tenantId: string,
+    userId: string | null,
+    opts?: ServiceOpts,
+  ): Promise<boolean> {
+    const tenant = this.ensureTenantId(tenantId);
+    const mg = this.getManager(opts);
+    if (relatedAssetId === assetId) {
+      throw new BadRequestException('Asset cannot have a relation to itself');
+    }
+    await this.lockSourceAsset(mg, tenant, assetId);
+    const related = await mg.query(
+      `SELECT id FROM assets WHERE tenant_id = $1 AND id = $2`,
+      [tenant, relatedAssetId],
+    );
+    if (related.length === 0) {
+      throw new BadRequestException('One or more related assets were not found');
+    }
+
+    const existing: Array<{ related_asset_id: string; relation_type: string }> = await mg.query(
+      `SELECT related_asset_id, relation_type FROM asset_relations
+       WHERE tenant_id = $1 AND asset_id = $2
+       ORDER BY created_at, id`,
+      [tenant, assetId],
+    );
+    const removed: Array<{ count: number }> = await mg.query(
+      `WITH removed AS (
+         DELETE FROM asset_relations
+          WHERE tenant_id = $1 AND asset_id = $2 AND related_asset_id = $3 AND relation_type = $4
+         RETURNING 1
+       )
+       SELECT count(*)::int AS count FROM removed`,
+      [tenant, assetId, relatedAssetId, relationType],
+    );
+    if (Number(removed[0]?.count ?? 0) === 0) return false;
+
+    const before = existing.map((r) => ({ related_asset_id: r.related_asset_id, relation_type: r.relation_type }));
+    const after = before.filter((r) => !(r.related_asset_id === relatedAssetId && r.relation_type === relationType));
+    await this.audit.log(
+      {
+        table: 'asset_relations',
+        recordId: assetId,
+        action: 'update',
+        before: { relations: before },
+        after: { relations: after },
+        userId,
+        ...this.auditSource(opts),
+      },
+      { manager: opts?.manager },
+    );
+    return true;
+  }
+
+  /**
    * Locks the asset whose relations are about to change, for the rest of the transaction.
    * `FOR NO KEY UPDATE` is enough to stop a delete or a change of the row, and it still lets
    * other transactions insert rows that reference the asset (their key share lock).

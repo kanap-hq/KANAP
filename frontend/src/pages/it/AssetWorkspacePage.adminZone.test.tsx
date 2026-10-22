@@ -51,7 +51,7 @@ vi.mock('../../hooks/useAssetNav', () => ({
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
-vi.mock('./editors/AssetRelationsPanel', () => ({ default: () => null }));
+vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => <div /> }));

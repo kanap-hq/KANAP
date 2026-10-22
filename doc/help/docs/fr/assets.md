@@ -258,7 +258,7 @@ Suit les informations de support et de contact fournisseur.
 
 ### Relations
 
-L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le badge de l'onglet compte tous les éléments liés. La plupart des champs sont enregistrés automatiquement.
+L'onglet Relations montre ce qui s'arrête avec cet actif, puis ce à quoi il est lié : autres actifs, lignes budgétaires, contrats, projets, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies de l'actif sont dans l'onglet [Technique](#technical). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les enregistrements liés que vous pouvez voir, ainsi que les liens et fichiers.
 
 **Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters et processus métier touchés, puis un tableau par type :
 
@@ -267,23 +267,43 @@ L'onglet Relations connecte cet actif à d'autres enregistrements dans KANAP. Le
 - **Clusters** : les clusters dont un membre tombe. **Tombé** quand plus aucun membre ne tient, sinon **Dégradé** avec le nombre de membres tombés. Les applications d'un cluster tombé tombent avec lui.
 - **Processus métier** : les processus des applications touchées.
 
-Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour une fois les relations de l'actif enregistrées plus bas.
+Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour dès que vous ajoutez ou retirez une relation entre actifs plus bas.
 
-**Relations entre actifs** :
-- **Dépend de** : Autres actifs dont celui-ci dépend (ex. : un serveur de base de données)
-- **Contient** : Actifs contenus dans celui-ci (ex. : serveurs dans une baie)
-- **Contenu par** / **Dépendu par** : Vues inverses en lecture seule, affichées uniquement lorsque d'autres actifs référencent celui-ci
+**Relations entre actifs**, un tableau par sens :
 
-**Finance et projets** :
-- **Lignes budgétaires** : Lien vers des lignes OPEX et CAPEX, dans une seule liste. Recherchez par titre ou par référence (`BL-12`) ; chaque suggestion affiche son type
-- **Contrats** : Lien vers des enregistrements de contrats
-- **Projets** : Lien vers des projets du portefeuille liés à cet actif
+| Section | Signification |
+|---|---|
+| **Contient** | Les actifs placés dans celui-ci, par exemple les serveurs d'une baie |
+| **Contenu dans** | Les actifs dans lesquels celui-ci se trouve |
+| **Dépend de** | Les actifs dont celui-ci a besoin pour fonctionner, par exemple un serveur de base de données |
+| **Requis par** | Les actifs qui ont besoin de celui-ci |
 
-**Tâches** : Tâches liées à cet actif. En lecture seule ici : les tâches gagnent ou perdent ce lien lorsque vous définissez le champ **Actif** sur une tâche dans la page Tâches.
+Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environnement et le statut. Un actif retiré ou désactivé reste affiché, son nom grisé.
 
-**Sites web pertinents** : Ajoutez des URL avec des noms optionnels, utiles pour les portails fournisseurs, tableaux de bord de monitoring ou liens de documentation. **Ajouter une URL** ouvre une boîte de dialogue ; les entrées existantes peuvent être modifiées ou supprimées.
+**Enregistrements liés**, un tableau chacun :
 
-**Pièces jointes** : Glissez-déposez des fichiers ou cliquez sur **Sélectionner des fichiers** pour téléverser. Cliquez sur la pastille d'une pièce jointe pour la télécharger. La suppression nécessite `infrastructure:member`.
+| Section | Colonnes |
+|---|---|
+| **Lignes budgétaires** | Référence (`BL-12`), nom, type (OPEX ou CAPEX), fournisseur, et le montant de l'année en cours dans votre colonne budgétaire par défaut, dans la devise de reporting. Un tiret signifie que la ligne n'a pas de budget pour l'année |
+| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
+| **Tâches** | Référence (`T-118`), titre, statut, assigné, échéance. Les tâches ouvertes viennent en premier |
+| **Incidents** | Référence (`INC-14`), titre, sévérité, statut, date de détection |
+
+Vous ne voyez que les sections des modules que vous pouvez lire : budget, contrats, projets du portefeuille, tâches et incidents. Un Contributeur métier ne voit que les projets et les tâches auxquels il participe. Un incident confidentiel n'apparaît qu'aux personnes qui peuvent le voir dans le registre des incidents, sans son titre.
+
+Les dates en orange demandent votre attention : un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats, ou une tâche ouverte dont l'échéance est passée. Une ligne budgétaire ou un contrat désactivé reste affiché, son nom grisé. À partir de deux lignes, les lignes budgétaires et les contrats se terminent par une ligne de total. Le total des lignes budgétaires est dans la devise de reporting et exclut une ligne dont la devise n'a pas de taux de change pour l'année : un avertissement d'une ligne sous le tableau l'indique. Les contrats ont un total par devise, sans les contrats désactivés.
+
+**Ajouter et retirer des liens** (`infrastructure:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module cible : **Ajouter** est donc absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
+
+- Une tâche liée ou déliée ici apparaît aussi dans l'activité de la tâche.
+- Lier ou délier un incident demande aussi `incidents:contributor` et s'inscrit dans le journal de l'incident. Un incident clos ou annulé ne peut être ni lié ni délié : rouvrez-le d'abord.
+
+**Liens et fichiers** : les liens web de l'actif (portails fournisseurs, tableaux de bord de monitoring, documentation) et ses fichiers (fichiers de configuration, schémas, documents fournisseurs), une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `infrastructure:member` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
 ---
 
@@ -422,5 +442,5 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Liez aux sites** : Assignez les actifs aux sites pour que le type d'hébergement, le pays et la ville soient renseignés automatiquement.
 - **Assignez aux applications** : Utilisez l'onglet Vue d'ensemble pour lier les actifs aux déploiements d'applications. Les mêmes assignations apparaissent sous l'onglet Déploiements de l'application.
 - **Utilisez l'onglet Relations** : Connectez les actifs aux lignes budgétaires, contrats et projets pour la visibilité financière.
-- **Les tâches viennent de la page Tâches** : Pour rattacher une tâche à un actif, définissez le champ Actif sur la tâche elle-même ; elle apparaîtra alors sous Relations > Tâches.
+- **Liez les tâches ici** : Ajoutez une tâche sous Relations > Tâches. Le lien apparaît aussi dans l'activité de la tâche.
 - **Attachez la documentation** : Téléversez les fichiers de configuration, diagrammes d'architecture ou documents fournisseurs directement dans l'onglet Relations.

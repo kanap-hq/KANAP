@@ -8,36 +8,10 @@ function itemCount(payload: any): number {
   return 0;
 }
 
-function settledItemCount(result: PromiseSettledResult<any>): number {
-  return result.status === 'fulfilled' ? itemCount(result.value.data) : 0;
-}
-
+/** The Relations badge of an asset: `counts.total` of the tab's read, in one request. */
 export async function fetchAssetRelationsCount(assetId: string): Promise<number> {
-  const [assetRelations, opex, capex, contracts, projects, tasks, links, attachments, incidents] = await Promise.allSettled([
-    api.get(`/assets/${assetId}/relations`),
-    api.get(`/assets/${assetId}/spend-items`),
-    api.get(`/assets/${assetId}/capex-items`),
-    api.get(`/assets/${assetId}/contracts`),
-    api.get(`/assets/${assetId}/projects`),
-    api.get(`/assets/${assetId}/related-tasks`, { params: { limit: 1 } }),
-    api.get(`/assets/${assetId}/links`),
-    api.get(`/assets/${assetId}/attachments`),
-    api.get('/incidents', { params: { asset_id: assetId, limit: 1 } }),
-  ]);
-
-  const structural = assetRelations.status === 'fulfilled'
-    ? (assetRelations.value.data?.outgoing?.length || 0) + (assetRelations.value.data?.incoming?.length || 0)
-    : 0;
-
-  return structural
-    + settledItemCount(opex)
-    + settledItemCount(capex)
-    + settledItemCount(contracts)
-    + settledItemCount(projects)
-    + settledItemCount(tasks)
-    + settledItemCount(links)
-    + settledItemCount(attachments)
-    + settledItemCount(incidents);
+  const res = await api.get<{ counts?: { total?: number } }>(`/assets/${assetId}/relations-tab`);
+  return Number(res.data?.counts?.total) || 0;
 }
 
 export async function fetchApplicationIncidentsCount(applicationId: string): Promise<number> {

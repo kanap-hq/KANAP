@@ -226,6 +226,13 @@ export class IncidentRelationsService extends IncidentsBaseService {
   }
 
   /**
+   * Link (`add`) or unlink one asset, from the asset's side (lot R2h, `setLinkFromTarget`).
+   */
+  setAssetLink(incidentId: string, assetId: string, add: boolean, userId: string | null, opts?: ServiceOpts): Promise<{ changed: boolean }> {
+    return this.setLinkFromTarget(ASSET_LINK, incidentId, assetId, add, userId, opts);
+  }
+
+  /**
    * Link (`add`) or unlink one object from the object's side. The incident must be visible to the
    * viewer (404 otherwise, the same answer whether it exists or not) and open; its row is locked
    * (FOR NO KEY UPDATE) before the set is read, so two links made at once from two objects both
