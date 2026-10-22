@@ -234,7 +234,8 @@
         "searchPlaceholder": "e.g., SQL Server",
         "noMatch": "No catalog entry matches.",
         "manualLink": "Enter a technology missing from the catalog",
-        "backToCatalog": "Back to the catalog"
+        "backToCatalog": "Back to the catalog",
+        "completes": "Completes {{reference}}"
       }
     },
     "connections": {

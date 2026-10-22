@@ -234,7 +234,8 @@
         "searchPlaceholder": "z. B. SQL Server",
         "noMatch": "Kein Katalogeintrag passt.",
         "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht",
-        "backToCatalog": "Zurück zum Katalog"
+        "backToCatalog": "Zurück zum Katalog",
+        "completes": "Ergänzt {{reference}}"
       }
     },
     "connections": {

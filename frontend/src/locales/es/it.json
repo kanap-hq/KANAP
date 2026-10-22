@@ -234,7 +234,8 @@
         "searchPlaceholder": "p. ej., SQL Server",
         "noMatch": "Ninguna entrada del catálogo coincide.",
         "manualLink": "Introducir una tecnología que no está en el catálogo",
-        "backToCatalog": "Volver al catálogo"
+        "backToCatalog": "Volver al catálogo",
+        "completes": "Completa {{reference}}"
       }
     },
     "connections": {
