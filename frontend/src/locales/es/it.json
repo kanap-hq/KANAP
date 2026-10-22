@@ -1543,14 +1543,6 @@
           "reviewImported": "Revisión del incidente importada"
         }
       },
-      "relations": {
-        "assets": "Activos",
-        "assetsPlaceholder": "Buscar activos",
-        "applications": "Aplicaciones",
-        "applicationsPlaceholder": "Buscar aplicaciones",
-        "technologies": "Tecnologías",
-        "technologiesPlaceholder": "Buscar tecnologías"
-      },
       "drawer": {
         "category": "Categoría",
         "noCategory": "Sin categoría",
@@ -1582,7 +1574,6 @@
         "saveFailed": "Error al guardar el incidente",
         "createFailed": "Error al crear el incidente",
         "entryFailed": "Error al añadir la entrada del registro",
-        "relationsFailed": "Error al guardar los vínculos",
         "attachmentsFailed": "Error al actualizar los adjuntos",
         "exportPdfFailed": "No se ha podido exportar el informe PDF.",
         "confidentialityFailed": "No se pudo actualizar el acceso",
@@ -1800,13 +1791,16 @@
           "contract": "Contrato",
           "project": "Proyecto",
           "application": "Aplicación",
-          "asset": "Activo"
+          "asset": "Activo",
+          "technology": "Tecnología"
         },
         "via": {
           "same_supplier": "mismo proveedor",
           "contract": "vía el contrato {{label}}",
           "project": "vía el proyecto {{label}}",
-          "task": "contiene la tarea {{label}}"
+          "task": "contiene la tarea {{label}}",
+          "asset_technology": "tecnología del activo {{label}}",
+          "application_technology": "tecnología de la aplicación {{label}}"
         },
         "viaHost": "{{server}} (en {{host}})",
         "technologyLink": {

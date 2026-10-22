@@ -547,9 +547,8 @@ export function IncidentWorkspacePage() {
     {
       key: 'relations',
       label: t('workspace.incident.tabs.relations'),
-      // The technologies section shows to a reader of the infrastructure only.
       badge: counts
-        ? (counts.assets + counts.applications + (hasLevel('infrastructure', 'reader') ? counts.technologies ?? 0 : 0) + counts.tasks) || undefined
+        ? ((counts.assets ?? 0) + (counts.applications ?? 0) + (counts.technologies ?? 0) + counts.tasks) || undefined
         : undefined,
       disabled: isCreate,
     },

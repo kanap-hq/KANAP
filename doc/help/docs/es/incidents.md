@@ -178,12 +178,25 @@ Reabrir un incidente no cambia nada de eso. Las versiones se mantienen, la entra
 
 ### Relaciones
 
-- **Activos**: los servidores, VM o equipos implicados. Busque y seleccione; enlazar y desenlazar queda anotado en el diario
-- **Aplicaciones**: las aplicaciones y servicios afectados, mismo comportamiento
-- **Tecnologías**: las tecnologías implicadas, como un directorio o un motor de base de datos, mismo comportamiento. Visibles, y contadas en la insignia de la pestaña, solo para los usuarios que pueden leer la infraestructura
-- **Tareas**: el trabajo de seguimiento. Cree una tarea directamente desde el incidente y quedará vinculada a él. La tarea muestra «Incidente · INC-14» en su propia barra lateral, y la columna Tareas del incidente la cuenta
+La pestaña Relaciones muestra lo que afecta el incidente: sus activos, aplicaciones y tecnologías, cada uno en su propia tabla, y después sugerencias y las tareas. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los activos, aplicaciones y tecnologías vinculados que puede ver, además de las tareas.
 
-El enlace se hace únicamente desde el lado del incidente. Un activo o una aplicación enlazados muestran el incidente en una sección **Incidentes** de solo lectura en su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias.
+**Registros vinculados**, una tabla cada uno:
+
+| Sección | Columnas |
+|---|---|
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
+| **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor |
+
+Solo ve las secciones de los módulos que puede leer. Los activos y las tecnologías requieren poder leer la infraestructura. Un Colaborador de negocio solo ve las aplicaciones en las que participa.
+
+**Añadir y quitar vínculos** (`incidents:contributor`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante y queda anotado en el diario. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más y también queda anotado en el diario. Un incidente cerrado o cancelado es de solo lectura: reábralo para cambiar sus vínculos.
+
+**Relacionados**: las tecnologías de los activos y las aplicaciones vinculados que el incidente aún no lista. El motivo indica el origen, por ejemplo «tecnología del activo AST-12» o «tecnología de la aplicación APP-3». Haga clic en **Vincular** para añadir la sugerencia a la sección Tecnologías. Las sugerencias requieren poder leer la infraestructura, muestran como máximo 20 tecnologías y no aparecen en un incidente cerrado o cancelado.
+
+**Tareas**: el trabajo de seguimiento. Cree una tarea directamente desde el incidente y quedará vinculada a él. La tarea muestra «Incidente · INC-14» en su propia barra lateral, y la columna Tareas del incidente la cuenta.
+
+El enlace se hace únicamente desde el lado del incidente. Un activo, una aplicación o una tecnología vinculados muestran el incidente en una sección **Incidentes** de solo lectura en su propia pestaña Relaciones: quien mire un servidor verá su historial de incidencias. Los documentos y los adjuntos tienen sus propias pestañas.
 
 ---
 
