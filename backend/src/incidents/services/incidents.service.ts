@@ -11,6 +11,8 @@ import { parsePagination, Sort } from '../../common/pagination';
 import { parseCreateIncident, parseListIncidentsQuery, parseUpdateIncident, UpdateIncidentDto } from '../dto';
 import { IncidentsBaseService, ServiceOpts, incidentRef, userNameSql } from './incidents-base.service';
 import { IncidentViewer, incidentVisibilitySql, isFrozenIncidentStatus } from '../incident-visibility';
+import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
+import { binder } from '../../common/relations/related-objects';
 import { assertSetFilterModes } from '../../common/ag-grid-filtering';
 
 const DEFAULT_SORT: Sort = { field: 'detected_at', direction: 'DESC' };
@@ -432,18 +434,53 @@ export class IncidentsService extends IncidentsBaseService {
       [id, tenantId],
     );
     const { entry_count, technology_count, document_count, attachment_count, ...incident } = row;
+    const applicationCount = !opts?.applications
+      ? null
+      : opts.applicationScope
+        ? await this.applicationCountInScope(mg, tenantId, id, opts.applicationScope.userId)
+        : incident.application_count;
     return {
       ...incident,
       counts: {
         entries: entry_count,
-        assets: incident.asset_count,
-        applications: incident.application_count,
-        // Counted for a reader of the infrastructure only, as the Relations tab shows them to that reader.
+        // The Relations tab's sections: each count is null for a caller who cannot see that section.
+        assets: opts?.technologies ? incident.asset_count : null,
+        applications: applicationCount,
         technologies: opts?.technologies ? technology_count : null,
         tasks: incident.task_count,
         documents: document_count,
         attachments: attachment_count,
       },
+    };
+  }
+
+  /** Applications the Relations tab lists for a Business Contributor. */
+  private async applicationCountInScope(mg: EntityManager, tenantId: string, incidentId: string, userId: string): Promise<number> {
+    const params: unknown[] = [tenantId, incidentId];
+    const bind = binder(params);
+    const [row] = await mg.query(
+      `SELECT COUNT(*)::int AS n
+         FROM incident_applications l
+         JOIN applications a ON a.id = l.application_id AND a.tenant_id = l.tenant_id
+        WHERE l.tenant_id = $1 AND l.incident_id = $2
+          AND ${applicationParticipantCondition('a', bind(userId))}`,
+      params,
+    );
+    return Number(row?.n ?? 0);
+  }
+
+  /**
+   * The detail returned after a write. The viewer may be overridden (the author of a create sees
+   * the row they just wrote); the relation counts stay those of the caller who asked.
+   */
+  private viewed(opts: ServiceOpts | undefined, viewer: IncidentViewer): ServiceOpts {
+    return {
+      manager: opts?.manager,
+      tenantId: opts?.tenantId,
+      viewer,
+      technologies: opts?.technologies,
+      applications: opts?.applications,
+      applicationScope: opts?.applicationScope,
     };
   }
 
@@ -509,7 +546,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'create', before: null, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
+    return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
   }
 
   /**
@@ -595,7 +632,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: { userId, isAdmin: true }, technologies: opts?.technologies });
+    return this.get(saved.id, this.viewed(opts, { userId, isAdmin: true }));
   }
 
   /**
@@ -626,7 +663,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
+    return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
   }
 
   /**
@@ -658,7 +695,7 @@ export class IncidentsService extends IncidentsBaseService {
       { table: 'incidents', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
+    return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
   }
 
   /**
@@ -676,7 +713,7 @@ export class IncidentsService extends IncidentsBaseService {
     // with the review mutations under the incident row lock (§3.3).
     const incident = await this.lockVisibleIncident(mg, id, tenantId, opts?.viewer);
     if (incident.confidential === confidential) {
-      return this.get(incident.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
+      return this.get(incident.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
     }
     if (incident.confidential && !confidential && !opts?.viewer?.isAdmin) {
       throw new ForbiddenException(CONFIDENTIAL_LIFT_MESSAGE);
@@ -700,7 +737,7 @@ export class IncidentsService extends IncidentsBaseService {
       { manager: mg },
     );
     await this.refreshLinkedTaskSearchIndex(mg, tenantId, saved.id);
-    return this.get(saved.id, { manager: mg, tenantId, viewer: opts?.viewer ?? { userId, isAdmin: true }, technologies: opts?.technologies });
+    return this.get(saved.id, this.viewed(opts, opts?.viewer ?? { userId, isAdmin: true }));
   }
 
   // =========================================================================

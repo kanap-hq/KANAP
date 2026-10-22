@@ -666,7 +666,7 @@ export class IncidentsController {
   async reopen(@Param('id') idOrRef: string, @Body() body: IncidentReasonInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
     const { reason } = parseIncidentReason(body);
-    return this.svc.reopen(id, reason, ctx.userId || null, this.opts(ctx));
+    return this.svc.reopen(id, reason, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -675,7 +675,7 @@ export class IncidentsController {
   async cancel(@Param('id') idOrRef: string, @Body() body: IncidentReasonInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
     const { reason } = parseIncidentReason(body);
-    return this.svc.cancel(id, reason, ctx.userId || null, this.opts(ctx));
+    return this.svc.cancel(id, reason, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -688,7 +688,7 @@ export class IncidentsController {
   ) {
     const id = await this.visibleId(idOrRef, ctx);
     const { confidential } = parseIncidentConfidentiality(body);
-    return this.svc.setConfidentiality(id, confidential, ctx.userId || null, this.opts(ctx));
+    return this.svc.setConfidentiality(id, confidential, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   // Delete (admin). What a delete removes or refuses, for the confirmation; before ':id'.
@@ -724,14 +724,14 @@ export class IncidentsController {
   @Get(':id')
   async get(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
-    return this.svc.get(id, this.opts(ctx));
+    return this.svc.get(id, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('incidents', 'contributor')
   @Post()
-  create(@Body() body: CreateIncidentInput, @Tenant() ctx: TenantRequest) {
-    return this.svc.create(body, ctx.userId || null, this.opts(ctx));
+  async create(@Body() body: CreateIncidentInput, @Tenant() ctx: TenantRequest) {
+    return this.svc.create(body, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   @UseGuards(PermissionGuard)
@@ -739,6 +739,6 @@ export class IncidentsController {
   @Patch(':id')
   async update(@Param('id') idOrRef: string, @Body() body: UpdateIncidentInput, @Tenant() ctx: TenantRequest) {
     const id = await this.visibleId(idOrRef, ctx);
-    return this.svc.update(id, body, ctx.userId || null, this.opts(ctx));
+    return this.svc.update(id, body, ctx.userId || null, await this.viewOpts(ctx));
   }
 }
