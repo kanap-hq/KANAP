@@ -14,7 +14,11 @@ import { BUDGET_NATURE_CONFIG } from './natureConfig';
 
 vi.mock('react-i18next', () => {
   const translation = { t: (key: string) => key, i18n: { language: 'en', resolvedLanguage: 'en' } };
-  return { useTranslation: () => translation, Trans: () => null };
+  return {
+    useTranslation: () => translation,
+    Trans: () => null,
+    initReactI18next: { type: '3rdParty', init: () => undefined },
+  };
 });
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn(), put: vi.fn() } }));
@@ -74,10 +78,11 @@ describe.each(['opex', 'capex'] as const)('BudgetLinePage %s real child tabs', (
     fireEvent.click(screen.getByRole('button', { name: 'relations' }));
     await waitFor(() => expect(mocked.get).toHaveBeenCalledWith(`${config.itemsApi}/${ID}/links`, expect.anything()));
     expect(mocked.get).toHaveBeenCalledWith(`${config.itemsApi}/${ID}/attachments`, expect.anything());
-    fireEvent.click(screen.getByRole('button', { name: `${nature}.relations.addUrl` }));
-    fireEvent.change(screen.getByPlaceholderText(`${nature}.relations.linkDescriptionPlaceholder`), { target: { value: 'Vendor' } });
-    fireEvent.change(screen.getByPlaceholderText('https://...'), { target: { value: 'https://example.com' } });
-    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.add' }));
+    expect(mocked.get).toHaveBeenCalledWith(`/budget-lines/${ID}/relations`);
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.addLink' }));
+    fireEvent.change(await screen.findByLabelText('linksAndFiles.columns.name'), { target: { value: 'Vendor' } });
+    fireEvent.change(screen.getByLabelText('linksAndFiles.url'), { target: { value: 'https://example.com' } });
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.add' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`${config.itemsApi}/${ID}/links`, { description: 'Vendor', url: 'https://example.com' }));
     const other = BUDGET_NATURE_CONFIG[config.otherNature];
     const urls = [...mocked.get.mock.calls, ...mocked.post.mock.calls, ...mocked.patch.mock.calls].map(([url]) => url);

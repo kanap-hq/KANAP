@@ -162,7 +162,7 @@ vi.mock('../../components/finance/BudgetTab', async () => {
   return { default: BudgetTabStandIn };
 });
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
-vi.mock('../../components/finance/ItemRelationsPanel', () => ({ default: () => null }));
+vi.mock('./workspace/BudgetLineRelationsTab', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 // The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
 // answers as the server does for a change in place.

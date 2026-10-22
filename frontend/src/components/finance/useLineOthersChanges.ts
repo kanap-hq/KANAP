@@ -12,8 +12,8 @@ import type { HeldChoices } from './heldChoices';
  * Pending, so nothing is refreshed and the "changed elsewhere" badge shows instead: a field of the
  * line edited and not saved, being saved or waiting for a choice; a budget or allocation choice
  * kept for the line while the user is on another tab; what the Budget or Allocations tab shown has
- * pending (`hasPending`); a Relations edit not saved; the focus in a text field of the workspace
- * (the user may be typing there).
+ * pending (`hasPending`); the focus in a text field of the workspace
+ * (the user may be typing there). Relations saves each change at once, so it is never pending.
  */
 export type LineOthersChangesOptions = {
   /** `/spend-items` or `/capex-items`. */
@@ -32,8 +32,6 @@ export type LineOthersChangesOptions = {
   budget: React.RefObject<BudgetTabHandle | null>;
   allocations: React.RefObject<AllocationsTabHandle | null>;
   heldChoices: HeldChoices;
-  /** Another tab of the line has an edit not saved (Relations). */
-  otherTabDirty: () => boolean;
   /** Reads the line again (the detail), unless it already holds `rowVersion`; resolves once shown. */
   refreshLine: (rowVersion: number | null) => Promise<unknown>;
 };
@@ -63,7 +61,6 @@ export function useLineOthersChanges(options: LineOthersChangesOptions): LineOth
       || (!!id && (o.heldChoices.budget.current?.lineId === id || o.heldChoices.allocation.current?.lineId === id))
       || (o.tab === 'budget' && !!o.budget.current?.hasPending())
       || (o.tab === 'allocations' && !!o.allocations.current?.hasPending())
-      || o.otherTabDirty()
       || typingWithin(o.root.current);
   }, []);
 
