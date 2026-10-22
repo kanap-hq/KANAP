@@ -282,6 +282,7 @@ export class ContractsController {
     return this.svc.getRelations(id, {
       manager: req?.queryRunner?.manager,
       infrastructure: canReadResource(req ?? {}, 'infrastructure'),
+      applications: canReadResource(req ?? {}, 'applications'),
       applicationScope: await resolveBusinessContributorScope(req, 'applications'),
     });
   }

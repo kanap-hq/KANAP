@@ -238,6 +238,12 @@ async function testSuggestions() {
     assert.deepEqual(hidden.assets.map((row) => row.id), [seed.assets.alpha.id, seed.assets.mid.id], 'linked assets stay listed');
     assert.deepEqual(hidden.suggestions.map((row) => row.name), ['Cedar app', 'Delta app']);
 
+    // No read of the applications: linked applications stay listed, none is suggested.
+    const noApps = await http.relations(seed.contractId, req(runner, seed, { contracts: 'reader', infrastructure: 'reader' }));
+    assert.ok(noApps.applications.length > 0, 'linked applications stay listed');
+    assert.ok(!noApps.suggestions.some((row) => row.type === 'application'), 'no application suggested without the read right');
+    assert.ok(noApps.suggestions.some((row) => row.type === 'asset'));
+
     // A Business Contributor sees the applications they take part in.
     const scoped = await http.relations(seed.contractId, req(runner, seed, READ, seed.userId));
     assert.deepEqual(

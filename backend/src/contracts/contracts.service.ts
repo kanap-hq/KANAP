@@ -1482,13 +1482,15 @@ export class ContractsService {
 
   /**
    * The Relations tab in one round trip (`readContractRelations`). `infrastructure` shows the
-   * technologies and the asset suggestions; `applicationScope` limits the application suggestions
+   * technologies and the asset suggestions; `applications` the application suggestions, which
+   * `applicationScope` limits
    * of a Business Contributor.
    */
   async getRelations(contractId: string, opts?: { manager?: EntityManager } & Partial<ContractRelationsAccess>) {
     const mg = opts?.manager ?? this.repo.manager;
     return readContractRelations(mg, await this.findContract(contractId, mg), {
       infrastructure: opts?.infrastructure === true,
+      applications: opts?.applications === true,
       applicationScope: opts?.applicationScope,
     });
   }

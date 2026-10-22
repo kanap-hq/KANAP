@@ -284,6 +284,8 @@ export type ContractRelationsTab = {
 export type ContractRelationsAccess = {
   /** The caller reads the infrastructure: the technologies section, and the asset suggestions. */
   infrastructure: boolean;
+  /** The caller reads the applications: the application suggestions. Linked applications stay listed. */
+  applications: boolean;
   /** A Business Contributor's application scope. Absent for everyone else. */
   applicationScope?: ParticipationAccessScope;
 };
@@ -334,7 +336,8 @@ export async function readContractRelations(
 /**
  * Applications and assets of the contract's supplier that are not linked yet, at most
  * `SUGGESTIONS_PER_RULE` of each, that the caller can read. None when the contract has no supplier.
- * An application is in service, and inside a Business Contributor's participation scope. An asset
+ * An application is in service, offered only to a reader of the applications, and inside a
+ * Business Contributor's participation scope. An asset
  * is not retired, and is offered only to a reader of the infrastructure.
  */
 async function contractSuggestions(
@@ -344,7 +347,7 @@ async function contractSuggestions(
 ): Promise<ContractRelationSuggestion[]> {
   if (!contract.supplier_id) return [];
   const supplierId = contract.supplier_id;
-  const applications = await suggestApplications(manager, contract, supplierId, opts.applicationScope);
+  const applications = opts.applications ? await suggestApplications(manager, contract, supplierId, opts.applicationScope) : [];
   const assets = opts.infrastructure ? await suggestAssets(manager, contract, supplierId) : [];
   return [...applications, ...assets].sort(BY_NAME);
 }
