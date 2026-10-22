@@ -1056,6 +1056,7 @@
       "fromYear": "Primer año",
       "toYear": "a",
       "toYearLabel": "Último año",
+      "currentYearOnly": "Año en curso ({{year}})",
       "yearsHint": "Hasta {{count}} años.",
       "columns": "Columnas",
       "hiddenColumn": "oculta",

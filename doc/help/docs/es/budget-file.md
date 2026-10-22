@@ -21,7 +21,7 @@ Un solo archivo contiene los dos tipos de línea. Su columna `nature` indica si 
 | Ajuste | Efecto |
 |---|---|
 | **Líneas** | Las líneas que muestra la lista, con su búsqueda, sus filtros y su ámbito de estado. **Todas las líneas** exporta todas las líneas en su lugar, incluidas las finalizadas, sin los filtros de la lista |
-| **Años** | **Primer año** y **Último año**, hasta doce años. Por defecto: el año en curso, el anterior y el siguiente |
+| **Años** | **Primer año** y **Último año**, hasta doce años. Por defecto: el año en curso, el anterior y el siguiente. Marque **Año en curso** para exportar solo el año en curso |
 | **Columnas** | Las columnas presupuestarias que se escribirán. Las columnas que muestra su organización están marcadas, y una columna oculta aparece marcada como **oculta**. Su encabezado se muestra bajo el nombre, por ejemplo `budget_2027` |
 | **Detalle** | **Totales anuales**: una columna por columna presupuestaria y año. **Meses**: una columna por columna presupuestaria, año y mes |
 

@@ -61,6 +61,9 @@ export default function BudgetFileExportDialog({
   const currentYear = new Date().getFullYear();
   const years = offerableYears(currentYear);
   const [range, setRange] = useState(() => defaultYearRange(currentYear));
+  // The usual export: the current year alone, in one click. The chosen range comes back when unticked.
+  const [currentOnly, setCurrentOnly] = useState(false);
+  const shownRange = currentOnly ? { from: currentYear, to: currentYear } : range;
   const [selectedColumns, setSelectedColumns] = useState<FileColumnKey[]>([]);
   const [columnsTouched, setColumnsTouched] = useState(false);
   const [detail, setDetail] = useState<'yearly' | 'months'>('yearly');
@@ -77,6 +80,7 @@ export default function BudgetFileExportDialog({
     setAllLines(false);
     setDetail('yearly');
     setRange(defaultYearRange(currentYear));
+    setCurrentOnly(false);
   }, [open, currentYear]);
 
   useEffect(() => {
@@ -109,7 +113,7 @@ export default function BudgetFileExportDialog({
     try {
       const response = await exportBudgetFile(scope, list, {
         language,
-        amountYears: yearsOfRange(range.from, range.to),
+        amountYears: yearsOfRange(shownRange.from, shownRange.to),
         columns: columns.map((column) => column.key).filter((key) => selectedColumns.includes(key)),
         detail,
         all: allLines,
@@ -129,6 +133,7 @@ export default function BudgetFileExportDialog({
       variant="standard"
       value={value}
       onChange={(event) => onChange(Number(event.target.value))}
+      disabled={currentOnly}
       inputProps={{ 'aria-label': label }}
       sx={{ ...drawerSelectSx, width: 96 }}
       MenuProps={{ slotProps: { paper: { style: { maxHeight: 320 } } } }}
@@ -158,10 +163,16 @@ export default function BudgetFileExportDialog({
         </Group>
 
         <Group label={t('operations.budgetFile.years')}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-            {yearSelect(range.from, setFrom, t('operations.budgetFile.fromYear'))}
+          <Box sx={{ display: 'flex', alignItems: 'center', flexWrap: 'wrap', columnGap: 1, rowGap: 0.75 }}>
+            {yearSelect(shownRange.from, setFrom, t('operations.budgetFile.fromYear'))}
             <Typography sx={{ fontSize: 13, color: 'kanap.text.secondary' }}>{t('operations.budgetFile.toYear')}</Typography>
-            {yearSelect(range.to, setTo, t('operations.budgetFile.toYearLabel'))}
+            {yearSelect(shownRange.to, setTo, t('operations.budgetFile.toYearLabel'))}
+            <Box sx={{ ml: 1.5 }}>
+              <ChoiceLine
+                control={<Checkbox size="small" checked={currentOnly} onChange={(event) => setCurrentOnly(event.target.checked)} sx={{ p: 0.25 }} />}
+                label={t('operations.budgetFile.currentYearOnly', { year: currentYear })}
+              />
+            </Box>
           </Box>
           <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', mt: 0.5 }}>
             {t('operations.budgetFile.yearsHint', { count: MAX_EXPORT_YEARS })}

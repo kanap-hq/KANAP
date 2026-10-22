@@ -103,6 +103,20 @@ describe('BudgetFileExportDialog', () => {
     click.mockRestore();
   });
 
+  it('exports the current year alone in one click, and gives the range back when unticked', async () => {
+    renderDialog();
+    const current = screen.getByRole('checkbox', { name: new RegExp(`operations.budgetFile.currentYearOnly:\\{"year":${Y}\\}`) });
+    fireEvent.click(current);
+    expect(screen.getByRole('combobox', { name: 'operations.budgetFile.fromYear' })).toHaveAttribute('aria-disabled', 'true');
+    expect(screen.getByRole('combobox', { name: 'operations.budgetFile.fromYear' })).toHaveTextContent(String(Y));
+    fireEvent.click(screen.getByRole('button', { name: 'operations.budgetFile.exportFiltered:{"count":120}' }));
+    await waitFor(() => expect(get).toHaveBeenCalledTimes(1));
+    expect(get.mock.calls[0][1].params.amountYears).toBe(String(Y));
+    fireEvent.click(current);
+    expect(screen.getByRole('combobox', { name: 'operations.budgetFile.fromYear' })).toHaveTextContent(String(Y - 1));
+    expect(screen.getByRole('combobox', { name: 'operations.budgetFile.toYearLabel' })).toHaveTextContent(String(Y + 1));
+  });
+
   it('labels an unfiltered list with its line count', () => {
     renderDialog({ sort: '', q: '', filters: '', statusScope: 'enabled' });
     expect(screen.getByRole('button', { name: 'operations.budgetFile.exportCount:{"count":120}' })).toBeInTheDocument();
