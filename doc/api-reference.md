@@ -763,7 +763,7 @@ GET `/locations/:id/relations` (`locations:reader`) returns the Relations tab of
 | Field | Read | Contents |
 |---|---|---|
 | `assets` | `infrastructure` | Assets at the location: `{ id, reference, name, kind, environment, status, provider, sub_location_id, sub_location_name }` (`reference` is `AST-n`), ordered by name |
-| `applications` | `applications` | Applications with an instance on one of those assets: `{ id, reference, name, lifecycle, status, environments }` (`reference` is `APP-n`, `environments` the sorted environments of those instances). A Business Contributor sees the applications they own |
+| `applications` | `applications` | Applications with an instance on one of those assets: `{ id, reference, name, lifecycle, status, environments }` (`reference` is `APP-n`, `environments` the sorted environments of those instances). A Business Contributor sees the applications they take part in |
 
 GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: the tab badge. It counts the assets for a reader of `infrastructure`, the applications for a reader of `applications` (inside a Business Contributor's participation), and the web links.
 
@@ -1148,7 +1148,7 @@ The nature is the line's. A section the caller cannot read is `null`. Contacts, 
 | Field | Read | Contents |
 |---|---|---|
 | `projects` | `portfolio_projects` | Linked projects: `{ id, item_number, name, status, planned_end }`. A Business Contributor sees the projects they take part in |
-| `applications` | `applications` | `{ id, reference, name, lifecycle, business_criticality, status }` (`reference` is `APP-n`). A Business Contributor sees the applications they own |
+| `applications` | `applications` | `{ id, reference, name, lifecycle, business_criticality, status }` (`reference` is `APP-n`). A Business Contributor sees the applications they take part in |
 | `technologies` | `infrastructure` | `{ id, reference, name, family, vendor }` (`reference` is `TEC-n`, `vendor` is the editor) |
 | `contracts` | `contracts` | Linked contracts: `{ id, name, supplier_name, end_date, yearly_amount, currency, auto_renewal, in_renewal_window, status }` |
 | `assets` | `infrastructure` | `{ id, reference, name, kind, environment, status }` (`reference` is `AST-n`), the links of the line's nature |
