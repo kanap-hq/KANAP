@@ -59,6 +59,8 @@ export default function PortfolioRelationsTab({
   const budgetColumns = useBudgetColumns();
   const domain = entity === 'project' ? 'portfolio_projects' : 'portfolio_requests';
   const canEdit = hasLevel(domain, 'contributor');
+  // The server writes a request's web links and files at `member`, a project's at `contributor`.
+  const canEditLinksAndFiles = hasLevel(domain, entity === 'project' ? 'contributor' : 'member');
   const [uploading, setUploading] = React.useState(0);
   const base = portfolioBase(entity, id);
   const relationsKey = portfolioRelationsKey(entity, id);
@@ -277,7 +279,7 @@ export default function PortfolioRelationsTab({
         links={links}
         files={files}
         loaded={linksQuery.isSuccess}
-        canEdit={canEdit}
+        canEdit={canEditLinksAndFiles}
         uploading={uploading}
         onAddLink={(draft) => saveLink(null, draft)}
         onEditLink={(linkRow, draft) => saveLink(linkRow, draft)}

@@ -349,6 +349,21 @@ describe('PortfolioRelationsTab', () => {
     expect(within(applications).getByText('workspace.application.relations.add')).toBeTruthy();
   });
 
+  it('offers a request links and files to a member only, as the server writes them', async () => {
+    renderTab('request', requestRelations());
+    await screen.findByRole('region', { name: 'workspace.application.relations.sections.processes' });
+    const applications = screen.getByRole('region', { name: 'workspace.application.relations.sections.applications' });
+    expect(within(applications).getByText('workspace.application.relations.add')).toBeTruthy();
+    expect(screen.queryByRole('button', { name: 'linksAndFiles.addLink' })).toBeNull();
+    expect(screen.queryByLabelText('linksAndFiles.attachFile')).toBeNull();
+  });
+
+  it('offers a request links and files to a member', async () => {
+    rights.portfolio_requests = 'member';
+    renderTab('request', requestRelations());
+    expect(await screen.findByRole('button', { name: 'linksAndFiles.addLink' })).toBeTruthy();
+  });
+
   it('gives a reader the tables and the navigation only', async () => {
     rights.portfolio_projects = 'reader';
     rights.portfolio_requests = 'reader';
@@ -397,6 +412,7 @@ describe('PortfolioRelationsTab', () => {
   });
 
   it('drops a link at once and restores it when the replacement is refused', async () => {
+    rights.portfolio_requests = 'member'; // the server writes a request's links and files at member
     const onRelationsChange = renderTab('request', requestRelations());
     let reject: (error: unknown) => void = () => undefined;
     mocked.post.mockReturnValue(new Promise((_, refuse) => { reject = refuse; }) as never);
@@ -412,6 +428,7 @@ describe('PortfolioRelationsTab', () => {
   });
 
   it('attaches a file and downloads it from the portfolio attachment route', async () => {
+    rights.portfolio_requests = 'member'; // the server writes a request's links and files at member
     const onRelationsChange = renderTab('request', requestRelations());
     const createObjectURL = vi.fn(() => 'blob:file');
     const revokeObjectURL = vi.fn();
