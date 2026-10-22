@@ -1,0 +1,167 @@
+{
+  "key": "check-point-gaia",
+  "name": "Check Point Gaia (Quantum)",
+  "editor": "Check Point",
+  "lifecycle_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+  "source_updated": null,
+  "version_grain": "major version as the vendor names it in the \"Security Gateway & Management\" table (R81.20); rows covering several versions keep the others in aliases",
+  "versions": [
+    {
+      "label": "R82.20",
+      "aliases": [],
+      "release_date": "2026-09-01",
+      "standard_support_end": "2030-09-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"September 2026\", \"September 2030\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R82.10",
+      "aliases": [],
+      "release_date": "2025-12-01",
+      "standard_support_end": "2030-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"December 2025\", \"June 2030\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R82",
+      "aliases": [],
+      "release_date": "2024-10-01",
+      "standard_support_end": "2029-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"October 2024\", \"April 2029\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R81.20",
+      "aliases": [],
+      "release_date": "2022-11-01",
+      "standard_support_end": "2027-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"November 2022\", \"May 2027\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R81.10",
+      "aliases": [],
+      "release_date": "2021-07-01",
+      "standard_support_end": "2026-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"July 2021\", \"March 2026\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R81",
+      "aliases": [],
+      "release_date": "2020-10-01",
+      "standard_support_end": "2024-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"October 2020\", \"October 2024\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R80.40",
+      "aliases": [],
+      "release_date": "2020-01-01",
+      "standard_support_end": "2024-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"January 2020\", \"April 2024\"): release date set to the first day of the month, end date to the last day."
+    },
+    {
+      "label": "R80.20",
+      "aliases": [
+        "R80.30"
+      ],
+      "release_date": "2018-09-01",
+      "standard_support_end": "2022-09-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"September 2018\", \"September 2022\"): release date set to the first day of the month, end date to the last day. Row also covers R80.30 (column \"Affected Versions\": R80.20, R80.30***). R80.30 in FIPS mode is supported until June 2024 (footnote ***)."
+    },
+    {
+      "label": "R80",
+      "aliases": [
+        "R80.10"
+      ],
+      "release_date": "2017-05-01",
+      "standard_support_end": "2022-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.checkpoint.com/support-services/support-life-cycle-policy/",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "Support Until",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor gives months only (\"May 2017\", \"January 2022\"): release date set to the first day of the month, end date to the last day. Row \"Check Point R80*\" also covers R80.10 (column \"Affected Versions\": R80, R80.10). Footnote * gives other end dates for Cloud Firewall Gateways and Management (31/5/2021) and Cloud Firewall VMware for NSX-V (31/1/2022)."
+    }
+  ]
+}

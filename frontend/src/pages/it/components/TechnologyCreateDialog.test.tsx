@@ -9,7 +9,9 @@ import TechnologyCreateDialog from './TechnologyCreateDialog';
 const get = vi.hoisted(() => vi.fn());
 const post = vi.hoisted(() => vi.fn());
 
-const stableT = (key: string) => key;
+const stableT = (key: string, options?: { reference?: string }) => (
+  options?.reference ? `${key}:${options.reference}` : key
+);
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
   useTranslation: () => ({ t: stableT, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -103,6 +105,40 @@ describe('TechnologyCreateDialog', () => {
     fireEvent.mouseOver(row);
     await act(async () => { await new Promise((resolve) => setTimeout(resolve, 900)); });
     expect(screen.queryByRole('tooltip')).toBeNull();
+  });
+
+  it('says when the entry completes a technology typed by hand, on the editor line', async () => {
+    get.mockImplementation(async (url: string) => {
+      if (url === '/technologies/catalog') {
+        return {
+          data: {
+            items: [
+              { key: 'postgresql', name: 'PostgreSQL', editor: 'PostgreSQL Global Development Group', family: 'database', hosting_type: 'on_prem', versions: 5, latest_version: '17', description: null, completes: 'TEC-50' },
+              { key: 'redis', name: 'Redis', editor: null, family: 'database', hosting_type: 'on_prem', versions: 1, latest_version: '7.2', description: null, completes: 'TEC-10' },
+              { key: 'nginx', name: 'Nginx', editor: 'F5', family: 'database', hosting_type: 'on_prem', versions: 1, latest_version: '1.24', description: null, completes: null },
+            ],
+          },
+        };
+      }
+      return { data: { items: [] } };
+    });
+    renderDialog();
+    const rows = await screen.findAllByRole('listitem');
+    const pg = rows.find((row) => within(row).queryByText('PostgreSQL'))!;
+    const mention = within(pg).getByText('pages.technologies.create.completes:TEC-50');
+    const editor = within(pg).getByText('PostgreSQL Global Development Group');
+    // The mention sits with the editor, in the secondary line. The row stays two lines.
+    expect(mention.parentElement).toBe(editor.parentElement);
+    expect(mention.parentElement).toHaveClass('kanap-autocomplete-option-secondary');
+    expect(getComputedStyle(mention).whiteSpace).toBe('nowrap');
+    expect(pg.childElementCount).toBe(2);
+    expect(pg.children[1]).toBe(mention.parentElement);
+    const redis = rows.find((row) => within(row).queryByText('Redis'))!;
+    expect(within(redis).getByText('pages.technologies.create.completes:TEC-10')).toBeTruthy();
+    expect(redis.childElementCount).toBe(2);
+    expect(redis.querySelectorAll('.kanap-autocomplete-option-secondary').length).toBe(2);
+    const nginx = rows.find((row) => within(row).queryByText('Nginx'))!;
+    expect(within(nginx).queryByText(/completes/)).toBeNull();
   });
 
   it('creates a technology missing from the catalog', async () => {

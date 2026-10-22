@@ -25,6 +25,9 @@ function testCpeVersionMatchesTheShippedCatalog() {
   assert.equal(cpeVersionOf('Subscription Edition SU12', 'msexchange'), '15.2');
   assert.equal(cpeVersionOf('IBM MQ 9.5 LTS', 'ibm-mq'), '9.5');
   assert.equal(cpeVersionOf('19', 'postgresql'), null);
+  // Cortex XDR community edition: `7.9.103-ce` is the NVD version `7.9.103`. A numeric label is itself.
+  assert.equal(cpeVersionOf('7.9.103-ce', 'cortex-xdr'), '7.9.103');
+  assert.equal(cpeVersionOf('9.3', 'cortex-xdr'), null);
 }
 
 function testVersionsOfReleases() {
@@ -171,6 +174,14 @@ function testOperatingSystemSupportDates() {
   assert.deepEqual(dates('sles', { eolFrom: '2024-10-31', eoesFrom: '2027-10-31' }), ['2024-10-31', '2027-10-31']);
   assert.deepEqual(dates('windows-server', { eoasFrom: '2022-01-11', eolFrom: '2027-01-12', eoesFrom: '2030-01-12' }), ['2022-01-11', '2027-01-12']);
   assert.deepEqual(dates('debian', { eoasFrom: '2026-06-10', eolFrom: '2028-06-30', eoesFrom: '2033-06-30' }), ['2026-06-10', '2028-06-30'], 'Debian: regular security support, then LTS');
+  // Amazon Linux: standard support, then security support. Equal dates leave no extended support.
+  assert.deepEqual(dates('amazon-linux', { eoasFrom: '2027-06-30', eolFrom: '2029-06-30' }), ['2027-06-30', '2029-06-30']);
+  assert.deepEqual(dates('amazon-linux', { eoasFrom: '2026-06-30', eolFrom: '2026-06-30' }), ['2026-06-30', null]);
+  // Alpine and AIX publish one end. IBM i and Solaris publish a paid extension (`eol_then_paid` keeps it; `eoas` is null).
+  assert.deepEqual(dates('alpine-linux', { eolFrom: '2028-06-01' }), ['2028-06-01', null]);
+  assert.deepEqual(dates('ibm-aix', { eolFrom: '2028-12-31' }), ['2028-12-31', null]);
+  assert.deepEqual(dates('ibm-i', { eolFrom: '2026-09-30', eoesFrom: '2029-09-30' }), ['2026-09-30', '2029-09-30']);
+  assert.deepEqual(dates('oracle-solaris', { eolFrom: '2031-11-01', eoesFrom: '2037-11-01' }), ['2031-11-01', '2037-11-01']);
   // Every other product keeps the catalog convention: active support, then the paid extension.
   assert.deepEqual(dates('nginx', ubuntu), ['2024-09-30', '2032-04-21']);
   assert.deepEqual(dates('postgresql', { eolFrom: '2029-11-08' }), ['2029-11-08', null]);
@@ -233,6 +244,28 @@ function testOperatingSystemReleases() {
   // Debian keeps its code name.
   assert.deepEqual(labels('debian', [{ name: '7', label: '7 (Wheezy)', releaseDate: '2013-05-04', eoasFrom: '2016-04-25', eolFrom: '2018-05-31' }]), ['7=7 (Wheezy)']);
 
+  // Amazon Linux drops the AMI prefix. `2` and `2023` stay.
+  assert.deepEqual(labels('amazon-linux', [
+    { name: '2023', label: '2023', releaseDate: '2023-03-01', eoasFrom: '2027-06-30', eolFrom: '2029-06-30' },
+    { name: '2', label: '2', releaseDate: '2018-06-26', eoasFrom: '2026-06-30', eolFrom: '2026-06-30' },
+    { name: '2018.03', label: 'AMI 2018.03', releaseDate: '2018-04-25', eoasFrom: '2020-12-31', eolFrom: '2023-12-31' },
+  ]), ['2023=2023', '2=2', '2018.03=2018.03']);
+
+  // AIX: one label per release, and that label is the key. The newest technology level takes it.
+  const aixCycles = versionsOfReleases([
+    { name: '7.3.4', label: '7.3 TL4', releaseDate: '2025-12-06', eolFrom: '2028-12-31' },
+    { name: '7.3.3', label: '7.3 TL3', releaseDate: '2024-12-06', eolFrom: '2027-12-31' },
+    { name: '7.2.5', label: '7.2 TL5', releaseDate: '2020-11-30' },
+  ], today, 'ibm-aix');
+  assert.deepEqual(aixCycles.map((version) => `${version.key}=${version.label}`), ['7.3=7.3', '7.2=7.2']);
+  assert.ok(aixCycles.every((version) => version.build_prefixes.length === 0));
+
+  // Solaris 11, the first release, is stored 11.0 so it does not cover 11.4.
+  assert.deepEqual(labels('oracle-solaris', [
+    { name: '11.4', label: '11.4', releaseDate: '2018-08-28', eolFrom: '2031-11-01', eoesFrom: '2037-11-01' },
+    { name: '11', label: '11', releaseDate: '2011-11-09' },
+  ]), ['11.4=11.4', '11=11.0']);
+
   // The shipped catalog follows the same rules.
   const byKey = new Map(shipped.map((p) => [p.key, p]));
   const shippedLabels = (key: string) => byKey.get(key)!.versions.map((x) => x.label);
@@ -240,6 +273,23 @@ function testOperatingSystemReleases() {
   assert.ok(!shippedLabels('windows-server').some((label) => /\b(AC|SAC|SP\d+)$/.test(label)), 'no channel release, no service pack');
   assert.ok(shippedLabels('ubuntu').every((label) => label.endsWith(' LTS')));
   assert.ok(['10 SP4', '11 SP4', '12', '12 SP5', '15', '15 SP7'].every((label) => shippedLabels('sles').includes(label)));
+  assert.ok(['2023', '2', '2018.03'].every((label) => shippedLabels('amazon-linux').includes(label)));
+  assert.ok(!shippedLabels('amazon-linux').some((label) => /^AMI\b/.test(label)));
+  assert.ok(['7.3', '7.2'].every((label) => shippedLabels('ibm-aix').includes(label)));
+  assert.ok(!shippedLabels('ibm-aix').some((label) => /\bTL\d/.test(label)));
+  assert.ok(shippedLabels('oracle-solaris').includes('11.4'));
+  assert.ok(shippedLabels('oracle-solaris').includes('11.0'));
+  assert.ok(!shippedLabels('oracle-solaris').includes('11'));
+  const aix = byKey.get('ibm-aix')!.versions.find((version) => version.label === '7.3')!;
+  assert.equal(aix.key, '7.3');
+  assert.equal(aix.cpe_version, null);
+  assert.deepEqual(aix.build_prefixes, []);
+  assert.ok(byKey.get('ibm-aix')!.versions.every((version) => version.key === version.label && version.build_prefixes.length === 0));
+  assert.equal(byKey.get('cortex-xdr')!.versions.find((version) => version.label === '9.3')!.cpe_version, null);
+  assert.equal(byKey.get('routeros')!.versions.find((version) => version.label === 'RouterOS 7.24')!.cpe_version, '7.24');
+  assert.equal(byKey.get('sharepoint')!.versions.find((version) => version.label === '2013 SP1')!.cpe_version, '2013');
+  assert.equal(byKey.get('azure-devops-server')!.versions.find((version) => version.label === '2022 Update 2')!.cpe_version, '2022');
+  assert.equal(byKey.get('sharepoint')!.versions.find((version) => version.label === 'Subscription Edition')!.cpe_version, null);
 }
 
 /**
@@ -253,7 +303,8 @@ function testOperatingSystemCpe() {
   const byKey = new Map(shipped.map((p) => [p.key, p]));
   const ids = (key: string) => byKey.get(key)!.cpe_products;
   assert.deepEqual(ids('ubuntu'), ['o:canonical:ubuntu_linux']);
-  assert.deepEqual(ids('rhel'), ['o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation']);
+  assert.deepEqual(ids('rhel'), ['a:redhat:enterprise_linux', 'o:redhat:enterprise_linux', 'o:redhat:enterprise_linux_desktop', 'o:redhat:enterprise_linux_server', 'o:redhat:enterprise_linux_workstation']);
+  assert.deepEqual(byKey.get('redhat-build-of-openjdk')!.cpe_products, ['a:oracle:jdk', 'a:oracle:openjdk', 'a:redhat:openjdk', 'a:redhat:openjdk_els']);
   assert.deepEqual(ids('debian'), ['o:debian:debian_linux']);
   assert.deepEqual(ids('almalinux'), ['o:almalinux:almalinux']);
   assert.deepEqual(ids('oracle-linux'), ['o:oracle:linux']);
@@ -310,6 +361,7 @@ function testOperatingSystemCpe() {
   // The branch the matching compares is the same number on the catalog entry and on the CPE product.
   const precision: Array<[string, number]> = [
     ['rhel', 1], ['debian', 1], ['oracle-linux', 1], ['almalinux', 1], ['rocky-linux', 1], ['centos', 1], ['ubuntu', 2], ['sles', 1],
+    ['ibm-aix', 2], ['ibm-i', 2], ['oracle-solaris', 2],
   ];
   const branched = new Set<string>();
   for (const [key, segments] of precision) {
@@ -321,6 +373,8 @@ function testOperatingSystemCpe() {
   }
   for (const id of Object.keys(VERSION_PRECISION)) assert.ok(branched.has(id), `${id} is a shipped operating-system product`);
   assert.equal(versionPrecisionOf('windows-server'), null);
+  assert.equal(versionPrecisionOf('amazon-linux'), null);
+  assert.equal(versionPrecisionOf('alpine-linux'), null);
   assert.equal(versionPrecisionOf('mssqlserver'), null);
   assert.equal(versionPrecisionOf('postgresql'), null);
 }
@@ -347,8 +401,58 @@ function testServiceCpe() {
   }
 }
 
+/** A few `cpe_version` values of each KANAP-maintained product, as the shipped file and the rule write them. */
+function testCuratedCpeVersions() {
+  const versionOf = (key: string, label: string) => {
+    const version = shipped.find((product) => product.key === key)?.versions.find((version) => version.label === label);
+    assert.ok(version, `${key} ${label}`);
+    return version;
+  };
+  const expectCpe = (key: string, label: string, cpe: string | null) => {
+    assert.equal(versionOf(key, label).cpe_version, cpe, `${key} ${label}`);
+    assert.equal(cpeVersionOf(label, key), cpe, `${key} ${label} rule`);
+  };
+  expectCpe('check-point-gaia', 'R81.20', 'r81.20');
+  expectCpe('check-point-gaia', 'R82', 'r82');
+  expectCpe('cisco-asa', '9.16(x)', '9.16\\(x\\)');
+  expectCpe('cisco-asa', '9.24(x)', '9.24\\(x\\)');
+  expectCpe('cisco-ftd', '7.7', null);
+  expectCpe('cisco-ftd', '6.2.3', null);
+  expectCpe('sophos-firewall', '22.0 MR1', '22.0');
+  expectCpe('sophos-firewall', '18.0', null);
+  expectCpe('ivanti-connect-secure', '25.1.3.x', '25.1.3');
+  expectCpe('ivanti-connect-secure', '9.1R18', '9.1');
+  expectCpe('ivanti-connect-secure', '22.7', null);
+  expectCpe('cisco-nx-os', '9.3(16)', '9.3\\(16\\)');
+  expectCpe('cisco-nx-os', '7.0(3)I7(x)', '7.0\\(3\\)i7\\(x\\)');
+  expectCpe('cisco-nx-os', '10.3(x)', '10.3\\(x\\)');
+  expectCpe('cisco-nx-os', '7.0(3)F3(3-5)', null);
+  expectCpe('cisco-nx-os', '7.0(3)F1/2(x)', null);
+  expectCpe('juniper-junos', '23.4', null);
+  expectCpe('juniper-junos', '12.3X48', null);
+  expectCpe('arista-eos', '4.28.x', '4.28');
+  expectCpe('netscaler-adc', '14.1', null);
+  expectCpe('dell-powerstore', '4.3.1 LTS2026', '4.3.1');
+  expectCpe('dell-powerstore', '5.0.0.2', null);
+  expectCpe('dell-powerscale', '9.15.0', null);
+  expectCpe('dell-unity', '5.5.5', null);
+  expectCpe('synology-dsm', '7.3 LTS', '7.3');
+  expectCpe('synology-dsm', '7.2', null);
+  expectCpe('veritas-netbackup', '10.4', null);
+  expectCpe('dell-data-domain', '8.8', null);
+  expectCpe('oracle-weblogic', '14.1.x', '14.1');
+  expectCpe('oracle-weblogic', '15.x', '15');
+  expectCpe('ibm-websphere', '9.0.x', '9.0');
+  expectCpe('ibm-websphere', '8.5.x', '8.5');
+  assert.deepEqual(versionOf('synology-dsm', '7.3 LTS').build_prefixes, ['7.3']);
+  assert.deepEqual(versionOf('dell-powerstore', '4.3.1 LTS2026').build_prefixes, ['4.3.1', '4.3.1.0', '4.3.1.1', '4.3.1.2']);
+  assert.deepEqual(versionOf('veritas-netbackup', '8.1').build_prefixes, ['8.1.1']);
+  assert.deepEqual(versionOf('sophos-firewall', '22.0 MR1').build_prefixes, []);
+}
+
 function main() {
   testCpeVersionMatchesTheShippedCatalog();
+  testCuratedCpeVersions();
   testVersionsOfReleases();
   testInvalidReleasesAreLeftOut();
   testCleanLabel();

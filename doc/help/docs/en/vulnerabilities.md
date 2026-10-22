@@ -19,13 +19,14 @@ These records come from the CVE list (CVE.org), under the [terms of use of the C
 
 Each technology is compared as follows:
 
-- **Products**: a technology is compared through its CPE product identifiers and its CVE.org names (see [Technologies](technologies.md#vulnerability-identifiers)). The CPE identifiers also match the CVE.org records that carry them, as Red Hat's do. A technology with neither gets no vulnerability. The catalog's operating systems have CPE identifiers too. SUSE Linux Enterprise Server has none: the NVD publishes too few of its vulnerabilities for a reliable match. Retired technologies are left out.
+- **Products**: a technology is compared through its CPE product identifiers and its CVE.org names (see [Technologies](technologies.md#vulnerability-identifiers)). The CPE identifiers also match the CVE.org records that carry them, as Red Hat's do. A technology with neither gets no vulnerability. The catalog's operating systems have CPE identifiers too. Red Hat Enterprise Linux also gets the vulnerabilities Red Hat files under its application streams (AppStream). Retired technologies are left out.
 - **CVE.org names**: the publisher and product names as the publisher writes them in its records, for example publisher `SAP_SE` and product `SAP HANA Database`. The comparison ignores case and punctuation, and otherwise needs the exact name. A close name does not match, so each variant of a product is declared on its own. A name can carry a version: it then applies only to the versions of the technology whose label starts with that version, for example `2019` for `Windows Server 2019`. When a label starts with several of them, only the longest counts: `2012 R2` carries `2012` and `2012 R2`, and gets the name of `2012 R2` only.
 - **Versions**: only the versions in use count: installed on a server in service, or used by an application in service.
 - **Version numbers**: versions compare on their numbers, part by part. `2016 SP3` counts as 2016 and `19c` as 19. A version with fewer than three numbers stands for its whole branch: `9.0` covers every `9.0.x`. A version KANAP cannot compare, such as a label without a number, counts as concerned.
 - **Versions in publisher records**: the same rules apply to the versions a CVE.org record lists. A version KANAP cannot compare with the publisher's counts as concerned, and the **Match** column of the export says "Version not comparable". This happens when your version is named by a year and the publisher numbers its components, for example `2021` against `106`. Check the publisher's record to decide whether your version is concerned.
-- **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. Windows Server compares on its year only, as KANAP does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
+- **Operating systems**: Red Hat Enterprise Linux, Debian, Oracle Linux, AlmaLinux, Rocky Linux, SUSE Linux Enterprise Server and CentOS compare on their major version, and Ubuntu on its year and month, as the NVD publishes them: `9.4` gets the vulnerabilities of `9`, and `22.04.3 LTS` those of `22.04`. IBM AIX, IBM i and Oracle Solaris compare on their first two numbers: `7.3.2` gets the vulnerabilities of `7.3`. Windows Server compares on its year only, as KANAP does not know which updates a server has: a `2019` version is concerned by every vulnerability of Windows Server 2019, including those an update already fixed. 2012 and 2012 R2 are told apart by their label, as are 2008 and 2008 R2.
 - **Unknown version**: a server or an application that names no version is potentially concerned by every vulnerability of the product. Its row shows **Not recorded** in the **Version** column.
+- **Linux distributions**: a distribution publishes its vulnerabilities per package. KANAP sees the vulnerabilities that the publisher assigns to a version of the distribution. It does not see the packages installed on a server, or their level of updates. To know whether a server is exposed, check the package in the distributor's security tracker: the technology links to it, under its versions table (see [Technologies](technologies.md#versions-from-the-catalog)).
 
 Some vulnerabilities only apply when two products run together, for example Tomcat on Windows. KANAP shows them for the vulnerable product alone, so one may appear for an installation it does not affect. Mark it **Not affected**.
 
@@ -42,7 +43,9 @@ Two kinds of technologies are out of the alerts by default:
 - **Operating systems**: KANAP does not know the patch level of a server, so an operating system would raise a very large number of vulnerabilities. The CVE.org list adds many more: the publishers of operating systems list the whole version as concerned.
 - **Cloud services run by a provider**: a technology hosted in the public cloud or as SaaS, or a catalog entry the provider runs. The provider patches an online service, so its vulnerabilities call for no action on your side. A technology in a private cloud stays in the alerts.
 
-You can include them again on the technology.
+You can include them again on the technology. To follow a single version of an operating system, for example the one your most exposed servers run, turn on its switch in the **Alerts** column of the versions table. The other versions stay out of the alerts.
+
+On SUSE Linux Enterprise Server, turning the switch of a base version also turns the switches of its service packs the same way, and a service pack can then be changed on its own.
 
 A version out of the alerts is still matched with the vulnerabilities. It stays in the technology's **Vulnerabilities** section, and its rows stay on this page under the **Alerts** filter. They are left out of everything else:
 
@@ -185,7 +188,7 @@ The recipients are the IT owners of the technology whose account is enabled and 
 
 ## Tips
 
-- **Fill in the CPE identifiers**: most catalog technologies come with them, operating systems included. SUSE Linux Enterprise Server has none. For the others, search the product in the NIST CPE dictionary.
+- **Fill in the CPE identifiers**: most catalog technologies come with them, operating systems included. For the others, search the product in the NIST CPE dictionary.
 - **Add the CVE.org names**: they bring in vulnerabilities the NVD has not analysed. Many catalog technologies come with them.
 - **Record versions**: a server or application without a version is potentially concerned by everything, which hides the real exposure.
 - **Write the note**: the next person to read the vulnerability sees what was done.

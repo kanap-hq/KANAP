@@ -75,6 +75,110 @@ describe('TechnologyOverviewTab', () => {
     expect(screen.queryByText('Catalog')).not.toBeInTheDocument();
   });
 
+  it('names the source of a catalog version while its dates still match', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-r81',
+        label: 'R81.20',
+        standard_support_end: '2027-05-31',
+        catalog_key: 'check-point-gaia:R81.20',
+        catalog_source: {
+          source_url: 'https://www.checkpoint.com/support-services/support-life-cycle-policy/',
+          checked_on: '2026-10-20',
+          editor: 'Check Point',
+          no_planned_end: false,
+        },
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /R81.20/ });
+    const link = within(row).getByRole('link', { name: 'Check Point' });
+    expect(link).toHaveAttribute('href', 'https://www.checkpoint.com/support-services/support-life-cycle-policy/');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(within(row).getByText(/verified on 20 Oct 2026/)).toBeInTheDocument();
+    expect(within(row).getByText('Catalog')).toBeInTheDocument();
+  });
+
+  it('hides the source once the stored dates leave the catalog', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-r81',
+        label: 'R81.20',
+        standard_support_end: '2028-01-15',
+        catalog_key: 'check-point-gaia:R81.20',
+        catalog_source: null,
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /R81.20/ });
+    expect(within(row).queryByRole('link', { name: 'Check Point' })).not.toBeInTheDocument();
+    expect(within(row).queryByText(/verified on/)).not.toBeInTheDocument();
+    expect(within(row).getByText('Catalog')).toBeInTheDocument();
+  });
+
+  it('replaces both empty dates when the vendor plans no end', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      versions: [{
+        ...VERSION,
+        id: 'v-was',
+        label: '9.0.x',
+        standard_support_end: null,
+        extended_support_end: null,
+        catalog_key: 'ibm-websphere:9.0.x',
+        catalog_source: {
+          source_url: 'https://www.ibm.com/support/pages/websphere-application-server90x',
+          checked_on: '2026-10-20',
+          editor: 'IBM',
+          no_planned_end: true,
+        },
+      }],
+    });
+    const row = within(screen.getByRole('table', { name: 'Versions' })).getByRole('row', { name: /9\.0\.x/ });
+    expect(within(row).getAllByText('No end planned by the vendor')).toHaveLength(2);
+    expect(within(row).queryByText('Date unknown')).not.toBeInTheDocument();
+    expect(within(row).queryByText('—')).not.toBeInTheDocument();
+    expect(within(row).getByRole('link', { name: 'IBM' })).toHaveAttribute('href', 'https://www.ibm.com/support/pages/websphere-application-server90x');
+  });
+
+  it('points at the distributor package tracker under the versions', () => {
+    renderTab({
+      ...TECHNOLOGY,
+      editor: 'Canonical',
+      catalog_key: 'ubuntu',
+      catalog_security_tracker: 'https://ubuntu.com/security/cves',
+    });
+    const link = screen.getByRole('link', { name: 'Ubuntu CVE tracker' });
+    expect(link).toHaveAttribute('href', 'https://ubuntu.com/security/cves');
+    expect(link).toHaveAttribute('target', '_blank');
+    expect(link).toHaveAttribute('rel', 'noopener noreferrer');
+    expect(screen.getByText(/publishes vulnerabilities per package/)).toBeInTheDocument();
+    expect(screen.getByText('Versions and dates kept up to date from the catalog')).toBeInTheDocument();
+  });
+
+  it('names an unknown tracker from the editor, and a known one despite a trailing slash', () => {
+    const { unmount } = renderTab({
+      ...TECHNOLOGY,
+      editor: 'Example',
+      catalog_security_tracker: 'https://example.test/security',
+    });
+    expect(screen.getByRole('link', { name: 'Example security tracker' })).toHaveAttribute('href', 'https://example.test/security');
+    unmount();
+    renderTab({
+      ...TECHNOLOGY,
+      catalog_security_tracker: 'https://security-tracker.debian.org/tracker/',
+    });
+    expect(screen.getByRole('link', { name: 'Debian security tracker' })).toHaveAttribute('href', 'https://security-tracker.debian.org/tracker/');
+  });
+
+  it('shows no tracker line when the product publishes none', () => {
+    renderTab();
+    expect(screen.queryByText(/publishes vulnerabilities per package/)).not.toBeInTheDocument();
+  });
+
   it('explains the catalog mark to a keyboard user', async () => {
     renderTab();
     const mark = screen.getByText('Catalog');
@@ -323,6 +427,117 @@ describe('TechnologyOverviewTab', () => {
     await act(async () => { release({ data: {} }); });
     await waitFor(() => expect(onVersionsChanged).toHaveBeenCalledTimes(1));
     expect(api.patch).toHaveBeenCalledTimes(1);
+  });
+
+  function versionRow(id: string, label: string, alerts: boolean | null = null, effective = false) {
+    return {
+      ...VERSION,
+      id,
+      label,
+      standard_support_end: null,
+      catalog_key: null,
+      vulnerability_alerts: alerts,
+      vulnerability_alerts_effective: effective,
+    };
+  }
+
+  const SLES = {
+    ...TECHNOLOGY,
+    name: 'SUSE Linux Enterprise Server',
+    cpe_products: ['o:suse:linux_enterprise_server'],
+    vulnerability_alerts: false,
+    versions: [
+      versionRow('v-11', '11'),
+      versionRow('v-sp4', '11 SP4'),
+      versionRow('v-sp1', '11 SP1'),
+      versionRow('v-sp2', '11 SP2'),
+      versionRow('v-12', '12 SP1'),
+    ],
+  } as TechnologyDetail;
+
+  it('names the service packs a base release switch includes, from the first to the last', async () => {
+    renderTab(SLES);
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Includes the service packs 11 SP1 to 11 SP4');
+  });
+
+  it('names a single service pack in the singular', async () => {
+    renderTab({ ...SLES, versions: [versionRow('v-11', '11'), versionRow('v-sp1', '11 SP1')] });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    expect(await screen.findByRole('tooltip')).toHaveTextContent('Includes the service pack 11 SP1');
+  });
+
+  it('leaves the service-pack hint off a pack, off Windows, and off a product that does not file packs', async () => {
+    const view = renderTab(SLES);
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+    view.unmount();
+
+    const windows = renderTab({
+      ...TECHNOLOGY,
+      cpe_products: ['o:microsoft:windows_server_2012'],
+      vulnerability_alerts: false,
+      versions: [versionRow('v-2012', '2012'), versionRow('v-r2', '2012 R2')],
+    });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 2012' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+    windows.unmount();
+
+    renderTab({
+      ...TECHNOLOGY,
+      cpe_products: ['o:microsoft:windows_server'],
+      vulnerability_alerts: false,
+      versions: [versionRow('v-11', '11'), versionRow('v-sp1', '11 SP1')],
+    });
+    fireEvent.mouseOver(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    await expect(screen.findByRole('tooltip', {}, { timeout: 400 })).rejects.toThrow();
+  });
+
+  it('shows every service pack the base release switch just wrote', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({
+      data: {
+        id: 'v-11',
+        vulnerability_alerts: true,
+        vulnerability_alerts_effective: true,
+        updated_versions: [
+          { id: 'v-11', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp1', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp2', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+          { id: 'v-sp4', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+        ],
+      },
+    });
+    const { onVersionsChanged } = renderTab(SLES);
+    expect(screen.queryAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(0);
+
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' }));
+    await waitFor(() => expect(api.patch).toHaveBeenCalledWith(
+      '/technologies/tech-1/versions/v-11',
+      { vulnerability_alerts: true },
+    ));
+    await waitFor(() => {
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP2' })).toBeChecked();
+      expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP4' })).toBeChecked();
+    });
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 12 SP1' })).not.toBeChecked();
+    expect(screen.getAllByRole('img', { name: 'Own setting for this version' })).toHaveLength(4);
+    expect(onVersionsChanged).toHaveBeenCalledTimes(1);
+  });
+
+  it('updates only the service pack whose switch was changed', async () => {
+    vi.mocked(api.patch).mockReset();
+    vi.mocked(api.patch).mockResolvedValue({
+      data: { id: 'v-sp1', vulnerability_alerts: true, vulnerability_alerts_effective: true },
+    });
+    renderTab(SLES);
+    fireEvent.click(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' }));
+    await waitFor(() => expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP1' })).toBeChecked());
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11' })).not.toBeChecked();
+    expect(screen.getByRole('switch', { name: 'Vulnerability alerts for 11 SP2' })).not.toBeChecked();
+    expect(api.patch).toHaveBeenCalledWith('/technologies/tech-1/versions/v-sp1', { vulnerability_alerts: true });
   });
 
   it('keeps every alert switch at the same place, with or without the own-setting dot', () => {

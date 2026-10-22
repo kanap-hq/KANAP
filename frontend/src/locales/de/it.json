@@ -234,7 +234,8 @@
         "searchPlaceholder": "z. B. SQL Server",
         "noMatch": "Kein Katalogeintrag passt.",
         "manualLink": "Eine Technologie erfassen, die nicht im Katalog steht",
-        "backToCatalog": "Zurück zum Katalog"
+        "backToCatalog": "Zurück zum Katalog",
+        "completes": "Ergänzt {{reference}}"
       }
     },
     "connections": {
@@ -2283,6 +2284,22 @@
         "fromCatalog": "Katalog",
         "fromCatalogHint": "Aus dem Katalog",
         "catalogNote": "Versionen und Daten werden aus dem Katalog aktuell gehalten",
+        "dateSource": "Quelle: <editor>{{editor}}</editor>, geprüft am {{date}}",
+        "noPlannedEnd": "Kein Ende vom Hersteller geplant",
+        "securityTrackerNote": "Dieser Anbieter veröffentlicht Schwachstellen pro Paket. KANAP verfolgt den Support jeder Version. Die Betroffenheit einzelner Pakete steht in seinem Tracker: <tracker>{{name}}</tracker>",
+        "securityTrackerOf": "Sicherheitstracker von {{editor}}",
+        "securityTracker": "Sicherheitstracker",
+        "trackers": {
+          "ubuntu": "Ubuntu-CVE-Tracker",
+          "redhat": "Red Hat Sicherheitsupdates",
+          "debian": "Debian-Sicherheitstracker",
+          "suse": "SUSE-CVE-Tracker",
+          "rocky": "Rocky Linux Errata",
+          "alma": "AlmaLinux-Errata",
+          "oracle": "Oracle Linux Sicherheit",
+          "amazon": "Amazon Linux Sicherheit",
+          "alpine": "Alpine-Sicherheitstracker"
+        },
         "edit": "Version {{label}} bearbeiten",
         "remove": "Version {{label}} löschen",
         "deleteTitle": "Version {{label}} löschen?",
@@ -2297,6 +2314,8 @@
         "alertsColumnHint": "Nimmt diese Version in die Schwachstellenwarnungen auf: die Seite Schwachstellen, die Zähler und die E-Mail mit der Zusammenfassung. Jede Version folgt der Einstellung der Technologie, außer ein Punkt kennzeichnet eine eigene Einstellung.",
         "includeInAlerts": "In Schwachstellenwarnungen aufnehmen",
         "alertsFor": "Warnungen zu Schwachstellen für {{label}}",
+        "alertsServicePacks_one": "Umfasst das Service Pack {{from}}",
+        "alertsServicePacks_other": "Umfasst die Service Packs {{from}} bis {{to}}",
         "alertsHint": "Einstellung der Technologie: gilt für Versionen ohne eigene Einstellung, für spätere Versionen und für Verknüpfungen ohne Version.",
         "alertsOwn": "Eigene Einstellung dieser Version",
         "alertsConfirmTitle": "Warnungen zu Schwachstellen",
@@ -3549,7 +3568,8 @@
       "monitoring": "Überwachung",
       "runtime": "Laufzeitumgebung und Framework",
       "storage": "Speicher",
-      "network_security": "Netzwerk und Sicherheit",
+      "network": "Netzwerk",
+      "network_security": "Sicherheit",
       "administration": "Administration",
       "other": "Sonstiges"
     },

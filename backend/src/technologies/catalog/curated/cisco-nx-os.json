@@ -1,0 +1,271 @@
+{
+  "key": "cisco-nx-os",
+  "name": "Cisco NX-OS",
+  "editor": "Cisco",
+  "lifecycle_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
+  "source_updated": "2026-10-09",
+  "version_grain": "major release train (10.4(x)) for Nexus 3000/9000; older trains from the Nexus 9000 end-of-life notices; a notice covering several trains is one version, the others in aliases",
+  "versions": [
+    {
+      "label": "10.6(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2028-02-29",
+      "extended_support_end": "2030-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EoSWM Date",
+        "extended_support_end": "EoVSS/LDoS"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train."
+    },
+    {
+      "label": "10.5(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2027-02-28",
+      "extended_support_end": "2029-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EoSWM Date",
+        "extended_support_end": "EoVSS/LDoS"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train."
+    },
+    {
+      "label": "10.4(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-02-28",
+      "extended_support_end": "2028-02-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EoSWM Date",
+        "extended_support_end": "EoVSS/LDoS"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train."
+    },
+    {
+      "label": "10.3(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-11-30",
+      "extended_support_end": "2027-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/ios-nx-os-software/nx-os-software/guide_c07-658595.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "EoSWM Date",
+        "extended_support_end": "EoVSS/LDoS"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. Footnote: 10.3(x) is extended for EX platforms until their hardware Last Date of Support."
+    },
+    {
+      "label": "10.2(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-11-30",
+      "extended_support_end": "2025-08-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/nexus-3000-9000-releases-10-2-x-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2025-02-28. The lifecycle statement shows \"Feb 28 2025/Aug 31 2025\" in its EoVSS/LDoS column."
+    },
+    {
+      "label": "10.1(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-11-30",
+      "extended_support_end": "2025-08-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/nexus-3000-9000-releases-10-1-x-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2025-02-28."
+    },
+    {
+      "label": "9.3(16)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-04-07",
+      "extended_support_end": "2027-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/nexus-3000-9000-releases-9-3-16-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. Separate notice for release 9.3(16). The notice gives End of Vulnerability/Security Support as August 31 2025, before its End of SW Maintenance date."
+    },
+    {
+      "label": "9.3(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-01-10",
+      "extended_support_end": "2025-10-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/nexus-3000-9000-releases-9-3x-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2025-04-10. Release 9.3(16) has its own notice."
+    },
+    {
+      "label": "9.2(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-04-10",
+      "extended_support_end": "2026-04-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-744378.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2024-04-10."
+    },
+    {
+      "label": "7.0(3)I7(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-05-07",
+      "extended_support_end": "2024-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/n3k-9k-releases.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2022-05-07."
+    },
+    {
+      "label": "7.0(3)I5(x)",
+      "aliases": [
+        "7.0(3)I6(x)"
+      ],
+      "release_date": null,
+      "standard_support_end": "2020-06-20",
+      "extended_support_end": "2024-06-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-741754.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS trains. One notice covers 7.0(3)I5(x) and 7.0(3)I6(x). End of Vulnerability/Security Support 2022-06-20."
+    },
+    {
+      "label": "7.0(3)I4(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2020-12-31",
+      "extended_support_end": "2024-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-742582.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS train. End of Vulnerability/Security Support 2022-12-31."
+    },
+    {
+      "label": "7.0(3)I2(x)",
+      "aliases": [
+        "7.0(3)I3(1)"
+      ],
+      "release_date": null,
+      "standard_support_end": "2020-02-29",
+      "extended_support_end": "2024-02-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-741290.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS trains. One notice covers 7.0(3)I2(x) and 7.0(3)I3(1). End of Vulnerability/Security Support 2022-02-28."
+    },
+    {
+      "label": "7.0(3)F3(3-5)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-04-17",
+      "extended_support_end": "2025-04-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-743017.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS releases 7.0(3)F3(3) to F3(5). The notice gives no End of Vulnerability/Security Support date."
+    },
+    {
+      "label": "7.0(3)F1/2(x)",
+      "aliases": [
+        "7.0(3)F3(1-2)"
+      ],
+      "release_date": null,
+      "standard_support_end": "2020-09-28",
+      "extended_support_end": "2024-09-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/switches/nexus-9000-series-switches/eos-eol-notice-c51-742176.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Nexus 3000/9000 NX-OS releases. One notice covers NX-OS-7.0(3)F1/2(x) and NX-OS-7.0(3)F3(1-2). The notice gives no End of Vulnerability/Security Support date."
+    }
+  ]
+}

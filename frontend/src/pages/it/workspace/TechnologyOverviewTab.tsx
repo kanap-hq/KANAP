@@ -28,7 +28,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import WarningAmberOutlined from '@mui/icons-material/WarningAmberOutlined';
 import { useQueryClient } from '@tanstack/react-query';
-import { useTranslation } from 'react-i18next';
+import { Trans, useTranslation } from 'react-i18next';
 import type { TFunction } from 'i18next';
 import api from '../../../api';
 import DeleteConfirmDialog from '../../../components/DeleteConfirmDialog';
@@ -46,6 +46,14 @@ import { formatSupportDate, supportStateColor, supportStateOf, type SupportState
 import { EditorField } from '../components/TechnologyCreateDialog';
 import TechnologyCveNames, { type TechnologyCveName } from './TechnologyCveNames';
 
+/** Where KANAP read the dates of a maintained version, while the stored dates still match the catalog. */
+export type CatalogDateSource = {
+  source_url: string;
+  checked_on: string;
+  editor: string;
+  no_planned_end: boolean;
+};
+
 export type TechnologyVersion = {
   id: string;
   label: string;
@@ -56,6 +64,8 @@ export type TechnologyVersion = {
   notes: string | null;
   /** Set when the version comes from the catalog (adoption or the living catalog's sync). */
   catalog_key?: string | null;
+  /** Null once a stored end date differs from the catalog, and on a version KANAP does not maintain. */
+  catalog_source?: CatalogDateSource | null;
   /** Own setting: `true`, `false`, or `null` when the version follows the technology. */
   vulnerability_alerts?: boolean | null;
   /** The version's exception, or the technology's setting. */
@@ -84,6 +94,8 @@ export type TechnologyDetail = {
   cve_names?: TechnologyCveName[];
   /** The catalog entry the technology was adopted from; its versions and dates are then kept up to date. */
   catalog_key?: string | null;
+  /** Page where the distributor tracks vulnerabilities per package. Null when the product has none. */
+  catalog_security_tracker?: string | null;
   replaced_by_id: string | null;
   replaced_by: { id: string; name: string; reference: string } | null;
   versions: TechnologyVersion[];
@@ -532,6 +544,94 @@ function versionDeleteCopy(version: TechnologyVersion, t: TFunction): { warning:
   };
 }
 
+/** Known distributor trackers, keyed by their page without a trailing slash. */
+const SECURITY_TRACKER_KEYS: Record<string, string> = {
+  'https://ubuntu.com/security/cves': 'workspace.technology.versions.trackers.ubuntu',
+  'https://access.redhat.com/security/security-updates/cve': 'workspace.technology.versions.trackers.redhat',
+  'https://security-tracker.debian.org/tracker': 'workspace.technology.versions.trackers.debian',
+  'https://www.suse.com/security/cve': 'workspace.technology.versions.trackers.suse',
+  'https://errata.rockylinux.org': 'workspace.technology.versions.trackers.rocky',
+  'https://errata.almalinux.org': 'workspace.technology.versions.trackers.alma',
+  'https://linux.oracle.com/security': 'workspace.technology.versions.trackers.oracle',
+  'https://alas.aws.amazon.com': 'workspace.technology.versions.trackers.amazon',
+  'https://security.alpinelinux.org': 'workspace.technology.versions.trackers.alpine',
+};
+
+/** The link text of a distributor's tracker: its name, or "security tracker of <editor>". */
+function securityTrackerName(url: string, editor: string | null, t: TFunction): string {
+  const key = SECURITY_TRACKER_KEYS[url.replace(/\/+$/, '')];
+  if (key) return t(key);
+  const name = editor?.trim();
+  return name
+    ? t('workspace.technology.versions.securityTrackerOf', { editor: name })
+    : t('workspace.technology.versions.securityTracker');
+}
+
+/**
+ * Products that file a service pack apart from the base release. The same set as
+ * `SERVICE_PACK_PRODUCTS` in `backend/src/vulnerabilities/vulnerability-rules.ts`.
+ */
+const SERVICE_PACK_PRODUCTS = new Set([
+  'o:suse:linux_enterprise_server',
+  'o:suse:suse_linux_enterprise_server',
+  'o:novell:suse_linux_enterprise_server',
+  'o:opensuse_project:suse_linux_enterprise_server',
+  'o:opensuse:suse_linux_enterprise_server',
+]);
+
+/** `15 SP5` → 5, `15.5` → 5; null for `15` or `2012 R2`. Same rule as `servicePackOf`. */
+function servicePackOf(raw: string): number | null {
+  const text = raw.trim();
+  const named = /^\d+\s*sp\s*(\d+)\b/i.exec(text);
+  if (named) return Number(named[1]);
+  const dotted = /^(\d+)\.(\d+)$/.exec(text);
+  return dotted ? Number(dotted[2]) : null;
+}
+
+/** `15`, `15 SP5` and `15.5` share 15. Null when the label is neither. */
+function servicePackMajor(raw: string): number | null {
+  const text = raw.trim();
+  const named = /^(\d+)\s*sp\s*\d+\b/i.exec(text);
+  if (named) return Number(named[1]);
+  const dotted = /^(\d+)\.(\d+)$/.exec(text);
+  if (dotted) return Number(dotted[1]);
+  const bare = /^(\d+)$/.exec(text);
+  return bare ? Number(bare[1]) : null;
+}
+
+/** Service packs of a base release, lowest pack first. Empty when the product does not file them. */
+function servicePackLabels(products: readonly string[] | undefined, versions: readonly { label: string }[], rootLabel: string): string[] {
+  if (!products?.some((product) => SERVICE_PACK_PRODUCTS.has(product.toLowerCase()))) return [];
+  if (servicePackOf(rootLabel) !== null) return [];
+  const major = servicePackMajor(rootLabel);
+  if (major == null) return [];
+  return versions
+    .map((version) => version.label)
+    .filter((label) => servicePackOf(label) != null && servicePackMajor(label) === major)
+    .sort((a, b) => (servicePackOf(a)! - servicePackOf(b)!) || a.localeCompare(b, 'en'));
+}
+
+/** "Includes the service packs 11 SP1 to 11 SP4", or the singular when there is one. */
+function servicePackTooltip(products: readonly string[] | undefined, versions: readonly { label: string }[], label: string, t: TFunction): string | undefined {
+  const packs = servicePackLabels(products, versions, label);
+  if (!packs.length) return undefined;
+  return t('workspace.technology.versions.alertsServicePacks', { count: packs.length, from: packs[0], to: packs[packs.length - 1] });
+}
+
+type VersionAlertWrite = {
+  id?: string;
+  vulnerability_alerts?: boolean | null;
+  vulnerability_alerts_effective?: boolean;
+  updated_versions?: Array<{ id?: string; vulnerability_alerts?: boolean | null; vulnerability_alerts_effective?: boolean }>;
+};
+
+/** Neutral at rest: a link inside a table cell turns teal only on hover. */
+const catalogSourceLinkSx = {
+  color: 'inherit',
+  font: 'inherit',
+  '&:hover': { color: 'kanap.teal', textDecoration: 'underline', textUnderlineOffset: '2px' },
+} as const;
+
 function VersionsTable({ technology, canManage, onChanged, onError, unmatched, onAddIdentifier }: {
   technology: TechnologyDetail;
   canManage: boolean;
@@ -557,6 +657,14 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
   const [alertsBusy, setAlertsBusy] = React.useState(false);
   const alertsBusyRef = React.useRef(false);
   const technologyAlerts = technology.vulnerability_alerts === true;
+  // The answer of the switch lists every version it wrote. Shown until the record is read again.
+  const versionAlertStamp = `${String(technology.vulnerability_alerts)}|${technology.versions.map((version) => `${version.id}:${String(version.vulnerability_alerts)}:${String(version.vulnerability_alerts_effective)}`).join(',')}`;
+  const [alertOverrides, setAlertOverrides] = React.useState<Record<string, { vulnerability_alerts: boolean | null; vulnerability_alerts_effective: boolean }>>({});
+  React.useEffect(() => { setAlertOverrides({}); }, [versionAlertStamp]);
+  const shownVersions = technology.versions.map((version) => {
+    const over = alertOverrides[version.id];
+    return over ? { ...version, vulnerability_alerts: over.vulnerability_alerts, vulnerability_alerts_effective: over.vulnerability_alerts_effective } : version;
+  });
 
   const startEdit = (version: TechnologyVersion | null) => {
     setEditing(version?.id ?? 'new');
@@ -620,7 +728,23 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
     setAlertsBusy(true);
     const value = next === technologyAlerts ? null : next;
     try {
-      await api.patch(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      const written = await api.patch<VersionAlertWrite>(`/technologies/${technology.id}/versions/${version.id}`, { vulnerability_alerts: value });
+      const listed = Array.isArray(written.data?.updated_versions) ? written.data.updated_versions : [];
+      const rows = listed.length > 0 ? listed : (written.data?.id ? [written.data] : []);
+      if (rows.length > 0) {
+        setAlertOverrides((prev) => {
+          const nextOverrides = { ...prev };
+          for (const row of rows) {
+            if (!row.id || row.vulnerability_alerts === undefined) continue;
+            const own = row.vulnerability_alerts;
+            nextOverrides[row.id] = {
+              vulnerability_alerts: own,
+              vulnerability_alerts_effective: row.vulnerability_alerts_effective ?? (own != null ? own : technologyAlerts),
+            };
+          }
+          return nextOverrides;
+        });
+      }
       await alertsWritten();
     } catch (err) {
       onError(getApiErrorMessage(err, t, t('workspace.technology.messages.saveFailed')));
@@ -766,9 +890,17 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
               </TableCell>
             </TableRow>
           )}
-          {technology.versions.map((version) => {
+          {shownVersions.map((version) => {
             if (editing === version.id) return editRow(version.id);
-            const status = supportStateOf(version.standard_support_end, version.extended_support_end);
+            const source = version.catalog_source;
+            // Both ends are empty together when the vendor plans no end. The phrase replaces each dash.
+            // That row has no support state: the status column stays empty.
+            const noEnd = source?.no_planned_end === true;
+            const noStatus = noEnd && !version.standard_support_end && !version.extended_support_end;
+            const status = noStatus ? null : supportStateOf(version.standard_support_end, version.extended_support_end);
+            const endCell = (date: string | null) => (noEnd
+              ? <Box component="span" sx={{ fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>{t('workspace.technology.versions.noPlannedEnd')}</Box>
+              : formatSupportDate(date, locale, '—'));
             return (
               <TableRow key={version.id}>
                 <TableCell>
@@ -780,14 +912,37 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
                       </Box>
                     </Tooltip>
                   )}
+                  {/* A second line, not the Catalog mark's tooltip: the source is a link, which a tooltip would hide. */}
+                  {source && (
+                    <Box sx={{ mt: '2px', fontSize: 12, lineHeight: 1.4, color: 'kanap.text.tertiary' }}>
+                      <Trans
+                        t={t}
+                        i18nKey="workspace.technology.versions.dateSource"
+                        values={{ editor: source.editor, date: formatSupportDate(source.checked_on, locale) }}
+                        components={{
+                          editor: (
+                            <Link
+                              href={source.source_url}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              underline="none"
+                              sx={catalogSourceLinkSx}
+                            />
+                          ),
+                        }}
+                      />
+                    </Box>
+                  )}
                 </TableCell>
-                <TableCell>{formatSupportDate(version.standard_support_end, locale, '—')}</TableCell>
-                <TableCell>{formatSupportDate(version.extended_support_end, locale, '—')}</TableCell>
+                <TableCell>{endCell(version.standard_support_end)}</TableCell>
+                <TableCell>{endCell(version.extended_support_end)}</TableCell>
                 <TableCell>
-                  <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
-                    <StatusDot color={supportStateColor(status, theme)} />
-                    {statusLabel(status, t)}
-                  </Box>
+                  {status && (
+                    <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: '6px' }} data-status={status}>
+                      <StatusDot color={supportStateColor(status, theme)} />
+                      {statusLabel(status, t)}
+                    </Box>
+                  )}
                 </TableCell>
                 {showAlerts && (
                   <AlertsCell>
@@ -795,6 +950,7 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
                       checked={version.vulnerability_alerts_effective ?? technologyAlerts}
                       disabled={!canManage || alertsBusy}
                       label={t('workspace.technology.versions.alertsFor', { label: version.label })}
+                      tooltip={servicePackTooltip(technology.cpe_products, technology.versions, version.label, t)}
                       onChange={(next) => { void setVersionAlerts(version, next); }}
                     />
                     <OwnSettingMark visible={version.vulnerability_alerts != null} />
@@ -821,6 +977,26 @@ function VersionsTable({ technology, canManage, onChanged, onError, unmatched, o
       {technology.catalog_key && (
         <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, color: th.palette.kanap.text.tertiary })}>
           {t('workspace.technology.versions.catalogNote')}
+        </Typography>
+      )}
+      {technology.catalog_security_tracker && (
+        <Typography sx={(th) => ({ mt: 0.75, fontSize: 12, lineHeight: 1.4, color: th.palette.kanap.text.tertiary })}>
+          <Trans
+            t={t}
+            i18nKey="workspace.technology.versions.securityTrackerNote"
+            values={{ name: securityTrackerName(technology.catalog_security_tracker, technology.editor, t) }}
+            components={{
+              tracker: (
+                <Link
+                  href={technology.catalog_security_tracker}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  underline="none"
+                  sx={tealLinkSx}
+                />
+              ),
+            }}
+          />
         </Typography>
       )}
       <DeleteConfirmDialog

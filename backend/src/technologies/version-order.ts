@@ -2,7 +2,7 @@
  * The order in which a technology's versions are shown: newest number first, then the labels
  * without a number, alphabetically.
  *
- * A label is read on its numeric prefix (digits separated by dots, an optional leading `v`), as
+ * A label is read on its numeric prefix (digits separated by dots, an optional leading `v` or `r`: Check Point `R81.20`), as
  * the vulnerability matching reads versions: `11.0` > `10.1` > `10.0` > `9.0` > `8.5`, `2019` >
  * `2016`, a missing segment counting as 0 (`9` = `9.0`). Equal numbers keep a stable order on
  * the whole label, the one with a qualifier first (`2016 SP3` before `2016`). Labels without a
@@ -11,7 +11,7 @@
 
 /** The numeric segments of a label's prefix (`9.0.85` → [9, 0, 85], `19c` → [19]), or null. */
 export function versionNumber(label: string | null | undefined): number[] | null {
-  const match = /^v?(\d+(?:\.\d+)*)/i.exec(String(label ?? '').trim());
+  const match = /^[vr]?(\d+(?:\.\d+)*)/i.exec(String(label ?? '').trim());
   if (!match) return null;
   const segments = match[1].split('.').map((part) => Number(part));
   return segments.every((n) => Number.isSafeInteger(n)) ? segments : null;
@@ -48,6 +48,6 @@ export function sortVersions<T extends { label: string | null }>(versions: reado
  */
 export function versionOrderSql(label: string): string {
   const text = `btrim(${label})`;
-  const number = `string_to_array(substring(${text} from '^[vV]?([0-9]+(?:\\.[0-9]+)*)'), '.')::numeric[]`;
+  const number = `string_to_array(substring(${text} from '^[vVrR]?([0-9]+(?:\\.[0-9]+)*)'), '.')::numeric[]`;
   return `${number} DESC NULLS LAST, CASE WHEN ${number} IS NULL THEN lower(${text}) END, lower(${text}) DESC`;
 }

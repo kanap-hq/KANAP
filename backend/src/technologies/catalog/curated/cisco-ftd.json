@@ -1,0 +1,333 @@
+{
+  "key": "cisco-ftd",
+  "name": "Cisco Secure Firewall Threat Defense",
+  "editor": "Cisco",
+  "lifecycle_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+  "source_updated": "2026-09-22",
+  "version_grain": "major version as listed in the \"Software EOL announcements\" table (7.2)",
+  "versions": [
+    {
+      "label": "10.1",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed in the compatibility guide; no end-of-life dates in the \"Software EOL announcements\" table as of checked_on."
+    },
+    {
+      "label": "10.0",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed in the compatibility guide; no end-of-life dates in the \"Software EOL announcements\" table as of checked_on."
+    },
+    {
+      "label": "7.7",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2027-09-29",
+      "extended_support_end": "2028-09-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2026-09-29."
+    },
+    {
+      "label": "7.6",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed in the compatibility guide; no end-of-life dates in the \"Software EOL announcements\" table as of checked_on. Suggested release on the page: 7.6.6."
+    },
+    {
+      "label": "7.4",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Listed in the compatibility guide; no end-of-life dates in the \"Software EOL announcements\" table as of checked_on."
+    },
+    {
+      "label": "7.3",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-05-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2025-11-18."
+    },
+    {
+      "label": "7.2",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-11-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2025-11-18."
+    },
+    {
+      "label": "7.1",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-12-21",
+      "extended_support_end": "2025-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2023-12-22."
+    },
+    {
+      "label": "7.0",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-11-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2025-11-18."
+    },
+    {
+      "label": "6.7",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-07-09",
+      "extended_support_end": "2024-07-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2021-07-09."
+    },
+    {
+      "label": "6.6",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-03-02",
+      "extended_support_end": "2025-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2022-03-02."
+    },
+    {
+      "label": "6.5",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-06-22",
+      "extended_support_end": "2023-06-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2020-06-22."
+    },
+    {
+      "label": "6.4",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-02-27",
+      "extended_support_end": "2026-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2023-02-27."
+    },
+    {
+      "label": "6.3",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-04-30",
+      "extended_support_end": "2023-04-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2020-04-30."
+    },
+    {
+      "label": "6.2.3",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-02-04",
+      "extended_support_end": "2025-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2022-02-04."
+    },
+    {
+      "label": "6.2.2",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-04-30",
+      "extended_support_end": "2023-04-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2020-04-30."
+    },
+    {
+      "label": "6.2.1",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2020-03-04",
+      "extended_support_end": "2022-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2019-03-05."
+    },
+    {
+      "label": "6.2",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2020-03-04",
+      "extended_support_end": "2022-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2019-03-05."
+    },
+    {
+      "label": "6.1",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-05-22",
+      "extended_support_end": "2023-05-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/firepower/compatibility/firepower-compatibility.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of updates",
+        "extended_support_end": "End of support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End of sale 2019-11-22."
+    }
+  ]
+}

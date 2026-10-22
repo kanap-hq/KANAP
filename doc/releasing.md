@@ -61,6 +61,11 @@ node scripts/release/release.mjs prepare 26.10.2 [--dry-run]
 The first version has no previous tag to start from: give the starting commit with
 `--since <ref>`. Once a version tag exists, `--since` is ignored.
 
+Refresh the KANAP-maintained catalog before preparing a version. Its files are
+`backend/src/technologies/catalog/curated/*.json`. The `technology-catalog-curation` skill reads
+each vendor source again and regenerates the shipped catalog. `prepare` then warns when a
+product's oldest `checked_on` is more than 120 days old. The warning does not stop the command.
+
 The command:
 
 1. Checks that `gh` is signed in, that the number is a valid version, and, after

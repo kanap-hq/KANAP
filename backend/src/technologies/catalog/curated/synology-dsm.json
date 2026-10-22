@@ -1,0 +1,118 @@
+{
+  "key": "synology-dsm",
+  "name": "Synology DSM",
+  "editor": "Synology",
+  "lifecycle_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+  "source_updated": "2026-10-13",
+  "version_grain": "minor version as Synology names it (DSM 7.2); each minor version is a separate product in the policy",
+  "versions": [
+    {
+      "label": "7.4",
+      "aliases": [],
+      "release_date": "2026-06-01",
+      "standard_support_end": "2028-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The vendor gives months only: release_date is the first day of the month, end dates the last day. Extended Life Phase: N/A. Synology states that future dates are close approximations, non-definitive and subject to be extended."
+    },
+    {
+      "label": "7.3 LTS",
+      "aliases": [
+        "7.3"
+      ],
+      "release_date": "2025-10-01",
+      "standard_support_end": "2027-10-31",
+      "extended_support_end": "2028-10-31",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": "End of Extended Life Phase"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor label: DSM 7.3 (LTS). The vendor gives months only: release_date is the first day of the month, end dates the last day. Synology states that future dates are close approximations, non-definitive and subject to be extended."
+    },
+    {
+      "label": "7.2",
+      "aliases": [],
+      "release_date": "2023-06-01",
+      "standard_support_end": "2025-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The vendor gives months only: release_date is the first day of the month, end dates the last day. Extended Life Phase: N/A."
+    },
+    {
+      "label": "7.1 LTS",
+      "aliases": [
+        "7.1"
+      ],
+      "release_date": "2022-04-01",
+      "standard_support_end": "2024-06-30",
+      "extended_support_end": "2025-06-30",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": "End of Extended Life Phase"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor label: DSM 7.1 (LTS). The vendor gives months only: release_date is the first day of the month, end dates the last day. The Extended Life Phase applies only to the older models listed in footnote 2 of the policy (for example DS3615xs, DS1515+, DS215j); other models stop at the End of Maintenance Phase."
+    },
+    {
+      "label": "7.0",
+      "aliases": [],
+      "release_date": "2021-06-01",
+      "standard_support_end": "2023-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The vendor gives months only: release_date is the first day of the month, end dates the last day. Extended Life Phase: N/A."
+    },
+    {
+      "label": "6.2 LTS",
+      "aliases": [
+        "6.2"
+      ],
+      "release_date": "2018-05-01",
+      "standard_support_end": "2021-06-30",
+      "extended_support_end": "2024-09-30",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://global.download.synology.com/download/Document/Software/WhitePaper/Os/DSM/All/enu/Software_Life_Cycle_Policy_enu.pdf",
+      "source_terms": {
+        "release_date": "General Availability",
+        "standard_support_end": "End of Maintenance Phase",
+        "extended_support_end": "End of Extended Life Phase"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Vendor label: DSM 6.2 (LTS). The vendor gives months only: release_date is the first day of the month, end dates the last day."
+    }
+  ]
+}

@@ -1,0 +1,333 @@
+{
+  "key": "cisco-asa",
+  "name": "Cisco Secure Firewall ASA",
+  "editor": "Cisco",
+  "lifecycle_url": "https://www.cisco.com/c/en/us/products/security/asa-firepower-services/eos-eol-notice-listing.html",
+  "source_updated": null,
+  "version_grain": "major release train as Cisco names it in its end-of-life notices (9.18(x)); one notice per train",
+  "versions": [
+    {
+      "label": "9.24(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/asa/compatibility/asamatrx.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "No end-of-life announcement for this train on the vendor listing as of checked_on; the train appears in the ASA compatibility guide."
+    },
+    {
+      "label": "9.23(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2027-09-29",
+      "extended_support_end": "2028-09-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/asa-release-9-23-asav-asdm-release-7-23-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2026-09-29. End of Vulnerability/Security Support 2027-09-29."
+    },
+    {
+      "label": "9.22(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/asa/compatibility/asamatrx.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "No end-of-life announcement for this train on the vendor listing as of checked_on; the train appears in the ASA compatibility guide."
+    },
+    {
+      "label": "9.20(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": null,
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/td/docs/security/asa/compatibility/asamatrx.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": null,
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "No end-of-life announcement for this train on the vendor listing as of checked_on; the train appears in the ASA compatibility guide."
+    },
+    {
+      "label": "9.19(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-05-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/asa-asav-asdm-release-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2025-11-18. End of Vulnerability/Security Support 2026-05-18."
+    },
+    {
+      "label": "9.18(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-11-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/asa-9-18-asav-asdm-release-7-18-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2025-11-18. End of Vulnerability/Security Support 2026-11-18."
+    },
+    {
+      "label": "9.17(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-12-21",
+      "extended_support_end": "2025-12-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/adaptive-security-appliance-9-17x-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.16(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2026-11-18",
+      "extended_support_end": "2027-11-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/asa-9-16-asav-asdm-release-7-16-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2025-11-18. End of Vulnerability/Security Support 2026-11-18."
+    },
+    {
+      "label": "9.15(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2022-06-17",
+      "extended_support_end": "2024-06-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-744625.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.14(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-03-02",
+      "extended_support_end": "2025-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/adaptive-security-appliance-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.13(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-06-22",
+      "extended_support_end": "2023-06-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-743796.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.12(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2024-02-27",
+      "extended_support_end": "2026-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/adaptive-security-appliance-9-12x-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": null
+    },
+    {
+      "label": "9.10(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2020-10-08",
+      "extended_support_end": "2022-10-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-742275.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2019-10-09."
+    },
+    {
+      "label": "9.9(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2021-05-22",
+      "extended_support_end": "2023-05-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-743169.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2020-05-22."
+    },
+    {
+      "label": "9.8(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2023-02-04",
+      "extended_support_end": "2025-02-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/adaptive-security-eol.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2022-02-04."
+    },
+    {
+      "label": "9.7(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2018-08-25",
+      "extended_support_end": "2022-08-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-738646.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2017-08-25. The notice names the train \"Software Release 9.7\"."
+    },
+    {
+      "label": "9.6(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2020-09-12",
+      "extended_support_end": "2022-09-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-742130.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2019-09-13."
+    },
+    {
+      "label": "9.2(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2018-08-25",
+      "extended_support_end": "2022-08-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-738647.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2017-08-25. The notice names the train \"Software Release 9.2\"."
+    },
+    {
+      "label": "9.1(x)",
+      "aliases": [],
+      "release_date": null,
+      "standard_support_end": "2018-08-25",
+      "extended_support_end": "2022-08-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://www.cisco.com/c/en/us/products/collateral/security/asa-firepower-services/eos-eol-notice-c51-738645.html",
+      "source_terms": {
+        "release_date": null,
+        "standard_support_end": "End of SW Maintenance Releases Date",
+        "extended_support_end": "Last Date of Support"
+      },
+      "checked_on": "2026-10-20",
+      "note": "End-of-Sale 2017-08-25. The notice names the train \"Software Release 9.1\"."
+    }
+  ]
+}

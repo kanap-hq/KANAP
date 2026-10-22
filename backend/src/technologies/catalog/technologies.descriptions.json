@@ -13,11 +13,35 @@
       "de": "Community-Linux-Distribution, aus Red Hat Enterprise Linux neu erstellt und von der AlmaLinux OS Foundation veröffentlicht.",
       "es": "Distribución Linux comunitaria reconstruida a partir de Red Hat Enterprise Linux, publicada por la AlmaLinux OS Foundation."
     },
+    "alpine-linux": {
+      "en": "Small, security-oriented Linux distribution built on musl and BusyBox, widely used as a base for container images.",
+      "fr": "Distribution Linux légère et orientée sécurité, basée sur musl et BusyBox, très utilisée comme base des images de conteneurs.",
+      "de": "Schlanke, sicherheitsorientierte Linux-Distribution auf Basis von musl und BusyBox, häufig als Grundlage für Container-Images genutzt.",
+      "es": "Distribución Linux ligera y orientada a la seguridad, basada en musl y BusyBox, muy usada como base de imágenes de contenedores."
+    },
+    "amazon-aurora-mysql": {
+      "en": "MySQL-compatible managed database with distributed storage of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Base de données gérée compatible MySQL, à stockage distribué d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwaltete MySQL-kompatible Datenbank mit verteiltem Speicher von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Base de datos gestionada compatible con MySQL, con almacenamiento distribuido de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
+    "amazon-aurora-postgresql": {
+      "en": "PostgreSQL-compatible managed database with distributed storage of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Base de données gérée compatible PostgreSQL, à stockage distribué d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwaltete PostgreSQL-kompatible Datenbank mit verteiltem Speicher von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Base de datos gestionada compatible con PostgreSQL, con almacenamiento distribuido de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
     "amazon-corretto": {
       "en": "Amazon’s free distribution of OpenJDK, the Java runtime and development kit, with long-term support.",
       "fr": "Distribution gratuite d’OpenJDK par Amazon, l’environnement d’exécution et de développement Java, avec support à long terme.",
       "de": "Kostenlose OpenJDK-Distribution von Amazon, Laufzeit- und Entwicklungsumgebung für Java, mit Langzeitsupport.",
       "es": "Distribución gratuita de OpenJDK de Amazon, el entorno de ejecución y desarrollo de Java, con soporte a largo plazo."
+    },
+    "amazon-documentdb": {
+      "en": "MongoDB-compatible managed document database of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Base documentaire gérée compatible MongoDB d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwaltete MongoDB-kompatible Dokumentendatenbank von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Base de datos documental gestionada compatible con MongoDB de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
     },
     "amazon-eks": {
       "en": "Managed Kubernetes service of Amazon Web Services: AWS runs the control plane, the customer runs the workloads.",
@@ -25,17 +49,71 @@
       "de": "Verwalteter Kubernetes-Dienst von Amazon Web Services: AWS betreibt die Steuerungsebene, der Kunde seine Workloads.",
       "es": "Servicio de Kubernetes gestionado de Amazon Web Services: AWS opera el plano de control y el cliente sus cargas de trabajo."
     },
+    "amazon-elasticache-redis": {
+      "en": "Managed in-memory cache service of Amazon Web Services for Redis OSS and Valkey: AWS runs the nodes and failover, the customer runs its data and keys.",
+      "fr": "Service de cache en mémoire géré d’Amazon Web Services pour Redis OSS et Valkey : AWS exploite les nœuds et la bascule, le client exploite ses données et ses clés.",
+      "de": "Verwalteter In-Memory-Cache-Dienst von Amazon Web Services für Redis OSS und Valkey: AWS betreibt Knoten und Failover, der Kunde seine Daten und Schlüssel.",
+      "es": "Servicio de caché en memoria gestionado de Amazon Web Services para Redis OSS y Valkey: AWS opera los nodos y la conmutación, y el cliente sus datos y claves."
+    },
+    "amazon-linux": {
+      "en": "Linux distribution of Amazon Web Services, tuned for EC2 instances and supported by AWS.",
+      "fr": "Distribution Linux d’Amazon Web Services, optimisée pour les instances EC2 et prise en charge par AWS.",
+      "de": "Linux-Distribution von Amazon Web Services, für EC2-Instanzen optimiert und von AWS unterstützt.",
+      "es": "Distribución Linux de Amazon Web Services, optimizada para las instancias EC2 y con soporte de AWS."
+    },
+    "amazon-msk": {
+      "en": "Managed Apache Kafka service of Amazon Web Services: AWS runs the brokers and the cluster, the customer runs its topics and applications.",
+      "fr": "Service Apache Kafka géré d’Amazon Web Services : AWS exploite les brokers et la grappe, le client exploite ses topics et ses applications.",
+      "de": "Verwalteter Apache-Kafka-Dienst von Amazon Web Services: AWS betreibt Broker und Cluster, der Kunde seine Topics und Anwendungen.",
+      "es": "Servicio de Apache Kafka gestionado de Amazon Web Services: AWS opera los brokers y el clúster, y el cliente sus topics y aplicaciones."
+    },
+    "amazon-opensearch": {
+      "en": "Managed search and log analytics service of Amazon Web Services: AWS runs the OpenSearch clusters, the customer runs its indexes and dashboards.",
+      "fr": "Service géré de recherche et d’analyse de journaux d’Amazon Web Services : AWS exploite les grappes OpenSearch, le client exploite ses index et tableaux de bord.",
+      "de": "Verwalteter Such- und Loganalysedienst von Amazon Web Services: AWS betreibt die OpenSearch-Cluster, der Kunde seine Indizes und Dashboards.",
+      "es": "Servicio gestionado de búsqueda y análisis de registros de Amazon Web Services: AWS opera los clústeres OpenSearch y el cliente sus índices y paneles."
+    },
+    "amazon-rds-mariadb": {
+      "en": "Managed MariaDB database service of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Service de base MariaDB géré d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwalteter MariaDB-Datenbankdienst von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Servicio de base de datos MariaDB gestionado de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
+    "amazon-rds-mysql": {
+      "en": "Managed MySQL database service of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Service de base MySQL géré d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwalteter MySQL-Datenbankdienst von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Servicio de base de datos MySQL gestionado de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
+    "amazon-rds-postgresql": {
+      "en": "Managed PostgreSQL database service of Amazon Web Services: AWS runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Service de base PostgreSQL géré d’Amazon Web Services : AWS exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwalteter PostgreSQL-Datenbankdienst von Amazon Web Services: AWS betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Servicio de base de datos PostgreSQL gestionado de Amazon Web Services: AWS opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
     "ansible-automation-platform": {
       "en": "Red Hat platform for automating the configuration and deployment of servers, network devices and applications with Ansible.",
       "fr": "Plateforme de Red Hat pour automatiser la configuration et le déploiement de serveurs, d’équipements réseau et d’applications avec Ansible.",
       "de": "Plattform von Red Hat zur Automatisierung von Konfiguration und Bereitstellung von Servern, Netzwerkgeräten und Anwendungen mit Ansible.",
       "es": "Plataforma de Red Hat para automatizar la configuración y el despliegue de servidores, equipos de red y aplicaciones con Ansible."
     },
+    "ansible-core": {
+      "en": "Open-source automation engine from Red Hat that configures systems and deploys applications over SSH from YAML playbooks.",
+      "fr": "Moteur d’automatisation open source de Red Hat qui configure les systèmes et déploie les applications via SSH à partir de playbooks YAML.",
+      "de": "Open-Source-Automatisierungs-Engine von Red Hat, die Systeme per SSH anhand von YAML-Playbooks konfiguriert und Anwendungen verteilt.",
+      "es": "Motor de automatización de código abierto de Red Hat que configura sistemas y despliega aplicaciones por SSH a partir de playbooks YAML."
+    },
     "apache-activemq": {
       "en": "Open-source message broker that passes messages between applications over JMS, AMQP, MQTT and STOMP.",
       "fr": "Courtier de messages open source qui transmet les messages entre applications via JMS, AMQP, MQTT et STOMP.",
       "de": "Open-Source-Message-Broker, der Nachrichten zwischen Anwendungen über JMS, AMQP, MQTT und STOMP vermittelt.",
       "es": "Intermediario de mensajes de código abierto que transmite mensajes entre aplicaciones mediante JMS, AMQP, MQTT y STOMP."
+    },
+    "apache-airflow": {
+      "en": "Open-source workflow scheduler of the Apache Software Foundation that runs data pipelines defined as Python code.",
+      "fr": "Ordonnanceur de flux open source de l’Apache Software Foundation qui exécute des chaînes de données définies en code Python.",
+      "de": "Open-Source-Workflow-Planer der Apache Software Foundation, der in Python-Code definierte Datenpipelines ausführt.",
+      "es": "Planificador de flujos de trabajo de código abierto de la Apache Software Foundation que ejecuta canalizaciones de datos definidas en código Python."
     },
     "apache-apisix": {
       "en": "Open-source API gateway: routes, secures and limits the calls made to an organization’s APIs.",
@@ -73,11 +151,65 @@
       "de": "Open-Source-Werkzeug zum Aufbau von Datenflüssen zwischen Systemen in einem visuellen Editor: Daten erfassen, umwandeln und weiterleiten.",
       "es": "Herramienta de código abierto para construir flujos de datos entre sistemas en un editor visual: recoger, transformar y enrutar datos."
     },
+    "apache-spark": {
+      "en": "Open-source distributed processing engine of the Apache Software Foundation for large-scale data processing, SQL and machine learning.",
+      "fr": "Moteur de traitement distribué open source de l’Apache Software Foundation pour le traitement de grands volumes de données, le SQL et l’apprentissage automatique.",
+      "de": "Verteilte Open-Source-Verarbeitungs-Engine der Apache Software Foundation für große Datenmengen, SQL und maschinelles Lernen.",
+      "es": "Motor de procesamiento distribuido de código abierto de la Apache Software Foundation para grandes volúmenes de datos, SQL y aprendizaje automático."
+    },
+    "apache-struts": {
+      "en": "Open-source MVC framework of the Apache Software Foundation for building Java web applications.",
+      "fr": "Framework MVC open source de l’Apache Software Foundation pour construire des applications web Java.",
+      "de": "Open-Source-MVC-Framework der Apache Software Foundation zur Entwicklung von Java-Webanwendungen.",
+      "es": "Framework MVC de código abierto de la Apache Software Foundation para crear aplicaciones web Java."
+    },
+    "arista-eos": {
+      "en": "Arista Networks operating system for its data center and campus switches, built on Linux and programmable.",
+      "fr": "Système d’exploitation d’Arista Networks pour ses commutateurs de centre de données et de campus, basé sur Linux et programmable.",
+      "de": "Betriebssystem von Arista Networks für seine Rechenzentrums- und Campus-Switches, auf Linux-Basis und programmierbar.",
+      "es": "Sistema operativo de Arista Networks para sus conmutadores de centro de datos y campus, basado en Linux y programable."
+    },
+    "artifactory": {
+      "en": "JFrog repository manager that stores and serves build artifacts, packages and container images for many formats.",
+      "fr": "Gestionnaire de dépôts de JFrog qui stocke et distribue artefacts de build, paquets et images de conteneurs de nombreux formats.",
+      "de": "Repository-Manager von JFrog, der Build-Artefakte, Pakete und Container-Images vieler Formate speichert und bereitstellt.",
+      "es": "Gestor de repositorios de JFrog que almacena y distribuye artefactos de compilación, paquetes e imágenes de contenedores de muchos formatos."
+    },
+    "aruba-aos-cx": {
+      "en": "HPE operating system for Aruba CX campus and data center switches, with a built-in database and programmable interfaces.",
+      "fr": "Système d’exploitation de HPE pour les commutateurs Aruba CX de campus et de centre de données, avec base de données intégrée et interfaces programmables.",
+      "de": "Betriebssystem von HPE für Aruba-CX-Switches in Campus und Rechenzentrum, mit integrierter Datenbank und programmierbaren Schnittstellen.",
+      "es": "Sistema operativo de HPE para los conmutadores Aruba CX de campus y centro de datos, con base de datos integrada e interfaces programables."
+    },
     "authentik": {
       "en": "Open-source identity provider: single sign-on, multi-factor authentication and user management over SAML, OAuth2 and LDAP.",
       "fr": "Fournisseur d’identité open source : authentification unique, authentification multifacteur et gestion des utilisateurs via SAML, OAuth2 et LDAP.",
       "de": "Open-Source-Identitätsanbieter: Single Sign-on, Mehrfaktor-Authentifizierung und Benutzerverwaltung über SAML, OAuth2 und LDAP.",
       "es": "Proveedor de identidad de código abierto: inicio de sesión único, autenticación multifactor y gestión de usuarios mediante SAML, OAuth2 y LDAP."
+    },
+    "azul-zulu": {
+      "en": "OpenJDK distribution from Azul: the Java runtime and development kit, free to use, with paid long-term support.",
+      "fr": "Distribution d’OpenJDK d’Azul : l’environnement d’exécution et de développement Java, gratuit, avec support à long terme payant.",
+      "de": "OpenJDK-Distribution von Azul: Laufzeit- und Entwicklungsumgebung für Java, kostenlos nutzbar, mit kostenpflichtigem Langzeitsupport.",
+      "es": "Distribución de OpenJDK de Azul: el entorno de ejecución y desarrollo de Java, de uso gratuito, con soporte a largo plazo de pago."
+    },
+    "azure-database-for-mysql": {
+      "en": "Managed MySQL database service of Microsoft Azure: Microsoft runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Service de base MySQL géré de Microsoft Azure : Microsoft exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwalteter MySQL-Datenbankdienst von Microsoft Azure: Microsoft betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Servicio de base de datos MySQL gestionado de Microsoft Azure: Microsoft opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
+    "azure-database-for-postgresql": {
+      "en": "Managed PostgreSQL database service of Microsoft Azure: Microsoft runs the servers, patching and backups, the customer runs its databases and data.",
+      "fr": "Service de base PostgreSQL géré de Microsoft Azure : Microsoft exploite les serveurs, les correctifs et les sauvegardes, le client exploite ses bases et ses données.",
+      "de": "Verwalteter PostgreSQL-Datenbankdienst von Microsoft Azure: Microsoft betreibt Server, Patches und Backups, der Kunde seine Datenbanken und Daten.",
+      "es": "Servicio de base de datos PostgreSQL gestionado de Microsoft Azure: Microsoft opera los servidores, los parches y las copias de seguridad, y el cliente sus bases de datos y sus datos."
+    },
+    "azure-devops-server": {
+      "en": "Self-hosted Microsoft DevOps server: Git repositories, work tracking, build and release pipelines and test plans.",
+      "fr": "Serveur DevOps auto-hébergé de Microsoft : dépôts Git, suivi du travail, pipelines de build et de mise en production et plans de test.",
+      "de": "Selbst gehosteter DevOps-Server von Microsoft: Git-Repositories, Arbeitsverfolgung, Build- und Release-Pipelines und Testpläne.",
+      "es": "Servidor DevOps autoalojado de Microsoft: repositorios Git, seguimiento del trabajo, canalizaciones de compilación y publicación y planes de prueba."
     },
     "azure-kubernetes-service": {
       "en": "Managed Kubernetes service of Microsoft Azure: Microsoft runs the control plane, the customer runs the workloads.",
@@ -85,11 +217,29 @@
       "de": "Verwalteter Kubernetes-Dienst von Microsoft Azure: Microsoft betreibt die Steuerungsebene, der Kunde seine Workloads.",
       "es": "Servicio de Kubernetes gestionado de Microsoft Azure: Microsoft opera el plano de control y el cliente sus cargas de trabajo."
     },
+    "bellsoft-liberica": {
+      "en": "OpenJDK distribution from BellSoft: the Java runtime and development kit for servers, desktops and containers.",
+      "fr": "Distribution d’OpenJDK de BellSoft : l’environnement d’exécution et de développement Java pour serveurs, postes et conteneurs.",
+      "de": "OpenJDK-Distribution von BellSoft: Laufzeit- und Entwicklungsumgebung für Java auf Servern, Desktops und in Containern.",
+      "es": "Distribución de OpenJDK de BellSoft: el entorno de ejecución y desarrollo de Java para servidores, equipos y contenedores."
+    },
+    "big-ip": {
+      "en": "F5 application delivery platform: load balancing, SSL offloading, web application firewall and access control for applications.",
+      "fr": "Plateforme de distribution d’applications de F5 : répartition de charge, déchargement SSL, pare-feu applicatif web et contrôle d’accès aux applications.",
+      "de": "Application-Delivery-Plattform von F5: Lastverteilung, SSL-Offloading, Web Application Firewall und Zugriffskontrolle für Anwendungen.",
+      "es": "Plataforma de entrega de aplicaciones de F5: balanceo de carga, descarga SSL, cortafuegos de aplicaciones web y control de acceso a las aplicaciones."
+    },
     "bind-9": {
       "en": "ISC’s open-source DNS server: answers name resolution queries and hosts the DNS zones of an organization.",
       "fr": "Serveur DNS open source de l’ISC : répond aux requêtes de résolution de noms et héberge les zones DNS d’une organisation.",
       "de": "Open-Source-DNS-Server des ISC: beantwortet Namensauflösungen und hostet die DNS-Zonen einer Organisation.",
       "es": "Servidor DNS de código abierto del ISC: responde a las consultas de resolución de nombres y aloja las zonas DNS de una organización."
+    },
+    "bitbucket": {
+      "en": "Atlassian Git repository hosting with pull requests, code review and build pipelines.",
+      "fr": "Hébergement de dépôts Git d’Atlassian avec demandes de fusion, revue de code et chaînes de build.",
+      "de": "Git-Repository-Hosting von Atlassian mit Pull Requests, Code-Review und Build-Pipelines.",
+      "es": "Alojamiento de repositorios Git de Atlassian con solicitudes de incorporación, revisión de código y canalizaciones de compilación."
     },
     "caddy": {
       "en": "Open-source web server and reverse proxy that obtains and renews its HTTPS certificates by itself.",
@@ -115,11 +265,47 @@
       "de": "Verteiltes Open-Source-Speichersystem, das Block-, Datei- und Objektspeicher auf Standardservern bereitstellt.",
       "es": "Sistema de almacenamiento distribuido de código abierto que ofrece almacenamiento de bloques, archivos y objetos en servidores estándar."
     },
+    "check-point-gaia": {
+      "en": "Operating system of Check Point Quantum security gateways: firewall, VPN, intrusion prevention and central management.",
+      "fr": "Système d’exploitation des passerelles de sécurité Check Point Quantum : pare-feu, VPN, prévention d’intrusion et administration centralisée.",
+      "de": "Betriebssystem der Check-Point-Quantum-Sicherheitsgateways: Firewall, VPN, Angriffsabwehr und zentrale Verwaltung.",
+      "es": "Sistema operativo de las pasarelas de seguridad Check Point Quantum: cortafuegos, VPN, prevención de intrusiones y administración centralizada."
+    },
     "checkmk": {
       "en": "Monitoring software for servers, networks, applications and cloud services, with automatic discovery of what to check.",
       "fr": "Logiciel de supervision des serveurs, réseaux, applications et services cloud, qui découvre lui-même les points à contrôler.",
       "de": "Überwachungssoftware für Server, Netzwerke, Anwendungen und Cloud-Dienste, die zu prüfende Elemente selbst erkennt.",
       "es": "Software de supervisión de servidores, redes, aplicaciones y servicios en la nube, que descubre por sí mismo qué comprobar."
+    },
+    "chef-infra-server": {
+      "en": "Progress Chef server that stores configuration cookbooks and policies and serves them to the Chef clients on managed nodes.",
+      "fr": "Serveur Chef de Progress qui stocke les cookbooks et politiques de configuration et les distribue aux clients Chef des nœuds gérés.",
+      "de": "Chef-Server von Progress, der Konfigurations-Cookbooks und Richtlinien speichert und an die Chef-Clients der verwalteten Knoten verteilt.",
+      "es": "Servidor Chef de Progress que almacena los cookbooks y políticas de configuración y los distribuye a los clientes Chef de los nodos gestionados."
+    },
+    "cisco-asa": {
+      "en": "Cisco firewall software for stateful filtering, site-to-site VPN and remote access VPN.",
+      "fr": "Logiciel de pare-feu de Cisco pour le filtrage avec état, les VPN entre sites et les VPN d’accès distant.",
+      "de": "Firewall-Software von Cisco für zustandsbehaftete Filterung, Site-to-Site-VPN und Fernzugriffs-VPN.",
+      "es": "Software de cortafuegos de Cisco para filtrado con estado, VPN entre sitios y VPN de acceso remoto."
+    },
+    "cisco-ftd": {
+      "en": "Cisco next-generation firewall software: filtering, intrusion prevention, malware protection and URL filtering, managed centrally.",
+      "fr": "Logiciel de pare-feu de nouvelle génération de Cisco : filtrage, prévention d’intrusion, protection contre les logiciels malveillants et filtrage d’URL, administré de façon centralisée.",
+      "de": "Next-Generation-Firewall-Software von Cisco: Filterung, Angriffsabwehr, Malwareschutz und URL-Filter, zentral verwaltet.",
+      "es": "Software de cortafuegos de nueva generación de Cisco: filtrado, prevención de intrusiones, protección contra malware y filtrado de URL, con administración centralizada."
+    },
+    "cisco-ios-xe": {
+      "en": "Cisco operating system for enterprise routers and switches, built on Linux, with programmable management interfaces.",
+      "fr": "Système d’exploitation de Cisco pour les routeurs et commutateurs d’entreprise, basé sur Linux, avec des interfaces d’administration programmables.",
+      "de": "Betriebssystem von Cisco für Router und Switches in Unternehmen, auf Linux-Basis, mit programmierbaren Verwaltungsschnittstellen.",
+      "es": "Sistema operativo de Cisco para enrutadores y conmutadores empresariales, basado en Linux, con interfaces de administración programables."
+    },
+    "cisco-nx-os": {
+      "en": "Cisco operating system for Nexus data center switches: routing, switching, fabric and automation features.",
+      "fr": "Système d’exploitation de Cisco pour les commutateurs de centre de données Nexus : routage, commutation, fabric et automatisation.",
+      "de": "Betriebssystem von Cisco für Nexus-Rechenzentrums-Switches: Routing, Switching, Fabric und Automatisierung.",
+      "es": "Sistema operativo de Cisco para los conmutadores de centro de datos Nexus: enrutamiento, conmutación, fabric y automatización."
     },
     "citrix-vad": {
       "en": "Citrix platform that delivers Windows applications and virtual desktops to users from the data center or the cloud.",
@@ -133,17 +319,41 @@
       "de": "Spaltenorientierte Open-Source-Datenbank für schnelle Analyseabfragen auf großen Datenmengen.",
       "es": "Base de datos columnar de código abierto para consultas analíticas rápidas sobre grandes volúmenes de datos."
     },
+    "cohesity-dataprotect": {
+      "en": "Cohesity backup software: backup, recovery and immutable copies of virtual machines, databases, files and SaaS applications.",
+      "fr": "Logiciel de sauvegarde de Cohesity : sauvegarde, restauration et copies immuables des machines virtuelles, bases de données, fichiers et applications SaaS.",
+      "de": "Backup-Software von Cohesity: Sicherung, Wiederherstellung und unveränderliche Kopien von virtuellen Maschinen, Datenbanken, Dateien und SaaS-Anwendungen.",
+      "es": "Software de copia de seguridad de Cohesity: copia, recuperación y copias inmutables de máquinas virtuales, bases de datos, archivos y aplicaciones SaaS."
+    },
     "commvault": {
       "en": "Data protection software: backup, recovery and archiving of servers, databases, applications and cloud workloads.",
       "fr": "Logiciel de protection des données : sauvegarde, restauration et archivage des serveurs, bases de données, applications et charges cloud.",
       "de": "Datensicherungssoftware: Backup, Wiederherstellung und Archivierung von Servern, Datenbanken, Anwendungen und Cloud-Workloads.",
       "es": "Software de protección de datos: copia de seguridad, recuperación y archivado de servidores, bases de datos, aplicaciones y cargas en la nube."
     },
+    "confluence": {
+      "en": "Atlassian wiki where teams write, organize and share pages, documentation and meeting notes.",
+      "fr": "Wiki d’Atlassian où les équipes rédigent, organisent et partagent pages, documentation et comptes rendus.",
+      "de": "Wiki von Atlassian, in dem Teams Seiten, Dokumentation und Besprechungsnotizen schreiben, ordnen und teilen.",
+      "es": "Wiki de Atlassian donde los equipos redactan, organizan y comparten páginas, documentación y actas de reuniones."
+    },
+    "consul": {
+      "en": "HashiCorp service networking tool (an IBM company): service discovery, health checks, key-value store and service mesh.",
+      "fr": "Outil de mise en réseau des services de HashiCorp (société d’IBM) : découverte de services, contrôles de santé, stockage clé-valeur et maillage de services.",
+      "de": "Werkzeug von HashiCorp (ein IBM-Unternehmen) für die Vernetzung von Diensten: Service Discovery, Health Checks, Schlüssel-Wert-Speicher und Service Mesh.",
+      "es": "Herramienta de red de servicios de HashiCorp (empresa de IBM): descubrimiento de servicios, comprobaciones de estado, almacén clave-valor y malla de servicios."
+    },
     "containerd": {
       "en": "Container runtime that runs and manages containers on a host; Kubernetes and Docker Engine rely on it.",
       "fr": "Moteur d’exécution de conteneurs qui lance et gère les conteneurs sur un hôte ; Kubernetes et Docker Engine s’appuient dessus.",
       "de": "Container-Laufzeit, die Container auf einem Host startet und verwaltet; Kubernetes und Docker Engine bauen darauf auf.",
       "es": "Entorno de ejecución de contenedores que lanza y gestiona contenedores en un host; Kubernetes y Docker Engine se basan en él."
+    },
+    "cortex-xdr": {
+      "en": "Palo Alto Networks endpoint agent that prevents, detects and investigates attacks on workstations and servers.",
+      "fr": "Agent de Palo Alto Networks installé sur les postes et serveurs pour prévenir, détecter et analyser les attaques.",
+      "de": "Endpoint-Agent von Palo Alto Networks, der Angriffe auf Arbeitsplätze und Server verhindert, erkennt und untersucht.",
+      "es": "Agente de Palo Alto Networks para equipos y servidores que previene, detecta e investiga los ataques."
     },
     "couchbase-server": {
       "en": "Distributed NoSQL document database with a built-in cache, SQL-like queries and full-text search.",
@@ -156,6 +366,30 @@
       "fr": "Distribution Linux communautaire, publiée environ tous les deux ans sous forme de version stable portant le nom d’un personnage de Toy Story.",
       "de": "Community-Linux-Distribution, die etwa alle zwei Jahre als stabile Version erscheint, benannt nach einer Figur aus Toy Story.",
       "es": "Distribución Linux comunitaria, publicada aproximadamente cada dos años como versión estable con el nombre de un personaje de Toy Story."
+    },
+    "dell-data-domain": {
+      "en": "Operating system of Dell PowerProtect DD (formerly Data Domain) backup appliances: deduplicated storage and replication of backup copies.",
+      "fr": "Système d’exploitation des appliances de sauvegarde Dell PowerProtect DD (anciennement Data Domain) : stockage dédupliqué et réplication des copies de sauvegarde.",
+      "de": "Betriebssystem der Backup-Appliances Dell PowerProtect DD (früher Data Domain): deduplizierter Speicher und Replikation der Sicherungskopien.",
+      "es": "Sistema operativo de los appliances de copia de seguridad Dell PowerProtect DD (antes Data Domain): almacenamiento deduplicado y replicación de las copias."
+    },
+    "dell-powerscale": {
+      "en": "Operating system of Dell PowerScale (formerly Isilon) clusters: scale-out file storage shared over NFS, SMB and S3.",
+      "fr": "Système d’exploitation des grappes Dell PowerScale (anciennement Isilon) : stockage de fichiers évolutif partagé en NFS, SMB et S3.",
+      "de": "Betriebssystem der Dell-PowerScale-Cluster (früher Isilon): skalierbarer Dateispeicher, bereitgestellt über NFS, SMB und S3.",
+      "es": "Sistema operativo de los clústeres Dell PowerScale (antes Isilon): almacenamiento de archivos escalable compartido por NFS, SMB y S3."
+    },
+    "dell-powerstore": {
+      "en": "Operating system of Dell PowerStore arrays: block, file and vVol storage, data reduction, snapshots and replication.",
+      "fr": "Système d’exploitation des baies Dell PowerStore : stockage bloc, fichier et vVol, réduction des données, instantanés et réplication.",
+      "de": "Betriebssystem der Dell-PowerStore-Arrays: Block-, Datei- und vVol-Speicher, Datenreduktion, Snapshots und Replikation.",
+      "es": "Sistema operativo de las cabinas Dell PowerStore: almacenamiento de bloques, archivos y vVol, reducción de datos, instantáneas y replicación."
+    },
+    "dell-unity": {
+      "en": "Operating environment of Dell Unity XT arrays: unified block and file storage with snapshots and replication.",
+      "fr": "Environnement d’exploitation des baies Dell Unity XT : stockage unifié bloc et fichier, avec instantanés et réplication.",
+      "de": "Betriebsumgebung der Dell-Unity-XT-Arrays: einheitlicher Block- und Dateispeicher mit Snapshots und Replikation.",
+      "es": "Entorno operativo de las cabinas Dell Unity XT: almacenamiento unificado de bloques y archivos, con instantáneas y replicación."
     },
     "docker-engine": {
       "en": "Software that builds container images and runs containers on a server or a workstation.",
@@ -181,6 +415,12 @@
       "de": "Open-Source-IMAP- und POP3-Server, der Postfächer speichert und E-Mail-Programmen den Zugriff darauf gibt.",
       "es": "Servidor IMAP y POP3 de código abierto que almacena los buzones y permite a los clientes de correo leerlos."
     },
+    "drupal": {
+      "en": "Open-source content management system written in PHP for structured websites, with fine-grained permissions and modules.",
+      "fr": "Système de gestion de contenu open source écrit en PHP pour les sites web structurés, avec des droits fins et des modules.",
+      "de": "Open-Source-Content-Management-System in PHP für strukturierte Websites, mit feinen Berechtigungen und Modulen.",
+      "es": "Sistema de gestión de contenidos de código abierto escrito en PHP para sitios web estructurados, con permisos detallados y módulos."
+    },
     "eclipse-jetty": {
       "en": "Lightweight open-source Java web server and servlet container, often embedded in applications.",
       "fr": "Serveur web et conteneur de servlets Java open source et léger, souvent intégré aux applications.",
@@ -205,6 +445,30 @@
       "de": "Cloud-Identitätsdienst von Microsoft, früher Azure Active Directory: Anmeldung, Single Sign-on und Zugriffskontrolle für Microsoft 365 und andere Anwendungen.",
       "es": "Servicio de identidad en la nube de Microsoft, antes Azure Active Directory: inicio de sesión, inicio de sesión único y control de acceso para Microsoft 365 y otras aplicaciones."
     },
+    "envoy": {
+      "en": "Open-source proxy of the CNCF for services and edge traffic: load balancing, TLS, retries and detailed observability.",
+      "fr": "Proxy open source de la CNCF pour le trafic entre services et en périphérie : répartition de charge, TLS, nouvelles tentatives et observabilité détaillée.",
+      "de": "Open-Source-Proxy der CNCF für Dienst- und Edge-Verkehr: Lastverteilung, TLS, Wiederholungen und detaillierte Beobachtbarkeit.",
+      "es": "Proxy de código abierto de la CNCF para el tráfico entre servicios y de borde: balanceo de carga, TLS, reintentos y observabilidad detallada."
+    },
+    "exim": {
+      "en": "Open-source mail transfer agent for UNIX and Linux that routes and delivers email, with flexible routing rules.",
+      "fr": "Agent de transfert de courrier open source pour UNIX et Linux qui achemine et distribue les e-mails, avec des règles de routage souples.",
+      "de": "Open-Source-Mail-Transfer-Agent für UNIX und Linux, der E-Mails mit flexiblen Routing-Regeln weiterleitet und zustellt.",
+      "es": "Agente de transferencia de correo de código abierto para UNIX y Linux que enruta y entrega el correo, con reglas de enrutamiento flexibles."
+    },
+    "fortios": {
+      "en": "Operating system of Fortinet FortiGate firewalls: filtering, VPN, intrusion prevention, web filtering and SD-WAN.",
+      "fr": "Système d’exploitation des pare-feu FortiGate de Fortinet : filtrage, VPN, prévention d’intrusion, filtrage web et SD-WAN.",
+      "de": "Betriebssystem der FortiGate-Firewalls von Fortinet: Filterung, VPN, Angriffsabwehr, Webfilter und SD-WAN.",
+      "es": "Sistema operativo de los cortafuegos FortiGate de Fortinet: filtrado, VPN, prevención de intrusiones, filtrado web y SD-WAN."
+    },
+    "gitlab": {
+      "en": "DevOps platform that hosts Git repositories and runs continuous integration, delivery and security scans, self-managed or as a service.",
+      "fr": "Plateforme DevOps qui héberge des dépôts Git et exécute l’intégration et la livraison continues et les analyses de sécurité, auto-hébergée ou en service.",
+      "de": "DevOps-Plattform, die Git-Repositories hostet und Continuous Integration, Delivery und Sicherheitsscans ausführt, selbst betrieben oder als Dienst.",
+      "es": "Plataforma DevOps que aloja repositorios Git y ejecuta integración y entrega continuas y análisis de seguridad, autogestionada o como servicio."
+    },
     "go": {
       "en": "Google’s open-source programming language and toolchain, compiled to standalone executables.",
       "fr": "Langage de programmation open source de Google et sa chaîne d’outils, compilé en exécutables autonomes.",
@@ -222,6 +486,12 @@
       "fr": "Outil de tableaux de bord open source qui représente métriques, journaux et traces issus de nombreuses sources et déclenche des alertes.",
       "de": "Open-Source-Dashboard-Werkzeug, das Metriken, Logs und Traces aus vielen Datenquellen darstellt und Alarme auslöst.",
       "es": "Herramienta de paneles de código abierto que representa métricas, registros y trazas de muchas fuentes de datos y lanza alertas."
+    },
+    "grafana-loki": {
+      "en": "Open-source log aggregation system from Grafana Labs that indexes only labels and keeps log lines in object storage.",
+      "fr": "Système d’agrégation de journaux open source de Grafana Labs qui n’indexe que les étiquettes et conserve les lignes dans un stockage objet.",
+      "de": "Open-Source-System zur Log-Aggregation von Grafana Labs, das nur Labels indexiert und die Logzeilen im Objektspeicher ablegt.",
+      "es": "Sistema de agregación de registros de código abierto de Grafana Labs que solo indexa las etiquetas y guarda las líneas en almacenamiento de objetos."
     },
     "graylog": {
       "en": "Log management platform: collects, indexes and searches the logs of servers, applications and network devices.",
@@ -247,17 +517,53 @@
       "de": "Werkzeug zur Verwaltung von Geheimnissen: speichert und vergibt Passwörter, Schlüssel und Zertifikate und verschlüsselt Daten für Anwendungen.",
       "es": "Herramienta de gestión de secretos: almacena y emite contraseñas, claves y certificados, y cifra datos para las aplicaciones."
     },
+    "horizon": {
+      "en": "Omnissa platform (formerly VMware Horizon) that delivers virtual desktops and Windows applications to users from the data center or the cloud.",
+      "fr": "Plateforme d’Omnissa (anciennement VMware Horizon) qui met à disposition des utilisateurs des postes virtuels et des applications Windows depuis le centre de données ou le cloud.",
+      "de": "Plattform von Omnissa (früher VMware Horizon), die Benutzern virtuelle Desktops und Windows-Anwendungen aus dem Rechenzentrum oder der Cloud bereitstellt.",
+      "es": "Plataforma de Omnissa (antes VMware Horizon) que pone a disposición de los usuarios escritorios virtuales y aplicaciones Windows desde el centro de datos o la nube."
+    },
+    "hpe-alletra-nimble": {
+      "en": "Operating system of HPE Alletra 5000 and 6000 arrays (formerly Nimble Storage): block storage with snapshots, replication and predictive support.",
+      "fr": "Système d’exploitation des baies HPE Alletra 5000 et 6000 (anciennement Nimble Storage) : stockage bloc avec instantanés, réplication et support prédictif.",
+      "de": "Betriebssystem der HPE-Alletra-5000- und -6000-Arrays (früher Nimble Storage): Blockspeicher mit Snapshots, Replikation und vorausschauendem Support.",
+      "es": "Sistema operativo de las cabinas HPE Alletra 5000 y 6000 (antes Nimble Storage): almacenamiento de bloques con instantáneas, replicación y soporte predictivo."
+    },
+    "ibm-aix": {
+      "en": "IBM UNIX operating system for its Power servers, used for critical databases and business applications.",
+      "fr": "Système d’exploitation UNIX d’IBM pour ses serveurs Power, utilisé pour les bases de données et applications métier critiques.",
+      "de": "UNIX-Betriebssystem von IBM für seine Power-Server, eingesetzt für kritische Datenbanken und Geschäftsanwendungen.",
+      "es": "Sistema operativo UNIX de IBM para sus servidores Power, usado para bases de datos y aplicaciones de negocio críticas."
+    },
     "ibm-db2": {
       "en": "IBM relational database for transactional and analytical workloads on Linux, Unix and Windows.",
       "fr": "Base de données relationnelle d’IBM pour les charges transactionnelles et analytiques sous Linux, Unix et Windows.",
       "de": "Relationale Datenbank von IBM für Transaktions- und Analyse-Workloads unter Linux, Unix und Windows.",
       "es": "Base de datos relacional de IBM para cargas transaccionales y analíticas en Linux, Unix y Windows."
     },
+    "ibm-i": {
+      "en": "IBM operating system for Power servers (successor of OS/400), with an integrated Db2 database for business applications.",
+      "fr": "Système d’exploitation d’IBM pour les serveurs Power (successeur d’OS/400), avec une base Db2 intégrée pour les applications métier.",
+      "de": "Betriebssystem von IBM für Power-Server (Nachfolger von OS/400), mit integrierter Db2-Datenbank für Geschäftsanwendungen.",
+      "es": "Sistema operativo de IBM para servidores Power (sucesor de OS/400), con una base de datos Db2 integrada para las aplicaciones de negocio."
+    },
     "ibm-mq": {
       "en": "IBM messaging middleware that carries messages between applications with guaranteed, once-only delivery.",
       "fr": "Middleware de messagerie d’IBM qui transporte les messages entre applications avec une livraison garantie et unique.",
       "de": "Messaging-Middleware von IBM, die Nachrichten zwischen Anwendungen garantiert und genau einmal zustellt.",
       "es": "Middleware de mensajería de IBM que transporta mensajes entre aplicaciones con entrega garantizada y única."
+    },
+    "ibm-semeru-runtime": {
+      "en": "Free OpenJDK distribution from IBM built with the Eclipse OpenJ9 virtual machine, tuned for low memory use.",
+      "fr": "Distribution gratuite d’OpenJDK d’IBM construite avec la machine virtuelle Eclipse OpenJ9, optimisée pour une faible consommation mémoire.",
+      "de": "Kostenlose OpenJDK-Distribution von IBM mit der virtuellen Maschine Eclipse OpenJ9, auf geringen Speicherbedarf ausgelegt.",
+      "es": "Distribución gratuita de OpenJDK de IBM construida con la máquina virtual Eclipse OpenJ9, optimizada para un bajo consumo de memoria."
+    },
+    "ibm-websphere": {
+      "en": "IBM’s Java application server for Jakarta EE applications, in traditional and Liberty editions.",
+      "fr": "Serveur d’applications Java d’IBM pour les applications Jakarta EE, en éditions traditionnelle et Liberty.",
+      "de": "Java-Anwendungsserver von IBM für Jakarta-EE-Anwendungen, in den Editionen Traditional und Liberty.",
+      "es": "Servidor de aplicaciones Java de IBM para aplicaciones Jakarta EE, en ediciones tradicional y Liberty."
     },
     "icinga": {
       "en": "Open-source monitoring system that checks hosts and services and sends alerts when they fail.",
@@ -271,17 +577,53 @@
       "de": "Zeitreihendatenbank für Metriken, Sensordaten und Ereignisse, mit zeitbasierten Abfragen und Aufbewahrungsregeln.",
       "es": "Base de datos de series temporales para métricas, datos de sensores y eventos, con consultas temporales y reglas de retención."
     },
+    "istio": {
+      "en": "Open-source service mesh of the CNCF for Kubernetes: traffic routing, mutual TLS between services and telemetry.",
+      "fr": "Maillage de services open source de la CNCF pour Kubernetes : routage du trafic, TLS mutuel entre services et télémétrie.",
+      "de": "Open-Source-Service-Mesh der CNCF für Kubernetes: Verkehrssteuerung, gegenseitiges TLS zwischen Diensten und Telemetrie.",
+      "es": "Malla de servicios de código abierto de la CNCF para Kubernetes: enrutamiento del tráfico, TLS mutuo entre servicios y telemetría."
+    },
+    "ivanti-connect-secure": {
+      "en": "Ivanti SSL VPN gateway that gives remote users access to internal applications and networks.",
+      "fr": "Passerelle VPN SSL d’Ivanti qui donne aux utilisateurs distants l’accès aux applications et réseaux internes.",
+      "de": "SSL-VPN-Gateway von Ivanti, das entfernten Benutzern Zugriff auf interne Anwendungen und Netzwerke gibt.",
+      "es": "Pasarela VPN SSL de Ivanti que da a los usuarios remotos acceso a las aplicaciones y redes internas."
+    },
     "jenkins": {
       "en": "Open-source automation server for continuous integration and delivery: builds, tests and deploys code.",
       "fr": "Serveur d’automatisation open source pour l’intégration et la livraison continues : compile, teste et déploie le code.",
       "de": "Open-Source-Automatisierungsserver für Continuous Integration und Delivery: baut, testet und verteilt Code.",
       "es": "Servidor de automatización de código abierto para integración y entrega continuas: compila, prueba y despliega código."
     },
+    "jira-service-management": {
+      "en": "Atlassian service desk tool: request portal, incidents, changes, problems and service level tracking.",
+      "fr": "Outil de centre de services d’Atlassian : portail de demandes, incidents, changements, problèmes et suivi des niveaux de service.",
+      "de": "Service-Desk-Werkzeug von Atlassian: Anfrageportal, Incidents, Changes, Probleme und Verfolgung der Service-Level.",
+      "es": "Herramienta de centro de servicios de Atlassian: portal de solicitudes, incidentes, cambios, problemas y seguimiento de niveles de servicio."
+    },
+    "jira-software": {
+      "en": "Atlassian work tracking tool for software teams: issues, boards, sprints and releases.",
+      "fr": "Outil de suivi du travail d’Atlassian pour les équipes logicielles : tickets, tableaux, sprints et versions.",
+      "de": "Werkzeug von Atlassian zur Arbeitsverfolgung für Softwareteams: Vorgänge, Boards, Sprints und Releases.",
+      "es": "Herramienta de seguimiento del trabajo de Atlassian para equipos de software: incidencias, tableros, sprints y versiones."
+    },
+    "juniper-junos": {
+      "en": "Operating system of Juniper routers, switches and firewalls, now published by HPE.",
+      "fr": "Système d’exploitation des routeurs, commutateurs et pare-feu Juniper, publié aujourd’hui par HPE.",
+      "de": "Betriebssystem der Router, Switches und Firewalls von Juniper, heute von HPE veröffentlicht.",
+      "es": "Sistema operativo de los enrutadores, conmutadores y cortafuegos de Juniper, publicado hoy por HPE."
+    },
     "keycloak": {
       "en": "Open-source identity and access management: single sign-on, user federation and authentication over OpenID Connect and SAML.",
       "fr": "Gestion des identités et des accès open source : authentification unique, fédération d’utilisateurs et authentification via OpenID Connect et SAML.",
       "de": "Open-Source-Identitäts- und Zugriffsverwaltung: Single Sign-on, Benutzerföderation und Authentifizierung über OpenID Connect und SAML.",
       "es": "Gestión de identidades y accesos de código abierto: inicio de sesión único, federación de usuarios y autenticación mediante OpenID Connect y SAML."
+    },
+    "kibana": {
+      "en": "Elastic visualization interface for Elasticsearch: searches, dashboards and analysis of logs, metrics and security events.",
+      "fr": "Interface de visualisation d’Elastic pour Elasticsearch : recherches, tableaux de bord et analyse des journaux, métriques et événements de sécurité.",
+      "de": "Visualisierungsoberfläche von Elastic für Elasticsearch: Suchen, Dashboards und Analyse von Logs, Metriken und Sicherheitsereignissen.",
+      "es": "Interfaz de visualización de Elastic para Elasticsearch: búsquedas, paneles y análisis de registros, métricas y eventos de seguridad."
     },
     "kong-gateway": {
       "en": "API gateway built on NGINX: routes, secures, limits and observes the calls made to APIs.",
@@ -294,6 +636,18 @@
       "fr": "Orchestration de conteneurs open source : déploie, dimensionne et relance les applications conteneurisées sur une grappe de serveurs.",
       "de": "Open-Source-Container-Orchestrierung: verteilt, skaliert und startet containerisierte Anwendungen auf einem Servercluster neu.",
       "es": "Orquestación de contenedores de código abierto: despliega, escala y reinicia aplicaciones en contenedores en un clúster de servidores."
+    },
+    "log4j": {
+      "en": "Open-source Java logging library of the Apache Software Foundation, embedded in many applications and products.",
+      "fr": "Bibliothèque de journalisation Java open source de l’Apache Software Foundation, intégrée à de nombreuses applications et produits.",
+      "de": "Open-Source-Logging-Bibliothek für Java der Apache Software Foundation, in viele Anwendungen und Produkte eingebettet.",
+      "es": "Biblioteca de registro Java de código abierto de la Apache Software Foundation, integrada en muchas aplicaciones y productos."
+    },
+    "logstash": {
+      "en": "Elastic data processing pipeline that collects, transforms and sends logs and events to Elasticsearch or other destinations.",
+      "fr": "Chaîne de traitement de données d’Elastic qui collecte, transforme et envoie journaux et événements vers Elasticsearch ou d’autres destinations.",
+      "de": "Datenverarbeitungs-Pipeline von Elastic, die Logs und Ereignisse sammelt, umwandelt und an Elasticsearch oder andere Ziele sendet.",
+      "es": "Canalización de procesamiento de datos de Elastic que recoge, transforma y envía registros y eventos a Elasticsearch u otros destinos."
     },
     "mariadb": {
       "en": "Open-source relational database, a fork of MySQL kept compatible with it.",
@@ -349,6 +703,24 @@
       "de": "Graphdatenbank, die Knoten und ihre Beziehungen speichert und mit der Sprache Cypher abgefragt wird.",
       "es": "Base de datos de grafos que almacena nodos y sus relaciones, consultada con el lenguaje Cypher."
     },
+    "netapp-ontap": {
+      "en": "NetApp storage operating system for file and block data, with snapshots, replication and storage efficiency, on premises or in the cloud.",
+      "fr": "Système d’exploitation de stockage de NetApp pour les données en mode fichier et bloc, avec instantanés, réplication et réduction des volumes, sur site ou dans le cloud.",
+      "de": "Speicherbetriebssystem von NetApp für Datei- und Blockdaten, mit Snapshots, Replikation und Speichereffizienz, lokal oder in der Cloud.",
+      "es": "Sistema operativo de almacenamiento de NetApp para datos de archivos y bloques, con instantáneas, replicación y eficiencia del almacenamiento, en las instalaciones o en la nube."
+    },
+    "netscaler-adc": {
+      "en": "Application delivery controller from NetScaler (Cloud Software Group): load balancing, SSL offloading, remote access gateway and web application firewall.",
+      "fr": "Contrôleur de distribution d’applications de NetScaler (Cloud Software Group) : répartition de charge, déchargement SSL, passerelle d’accès distant et pare-feu applicatif web.",
+      "de": "Application Delivery Controller von NetScaler (Cloud Software Group): Lastverteilung, SSL-Offloading, Fernzugriffs-Gateway und Web Application Firewall.",
+      "es": "Controlador de entrega de aplicaciones de NetScaler (Cloud Software Group): balanceo de carga, descarga SSL, pasarela de acceso remoto y cortafuegos de aplicaciones web."
+    },
+    "nexus": {
+      "en": "Sonatype repository manager that stores build artifacts and proxies public package registries such as Maven, npm and Docker.",
+      "fr": "Gestionnaire de dépôts de Sonatype qui stocke les artefacts de build et sert de proxy aux registres publics de paquets comme Maven, npm et Docker.",
+      "de": "Repository-Manager von Sonatype, der Build-Artefakte speichert und öffentliche Paket-Registries wie Maven, npm und Docker spiegelt.",
+      "es": "Gestor de repositorios de Sonatype que almacena artefactos de compilación y hace de proxy de registros públicos de paquetes como Maven, npm y Docker."
+    },
     "nginx": {
       "en": "Web server, reverse proxy and load balancer, widely used in front of web applications and APIs.",
       "fr": "Serveur web, proxy inverse et répartiteur de charge, très utilisé devant les applications web et les API.",
@@ -360,6 +732,12 @@
       "fr": "Environnement d’exécution JavaScript pour les serveurs et les outils en ligne de commande, construit sur le moteur V8 de Chrome.",
       "de": "JavaScript-Laufzeit für Server und Kommandozeilenwerkzeuge, aufgebaut auf der V8-Engine von Chrome.",
       "es": "Entorno de ejecución de JavaScript para servidores y herramientas de línea de comandos, basado en el motor V8 de Chrome."
+    },
+    "nutanix-aos": {
+      "en": "Nutanix software that pools the disks of cluster nodes into distributed storage for the hyperconverged infrastructure.",
+      "fr": "Logiciel de Nutanix qui regroupe les disques des nœuds d’une grappe en un stockage distribué pour l’infrastructure hyperconvergée.",
+      "de": "Software von Nutanix, die die Datenträger der Clusterknoten zu verteiltem Speicher für die hyperkonvergente Infrastruktur zusammenfasst.",
+      "es": "Software de Nutanix que agrupa los discos de los nodos de un clúster en un almacenamiento distribuido para la infraestructura hiperconvergente."
     },
     "nutanix-files": {
       "en": "Nutanix file storage service: SMB and NFS shares hosted on a Nutanix cluster.",
@@ -403,11 +781,35 @@
       "de": "Linux-Distribution von Oracle, aus Red Hat Enterprise Linux neu erstellt, mit optionalem kostenpflichtigem Support.",
       "es": "Distribución Linux de Oracle, reconstruida a partir de Red Hat Enterprise Linux, con soporte de pago opcional."
     },
+    "oracle-solaris": {
+      "en": "Oracle UNIX operating system for SPARC and x86 servers, with ZFS storage and Solaris zones for isolation.",
+      "fr": "Système d’exploitation UNIX d’Oracle pour les serveurs SPARC et x86, avec le stockage ZFS et l’isolation par zones Solaris.",
+      "de": "UNIX-Betriebssystem von Oracle für SPARC- und x86-Server, mit ZFS-Speicher und Solaris-Zonen zur Isolierung.",
+      "es": "Sistema operativo UNIX de Oracle para servidores SPARC y x86, con almacenamiento ZFS y aislamiento mediante zonas Solaris."
+    },
+    "oracle-weblogic": {
+      "en": "Oracle’s Java application server for Jakarta EE applications, used by many Oracle business products.",
+      "fr": "Serveur d’applications Java d’Oracle pour les applications Jakarta EE, utilisé par de nombreux produits métier d’Oracle.",
+      "de": "Java-Anwendungsserver von Oracle für Jakarta-EE-Anwendungen, von vielen Geschäftsprodukten von Oracle genutzt.",
+      "es": "Servidor de aplicaciones Java de Oracle para aplicaciones Jakarta EE, usado por muchos productos de negocio de Oracle."
+    },
     "ovirt": {
       "en": "Open-source virtualization management for KVM: hosts, virtual machines, storage and networks from one console.",
       "fr": "Gestion de virtualisation open source pour KVM : hôtes, machines virtuelles, stockage et réseaux depuis une seule console.",
       "de": "Open-Source-Virtualisierungsverwaltung für KVM: Hosts, virtuelle Maschinen, Speicher und Netzwerke in einer Konsole.",
       "es": "Gestión de virtualización de código abierto para KVM: hosts, máquinas virtuales, almacenamiento y redes desde una sola consola."
+    },
+    "pangp": {
+      "en": "Palo Alto Networks remote access VPN: an agent on user devices connects them to the network through the company firewalls.",
+      "fr": "VPN d’accès distant de Palo Alto Networks : un agent sur les postes des utilisateurs les relie au réseau à travers les pare-feu de l’entreprise.",
+      "de": "Fernzugriffs-VPN von Palo Alto Networks: ein Agent auf den Geräten der Benutzer verbindet sie über die Firewalls des Unternehmens mit dem Netzwerk.",
+      "es": "VPN de acceso remoto de Palo Alto Networks: un agente en los equipos de los usuarios los conecta a la red a través de los cortafuegos de la empresa."
+    },
+    "panos": {
+      "en": "Operating system of Palo Alto Networks firewalls: application-aware filtering, VPN, intrusion prevention and URL filtering.",
+      "fr": "Système d’exploitation des pare-feu de Palo Alto Networks : filtrage par application, VPN, prévention d’intrusion et filtrage d’URL.",
+      "de": "Betriebssystem der Firewalls von Palo Alto Networks: anwendungsbasierte Filterung, VPN, Angriffsabwehr und URL-Filter.",
+      "es": "Sistema operativo de los cortafuegos de Palo Alto Networks: filtrado por aplicación, VPN, prevención de intrusiones y filtrado de URL."
     },
     "php": {
       "en": "Scripting language for web applications, run by a web server or by PHP-FPM.",
@@ -451,11 +853,35 @@
       "de": "Backup-Server für virtuelle Maschinen, Container und Hosts von Proxmox VE, mit Deduplizierung und Verschlüsselung.",
       "es": "Servidor de copias de seguridad de máquinas virtuales, contenedores y hosts de Proxmox VE, con deduplicación y cifrado."
     },
+    "proxmox-mail-gateway": {
+      "en": "Open-source mail gateway from Proxmox that filters incoming and outgoing email for spam, viruses and policy rules.",
+      "fr": "Passerelle de messagerie open source de Proxmox qui filtre les e-mails entrants et sortants contre le spam, les virus et selon des règles.",
+      "de": "Open-Source-Mail-Gateway von Proxmox, das ein- und ausgehende E-Mails nach Spam, Viren und Regeln filtert.",
+      "es": "Pasarela de correo de código abierto de Proxmox que filtra el correo entrante y saliente contra spam, virus y según reglas."
+    },
+    "proxmox-ve": {
+      "en": "Open-source virtualization platform from Proxmox that runs KVM virtual machines and LXC containers, managed from a web interface.",
+      "fr": "Plateforme de virtualisation open source de Proxmox qui exécute des machines virtuelles KVM et des conteneurs LXC, administrée depuis une interface web.",
+      "de": "Open-Source-Virtualisierungsplattform von Proxmox für virtuelle KVM-Maschinen und LXC-Container, verwaltet über eine Weboberfläche.",
+      "es": "Plataforma de virtualización de código abierto de Proxmox que ejecuta máquinas virtuales KVM y contenedores LXC, administrada desde una interfaz web."
+    },
+    "prtg": {
+      "en": "Paessler monitoring software for networks, servers and applications, based on sensors, with alerts and maps.",
+      "fr": "Logiciel de supervision de Paessler pour les réseaux, serveurs et applications, basé sur des capteurs, avec alertes et cartes.",
+      "de": "Überwachungssoftware von Paessler für Netzwerke, Server und Anwendungen, auf Sensorbasis, mit Alarmen und Karten.",
+      "es": "Software de supervisión de Paessler para redes, servidores y aplicaciones, basado en sensores, con alertas y mapas."
+    },
     "puppet": {
       "en": "Configuration management tool that keeps servers in a declared state: packages, files, services and settings.",
       "fr": "Outil de gestion de configuration qui maintient les serveurs dans un état déclaré : paquets, fichiers, services et paramètres.",
       "de": "Konfigurationsmanagement-Werkzeug, das Server in einem deklarierten Zustand hält: Pakete, Dateien, Dienste und Einstellungen.",
       "es": "Herramienta de gestión de la configuración que mantiene los servidores en un estado declarado: paquetes, archivos, servicios y parámetros."
+    },
+    "pure-purity-fa": {
+      "en": "Operating system of Pure Storage FlashArray all-flash arrays: block and file storage, data reduction, snapshots and replication.",
+      "fr": "Système d’exploitation des baies 100 % flash FlashArray de Pure Storage : stockage bloc et fichier, réduction des données, instantanés et réplication.",
+      "de": "Betriebssystem der All-Flash-Arrays FlashArray von Pure Storage: Block- und Dateispeicher, Datenreduktion, Snapshots und Replikation.",
+      "es": "Sistema operativo de las cabinas all-flash FlashArray de Pure Storage: almacenamiento de bloques y archivos, reducción de datos, instantáneas y replicación."
     },
     "python": {
       "en": "General-purpose programming language and interpreter, used for scripts, automation, web services and data processing.",
@@ -480,6 +906,12 @@
       "fr": "Plateforme Kubernetes de Red Hat, avec des outils intégrés pour construire, déployer et exploiter des applications conteneurisées.",
       "de": "Kubernetes-Plattform von Red Hat mit integrierten Werkzeugen zum Bauen, Bereitstellen und Betreiben containerisierter Anwendungen.",
       "es": "Plataforma de Kubernetes de Red Hat con herramientas integradas para construir, desplegar y operar aplicaciones en contenedores."
+    },
+    "redhat-build-of-openjdk": {
+      "en": "Red Hat’s OpenJDK distribution: the Java runtime and development kit, supported on RHEL, Windows and OpenShift.",
+      "fr": "Distribution d’OpenJDK de Red Hat : l’environnement d’exécution et de développement Java, pris en charge sur RHEL, Windows et OpenShift.",
+      "de": "OpenJDK-Distribution von Red Hat: Laufzeit- und Entwicklungsumgebung für Java, unterstützt auf RHEL, Windows und OpenShift.",
+      "es": "Distribución de OpenJDK de Red Hat: el entorno de ejecución y desarrollo de Java, con soporte en RHEL, Windows y OpenShift."
     },
     "redhat-jboss-eap": {
       "en": "Red Hat’s Java application server for Jakarta EE applications, based on WildFly.",
@@ -511,11 +943,29 @@
       "de": "Community-Linux-Distribution, aus Red Hat Enterprise Linux neu erstellt und von der Rocky Enterprise Software Foundation veröffentlicht.",
       "es": "Distribución Linux comunitaria reconstruida a partir de Red Hat Enterprise Linux, publicada por la Rocky Enterprise Software Foundation."
     },
+    "routeros": {
+      "en": "MikroTik operating system for its routers and switches: routing, firewall, VPN, wireless and bandwidth management.",
+      "fr": "Système d’exploitation de MikroTik pour ses routeurs et commutateurs : routage, pare-feu, VPN, sans-fil et gestion de la bande passante.",
+      "de": "Betriebssystem von MikroTik für seine Router und Switches: Routing, Firewall, VPN, WLAN und Bandbreitenverwaltung.",
+      "es": "Sistema operativo de MikroTik para sus enrutadores y conmutadores: enrutamiento, cortafuegos, VPN, red inalámbrica y gestión del ancho de banda."
+    },
+    "rubrik-cdm": {
+      "en": "Rubrik backup software running on its cluster appliances: backup, recovery and immutable copies of virtual machines, databases and files.",
+      "fr": "Logiciel de sauvegarde de Rubrik exécuté sur ses appliances en grappe : sauvegarde, restauration et copies immuables des machines virtuelles, bases de données et fichiers.",
+      "de": "Backup-Software von Rubrik auf seinen Cluster-Appliances: Sicherung, Wiederherstellung und unveränderliche Kopien von virtuellen Maschinen, Datenbanken und Dateien.",
+      "es": "Software de copia de seguridad de Rubrik que funciona en sus appliances en clúster: copia, recuperación y copias inmutables de máquinas virtuales, bases de datos y archivos."
+    },
     "ruby": {
       "en": "Dynamic programming language and interpreter, used notably by the Ruby on Rails web framework.",
       "fr": "Langage de programmation dynamique et son interpréteur, utilisé notamment par le framework web Ruby on Rails.",
       "de": "Dynamische Programmiersprache mit Interpreter, unter anderem vom Web-Framework Ruby on Rails genutzt.",
       "es": "Lenguaje de programación dinámico y su intérprete, usado en particular por el framework web Ruby on Rails."
+    },
+    "salt": {
+      "en": "Open-source configuration management and remote execution tool, maintained by Broadcom, that drives servers through an event bus.",
+      "fr": "Outil open source de gestion de configuration et d’exécution à distance, maintenu par Broadcom, qui pilote les serveurs par un bus d’événements.",
+      "de": "Open-Source-Werkzeug für Konfigurationsmanagement und Fernausführung, von Broadcom gepflegt, das Server über einen Ereignisbus steuert.",
+      "es": "Herramienta de código abierto de gestión de la configuración y ejecución remota, mantenida por Broadcom, que controla los servidores mediante un bus de eventos."
     },
     "samba": {
       "en": "Open-source software that provides Windows file and print sharing on Linux and can act as an Active Directory domain controller.",
@@ -523,11 +973,41 @@
       "de": "Open-Source-Software für Windows-Datei- und Druckerfreigaben unter Linux, auch als Active-Directory-Domänencontroller einsetzbar.",
       "es": "Software de código abierto que ofrece el uso compartido de archivos e impresoras de Windows en Linux y puede actuar como controlador de dominio de Active Directory."
     },
+    "sharepoint": {
+      "en": "On-premises Microsoft collaboration server for intranet sites, document libraries, lists and workflows.",
+      "fr": "Serveur de collaboration sur site de Microsoft pour les sites intranet, bibliothèques de documents, listes et flux de travail.",
+      "de": "Lokaler Kollaborationsserver von Microsoft für Intranetseiten, Dokumentbibliotheken, Listen und Workflows.",
+      "es": "Servidor de colaboración local de Microsoft para sitios de intranet, bibliotecas de documentos, listas y flujos de trabajo."
+    },
     "sles": {
       "en": "Commercial Linux distribution from SUSE for servers, published as a major version and its service packs.",
       "fr": "Distribution Linux commerciale de SUSE pour les serveurs, publiée en versions majeures et en service packs.",
       "de": "Kommerzielle Linux-Distribution von SUSE für Server, veröffentlicht als Hauptversion mit ihren Service Packs.",
       "es": "Distribución Linux comercial de SUSE para servidores, publicada como versión principal y sus service packs."
+    },
+    "sns-firmware": {
+      "en": "Operating system of Stormshield firewalls: filtering, VPN, intrusion prevention and web filtering.",
+      "fr": "Système d’exploitation des pare-feu de Stormshield : filtrage, VPN, prévention d’intrusion et filtrage web.",
+      "de": "Betriebssystem der Stormshield-Firewalls: Filterung, VPN, Angriffsabwehr und Webfilter.",
+      "es": "Sistema operativo de los cortafuegos de Stormshield: filtrado, VPN, prevención de intrusiones y filtrado web."
+    },
+    "solr": {
+      "en": "Open-source search platform of the Apache Software Foundation, built on Lucene, with full-text search, faceting and indexing.",
+      "fr": "Plateforme de recherche open source de l’Apache Software Foundation, basée sur Lucene, avec recherche plein texte, facettes et indexation.",
+      "de": "Open-Source-Suchplattform der Apache Software Foundation auf Lucene-Basis, mit Volltextsuche, Facetten und Indexierung.",
+      "es": "Plataforma de búsqueda de código abierto de la Apache Software Foundation, basada en Lucene, con búsqueda de texto completo, facetas e indexación."
+    },
+    "sonarqube-server": {
+      "en": "Self-managed code analysis server from Sonar that detects bugs, vulnerabilities and quality issues in source code.",
+      "fr": "Serveur d’analyse de code auto-hébergé de Sonar qui détecte bogues, vulnérabilités et défauts de qualité dans le code source.",
+      "de": "Selbst betriebener Codeanalyse-Server von Sonar, der Fehler, Schwachstellen und Qualitätsmängel im Quellcode erkennt.",
+      "es": "Servidor de análisis de código autogestionado de Sonar que detecta errores, vulnerabilidades y problemas de calidad en el código fuente."
+    },
+    "sophos-firewall": {
+      "en": "Operating system of Sophos firewalls: filtering, VPN, intrusion prevention, web filtering and SD-WAN.",
+      "fr": "Système d’exploitation des pare-feu de Sophos : filtrage, VPN, prévention d’intrusion, filtrage web et SD-WAN.",
+      "de": "Betriebssystem der Sophos-Firewalls: Filterung, VPN, Angriffsabwehr, Webfilter und SD-WAN.",
+      "es": "Sistema operativo de los cortafuegos de Sophos: filtrado, VPN, prevención de intrusiones, filtrado web y SD-WAN."
     },
     "splunk": {
       "en": "Platform that collects, indexes and searches machine data such as logs and events, for monitoring and security.",
@@ -535,11 +1015,35 @@
       "de": "Plattform, die Maschinendaten wie Logs und Ereignisse sammelt, indiziert und durchsucht, für Überwachung und Sicherheit.",
       "es": "Plataforma que recoge, indexa y busca datos de máquinas como registros y eventos, para supervisión y seguridad."
     },
+    "spring-boot": {
+      "en": "Java framework from Broadcom’s Spring project that builds stand-alone, production-ready applications with embedded servers and auto-configuration.",
+      "fr": "Framework Java du projet Spring de Broadcom qui produit des applications autonomes prêtes pour la production, avec serveur intégré et configuration automatique.",
+      "de": "Java-Framework aus dem Spring-Projekt von Broadcom für eigenständige, produktionsreife Anwendungen mit eingebettetem Server und automatischer Konfiguration.",
+      "es": "Framework Java del proyecto Spring de Broadcom que crea aplicaciones autónomas listas para producción, con servidor integrado y configuración automática."
+    },
+    "spring-framework": {
+      "en": "Open-source Java application framework maintained by Broadcom: dependency injection, web MVC, data access and transactions.",
+      "fr": "Framework d’applications Java open source maintenu par Broadcom : injection de dépendances, web MVC, accès aux données et transactions.",
+      "de": "Open-Source-Anwendungsframework für Java, von Broadcom gepflegt: Dependency Injection, Web-MVC, Datenzugriff und Transaktionen.",
+      "es": "Framework de aplicaciones Java de código abierto mantenido por Broadcom: inyección de dependencias, web MVC, acceso a datos y transacciones."
+    },
     "squid": {
       "en": "Open-source caching and forwarding web proxy, used to filter and speed up web access.",
       "fr": "Proxy web open source avec cache, utilisé pour filtrer et accélérer l’accès au web.",
       "de": "Open-Source-Web-Proxy mit Cache, eingesetzt zum Filtern und Beschleunigen des Webzugriffs.",
       "es": "Proxy web de código abierto con caché, usado para filtrar y acelerar el acceso a la web."
+    },
+    "synology-dsm": {
+      "en": "Operating system of Synology NAS devices: file sharing, backup, user management and add-on applications from a web interface.",
+      "fr": "Système d’exploitation des NAS Synology : partage de fichiers, sauvegarde, gestion des utilisateurs et applications complémentaires depuis une interface web.",
+      "de": "Betriebssystem der Synology-NAS-Geräte: Dateifreigabe, Backup, Benutzerverwaltung und Zusatzanwendungen über eine Weboberfläche.",
+      "es": "Sistema operativo de los NAS de Synology: uso compartido de archivos, copia de seguridad, gestión de usuarios y aplicaciones adicionales desde una interfaz web."
+    },
+    "terraform": {
+      "en": "HashiCorp infrastructure as code tool (an IBM company) that creates and changes cloud and on-premises resources from declarative files.",
+      "fr": "Outil d’infrastructure as code de HashiCorp (société d’IBM) qui crée et modifie des ressources cloud et sur site à partir de fichiers déclaratifs.",
+      "de": "Infrastructure-as-Code-Werkzeug von HashiCorp (ein IBM-Unternehmen), das Cloud- und lokale Ressourcen aus deklarativen Dateien erstellt und ändert.",
+      "es": "Herramienta de infraestructura como código de HashiCorp (empresa de IBM) que crea y modifica recursos en la nube y locales a partir de archivos declarativos."
     },
     "tomcat": {
       "en": "Open-source Java web server and servlet container of the Apache Software Foundation, running Java web applications.",
@@ -552,6 +1056,12 @@
       "fr": "Proxy inverse et répartiteur de charge open source qui configure lui-même ses routes à partir de Docker et Kubernetes.",
       "de": "Open-Source-Reverse-Proxy und Load Balancer, der seine Routen selbst aus Docker und Kubernetes konfiguriert.",
       "es": "Proxy inverso y balanceador de carga de código abierto que configura por sí mismo sus rutas a partir de Docker y Kubernetes."
+    },
+    "truenas": {
+      "en": "iXsystems storage operating system based on ZFS, sharing files and block volumes over the network.",
+      "fr": "Système d’exploitation de stockage d’iXsystems basé sur ZFS, qui partage fichiers et volumes en mode bloc sur le réseau.",
+      "de": "Speicherbetriebssystem von iXsystems auf ZFS-Basis, das Dateien und Blockvolumes im Netzwerk bereitstellt.",
+      "es": "Sistema operativo de almacenamiento de iXsystems basado en ZFS, que comparte archivos y volúmenes de bloques en la red."
     },
     "ubuntu": {
       "en": "Linux distribution from Canonical, published twice a year, with a long-term support release every two years.",
@@ -583,6 +1093,24 @@
       "de": "Überwachungs- und Reporting-Werkzeug von Veeam für virtuelle Umgebungen und Veeam-Backups.",
       "es": "Herramienta de supervisión e informes de Veeam para entornos virtuales y copias de seguridad de Veeam."
     },
+    "veritas-netbackup": {
+      "en": "Enterprise backup software, now published by Cohesity: backup and recovery of servers, virtual machines, databases and cloud workloads.",
+      "fr": "Logiciel de sauvegarde d’entreprise, publié aujourd’hui par Cohesity : sauvegarde et restauration des serveurs, machines virtuelles, bases de données et charges cloud.",
+      "de": "Backup-Software für Unternehmen, heute von Cohesity veröffentlicht: Sicherung und Wiederherstellung von Servern, virtuellen Maschinen, Datenbanken und Cloud-Workloads.",
+      "es": "Software de copia de seguridad empresarial, publicado hoy por Cohesity: copia y recuperación de servidores, máquinas virtuales, bases de datos y cargas en la nube."
+    },
+    "vmware-cloud-foundation": {
+      "en": "Broadcom private cloud platform that bundles vSphere compute, vSAN storage, NSX networking and lifecycle management.",
+      "fr": "Plateforme de cloud privé de Broadcom qui réunit le calcul vSphere, le stockage vSAN, le réseau NSX et la gestion du cycle de vie.",
+      "de": "Private-Cloud-Plattform von Broadcom, die vSphere-Rechenleistung, vSAN-Speicher, NSX-Netzwerk und Lifecycle-Management bündelt.",
+      "es": "Plataforma de nube privada de Broadcom que reúne el cómputo vSphere, el almacenamiento vSAN, la red NSX y la gestión del ciclo de vida."
+    },
+    "vmware-srm": {
+      "en": "Broadcom disaster recovery tool for vSphere (now VMware Live Site Recovery): replicates virtual machines and runs failover plans to a second site.",
+      "fr": "Outil de reprise après sinistre de Broadcom pour vSphere (désormais VMware Live Site Recovery) : réplique les machines virtuelles et exécute les plans de bascule vers un second site.",
+      "de": "Disaster-Recovery-Werkzeug von Broadcom für vSphere (heute VMware Live Site Recovery): repliziert virtuelle Maschinen und führt Failover-Pläne an einen zweiten Standort aus.",
+      "es": "Herramienta de recuperación ante desastres de Broadcom para vSphere (ahora VMware Live Site Recovery): replica las máquinas virtuales y ejecuta los planes de conmutación a un segundo sitio."
+    },
     "vsphere": {
       "en": "VMware virtualization platform: ESXi hypervisors running the virtual machines and vCenter managing them.",
       "fr": "Plateforme de virtualisation de VMware : les hyperviseurs ESXi exécutent les machines virtuelles et vCenter les administre.",
@@ -595,11 +1123,35 @@
       "de": "Betriebssystem von Microsoft für Server, in Langzeitversionen mit einem Standard-Support-Zeitraum und einem erweiterten Support-Zeitraum.",
       "es": "Sistema operativo de Microsoft para servidores, en versiones de largo plazo con un periodo de soporte estándar y otro de soporte extendido."
     },
+    "wordpress": {
+      "en": "Open-source content management system written in PHP for websites and blogs, extended by themes and plugins.",
+      "fr": "Système de gestion de contenu open source écrit en PHP pour les sites web et les blogs, enrichi par des thèmes et des extensions.",
+      "de": "Open-Source-Content-Management-System in PHP für Websites und Blogs, erweiterbar durch Themes und Plugins.",
+      "es": "Sistema de gestión de contenidos de código abierto escrito en PHP para sitios web y blogs, ampliable con temas y plugins."
+    },
+    "xcp-ng": {
+      "en": "Open-source virtualization platform based on the Xen hypervisor, published by Vates and managed with Xen Orchestra.",
+      "fr": "Plateforme de virtualisation open source basée sur l’hyperviseur Xen, publiée par Vates et administrée avec Xen Orchestra.",
+      "de": "Open-Source-Virtualisierungsplattform auf Basis des Xen-Hypervisors, von Vates veröffentlicht und mit Xen Orchestra verwaltet.",
+      "es": "Plataforma de virtualización de código abierto basada en el hipervisor Xen, publicada por Vates y administrada con Xen Orchestra."
+    },
     "zabbix": {
       "en": "Open-source monitoring software for servers, networks, applications and services, with alerts and dashboards.",
       "fr": "Logiciel de supervision open source des serveurs, réseaux, applications et services, avec alertes et tableaux de bord.",
       "de": "Open-Source-Überwachungssoftware für Server, Netzwerke, Anwendungen und Dienste, mit Alarmen und Dashboards.",
       "es": "Software de supervisión de código abierto de servidores, redes, aplicaciones y servicios, con alertas y paneles."
+    },
+    "zerto": {
+      "en": "HPE disaster recovery software that continuously replicates virtual machines and restores them to any point in time.",
+      "fr": "Logiciel de reprise après sinistre de HPE qui réplique en continu les machines virtuelles et les restaure à n’importe quel point dans le temps.",
+      "de": "Disaster-Recovery-Software von HPE, die virtuelle Maschinen fortlaufend repliziert und auf jeden beliebigen Zeitpunkt wiederherstellt.",
+      "es": "Software de recuperación ante desastres de HPE que replica de forma continua las máquinas virtuales y las restaura a cualquier punto en el tiempo."
+    },
+    "zookeeper": {
+      "en": "Open-source coordination service of the Apache Software Foundation that keeps configuration, naming and locks for distributed systems.",
+      "fr": "Service de coordination open source de l’Apache Software Foundation qui tient la configuration, le nommage et les verrous des systèmes distribués.",
+      "de": "Open-Source-Koordinationsdienst der Apache Software Foundation, der Konfiguration, Namensgebung und Sperren für verteilte Systeme verwaltet.",
+      "es": "Servicio de coordinación de código abierto de la Apache Software Foundation que gestiona la configuración, los nombres y los bloqueos de sistemas distribuidos."
     }
   }
 }

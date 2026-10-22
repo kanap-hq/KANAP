@@ -1,0 +1,469 @@
+{
+  "key": "dell-unity",
+  "name": "Dell Unity OE",
+  "editor": "Dell Technologies",
+  "lifecycle_url": "https://www.dell.com/support/kbdoc/en-us/000185734/all-dell-emc-end-of-life-documents",
+  "source_updated": "2026-10-16",
+  "version_grain": "Unity OE release as the vendor names it (5.4.1)",
+  "versions": [
+    {
+      "label": "5.5.5",
+      "aliases": [],
+      "release_date": "2026-10-01",
+      "standard_support_end": "2028-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.5.4",
+      "aliases": [],
+      "release_date": "2026-03-28",
+      "standard_support_end": "2028-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.5.3",
+      "aliases": [],
+      "release_date": "2026-02-12",
+      "standard_support_end": "2028-02-29",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.5.2",
+      "aliases": [],
+      "release_date": "2025-10-29",
+      "standard_support_end": "2027-10-29",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.5.1",
+      "aliases": [],
+      "release_date": "2025-07-31",
+      "standard_support_end": "2027-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.5.0",
+      "aliases": [],
+      "release_date": "2025-03-26",
+      "standard_support_end": "2027-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.4.1",
+      "aliases": [],
+      "release_date": "2024-12-12",
+      "standard_support_end": "2026-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "5.4.1 ends before 5.4.0 (2027-02-28) in the vendor file. The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.4.0",
+      "aliases": [],
+      "release_date": "2024-02-08",
+      "standard_support_end": "2027-02-28",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.3.1",
+      "aliases": [],
+      "release_date": "2023-10-12",
+      "standard_support_end": "2026-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.3.0",
+      "aliases": [],
+      "release_date": "2023-05-05",
+      "standard_support_end": "2026-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.2.2",
+      "aliases": [],
+      "release_date": "2023-01-27",
+      "standard_support_end": "2026-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.2.1",
+      "aliases": [],
+      "release_date": "2022-07-28",
+      "standard_support_end": "2025-07-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.2.0",
+      "aliases": [],
+      "release_date": "2022-04-29",
+      "standard_support_end": "2025-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.1.3",
+      "aliases": [],
+      "release_date": "2022-03-01",
+      "standard_support_end": "2025-03-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.1.2",
+      "aliases": [],
+      "release_date": "2021-12-29",
+      "standard_support_end": "2024-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.1.1",
+      "aliases": [],
+      "release_date": "2021-10-01",
+      "standard_support_end": "2024-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.1.0",
+      "aliases": [],
+      "release_date": "2021-06-21",
+      "standard_support_end": "2024-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.8",
+      "aliases": [],
+      "release_date": "2022-01-24",
+      "standard_support_end": "2025-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.7",
+      "aliases": [],
+      "release_date": "2021-04-25",
+      "standard_support_end": "2024-04-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.6",
+      "aliases": [],
+      "release_date": "2021-01-08",
+      "standard_support_end": "2024-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.5",
+      "aliases": [],
+      "release_date": "2020-11-30",
+      "standard_support_end": "2023-12-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.4",
+      "aliases": [],
+      "release_date": "2020-11-10",
+      "standard_support_end": "2023-11-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.3",
+      "aliases": [],
+      "release_date": "2020-05-18",
+      "standard_support_end": "2023-05-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.2",
+      "aliases": [],
+      "release_date": "2020-01-16",
+      "standard_support_end": "2023-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.1",
+      "aliases": [],
+      "release_date": "2019-10-23",
+      "standard_support_end": "2022-10-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "5.0.0",
+      "aliases": [],
+      "release_date": "2019-06-27",
+      "standard_support_end": "2022-06-30",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    },
+    {
+      "label": "4.5",
+      "aliases": [],
+      "release_date": "2019-01-31",
+      "standard_support_end": "2022-01-31",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://supportkb.dell.com/attachment/ka0Do0000003Q4eIAE/Dell-Operating%20Environment-Release-and-End-of-Service-Life-Notifications_pkb_en_US_1.xlsx",
+      "source_terms": {
+        "release_date": "RTS Date",
+        "standard_support_end": "EOSS Date",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "The file gives an EOSL Date equal to the EOSS Date and states that End of Service Life occurs at the End of Standard Support date."
+    }
+  ]
+}

@@ -10,7 +10,9 @@
 // the "Release notes" section of every pull request merged since the previous version. --since
 // gives the starting point of the first release, when no version tag exists yet. Once the entry
 // is written, the same command with --commit commits "Release <version>", pushes the branch,
-// opens the pull request and puts it in the merge queue.
+// opens the pull request and puts it in the merge queue. A product in
+// backend/src/technologies/catalog/curated/ whose oldest checked_on is more than 120 days
+// old prints a warning. The warning never stops the command.
 //
 // publish: once the release pull request has merged, tags its merge commit v<version>, creates
 // the GitHub release from the CHANGELOG.md entry, attaches the component inventory
@@ -25,6 +27,7 @@ import { spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, readFileSync, readdirSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
+import { pathToFileURL } from 'node:url';
 import {
   InputError, compareVersions, entrySkeleton, extractEntry, extractReleaseNotes, insertEntry,
   isUnchangedSkeleton, latestVersion, missingPrNumbers, parseVersion, prNumbersOf, tagOf, versionOfTag,
@@ -43,6 +46,74 @@ const USAGE = [
 ].join('\n');
 
 let dryRun = false;
+
+const CURATED_DIR = path.join('backend', 'src', 'technologies', 'catalog', 'curated');
+const CURATED_STALE_DAYS = 120;
+const DAY_MS = 86400000;
+
+// A real ISO day, or null. Rejects a day that does not exist (2026-02-31).
+function isoDayMs(day) {
+  if (typeof day !== 'string' || !/^\d{4}-\d{2}-\d{2}$/.test(day)) return null;
+  const year = Number(day.slice(0, 4));
+  const month = Number(day.slice(5, 7));
+  const date = Number(day.slice(8, 10));
+  const ms = Date.UTC(year, month - 1, date);
+  const back = new Date(ms);
+  if (back.getUTCFullYear() !== year || back.getUTCMonth() !== month - 1 || back.getUTCDate() !== date) return null;
+  return ms;
+}
+
+/**
+ * Warning when a KANAP-maintained product was last checked more than `maxDays` before `today`.
+ * `products` is `{ key, checkedOn }[]`, `checkedOn` the oldest ISO day of that product (null when
+ * none parses, which counts as stale). Returns null when every product is fresh. Never throws.
+ */
+export function curatedStaleWarning(products, today, maxDays = CURATED_STALE_DAYS) {
+  const todayMs = isoDayMs(today);
+  if (todayMs === null || !Array.isArray(products)) return null;
+  const stale = [];
+  for (const product of products) {
+    const checkedMs = isoDayMs(product?.checkedOn);
+    if (checkedMs === null || todayMs - checkedMs > maxDays * DAY_MS) {
+      if (product?.key) stale.push(String(product.key));
+    }
+  }
+  if (stale.length === 0) return null;
+  const keys = stale.slice().sort();
+  return `Warning: curated catalog: ${keys.length} product(s) checked more than ${maxDays} days ago: ${keys.join(', ')} (run the technology-catalog-curation skill)`;
+}
+
+function curatedProducts(root) {
+  let names;
+  try {
+    names = readdirSync(path.join(root, CURATED_DIR));
+  } catch {
+    return [];
+  }
+  const products = [];
+  for (const name of names) {
+    if (!name.endsWith('.json')) continue;
+    const key = name.slice(0, -'.json'.length);
+    let checkedOn = null;
+    try {
+      const doc = JSON.parse(readFileSync(path.join(root, CURATED_DIR, name), 'utf8'));
+      const days = (Array.isArray(doc.versions) ? doc.versions : [])
+        .map((version) => version?.checked_on)
+        .filter((day) => isoDayMs(day) !== null)
+        .sort();
+      checkedOn = days[0] ?? null;
+    } catch {
+      checkedOn = null;
+    }
+    products.push({ key, checkedOn });
+  }
+  return products;
+}
+
+function warnCuratedCatalog(root) {
+  const line = curatedStaleWarning(curatedProducts(root), new Date().toISOString().slice(0, 10));
+  if (line) console.log(line);
+}
 
 function parseArgs(argv) {
   const [command, version, ...rest] = argv;
@@ -251,6 +322,7 @@ function prepare(root, options) {
   if (dryRun) console.log(`\n${draft.text}`);
   console.log(`Release notes draft: ${draftFile}`);
   console.log(`${prs.length} pull requests merged since ${base}: ${draft.withNotes} with a release notes section, ${draft.without} without.`);
+  warnCuratedCatalog(root);
 
   if (!options.commit) {
     console.log(`\nNext: write the ${version} entry in ${changelogFile} from the draft, then run:`);
@@ -440,9 +512,12 @@ function main() {
   else publish(root, options);
 }
 
-try {
-  main();
-} catch (err) {
-  console.error(err instanceof InputError ? `Error: ${err.message}` : err.message ?? err);
-  process.exit(err instanceof InputError ? 2 : 1);
+const invokedDirectly = process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href;
+if (invokedDirectly) {
+  try {
+    main();
+  } catch (err) {
+    console.error(err instanceof InputError ? `Error: ${err.message}` : err.message ?? err);
+    process.exit(err instanceof InputError ? 2 : 1);
+  }
 }

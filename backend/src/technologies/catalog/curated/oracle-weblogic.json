@@ -1,0 +1,78 @@
+{
+  "key": "oracle-weblogic",
+  "name": "Oracle WebLogic Server",
+  "editor": "Oracle",
+  "lifecycle_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
+  "source_updated": "2026-04-13",
+  "version_grain": "release line as the Lifetime Support Policy names it (14.1.x, 12.2.x)",
+  "versions": [
+    {
+      "label": "15.x",
+      "aliases": [],
+      "release_date": "2025-10-01",
+      "standard_support_end": "2030-10-31",
+      "extended_support_end": "2033-10-31",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
+      "source_terms": {
+        "release_date": "GA Date",
+        "standard_support_end": "Premier Support Ends",
+        "extended_support_end": "Extended Support Ends"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Row 'Oracle Weblogic Server 15.x' (15c Releases). The vendor gives months only: release_date is the first day of the month, end dates the last day. Sustaining Support Ends: Indefinite."
+    },
+    {
+      "label": "14.1.x",
+      "aliases": [],
+      "release_date": "2020-03-01",
+      "standard_support_end": "2030-12-31",
+      "extended_support_end": "2033-12-31",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
+      "source_terms": {
+        "release_date": "GA Date",
+        "standard_support_end": "Premier Support Ends",
+        "extended_support_end": "Extended Support Ends"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Row 'Oracle Weblogic Server 14.1.x' (14c Releases). GA Date reads 'Mar 2020 – Dec 2024' (14.1.1 to 14.1.2); release_date uses the first month. The vendor gives months only: release_date is the first day of the month, end dates the last day. Sustaining Support Ends: Indefinite. Error correction dates per patch set are in My Oracle Support (login)."
+    },
+    {
+      "label": "12.2.x",
+      "aliases": [],
+      "release_date": "2015-10-01",
+      "standard_support_end": "2026-12-31",
+      "extended_support_end": "2027-12-31",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
+      "source_terms": {
+        "release_date": "GA Date",
+        "standard_support_end": "Premier Support Ends",
+        "extended_support_end": "Extended Support Ends"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Row 'Oracle WebLogic Server 12.2.x' (Cloud Application Foundation 12c). The vendor gives months only: release_date is the first day of the month, end dates the last day. Sustaining Support Ends: Indefinite. Footnote 8: the 12.2.1.3 error correction period ended June 2023; bug fixes and patches need the latest 12.2.1.x patch set."
+    },
+    {
+      "label": "12.1.x",
+      "aliases": [],
+      "release_date": "2011-12-01",
+      "standard_support_end": "2017-12-31",
+      "extended_support_end": "2022-01-31",
+      "no_planned_end": false,
+      "date_precision": "month",
+      "source_url": "https://www.oracle.com/us/assets/lifetime-support-middleware-069163.pdf",
+      "source_terms": {
+        "release_date": "GA Date",
+        "standard_support_end": "Premier Support Ends",
+        "extended_support_end": "Extended Support Ends"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Row 'Oracle WebLogic Server 12.1.x'. GA Date reads 'Dec 2011 – Jul 2014'; release_date uses the first month. Extended Support Ends reads 'Dec 2019' with footnote 7: Extended Support for WebLogic Server 12.1.3 runs January 1, 2020 through January 31, 2022 (Severity 1 and security fixes only). The 2022-01-31 date applies to 12.1.3 only; 12.1.1 and 12.1.2 ended Extended Support in Dec 2019. The vendor gives months only: release_date is the first day of the month, end dates the last day. Sustaining Support Ends: Indefinite. The 2022-01-31 extended date is the exact day given by footnote 7."
+    }
+  ]
+}

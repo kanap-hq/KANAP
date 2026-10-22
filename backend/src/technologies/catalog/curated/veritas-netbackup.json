@@ -1,0 +1,323 @@
+{
+  "key": "veritas-netbackup",
+  "name": "NetBackup",
+  "editor": "Cohesity (formerly Veritas)",
+  "lifecycle_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+  "source_updated": "2026-10-19",
+  "version_grain": "release train (10.4); the matrix also lists the maintenance release of each train (10.4.0.1), which alone carries Extended and Sustaining Support. Trains up to 8.2 date every release (8.1.2): those sharing the same dates are grouped, the others split",
+  "versions": [
+    {
+      "label": "11.2",
+      "aliases": [],
+      "release_date": "2026-05-28",
+      "standard_support_end": "2029-05-28",
+      "extended_support_end": null,
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "End of Support Life Date(EOSL)",
+        "extended_support_end": null
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Date read on the 11.2 row (its 'Extended Support Starts' is 'Not Applicable'). The maintenance release 11.2.0.1 (GA 2026-09-08) shows 'To Be Determined' for Extended and Sustaining Support and '-' for EOSL: the extended date is not published yet."
+    },
+    {
+      "label": "11.1",
+      "aliases": [],
+      "release_date": "2025-11-24",
+      "standard_support_end": "2028-11-24",
+      "extended_support_end": "2031-11-24",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 11.1. 11.1 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 11.1.0.2 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "11.0",
+      "aliases": [],
+      "release_date": "2025-03-18",
+      "standard_support_end": "2028-03-18",
+      "extended_support_end": "2031-03-18",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 11.0. 11.0 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 11.0.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.5",
+      "aliases": [],
+      "release_date": "2024-09-30",
+      "standard_support_end": "2027-09-30",
+      "extended_support_end": "2030-09-30",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.5. 10.5 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.5.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.4",
+      "aliases": [],
+      "release_date": "2024-03-27",
+      "standard_support_end": "2027-03-27",
+      "extended_support_end": "2030-03-27",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.4. 10.4 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.4.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.3",
+      "aliases": [],
+      "release_date": "2023-10-23",
+      "standard_support_end": "2026-10-23",
+      "extended_support_end": "2029-10-23",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.3. 10.3 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.3.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.2",
+      "aliases": [],
+      "release_date": "2023-03-31",
+      "standard_support_end": "2026-03-31",
+      "extended_support_end": "2029-03-31",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.2. 10.2 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.2.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.1",
+      "aliases": [],
+      "release_date": "2022-09-08",
+      "standard_support_end": "2025-09-08",
+      "extended_support_end": "2028-09-08",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.1. 10.1 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.1.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "10.0",
+      "aliases": [],
+      "release_date": "2022-03-28",
+      "standard_support_end": "2025-03-28",
+      "extended_support_end": "2028-03-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 10.0. 10.0 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 10.0.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "9.1",
+      "aliases": [],
+      "release_date": "2021-06-07",
+      "standard_support_end": "2024-06-07",
+      "extended_support_end": "2027-06-07",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 9.1. 9.1 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 9.1.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "9.0",
+      "aliases": [],
+      "release_date": "2021-01-01",
+      "standard_support_end": "2024-01-01",
+      "extended_support_end": "2027-01-01",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 9.0. 9.0 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 9.0.0.1 per the matrix, whose 'Extended Support Starts' equals that date."
+    },
+    {
+      "label": "8.3",
+      "aliases": [],
+      "release_date": "2020-07-29",
+      "standard_support_end": "2024-07-29",
+      "extended_support_end": "2027-07-29",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. release_date is the GA of 8.3. 8.3 itself reaches its End of Support Life Date on the standard_support_end date. Extended and Sustaining Support (to extended_support_end) apply only to the latest maintenance release of the train, 8.3.0.2 per the matrix, whose 'Extended Support Starts' equals that date. 8.3.0.1 also ends on 2024-07-29."
+    },
+    {
+      "label": "8.2",
+      "aliases": [],
+      "release_date": "2019-06-28",
+      "standard_support_end": "2023-06-28",
+      "extended_support_end": "2026-06-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (2025-06-28)."
+    },
+    {
+      "label": "8.1.2",
+      "aliases": [
+        "8.1.2.1"
+      ],
+      "release_date": "2018-09-17",
+      "standard_support_end": "2022-06-28",
+      "extended_support_end": "2025-06-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (2024-06-28). Covers 8.1.2 and 8.1.2.1 (GA 2018-12-15), which share the same dates."
+    },
+    {
+      "label": "8.1",
+      "aliases": [
+        "8.1.1"
+      ],
+      "release_date": "2017-09-26",
+      "standard_support_end": "2022-06-28",
+      "extended_support_end": "2023-06-28",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (Not Applicable). Covers 8.1 and 8.1.1 (GA 2018-02-15), which share the same dates. 8.1.2 has a later EOSL and its own entry."
+    },
+    {
+      "label": "8.0",
+      "aliases": [],
+      "release_date": "2016-12-05",
+      "standard_support_end": "2020-03-26",
+      "extended_support_end": "2024-03-26",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (2022-03-26)."
+    },
+    {
+      "label": "7.7.3",
+      "aliases": [],
+      "release_date": "2016-06-06",
+      "standard_support_end": "2019-05-05",
+      "extended_support_end": "2023-05-05",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (2021-05-05)."
+    },
+    {
+      "label": "7.7",
+      "aliases": [
+        "7.7.1",
+        "7.7.2"
+      ],
+      "release_date": "2015-07-06",
+      "standard_support_end": "2019-05-05",
+      "extended_support_end": "2022-05-05",
+      "no_planned_end": false,
+      "date_precision": "day",
+      "source_url": "https://sort.veritas.com/cohesity/eosl/show_matrix",
+      "source_terms": {
+        "release_date": "Release Date(GA)",
+        "standard_support_end": "Extended Support Starts",
+        "extended_support_end": "End of Support Life Date(EOSL)"
+      },
+      "checked_on": "2026-10-20",
+      "note": "Product row 'NetBackup - Enterprise Server'. Older train model: each row carries its own Extended Support Starts and EOSL dates; Sustaining Support Starts is not stored (2021-05-05). Covers 7.7, 7.7.1 (GA 2015-10-05) and 7.7.2 (GA 2016-02-01), which share the same dates. 7.7.3 has a later EOSL and its own entry."
+    }
+  ]
+}

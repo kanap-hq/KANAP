@@ -10,7 +10,7 @@ import { catalogCveNames, cveNameIdentity, sortCveNames, type CveName } from '..
 import { defaultVulnerabilityAlerts } from '../../vulnerabilities/vulnerability-alerts';
 import { hostingTypeOfMode, isCloudHostingType, resolveHostingType } from '../hosting-type';
 import { readTechnology, technologyReference } from '../technology-rows';
-import { lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
+import { catalogFamilyForTenant, lowerSorted, mergeProduct, offeredState, validCatalogVersion } from './catalog-releases';
 // The JSON file has its own name: under ts-node, Node resolves `./x` to `x.json` before `x.ts`.
 import * as shipped from './technologies.catalog.json';
 // Written for KANAP and kept apart from the catalog, which the script rebuilds from endoflife.date.
@@ -24,6 +24,12 @@ export type CatalogVersion = {
   release_date: string | null;
   standard_support_end: string | null;
   extended_support_end: string | null;
+  /** Page this version's dates were read from. Present on a product maintained by KANAP. */
+  source_url?: string;
+  /** Day those dates were last checked (`YYYY-MM-DD`). Present on a product maintained by KANAP. */
+  checked_on?: string;
+  /** The vendor states there is no planned end of support. Both end dates are then null. */
+  no_planned_end?: boolean;
 };
 
 export type CatalogProduct = {
@@ -47,6 +53,16 @@ export type CatalogProduct = {
    */
   noCpe?: string | true;
   source_url: string | null;
+  /**
+   * Day the vendor last updated the lifecycle page. Present on a product maintained by KANAP,
+   * null when the page states none. Absent on an endoflife.date entry.
+   */
+  source_updated?: string | null;
+  /**
+   * Page where the distributor tracks vulnerabilities of an operating system. Copied into the
+   * shipped file. Absent for Windows Server, CentOS, AIX, IBM i and Solaris.
+   */
+  security_tracker?: string;
   versions: CatalogVersion[];
 };
 
@@ -60,8 +76,9 @@ export type CatalogLanguage = 'en' | 'fr' | 'de' | 'es';
 type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
 
 /**
- * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built from
- * endoflife.date by `scripts/technologies/build-catalog.mjs`, MIT license). It is offered, never
+ * The starting catalog of technologies KANAP ships (`technologies.catalog.json`, built by
+ * `scripts/technologies/build-catalog.mjs` from endoflife.date and from the KANAP-maintained files
+ * in `curated/`, MIT license for the endoflife.date part). It is offered, never
  * imposed: nothing is written until a tenant adopts an entry, which creates the technology, its
  * versions and its CPE identifiers. The catalog is living (lot C4): the versions endoflife.date
  * published since the shipped file was built come from the platform cache
@@ -69,9 +86,27 @@ type Descriptions = Record<string, Partial<Record<CatalogLanguage, string>>>;
  * (`technology-catalog-sync.service.ts`) keeps the adopted technologies up to date
  * (`technologies.catalog_key`, `technologies.catalog_state`, `technology_versions.catalog_key`).
  */
+const SHIPPED_PRODUCTS = (shipped as unknown as { products: CatalogProduct[] }).products;
+
+/**
+ * `product:version` keys whose shipped version says the vendor plans no end and stores both
+ * dates empty. The end-of-support report leaves those versions out of the missing-date gaps.
+ */
+export function shippedKeysWithoutPlannedEnd(): readonly string[] {
+  const keys: string[] = [];
+  for (const product of SHIPPED_PRODUCTS) {
+    for (const version of product.versions) {
+      if (version.no_planned_end === true && version.standard_support_end == null && version.extended_support_end == null) {
+        keys.push(`${product.key}:${version.key}`);
+      }
+    }
+  }
+  return keys;
+}
+
 @Injectable()
 export class TechnologyCatalogService {
-  private readonly products: CatalogProduct[] = (shipped as unknown as { products: CatalogProduct[] }).products;
+  private readonly products: CatalogProduct[] = SHIPPED_PRODUCTS;
   private readonly byKey = new Map(this.products.map((product) => [product.key, product]));
   private readonly descriptions = (shippedDescriptions as unknown as { descriptions: Descriptions }).descriptions;
   /** The end of the day the shipped file was read from endoflife.date (`source.retrieved_on`). */
@@ -140,36 +175,48 @@ export class TechnologyCatalogService {
   }
 
   /**
-   * The entries the tenant has not adopted (no technology with its catalog key or its name),
-   * filtered by `q` (name, editor) and `family`, sorted by name.
+   * The entries the tenant has not adopted: no technology with its catalog key, nor a technology of
+   * its name already tied to the catalog. A technology typed by hand under the entry's name keeps the
+   * entry on offer: adopting it completes that technology (`adopt`). Each item carries `completes`,
+   * the reference (`TEC-<item_number>`) of that hand-typed technology, compared without case, or null.
+   * Filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
+   * would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list is offered
+   * under the code the tenant would actually receive.
    */
   async notAdopted(filters: { q?: string; family?: string; language?: unknown }, opts: Opts) {
     const language = await languageOf(opts.manager, opts.tenantId, opts.userId ?? null, filters.language);
-    const rows: Array<{ catalog_key: string | null; name: string }> = await opts.manager.query(
-      `SELECT catalog_key, name FROM technologies WHERE tenant_id = $1`,
+    const rows: Array<{ catalog_key: string | null; name: string; item_number: number | null }> = await opts.manager.query(
+      `SELECT catalog_key, name, item_number FROM technologies WHERE tenant_id = $1`,
       [opts.tenantId],
     );
     const keys = new Set(rows.map((row) => row.catalog_key).filter(Boolean));
-    const names = new Set(rows.map((row) => row.name.trim().toLowerCase()));
+    const names = new Set(rows.filter((row) => row.catalog_key).map((row) => row.name.trim().toLowerCase()));
+    const completesByName = new Map<string, string | null>();
+    for (const row of rows) {
+      if (row.catalog_key) continue;
+      completesByName.set(row.name.trim().toLowerCase(), technologyReference(row.item_number));
+    }
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
-    const { hostingTypes } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
+    const { hostingTypes, technologyFamilies } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
     const living = await this.effectiveProducts(opts.manager);
     const items = Array.from(living.values())
       .filter((product) => !keys.has(product.key) && !names.has(product.name.toLowerCase()))
-      .filter((product) => !family || product.family === family)
-      .filter((product) => !needle || product.name.toLowerCase().includes(needle) || product.editor.toLowerCase().includes(needle))
-      .sort((a, b) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' }))
-      .map((product) => ({
+      .map((product) => ({ product, family: catalogFamilyForTenant(product.family, technologyFamilies) }))
+      .filter((row) => !family || row.family === family)
+      .filter((row) => !needle || row.product.name.toLowerCase().includes(needle) || row.product.editor.toLowerCase().includes(needle))
+      .sort((a, b) => a.product.name.localeCompare(b.product.name, 'en', { sensitivity: 'base' }))
+      .map(({ product, family: resolved }) => ({
         key: product.key,
         name: product.name,
         editor: product.editor,
-        family: product.family,
+        family: resolved,
         hosting_type: resolveHostingType(hostingTypes, this.hostingTypeOf(product)),
         cpe_products: product.cpe_products,
         versions: product.versions.length,
         latest_version: product.versions[0]?.label ?? null,
         description: this.description(product.key, language),
+        completes: completesByName.get(product.name.trim().toLowerCase()) ?? null,
       }));
     return { items };
   }
@@ -263,7 +310,7 @@ export class TechnologyCatalogService {
       await this.cpeEvents?.emit({ manager: mg, tenantId, technologyId, products: addedCpeProducts(before.cpe_products, after.cpe_products) });
     } else {
       const settings = await this.itOps.getSettings(tenantId, { manager: mg });
-      const family = (settings.technologyFamilies ?? []).some((item) => item.code === product.family) ? product.family : 'other';
+      const family = catalogFamilyForTenant(product.family, settings.technologyFamilies);
       const hostingType = resolveHostingType(settings.hostingTypes, this.hostingTypeOf(product));
       const itemNumber = await allocateItemNumbers('technology', tenantId, 1, mg);
       const [row]: Array<{ id: string }> = await mg.query(

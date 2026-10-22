@@ -234,7 +234,8 @@
         "searchPlaceholder": "e.g., SQL Server",
         "noMatch": "No catalog entry matches.",
         "manualLink": "Enter a technology missing from the catalog",
-        "backToCatalog": "Back to the catalog"
+        "backToCatalog": "Back to the catalog",
+        "completes": "Completes {{reference}}"
       }
     },
     "connections": {
@@ -2283,6 +2284,22 @@
         "fromCatalog": "Catalog",
         "fromCatalogHint": "From the catalog",
         "catalogNote": "Versions and dates kept up to date from the catalog",
+        "dateSource": "Source: <editor>{{editor}}</editor>, verified on {{date}}",
+        "noPlannedEnd": "No end planned by the vendor",
+        "securityTrackerNote": "This distributor publishes vulnerabilities per package. KANAP tracks support for each version. Read the package exposure in its tracker: <tracker>{{name}}</tracker>",
+        "securityTrackerOf": "{{editor}} security tracker",
+        "securityTracker": "Security tracker",
+        "trackers": {
+          "ubuntu": "Ubuntu CVE tracker",
+          "redhat": "Red Hat security updates",
+          "debian": "Debian security tracker",
+          "suse": "SUSE CVE tracker",
+          "rocky": "Rocky Linux errata",
+          "alma": "AlmaLinux errata",
+          "oracle": "Oracle Linux security",
+          "amazon": "Amazon Linux security",
+          "alpine": "Alpine security tracker"
+        },
         "edit": "Edit version {{label}}",
         "remove": "Delete version {{label}}",
         "deleteTitle": "Delete version {{label}}?",
@@ -2297,6 +2314,8 @@
         "alertsColumnHint": "Includes this version in vulnerability alerts: the Vulnerabilities page, the counts and the summary email. Each version follows the technology setting unless a dot marks its own setting.",
         "includeInAlerts": "Include in vulnerability alerts",
         "alertsFor": "Vulnerability alerts for {{label}}",
+        "alertsServicePacks_one": "Includes the service pack {{from}}",
+        "alertsServicePacks_other": "Includes the service packs {{from}} to {{to}}",
         "alertsHint": "Technology setting: it applies to versions without their own setting, to versions added later, and to links with no version.",
         "alertsOwn": "Own setting for this version",
         "alertsConfirmTitle": "Vulnerability alerts",
@@ -3549,7 +3568,8 @@
       "monitoring": "Monitoring",
       "runtime": "Runtime and framework",
       "storage": "Storage",
-      "network_security": "Network and security",
+      "network": "Network",
+      "network_security": "Security",
       "administration": "Administration",
       "other": "Other"
     },
