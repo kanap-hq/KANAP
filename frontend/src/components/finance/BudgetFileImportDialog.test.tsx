@@ -248,6 +248,18 @@ describe('BudgetFileImportDialog', () => {
     expect(screen.getByText(`operations.budgetFile.rowColumn:${JSON.stringify({ line: 3, column: 'description', message })}`)).toBeInTheDocument();
   });
 
+  it("warns, by its translation code, about a company other than the cost center's", async () => {
+    const warning = {
+      line: 4, code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY', costCenter: 'IT-100', company: 'Globex', costCenterCompany: 'Acme',
+      message: 'Cost center IT-100 belongs to Acme. The line is paid by Globex.',
+    };
+    post.mockResolvedValueOnce({ data: report({ warnings: { duplicates: [], ignoredColumns: [], supplierNames: [], ignoredCells: [], costCenterCompanies: [warning] } }) });
+    renderDialog();
+    expect(await screen.findByText('operations.budgetFile.warningsTitle')).toBeInTheDocument();
+    expect(screen.getByText(new RegExp(`^operations\\.budgetFile\\.rowColumn:.*"line":4,"column":"company_name".*errors:BUDGET_FILE_COST_CENTER_OTHER_COMPANY`))).toBeInTheDocument();
+    expect(screen.getByText('operations.budgetFile.ready')).toBeInTheDocument();
+  });
+
   it('turns a stale check into a plain sentence with a way to check again', async () => {
     post.mockResolvedValueOnce({ data: report() });
     renderDialog();

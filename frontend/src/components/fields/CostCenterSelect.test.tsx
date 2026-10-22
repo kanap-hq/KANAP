@@ -264,4 +264,48 @@ describe('CostCenterSelect', () => {
     expect(input).toHaveValue('Logis');
     expect(shownIds()).toEqual(['lg-10']);
   });
+
+  describe('with a company', () => {
+    // GRP-FR and LG-10 move to a second company; group GRP then holds none of company one's centers.
+    const TWO_COMPANIES = NODES.map((n) => (
+      n.id === 'grp-fr' || n.id === 'lg-10' ? { ...n, company_id: 'company-2', company_name: 'Company two' } : n
+    ));
+    beforeEach(() => { treeState.nodes = TWO_COMPANIES; });
+
+    it("lists only that company's cost centers, with the groups above them", () => {
+      const { input } = renderSelect({ companyId: 'company-1' });
+      open(input);
+      expect(shownIds()).toEqual(['it', 'it-100', 'it-200']);
+      expect(option('it')).toHaveAttribute('aria-disabled', 'true');
+      expect(option('it-100')).not.toHaveAttribute('aria-disabled', 'true');
+    });
+
+    it('keeps the current cost center of another company listed and pickable', () => {
+      const { input, onChange } = renderSelect({ companyId: 'company-1', value: 'lg-10' });
+      open(input);
+      expect(shownIds()).toEqual(['it', 'it-100', 'it-200', 'lg-10']);
+      expect(option('lg-10')).not.toHaveAttribute('aria-disabled', 'true');
+      fireEvent.click(option('it-100'));
+      expect(onChange).toHaveBeenCalledWith('it-100', expect.objectContaining({ id: 'it-100' }));
+    });
+
+    it('lists every cost center when no company is given', () => {
+      const { input } = renderSelect({ companyId: '' });
+      open(input);
+      expect(shownIds()).toEqual(['it', 'it-100', 'it-200', 'grp', 'grp-fr', 'lg-10']);
+    });
+
+    it('says the company has no cost center, with the way to create one', () => {
+      const { input } = renderSelect({ companyId: 'company-3' });
+      open(input);
+      expect(screen.getByText('selects.noCostCenterForCompany')).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: 'selects.createCostCenter' })).toBeInTheDocument();
+    });
+
+    it('leaves report filters unnarrowed', () => {
+      const { input } = renderSelect({ companyId: 'company-1', selectable: 'all' });
+      open(input);
+      expect(shownIds()).toEqual(['it', 'it-100', 'it-200', 'grp', 'grp-fr', 'lg-10']);
+    });
+  });
 });

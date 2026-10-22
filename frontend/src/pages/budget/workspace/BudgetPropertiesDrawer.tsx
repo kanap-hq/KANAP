@@ -36,6 +36,8 @@ type Props = {
   mode?: 'create' | 'edit';
   supplierId: string;
   payingCompanyId: string;
+  /** The paying company was brought by the cost center and still follows it: the cost center list is not narrowed to it. */
+  companyFollowsCostCenter?: boolean;
   accountId: string;
   currency: string;
   /** The line's value per dimension id; a dimension without a value is absent or null. */
@@ -84,6 +86,7 @@ export default function BudgetPropertiesDrawer({
   mode = 'edit',
   supplierId,
   payingCompanyId,
+  companyFollowsCostCenter = false,
   accountId,
   currency,
   analyticsValues,
@@ -184,6 +187,7 @@ export default function BudgetPropertiesDrawer({
               hideLabel
               label={t('opex.fields.costCenter')}
               selectable="cost_centers"
+              companyId={companyFollowsCostCenter ? null : payingCompanyId || null}
               value={costCenterId || null}
               selectedOption={matching(references?.cost_center, costCenterId)}
               onChange={(v, node) => onCostCenterChange(v ?? '', node)}
