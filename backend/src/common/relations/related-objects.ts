@@ -1,5 +1,10 @@
 import type { EntityManager } from 'typeorm';
-import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
+import {
+  ParticipationAccessScope,
+  applicationParticipantCondition,
+  projectParticipantCondition,
+  requestParticipantCondition,
+} from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
 import { loadVersionTotals, SUMMARY_COLUMNS, SUMMARY_SCOPES } from '../../spend/spend-summary.builder';
 import { contractTermsSql, SQL_TODAY_UTC } from '../../contracts/contract-terms';
@@ -10,11 +15,20 @@ import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } f
 
 /**
  * The linked objects a Relations tab lists (lot R1, `applications-relations.service.ts`), shared by
- * every object that has one (applications, technologies). Each listing reads one link table of the
- * owner (`links`, owner column `owner`) over the owner's id: one query per section, `tenant_id` on
- * each table and join besides RLS. Table and column names come from the callers' constants only.
+ * every object that has one (applications, technologies, portfolio projects and requests). Each
+ * listing reads one link table of the owner (`links`, owner column `owner`) over the owner's id:
+ * one query per section, `tenant_id` on each table and join besides RLS. Table and column names
+ * come from the callers' constants only.
  */
-export type RelationLinkTable = { links: string; owner: string };
+export type RelationLinkTable = {
+  links: string;
+  owner: string;
+  /**
+   * The linked row's column. Budget lines default to `spend_item_id`. A project or a request
+   * stores the line in `opex_id` (`portfolio_project_opex`, `portfolio_request_opex`).
+   */
+  target?: string;
+};
 
 export type RelatedBudgetLine = {
   id: string;
@@ -53,6 +67,51 @@ export type RelatedIncident = {
   detected_at: string | null;
 };
 
+/** An application linked to the owner. `reference` is already `APP-n` (the contract tab's fields). */
+export type RelatedApplication = {
+  id: string;
+  reference: string;
+  name: string;
+  lifecycle: string;
+  business_criticality: string | null;
+  status: string;
+};
+
+/** An asset linked to the owner. `reference` is already `AST-n`. */
+export type RelatedAsset = {
+  id: string;
+  reference: string;
+  name: string;
+  kind: string;
+  environment: string;
+  status: string;
+};
+
+/** A technology linked to the owner. `reference` is already `TEC-n`. */
+export type RelatedTechnology = {
+  id: string;
+  reference: string;
+  name: string;
+  family: string;
+  vendor: string | null;
+};
+
+/** A business process linked to the owner, with its business owner, as the application tab lists it. */
+export type RelatedBusinessProcess = {
+  id: string;
+  name: string;
+  status: string | null;
+  owner_name: string | null;
+};
+
+/** A project or a request linked by conversion: business reference, name and status. */
+export type RelatedPortfolioItem = {
+  id: string;
+  item_number: number | null;
+  name: string;
+  status: string | null;
+};
+
 /** The owner's incident link table (`incident_applications`, `incident_technologies`). Column names come from the callers' constants. */
 export type IncidentLinkTable = { table: string; column: string };
 
@@ -80,10 +139,11 @@ export async function listRelatedBudgetLines(
   year: number,
   measure: string,
 ): Promise<RelatedBudgetLine[]> {
+  const line = t.target ?? 'spend_item_id';
   const rows: Array<Omit<RelatedBudgetLine, 'amount'> & { currency: string | null }> = await mg.query(
     `SELECT i.id, i.item_number, i.nature, i.product_name, s.name AS supplier_name, i.currency, i.status::text AS status
      FROM ${t.links} l
-     JOIN spend_items i ON i.id = l.spend_item_id AND i.tenant_id = l.tenant_id${naturesAnd('i', BUDGET_NATURES)}
+     JOIN spend_items i ON i.id = l.${line} AND i.tenant_id = l.tenant_id${naturesAnd('i', BUDGET_NATURES)}
      LEFT JOIN suppliers s ON s.id = i.supplier_id AND s.tenant_id = i.tenant_id
      WHERE l.tenant_id = $1 AND l.${t.owner} = $2
      ORDER BY lower(i.product_name), i.id`,
@@ -186,4 +246,118 @@ export async function listRelatedIncidents(
       ORDER BY i.detected_at DESC NULLS LAST, i.item_number DESC`,
     params,
   );
+}
+
+/** The applications linked through `t.target`, inside a Business Contributor's participation scope. */
+export async function listRelatedApplications(
+  mg: EntityManager,
+  t: RelationLinkTable & { target: string },
+  tenantId: string,
+  ownerId: string,
+  scope?: ParticipationAccessScope,
+): Promise<RelatedApplication[]> {
+  const params: unknown[] = [tenantId, ownerId];
+  const bind = binder(params);
+  const scopeSql = scope ? `AND ${applicationParticipantCondition('a', bind(scope.userId))}` : '';
+  const rows: RelatedApplication[] = await mg.query(
+    `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle, a.criticality AS business_criticality, a.status::text AS status
+       FROM ${t.links} l
+       JOIN applications a ON a.id = l.${t.target} AND a.tenant_id = l.tenant_id
+      WHERE l.tenant_id = $1 AND l.${t.owner} = $2 ${scopeSql}
+      ORDER BY lower(a.name), a.id`,
+    params,
+  );
+  return rows.map((row) => ({ ...row, business_criticality: row.business_criticality ?? null }));
+}
+
+/** The assets linked through `t.target`, the contract tab's fields, ordered by name. */
+export async function listRelatedAssets(
+  mg: EntityManager,
+  t: RelationLinkTable & { target: string },
+  tenantId: string,
+  ownerId: string,
+): Promise<RelatedAsset[]> {
+  return mg.query(
+    `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, a.environment, a.status
+       FROM ${t.links} l
+       JOIN assets a ON a.id = l.${t.target} AND a.tenant_id = l.tenant_id
+      WHERE l.tenant_id = $1 AND l.${t.owner} = $2
+      ORDER BY lower(a.name), a.id`,
+    [tenantId, ownerId],
+  );
+}
+
+/** The technologies linked through `t.target`. `vendor` is the technology's editor. */
+export async function listRelatedTechnologies(
+  mg: EntityManager,
+  t: RelationLinkTable & { target: string },
+  tenantId: string,
+  ownerId: string,
+): Promise<RelatedTechnology[]> {
+  const rows: RelatedTechnology[] = await mg.query(
+    `SELECT t.id, 'TEC-' || t.item_number AS reference, t.name, t.family, t.editor AS vendor
+       FROM ${t.links} l
+       JOIN technologies t ON t.id = l.${t.target} AND t.tenant_id = l.tenant_id
+      WHERE l.tenant_id = $1 AND l.${t.owner} = $2
+      ORDER BY lower(t.name), t.id`,
+    [tenantId, ownerId],
+  );
+  return rows.map((row) => ({ ...row, vendor: row.vendor ?? null }));
+}
+
+/** The business processes linked through `t.target`, with the business owner's name. */
+export async function listRelatedBusinessProcesses(
+  mg: EntityManager,
+  t: RelationLinkTable & { target: string },
+  tenantId: string,
+  ownerId: string,
+): Promise<RelatedBusinessProcess[]> {
+  const rows: RelatedBusinessProcess[] = await mg.query(
+    `SELECT p.id, p.name, p.status::text AS status,
+            NULLIF(btrim(concat_ws(' ', u.first_name, u.last_name)), '') AS owner_name
+       FROM ${t.links} l
+       JOIN business_processes p ON p.id = l.${t.target} AND p.tenant_id = l.tenant_id
+       LEFT JOIN users u ON u.id = p.owner_user_id AND u.tenant_id = p.tenant_id
+      WHERE l.tenant_id = $1 AND l.${t.owner} = $2
+      ORDER BY lower(p.name), p.id`,
+    [tenantId, ownerId],
+  );
+  return rows.map((row) => ({ ...row, status: row.status ?? null, owner_name: row.owner_name ?? null }));
+}
+
+const PORTFOLIO_PEERS = {
+  portfolio_requests: requestParticipantCondition,
+  portfolio_projects: projectParticipantCondition,
+} as const;
+
+/**
+ * The projects or requests linked through `t` (a conversion link, `portfolio_request_projects`).
+ * `peer` is the table of the other side. A Business Contributor's participation scope hides a row
+ * the caller does not take part in. Ordered by business reference.
+ */
+export async function listRelatedPortfolioItems(
+  mg: EntityManager,
+  t: RelationLinkTable & { target: string },
+  peer: keyof typeof PORTFOLIO_PEERS,
+  tenantId: string,
+  ownerId: string,
+  scope?: ParticipationAccessScope,
+): Promise<RelatedPortfolioItem[]> {
+  const params: unknown[] = [tenantId, ownerId];
+  const bind = binder(params);
+  const scopeSql = scope ? `AND ${PORTFOLIO_PEERS[peer]('p', bind(scope.userId))}` : '';
+  const rows: Array<RelatedPortfolioItem & { item_number: number | string | null }> = await mg.query(
+    `SELECT p.id, p.item_number, p.name, p.status
+       FROM ${t.links} l
+       JOIN ${peer} p ON p.id = l.${t.target} AND p.tenant_id = l.tenant_id
+      WHERE l.tenant_id = $1 AND l.${t.owner} = $2 ${scopeSql}
+      ORDER BY p.item_number ASC NULLS LAST, lower(p.name), p.id`,
+    params,
+  );
+  return rows.map((row) => ({
+    id: row.id,
+    item_number: row.item_number == null ? null : Number(row.item_number),
+    name: row.name,
+    status: row.status ?? null,
+  }));
 }
