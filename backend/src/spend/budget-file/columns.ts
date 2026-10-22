@@ -64,7 +64,7 @@ export function columnOfMeasure(measure: AmountMeasure): FileColumn {
 export function detailColumns(dimensionCodes: readonly string[]): string[] {
   const columns = [
     'nature', 'item_number', 'name', 'description',
-    'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'run_build',
+    'company_name', 'supplier_name', 'supplier_erp_id', 'account_number', 'cost_center_code', 'cost_center_path', 'run_build',
   ];
   for (const code of dimensionCodes) columns.push(`analytics:${code}`);
   columns.push(
@@ -72,6 +72,12 @@ export function detailColumns(dimensionCodes: readonly string[]): string[] {
   );
   return columns;
 }
+
+/**
+ * Columns the export writes for reading only. The reader knows them, so they raise no
+ * ignored-column warning, and the import never reads their cells.
+ */
+export const EXPORT_ONLY_COLUMNS: ReadonlySet<string> = new Set(['cost_center_path']);
 
 /** Columns csv-sheet matches as fields. Analytics columns are declared separately. */
 export function schemaFields(): string[] {

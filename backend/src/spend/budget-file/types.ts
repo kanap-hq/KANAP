@@ -54,6 +54,8 @@ export interface StoredLine {
   accountNumber: string | null;
   costCenterId: string | null;
   costCenterCode: string | null;
+  /** The centre's names from the root group, joined with ` / `. Null for a root centre. */
+  costCenterPath: string | null;
   runBuild: 'run' | 'build' | null;
   /** Dimension code to the value name. A missing code means no value. */
   analytics: Record<string, string>;

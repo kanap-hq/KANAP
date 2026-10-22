@@ -56,6 +56,7 @@ Las columnas de detalle son las mismas para los dos tipos de línea.
 | `supplier_erp_id` | El ID del proveedor en su ERP | Opcional |
 | `account_number` | Número de cuenta, en el plan de cuentas de la empresa pagadora | Obligatorio |
 | `cost_center_code` | Código del centro de coste. Se rechaza un grupo | Opcional |
+| `cost_center_path` | El lugar del centro de coste en el árbol, desde su grupo raíz hasta el centro, con los nombres separados por ` / `, por ejemplo `TI / Infraestructuras / Red`. Vacío para un centro en la raíz del árbol o una línea sin centro. Úselo para filtrar o agrupar las líneas por dirección en su hoja de cálculo | Solo exportación, se ignora al importar |
 | `run_build` | `run` o `build` | Opcional |
 | `analytics:<code>` | El nombre del valor en la dimensión cuyo código es ese, sin distinguir mayúsculas y minúsculas. Una columna por dimensión activada, la dimensión por defecto incluida. Una dimensión usada para un solo tipo de línea solo toma un valor en las filas de ese tipo y queda vacía en las demás. En un espacio de trabajo nuevo, las dimensiones recomendadas están en `analytics:default` (el tipo de coste), `analytics:it_tower`, `analytics:purpose` y `analytics:priority`, por ejemplo `Software`, `Aplicación`, `Sustitución` o `Alta` | Opcional, salvo para una dimensión obligatoria del tipo de la línea, como el tipo de activo fijo de una línea CAPEX en un espacio de trabajo creado antes de las dimensiones recomendadas. La carga crea un valor que no existe |
 | `owner_it_email` | Correo de un usuario activo | Opcional |

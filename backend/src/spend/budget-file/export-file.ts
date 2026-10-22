@@ -114,6 +114,7 @@ function exportRow(
   values.set('supplier_erp_id', line.supplierErpId ?? '');
   values.set('account_number', line.accountNumber ?? '');
   values.set('cost_center_code', line.costCenterCode ?? '');
+  values.set('cost_center_path', line.costCenterPath ?? '');
   values.set('run_build', line.runBuild ?? '');
   for (const dimension of input.dimensions) {
     const applies = !dimension.appliesTo || dimension.appliesTo === line.nature;
