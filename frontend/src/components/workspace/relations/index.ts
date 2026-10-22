@@ -13,8 +13,9 @@ export type {
 export { DASH, PAGE, TOTALS_FROM, pathOf, refOf, relationDate, todayYmd } from './helpers';
 export { useRelations } from './useRelations';
 export type { UseRelationsOptions } from './useRelations';
-export { useRelationLabels } from './labels';
 export { default as RelationSections } from './RelationSections';
+export { default as RelationSuggestions } from './RelationSuggestions';
+export type { RelationSuggestion } from './RelationSuggestions';
 export {
   applicationsSection,
   assetsSection,
