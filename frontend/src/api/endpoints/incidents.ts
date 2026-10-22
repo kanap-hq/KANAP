@@ -126,15 +126,6 @@ export interface IncidentEntry {
 }
 
 /**
- * Linked asset, application or technology (GET /incidents/:id/assets | /applications | /technologies)
- */
-export interface IncidentLinkedObject {
-  id: string;
-  name: string;
-  reference: string | null;
-}
-
-/**
  * Attachment (GET /incidents/:id/attachments) — same fields as task attachments
  */
 export interface IncidentAttachment {
@@ -176,24 +167,6 @@ export const incidentsApi = {
 
   createEntry: (idOrRef: string, data: { content: string; occurred_at?: string }): Promise<IncidentEntry> =>
     api.post<IncidentEntry>(`/incidents/${idOrRef}/entries`, data),
-
-  listAssets: (idOrRef: string): Promise<IncidentLinkedObject[]> =>
-    api.get<IncidentLinkedObject[]>(`/incidents/${idOrRef}/assets`),
-
-  replaceAssets: (idOrRef: string, assetIds: string[]): Promise<IncidentLinkedObject[]> =>
-    api.post<IncidentLinkedObject[]>(`/incidents/${idOrRef}/assets/bulk-replace`, { asset_ids: assetIds }),
-
-  listApplications: (idOrRef: string): Promise<IncidentLinkedObject[]> =>
-    api.get<IncidentLinkedObject[]>(`/incidents/${idOrRef}/applications`),
-
-  replaceApplications: (idOrRef: string, applicationIds: string[]): Promise<IncidentLinkedObject[]> =>
-    api.post<IncidentLinkedObject[]>(`/incidents/${idOrRef}/applications/bulk-replace`, { application_ids: applicationIds }),
-
-  listTechnologies: (idOrRef: string): Promise<IncidentLinkedObject[]> =>
-    api.get<IncidentLinkedObject[]>(`/incidents/${idOrRef}/technologies`),
-
-  replaceTechnologies: (idOrRef: string, technologyIds: string[]): Promise<IncidentLinkedObject[]> =>
-    api.post<IncidentLinkedObject[]>(`/incidents/${idOrRef}/technologies/bulk-replace`, { technology_ids: technologyIds }),
 
   listAttachments: (idOrRef: string): Promise<IncidentAttachment[]> =>
     api.get<IncidentAttachment[]>(`/incidents/${idOrRef}/attachments`),
