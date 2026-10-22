@@ -394,7 +394,7 @@ export class IncidentsController {
     }
     parseTargetId(rawTarget);
     const id = await this.visibleId(idOrRef, ctx);
-    return this.relations.setLink(kind, id, rawTarget, add, ctx.userId || null, this.opts(ctx));
+    return this.relations.setLink(kind, id, rawTarget, add, ctx.userId || null, await this.viewOpts(ctx));
   }
 
   // Documents (knowledge relations live on the knowledge side)

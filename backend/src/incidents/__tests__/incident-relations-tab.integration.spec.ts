@@ -264,6 +264,21 @@ async function testContributorSeesOwnedApplications() {
   });
 }
 
+async function testContributorWritesOwnedApplicationsOnly() {
+  await inRolledBackTransaction(async (runner) => {
+    const s = await seedRich(runner, 'incr-bcw');
+    const { http } = harness(runner);
+    const caller = ctx(runner, s.tenantId, WRITE, s.contributorId);
+    // Alpha is linked but outside the contributor's applications: it reads as missing and stays linked.
+    const hidden = await refusal(() => http.unlinkRelation(s.incidentId, 'applications', s.apps.alpha.id, caller));
+    assert.ok(hidden.error instanceof NotFoundException);
+    assert.equal(hidden.message, 'Application not found.');
+    const admin = ctx(runner, s.tenantId, WRITE, s.userId);
+    const body = await http.getRelations(s.incidentId, admin) as any;
+    assert.ok(body.applications.some((row: Ref) => row.id === s.apps.alpha.id));
+  });
+}
+
 async function testClosedIncidentHasNothingToLink() {
   await inRolledBackTransaction(async (runner) => {
     const s = await seedRich(runner, 'incr-closed');
@@ -508,6 +523,7 @@ void runSpecs('incident-relations-tab', [
   ['the tab lists assets, applications, technologies and suggestions', testPayload],
   ['a section is null without the module read', testSectionsFollowTheRead],
   ['a business contributor sees the applications they take part in', testContributorSeesOwnedApplications],
+  ['a business contributor links and unlinks only the applications they take part in', testContributorWritesOwnedApplicationsOnly],
   ['a closed incident is not editable and suggests nothing', testClosedIncidentHasNothingToLink],
   ['suggestions keep twenty technologies and a referenced source', testSuggestionsAreCapped],
   ['one link writes the journal and the audit, and the refusals write nothing', testWrites],

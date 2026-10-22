@@ -212,9 +212,13 @@ export class IncidentRelationsService extends IncidentsBaseService {
     const tenantId = this.ensureTenantId(opts?.tenantId);
     const incident = await this.ensureIncident(incidentId, mg, tenantId, opts?.viewer);
     this.assertEditable(incident);
+    // A Business Contributor links and unlinks only the applications they take part in; any other reads as missing.
+    const params: unknown[] = [tenantId, id];
+    const scope = kind === 'applications' ? opts?.applicationScope : undefined;
+    const inScope = scope ? ` AND ${applicationParticipantCondition('t', binder(params)(scope.userId))}` : '';
     const found: unknown[] = await mg.query(
-      `SELECT 1 FROM ${spec.targetTable} WHERE tenant_id = $1 AND id = $2`,
-      [tenantId, id],
+      `SELECT 1 FROM ${spec.targetTable} t WHERE t.tenant_id = $1 AND t.id = $2${inScope}`,
+      params,
     );
     if (found.length === 0) throw new NotFoundException(spec.notFound);
     const res = await this.setLinkFromTarget(spec, incident.id, id, add, userId, opts);
