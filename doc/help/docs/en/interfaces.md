@@ -195,13 +195,21 @@ The mapping table summarises each rule by listing the source bindings, an arrow,
 
 ### Relations
 
-The Relations tab gathers the links from this interface to other things.
+The Relations tab shows what this interface depends on and what depends on it, with its links and files. The knowledge documents linked to the interface come first, then the upstream interfaces, the downstream interfaces, and the links and files. The tab badge counts the upstream and downstream interfaces, and the links and files. Knowledge documents are not counted.
 
-- **Interface dependencies**: Upstream and downstream interfaces. Use these to document orderings such as "Order Sync must run before Invoice Sync".
-- **External URLs**: Links to documentation in Confluence, SharePoint, etc. Add a description and a URL; the open-in-new-tab icon takes you straight to the link.
-- **Attachments**: Drag and drop files into the upload area or use **Select files** to attach specification documents directly to the interface. Click an attachment chip to download it; click the trash icon to delete it (requires `applications:member`).
+**Upstream interfaces** and **Downstream interfaces**: one table each, with the reference (`INT-4`), name, source application, target application and lifecycle. Click a row to open the interface. A retired interface stays listed with its row greyed out. Use these sections to document an order, such as "Order Sync must run before Invoice Sync".
 
-A Knowledge section is reserved for future cross-entity knowledge linking; it currently shows an informational placeholder.
+A dependency goes one way. If you add interface B upstream of interface A, B appears upstream on A only. A does not appear downstream on B.
+
+**Adding and removing interfaces** (`applications:member`): **Add** at the right of a section opens a search of interfaces. Type a name or a reference and pick a result: the link is saved at once. The search leaves out this interface and the interfaces already in the section. To remove a link, hover the row and click the cross at its end. Removing a link deletes neither interface. Readers see the tables read-only.
+
+**Links and files**: the web links of the interface (specifications, documentation pages, monitoring dashboards) and its files, one row each with its name, the domain of the link or the size of the file, and the date it was added. Click a link to open it in a new tab, or a file to download it. With `applications:member`:
+
+- **Add link** opens a dialog for a URL and an optional name; the link is saved at once. To change a link, hover its row and click the pencil.
+- **Attach file** opens the file chooser. You can also drop files on the section.
+- To remove a link or a file, hover the row and click the cross. Deleting a file asks for confirmation first.
+
+**Tip**: Attach the specification and the mapping documents to the interface, so the people who run it find them in one place.
 
 ---
 

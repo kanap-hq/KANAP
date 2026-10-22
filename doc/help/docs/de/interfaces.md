@@ -195,13 +195,21 @@ Die Mapping-Tabelle fasst jede Regel zusammen, indem sie die Quellbindungen, ein
 
 ### Beziehungen
 
-Der Reiter Beziehungen sammelt die Verknüpfungen von dieser Schnittstelle zu anderen Dingen.
+Der Reiter Beziehungen zeigt, wovon diese Schnittstelle abhängt und was von ihr abhängt, zusammen mit ihren Links und Dateien. Zuerst kommen die mit der Schnittstelle verknüpften Wissensdokumente, dann die vorgelagerten Schnittstellen, die nachgelagerten Schnittstellen sowie die Links und Dateien. Das Badge des Reiters zählt die vor- und nachgelagerten Schnittstellen sowie die Links und Dateien. Wissensdokumente werden nicht gezählt.
 
-- **Schnittstellen-Abhängigkeiten**: Vorgelagerte und nachgelagerte Schnittstellen. Verwenden Sie diese, um Reihenfolgen zu dokumentieren, wie „Order Sync muss vor Invoice Sync laufen".
-- **Externe URLs**: Links zur Dokumentation in Confluence, SharePoint usw. Fügen Sie eine Beschreibung und eine URL hinzu; das Symbol „In neuem Tab öffnen" führt Sie direkt zum Link.
-- **Anhänge**: Ziehen Sie Dateien per Drag-and-Drop in den Upload-Bereich oder verwenden Sie **Dateien auswählen**, um Spezifikationsdokumente direkt an die Schnittstelle anzuhängen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen; klicken Sie auf das Papierkorbsymbol, um ihn zu löschen (erfordert `applications:member`).
+**Vorgelagerte Schnittstellen** und **Nachgelagerte Schnittstellen**: je eine Tabelle mit Referenz (`INT-4`), Name, Quellanwendung, Zielanwendung und Lebenszyklus. Klicken Sie auf eine Zeile, um die Schnittstelle zu öffnen. Eine stillgelegte Schnittstelle bleibt aufgeführt, ihre Zeile ist ausgegraut. Nutzen Sie diese Abschnitte, um eine Reihenfolge zu dokumentieren, etwa „Auftragssync muss vor Rechnungssync laufen“.
 
-Ein Wissensdatenbank-Bereich ist für zukünftige entitätenübergreifende Wissensverknüpfungen reserviert; er zeigt derzeit einen informativen Platzhalter.
+Eine Abhängigkeit gilt in eine Richtung. Wenn Sie Schnittstelle B als vorgelagert zu Schnittstelle A hinzufügen, erscheint B nur bei A als vorgelagert. A erscheint bei B nicht als nachgelagert.
+
+**Schnittstellen hinzufügen und entfernen** (`applications:member`): **Hinzufügen** rechts in einem Abschnitt öffnet eine Suche nach Schnittstellen. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Die Suche lässt diese Schnittstelle und die bereits im Abschnitt vorhandenen Schnittstellen aus. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Ende. Das Entfernen einer Verknüpfung löscht keine der beiden Schnittstellen. Leser sehen die Tabellen schreibgeschützt.
+
+**Links und Dateien**: die Weblinks der Schnittstelle (Spezifikationen, Dokumentationsseiten, Monitoring-Dashboards) und ihre Dateien, je eine Zeile mit Name, Domain des Links oder Größe der Datei und dem Datum des Hinzufügens. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `applications:member`:
+
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Vor dem Löschen einer Datei wird eine Bestätigung abgefragt.
+
+**Tipp**: Hängen Sie die Spezifikation und die Mapping-Dokumente an die Schnittstelle an, damit die Personen, die sie betreiben, alles an einem Ort finden.
 
 ---
 

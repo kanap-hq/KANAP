@@ -195,13 +195,21 @@ La tabla de mapeo resume cada regla listando los enlaces de origen, una flecha y
 
 ### Relaciones
 
-La pestaña Relaciones reúne los vínculos de esta interfaz con otras cosas.
+La pestaña Relaciones muestra de qué depende esta interfaz y qué depende de ella, junto con sus enlaces y archivos. Primero aparecen los documentos de conocimiento vinculados a la interfaz, después las interfaces anteriores, las interfaces posteriores, y los enlaces y archivos. La insignia de la pestaña cuenta las interfaces anteriores y posteriores, y los enlaces y archivos. Los documentos de conocimiento no se cuentan.
 
-- **Dependencias de interfaz**: Interfaces aguas arriba y aguas abajo. Úselas para documentar ordenamientos como "La sincronización de pedidos debe ejecutarse antes que la sincronización de facturas".
-- **URLs externas**: Enlaces a documentación en Confluence, SharePoint, etc. Añada una descripción y una URL; el icono de abrir en nueva pestaña le lleva directamente al enlace.
-- **Adjuntos**: Arrastre y suelte archivos en el área de carga o use **Seleccionar archivos** para adjuntar documentos de especificación directamente a la interfaz. Haga clic en un chip de adjunto para descargarlo; haga clic en el icono de papelera para eliminarlo (requiere `applications:member`).
+**Interfaces anteriores** e **Interfaces posteriores**: una tabla cada una, con la referencia (`INT-4`), el nombre, la aplicación de origen, la aplicación de destino y el ciclo de vida. Haga clic en una fila para abrir la interfaz. Una interfaz retirada sigue en la lista, con su fila en gris. Use estas secciones para documentar un orden, por ejemplo "La sincronización de pedidos debe ejecutarse antes que la sincronización de facturas".
 
-Una sección de Conocimiento está reservada para futura vinculación de conocimiento entre entidades; actualmente muestra un marcador informativo.
+Una dependencia va en un solo sentido. Si añade la interfaz B como anterior a la interfaz A, B aparece como anterior solo en A. A no aparece como posterior en B.
+
+**Añadir y quitar interfaces** (`applications:member`): **Añadir**, a la derecha de una sección, abre una búsqueda de interfaces. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. La búsqueda excluye esta interfaz y las interfaces que ya están en la sección. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz del final. Quitar un vínculo no elimina ninguna de las dos interfaces. Los lectores ven las tablas en solo lectura.
+
+**Enlaces y archivos**: los enlaces web de la interfaz (especificaciones, páginas de documentación, paneles de monitorización) y sus archivos, una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `applications:member`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos en la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide confirmación antes.
+
+**Consejo**: Adjunte la especificación y los documentos de mapeo a la interfaz, para que las personas que la operan los encuentren en un solo lugar.
 
 ---
 
