@@ -258,7 +258,7 @@ Verfolgt Lieferantensupport und Kontaktinformationen.
 
 ### Verknüpfungen
 
-Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KANAP. Das Reiter-Badge zählt alle verknüpften Elemente. Die meisten Felder werden automatisch gespeichert.
+Der Reiter Verknüpfungen zeigt, was mit diesem Asset ausfällt, und danach, womit es verknüpft ist: andere Assets, Budgetzeilen, Verträge, Projekte, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach seine Links und Dateien. Die Technologien des Assets stehen im Reiter [Technisch](#technical). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Datensätze, die Sie sehen dürfen, sowie die Links und Dateien.
 
 **Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
 
@@ -267,23 +267,43 @@ Der Reiter Verknüpfungen verbindet dieses Asset mit anderen Datensätzen in KAN
 - **Cluster**: Cluster mit einem ausgefallenen Mitglied. **Ausgefallen**, wenn kein Mitglied mehr steht, sonst **Beeinträchtigt** mit der Zahl der ausgefallenen Mitglieder. Die Anwendungen eines ausgefallenen Clusters fallen mit ihm aus.
 - **Geschäftsprozesse**: die Prozesse der betroffenen Anwendungen.
 
-Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie die Asset-Beziehungen weiter unten speichern.
+Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie weiter unten eine Beziehung zwischen Assets hinzufügen oder entfernen.
 
-**Asset-Beziehungen**:
-- **Hängt ab von**: Andere Assets, von denen dieses abhängt (z. B. ein Datenbankserver)
-- **Enthält**: Assets, die in diesem enthalten sind (z. B. Server in einem Rack)
-- **Enthalten in** / **Abhängig von**: Schreibgeschützte umgekehrte Ansichten, nur angezeigt, wenn andere Assets dieses referenzieren
+**Beziehungen zwischen Assets**, eine Tabelle pro Richtung:
 
-**Finanzen & Projekte**:
-- **Budgetzeilen**: Verknüpfung mit OPEX- und CAPEX-Zeilen in einer Liste. Suchen Sie nach Titel oder Referenz (`BL-12`); jeder Vorschlag zeigt seinen Typ
-- **Verträge**: Verknüpfung mit Vertragsdatensätzen
-- **Projekte**: Verknüpfung mit Portfolio-Projekten, die mit diesem Asset zusammenhängen
+| Abschnitt | Bedeutung |
+|---|---|
+| **Enthält** | Die Assets in diesem, zum Beispiel die Server in einem Rack |
+| **Enthalten in** | Die Assets, in denen sich dieses befindet |
+| **Hängt ab von** | Die Assets, die dieses zum Betrieb braucht, zum Beispiel ein Datenbankserver |
+| **Benötigt von** | Die Assets, die dieses brauchen |
 
-**Aufgaben**: Aufgaben, die mit diesem Asset verknüpft sind. Hier schreibgeschützt. Aufgaben gewinnen oder verlieren diese Verknüpfung, wenn Sie das Feld **Asset** auf einer Aufgabe in der Aufgabenseite festlegen.
+Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt.
 
-**Relevante Websites**: URLs mit optionalen Namen hinzufügen, nützlich für Lieferantenportale, Monitoring-Dashboards oder Dokumentationslinks. **URL hinzufügen** öffnet einen Dialog; vorhandene Einträge können bearbeitet oder gelöscht werden.
+**Verknüpfte Datensätze**, jeweils eine Tabelle:
 
-**Anhänge**: Dateien per Drag-and-Drop ziehen oder auf **Dateien auswählen** klicken, um sie hochzuladen. Klicken Sie auf einen Anhang-Chip, um ihn herunterzuladen. Löschen erfordert `infrastructure:member`.
+| Abschnitt | Spalten |
+|---|---|
+| **Budgetzeilen** | Referenz (`BL-12`), Name, Typ (OPEX oder CAPEX), Lieferant und der Betrag des laufenden Jahres in Ihrer Standard-Budgetspalte, in der Berichtswährung. Ein Strich bedeutet, dass die Zeile für das Jahr kein Budget hat |
+| **Verträge** | Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
+| **Projekte** | Referenz (`PRJ-7`), Name, Status, geplantes Ende |
+| **Aufgaben** | Referenz (`T-118`), Titel, Status, zugewiesene Person, Fälligkeit. Offene Aufgaben stehen zuerst |
+| **Vorfälle** | Referenz (`INC-14`), Titel, Schweregrad, Status, Erkennungsdatum |
+
+Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen: Budget, Verträge, Portfolio-Projekte, Aufgaben und Vorfälle. Ein Fachbereichs-Mitwirkender sieht nur die Projekte und Aufgaben, an denen er beteiligt ist. Ein vertraulicher Vorfall erscheint nur für die Personen, die ihn im Vorfallregister sehen dürfen, und ohne seinen Titel.
+
+Orange Daten verlangen Aufmerksamkeit: ein Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt, oder eine offene Aufgabe nach ihrer Fälligkeit. Eine deaktivierte Budgetzeile oder ein deaktivierter Vertrag bleibt mit ausgegrautem Namen aufgeführt. Ab zwei Zeilen enden Budgetzeilen und Verträge mit einer Summenzeile. Die Summe der Budgetzeilen steht in der Berichtswährung und lässt eine Zeile aus, deren Währung für das Jahr keinen Wechselkurs hat: Ein einzeiliger Hinweis unter der Tabelle nennt sie. Verträge erhalten eine Summe je Währung, ohne die deaktivierten Verträge.
+
+**Verknüpfungen hinzufügen und entfernen** (`infrastructure:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert auch Leserechte auf das Zielmodul, daher fehlt **Hinzufügen** in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
+
+- Eine Aufgabe, die Sie hier verknüpfen oder lösen, erscheint auch in der Aktivität der Aufgabe.
+- Das Verknüpfen oder Lösen eines Vorfalls erfordert zusätzlich `incidents:contributor` und wird im Journal des Vorfalls festgehalten. Ein geschlossener oder abgebrochener Vorfall kann weder verknüpft noch gelöst werden: Öffnen Sie ihn zuerst wieder.
+
+**Links und Dateien**: die Weblinks des Assets (Lieferantenportale, Monitoring-Dashboards, Dokumentation) und seine Dateien (Konfigurationsdateien, Diagramme, Lieferantendokumente), je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `infrastructure:member`:
+
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
 ---
 
@@ -422,5 +442,5 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Mit Standorten verknüpfen**: Weisen Sie Assets Standorten zu, sodass Hosting-Typ, Land und Stadt automatisch ausgefüllt werden.
 - **Anwendungen zuweisen**: Verwenden Sie den Reiter Übersicht, um Assets mit Anwendungs-Bereitstellungen zu verknüpfen. Die gleichen Zuweisungen erscheinen unter dem Reiter Bereitstellungen der Anwendung.
 - **Reiter Verknüpfungen verwenden**: Verbinden Sie Assets mit Budgetzeilen, Verträgen und Projekten für finanzielle Sichtbarkeit.
-- **Aufgaben kommen von der Aufgabenseite**: Um eine Aufgabe an ein Asset anzuhängen, setzen Sie das Feld Asset auf der Aufgabe selbst; sie erscheint dann unter Verknüpfungen > Aufgaben.
+- **Aufgaben hier verknüpfen**: Fügen Sie eine Aufgabe unter Verknüpfungen > Aufgaben hinzu. Die Verknüpfung erscheint auch in der Aktivität der Aufgabe.
 - **Dokumentation anhängen**: Laden Sie Konfigurationsdateien, Architekturdiagramme oder Lieferantendokumente direkt in den Reiter Verknüpfungen hoch.

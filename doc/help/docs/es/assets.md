@@ -258,7 +258,7 @@ Hace seguimiento de información de soporte y contactos del proveedor.
 
 ### Relaciones
 
-La pestaña Relaciones conecta este activo a otros registros en KANAP. La insignia de la pestaña cuenta todos los elementos vinculados. La mayoría de los campos se guardan automáticamente.
+La pestaña Relaciones muestra lo que se detiene con este activo y después con qué está vinculado: otros activos, líneas presupuestarias, contratos, proyectos, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías del activo están en la pestaña [Técnico](#technical). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los registros vinculados que puede ver, así como los enlaces y archivos.
 
 **Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres y procesos de negocio afectados, y después una tabla por tipo:
 
@@ -267,23 +267,43 @@ La pestaña Relaciones conecta este activo a otros registros en KANAP. La insign
 - **Clústeres**: los clústeres con un miembro caído. **Caído** cuando no queda ningún miembro en pie, si no **Degradado** con el número de miembros caídos. Las aplicaciones de un clúster caído caen con él.
 - **Procesos de negocio**: los procesos de las aplicaciones afectadas.
 
-Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza al guardar las relaciones del activo, más abajo.
+Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza en cuanto añade o quita una relación entre activos, más abajo.
 
-**Relaciones de activos**:
-- **Depende de**: Otros activos de los que depende este (p. ej., un servidor de base de datos)
-- **Contiene**: Activos contenidos dentro de este (p. ej., servidores en un rack)
-- **Contenido por** / **Del que dependen**: Vistas inversas de solo lectura, mostradas solo cuando otros activos hacen referencia a este
+**Relaciones entre activos**, una tabla por sentido:
 
-**Financiero y proyectos**:
-- **Líneas presupuestarias**: Vincular a líneas OPEX y CAPEX, en una sola lista. Busque por título o por referencia (`BL-12`); cada sugerencia muestra su tipo
-- **Contratos**: Vincular a registros de contratos
-- **Proyectos**: Vincular a proyectos del portafolio relacionados con este activo
+| Sección | Significado |
+|---|---|
+| **Contiene** | Los activos que están dentro de este, por ejemplo los servidores de un rack |
+| **Contenido en** | Los activos en los que se encuentra este |
+| **Depende de** | Los activos que este necesita para funcionar, por ejemplo un servidor de base de datos |
+| **Requerido por** | Los activos que necesitan este |
 
-**Tareas**: Tareas vinculadas a este activo. Solo lectura aquí: las tareas ganan o pierden este vínculo cuando establece el campo **Activo** en una tarea desde la página de Tareas.
+Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el estado. Un activo retirado o desactivado sigue en la lista con el nombre atenuado.
 
-**Sitios web relevantes**: Añada URLs con nombres opcionales. Es útil para portales de proveedores, paneles de monitoreo o enlaces a documentación. **Añadir URL** abre un diálogo; las entradas existentes pueden editarse o eliminarse.
+**Registros vinculados**, una tabla cada uno:
 
-**Adjuntos**: Arrastre y suelte archivos o haga clic en **Seleccionar archivos** para subirlos. Haga clic en un chip de adjunto para descargarlo. La eliminación requiere `infrastructure:member`.
+| Sección | Columnas |
+|---|---|
+| **Líneas presupuestarias** | Referencia (`BL-12`), nombre, tipo (OPEX o CAPEX), proveedor y el importe del año en curso en su columna presupuestaria por defecto, en la moneda de reporte. Un guion significa que la línea no tiene presupuesto para el año |
+| **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
+| **Proyectos** | Referencia (`PRJ-7`), nombre, estado, fin previsto |
+| **Tareas** | Referencia (`T-118`), título, estado, asignado, vencimiento. Las tareas abiertas aparecen primero |
+| **Incidentes** | Referencia (`INC-14`), título, severidad, estado, fecha de detección |
+
+Solo ve las secciones de los módulos que puede leer: presupuesto, contratos, proyectos del portafolio, tareas e incidentes. Un Colaborador de negocio solo ve los proyectos y las tareas en los que participa. Un incidente confidencial solo aparece para las personas que pueden verlo en el registro de incidentes, sin su título.
+
+Las fechas en naranja requieren atención: un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos, o una tarea abierta con el vencimiento pasado. Una línea presupuestaria o un contrato desactivado sigue en la lista con el nombre atenuado. A partir de dos filas, las líneas presupuestarias y los contratos terminan con una fila de total. El total de las líneas presupuestarias está en la moneda de reporte y excluye una línea cuya moneda no tiene tipo de cambio para el año: un aviso de una línea bajo la tabla la indica. Los contratos tienen un total por moneda, sin los contratos desactivados.
+
+**Añadir y quitar vínculos** (`infrastructure:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular también requiere poder leer el módulo de destino, así que **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
+
+- Una tarea que vincula o desvincula aquí también aparece en la actividad de la tarea.
+- Vincular o desvincular un incidente requiere también `incidents:contributor` y queda registrado en el diario del incidente. Un incidente cerrado o cancelado no se puede vincular ni desvincular: reábralo primero.
+
+**Enlaces y archivos**: los enlaces web del activo (portales de proveedores, paneles de monitoreo, documentación) y sus archivos (archivos de configuración, diagramas, documentos del proveedor), una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `infrastructure:member`:
+
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
 ---
 
@@ -422,5 +442,5 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Vincule a ubicaciones**: Asigne activos a ubicaciones para que el tipo de alojamiento, país y ciudad se rellenen automáticamente.
 - **Asigne a aplicaciones**: Use la pestaña Visión general para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
 - **Use la pestaña Relaciones**: Conecte activos a líneas presupuestarias, contratos y proyectos para visibilidad financiera.
-- **Las tareas vienen de la página Tareas**: Para adjuntar una tarea a un activo, defina el campo Activo en la propia tarea; aparecerá en Relaciones > Tareas.
+- **Vincule tareas aquí**: Añada una tarea en Relaciones > Tareas. El vínculo también aparece en la actividad de la tarea.
 - **Adjunte documentación**: Suba archivos de configuración, diagramas de arquitectura o documentos del proveedor directamente a la pestaña Relaciones.
