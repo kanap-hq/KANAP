@@ -175,8 +175,10 @@ export class TechnologyCatalogService {
   }
 
   /**
-   * The entries the tenant has not adopted (no technology with its catalog key or its name),
-   * filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
+   * The entries the tenant has not adopted: no technology with its catalog key, nor a technology of
+   * its name already tied to the catalog. A technology typed by hand under the entry's name keeps the
+   * entry on offer: adopting it completes that technology (`adopt`).
+   * Filtered by `q` (name, editor) and `family`, sorted by name. `family` is the family an adoption
    * would write (`catalogFamilyForTenant`), so a catalog family the tenant does not list is offered
    * under the code the tenant would actually receive.
    */
@@ -187,7 +189,7 @@ export class TechnologyCatalogService {
       [opts.tenantId],
     );
     const keys = new Set(rows.map((row) => row.catalog_key).filter(Boolean));
-    const names = new Set(rows.map((row) => row.name.trim().toLowerCase()));
+    const names = new Set(rows.filter((row) => row.catalog_key).map((row) => row.name.trim().toLowerCase()));
     const needle = String(filters.q ?? '').trim().toLowerCase();
     const family = String(filters.family ?? '').trim();
     const { hostingTypes, technologyFamilies } = await this.itOps.getSettings(opts.tenantId, { manager: opts.manager });
