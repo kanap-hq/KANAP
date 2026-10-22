@@ -21,6 +21,14 @@ import { resolveBusinessContributorScopeForUser } from '../auth/business-contrib
 import { hasLevel } from '../technologies/technologies.controller';
 import { requireManager } from '../technologies/technology-rows';
 import { AssetImpactService } from './services/asset-impact.service';
+import { buildRelationsAccess } from '../common/relations/relations-access';
+import { incidentViewerFromContext } from '../incidents/incident-visibility';
+import {
+  ASSET_RELATION_READS,
+  AssetRelationsTabService,
+  assetRelationKindOrThrow,
+  type AssetRelationsContext,
+} from './asset-relations-tab.service';
 
 @UseGuards(JwtAuthGuard)
 @Controller('assets')
@@ -33,6 +41,7 @@ export class AssetsController {
     private readonly knowledge: KnowledgeService,
     private readonly tasks: TasksUnifiedService,
     private readonly impact: AssetImpactService,
+    private readonly relationsTab: AssetRelationsTabService,
   ) {}
 
   // Attachment download/delete (static routes before :id param routes)
@@ -344,6 +353,71 @@ export class AssetsController {
       manager: req?.queryRunner?.manager,
       tenantId,
     });
+  }
+
+  /**
+   * The Relations tab in one round trip (`asset-relations-tab.service.ts`): the relations between
+   * assets in four directions, budget lines, contracts, projects, tasks and incidents (each null
+   * without the read of its module), and the badge counts. `:id` is a uuid or `AST-n`.
+   * `GET :id/relations` keeps its shape for its other callers.
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get(':id/relations-tab')
+  relationsTabRead(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.relationsContext(ctx).then((rel) => this.relationsTab.read(id, rel));
+  }
+
+  /** Link one object (`{ id }`). Kinds: `contains`, `contained_by`, `depends_on`, `depended_on_by`, `budget_lines`, `contracts`, `projects`, `tasks`, `incidents`. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, String(body?.id ?? ''), true, ctx);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'member')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, targetId, false, ctx);
+  }
+
+  /** An unknown kind is 404 before the participation scopes are read. */
+  private writeRelation(kind: string, ref: string, targetId: string, add: boolean, ctx: TenantRequest) {
+    assetRelationKindOrThrow(kind);
+    return this.relationsContext(ctx).then((rel) => this.relationsTab.setLink(kind, ref, targetId, add, rel));
+  }
+
+  /**
+   * What the tab may show and change. One query after the other: the request's connection runs
+   * them in turn. A Business Contributor's scope hides a project or a task they do not take part in.
+   */
+  private async relationsContext(ctx: TenantRequest): Promise<AssetRelationsContext> {
+    const manager = requireManager(ctx.manager);
+    const who = { manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin === true };
+    const rights = buildRelationsAccess(ctx, { read: ASSET_RELATION_READS, contribute: { incidents: 'incidents' } });
+    const project = await resolveBusinessContributorScopeForUser(who, 'portfolio_projects');
+    const task = await resolveBusinessContributorScopeForUser(who, 'tasks');
+    return {
+      manager,
+      tenantId: ctx.tenantId,
+      userId: ctx.userId || null,
+      access: rights.access,
+      writes: { incidents: rights.contributes.incidents },
+      scopes: { project, task },
+      incidentViewer: incidentViewerFromContext(ctx),
+    };
   }
 
   // Financial link endpoints
