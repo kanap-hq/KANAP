@@ -50,10 +50,10 @@ export interface Incident extends IncidentRow {
   updated_by: string | null;
   counts: {
     entries: number;
-    assets: number;
-    applications: number;
-    /** Null for a caller who cannot read the infrastructure. */
-    technologies?: number | null;
+    // Null when the caller cannot see that section of the Relations tab.
+    assets: number | null;
+    applications: number | null;
+    technologies: number | null;
     tasks: number;
     documents: number;
     attachments: number;
