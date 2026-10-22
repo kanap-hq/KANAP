@@ -771,6 +771,19 @@ The Relations tab of an incident, one round trip (`backend/src/incidents/service
   - `suggestions`: up to 20 technologies carried by a linked asset (`asset_technologies`) or, for a caller who reads `applications`, by a linked application they can see (`application_technologies`), that the incident does not list yet. Each item is `{ type: 'technology', id, reference, name, family, vendor, via: { kind, label } }`. `kind` is `asset_technology` or `application_technology`. `label` is the source reference (`AST-n` or `APP-n`). Several sources for one technology keep the first reference in alphabetical order. A source with no reference is left out. Suggestions are returned to a reader of `infrastructure`, on an incident that can still be edited.
 - POST `/incidents/:id/relations/:kind` with `{ id }` and DELETE `/incidents/:id/relations/:kind/:targetId` → `{ ok: true, changed }`. `kind` is `assets`, `applications` or `technologies`. Anything else is `404` `Unknown relation type.`, before the module check and before the id is read. `assets` need a read of `infrastructure` (`403` `You cannot read this module.`). `technologies` need the same read (`403` `You cannot read technologies.`). `applications` need a read of `applications` (`403` `You cannot read this module.`). The module check comes before the id is parsed and before the incident is read. An id that is not a uuid is `400` `Invalid id.`. A uuid that is not a row of the tenant is `404` (`Asset not found.`, `Application not found.` or `Technology not found.`). A closed or cancelled incident refuses the write (`403` `This incident is closed. Reopen it to make changes.`), and that answer comes before the missing-target check. Linking a row that is already linked, or unlinking a row that is not, answers `changed: false` and writes nothing. A change locks the incident (`FOR NO KEY UPDATE`), appends one `link_change` journal entry (the business references, for example `Assets linked: AST-n.`) and one audit row on the link table (`incident_assets`, `incident_applications` or `incident_technologies`): `recordId` the incident, `action` `update`, `before` and `after` the target ids in name order.
 
+## Location relations
+
+GET `/locations/:id/relations` (`locations:reader`) returns the Relations tab of a location in one round trip. `:id` is a UUID or `LOC-n`. A missing location is `404` "Location not found". Both sections are read only: an asset's location is set on the asset. A section the caller cannot read is `null`. Web links stay on `/locations/:id/links`.
+
+| Field | Read | Contents |
+|---|---|---|
+| `assets` | `infrastructure` | Assets at the location: `{ id, reference, name, kind, environment, status, provider, sub_location_id, sub_location_name }` (`reference` is `AST-n`), ordered by name |
+| `applications` | `applications` | Applications with an instance on one of those assets: `{ id, reference, name, lifecycle, status, environments }` (`reference` is `APP-n`, `environments` the sorted environments of those instances). A Business Contributor sees the applications they take part in |
+
+GET `/locations/:id/relation-counts` (`locations:reader`) → `{ relations }`: the tab badge. It counts the assets for a reader of `infrastructure`, the applications for a reader of `applications` (inside a Business Contributor's participation), and the web links.
+
+The older GET `/locations/:id/servers` and `/locations/:id/applications` stay, under `locations:reader` alone.
+
 ## IT Ops Settings
 Tenant-scoped configuration for IT Landscape dropdowns and enums.
 
@@ -1150,7 +1163,7 @@ The nature is the line's. A section the caller cannot read is `null`. Contacts, 
 | Field | Read | Contents |
 |---|---|---|
 | `projects` | `portfolio_projects` | Linked projects: `{ id, item_number, name, status, planned_end }`. A Business Contributor sees the projects they take part in |
-| `applications` | `applications` | `{ id, reference, name, lifecycle, business_criticality, status }` (`reference` is `APP-n`). A Business Contributor sees the applications they own |
+| `applications` | `applications` | `{ id, reference, name, lifecycle, business_criticality, status }` (`reference` is `APP-n`). A Business Contributor sees the applications they take part in |
 | `technologies` | `infrastructure` | `{ id, reference, name, family, vendor }` (`reference` is `TEC-n`, `vendor` is the editor) |
 | `contracts` | `contracts` | Linked contracts: `{ id, name, supplier_name, end_date, yearly_amount, currency, auto_renewal, in_renewal_window, status }` |
 | `assets` | `infrastructure` | `{ id, reference, name, kind, environment, status }` (`reference` is `AST-n`), the links of the line's nature |

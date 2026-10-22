@@ -1208,6 +1208,7 @@
     "columns": {
       "name": "Nom",
       "detail": "Adresse ou taille",
+      "address": "Adresse",
       "added": "Ajouté le"
     },
     "types": {
@@ -1222,6 +1223,8 @@
     "placeholders": {
       "name": "ex. : Portail de l’éditeur",
       "url": "ex. : https://status.example.com"
-    }
+    },
+    "linksTitle": "Liens web",
+    "linksEmpty": "Aucun lien web."
   }
 }

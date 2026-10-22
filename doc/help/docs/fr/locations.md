@@ -83,7 +83,7 @@ Chaque sous-site possède :
 
 Les sous-sites sont disponibles dès que le site existe (après avoir cliqué sur **Créer**). Chaque ligne s'enregistre seule lorsque vous quittez le champ, et la suppression d'un sous-site demande d'abord une confirmation.
 
-Les actifs peuvent être assignés à un sous-site spécifique au sein d'un site, ce qui vous permet de suivre exactement où se trouve le matériel. Lorsque des sous-sites existent, l'onglet Relations montre à quel sous-site chaque actif appartient.
+Les actifs peuvent être assignés à un sous-site spécifique au sein d'un site, ce qui vous permet de suivre exactement où se trouve le matériel. L'onglet Relations montre le sous-site de chaque actif qui en a un.
 
 ---
 
@@ -103,11 +103,21 @@ Les modifications s'enregistrent automatiquement. L'ajout d'un contact ou d'un l
 
 ### Relations
 
-L'onglet Relations affiche les entités liées à ce site. Il est en lecture seule : les relations sont gérées depuis les enregistrements liés eux-mêmes.
+L'onglet Relations affiche les actifs de ce site et les applications qui tournent dessus, puis les liens web du site. Cliquez sur une ligne pour ouvrir l'actif ou l'application. Le badge de l'onglet compte les actifs et les applications que vous pouvez voir, et les liens web.
 
-**Actifs** : Un tableau des actifs hébergés sur ce site, affichant Nom, Environnement, Type, Fournisseur, Région/Zone et Statut. Lorsque le site a des sous-sites, une colonne **Sous-site** supplémentaire apparaît montrant à quel sous-site chaque actif est assigné. Cliquez sur un nom d'actif pour accéder à son espace de travail.
+| Section | Colonnes |
+|---|---|
+| **Actifs** | Référence (`AST-12`), nom, sous-site, type, environnement, fournisseur, statut |
+| **Applications** | Référence (`APP-3`), nom, environnements, cycle de vie |
 
-**Applications** : Un tableau des applications qui ont de l'infrastructure sur ce site, affichant Nom et Environnements. Cliquez sur un nom d'application pour accéder à son espace de travail.
+**Actifs** liste les actifs placés sur ce site. La colonne **Sous-site** n'apparaît que si au moins un actif a un sous-site. La section est en lecture seule : le site d'un actif se choisit sur l'actif lui-même. Elle demande de pouvoir lire l'infrastructure.
+
+**Applications** liste les applications qui ont une instance sur l'un de ces actifs. **Environnements** affiche les environnements de ces instances. La section est en lecture seule et demande de pouvoir lire les applications. Un Contributeur métier ne voit que les applications auxquelles il participe.
+
+**Liens web** : les liens du site (portails fournisseur, documentation des installations, pages de statut), une ligne chacun avec son nom, le domaine du lien et la date d'ajout. Ce sont les mêmes liens que les **Sites web pertinents** de l'onglet Contacts & Support. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet. Avec `locations:member` :
+
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- Pour retirer un lien, survolez sa ligne et cliquez sur la croix.
 
 ---
 

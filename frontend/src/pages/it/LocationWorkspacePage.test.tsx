@@ -99,3 +99,33 @@ describe('LocationWorkspacePage name refusals', () => {
     expect(navigateMock).not.toHaveBeenCalled();
   });
 });
+
+describe('LocationWorkspacePage relations badge', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it('counts what the Relations tab shows', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/loc-1') return { data: LOCATION };
+      if (url === '/locations/loc-1/relation-counts') return { data: { relations: 7 } };
+      return { data: [] };
+    });
+    renderAt('/it/locations/loc-1/overview');
+    const tab = await screen.findByRole('tab', { name: /workspace\.location\.tabs\.relations/ });
+    await waitFor(() => expect(tab).toHaveTextContent('7'));
+    expect(mocked.get).toHaveBeenCalledWith('/locations/loc-1/relation-counts');
+  });
+
+  it('shows no badge when the tab is empty', async () => {
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/locations/loc-1') return { data: LOCATION };
+      if (url === '/locations/loc-1/relation-counts') return { data: { relations: 0 } };
+      return { data: [] };
+    });
+    renderAt('/it/locations/loc-1/overview');
+    const tab = await screen.findByRole('tab', { name: /workspace\.location\.tabs\.relations/ });
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/locations/loc-1/relation-counts'));
+    expect(tab.textContent).toBe('workspace.location.tabs.relations');
+  });
+});

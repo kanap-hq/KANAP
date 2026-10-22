@@ -1208,6 +1208,7 @@
     "columns": {
       "name": "Nombre",
       "detail": "Dirección o tamaño",
+      "address": "Dirección",
       "added": "Añadido"
     },
     "types": {
@@ -1222,6 +1223,8 @@
     "placeholders": {
       "name": "p. ej., Portal del proveedor",
       "url": "p. ej., https://status.example.com"
-    }
+    },
+    "linksTitle": "Enlaces web",
+    "linksEmpty": "Ningún enlace web."
   }
 }

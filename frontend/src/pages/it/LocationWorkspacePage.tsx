@@ -76,6 +76,8 @@ export default function LocationWorkspacePage() {
   const [saving, setSaving] = React.useState(false);
   const [operatingCompanyName, setOperatingCompanyName] = React.useState<string | null>(null);
   const [subLocationsCount, setSubLocationsCount] = React.useState(0);
+  // The Relations tab badge: assets, applications and web links the caller can see.
+  const [relationsCount, setRelationsCount] = React.useState(0);
   const [deleteDialogOpen, setDeleteDialogOpen] = React.useState(false);
   const [deleting, setDeleting] = React.useState(false);
   const [pendingHostingType, setPendingHostingType] = React.useState<string | null>(null);
@@ -380,10 +382,25 @@ export default function LocationWorkspacePage() {
     subItemsAnchorRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' });
   };
 
+  const loadRelationCounts = React.useCallback(async () => {
+    if (!data?.id) return;
+    try {
+      const res = await api.get<{ relations: number }>(`/locations/${data.id}/relation-counts`);
+      setRelationsCount(Number(res.data?.relations) || 0);
+    } catch {
+      setRelationsCount(0);
+    }
+  }, [data?.id]);
+
+  React.useEffect(() => {
+    setRelationsCount(0);
+    void loadRelationCounts();
+  }, [loadRelationCounts]);
+
   const workspaceTabs: PortfolioDetailWorkspaceTab[] = [
     { key: 'overview', label: t('workspace.location.tabs.overview') },
     { key: 'contacts', label: t('workspace.location.tabs.contacts'), disabled: isCreate },
-    { key: 'relations', label: t('workspace.location.tabs.relations'), disabled: isCreate },
+    { key: 'relations', label: t('workspace.location.tabs.relations'), disabled: isCreate, badge: relationsCount || undefined },
   ];
 
   const title = isCreate
@@ -547,7 +564,7 @@ export default function LocationWorkspacePage() {
               <LocationContactsTab locationId={data.id} canManage={canManage} />
             )}
             {validTab === 'relations' && (
-              <LocationRelationsTab locationId={data.id} />
+              <LocationRelationsTab locationId={data.id} onRelationsChange={() => { void loadRelationCounts(); }} />
             )}
           </>
         )}

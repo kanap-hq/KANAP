@@ -1208,6 +1208,7 @@
     "columns": {
       "name": "Name",
       "detail": "Address or size",
+      "address": "Address",
       "added": "Added"
     },
     "types": {
@@ -1222,6 +1223,8 @@
     "placeholders": {
       "name": "e.g., Vendor portal",
       "url": "e.g., https://status.example.com"
-    }
+    },
+    "linksTitle": "Web links",
+    "linksEmpty": "No web link."
   }
 }

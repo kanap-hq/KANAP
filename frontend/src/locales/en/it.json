@@ -2980,14 +2980,9 @@
         "addWebsite": "+ Add website"
       },
       "relations": {
-        "assetsTitle": "Assets at this location",
         "noAssets": "No assets linked to this location.",
         "subLocation": "Sub-location",
-        "type": "Type",
         "provider": "Provider",
-        "regionZone": "Region / zone",
-        "status": "Status",
-        "applicationsTitle": "Applications at this location",
         "noApplications": "No applications detected for this location.",
         "environments": "Environments"
       },
