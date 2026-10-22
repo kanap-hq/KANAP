@@ -162,7 +162,7 @@ vi.mock('../../components/finance/BudgetTab', async () => {
   return { default: BudgetTabStandIn };
 });
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
-vi.mock('../../components/finance/ItemRelationsPanel', () => ({ default: () => null }));
+vi.mock('./workspace/BudgetLineRelationsTab', () => ({ default: () => null }));
 vi.mock('../../components/EntityTasksPanel', () => ({ default: () => null }));
 // The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
 // answers as the server does for a change in place.
@@ -1963,11 +1963,10 @@ describe('BudgetLinePage change type (lot M)', () => {
   });
   afterEach(() => { auth.canEdit = true; });
 
-  it('the « … » pill opens the change of type; once changed, the line opens in its new type', async () => {
+  it('Change type in the properties opens the change of type; once changed, the line opens in its new type', async () => {
     renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
-    fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
     const dialog = await screen.findByTestId('change-type-dialog');
     expect(dialog).toHaveAttribute('data-nature', nature);
     expect(dialog).toHaveAttribute('data-line', ITEM_ID);
@@ -1979,8 +1978,7 @@ describe('BudgetLinePage change type (lot M)', () => {
     renderAt(`/ops/budget/${ITEM_ID}/overview`);
     const notes = await screen.findByDisplayValue('Renewal');
     fireEvent.change(notes, { target: { value: 'Renewal in March' } });
-    fireEvent.click(screen.getByRole('button', { name: 'buttons.moreActions' }));
-    fireEvent.click(screen.getByRole('menuitem', { name: 'ops:shared.changeType.menuItem' }));
+    fireEvent.click(screen.getByRole('button', { name: 'budget.changeType' }));
     await screen.findByTestId('change-type-dialog');
     expect(mocked.patch).toHaveBeenCalledWith(`/budget-lines/${ITEM_ID}`, { notes: 'Renewal in March', base: { notes: 'Renewal' } });
   });
@@ -1989,7 +1987,7 @@ describe('BudgetLinePage change type (lot M)', () => {
     auth.canEdit = false;
     renderAt(`/ops/budget/${ITEM_ID}/overview`);
     await screen.findByDisplayValue('Renewal');
-    expect(screen.queryByRole('button', { name: 'buttons.moreActions' })).toBeNull();
+    expect(screen.queryByRole('button', { name: 'budget.changeType' })).toBeNull();
   });
 
   it('names the line that replaces this one; it opens in its own type', async () => {

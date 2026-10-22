@@ -38,7 +38,6 @@ import {
 } from '../../constants/status';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
-import WorkspaceMoreMenu from '../../components/workspace/WorkspaceMoreMenu';
 import ChangeTypeDialog, { type ChangeTypeResult } from '../../components/finance/ChangeTypeDialog';
 import LineLineage, { type LineageLine } from '../../components/finance/LineLineage';
 import { budgetLinePath, openLineAfterTypeChange } from '../../components/finance/changeTypeNavigation';
@@ -48,7 +47,6 @@ import BudgetPropertiesDrawer, { RunBuild } from './workspace/BudgetPropertiesDr
 import type { BudgetTabHandle } from '../../components/finance/BudgetTab';
 import type { AllocationsTabHandle } from '../../components/finance/AllocationsTab';
 import { namesInSentence, useHeldChoices } from '../../components/finance/heldChoices';
-import type { RelationsPanelHandle } from '../../components/finance/ItemRelationsPanel';
 import EntityTasksPanel from '../../components/EntityTasksPanel';
 import { budgetListFieldPredicate } from './listFields';
 import { readStoredBudgetListContext, writeStoredBudgetListContext } from './listContextStorage';
@@ -68,11 +66,11 @@ import { useCostCenterNode } from '../../hooks/useCostCenterTree';
 // a tab whose code fails to load shows a retry button in its place (WorkspaceTabBoundary).
 const budgetTab = retryableLazy(() => import('../../components/finance/BudgetTab'));
 const allocationsTab = retryableLazy(() => import('../../components/finance/AllocationsTab'));
-const relationsPanel = retryableLazy(() => import('../../components/finance/ItemRelationsPanel'));
+const relationsTab = retryableLazy(() => import('./workspace/BudgetLineRelationsTab'));
 const BudgetTab = budgetTab.Component;
 const AllocationsTab = allocationsTab.Component;
-const RelationsPanel = relationsPanel.Component;
-const LAZY_TABS = [budgetTab, allocationsTab, relationsPanel];
+const RelationsTab = relationsTab.Component;
+const LAZY_TABS = [budgetTab, allocationsTab, relationsTab];
 function preloadTabs() {
   LAZY_TABS.forEach((tab) => tab.preload());
 }
@@ -662,7 +660,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     return undefined;
   }, [locale, t]);
 
-  // ----- Transitional ref-save tabs (budget / allocations / relations) -----
+  // ----- Transitional ref-save tabs (budget / allocations) -----
   const budgetRef = React.useRef<BudgetTabHandle>(null);
   // The paying company's country, for the budget tab: a new costed line starts on its standard calendar.
   const payingCompanyId = form.paying_company_id;
@@ -676,13 +674,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const allocRef = React.useRef<AllocationsTabHandle>(null);
   // Budget and allocation choices kept for this line while the user is on another of its tabs.
   const heldChoices = useHeldChoices(uuid);
-  const relationsRef = React.useRef<RelationsPanelHandle>(null);
-
-  // Relations autosaves internally; flushAll drains any pending write on navigation.
-  const activeRefEditor = React.useCallback(() => {
-    if (routeTab === 'relations') return relationsRef.current;
-    return null;
-  }, [routeTab]);
 
   // ----- What others changed (lot 3G): the line, and the year's version on Budget and Allocations -----
   const others = useLineOthersChanges({
@@ -699,7 +690,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     budget: budgetRef,
     allocations: allocRef,
     heldChoices,
-    otherTabDirty: () => !!activeRefEditor()?.isDirty?.(),
     // The detail again, unless a refetch (window focus) already brought that counter. A read that
     // fails rejects: nothing was shown, the counter stays for the next poll.
     refreshLine: async (rowVersion) => {
@@ -743,19 +733,14 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       if (!((await budgetRef.current?.flush(options)) ?? true)) return false;
     } else if (routeTab === 'allocations') {
       if (!((await allocRef.current?.flush(options)) ?? true)) return false;
-    } else {
-      const editor = activeRefEditor();
-      if (editor?.isDirty?.()) {
-        try { await editor.save(); } catch { return false; }
-      }
     }
+    // Relations saves each change at once, so a leave never waits on that tab.
     // A budget or allocation choice kept from a tab left meanwhile: only a move that keeps the line goes on.
     return !!options?.ignoreHeld || (budgetChoices().length === 0 && !allocationChoice());
-  }, [autosave, activeRefEditor, routeTab, budgetChoices, allocationChoice]);
+  }, [autosave, routeTab, budgetChoices, allocationChoice]);
 
   const tabUnsaved = React.useCallback(() => (routeTab === 'budget' && !!budgetRef.current?.isDirty())
-    || (routeTab === 'allocations' && !!allocRef.current?.isDirty())
-    || !!activeRefEditor()?.isDirty?.(), [routeTab, activeRefEditor]);
+    || (routeTab === 'allocations' && !!allocRef.current?.isDirty()), [routeTab]);
   // Something would be lost by leaving: a save not done, a choice not made (on any line or tab).
   const unsavedWork = React.useCallback(
     () => autosaveRegistry.isBusy() || tabUnsaved() || budgetChoices().length > 0 || allocationChoice(),
@@ -1119,9 +1104,6 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 itemRef={reference}
               />
             )}
-            {canChangeType && (
-              <WorkspaceMoreMenu items={[{ key: 'change-type', label: t('ops:shared.changeType.menuItem'), onClick: () => { void openChangeType(); } }]} />
-            )}
             {isCreate && (
               <Button variant="contained" size="small" onClick={() => void handleCreate()} disabled={createSubmitting}>
                 {t('common:buttons.create')}
@@ -1276,7 +1258,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
               <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />
             )}
             {routeTab === 'relations' && !isCreate && !stale && uuid && (
-              <RelationsPanel key={uuid} kind={config.relationsKind} id={uuid} ref={relationsRef} autoSave onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+              <RelationsTab key={uuid} lineId={uuid} nature={nature} onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
             )}
           </React.Suspense>
         </WorkspaceTabBoundary>

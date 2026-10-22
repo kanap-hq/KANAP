@@ -194,10 +194,10 @@ Una disposición de columnas que haya guardado conserva su propia elección de c
 
 Haga clic en cualquier fila de la lista para abrir el espacio de trabajo. Su dirección nombra la línea por su referencia, por ejemplo `/ops/budget/BL-12/overview`. Tiene cuatro partes:
 
-- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir**, el menú **...** (**Cambiar el tipo…**, consulte [Cambiar el tipo](#cambiar-el-tipo)) y el botón de cierre
+- **Cabecera**: la referencia de la línea (p. ej., `BL-12`) con un botón para copiarla, el título de la línea (haga clic en él para cambiar el nombre de la línea), **Ant.** / **Sig.**, **Compartir** y el botón de cierre
 - **Barra de metadatos** bajo el título: **Estado**, **Responsable de TI** y **Responsable de negocio**, editables en el sitio. Cuando el centro de coste de la línea tiene un responsable del presupuesto, **Responsable del presupuesto** aparece a continuación. Es de solo lectura y se deriva del centro de coste, no se almacena en la línea: pase el cursor por encima para ver de qué centro de coste procede, y cámbielo en el centro de coste (consulte [Centros de coste](cost-centers.md#responsable-del-presupuesto-en-las-lineas-de-presupuesto))
 - **Cuatro pestañas**: **Vista general**, **Presupuesto**, **Asignaciones** y **Relaciones** (la pestaña Relaciones muestra cuántos vínculos tiene la línea)
-- **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo**. Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
+- **Panel Propiedades** a la derecha: los campos principales de la línea, empezando por **Tipo** (con **Cambiar el tipo…** junto a él en una línea existente, consulte [Cambiar el tipo](#cambiar-el-tipo)). Ábralo o ciérrelo con el botón de propiedades; el espacio de trabajo recuerda su elección
 
 **Guardado automático**:
 
@@ -237,7 +237,7 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 
 **Panel Propiedades**:
 
-- **Tipo**: **OPEX** o **CAPEX**. En una línea existente, **Cambiar el tipo…** junto a él abre el mismo diálogo que el menú **...**
+- **Tipo**: **OPEX** o **CAPEX**. En una línea existente, **Cambiar el tipo…** junto a él abre el diálogo descrito en [Cambiar el tipo](#cambiar-el-tipo)
 - **Proveedor**, **Centro de coste**, **Empresa pagadora**, **Cuenta** (filtrada por el plan de cuentas de la empresa pagadora y el tipo de la línea), **Moneda** (solo las monedas permitidas en su espacio de trabajo), un campo por dimensión analítica usada para el tipo de la línea, **Run o build** e **Inicio de vigencia**
 - **Ciclo de vida**: el interruptor de estado, cuya etiqueta muestra el estado actual (**Activado** o **Desactivado**), y la fecha de **Fin de validez**. Consulte [Estado y ciclo de vida](#estado-y-ciclo-de-vida)
 - Fechas **Creado** y **Actualizado** (solo lectura)
@@ -555,54 +555,41 @@ La pestaña Asignaciones distribuye el gasto de un año entre sus empresas y dep
 
 ### Relaciones
 
-La pestaña Relaciones vincula la línea con objetos relacionados: Proyectos, Aplicaciones, Tecnologías, Contratos, Contactos, Sitios web relevantes y Adjuntos. Todo lo de esta pestaña se guarda automáticamente.
+La pestaña Relaciones muestra lo que paga esta línea: sus proyectos, aplicaciones, tecnologías, contratos y activos, cada uno en su propia tabla, y después sugerencias, los contactos, y los enlaces y archivos. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los proyectos, aplicaciones, tecnologías, contratos y activos vinculados, además de los enlaces y archivos. Los contactos no se cuentan. Las tecnologías y los activos solo cuentan si puede leer la infraestructura.
 
-**Proyectos**:
+**Registros vinculados**, una tabla cada uno:
 
-- Use el autocompletado para vincular uno o más proyectos de su Portafolio
-- Esto ayuda a agrupar el gasto por proyecto en los informes y permite la contabilidad de proyectos
-- Los nombres de los proyectos aparecen en la columna **Proyecto** de la lista, y la búsqueda rápida los encuentra
-- Quite un proyecto haciendo clic en la X de su chip
+| Sección | Columnas |
+|---|---|
+| **Proyectos** | Referencia (`PRJ-7`), nombre, estado, fin previsto |
+| **Aplicaciones** | Referencia (`APP-3`), nombre, ciclo de vida, criticidad de negocio |
+| **Tecnologías** | Referencia (`TEC-5`), nombre, familia, editor |
+| **Contratos** | Nombre, proveedor, fin del periodo en curso, importe anual en la moneda del contrato, renovación (tácita o manual) |
+| **Activos** | Referencia (`AST-12`), nombre, tipo, entorno, estado |
 
-**Aplicaciones**:
+Solo ve las secciones de los módulos que puede leer. Las tecnologías y los activos requieren poder leer la infraestructura. Un Colaborador de negocio solo ve los proyectos y las aplicaciones en los que participa. Los nombres de los proyectos también aparecen en la columna **Proyecto** de la lista, donde la búsqueda rápida los encuentra. Los nombres de los contratos aparecen en su columna **Contrato**.
 
-- Use el autocompletado para vincular una o más aplicaciones o servicios de su catálogo IT
-- Esto ayuda a saber qué líneas financian qué aplicaciones o servicios
-- Quite una aplicación haciendo clic en la X de su chip
+Una fecha de fin en naranja señala un contrato cuya decisión de renovación cae dentro de su ventana de decisión de contratos. Un contrato desactivado, o un activo retirado o desactivado, sigue en la lista con el nombre atenuado. A partir de dos filas, los contratos terminan con un total por moneda, sin los contratos desactivados.
 
-**Tecnologías**:
+**Añadir y quitar vínculos** (`budget:member`): **Añadir**, a la derecha de una sección, abre una búsqueda. Escriba un nombre o una referencia y elija un resultado: el vínculo se guarda al instante. Vincular requiere también poder leer el módulo de destino: **Añadir** no aparece en una sección que no puede leer. Para quitar un vínculo, pase el cursor sobre la fila y haga clic en la cruz al final. Quitar un vínculo no elimina nada más. Los lectores ven las tablas en solo lectura.
 
-- Use el autocompletado para vincular las tecnologías que paga la línea, como licencias de base de datos o una suscripción de hipervisor
-- Solo visible si puede leer la infraestructura
-- Quite una tecnología haciendo clic en la X de su etiqueta
+**Relacionados**: las aplicaciones y los contratos del proveedor de la línea que aún no están vinculados, con el motivo «mismo proveedor». Haga clic en **Vincular** para añadir la sugerencia a su sección. Las sugerencias muestran:
 
-**Contratos**:
+- las aplicaciones en servicio, si puede leer las aplicaciones. Un Colaborador de negocio solo ve las aplicaciones en las que participa;
+- los contratos activos, si puede leer los contratos;
+- 20 como máximo de cada tipo.
 
-- Use el autocompletado para vincular uno o más contratos
-- Una vez vinculado, el nombre del contrato aparece en la columna **Contrato** de la lista como referencia rápida
-- Un contrato puede vincularse a varias líneas (relación de muchos a muchos)
-- Quite un contrato haciendo clic en la X de su chip
+La sección no aparece cuando la línea no tiene proveedor o no hay nada que sugerir.
 
-**Contactos**:
+**Contactos**: personas de esta línea, cada una con un rol (**Comercial**, **Técnico**, **Soporte** u **Otro**). Elija un contacto y luego su rol: al elegir el rol se añade el contacto. La tabla muestra el rol, el nombre, los apellidos, el cargo, el correo electrónico y el móvil. Pase el cursor sobre el rol para ver si el contacto viene del proveedor o se añadió manualmente. Quite un contacto con el icono de quitar.
 
-- Vincule contactos a la línea: elija un contacto y luego su rol (**Comercial**, **Técnico**, **Soporte** u **Otro**). Al elegir el rol se añade el contacto
-- La tabla muestra el rol, el nombre, el apellido, el cargo, el correo y el móvil. Pase el ratón sobre el rol para ver si el contacto viene del proveedor o se añadió manualmente
-- Quite un contacto con el icono de quitar
-- Útil para saber a quién dirigirse para renovaciones, incidencias de soporte o negociaciones
+**Enlaces y archivos**: los enlaces web de la línea (portales de proveedores, documentación, consolas de administración) y sus archivos (presupuestos, facturas, notas de aprobación), una fila cada uno con su nombre, el dominio del enlace o el tamaño del archivo, y la fecha en que se añadió. Haga clic en un enlace para abrirlo en una pestaña nueva, o en un archivo para descargarlo. Con `budget:member`:
 
-**Sitios web relevantes**:
+- **Añadir enlace** abre un diálogo para una URL y un nombre opcional; el enlace se guarda al instante. Para cambiar un enlace, pase el cursor sobre su fila y haga clic en el lápiz.
+- **Adjuntar archivo** abre el selector de archivos. También puede soltar archivos sobre la sección.
+- Para quitar un enlace o un archivo, pase el cursor sobre la fila y haga clic en la cruz. Eliminar un archivo pide una confirmación antes.
 
-- Haga clic en **Agregar URL** para añadir un enlace (p. ej., portales de proveedores, documentación, consolas de administración, wikis internos). Cada enlace tiene un **Nombre** y una **URL**
-- Haga clic en la fila de un enlace para editarlo, o use el icono de eliminar para quitarlo
-
-**Adjuntos**:
-
-- Suba archivos relacionados con la línea (p. ej., contratos, facturas, presupuestos, pliegos, notas de aprobación, especificaciones técnicas)
-- Arrastre y suelte archivos en la zona de adjuntos, o haga clic en **Seleccionar archivos** para buscarlos
-- Haga clic en el chip de un archivo para descargarlo
-- Elimine un adjunto con el icono de eliminar de su chip (tras confirmar; requiere `budget:member`)
-
-**Consejo**: Vincule contratos para seguir las renovaciones en varias líneas. Añada las URL de los portales de proveedores para un acceso rápido. Suba presupuestos y facturas como adjuntos para tener todos los documentos de una línea en un solo lugar.
+**Consejo**: Vincule los contratos para seguir las renovaciones en varias líneas. Adjunte presupuestos y facturas para tener todos los documentos de una línea en un solo lugar.
 
 ---
 
@@ -654,7 +641,7 @@ Cada línea tiene un **estado** (Habilitado o Deshabilitado) y un **Fin de valid
 
 ## Cambiar el tipo
 
-Una línea OPEX que resulta ser una inversión pasa a ser una línea CAPEX, y una línea CAPEX que resulta ser gasto operativo pasa a ser una línea OPEX. Use **Cambiar el tipo…** en el menú **...** de la cabecera del espacio de trabajo, o **Cambiar el tipo…** junto a **Tipo** en el panel **Propiedades**. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
+Una línea OPEX que resulta ser una inversión pasa a ser una línea CAPEX, y una línea CAPEX que resulta ser gasto operativo pasa a ser una línea OPEX. Haga clic en **Cambiar el tipo…** junto a **Tipo** en el panel **Propiedades**. Necesita el nivel Miembro en Presupuesto (`budget:member`). Los cambios aún no guardados se guardan antes de que se abra el diálogo.
 
 **A partir de** fija dónde empieza el cambio:
 
@@ -683,9 +670,9 @@ Un archivo de presupuesto nunca cambia el tipo de una línea. Consulte [Cargar u
 
 4. **Vincule aplicaciones**: Asocie líneas con las aplicaciones o servicios que financian. Esto proporciona un mapeo claro de coste a aplicación.
 
-5. **Suba documentación**: Utilice la funcionalidad de adjuntos para almacenar contratos, presupuestos, facturas, notas de aprobación y SOW de proveedores.
+5. **Suba documentación**: Utilice **Adjuntar archivo** en **Enlaces y archivos** de la pestaña Relaciones para almacenar contratos, presupuestos, facturas, notas de aprobación y SOW de proveedores.
 
-6. **Añada enlaces a portales de proveedores**: Utilice Sitios web relevantes para vincular a consolas de administración, portales de soporte y documentación de proveedores para acceso rápido.
+6. **Añada enlaces a portales de proveedores**: Utilice **Añadir enlace** en **Enlaces y archivos** para vincular a consolas de administración, portales de soporte y documentación de proveedores para acceso rápido.
 
 7. **Registre contactos**: Añada contactos de proveedor con roles (Comercial, Técnico, Soporte) para que su equipo sepa a quién llamar para cada línea.
 

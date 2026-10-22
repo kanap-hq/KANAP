@@ -1,7 +1,9 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
+import { AuditService } from '../audit/audit.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { checkIds, type DeleteRefusal } from '../common/record-in-use';
+import { resolveBudgetLine } from '../common/resolve-item-id';
 import { FxRateService } from '../currency/fx-rate.service';
 import { AllocationCalculatorService } from './allocation-calculator.service';
 import { SUMMARY_SCOPES, summaryTenantId } from './spend-summary.builder';
@@ -9,8 +11,11 @@ import { BudgetListAccess } from './budget-list/budget-list.runtime';
 import * as budgetList from './budget-list/budget-list.service';
 import { CapexItemsDeleteService, SpendItemsDeleteService } from './spend-items-delete.service';
 import { BUDGET_NATURES, naturesAnd, type BudgetNature } from './budget-nature';
-
-import { resolveBudgetLine } from '../common/resolve-item-id';
+import {
+  readBudgetLineRelations,
+  setBudgetLineRelation,
+  type BudgetLineRelationsContext,
+} from './budget-line-relations';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 
 type ReadOptions = { manager: EntityManager; access?: BudgetListAccess };
@@ -25,6 +30,7 @@ export class BudgetLinesService {
     private readonly capexDelete: CapexItemsDeleteService,
     private readonly opexItems: SpendItemsService,
     private readonly capexItems: CapexItemsService,
+    private readonly audit: AuditService,
   ) {}
 
   private items(nature: BudgetNature) {
@@ -126,5 +132,23 @@ export class BudgetLinesService {
       deleted: [...first.deleted, ...second.deleted].sort((a, b) => position.get(a)! - position.get(b)!),
       failed: [...first.failed, ...second.failed].sort((a, b) => position.get(a.id)! - position.get(b.id)!),
     };
+  }
+
+  /** The Relations tab in one round trip (`budget-line-relations.ts`). */
+  relations(ref: string, ctx: BudgetLineRelationsContext) {
+    return readBudgetLineRelations(ctx.manager, ref, ctx);
+  }
+
+  /** Link or unlink one row of the tab. The line is locked; one audit row when the set changes. */
+  setRelation(kind: string, ref: string, targetId: string, add: boolean, ctx: BudgetLineRelationsContext) {
+    return setBudgetLineRelation(
+      { manager: ctx.manager, audit: this.audit },
+      kind,
+      ref,
+      targetId,
+      add,
+      ctx.userId,
+      ctx,
+    );
   }
 }

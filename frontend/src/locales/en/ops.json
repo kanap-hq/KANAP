@@ -164,33 +164,6 @@
       "noDepartments": "No departments",
       "defaultManual": "Default ({{count}} companies)",
       "defaultManual_one": "Default ({{count}} company)"
-    },
-    "relations": {
-      "projects": "Projects",
-      "selectProjects": "Select projects",
-      "applications": "Applications",
-      "selectApplications": "Select applications/services",
-      "technologies": "Technologies",
-      "selectTechnologies": "Select technologies",
-      "contracts": "Contracts",
-      "selectContracts": "Select contracts",
-      "relevantWebsites": "Relevant websites",
-      "addUrl": "Add URL",
-      "linkName": "Name",
-      "linkUrl": "URL",
-      "noWebsites": "No links added",
-      "deleteWebsite": "Delete link",
-      "addLinkTitle": "Add link",
-      "editLinkTitle": "Edit link",
-      "linkDescriptionPlaceholder": "e.g., vendor portal",
-      "attachments": "Attachments",
-      "dragDrop": "Drag & drop files here, or use the button to select",
-      "noUploadPermission": "You do not have permission to upload attachments.",
-      "selectFiles": "Select files",
-      "uploadingFiles_one": "Uploading {{count}} file…",
-      "uploadingFiles_other": "Uploading {{count}} files…",
-      "failedToLoad": "Failed to load relations",
-      "failedToSave": "Failed to save relations"
     }
   },
   "capex": {
@@ -325,33 +298,6 @@
       "noDepartments": "No departments",
       "defaultManual": "Default ({{count}} companies)",
       "defaultManual_one": "Default ({{count}} company)"
-    },
-    "relations": {
-      "projects": "Projects",
-      "selectProjects": "Select projects",
-      "applications": "Applications",
-      "selectApplications": "Select applications/services",
-      "technologies": "Technologies",
-      "selectTechnologies": "Select technologies",
-      "contracts": "Contracts",
-      "selectContracts": "Select contracts",
-      "relevantWebsites": "Relevant websites",
-      "addUrl": "Add URL",
-      "attachments": "Attachments",
-      "dragDrop": "Drag & drop files here, or use the button to select",
-      "noUploadPermission": "You do not have permission to upload attachments.",
-      "selectFiles": "Select files",
-      "uploadingFiles_one": "Uploading {{count}} file…",
-      "uploadingFiles_other": "Uploading {{count}} files…",
-      "failedToLoad": "Failed to load relations",
-      "failedToSave": "Failed to save relations",
-      "linkName": "Name",
-      "linkUrl": "URL",
-      "noWebsites": "No links added",
-      "deleteWebsite": "Delete link",
-      "addLinkTitle": "Add link",
-      "editLinkTitle": "Edit link",
-      "linkDescriptionPlaceholder": "e.g., vendor portal"
     },
     "tabs": {
       "overview": "Overview",
@@ -1215,7 +1161,6 @@
       "yPlus2": "Y+2"
     },
     "changeType": {
-      "menuItem": "Change type…",
       "title": "Change the type of {{reference}}",
       "subtitle": {
         "capex": "This OPEX line becomes a CAPEX line.",

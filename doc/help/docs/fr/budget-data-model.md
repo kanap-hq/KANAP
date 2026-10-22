@@ -81,7 +81,7 @@ Une ligne n'a pas de statut à charger. Elle est active jusqu'à sa fin de valid
 
 ### Changer le type d'une ligne
 
-Une ligne passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** dans le menu **...**, voir [Changer le type](budget-lines.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
+Une ligne passe d'OPEX à CAPEX, ou l'inverse, dans son espace de travail (**Changer le type...** à côté de **Type** dans le panneau **Propriétés**, voir [Changer le type](budget-lines.md#changer-le-type)). Un fichier budgétaire ne le change jamais. Le changement commence le 1er janvier d'une année :
 
 - **À partir de la première année de la ligne**, la ligne elle-même change de type. Elle garde son numéro `BL`, ses années budgétaires, ventilations, liens, pièces jointes et tâches
 - **À partir d'une année ultérieure**, la ligne se termine le 31 décembre de l'année précédente et garde ses années budgétaires antérieures. Une nouvelle ligne de l'autre type, avec son propre numéro `BL`, porte les années budgétaires suivantes, les contacts et les liens vers les applications, actifs, contrats, projets et demandes. La nouvelle ligne enregistre la ligne à laquelle elle succède, et chaque ligne budgétaire affiche l'autre

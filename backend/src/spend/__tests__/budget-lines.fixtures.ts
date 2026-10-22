@@ -55,5 +55,5 @@ export function budgetService(runner: QueryRunner) {
   const args: any[] = [runner.manager.getRepository(SpendItem), undefined, undefined, undefined, audit, storage, time];
   return new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any,
     new (SpendItemsDeleteService as any)(...args), new (CapexItemsDeleteService as any)(...args),
-    itemService('opex', audit) as any, itemService('capex', audit) as any);
+    itemService('opex', audit) as any, itemService('capex', audit) as any, undefined as any);
 }

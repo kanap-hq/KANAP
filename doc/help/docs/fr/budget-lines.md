@@ -194,10 +194,10 @@ Une disposition de colonnes que vous avez enregistrée garde son propre choix de
 
 Cliquez sur n'importe quelle ligne de la liste pour ouvrir l'espace de travail. Son adresse désigne la ligne par sa référence, par exemple `/ops/budget/BL-12/overview`. Il comporte quatre parties :
 
-- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager**, le menu **...** (**Changer le type...**, voir [Changer le type](#changer-le-type)) et le bouton de fermeture
+- **En-tête** : la référence de la ligne (ex. : `BL-12`) avec un bouton de copie, le titre de la ligne (cliquez dessus pour la renommer), **Préc.** / **Suiv.**, **Partager** et le bouton de fermeture
 - **Barre de métadonnées** sous le titre : **Statut**, **Responsable IT** et **Responsable métier**, modifiables sur place. Lorsque le centre de coûts de la ligne a un responsable budgétaire, **Responsable budgétaire** vient ensuite. Il est en lecture seule. Il vient du centre de coûts, et la ligne ne l'enregistre pas : survolez-le pour voir de quel centre de coûts il provient, et modifiez-le sur le centre de coûts (voir [Centres de coûts](cost-centers.md#responsable-budgetaire-sur-les-lignes-budgetaires))
 - **Quatre onglets** : **Vue d'ensemble**, **Budget**, **Ventilations** et **Relations** (l'onglet Relations indique le nombre de liens de la ligne)
-- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type**. Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
+- **Panneau Propriétés** à droite : les champs principaux de la ligne, en commençant par **Type** (avec **Changer le type...** à côté sur une ligne existante, voir [Changer le type](#changer-le-type)). Ouvrez-le ou fermez-le avec le bouton des propriétés ; l'espace de travail mémorise votre choix
 
 **Enregistrement automatique** :
 
@@ -237,7 +237,7 @@ Lorsque la ligne en remplace une autre, ou a été remplacée à partir d'une an
 
 **Panneau Propriétés** :
 
-- **Type** : **OPEX** ou **CAPEX**. Sur une ligne existante, **Changer le type...** à côté ouvre la même fenêtre que le menu **...**
+- **Type** : **OPEX** ou **CAPEX**. Sur une ligne existante, **Changer le type...** à côté ouvre la fenêtre décrite dans [Changer le type](#changer-le-type)
 - **Fournisseur**, **Centre de coûts**, **Société payeuse**, **Compte** (filtré par le plan comptable de la société payeuse et le type de la ligne), **Devise** (seulement les devises autorisées dans votre espace de travail), un champ par dimension analytique utilisée pour le type de la ligne, **Run ou build** et **Début d'effet**
 - **Cycle de vie** : l'interrupteur de statut, dont le libellé indique l'état actuel (**Activé** ou **Désactivé**), et la date de **Fin de validité**. Voir [Statut et cycle de vie](#statut-et-cycle-de-vie)
 - Dates **Créé** et **Mis à jour** (lecture seule)
@@ -555,54 +555,41 @@ L'onglet Ventilations répartit la dépense d'une année entre vos sociétés et
 
 ### Relations
 
-L'onglet Relations lie la ligne aux objets associés : Projets, Applications, Technologies, Contrats, Contacts, Sites web pertinents et Pièces jointes. Tout ce qui se trouve dans cet onglet s'enregistre automatiquement.
+L'onglet Relations montre ce que finance cette ligne : ses projets, applications, technologies, contrats et actifs, chacun dans son propre tableau, puis des suggestions, les contacts, et les liens et fichiers. Cliquez sur une ligne du tableau pour ouvrir l'enregistrement. Le badge de l'onglet compte les projets, applications, technologies, contrats et actifs liés, ainsi que les liens et fichiers. Les contacts ne sont pas comptés. Les technologies et les actifs ne comptent que si vous pouvez lire l'infrastructure.
 
-**Projets** :
+**Enregistrements liés**, un tableau chacun :
 
-- Utilisez l'autocomplétion pour lier un ou plusieurs projets depuis votre Portefeuille
-- Cela aide à regrouper les dépenses par projet dans les rapports et permet la comptabilité projet
-- Les noms des projets apparaissent dans la colonne **Projet** de la liste, et la recherche rapide les trouve
-- Retirez un projet en cliquant sur le X de sa puce
+| Section | Colonnes |
+|---|---|
+| **Projets** | Référence (`PRJ-7`), nom, statut, fin prévue |
+| **Applications** | Référence (`APP-3`), nom, cycle de vie, criticité business |
+| **Technologies** | Référence (`TEC-5`), nom, famille, éditeur |
+| **Contrats** | Nom, fournisseur, fin de la période en cours, montant annuel dans la devise du contrat, renouvellement (tacite ou manuel) |
+| **Actifs** | Référence (`AST-12`), nom, type, environnement, statut |
 
-**Applications** :
+Vous ne voyez que les sections des modules que vous pouvez lire. Les technologies et les actifs demandent de pouvoir lire l'infrastructure. Un Contributeur métier ne voit que les projets et les applications auxquels il participe. Les noms des projets apparaissent aussi dans la colonne **Projet** de la liste, où la recherche rapide les trouve. Les noms des contrats apparaissent dans sa colonne **Contrat**.
 
-- Utilisez l'autocomplétion pour lier une ou plusieurs applications ou services depuis votre catalogue IT
-- Cela aide à suivre quelles lignes financent quelles applications ou services
-- Retirez une application en cliquant sur le X de sa puce
+Une date de fin en orange signale un contrat dont la décision de renouvellement tombe dans votre fenêtre de décision des contrats. Un contrat désactivé, ou un actif retiré ou désactivé, reste affiché, son nom grisé. À partir de deux lignes, les contrats se terminent par un total par devise, sans les contrats désactivés.
 
-**Technologies** :
+**Ajouter et retirer des liens** (`budget:member`) : **Ajouter**, à droite d'une section, ouvre une recherche. Tapez un nom ou une référence et choisissez un résultat : le lien est enregistré aussitôt. Lier demande aussi de pouvoir lire le module visé : **Ajouter** est absent d'une section que vous ne pouvez pas lire. Pour retirer un lien, survolez la ligne et cliquez sur la croix en fin de ligne. Retirer un lien ne supprime rien d'autre. Les lecteurs voient les tableaux en lecture seule.
 
-- Utilisez l'autocomplétion pour lier les technologies que la ligne paie, comme des licences de base de données ou un abonnement d'hyperviseur
-- Visible seulement si vous pouvez lire l'infrastructure
-- Retirez une technologie en cliquant sur le X de sa puce
+**Apparentés** : les applications et les contrats du fournisseur de la ligne qui ne sont pas encore liés, avec la raison « même fournisseur ». Cliquez sur **Lier** pour ajouter la suggestion à sa section. Les suggestions montrent :
 
-**Contrats** :
+- les applications en service, si vous pouvez lire les applications. Un Contributeur métier ne voit que les applications auxquelles il participe ;
+- les contrats actifs, si vous pouvez lire les contrats ;
+- 20 au plus de chaque type.
 
-- Utilisez l'autocomplétion pour lier un ou plusieurs contrats
-- Lorsqu'ils sont liés, le nom du contrat apparaît dans la colonne **Contrat** de la liste pour référence rapide
-- Un contrat peut être lié à plusieurs lignes (relation plusieurs-à-plusieurs)
-- Retirez un contrat en cliquant sur le X de sa puce
+La section est absente quand la ligne n'a pas de fournisseur ou qu'il n'y a rien à suggérer.
 
-**Contacts** :
+**Contacts** : les personnes liées à cette ligne, chacune avec un rôle (**Commercial**, **Technique**, **Support** ou **Autre**). Choisissez un contact, puis son rôle : le choix du rôle ajoute le contact. Le tableau montre le rôle, le prénom, le nom, la fonction, l'e-mail et le mobile. Survolez le rôle pour voir si le contact vient du fournisseur ou a été ajouté manuellement. Retirez un contact avec l'icône de retrait.
 
-- Liez des contacts à la ligne : choisissez un contact, puis son rôle (**Commercial**, **Technique**, **Support** ou **Autre**). Le choix du rôle ajoute le contact
-- Le tableau affiche le rôle, le prénom, le nom, la fonction, l'e-mail et le mobile. Survolez le rôle pour savoir si le contact vient du fournisseur ou a été ajouté manuellement
-- Retirez un contact avec l'icône de retrait
-- Utile pour savoir qui contacter pour les renouvellements, les incidents de support ou les négociations
+**Liens et fichiers** : les liens web de la ligne (portails fournisseurs, documentation, consoles d'administration) et ses fichiers (devis, factures, notes d'approbation), une ligne chacun avec son nom, le domaine du lien ou la taille du fichier, et sa date d'ajout. Cliquez sur un lien pour l'ouvrir dans un nouvel onglet, ou sur un fichier pour le télécharger. Avec `budget:member` :
 
-**Sites web pertinents** :
+- **Ajouter un lien** ouvre une boîte de dialogue pour une URL et un nom optionnel ; le lien est enregistré aussitôt. Pour modifier un lien, survolez sa ligne et cliquez sur le crayon.
+- **Joindre un fichier** ouvre le sélecteur de fichiers. Vous pouvez aussi déposer des fichiers sur la section.
+- Pour retirer un lien ou un fichier, survolez la ligne et cliquez sur la croix. La suppression d'un fichier demande d'abord une confirmation.
 
-- Cliquez sur **Ajouter une URL** pour ajouter un lien (ex. : portails fournisseurs, documentation, consoles d'administration, wikis internes). Chaque lien a un **Nom** et une **URL**
-- Cliquez sur la rangée d'un lien pour le modifier, ou utilisez l'icône de suppression pour le retirer
-
-**Pièces jointes** :
-
-- Téléversez des fichiers liés à la ligne (ex. : contrats, factures, devis, cahiers des charges, notes d'approbation, spécifications techniques)
-- Glissez-déposez des fichiers dans la zone de pièces jointes, ou cliquez sur **Sélectionner des fichiers** pour parcourir
-- Cliquez sur la puce d'un fichier pour le télécharger
-- Supprimez une pièce jointe avec l'icône de suppression de sa puce (après confirmation ; nécessite `budget:member`)
-
-**Conseil** : Liez les contrats pour suivre les renouvellements sur plusieurs lignes. Ajoutez les URL des portails fournisseurs pour un accès rapide. Téléversez les devis et factures en pièces jointes pour garder tous les documents d'une ligne au même endroit.
+**Conseil** : Liez les contrats pour suivre les renouvellements sur plusieurs lignes. Joignez les devis et les factures pour garder tous les documents d'une ligne au même endroit.
 
 ---
 
@@ -654,7 +641,7 @@ Chaque ligne a un **statut** (Activé ou Désactivé) et une **Fin de validité*
 
 ## Changer le type
 
-Une ligne OPEX qui s'avère être un investissement devient une ligne CAPEX, et une ligne CAPEX qui s'avère être une dépense de fonctionnement devient une ligne OPEX. Utilisez **Changer le type...** dans le menu **...** de l'en-tête de l'espace de travail, ou à côté de **Type** dans le panneau **Propriétés**. Il faut le niveau Membre sur Budget (`budget:member`). Les modifications pas encore enregistrées sont enregistrées avant l'ouverture de la fenêtre.
+Une ligne OPEX qui s'avère être un investissement devient une ligne CAPEX, et une ligne CAPEX qui s'avère être une dépense de fonctionnement devient une ligne OPEX. Cliquez sur **Changer le type...** à côté de **Type** dans le panneau **Propriétés**. Il faut le niveau Membre sur Budget (`budget:member`). Les modifications pas encore enregistrées sont enregistrées avant l'ouverture de la fenêtre.
 
 **À partir de** fixe le début du changement :
 
@@ -683,9 +670,9 @@ Un fichier budgétaire ne change jamais le type d'une ligne. Voir [Charger un bu
 
 4. **Liez les applications** : Associez les lignes aux applications ou services qu'elles financent. Vous obtenez une correspondance claire entre coûts et applications.
 
-5. **Téléversez la documentation** : Utilisez les Pièces jointes pour stocker les contrats fournisseurs, devis, factures, notes d'approbation et cahiers des charges.
+5. **Téléversez la documentation** : Utilisez **Joindre un fichier** dans **Liens et fichiers** de l'onglet Relations pour stocker les contrats fournisseurs, devis, factures, notes d'approbation et cahiers des charges.
 
-6. **Ajoutez les liens des portails fournisseurs** : Utilisez les Sites web pertinents pour pointer vers les consoles d'administration, les portails de support et la documentation des fournisseurs.
+6. **Ajoutez les liens des portails fournisseurs** : Utilisez **Ajouter un lien** dans **Liens et fichiers** pour pointer vers les consoles d'administration, les portails de support et la documentation des fournisseurs.
 
 7. **Suivez les contacts** : Ajoutez les contacts fournisseurs avec leur rôle (Commercial, Technique, Support) pour que votre équipe sache qui appeler pour chaque ligne.
 

@@ -194,10 +194,10 @@ Eine von Ihnen gespeicherte Spaltenanordnung behält ihre eigene Auswahl an Spal
 
 Klicken Sie auf eine beliebige Zeile der Liste, um den Arbeitsbereich zu öffnen. Seine Adresse nennt die Zeile über ihre Referenz, zum Beispiel `/ops/budget/BL-12/overview`. Er besteht aus vier Teilen:
 
-- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen**, das Menü **...** (**Typ ändern…**, siehe [Typ ändern](#typ-andern)) und die Schaltfläche zum Schließen
+- **Kopfzeile**: die Referenz der Zeile (z. B. `BL-12`) mit einer Kopierschaltfläche, der Titel der Zeile (anklicken, um die Zeile umzubenennen), **Zurück** / **Weiter**, **Teilen** und die Schaltfläche zum Schließen
 - **Metadatenleiste** unter dem Titel: **Status**, **IT-Verantwortlicher** und **Fachbereichsverantwortlicher**, direkt bearbeitbar. Hat die Kostenstelle der Zeile einen Budgetverantwortlichen, folgt **Budgetverantwortlicher** danach. Er ist schreibgeschützt und aus der Kostenstelle abgeleitet, nicht auf der Zeile gespeichert: Fahren Sie mit der Maus darüber, um zu sehen, aus welcher Kostenstelle er stammt, und ändern Sie ihn auf der Kostenstelle (siehe [Kostenstellen](cost-centers.md#budgetverantwortlicher-auf-budgetzeilen))
 - **Vier Tabs**: **Übersicht**, **Budget**, **Zuordnungen** und **Verknüpfungen** (der Tab Verknüpfungen zeigt die Anzahl der Verknüpfungen der Zeile)
-- **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ**. Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
+- **Bereich Eigenschaften** rechts: die Hauptfelder der Zeile, beginnend mit **Typ** (bei einer bestehenden Zeile mit **Typ ändern…** daneben, siehe [Typ ändern](#typ-andern)). Öffnen oder schließen Sie ihn mit der Eigenschaften-Schaltfläche; der Arbeitsbereich merkt sich Ihre Wahl
 
 **Automatisches Speichern**:
 
@@ -237,7 +237,7 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 
 **Bereich Eigenschaften**:
 
-- **Typ**: **OPEX** oder **CAPEX**. Bei einer bestehenden Zeile öffnet **Typ ändern…** daneben denselben Dialog wie das Menü **...**
+- **Typ**: **OPEX** oder **CAPEX**. Bei einer bestehenden Zeile öffnet **Typ ändern…** daneben den unter [Typ ändern](#typ-andern) beschriebenen Dialog
 - **Lieferant**, **Kostenstelle**, **Zahlendes Unternehmen**, **Konto** (gefiltert nach dem Kontenplan des zahlenden Unternehmens und dem Typ der Zeile), **Währung** (nur die in Ihrem Arbeitsbereich erlaubten Währungen), ein Feld pro Analysedimension, die für den Typ der Zeile verwendet wird, **Run oder Build** und **Beginn der Gültigkeit**
 - **Lebenszyklus**: der Statusschalter, dessen Beschriftung den aktuellen Zustand zeigt (**Aktiviert** oder **Deaktiviert**), und das Datum **Ende der Gültigkeit**. Siehe [Status und Lebenszyklus](#status-und-lebenszyklus)
 - Die Daten **Erstellt** und **Aktualisiert** (schreibgeschützt)
@@ -555,54 +555,41 @@ Der Tab Zuordnungen verteilt die Ausgabe eines Jahres auf Ihre Unternehmen und A
 
 ### Verknüpfungen
 
-Der Tab Verknüpfungen verbindet die Zeile mit zugehörigen Objekten: Projekte, Anwendungen, Technologien, Verträge, Kontakte, Relevante Websites und Anhänge. Alles in diesem Tab wird automatisch gespeichert.
+Der Reiter Verknüpfungen zeigt, was diese Zeile bezahlt: ihre Projekte, Anwendungen, Technologien, Verträge und Assets, jeweils in einer eigenen Tabelle, danach Vorschläge, die Kontakte sowie Links und Dateien. Klicken Sie auf eine Tabellenzeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Projekte, Anwendungen, Technologien, Verträge und Assets sowie die Links und Dateien. Kontakte werden nicht gezählt. Technologien und Assets zählen nur, wenn Sie die Infrastruktur lesen dürfen.
 
-**Projekte**:
+**Verknüpfte Datensätze**, jeweils eine Tabelle:
 
-- Verknüpfen Sie über die Autovervollständigung ein oder mehrere Projekte aus Ihrem Portfolio
-- Das hilft, Ausgaben in Berichten nach Projekt zu gruppieren, und ermöglicht die Projektbuchhaltung
-- Die Projektnamen erscheinen in der Spalte **Projekt** der Liste, und die Schnellsuche findet sie
-- Entfernen Sie ein Projekt mit dem X auf seinem Chip
+| Abschnitt | Spalten |
+|---|---|
+| **Projekte** | Referenz (`PRJ-7`), Name, Status, geplantes Ende |
+| **Anwendungen** | Referenz (`APP-3`), Name, Lebenszyklus, Geschäftskritikalität |
+| **Technologien** | Referenz (`TEC-5`), Name, Familie, Hersteller |
+| **Verträge** | Name, Lieferant, Ende der laufenden Laufzeit, Jahresbetrag in der Vertragswährung, Verlängerung (stillschweigend oder manuell) |
+| **Assets** | Referenz (`AST-12`), Name, Typ, Umgebung, Status |
 
-**Anwendungen**:
+Sie sehen nur die Abschnitte der Module, die Sie lesen dürfen. Technologien und Assets erfordern Leserechte auf die Infrastruktur. Ein Fachbereichs-Mitwirkender sieht nur die Projekte und Anwendungen, an denen er beteiligt ist. Die Projektnamen erscheinen auch in der Spalte **Projekt** der Liste, wo die Schnellsuche sie findet. Die Vertragsnamen erscheinen in ihrer Spalte **Vertrag**.
 
-- Verknüpfen Sie über die Autovervollständigung eine oder mehrere Anwendungen oder Services aus Ihrem IT-Katalog
-- Das hilft nachzuverfolgen, welche Zeilen welche Anwendungen oder Services finanzieren
-- Entfernen Sie eine Anwendung mit dem X auf ihrem Chip
+Ein orangefarbenes Enddatum kennzeichnet einen Vertrag, dessen Verlängerungsentscheidung in Ihr Entscheidungsfenster für Verträge fällt. Ein deaktivierter Vertrag oder ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt. Ab zwei Zeilen enden die Verträge mit einer Summe je Währung, ohne die deaktivierten Verträge.
 
-**Technologien**:
+**Verknüpfungen hinzufügen und entfernen** (`budget:member`): **Hinzufügen** rechts neben einem Abschnitt öffnet eine Suche. Geben Sie einen Namen oder eine Referenz ein und wählen Sie ein Ergebnis: Die Verknüpfung wird sofort gespeichert. Das Verknüpfen erfordert zusätzlich Leserechte auf das Zielmodul. **Hinzufügen** fehlt daher in einem Abschnitt, den Sie nicht lesen dürfen. Um eine Verknüpfung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Das Entfernen einer Verknüpfung löscht nichts anderes. Leser sehen die Tabellen schreibgeschützt.
 
-- Verknüpfen Sie über die Autovervollständigung die Technologien, die die Zeile bezahlt, etwa Datenbanklizenzen oder ein Hypervisor-Abonnement
-- Nur sichtbar, wenn Sie die Infrastruktur lesen dürfen
-- Entfernen Sie eine Technologie über das X auf ihrem Chip
+**Verwandt**: die Anwendungen und Verträge des Lieferanten der Zeile, die noch nicht verknüpft sind, mit dem Grund „gleicher Lieferant“. Klicken Sie auf **Verknüpfen**, um den Vorschlag seinem Abschnitt hinzuzufügen. Die Vorschläge zeigen:
 
-**Verträge**:
+- Anwendungen in Betrieb, wenn Sie die Anwendungen lesen dürfen. Ein Fachbereichs-Mitwirkender sieht nur die Anwendungen, an denen er beteiligt ist;
+- aktive Verträge, wenn Sie die Verträge lesen dürfen;
+- höchstens 20 je Typ.
 
-- Verknüpfen Sie über die Autovervollständigung einen oder mehrere Verträge
-- Verknüpfte Verträge erscheinen zur schnellen Orientierung in der Spalte **Vertrag** der Liste
-- Ein Vertrag kann mit mehreren Zeilen verknüpft sein (n:m-Beziehung)
-- Entfernen Sie einen Vertrag mit dem X auf seinem Chip
+Der Abschnitt fehlt, wenn die Zeile keinen Lieferanten hat oder es nichts vorzuschlagen gibt.
 
-**Kontakte**:
+**Kontakte**: Personen zu dieser Zeile, jede mit einer Rolle (**Vertrieb**, **Technik**, **Support** oder **Sonstige**). Wählen Sie einen Kontakt und dann seine Rolle: Die Wahl der Rolle fügt den Kontakt hinzu. Die Tabelle zeigt Rolle, Vorname, Nachname, Funktion, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde. Entfernen Sie einen Kontakt mit dem Entfernen-Symbol.
 
-- Verknüpfen Sie Kontakte mit der Zeile: Wählen Sie einen Kontakt und dann seine Rolle (**Vertrieb**, **Technik**, **Support** oder **Sonstige**). Die Wahl der Rolle fügt den Kontakt hinzu
-- Die Tabelle zeigt Rolle, Vorname, Nachname, Budgetzeile, E-Mail und Mobilnummer. Fahren Sie mit der Maus über die Rolle, um zu sehen, ob der Kontakt vom Lieferanten stammt oder manuell hinzugefügt wurde
-- Entfernen Sie einen Kontakt mit dem Entfernen-Symbol
-- Nützlich, um zu wissen, wen Sie bei Verlängerungen, Supportfällen oder Verhandlungen ansprechen
+**Links und Dateien**: die Weblinks der Zeile (Lieferantenportale, Dokumentation, Admin-Konsolen) und ihre Dateien (Angebote, Rechnungen, Genehmigungsvermerke), je eine Zeile mit Name, der Domain des Links oder der Größe der Datei und dem Datum, an dem sie hinzugefügt wurden. Klicken Sie auf einen Link, um ihn in einem neuen Tab zu öffnen, oder auf eine Datei, um sie herunterzuladen. Mit `budget:member`:
 
-**Relevante Websites**:
+- **Link hinzufügen** öffnet einen Dialog für eine URL und einen optionalen Namen; der Link wird sofort gespeichert. Um einen Link zu ändern, fahren Sie mit der Maus über seine Zeile und klicken Sie auf den Stift.
+- **Datei anhängen** öffnet die Dateiauswahl. Sie können Dateien auch auf den Abschnitt ziehen.
+- Um einen Link oder eine Datei zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz. Das Löschen einer Datei fragt zuerst nach einer Bestätigung.
 
-- Klicken Sie auf **URL hinzufügen**, um einen Link hinzuzufügen (z. B. Lieferantenportale, Dokumentation, Admin-Konsolen, interne Wikis). Jeder Link hat einen **Namen** und eine **URL**
-- Klicken Sie auf die Zeile eines Links, um ihn zu bearbeiten, oder entfernen Sie ihn mit dem Löschsymbol
-
-**Anhänge**:
-
-- Laden Sie Dateien zu der Zeile hoch (z. B. Verträge, Rechnungen, Angebote, Leistungsbeschreibungen, Genehmigungsvermerke, technische Spezifikationen)
-- Ziehen Sie Dateien in den Anhangsbereich oder klicken Sie auf **Dateien auswählen**
-- Klicken Sie auf den Chip einer Datei, um sie herunterzuladen
-- Löschen Sie einen Anhang mit dem Löschsymbol auf seinem Chip (nach Bestätigung; erfordert `budget:member`)
-
-**Tipp**: Verknüpfen Sie Verträge, um Verlängerungen über mehrere Zeilen hinweg zu verfolgen. Fügen Sie URLs von Lieferantenportalen für den schnellen Zugriff hinzu. Laden Sie Angebote und Rechnungen als Anhänge hoch, um alle Dokumente einer Zeile an einem Ort zu halten.
+**Tipp**: Verknüpfen Sie Verträge, um Verlängerungen über mehrere Zeilen hinweg zu verfolgen. Hängen Sie Angebote und Rechnungen an, um alle Dokumente einer Zeile an einem Ort zu haben.
 
 ---
 
@@ -654,7 +641,7 @@ Jede Zeile hat einen **Status** (Aktiviert oder Deaktiviert) und ein optionales 
 
 ## Typ ändern
 
-Eine OPEX-Zeile, die sich als Investition herausstellt, wird zu einer CAPEX-Zeile, und eine CAPEX-Zeile, die sich als Betriebsausgabe herausstellt, wird zu einer OPEX-Zeile. Verwenden Sie **Typ ändern…** im Menü **...** der Kopfzeile des Arbeitsbereichs oder neben **Typ** im Bereich **Eigenschaften**. Sie benötigen die Stufe Mitglied für Budget (`budget:member`). Noch nicht gespeicherte Änderungen werden gespeichert, bevor sich der Dialog öffnet.
+Eine OPEX-Zeile, die sich als Investition herausstellt, wird zu einer CAPEX-Zeile, und eine CAPEX-Zeile, die sich als Betriebsausgabe herausstellt, wird zu einer OPEX-Zeile. Klicken Sie auf **Typ ändern…** neben **Typ** im Bereich **Eigenschaften**. Sie benötigen die Stufe Mitglied für Budget (`budget:member`). Noch nicht gespeicherte Änderungen werden gespeichert, bevor sich der Dialog öffnet.
 
 **Ab** legt fest, wo die Änderung beginnt:
 
@@ -683,9 +670,9 @@ Eine Budgetdatei ändert den Typ einer Zeile nie. Siehe [Ein Budget aus einer Ta
 
 4. **Anwendungen verknüpfen**: Ordnen Sie Zeilen den Anwendungen oder Services zu, die sie finanzieren. Dies bietet eine klare Kosten-zu-Anwendungs-Zuordnung.
 
-5. **Dokumentation hochladen**: Verwenden Sie die Anhangfunktion, um Lieferantenverträge, Angebote, Rechnungen, Genehmigungsvermerke und Leistungsbeschreibungen zu speichern.
+5. **Dokumentation hochladen**: Verwenden Sie **Datei anhängen** unter **Links und Dateien** im Reiter Verknüpfungen, um Lieferantenverträge, Angebote, Rechnungen, Genehmigungsvermerke und Leistungsbeschreibungen zu speichern.
 
-6. **Lieferantenportal-Links hinzufügen**: Verwenden Sie relevante Websites, um zu Lieferanten-Admin-Konsolen, Support-Portalen und Dokumentation für schnellen Zugriff zu verlinken.
+6. **Lieferantenportal-Links hinzufügen**: Verwenden Sie **Link hinzufügen** unter **Links und Dateien**, um zu Lieferanten-Admin-Konsolen, Support-Portalen und Dokumentation für schnellen Zugriff zu verlinken.
 
 7. **Kontakte verfolgen**: Fügen Sie Lieferantenkontakte mit Rollen (Vertrieb, Technik, Support) hinzu, damit Ihr Team weiß, wen es für jede Zeile kontaktieren soll.
 
