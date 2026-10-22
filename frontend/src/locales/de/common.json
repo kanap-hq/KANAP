@@ -679,6 +679,7 @@
     "server": "Server",
     "costCenter": "Kostenstelle",
     "noCostCenterYet": "Noch keine Kostenstelle.",
+    "noCostCenterForCompany": "Keine Kostenstelle für dieses Unternehmen.",
     "createCostCenter": "Eine anlegen",
     "noCostCentersFound": "Keine Kostenstellen gefunden",
     "costCentersLoadFailed": "Die Kostenstellen konnten nicht geladen werden.",

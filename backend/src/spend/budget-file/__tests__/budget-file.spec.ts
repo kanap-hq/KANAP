@@ -793,6 +793,38 @@ async function testTrailingLineBreak() {
   assert.deepEqual(edited.plans.map((plan) => plan.body), [{ notes: 'test 2' }], 'a real change still writes');
 }
 
+/** company_name of another company than the cost center's: accepted, with one warning on the line. */
+async function testCostCenterOfAnotherCompany() {
+  const cat = catalog({
+    companies: [
+      { id: 'c1', name: 'Acme', coaId: null, disabledAt: null },
+      { id: 'c2', name: 'Globex', coaId: null, disabledAt: null },
+    ],
+    accounts: [{ id: 'a1', number: '6100', coaId: null, disabledAt: null }],
+    costCenters: [{ id: 'cc1', code: 'IT-100', kind: 'cost_center', companyId: 'c1', disabledAt: null }],
+  });
+  const header = 'item_number,name,company_name,cost_center_code,account_number,currency\n';
+  const other = await preflight('opex', `${header},Widget,Globex,IT-100,6100,EUR\n`, [], { cat });
+  assert.equal(other.ok, true, JSON.stringify(other.errors));
+  assert.deepEqual(other.warnings.costCenterCompanies, [{
+    line: 2,
+    code: 'BUDGET_FILE_COST_CENTER_OTHER_COMPANY',
+    costCenter: 'IT-100',
+    company: 'Globex',
+    costCenterCompany: 'Acme',
+    message: 'Cost center IT-100 belongs to Acme. The line is paid by Globex.',
+  }]);
+  const same = await preflight('opex', `${header},Widget,Acme,IT-100,6100,EUR\n`, [], { cat });
+  assert.deepEqual(same.warnings.costCenterCompanies, [], 'the cost center\'s own company');
+  const fromCenter = await preflight('opex', `${header},Widget,,IT-100,6100,EUR\n`, [], { cat });
+  assert.equal(fromCenter.ok, true, JSON.stringify(fromCenter.errors));
+  assert.deepEqual(fromCenter.warnings.costCenterCompanies, [], 'an empty company_name takes the cost center\'s');
+  // A stored line's cost center counts too when the file leaves the column out.
+  const stored = line({ costCenterId: 'cc1', costCenterCode: 'IT-100' });
+  const kept = await preflight('opex', 'item_number,name,company_name\nBL-3,Widget,Globex\n', [stored], { cat });
+  assert.deepEqual(kept.warnings.costCenterCompanies.map((warning) => warning.line), [2]);
+}
+
 async function main() {
   await testTokenLanguages();
   await testDecimalMarkParameter();
@@ -815,6 +847,7 @@ async function main() {
   await testDuplicatesByNature();
   await testTrailingLineBreak();
   await testCapexDescription();
+  await testCostCenterOfAnotherCompany();
   console.log('budget-file.spec: ok');
 }
 

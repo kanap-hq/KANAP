@@ -25,7 +25,7 @@ El espacio de trabajo se abre en modo de creación, con el título **Nueva líne
 **Opcional pero útil**:
 
 - **Proveedor**: A quién paga. Vinculado a sus proveedores en datos maestros
-- **Centro de coste**: Quién es responsable del gasto. Consulte [Centros de coste](cost-centers.md). Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
+- **Centro de coste**: Quién es responsable del gasto. Consulte [Centros de coste](cost-centers.md). Una vez elegida la empresa pagadora, la lista muestra los centros de coste de esa empresa. Cuando la empresa pagadora aún está vacía, elegir un centro de coste la completa con la empresa del centro de coste
 - **Run o build**: **Run** para el gasto que mantiene en funcionamiento los servicios existentes, **Build** para el gasto que los crea o los modifica
 - **Dimensiones analíticas**: Un campo por dimensión usada para el tipo de la línea, con el nombre de la dimensión, para agrupar a medida en los informes (p. ej., **Software** en **Tipo de coste**). La dimensión por defecto se muestra como **Dimensión analítica** hasta que se le da un nombre. Consulte [Dimensiones analíticas](analytics.md)
 - **Fin de validez**: La fecha en que termina esta línea. Déjela en blanco si no hay fin. Después de esa fecha, la línea queda desactivada y los años posteriores dejan de contar en las vistas presupuestarias
@@ -246,8 +246,9 @@ Cuando la línea sustituye a otra, o fue sustituida a partir de un año posterio
 **Centro de coste**:
 
 - La lista muestra el árbol de centros de coste. Los grupos se muestran para ayudarle a orientarse y no se pueden elegir. Busque por código, nombre o nombre de grupo
+- Cuando la empresa pagadora está elegida, la lista muestra solo los centros de coste de esa empresa, con los grupos por encima de ellos. Una línea que ya tiene un centro de coste de otra empresa lo conserva en la lista. Cuando la empresa no tiene ningún centro de coste, la lista lo indica
 - Un centro de coste desactivado aparece marcado como **Desactivado**. Se mantiene en las líneas que ya lo tienen y no se puede elegir para otra línea
-- Cuando crea una línea y la empresa pagadora está vacía, elegir un centro de coste completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, elegir otro centro de coste también actualiza la empresa
+- Cuando crea una línea y la empresa pagadora está vacía, la lista muestra todos los centros de coste. Elegir uno completa la empresa pagadora con la empresa del centro de coste, de modo que la lista **Cuenta** se abre en el plan de cuentas de esa empresa. Hasta que usted elija una empresa o una cuenta, la lista conserva todos los centros de coste y elegir otro también actualiza la empresa
 - Cuando la empresa pagadora difiere de la empresa del centro de coste, se conservan ambas. Una indicación bajo el campo dice "Este centro de coste pertenece a" seguido del nombre de la empresa
 - Una línea guardada mediante la API con un centro de coste y sin empresa pagadora toma la empresa del centro de coste. Para los archivos CSV, consulte [Importación/exportación CSV](#importacionexportacion-csv)
 

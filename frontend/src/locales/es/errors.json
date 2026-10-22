@@ -70,6 +70,7 @@
   "CSV_FILE_OPENDOCUMENT": "Este archivo es una hoja de cálculo OpenDocument, no un CSV. En LibreOffice Calc: Archivo › Guardar como › Texto CSV.",
   "CSV_FILE_NOT_TEXT": "Este archivo no es un archivo CSV. Guárdelo como CSV UTF-8 e impórtelo de nuevo.",
   "CSV_FILE_EMPTY": "El archivo está vacío.",
+  "BUDGET_FILE_COST_CENTER_OTHER_COMPANY": "El centro de coste {{costCenter}} pertenece a {{costCenterCompany}}. La línea la paga {{company}}.",
   "CSV_HEADER_IGNORED_COLUMNS": "Estas columnas no se importan: {{extra}}.",
   "CSV_HEADER_UNKNOWN_TIME_ZONE": "Zona horaria desconocida en la columna {{column}}: {{zone}}. Use una zona como Europe/Paris o UTC.",
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",

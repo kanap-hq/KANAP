@@ -679,6 +679,7 @@
     "server": "Serveur",
     "costCenter": "Centre de coûts",
     "noCostCenterYet": "Aucun centre de coûts pour l'instant.",
+    "noCostCenterForCompany": "Aucun centre de coûts pour cette société.",
     "createCostCenter": "En créer un",
     "noCostCentersFound": "Aucun centre de coûts trouvé",
     "costCentersLoadFailed": "Les centres de coûts n'ont pas pu être chargés.",

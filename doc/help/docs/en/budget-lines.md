@@ -25,7 +25,7 @@ The workspace opens in creation mode, titled **New OPEX line** or **New CAPEX li
 **Optional but useful**:
 
 - **Supplier**: Who you are paying. Links to your suppliers in master data
-- **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). When the paying company is still empty, picking a cost center fills it with the cost center's company
+- **Cost center**: Who owns the spend. See [Cost centers](cost-centers.md). Once the paying company is chosen, the list shows that company's cost centers. When the paying company is still empty, picking a cost center fills it with the cost center's company
 - **Run or build**: **Run** for spend that keeps existing services running, **Build** for spend that creates or changes them
 - **Analytics dimensions**: One field per dimension used for the line's type, named after it, for custom grouping in reports (e.g., **Software** on **Cost pool**). The default dimension shows as **Analytics dimension** until it is renamed. See [Analytics dimensions](analytics.md)
 - **End of validity**: The date this line stops. Leave it blank if there is no end. After it, the line is disabled and later years no longer count in the budget views
@@ -246,8 +246,9 @@ When the line replaces another one, or was replaced from a later year after a ty
 **Cost center**:
 
 - The list shows the cost center tree. Groups are shown to help you find your way and cannot be picked. Search by code, name or group name
+- When the paying company is chosen, the list shows only that company's cost centers, with the groups above them. A line that already has a cost center of another company keeps it in the list. When the company has no cost center, the list says so
 - A disabled cost center is marked **Disabled**. It stays on the lines that already have it, and cannot be picked for another line
-- When you create a line and the paying company is empty, picking a cost center fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, choosing another cost center updates the company too
+- When you create a line and the paying company is empty, the list shows every cost center. Picking one fills the paying company with the cost center's company, so the **Account** list opens on that company's chart of accounts. Until you pick a company or an account yourself, the list keeps every cost center and choosing another one updates the company too
 - When the paying company differs from the cost center's company, both are kept. A hint under the field says "This cost center belongs to" followed by the company name
 - A line saved through the API with a cost center and no paying company takes the cost center's company. For CSV files, see [CSV import/export](#csv-importexport)
 

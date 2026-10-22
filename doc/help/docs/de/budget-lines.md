@@ -25,7 +25,7 @@ Der Arbeitsbereich öffnet sich im Erstellungsmodus mit dem Titel **Neue OPEX-Ze
 **Optional aber nützlich**:
 
 - **Lieferant**: Wen Sie bezahlen. Verknüpft mit Ihren Lieferanten in den Stammdaten
-- **Kostenstelle**: Wer für die Ausgabe verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
+- **Kostenstelle**: Wer für die Ausgabe verantwortlich ist. Siehe [Kostenstellen](cost-centers.md). Sobald das zahlende Unternehmen gewählt ist, zeigt die Liste die Kostenstellen dieses Unternehmens. Ist das zahlende Unternehmen noch leer, füllt die Wahl einer Kostenstelle es mit dem Unternehmen der Kostenstelle
 - **Run oder Build**: **Run** für Ausgaben, die bestehende Services am Laufen halten, **Build** für Ausgaben, die sie schaffen oder verändern
 - **Analysedimensionen**: Ein Feld pro Dimension, die für den Typ der Zeile verwendet wird, nach ihr benannt, für eine eigene Gruppierung in Berichten (z. B. **Software** in **Kostenart**). Die Standarddimension erscheint als **Analysedimension**, bis sie umbenannt wird. Siehe [Analysedimensionen](analytics.md)
 - **Ende der Gültigkeit**: Das Datum, an dem diese Zeile endet. Lassen Sie es leer, wenn es kein Ende gibt. Danach ist die Zeile deaktiviert und spätere Jahre zählen in den Budgetansichten nicht mehr
@@ -246,8 +246,9 @@ Ersetzt die Zeile eine andere, oder wurde sie nach einer Typänderung ab einem s
 **Kostenstelle**:
 
 - Die Liste zeigt den Kostenstellenbaum. Gruppen werden zur Orientierung angezeigt und können nicht gewählt werden. Suchen Sie nach Code, Name oder Gruppenname
+- Ist das zahlende Unternehmen gewählt, zeigt die Liste nur die Kostenstellen dieses Unternehmens, mit den Gruppen darüber. Eine Zeile, die bereits eine Kostenstelle eines anderen Unternehmens hat, behält sie in der Liste. Hat das Unternehmen keine Kostenstelle, weist die Liste darauf hin
 - Eine deaktivierte Kostenstelle ist als **Deaktiviert** markiert. Sie bleibt auf den Zeilen, die sie bereits haben, und kann für keine andere Zeile gewählt werden
-- Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, füllt die Wahl einer Kostenstelle das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt. Solange Sie nicht selbst ein Unternehmen oder ein Konto wählen, aktualisiert die Wahl einer anderen Kostenstelle auch das Unternehmen
+- Wenn Sie eine Zeile erstellen und das zahlende Unternehmen leer ist, zeigt die Liste alle Kostenstellen. Die Wahl einer Kostenstelle füllt das zahlende Unternehmen mit dem Unternehmen der Kostenstelle, sodass die Liste **Konto** den Kontenplan dieses Unternehmens zeigt. Solange Sie nicht selbst ein Unternehmen oder ein Konto wählen, zeigt die Liste weiterhin alle Kostenstellen und die Wahl einer anderen Kostenstelle aktualisiert auch das Unternehmen
 - Wenn sich das zahlende Unternehmen vom Unternehmen der Kostenstelle unterscheidet, bleiben beide erhalten. Ein Hinweis unter dem Feld lautet „Diese Kostenstelle gehört zu“, gefolgt vom Namen des Unternehmens
 - Eine über die API gespeicherte Zeile mit Kostenstelle und ohne zahlendes Unternehmen erhält das Unternehmen der Kostenstelle. Für CSV-Dateien siehe [CSV-Import/Export](#csv-importexport)
 

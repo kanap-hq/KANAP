@@ -1126,6 +1126,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             mode="create"
             supplierId={createForm.supplier_id}
             payingCompanyId={createForm.paying_company_id}
+            companyFollowsCostCenter={createCompanyFromCostCenter && !createForm.account_id}
             accountId={createForm.account_id}
             currency={createForm.currency}
             analyticsValues={createForm.analytics_values}

@@ -61,7 +61,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
   return { default: (props: {
     costCenterId?: string;
     nature: string; onNatureChange: (v: string) => void; onChangeType?: () => void;
-    mode: string; payingCompanyId: string; accountId: string; onPayingCompanyChange: (v: string) => void;
+    mode: string; payingCompanyId: string; companyFollowsCostCenter?: boolean; accountId: string; onPayingCompanyChange: (v: string) => void;
     onAccountChange: (v: string) => void; onSupplierChange: (v: string) => void; onCostCenterChange: (v: string, node: { id: string; company_id: string | null } | null) => void;
     onRunBuildChange: (v: string) => void; analyticsValues: Record<string, string | null>;
     onAnalyticsValueChange: (axisId: string, v: string | null) => void; onDisabledAtChange?: (v: string | null) => void;
@@ -72,6 +72,7 @@ vi.mock('./workspace/BudgetPropertiesDrawer', async () => {
     <div
       data-cost-center={props.costCenterId}
       data-mode={props.mode} data-company={props.payingCompanyId} data-account={props.accountId}
+      data-company-follows={String(!!props.companyFollowsCostCenter)}
       data-analytics={JSON.stringify(props.analyticsValues)}
       data-references={JSON.stringify(props.references ?? null)}
       data-analytics-options={JSON.stringify(props.analyticsOptions ?? null)}
@@ -321,9 +322,12 @@ describe('BudgetLinePage create', () => {
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-2');
+    // While the company follows, the cost center list is not narrowed to it.
+    expect(drawer()).toHaveAttribute('data-company-follows', 'true');
     fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-3');
     fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-3');
   });
@@ -333,6 +337,7 @@ describe('BudgetLinePage create', () => {
     const drawer = () => document.querySelector('[data-mode="create"]');
     fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
     fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+    expect(drawer()).toHaveAttribute('data-company-follows', 'false');
     fireEvent.click(screen.getByRole('button', { name: 'pick third cost center' }));
     expect(drawer()).toHaveAttribute('data-company', 'company-1');
   });

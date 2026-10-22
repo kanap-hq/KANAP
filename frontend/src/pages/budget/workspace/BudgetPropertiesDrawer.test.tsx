@@ -52,10 +52,11 @@ vi.mock('../../../components/fields/CostCenterSelect', () => ({
   default: (p: {
     value: string | null;
     selectable?: string;
+    companyId?: string | null;
     selectedOption?: { code: string } | null;
     onChange: (v: string | null, node: unknown) => void;
   }) => (
-    <div data-testid="cost-center-select" data-selectable={p.selectable} data-known={p.selectedOption?.code ?? ''}>
+    <div data-testid="cost-center-select" data-selectable={p.selectable} data-company={p.companyId ?? ''} data-known={p.selectedOption?.code ?? ''}>
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
       <button type="button" onClick={() => p.onChange(null, null)}>clear cost center</button>
@@ -230,6 +231,19 @@ describe('BudgetPropertiesDrawer cost center and run or build', () => {
     expect(screen.getByText('opex.fields.runBuild')).toBeInTheDocument();
     expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-selectable', 'cost_centers');
     expect(screen.getByTestId('cost-center-select')).toHaveTextContent('cc-1');
+  });
+
+  it('narrows the cost centers to the paying company, unless that company follows the cost center', () => {
+    const { unmount } = renderDrawer({ mode: 'edit', costCenterId: 'cc-1', payingCompanyId: 'company-2' });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-company', 'company-2');
+    unmount();
+
+    const second = renderDrawer({ mode: 'create', payingCompanyId: '' });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-company', '');
+    second.unmount();
+
+    renderDrawer({ mode: 'create', costCenterId: 'cc-2', payingCompanyId: 'company-2', companyFollowsCostCenter: true });
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-company', '');
   });
 
   it('reports a picked cost center, and a cleared one as empty', () => {
