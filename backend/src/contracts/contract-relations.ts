@@ -1,12 +1,16 @@
 import { BadRequestException, NotFoundException } from '@nestjs/common';
 import { EntityManager } from 'typeorm';
 import { AuditService } from '../audit/audit.service';
+import { applicationParticipantCondition, type ParticipationAccessScope } from '../auth/business-contributor-scope';
+import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
+import { binder } from '../common/relations/related-objects';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 
 /**
  * What a contract is linked to, from the contract's side: its budget lines of both natures
  * (`contract_spend_items`), its applications (`application_contracts`), its assets
- * (`asset_contracts`) and its technologies (`technology_contracts`). Each set is listed and replaced as a whole. Every statement carries the
+ * (`asset_contracts`) and its technologies (`technology_contracts`). Each set is listed and replaced as a whole,
+ * and the Relations tab also reads them in one round trip and links one row at a time. Every statement carries the
  * contract's tenant besides RLS. A replacement locks the contract's row first (FOR NO KEY UPDATE):
  * a second replacement of the same set waits, then reads what the first one committed, so the
  * last one wins and its audit row matches what is stored. A link written meanwhile from the other
@@ -211,4 +215,230 @@ export async function contractRelationCounts(manager: EntityManager, contract: R
     attachments: n('attachments'),
     relations,
   };
+}
+
+/** The kinds the Relations tab links one at a time. */
+export const CONTRACT_TAB_KINDS = ['applications', 'assets', 'technologies'] as const;
+export type ContractTabKind = (typeof CONTRACT_TAB_KINDS)[number];
+
+/** At most this many suggestions per rule, the same cap as the applications' Relations tab. */
+const SUGGESTIONS_PER_RULE = 20;
+
+/**
+ * An application in service: the same rule as the application suggestions and `inServiceSql`
+ * (`status` enabled, `disabled_at` unset or still to come).
+ */
+const applicationInService = (alias: string) =>
+  `${alias}.status = 'enabled' AND (${alias}.disabled_at IS NULL OR ${alias}.disabled_at > now())`;
+
+/** An asset that is not retired (`retired` is the locked lifecycle code, `assetInServiceSql`). */
+const assetInService = (alias: string) => `${alias}.status IS DISTINCT FROM 'retired'`;
+
+export type ContractRelatedApplication = {
+  id: string;
+  /** `APP-n`. */
+  reference: string;
+  name: string;
+  lifecycle: string;
+  business_criticality: string | null;
+  status: string;
+};
+
+export type ContractRelatedAsset = {
+  id: string;
+  /** `AST-n`. */
+  reference: string;
+  name: string;
+  kind: string;
+  environment: string;
+  status: string;
+};
+
+export type ContractRelatedTechnology = {
+  id: string;
+  /** `TEC-n`. */
+  reference: string;
+  name: string;
+  family: string;
+  /** The technology's editor. */
+  vendor: string | null;
+};
+
+/** A suggestion, the same shape as the applications' (`via.kind` is the reason, `label` is null). */
+export type ContractRelationSuggestion = {
+  type: 'application' | 'asset';
+  id: string;
+  reference: string;
+  name: string;
+  via: { kind: 'same_supplier'; label: string | null };
+};
+
+export type ContractRelationsTab = {
+  applications: ContractRelatedApplication[];
+  assets: ContractRelatedAsset[];
+  /** Null when the caller cannot read the infrastructure. */
+  technologies: ContractRelatedTechnology[] | null;
+  suggestions: ContractRelationSuggestion[];
+};
+
+export type ContractRelationsAccess = {
+  /** The caller reads the infrastructure: the technologies section, and the asset suggestions. */
+  infrastructure: boolean;
+  /** A Business Contributor's application scope. Absent for everyone else. */
+  applicationScope?: ParticipationAccessScope;
+};
+
+const BY_NAME = (left: { name: string; id: string }, right: { name: string; id: string }) =>
+  left.name.toLowerCase().localeCompare(right.name.toLowerCase()) || left.id.localeCompare(right.id);
+
+/**
+ * The Relations tab in one round trip: the linked applications, assets and technologies (the
+ * technologies are null without a read of the infrastructure), and suggestions of the contract's
+ * supplier. Web links, attachments and contacts stay on their own routes. Ordered by name.
+ */
+export async function readContractRelations(
+  manager: EntityManager,
+  contract: RelationsContract & { supplier_id: string | null },
+  opts: ContractRelationsAccess,
+): Promise<ContractRelationsTab> {
+  const applications: ContractRelatedApplication[] = await manager.query(
+    `SELECT a.id, a.sequential_id AS reference, a.name, a.lifecycle, a.criticality AS business_criticality, a.status::text AS status
+       FROM application_contracts l
+       JOIN applications a ON a.tenant_id = l.tenant_id AND a.id = l.application_id
+      WHERE l.tenant_id = $1 AND l.contract_id = $2
+      ORDER BY lower(a.name), a.id`,
+    [contract.tenant_id, contract.id],
+  );
+  const assets: ContractRelatedAsset[] = await manager.query(
+    `SELECT a.id, a.asset_reference AS reference, a.name, a.kind, a.environment, a.status
+       FROM asset_contracts l
+       JOIN assets a ON a.tenant_id = l.tenant_id AND a.id = l.asset_id
+      WHERE l.tenant_id = $1 AND l.contract_id = $2
+      ORDER BY lower(a.name), a.id`,
+    [contract.tenant_id, contract.id],
+  );
+  const technologies: ContractRelatedTechnology[] | null = opts.infrastructure
+    ? await manager.query(
+      `SELECT t.id, 'TEC-' || t.item_number AS reference, t.name, t.family, t.editor AS vendor
+         FROM technology_contracts l
+         JOIN technologies t ON t.tenant_id = l.tenant_id AND t.id = l.technology_id
+        WHERE l.tenant_id = $1 AND l.contract_id = $2
+        ORDER BY lower(t.name), t.id`,
+      [contract.tenant_id, contract.id],
+    )
+    : null;
+  const suggestions = await contractSuggestions(manager, contract, opts);
+  return { applications, assets, technologies, suggestions };
+}
+
+/**
+ * Applications and assets of the contract's supplier that are not linked yet, at most
+ * `SUGGESTIONS_PER_RULE` of each, that the caller can read. None when the contract has no supplier.
+ * An application is in service, and inside a Business Contributor's participation scope. An asset
+ * is not retired, and is offered only to a reader of the infrastructure.
+ */
+async function contractSuggestions(
+  manager: EntityManager,
+  contract: RelationsContract & { supplier_id: string | null },
+  opts: ContractRelationsAccess,
+): Promise<ContractRelationSuggestion[]> {
+  if (!contract.supplier_id) return [];
+  const supplierId = contract.supplier_id;
+  const applications = await suggestApplications(manager, contract, supplierId, opts.applicationScope);
+  const assets = opts.infrastructure ? await suggestAssets(manager, contract, supplierId) : [];
+  return [...applications, ...assets].sort(BY_NAME);
+}
+
+async function suggestApplications(
+  manager: EntityManager,
+  contract: RelationsContract,
+  supplierId: string,
+  scope: ParticipationAccessScope | undefined,
+): Promise<ContractRelationSuggestion[]> {
+  const params: unknown[] = [contract.tenant_id, contract.id, supplierId];
+  const bind = binder(params);
+  const scopeSql = scope ? `AND ${applicationParticipantCondition('a', bind(scope.userId))}` : '';
+  const rows: Array<{ id: string; reference: string; name: string }> = await manager.query(
+    `SELECT a.id, a.sequential_id AS reference, a.name
+       FROM applications a
+      WHERE a.tenant_id = $1 AND a.supplier_id = $3 AND ${applicationInService('a')}
+        AND NOT EXISTS (
+          SELECT 1 FROM application_contracts l
+           WHERE l.tenant_id = a.tenant_id AND l.contract_id = $2 AND l.application_id = a.id
+        )
+        ${scopeSql}
+      ORDER BY lower(a.name), a.id
+      LIMIT ${SUGGESTIONS_PER_RULE}`,
+    params,
+  );
+  return rows.map((row) => ({ ...row, type: 'application' as const, via: { kind: 'same_supplier' as const, label: null } }));
+}
+
+async function suggestAssets(
+  manager: EntityManager,
+  contract: RelationsContract,
+  supplierId: string,
+): Promise<ContractRelationSuggestion[]> {
+  const rows: Array<{ id: string; reference: string; name: string }> = await manager.query(
+    `SELECT a.id, a.asset_reference AS reference, a.name
+       FROM assets a
+       JOIN asset_support_info s ON s.tenant_id = a.tenant_id AND s.asset_id = a.id
+      WHERE a.tenant_id = $1 AND s.vendor_id = $3 AND ${assetInService('a')}
+        AND NOT EXISTS (
+          SELECT 1 FROM asset_contracts l
+           WHERE l.tenant_id = a.tenant_id AND l.contract_id = $2 AND l.asset_id = a.id
+        )
+      ORDER BY lower(a.name), a.id
+      LIMIT ${SUGGESTIONS_PER_RULE}`,
+    [contract.tenant_id, contract.id, supplierId],
+  );
+  return rows.map((row) => ({ ...row, type: 'asset' as const, via: { kind: 'same_supplier' as const, label: null } }));
+}
+
+export function contractRelationKindOrThrow(value: string): ContractTabKind {
+  if (!(CONTRACT_TAB_KINDS as readonly string[]).includes(value)) throw new NotFoundException('Unknown relation type.');
+  return value as ContractTabKind;
+}
+
+/**
+ * Link or unlink one application, asset or technology. The contract's row is locked (FOR NO KEY
+ * UPDATE). The audit row matches `replaceContractRelations`: the link table, `recordId` the
+ * contract, `before` and `after` `{ ids }` of the sorted ids. Linking what is linked, or unlinking
+ * what is not, changes nothing and writes no audit row.
+ */
+export async function setContractRelation(
+  deps: ContractRelationsDeps,
+  kind: ContractTabKind,
+  targetId: string,
+  add: boolean,
+  userId: string | null,
+  loadOwner: () => Promise<{ id: string; tenantId: string }>,
+): Promise<{ ok: true; changed: boolean }> {
+  const set = SETS[kind];
+  const audit: OwnedLinkAudit = {
+    log: (entry, opts) => deps.audit.log(
+      {
+        table: entry.table,
+        recordId: entry.recordId,
+        action: 'update',
+        before: { ids: entry.before },
+        after: { ids: entry.after },
+        userId: entry.userId,
+      },
+      opts,
+    ),
+  };
+  return setOwnedLink({
+    manager: deps.manager,
+    userId,
+    kind,
+    targetId,
+    add,
+    allowed: true,
+    loadOwner,
+    owner: { table: 'contracts', idColumn: 'id' },
+    ownerNotFound: 'Contract not found.',
+    link: { table: set.links, ownerColumn: 'contract_id', targetColumn: set.otherFk, notFound: set.notFound },
+    audit,
+  });
 }

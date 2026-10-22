@@ -44,8 +44,12 @@ import {
   listContractAssets,
   listContractTechnologies,
   listContractBudgetLines,
+  readContractRelations,
   replaceContractRelations,
+  setContractRelation,
   type ContractRelationSet,
+  type ContractRelationsAccess,
+  type ContractTabKind,
 } from './contract-relations';
 import {
   contractBudgetCurrentYear,
@@ -1474,6 +1478,28 @@ export class ContractsService {
   async listTechnologies(contractId: string, opts?: { manager?: EntityManager }) {
     const mg = opts?.manager ?? this.repo.manager;
     return listContractTechnologies(mg, await this.findContract(contractId, mg));
+  }
+
+  /**
+   * The Relations tab in one round trip (`readContractRelations`). `infrastructure` shows the
+   * technologies and the asset suggestions; `applicationScope` limits the application suggestions
+   * of a Business Contributor.
+   */
+  async getRelations(contractId: string, opts?: { manager?: EntityManager } & Partial<ContractRelationsAccess>) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return readContractRelations(mg, await this.findContract(contractId, mg), {
+      infrastructure: opts?.infrastructure === true,
+      applicationScope: opts?.applicationScope,
+    });
+  }
+
+  /** Link or unlink one application, asset or technology (`setContractRelation`). */
+  async setRelation(kind: ContractTabKind, contractId: string, targetId: string, add: boolean, userId?: string | null, opts?: { manager?: EntityManager }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    return setContractRelation({ manager: mg, audit: this.audit }, kind, targetId, add, userId ?? null, async () => {
+      const contract = await this.findContract(contractId, mg);
+      return { id: contract.id, tenantId: contract.tenant_id };
+    });
   }
 
   async replaceRelations(contractId: string, set: ContractRelationSet, ids: string[], userId?: string | null, opts?: { manager?: EntityManager }) {

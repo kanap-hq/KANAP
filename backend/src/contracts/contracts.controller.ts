@@ -20,6 +20,8 @@ import { SupplierContactRole } from '../contacts/supplier-contact.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { canReadContractBudget } from './contract-budget';
 import { canReadResource } from '../common/record-usages';
+import { resolveBusinessContributorScope } from '../auth/business-contributor-scope';
+import { contractRelationKindOrThrow } from './contract-relations';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
@@ -270,6 +272,42 @@ export class ContractsController {
     // A set the caller cannot read is never replaced (an empty list would remove every link).
     if (!canReadResource(req ?? {}, 'infrastructure')) throw new ForbiddenException('You cannot read technologies.');
     return this.svc.replaceRelations(id, 'technologies', body?.technology_ids ?? [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
+  }
+
+  /** Applications, assets, technologies and supplier suggestions, in one round trip. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'reader')
+  @Get(':id/relations')
+  async relations(@Param('id') id: string, @Req() req: any) {
+    return this.svc.getRelations(id, {
+      manager: req?.queryRunner?.manager,
+      infrastructure: canReadResource(req ?? {}, 'infrastructure'),
+      applicationScope: await resolveBusinessContributorScope(req, 'applications'),
+    });
+  }
+
+  /** Link one application, asset or technology (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Post(':id/relations/:kind')
+  linkRelation(@Param('id') id: string, @Param('kind') kind: string, @Body() body: { id?: string }, @Req() req: any) {
+    return this.writeRelation(kind, id, String(body?.id ?? ''), true, req);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('contracts', 'member')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(@Param('id') id: string, @Param('kind') kind: string, @Param('targetId') targetId: string, @Req() req: any) {
+    return this.writeRelation(kind, id, targetId, false, req);
+  }
+
+  /** `technologies` also needs a read of the infrastructure, as the bulk replacement does. */
+  private writeRelation(kind: string, id: string, targetId: string, add: boolean, req: any) {
+    const relation = contractRelationKindOrThrow(kind);
+    if (relation === 'technologies' && !canReadResource(req ?? {}, 'infrastructure')) {
+      throw new ForbiddenException('You cannot read technologies.');
+    }
+    return this.svc.setRelation(relation, id, targetId, add, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
   // Tasks for contract
