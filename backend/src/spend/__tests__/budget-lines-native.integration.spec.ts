@@ -33,7 +33,7 @@ runSpecs('budget-lines-native.integration.spec', [['native HTTP contract, confli
     const audit = new AuditService(runner.manager.getRepository(AuditLog));
     const opex = itemService('opex', audit);
     const capex = itemService('capex', audit);
-    const service = new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any, undefined as any, undefined as any, opex, capex);
+    const service = new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any, undefined as any, undefined as any, opex, capex, undefined as any);
     const identity = async (level: string | null) => {
       const [role] = await runner.query(`INSERT INTO roles (tenant_id, role_name) VALUES ($1, $2) RETURNING id`, [tenantId, `Native ${level}`]);
       if (level) await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'budget', $3)`, [tenantId, role.id, level]);

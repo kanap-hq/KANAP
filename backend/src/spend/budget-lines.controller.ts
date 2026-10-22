@@ -2,10 +2,17 @@ import { Body, Controller, Delete, Get, HttpCode, Param, Patch, Post, Query, Res
 import { EntityManager } from 'typeorm';
 import { Response } from 'express';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
+import { resolveBusinessContributorScopeForUser } from '../auth/business-contributor-scope';
 import { PermissionGuard } from '../auth/permission.guard';
 import { ReadOnlyRoute, RequireLevel } from '../auth/require-level.decorator';
 import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { resolveBudgetLine } from '../common/resolve-item-id';
+import { buildRelationsAccess } from '../common/relations/relations-access';
+import {
+  BUDGET_LINE_RELATION_READS,
+  budgetLineRelationKindOrThrow,
+  type BudgetLineRelationsContext,
+} from './budget-line-relations';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { contentDisposition } from '../common/content-disposition';
 import { BudgetFileService } from './budget-file/budget-file.service';
@@ -184,6 +191,70 @@ export class BudgetLinesController {
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: unknown, @Tenant() ctx: TenantRequest) {
     return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager as EntityManager });
+  }
+
+  /**
+   * Projects, applications, technologies, contracts, assets and supplier suggestions, in one
+   * round trip. `:id` is a uuid or a line reference (`BL-n`, `OPX-n`, `CPX-n`).
+   */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'reader')
+  @Get(':id/relations')
+  relations(@Param('id') id: string, @Tenant() ctx: TenantRequest) {
+    return this.relationsContext(ctx).then((rel) => this.svc.relations(id, rel));
+  }
+
+  /** Link one project, application, technology, contract or asset (`{ id }`). */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Post(':id/relations/:kind')
+  linkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Body() body: { id?: string },
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, String(body?.id ?? ''), true, ctx);
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('budget', 'member')
+  @Delete(':id/relations/:kind/:targetId')
+  unlinkRelation(
+    @Param('id') id: string,
+    @Param('kind') kind: string,
+    @Param('targetId') targetId: string,
+    @Tenant() ctx: TenantRequest,
+  ) {
+    return this.writeRelation(kind, id, targetId, false, ctx);
+  }
+
+  /**
+   * An unknown kind is 404 before the participation scopes are read. The module read (403) is
+   * the service's, before it parses the target id.
+   */
+  private writeRelation(kind: string, ref: string, targetId: string, add: boolean, ctx: TenantRequest) {
+    budgetLineRelationKindOrThrow(kind);
+    return this.relationsContext(ctx).then((rel) => this.svc.setRelation(kind, ref, targetId, add, rel));
+  }
+
+  /**
+   * What the tab may show. One query after the other: the request's connection runs them in turn.
+   * A Business Contributor's scope hides an application or a project they do not take part in.
+   */
+  private async relationsContext(ctx: TenantRequest): Promise<BudgetLineRelationsContext> {
+    const manager = ctx.manager as EntityManager;
+    const who = { manager, userId: ctx.userId, tenantId: ctx.tenantId, isAdmin: ctx.isAdmin === true };
+    const { access } = buildRelationsAccess(ctx, { read: BUDGET_LINE_RELATION_READS });
+    const applicationScope = await resolveBusinessContributorScopeForUser(who, 'applications');
+    const projectScope = await resolveBusinessContributorScopeForUser(who, 'portfolio_projects');
+    return {
+      manager,
+      userId: ctx.userId || null,
+      access,
+      applicationScope,
+      projectScope,
+    };
   }
 
   // Keep the generic detail route after every static GET path.

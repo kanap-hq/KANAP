@@ -74,7 +74,7 @@ async function main() {
     });
     const opex = itemService('opex');
     const capex = itemService('capex');
-    const lines = new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any, undefined as any, undefined as any, opex, capex);
+    const lines = new BudgetLinesService(deps.allocationCalculator as any, deps.fxRates as any, undefined as any, undefined as any, opex, capex, undefined as any);
     const token = jwt.sign({ sub: userId, tenant_id: tenantId, purpose: 'access' }, JWT_SECRET);
 
     @Module({
