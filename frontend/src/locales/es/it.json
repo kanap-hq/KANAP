@@ -1740,6 +1740,8 @@
           "requests": "Solicitudes",
           "tasks": "Tareas",
           "technologies": "Tecnologías",
+          "applications": "Aplicaciones",
+          "assets": "Activos",
           "related": "Relacionados"
         },
         "empty": {
@@ -1748,7 +1750,9 @@
           "projects": "Ningún proyecto vinculado.",
           "requests": "Ninguna solicitud vinculada.",
           "tasks": "Ninguna tarea vinculada.",
-          "technologies": "Ninguna tecnología vinculada."
+          "technologies": "Ninguna tecnología vinculada.",
+          "applications": "Ninguna aplicación vinculada.",
+          "assets": "Ningún activo vinculado."
         },
         "columns": {
           "ref": "Ref.",
@@ -1780,12 +1784,16 @@
           "contracts": "Buscar contratos",
           "projects": "Buscar proyectos",
           "requests": "Buscar solicitudes",
-          "technologies": "Buscar tecnologías"
+          "technologies": "Buscar tecnologías",
+          "applications": "Buscar aplicaciones",
+          "assets": "Buscar activos"
         },
         "types": {
           "budget_line": "Línea presupuestaria",
           "contract": "Contrato",
-          "project": "Proyecto"
+          "project": "Proyecto",
+          "application": "Aplicación",
+          "asset": "Activo"
         },
         "via": {
           "same_supplier": "mismo proveedor",
