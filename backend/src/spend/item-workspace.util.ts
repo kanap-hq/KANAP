@@ -2,6 +2,7 @@ import { EntityManager } from 'typeorm';
 import { deriveStatusFromDisabledAt, StatusState } from '../common/status';
 import type { CostCenterKind } from '../cost-centers/cost-center.entity';
 import { AmountScope } from './amounts-write.util';
+import { linkedLineOf } from './budget-nature';
 
 /**
  * What the OPEX and CAPEX workspaces read besides the line itself, in one
@@ -132,8 +133,17 @@ function costCenterReference(raw: Record<string, any>): CostCenterReference {
 export type ItemRelationCounts = {
   contracts: number;
   applications: number;
-  /** Technologies linked to the line: counted, and in `total`, for a caller who reads the infrastructure only (null otherwise). */
+  /**
+   * Technologies linked to the line: counted, and in `total`, for a caller who reads the
+   * infrastructure only (null otherwise).
+   */
   technologies: number | null;
+  /**
+   * Assets linked to the line, of the line's nature (`asset_spend_items`): counted, and in
+   * `total`, for a caller who reads the infrastructure only (null otherwise). The same read as
+   * the technologies.
+   */
+  assets: number | null;
   projects: number;
   links: number;
   attachments: number;
@@ -143,7 +153,8 @@ export type ItemRelationCounts = {
 /**
  * The counts the Relations tab lists: links to rows that exist (the lists join
  * their target), the line's websites and attachments. `technologies`: the caller
- * reads the infrastructure, so the tab shows its Technologies section.
+ * reads the infrastructure, so the tab shows its Technologies section and its Assets
+ * section. Both are null, and out of `total`, otherwise.
  */
 export async function countItemRelations(
   manager: EntityManager,
@@ -152,6 +163,9 @@ export async function countItemRelations(
   opts: { technologies: boolean } = { technologies: false },
 ): Promise<ItemRelationCounts> {
   const t = SCOPES[scope];
+  // The asset links of this nature only: the table is shared, and a link to a line of the
+  // other nature is not this line's (`spend/budget-nature.ts`).
+  const assetNature = linkedLineOf('l.tenant_id', 'l.spend_item_id', scope);
   const [row] = await manager.query(
     `SELECT
        (SELECT count(*) FROM ${t.contracts.table} l JOIN contracts c ON c.tenant_id = l.tenant_id AND c.id = l.contract_id
@@ -162,6 +176,8 @@ export async function countItemRelations(
          WHERE l.tenant_id = $1 AND l.${t.projects.fk} = $2)::int AS projects,
        (SELECT count(*) FROM technology_spend_items l JOIN technologies x ON x.tenant_id = l.tenant_id AND x.id = l.technology_id
          WHERE l.tenant_id = $1 AND l.spend_item_id = $2)::int AS technologies,
+       (SELECT count(*) FROM asset_spend_items l JOIN assets a ON a.tenant_id = l.tenant_id AND a.id = l.asset_id
+         WHERE l.tenant_id = $1 AND l.spend_item_id = $2${assetNature})::int AS assets,
        (SELECT count(*) FROM ${t.links.table} WHERE tenant_id = $1 AND ${t.links.fk} = $2)::int AS links,
        (SELECT count(*) FROM ${t.attachments.table} WHERE tenant_id = $1 AND ${t.attachments.fk} = $2)::int AS attachments`,
     [item.tenant_id, item.id],
@@ -173,10 +189,13 @@ export async function countItemRelations(
     links: Number(row?.links) || 0,
     attachments: Number(row?.attachments) || 0,
   };
-  const technologies = opts.technologies ? Number(row?.technologies) || 0 : null;
+  const infrastructure = opts.technologies;
+  const technologies = infrastructure ? Number(row?.technologies) || 0 : null;
+  const assets = infrastructure ? Number(row?.assets) || 0 : null;
   return {
     ...counts,
     technologies,
-    total: counts.contracts + counts.applications + (technologies ?? 0) + counts.projects + counts.links + counts.attachments,
+    assets,
+    total: counts.contracts + counts.applications + (technologies ?? 0) + (assets ?? 0) + counts.projects + counts.links + counts.attachments,
   };
 }

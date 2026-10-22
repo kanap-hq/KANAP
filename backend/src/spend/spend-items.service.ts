@@ -319,7 +319,8 @@ export class SpendItemsService {
 
   /**
    * The Relations tab badge: one statement instead of one request per relation. `technologies`: the
-   * caller reads the infrastructure (the technologies are counted for it only).
+   * caller reads the infrastructure (the technologies and the assets of the line's nature are
+   * counted for it only).
    */
   async relationCounts(id: string, opts?: { manager?: EntityManager; technologies?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;

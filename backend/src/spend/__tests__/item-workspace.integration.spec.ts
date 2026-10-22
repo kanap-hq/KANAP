@@ -121,7 +121,7 @@ async function testRelationCounts() {
 
     assert.deepEqual(
       await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId }),
-      { contracts: 0, applications: 0, projects: 0, links: 0, attachments: 0, technologies: null, total: 0 },
+      { contracts: 0, applications: 0, projects: 0, links: 0, attachments: 0, technologies: null, assets: null, total: 0 },
     );
 
     await runner.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, contract, ids.opex]);
@@ -135,27 +135,58 @@ async function testRelationCounts() {
     );
     assert.deepEqual(
       await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId }),
-      { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, technologies: null, total: 6 },
-      'without the right to read the infrastructure, the technologies are neither counted nor in the total',
+      { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, technologies: null, assets: null, total: 6 },
+      'without the right to read the infrastructure, the technologies and the assets are neither counted nor in the total',
     );
 
-    // A technology of the line: counted, and in the total, for a reader of the infrastructure only.
+    // A technology of the line, and an asset of its nature: counted, and in the total, for a reader
+    // of the infrastructure only. The same flag covers both sections.
     const technology = await one(`INSERT INTO technologies (tenant_id, item_number, name, family) VALUES ($1, 1, 'Tech W', 'other') RETURNING id`, [tenantId]);
     await runner.query(`INSERT INTO technology_spend_items (tenant_id, technology_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, technology, ids.opex]);
     assert.deepEqual(
       await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId }, { technologies: true }),
-      { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, technologies: 1, total: 7 },
+      { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, technologies: 1, assets: 0, total: 7 },
     );
     assert.equal((await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId })).total, 6);
 
-    // The CAPEX line's relations share the OPEX link tables since lot Z1.
+    const asset = await one(
+      `INSERT INTO assets (tenant_id, name, kind, environment, status, created_at, updated_at)
+       VALUES ($1, 'Asset W', 'physical_server', 'prod', 'active', now(), now()) RETURNING id`,
+      [tenantId],
+    );
+    await runner.query(`INSERT INTO asset_spend_items (tenant_id, asset_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, asset, ids.opex]);
+    assert.deepEqual(
+      await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId }, { technologies: true }),
+      { contracts: 1, applications: 1, projects: 1, links: 2, attachments: 1, technologies: 1, assets: 1, total: 8 },
+    );
+    const hidden = await countItemRelations(runner.manager, 'opex', { id: ids.opex, tenant_id: tenantId });
+    assert.equal(hidden.assets, null);
+    assert.equal(hidden.total, 6, 'the asset stays out of the total without the infrastructure read');
+    assert.equal(
+      (await countItemRelations(runner.manager, 'capex', { id: ids.opex, tenant_id: tenantId }, { technologies: true })).assets,
+      0,
+      'an asset link counts for the line nature asked: this OPEX line is not a CAPEX line',
+    );
+
+    // The CAPEX line's relations share the OPEX link tables since lot Z1. Its asset is its own.
     await runner.query(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, contract, ids.capex]);
     await runner.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES ($1, $2, $3)`, [tenantId, project, ids.capex]);
     await runner.query(`INSERT INTO spend_links (tenant_id, spend_item_id, url) VALUES ($1, $2, 'https://c.invalid')`, [tenantId, ids.capex]);
     await runner.query(`INSERT INTO technology_spend_items (tenant_id, technology_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, technology, ids.capex]);
+    const capexAsset = await one(
+      `INSERT INTO assets (tenant_id, name, kind, environment, status, created_at, updated_at)
+       VALUES ($1, 'Capex asset W', 'virtual_machine', 'test', 'active', now(), now()) RETURNING id`,
+      [tenantId],
+    );
+    await runner.query(`INSERT INTO asset_spend_items (tenant_id, asset_id, spend_item_id) VALUES ($1, $2, $3)`, [tenantId, capexAsset, ids.capex]);
     assert.deepEqual(
       await countItemRelations(runner.manager, 'capex', { id: ids.capex, tenant_id: tenantId }, { technologies: true }),
-      { contracts: 1, applications: 0, projects: 1, links: 1, attachments: 0, technologies: 1, total: 4 },
+      { contracts: 1, applications: 0, projects: 1, links: 1, attachments: 0, technologies: 1, assets: 1, total: 5 },
+    );
+    assert.equal(
+      (await countItemRelations(runner.manager, 'opex', { id: ids.capex, tenant_id: tenantId }, { technologies: true })).assets,
+      0,
+      'the CAPEX line asset is not an OPEX count',
     );
 
     assert.equal(
