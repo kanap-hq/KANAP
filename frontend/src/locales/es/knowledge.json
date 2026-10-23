@@ -47,7 +47,7 @@
       },
       "messages": {
         "failed": "No se pudo actualizar la biblioteca.",
-        "restrictedEmpty": "Si no agrega lectores ni editores, solo el propietario y los administradores de conocimiento podrán acceder a esta biblioteca."
+        "restrictedEmpty": "Si no añade lectores ni editores, solo el propietario y los administradores de conocimiento podrán acceder a esta biblioteca."
       },
       "sections": {
         "access": "Control de acceso",
@@ -223,7 +223,7 @@
       },
       "empty": "Sin actividad aún.",
       "fields": {
-        "addComment": "Agregar comentario"
+        "addComment": "Añadir comentario"
       }
     },
     "contributors": {

@@ -95,7 +95,7 @@
       "titleFiltered": "Tareas ({{count}} / {{total}})",
       "toggleFilters": "Mostrar/ocultar filtros",
       "clearFilters": "Restablecer filtros",
-      "addTask": "Agregar tarea",
+      "addTask": "Añadir tarea",
       "filters": {
         "status": "Estado",
         "phase": "Fase",
@@ -417,7 +417,7 @@
           "capturedAtInProgress": "capturada al pasar a En curso"
         },
         "states": {
-          "noTimeLogged": "Aún no se ha registrado tiempo. Haga clic en «Registrar tiempo» para agregar entradas."
+          "noTimeLogged": "Aún no se ha registrado tiempo. Haga clic en «Registrar tiempo» para añadir entradas."
         },
         "values": {
           "executionProgress": "Progreso: {{progress}} %",
@@ -460,9 +460,9 @@
       },
       "timeline": {
         "actions": {
-          "addMilestone": "Agregar hito",
-          "addPhase": "Agregar fase",
-          "addTaskToPhase": "Agregar tarea a la fase",
+          "addMilestone": "Añadir hito",
+          "addPhase": "Añadir fase",
+          "addTaskToPhase": "Añadir tarea a la fase",
           "applyTemplate": "Aplicar plantilla",
           "deletePhase": "Eliminar fase",
           "replaceAll": "Reemplazar todo",
@@ -510,8 +510,8 @@
           "assignee": "Asignado"
         },
         "messages": {
-          "addMilestoneFailed": "Error al agregar el hito",
-          "addPhaseFailed": "Error al agregar la fase",
+          "addMilestoneFailed": "Error al añadir el hito",
+          "addPhaseFailed": "Error al añadir la fase",
           "applyTemplateFailed": "Error al aplicar la plantilla",
           "deleteMilestoneFailed": "Error al eliminar el hito",
           "deletePhaseFailed": "Error al eliminar la fase",
@@ -532,7 +532,7 @@
           "projectDates": "Fechas del proyecto"
         },
         "states": {
-          "noMilestones": "No hay hitos definidos. Agregue hitos manualmente o active los hitos de fase arriba.",
+          "noMilestones": "No hay hitos definidos. Añada hitos manualmente o active los hitos de fase arriba.",
           "noPlannedPhases": "No hay fases con fechas planificadas",
           "noPlannedPhasesHelp": "Establezca fechas de inicio y fin planificadas en las fases para verlas en el diagrama de Gantt.",
           "noPlannedProjects": "No hay proyectos con fechas planificadas",
@@ -798,7 +798,7 @@
         },
         "messages": {
           "doneRequiresTime": "No se puede marcar la tarea como completada sin registrar tiempo.",
-          "emptySubmission": "Agregue un comentario, un cambio de estado o un registro de tiempo antes de enviar.",
+          "emptySubmission": "Añada un comentario, un cambio de estado o un registro de tiempo antes de enviar.",
           "submitFailed": "Error al enviar la actividad"
         }
       },
@@ -1941,7 +1941,7 @@
   "contributors": {
     "title": "Colaboradores",
     "actions": {
-      "addContributor": "Agregar colaborador",
+      "addContributor": "Añadir colaborador",
       "collapseTeam": "Contraer equipo",
       "expandTeam": "Expandir equipo"
     },
@@ -2020,7 +2020,7 @@
       }
     },
     "states": {
-      "empty": "Aún no hay colaboradores configurados. Agregue colaboradores para definir sus competencias y disponibilidad.",
+      "empty": "Aún no hay colaboradores configurados. Añada colaboradores para definir sus competencias y disponibilidad.",
       "noneMatchFilter": "Ningún colaborador coincide con los filtros actuales."
     },
     "teams": {
@@ -2033,13 +2033,13 @@
       "avgDaysPerMonth": "Prom.: {{count}} d/mes"
     },
     "dialog": {
-      "title": "Agregar colaborador",
+      "title": "Añadir colaborador",
       "selectUser": "Seleccionar usuario",
       "searchUsers": "Buscar usuarios…",
-      "adding": "Agregando…"
+      "adding": "Añadiendo…"
     },
     "messages": {
-      "addFailed": "Error al agregar el colaborador"
+      "addFailed": "Error al añadir el colaborador"
     }
   },
   "actions": {
@@ -2086,9 +2086,9 @@
       "daysAgo": "Hace {{count}} d"
     },
     "actions": {
-      "addComment": "Agregar comentario",
-      "addDecision": "Agregar decisión",
-      "adding": "Agregando…",
+      "addComment": "Añadir comentario",
+      "addDecision": "Añadir decisión",
+      "adding": "Añadiendo…",
       "editComment": "Editar comentario",
       "submitShortcut": "Enviar (Ctrl/Cmd+Intro)"
     },
@@ -2096,8 +2096,8 @@
       "editComment": "Edite su comentario…"
     },
     "messages": {
-      "addCommentFailed": "Error al agregar el comentario",
-      "beFirstToAdd": "¡Sea el primero en agregar uno!",
+      "addCommentFailed": "Error al añadir el comentario",
+      "beFirstToAdd": "¡Sea el primero en añadir uno!",
       "imageImportNotConfigured": "Importación de imagen por URL no configurada",
       "imageUploadNotConfigured": "Carga de imagen no configurada",
       "loadingComments": "Cargando comentarios…",
@@ -2112,7 +2112,7 @@
       "noChange": "(Sin cambio)",
       "fields": {
         "changeStatus": "Cambiar estado a…",
-        "comment": "Agregar un comentario",
+        "comment": "Añadir un comentario",
         "contextMeeting": "Contexto / Reunión",
         "contextOptional": "Contexto (opcional)",
         "decisionOutcome": "Resultado de la decisión",
@@ -2127,8 +2127,8 @@
     },
     "history": {
       "actions": {
-        "addedComment": "Agregó un comentario",
-        "addedField": "{{field}} agregado: {{value}}",
+        "addedComment": "Añadió un comentario",
+        "addedField": "{{field}} añadido: {{value}}",
         "changedField": "{{field}}: {{from}} → {{to}}",
         "decisionWithOutcome": "Decisión: {{outcome}}",
         "recorded": "Actividad registrada",
@@ -2215,7 +2215,7 @@
         "requests": "Solicitudes"
       },
       "fields": {
-        "addDependency": "Agregar dependencia"
+        "addDependency": "Añadir dependencia"
       },
       "labels": {
         "current": "Dependencias actuales:"
@@ -2557,18 +2557,18 @@
       "employmentTypes": "Tipos de contrato"
     },
     "actions": {
-      "addCriterion": "Agregar criterio",
-      "addSkill": "Agregar competencia",
-      "addTemplate": "Agregar plantilla",
-      "addTeam": "Agregar equipo",
-      "addSource": "Agregar origen",
-      "addCategory": "Agregar categoría",
-      "addStream": "Agregar línea",
-      "addTaskType": "Agregar tipo de tarea",
-      "addValue": "Agregar valor",
-      "addPhase": "Agregar fase",
+      "addCriterion": "Añadir criterio",
+      "addSkill": "Añadir competencia",
+      "addTemplate": "Añadir plantilla",
+      "addTeam": "Añadir equipo",
+      "addSource": "Añadir origen",
+      "addCategory": "Añadir categoría",
+      "addStream": "Añadir línea",
+      "addTaskType": "Añadir tipo de tarea",
+      "addValue": "Añadir valor",
+      "addPhase": "Añadir fase",
       "seedDefaults": "Cargar valores predeterminados",
-      "addEmploymentType": "Agregar tipo de contrato"
+      "addEmploymentType": "Añadir tipo de contrato"
     },
     "fields": {
       "name": "Nombre",
@@ -2585,7 +2585,7 @@
       "title": "Criterios de evaluación",
       "mandatoryBypassTitle": "Las solicitudes obligatorias obtienen automáticamente 100 puntos",
       "mandatoryBypassDescription": "Cuando se activa, las solicitudes marcadas como obligatorias reciben una puntuación de prioridad de 100, independientemente de otros criterios. La sobrescritura manual se bloquea.",
-      "empty": "Aún no hay criterios de evaluación configurados. Agregue criterios para activar la evaluación de solicitudes.",
+      "empty": "Aún no hay criterios de evaluación configurados. Añada criterios para activar la evaluación de solicitudes.",
       "dragToReorder": "Arrastrar para reordenar",
       "reorderHint": "Arrastre el asa izquierda para reordenar los criterios; el orden se aplica a la evaluación de solicitudes.",
       "chips": {
@@ -2615,7 +2615,7 @@
       "confirmDelete": "Sus evaluaciones existentes también se eliminan. Esta acción no se puede deshacer."
     },
     "skills": {
-      "empty": "Aún no hay competencias configuradas. Use «Cargar valores predeterminados» para cargar competencias estándar, o agregue competencias manualmente.",
+      "empty": "Aún no hay competencias configuradas. Use «Cargar valores predeterminados» para cargar competencias estándar, o añada competencias manualmente.",
       "description": "Las competencias se utilizan para definir las áreas de experiencia de los miembros del equipo. Configure las competencias relevantes para su organización.",
       "dialog": {
         "editTitle": "Editar competencia",
@@ -2703,7 +2703,7 @@
       }
     },
     "teams": {
-      "empty": "Aún no hay equipos configurados. Use «Cargar valores predeterminados» para cargar equipos estándar, o agregue equipos manualmente.",
+      "empty": "Aún no hay equipos configurados. Use «Cargar valores predeterminados» para cargar equipos estándar, o añada equipos manualmente.",
       "description": "Los equipos son grupos organizacionales a los que pertenecen los colaboradores. Asigne colaboradores a equipos para organizarlos por departamento o función.",
       "memberCount_one": "{{count}} miembro",
       "memberCount_other": "{{count}} miembros",
@@ -2718,7 +2718,7 @@
       }
     },
     "employmentTypes": {
-      "empty": "Aún no hay tipos de contrato. Use «Cargar valores predeterminados» para cargar Interno, Externo, Aprendiz y Otro, o agregue los suyos.",
+      "empty": "Aún no hay tipos de contrato. Use «Cargar valores predeterminados» para cargar Interno, Externo, Aprendiz y Otro, o añada los suyos.",
       "description": "Los tipos de contrato describen cómo trabaja cada colaborador con usted: empleado, proveedor o aprendiz, por ejemplo. Cada colaborador empieza como Interno; cámbielo en su ficha.",
       "usageCount_one": "{{count}} colaborador",
       "usageCount_other": "{{count}} colaboradores",
