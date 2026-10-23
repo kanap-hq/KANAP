@@ -1943,6 +1943,7 @@
         "technical": "Technical",
         "hardware": "Hardware",
         "support": "Support",
+        "dependencies": "Dependencies",
         "relations": "Relations",
         "knowledge": "Knowledge",
         "assignments": "Assignments",

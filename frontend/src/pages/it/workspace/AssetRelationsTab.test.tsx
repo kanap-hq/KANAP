@@ -7,7 +7,8 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { KanapDialogProvider } from '../../../components/design';
 import api from '../../../api';
-import AssetRelationsTab, { type AssetRelationsData } from './AssetRelationsTab';
+import AssetRelationsTab from './AssetRelationsTab';
+import { assetRelationsKey, type AssetRelationsData } from './assetRelationsData';
 
 const rights = vi.hoisted(() => ({} as Record<string, string>));
 
@@ -34,9 +35,6 @@ vi.mock('../../../auth/AuthContext', () => ({
     },
   }),
 }));
-vi.mock('../editors/AssetImpactSection', () => ({
-  default: ({ version }: { version?: number }) => <section aria-label="impact" data-version={version ?? 0} />,
-}));
 vi.mock('../../../hooks/useBudgetColumns', () => ({
   default: () => ({ label: (key: string) => `column:${key}` }),
 }));
@@ -49,20 +47,12 @@ vi.mock('../../../hooks/useApplicationClassificationCatalog', () => ({
 
 const mocked = vi.mocked(api);
 
-const asset = (id: string, reference: string, name: string, status = 'active') => ({
-  id, reference, name, kind: 'virtual_machine', environment: 'prod', status,
-});
-
 function relations(overrides: Partial<AssetRelationsData> = {}): AssetRelationsData {
   return {
     year: 2026,
     budget_column: { key: 'budget', label: 'Budget' },
-    assets: {
-      contains: [asset('as-2', 'AST-2', 'vm-app-01')],
-      contained_by: [asset('as-3', 'AST-3', 'esx-host-01')],
-      depends_on: [asset('as-4', 'AST-4', 'san-01')],
-      depended_on_by: [asset('as-5', 'AST-5', 'backup-01', 'retired')],
-    },
+    // The relations between assets belong to the Dependencies tab: this tab shares the read, not the rows.
+    assets: { contains: [], contained_by: [], depends_on: [], depended_on_by: [] },
     budget_lines: [{
       id: 'bl-1', item_number: 12, nature: 'opex', product_name: 'Hosting', supplier_name: 'OVH',
       amount: 1200, currency: 'EUR', status: 'enabled',
@@ -77,7 +67,7 @@ function relations(overrides: Partial<AssetRelationsData> = {}): AssetRelationsD
       { id: 'inc-5', item_number: 5, title: 'Disk full', status: 'open', severity: 'high', detected_at: '2026-10-01T08:00:00.000Z' },
       { id: 'inc-6', item_number: 6, title: 'Old outage', status: 'closed', severity: 'low', detected_at: '2026-09-01T08:00:00.000Z' },
     ],
-    counts: { total: 11 },
+    counts: { assets: 0, total: 7 },
     ...overrides,
   };
 }
@@ -90,18 +80,11 @@ function Location() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-function renderTab(data: AssetRelationsData, onRelationsChange = vi.fn()) {
+function renderTab(data: AssetRelationsData) {
   mocked.get.mockImplementation(async (url: string) => {
     if (url === '/assets/as-1/relations-tab') return { data } as never;
     if (url === '/assets/as-1/links') return { data: LINKS } as never;
     if (url === '/assets/as-1/attachments') return { data: FILES } as never;
-    if (url === '/assets') {
-      return { data: { items: [
-        { id: 'as-1', name: 'this-server', asset_reference: 'AST-1' },
-        { id: 'as-2', name: 'vm-app-01', asset_reference: 'AST-2' },
-        { id: 'as-9', name: 'edge-fw', asset_reference: 'AST-9' },
-      ] } } as never;
-    }
     if (url === '/budget-lines/summary') {
       return { data: { items: [{ id: 'bl-9', item_number: 9, product_name: 'Backup licence', nature: 'capex' }] } } as never;
     }
@@ -117,19 +100,22 @@ function renderTab(data: AssetRelationsData, onRelationsChange = vi.fn()) {
     return { data: [] } as never;
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+  const invalidate = vi.spyOn(client, 'invalidateQueries');
   render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
           <MemoryRouter>
-            <AssetRelationsTab assetId="as-1" onRelationsChange={onRelationsChange} />
+            <AssetRelationsTab assetId="as-1" />
             <Location />
           </MemoryRouter>
         </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
-  return { onRelationsChange };
+  // The page reads the shared query again for the badges.
+  const badgeRead = () => invalidate.mock.calls.some(([filters]) => JSON.stringify(filters?.queryKey) === JSON.stringify(assetRelationsKey('as-1')));
+  return { badgeRead };
 }
 
 const A = (name: string) => `workspace.asset.relations.${name}`;
@@ -160,17 +146,12 @@ describe('AssetRelationsTab', () => {
     mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
   });
 
-  it('shows the impact first, then one table per type in order, and opens the record', async () => {
+  it('shows one table per type in order and opens the record', async () => {
     renderTab(relations());
-    await screen.findByText('vm-app-01');
+    await screen.findByText('Datacenter move');
 
     const labels = screen.getAllByRole('region').map((region) => region.getAttribute('aria-label'));
     expect(labels).toEqual([
-      'impact',
-      A('contains'),
-      A('containedBy'),
-      A('dependsOn'),
-      A('dependedOnBy'),
       SECTION('budgetLines'),
       SECTION('contracts'),
       SECTION('projects'),
@@ -180,16 +161,7 @@ describe('AssetRelationsTab', () => {
     ]);
     expect(mocked.get).toHaveBeenCalledWith('/assets/as-1/relations-tab');
     expect(mocked.get).not.toHaveBeenCalledWith('/assets/as-1/relations');
-
-    const contains = screen.getByRole('region', { name: A('contains') });
-    expect(within(contains).getByText('AST-2')).toBeTruthy();
-    expect(within(contains).getByText('serverKind:virtual_machine')).toBeTruthy();
-    expect(within(contains).getByText('enums.environment.prod')).toBeTruthy();
-    expect(within(contains).getByText('lifecycleStatus:active')).toBeTruthy();
-    expect(within(contains).getByText('pages.assets.columns.environment')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: A('containedBy') })).getByText('esx-host-01')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: A('dependsOn') })).getByText('san-01')).toBeTruthy();
-    expect(within(screen.getByRole('region', { name: A('dependedOnBy') })).getByText('backup-01')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: A('contains') })).toBeNull();
 
     const budget = screen.getByRole('region', { name: SECTION('budgetLines') });
     expect(within(budget).getByText('BL-12')).toBeTruthy();
@@ -207,8 +179,6 @@ describe('AssetRelationsTab', () => {
     expect(within(incidents).getByText('INC-5')).toBeTruthy();
     expect(within(incidents).getByText('enums.incidentSeverity.high')).toBeTruthy();
 
-    fireEvent.click(within(screen.getByRole('region', { name: A('containedBy') })).getByText('esx-host-01'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-3/overview');
     fireEvent.click(within(budget).getByText('Hosting'));
     expect(screen.getByTestId('location')).toHaveTextContent('/ops/budget/BL-12');
     fireEvent.click(within(contracts).getByText('VMware support'));
@@ -221,8 +191,8 @@ describe('AssetRelationsTab', () => {
     expect(screen.getByTestId('location')).toHaveTextContent('/it/incidents/INC-5/overview');
   });
 
-  it('adds in each direction and each type, without the asset itself or the rows already linked', async () => {
-    const { onRelationsChange } = renderTab(relations());
+  it('adds in each type and only offers the open incidents', async () => {
+    const { badgeRead } = renderTab(relations());
     const pick = async (section: string, option: RegExp, kind: string, id: string) => {
       const region = await screen.findByRole('region', { name: section });
       fireEvent.click(within(region).getByText('workspace.application.relations.add'));
@@ -230,19 +200,7 @@ describe('AssetRelationsTab', () => {
       await waitFor(() => expect(mocked.post).toHaveBeenCalledWith(`/assets/as-1/relations/${kind}`, { id }));
     };
 
-    await screen.findByText('vm-app-01');
-    const contains = screen.getByRole('region', { name: A('contains') });
-    fireEvent.click(within(contains).getByText('workspace.application.relations.add'));
-    expect(await screen.findByRole('option', { name: /edge-fw/ })).toBeTruthy();
-    expect(screen.queryByRole('option', { name: /this-server/ })).toBeNull();
-    expect(screen.queryByRole('option', { name: /vm-app-01/ })).toBeNull();
-    fireEvent.click(screen.getByRole('option', { name: /edge-fw/ }));
-    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
-    await waitFor(() => expect(screen.getByRole('region', { name: 'impact' })).toHaveAttribute('data-version', '1'));
-
-    await pick(A('containedBy'), /edge-fw/, 'contained_by', 'as-9');
-    await pick(A('dependsOn'), /edge-fw/, 'depends_on', 'as-9');
-    await pick(A('dependedOnBy'), /edge-fw/, 'depended_on_by', 'as-9');
+    await screen.findByText('Datacenter move');
     await pick(SECTION('budgetLines'), /Backup licence/, 'budget_lines', 'bl-9');
     await pick(SECTION('contracts'), /Hosting contract/, 'contracts', 'c-9');
     await pick(SECTION('projects'), /Network refresh/, 'projects', 'prj-9');
@@ -254,30 +212,14 @@ describe('AssetRelationsTab', () => {
     expect(screen.queryByRole('option', { name: /Closed one/ })).toBeNull();
     fireEvent.click(screen.getByRole('option', { name: /Fan failure/ }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/incidents', { id: 'inc-9' }));
-    expect(onRelationsChange).toHaveBeenCalled();
-  });
-
-  it('unlinks an asset relation at once and restores it when the server refuses', async () => {
-    const { onRelationsChange } = renderTab(relations());
-    let reject: (error: unknown) => void = () => undefined;
-    mocked.delete.mockReturnValue(new Promise((_, next) => { reject = next; }) as never);
-    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=san-01)' }));
-
-    expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/relations/depends_on/as-4');
-    await waitFor(() => expect(screen.queryByText('san-01')).toBeNull());
-    expect(screen.getByText('vm-app-01')).toBeTruthy();
-
-    reject({ response: { status: 500, data: { message: 'Server down' } } });
-    expect(await screen.findByText('san-01')).toBeTruthy();
-    expect(screen.getByRole('alert')).toBeTruthy();
-    expect(onRelationsChange).not.toHaveBeenCalled();
+    expect(badgeRead()).toBe(true);
   });
 
   it('unlinks a task and keeps a closed incident', async () => {
-    const { onRelationsChange } = renderTab(relations());
+    const { badgeRead } = renderTab(relations());
     fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Patch the host)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/relations/tasks/tsk-1'));
-    await waitFor(() => expect(onRelationsChange).toHaveBeenCalled());
+    await waitFor(() => expect(badgeRead()).toBe(true));
 
     const incidents = screen.getByRole('region', { name: INCIDENTS });
     expect(within(incidents).getByRole('button', { name: 'workspace.application.relations.remove(name=Disk full)' })).toBeTruthy();
@@ -286,11 +228,11 @@ describe('AssetRelationsTab', () => {
 
   it('leaves a null section out', async () => {
     renderTab(relations({ budget_lines: null, contracts: null, projects: null, tasks: null, incidents: null }));
-    await screen.findByText('vm-app-01');
+    await screen.findByText('Console');
+    await waitFor(() => expect(screen.queryByRole('region', { name: SECTION('budgetLines') })).toBeNull());
     for (const name of [SECTION('budgetLines'), SECTION('contracts'), SECTION('projects'), SECTION('tasks'), INCIDENTS]) {
       expect(screen.queryByRole('region', { name })).toBeNull();
     }
-    expect(screen.getByRole('region', { name: A('dependedOnBy') })).toBeTruthy();
     expect(screen.getByRole('region', { name: 'linksAndFiles.title' })).toBeTruthy();
   });
 
@@ -298,7 +240,7 @@ describe('AssetRelationsTab', () => {
     rights.contracts = '';
     rights.incidents = 'reader';
     renderTab(relations());
-    await screen.findByText('vm-app-01');
+    await screen.findByText('Datacenter move');
     const contracts = screen.getByRole('region', { name: SECTION('contracts') });
     expect(within(contracts).queryByText('workspace.application.relations.add')).toBeNull();
     expect(within(contracts).queryByRole('button', { name: /relations\.remove/ })).toBeNull();
@@ -311,18 +253,17 @@ describe('AssetRelationsTab', () => {
   it('gives a reader the tables and the navigation only', async () => {
     rights.infrastructure = 'reader';
     renderTab(relations());
-    await screen.findByText('vm-app-01');
+    await screen.findByText('Datacenter move');
     expect(screen.queryByText('workspace.application.relations.add')).toBeNull();
     expect(screen.queryByRole('button', { name: /relations\.remove/ })).toBeNull();
     expect(screen.queryByRole('button', { name: 'linksAndFiles.addLink' })).toBeNull();
     expect(screen.queryByLabelText('linksAndFiles.attachFile')).toBeNull();
-    expect(screen.getByRole('region', { name: 'impact' })).toBeTruthy();
-    fireEvent.click(screen.getByText('san-01'));
-    expect(screen.getByTestId('location')).toHaveTextContent('/it/assets/AST-4/overview');
+    fireEvent.click(screen.getByText('Datacenter move'));
+    expect(screen.getByTestId('location')).toHaveTextContent('/portfolio/projects/PRJ-4');
   });
 
   it('saves a web link at once and deletes a file only after confirmation', async () => {
-    const { onRelationsChange } = renderTab(relations());
+    const { badgeRead } = renderTab(relations());
     expect(await screen.findByText('Console')).toBeTruthy();
     expect(screen.getByText('rack.pdf')).toBeTruthy();
 
@@ -332,7 +273,7 @@ describe('AssetRelationsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'buttons.add' }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/links', { url: 'https://status.example.com', description: 'Status page' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(onRelationsChange).toHaveBeenCalled();
+    expect(badgeRead()).toBe(true);
 
     fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.editLinkNamed(name=Console)' }));
     fireEvent.change(await screen.findByLabelText('linksAndFiles.url'), { target: { value: 'https://admin.example.com' } });
@@ -351,10 +292,10 @@ describe('AssetRelationsTab', () => {
   });
 
   it('attaches a file', async () => {
-    const { onRelationsChange } = renderTab(relations());
+    const { badgeRead } = renderTab(relations());
     const file = new File(['x'], 'notes.txt', { type: 'text/plain' });
     fireEvent.change(await screen.findByLabelText('linksAndFiles.attachFile'), { target: { files: [file] } });
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/attachments', expect.any(FormData)));
-    await waitFor(() => expect(onRelationsChange).toHaveBeenCalled());
+    await waitFor(() => expect(badgeRead()).toBe(true));
   });
 });

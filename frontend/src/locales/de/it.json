@@ -1943,6 +1943,7 @@
         "technical": "Technik",
         "hardware": "Hardware",
         "support": "Support",
+        "dependencies": "Abhängigkeiten",
         "relations": "Beziehungen",
         "knowledge": "Wissensdatenbank",
         "assignments": "Zuordnungen",

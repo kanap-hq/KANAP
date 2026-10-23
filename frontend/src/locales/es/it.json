@@ -1943,6 +1943,7 @@
         "technical": "Técnico",
         "hardware": "Hardware",
         "support": "Soporte",
+        "dependencies": "Dependencias",
         "relations": "Relaciones",
         "knowledge": "Base de conocimiento",
         "assignments": "Asignaciones",

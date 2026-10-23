@@ -46,6 +46,7 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
+vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => <div>dependencies-tab</div> }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => <div>technologies-section</div> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => <div /> }));
@@ -82,6 +83,9 @@ const REACH = {
   totals: { open: 3, severe: 3, exploited_severe: 1 },
 };
 
+// What the relations read and the cluster lists answer; each test sets them.
+const wire = vi.hoisted(() => ({ counts: { assets: 0, total: 0 } as Record<string, number>, members: [] as unknown[], clusters: [] as unknown[] }));
+
 function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | (() => Promise<unknown>) = ASSET) {
   const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   get.mockImplementation(async (url: string) => {
@@ -89,7 +93,9 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
     if (url === VULNERABILITIES_URL) return typeof reach === 'function' ? reach() : { data: reach };
     if (url === '/locations') return { data: { items: [] } };
     if (url.endsWith('/assignments')) return { data: [] };
-    if (url.endsWith('/clusters') || url.endsWith('/members')) return { data: { items: [] } };
+    if (url === '/assets/asset-1/relations-tab') return { data: { counts: wire.counts } };
+    if (url.endsWith('/members')) return { data: { items: wire.members } };
+    if (url.endsWith('/clusters')) return { data: { items: wire.clusters } };
     return { data: { items: [], outgoing: [], incoming: [] } };
   });
   render(
@@ -116,6 +122,9 @@ const follows = (first: Element, second: Element) =>
 describe('Asset workspace: section placement', () => {
   beforeEach(() => {
     get.mockReset();
+    wire.counts = { assets: 0, total: 0 };
+    wire.members = [];
+    wire.clusters = [];
     features.vulnerabilityFeed = false;
     vi.stubGlobal('matchMedia', (query: string) => ({
       matches: false,
@@ -175,6 +184,41 @@ describe('Asset workspace: section placement', () => {
     expect(screen.queryByText('workspace.asset.untitled')).toBeNull();
     answer({ data: { ...ASSET, name: '' } });
     expect(await screen.findByText('workspace.asset.untitled')).toBeInTheDocument();
+  });
+
+  describe('dependencies and relations tabs', () => {
+    const tabText = (name: string) => screen.getByRole('tab', { name: new RegExp(`workspace.asset.tabs.${name}`) }).textContent;
+
+    it('puts Dependencies just before Relations and counts each from the one shared read', async () => {
+      wire.counts = { assets: 3, total: 12 };
+      wire.clusters = [{ id: 'c1', name: 'cluster-1' }, { id: 'c2', name: 'cluster-2' }];
+      renderAt('/it/assets/asset-1/overview');
+      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies5'));
+      expect(tabText('relations')).toBe('workspace.asset.tabs.relations12');
+      const tabs = screen.getAllByRole('tab').map((tab) => tab.textContent);
+      expect(tabs.indexOf('workspace.asset.tabs.dependencies5')).toBe(tabs.indexOf('workspace.asset.tabs.relations12') - 1);
+      expect(get.mock.calls.filter(([url]) => url === '/assets/asset-1/relations-tab')).toHaveLength(1);
+    });
+
+    it('counts the members of a cluster instead of its clusters', async () => {
+      wire.counts = { assets: 1, total: 0 };
+      wire.members = [{ id: 'm1' }, { id: 'm2' }, { id: 'm3' }];
+      wire.clusters = [{ id: 'c1' }];
+      renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, is_cluster: true });
+      await waitFor(() => expect(tabText('dependencies')).toBe('workspace.asset.tabs.dependencies4'));
+      expect(tabText('relations')).toBe('workspace.asset.tabs.relations0');
+    });
+
+    it('renders the Dependencies tab on /dependencies only', async () => {
+      renderAt('/it/assets/asset-1/dependencies');
+      expect(await screen.findByText('dependencies-tab')).toBeInTheDocument();
+    });
+
+    it('does not render the Dependencies tab elsewhere', async () => {
+      renderAt('/it/assets/asset-1/overview');
+      await screen.findByText('workspace.asset.technical.identity');
+      expect(screen.queryByText('dependencies-tab')).toBeNull();
+    });
   });
 
   describe('vulnerabilities', () => {

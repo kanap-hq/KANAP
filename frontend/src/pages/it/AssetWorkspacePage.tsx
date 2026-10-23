@@ -40,7 +40,9 @@ import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
 import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareInfoPanel';
 import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
+import AssetDependenciesTab from './workspace/AssetDependenciesTab';
 import AssetRelationsTab from './workspace/AssetRelationsTab';
+import { assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
 import AssetTechnologiesSection from './components/AssetTechnologiesSection';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 import ReachVulnerabilitiesSection, { type ReachVulnerabilities } from './workspace/ReachVulnerabilitiesSection';
@@ -66,7 +68,6 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
-import { fetchAssetRelationsCount } from '../../utils/workspaceTabCounts';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 import type { AssetExternalLink } from '../../api/endpoints/assets';
 import { isNetboxAttentionStatus } from '../../api/endpoints/netbox';
@@ -167,9 +168,9 @@ type ServerConnectionRow = {
   destination_label?: string | null;
 };
 
-type TabKey = 'overview' | 'technical' | 'hardware' | 'support' | 'relations';
+type TabKey = 'overview' | 'technical' | 'hardware' | 'support' | 'dependencies' | 'relations';
 
-const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'technical', 'hardware', 'support', 'relations']);
+const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'technical', 'hardware', 'support', 'dependencies', 'relations']);
 const OVERVIEW_LEGACY_TABS = new Set(['knowledge', 'assignments', 'connections']);
 
 const ENV_OPTION_KEYS = [
@@ -1007,6 +1008,8 @@ export default function AssetWorkspacePage() {
       await api.post(`/assets/${id}/members`, { server_ids: ids });
       setMemberDialogOpen(false);
       await loadClusterMembers();
+      // The impact reads the members of a cluster.
+      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
     } catch (e: any) {
       setMemberSaveError(getApiErrorMessage(e, t, t('messages.saveMembersFailed')));
     } finally {
@@ -1059,11 +1062,13 @@ export default function AssetWorkspacePage() {
   const { total, index, hasPrev, hasNext, prevId, nextId } = isCreate
     ? { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null as any, nextId: null as any }
     : nav;
-  const assetRelationsCountQuery = useQuery({
-    queryKey: ['asset-workspace-relations-count', id],
-    queryFn: () => fetchAssetRelationsCount(id),
+  // One read for both tabs and both badges; the tabs write through the same key.
+  const assetRelationsQuery = useQuery({
+    queryKey: assetRelationsKey(id),
+    queryFn: () => fetchAssetRelationsTab(id),
     enabled: !isCreate && !!id,
   });
+  const relationCounts = assetRelationsQuery.data?.counts;
   // One query for the Vulnerabilities section and the severe badge. Its key sits under the asset's
   // technologies: every change of a technology link (`invalidateTechnologyLinks`), on this asset or on
   // the host or cluster that carries technologies to it, reads it again.
@@ -1196,7 +1201,14 @@ export default function AssetWorkspacePage() {
       { key: 'hardware', label: t('workspace.asset.tabs.hardware'), disabled: isCreate },
       { key: 'support', label: t('workspace.asset.tabs.support'), disabled: isCreate },
     ] : []),
-    { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: assetRelationsCountQuery.data ?? 0, disabled: isCreate },
+    {
+      key: 'dependencies',
+      label: t('workspace.asset.tabs.dependencies'),
+      // Relations between assets, plus the saved members of a cluster or the clusters of a server.
+      badge: (relationCounts?.assets ?? 0) + (isCluster ? clusterMembers.length : clustersForServer.length),
+      disabled: isCreate,
+    },
+    { key: 'relations', label: t('workspace.asset.tabs.relations'), badge: relationCounts?.total ?? 0, disabled: isCreate },
   ];
 
   const canonicalPathFor = (targetId: string, nextTab: TabKey = validTab) => {
@@ -2034,6 +2046,8 @@ export default function AssetWorkspacePage() {
                           } catch {
                             return;
                           }
+                          // The impact reads the members of a cluster.
+                          void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
                           if (!(next && id && canEditNetboxField('operating_system'))) return;
                           try {
                             await api.delete(`/assets/${id}/operating-system`);
@@ -2308,14 +2322,8 @@ export default function AssetWorkspacePage() {
               assetId={id}
             />
           )}
-          {tab === 'relations' && !isCreate && !!id && (
-            <AssetRelationsTab
-              assetId={id}
-              onRelationsChange={() => {
-                void assetRelationsCountQuery.refetch();
-              }}
-            />
-          )}
+          {tab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} />}
+          {tab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog
         open={memberDialogOpen}

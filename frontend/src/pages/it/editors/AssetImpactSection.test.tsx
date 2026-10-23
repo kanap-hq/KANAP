@@ -1,5 +1,5 @@
 import React from 'react';
-import { fireEvent, render, screen, within } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
@@ -60,19 +60,18 @@ function renderSection(data: AssetImpact | Error) {
     return { data } as never;
   });
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
-  const tree = (version: number) => (
+  render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/assets/host/relations']}>
           <Routes>
-            <Route path="*" element={<><AssetImpactSection assetId="host" version={version} /><Location /></>} />
+            <Route path="*" element={<><AssetImpactSection assetId="host" /><Location /></>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
-    </QueryClientProvider>
+    </QueryClientProvider>,
   );
-  const view = render(tree(0));
-  return { rerender: (version: number) => view.rerender(tree(version)) };
+  return { client };
 }
 
 beforeEach(() => {
@@ -142,12 +141,12 @@ describe('AssetImpactSection', () => {
   });
 
   it('keeps the section on screen while it is read again', async () => {
-    const view = renderSection(impact());
+    const { client } = renderSection(impact());
     expect(await screen.findByRole('table', { name: `${P}.sections.assets` })).toBeInTheDocument();
     mocked.get.mockImplementation(() => new Promise(() => undefined));
-    view.rerender(1);
+    void client.invalidateQueries({ queryKey: ['asset-impact', 'host'] });
     expect(screen.getByRole('table', { name: `${P}.sections.assets` })).toBeInTheDocument();
-    expect(mocked.get).toHaveBeenCalledTimes(2);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledTimes(2));
   });
 
   it('leaves out empty sections and those the caller cannot read', async () => {
