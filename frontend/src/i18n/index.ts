@@ -205,14 +205,13 @@ function syncDocumentLanguage(lng: string | undefined): void {
   document.documentElement.lang = resolveSupportedLocale(lng);
 }
 
-i18n.on('languageChanged', syncDocumentLanguage);
 
 // A component that calls `i18n.changeLanguage` directly still gets its texts: they load after the
 // switch, then the language is applied again so `resolvedLanguage` points at them.
 i18n.on('languageChanged', (lng) => {
   const locale = resolveSupportedLocale(lng);
   // Screen readers, spell checkers and the browser's translation prompt read the page language here.
-  document.documentElement.lang = locale;
+  syncDocumentLanguage(locale);
   if (i18n.hasResourceBundle(locale, 'common')) return;
   void loadLocale(locale).then(
     () => {
