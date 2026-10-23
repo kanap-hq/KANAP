@@ -1102,7 +1102,8 @@ describe('VulnerabilitiesPage', () => {
         const clamp = () => getComputedStyle(summary).getPropertyValue('-webkit-line-clamp');
         expect(clamp()).toBe('3');
         fireEvent.click(within(detail).getByRole('button', { name: 'See more' }));
-        expect(clamp()).toBe('');
+        // jsdom 30.1.3 reports the initial value 'none' where older versions report ''.
+        expect(['', 'none']).toContain(clamp());
         fireEvent.click(within(detail).getByRole('button', { name: 'See less' }));
         expect(within(detail).getByRole('button', { name: 'See more' }).getAttribute('aria-expanded')).toBe('false');
         // The vector and the references stay visible under the cut summary.
