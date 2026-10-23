@@ -1,12 +1,14 @@
 import React from 'react';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { Link, MemoryRouter, Route, Routes } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
+const auth = vi.hoisted(() => ({ canAdmin: true }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -17,9 +19,9 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => true, profile: { id: 'user-1' } }),
+  useAuth: () => ({ hasLevel: (_resource: string, level: string) => level !== 'admin' || auth.canAdmin, profile: { id: 'user-1' } }),
 }));
-vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../hooks/useDepartmentNav', () => ({
   useDepartmentNav: () => ({ ids: [], index: 0, total: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
@@ -39,6 +41,7 @@ const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
   patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
 };
 
 const DEPARTMENT = {
@@ -58,12 +61,14 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
-          <Link to="/master-data/departments/dep-2/overview">go to dep-2</Link>
-          <Routes>
-            <Route path="/master-data/departments/:id/:tab" element={<DepartmentWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <Link to="/master-data/departments/dep-2/overview">go to dep-2</Link>
+            <Routes>
+              <Route path="/master-data/departments/:id/:tab" element={<DepartmentWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -72,6 +77,8 @@ function renderAt(path: string) {
 describe('DepartmentWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    auth.canAdmin = true;
+    mocked.delete.mockResolvedValue({ data: {} });
     mocked.get.mockImplementation(async (url: string, config?: { params?: { year?: number } }) => {
       if (url === '/departments/dep-1') return { data: DEPARTMENT };
       if (url === '/departments/dep-2') return { data: { ...DEPARTMENT, id: 'dep-2', name: 'Legal', description: 'Contracts' } };
@@ -90,6 +97,41 @@ describe('DepartmentWorkspacePage', () => {
     expect(screen.queryByRole('button', { name: 'common:buttons.reset' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'shared.labels.overview' })).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: 'shared.labels.details' })).toBeInTheDocument();
+  });
+
+  it('hides delete from someone who is not a departments admin', async () => {
+    auth.canAdmin = false;
+    renderAt('/master-data/departments/dep-1/overview');
+    await screen.findByText('Finance');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  });
+
+  it('refuses to delete a department that is in use, and offers no confirmation', async () => {
+    mocked.post.mockResolvedValue({
+      data: { refused: [{ id: 'dep-1', name: 'Finance', code: 'DEPARTMENT_IN_USE', usages: [{ type: 'budget_lines', total: 3 }] }] },
+    });
+    renderAt('/master-data/departments/dep-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(mocked.post).toHaveBeenCalledWith('/departments/delete-check', { ids: ['dep-1'] });
+    expect(within(dialog).getByText('errors:DEPARTMENT_IN_USE')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a department nothing uses, then returns to the list', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    renderAt(`/master-data/departments/dep-1/overview?year=${Y}`);
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:delete.cannotUndo')).toBeInTheDocument();
+    const loadsBefore = mocked.get.mock.calls.filter(([url]) => url === '/departments/dep-1').length;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/departments/dep-1'));
+    expect(navigateMock).toHaveBeenCalledWith(`/master-data/departments?year=${Y}`);
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/departments/dep-1')).toHaveLength(loadsBefore);
   });
 
   it('saves a name change on blur', async () => {

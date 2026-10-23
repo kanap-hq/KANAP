@@ -236,7 +236,8 @@
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Un autre département de cette société porte déjà ce nom.",
       "companyRequired": "Choisissez une société.",
-      "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
+      "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
+      "deleteFailed": "Échec de la suppression du département."
     },
     "delete": {
       "toDelete_one": "{{count}} département sera supprimé :",
@@ -475,7 +476,8 @@
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Un autre fournisseur porte déjà ce nom.",
       "saveFailed": "Échec de l'enregistrement du fournisseur.",
-      "createFailed": "Échec de la création du fournisseur."
+      "createFailed": "Échec de la création du fournisseur.",
+      "deleteFailed": "Échec de la suppression du fournisseur."
     },
     "previous": "Fournisseur précédent",
     "next": "Fournisseur suivant",

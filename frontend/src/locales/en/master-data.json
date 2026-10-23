@@ -236,7 +236,8 @@
       "nameRequired": "Enter a name.",
       "nameTaken": "Another department of this company already has this name.",
       "companyRequired": "Choose a company.",
-      "headcountInvalid": "Enter a whole number, 0 or more."
+      "headcountInvalid": "Enter a whole number, 0 or more.",
+      "deleteFailed": "Failed to delete the department."
     },
     "delete": {
       "toDelete_one": "{{count}} department will be deleted:",
@@ -475,7 +476,8 @@
       "nameRequired": "Enter a name.",
       "nameTaken": "Another supplier already has this name.",
       "saveFailed": "Failed to save the supplier.",
-      "createFailed": "Failed to create the supplier."
+      "createFailed": "Failed to create the supplier.",
+      "deleteFailed": "Failed to delete the supplier."
     },
     "previous": "Previous supplier",
     "next": "Next supplier",
