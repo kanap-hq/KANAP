@@ -186,5 +186,17 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Ce dossier contient encore {{usages}}. Déplacez-le ou supprimez-le d’abord.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Ce dossier contient encore {{usages}}. Déplacez-les ou supprimez-les d’abord.",
   "currency_invalid": "Code de devise inconnu : saisissez des codes ISO 4217 à trois lettres, par exemple EUR, USD, CHF.",
-  "turnover_fx_missing_all": "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition."
+  "turnover_fx_missing_all": "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition.",
+  "name_required": "Saisissez un nom.",
+  "name_taken": "Une application porte déjà ce nom : {{ref}}.",
+  "name_ambiguous": "{{count}} applications s'appellent {{name}}. Ajoutez la colonne id pour indiquer laquelle.",
+  "name_too_long": "Le nom est trop long : {{max}} caractères au plus.",
+  "lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Utilisez un cycle de vie de la liste, par son nom ou son code.",
+  "category_invalid": "Catégorie inconnue : {{value}}. Utilisez une catégorie de la liste, par son nom ou son code.",
+  "classification_unknown": "Valeur inconnue : {{value}}. Utilisez un niveau des paramètres de classification, par son nom ou son code.",
+  "duration_invalid": "{{field}} doit être un nombre entier de minutes.",
+  "owner_email_unknown": "Aucun utilisateur avec le courriel {{email}}.",
+  "dates_inconsistent": "La fin de support et la date de retrait ne peuvent pas précéder la mise en service.",
+  "suite_has_children": "Retirez d'abord les {{count}} applications rattachées.",
+  "forbidden": "Vous n'avez pas les droits pour cette action."
 }

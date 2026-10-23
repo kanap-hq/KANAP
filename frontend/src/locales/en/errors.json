@@ -186,5 +186,17 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "This folder still has {{usages}}. Move or delete it first.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "This folder still has {{usages}}. Move or delete them first.",
   "currency_invalid": "Unknown currency code: enter three-letter ISO 4217 codes, for example EUR, USD, CHF.",
-  "turnover_fx_missing_all": "None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver."
+  "turnover_fx_missing_all": "None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver.",
+  "name_required": "Enter a name.",
+  "name_taken": "An application already has this name: {{ref}}.",
+  "name_ambiguous": "{{count}} applications are named {{name}}. Add the id column to say which one.",
+  "name_too_long": "The name is too long: {{max}} characters at most.",
+  "lifecycle_invalid": "Unknown lifecycle: {{value}}. Use a lifecycle from the list, by its name or its code.",
+  "category_invalid": "Unknown category: {{value}}. Use a category from the list, by its name or its code.",
+  "classification_unknown": "Unknown value: {{value}}. Use a level from the classification settings, by its name or its code.",
+  "duration_invalid": "{{field}} must be a whole number of minutes.",
+  "owner_email_unknown": "No user with the email {{email}}.",
+  "dates_inconsistent": "The end of support and the retirement date cannot come before the go-live date.",
+  "suite_has_children": "Detach the {{count}} child applications first.",
+  "forbidden": "You do not have the rights for this action."
 }

@@ -6,6 +6,33 @@ import { getApiErrorMessage, getDocumentSaveErrorMessage } from './apiErrorMessa
 const t = i18n.getFixedT('en');
 
 describe('getApiErrorMessage', () => {
+  it('words a refusal without a code as a missing right, in each language', () => {
+    const forbidden = { response: { status: 403, data: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' } } };
+    expect(getApiErrorMessage(forbidden, t, 'fallback')).toBe('You do not have the rights for this action.');
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('de'), 'fallback')).toBe('Sie haben keine Berechtigung für diese Aktion.');
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('es'), 'fallback')).toBe('No tiene permisos para esta acción.');
+    const coded = { response: { status: 403, data: { code: 'administrator_required', message: 'Administrator required' } } };
+    expect(getApiErrorMessage(coded, t, 'fallback')).toBe('Only an administrator of this workspace can do this.');
+  });
+
+  it('translates the application refusals with their values', () => {
+    const fr = i18n.getFixedT('fr');
+    const taken = { response: { status: 409, data: { code: 'name_taken', message: 'Another application is already named "CRM"', params: { name: 'CRM', ref: 'APP-12' } } } };
+    expect(getApiErrorMessage(taken, fr, 'fallback')).toBe('Une application porte déjà ce nom : APP-12.');
+    const suite = { response: { status: 409, data: { code: 'suite_has_children', message: 'Detach', params: { count: 3 } } } };
+    expect(getApiErrorMessage(suite, fr, 'fallback')).toBe('Retirez d\'abord les 3 applications rattachées.');
+    const owner = { response: { status: 400, data: { code: 'owner_email_unknown', message: 'No user', params: { email: 'x@example.com' } } } };
+    expect(getApiErrorMessage(owner, fr, 'fallback')).toBe('Aucun utilisateur avec le courriel x@example.com.');
+    for (const code of ['name_required', 'name_ambiguous', 'name_too_long', 'lifecycle_invalid', 'category_invalid', 'classification_unknown', 'duration_invalid', 'dates_inconsistent']) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes' } } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{/);
+      }
+    }
+  });
+
   it('translates a turnover that cannot be compared because every selected company lacks a rate', () => {
     const missing = {
       response: {

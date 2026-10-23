@@ -55,6 +55,16 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
   const message = stringifyErrorValue(payload?.message) || stringifyErrorValue(apiError?.message);
+  const status = apiError?.response?.status;
+
+  // A refusal with no code of its own (Nest's "Forbidden resource"): the plain sentence.
+  if (status === 403 && !stringifyErrorValue(payload?.code)) {
+    const translated = t('errors:forbidden', { defaultValue: message || fallback });
+    if (typeof translated === 'string' && translated.trim()) {
+      return translated;
+    }
+  }
+
   const code = getApiErrorCode(apiError);
 
   if (code) {
@@ -75,7 +85,7 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   }
 
   // A rate limit answers with no code of its own (ThrottlerException).
-  if (apiError?.response?.status === 429) {
+  if (status === 429) {
     const translated = t('errors:rate_limited', { defaultValue: fallback });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;

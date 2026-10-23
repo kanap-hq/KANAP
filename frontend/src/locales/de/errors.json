@@ -186,5 +186,17 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie ihn zuerst.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst.",
   "currency_invalid": "Unbekannter Währungscode: Geben Sie dreistellige ISO-4217-Codes ein, zum Beispiel EUR, USD, CHF.",
-  "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium."
+  "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium.",
+  "name_required": "Geben Sie einen Namen ein.",
+  "name_taken": "Eine Anwendung trägt diesen Namen bereits: {{ref}}.",
+  "name_ambiguous": "{{count}} Anwendungen heißen {{name}}. Fügen Sie die Spalte id hinzu, um eine davon anzugeben.",
+  "name_too_long": "Der Name ist zu lang: höchstens {{max}} Zeichen.",
+  "lifecycle_invalid": "Unbekannter Lebenszyklus: {{value}}. Verwenden Sie einen Lebenszyklus aus der Liste, mit Namen oder Code.",
+  "category_invalid": "Unbekannte Kategorie: {{value}}. Verwenden Sie eine Kategorie aus der Liste, mit Namen oder Code.",
+  "classification_unknown": "Unbekannter Wert: {{value}}. Verwenden Sie eine Stufe aus den Klassifizierungseinstellungen, mit Namen oder Code.",
+  "duration_invalid": "{{field}} muss eine ganze Zahl von Minuten sein.",
+  "owner_email_unknown": "Kein Benutzer mit der E-Mail-Adresse {{email}}.",
+  "dates_inconsistent": "Supportende und Stilllegungsdatum dürfen nicht vor dem Go-live-Datum liegen.",
+  "suite_has_children": "Lösen Sie zuerst die {{count}} zugeordneten Anwendungen.",
+  "forbidden": "Sie haben keine Berechtigung für diese Aktion."
 }

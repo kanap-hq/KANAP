@@ -700,6 +700,10 @@ export const IntegratedDocumentEditor = React.forwardRef<
   const lockHolderLabel = activeLockInfo?.holder_name || 'another user';
   const loadErrorMessage = React.useMemo(() => {
     if (!loadError) return null;
+    // A document the server cannot find for this user ("Library not found") carries no code of
+    // its own: a plain sentence rather than the server's words.
+    const response = (loadError as { response?: { status?: number; data?: { code?: unknown } } }).response;
+    if (response?.status === 404 && !response.data?.code) return t('documentEditor.notReachable');
     return getApiErrorMessage(loadError, t, t('documentEditor.failedToLoad'));
   }, [loadError, t]);
   const lockExpiryLabel = React.useMemo(() => {
