@@ -241,6 +241,9 @@ export function gridRowSelection(enableRowSelection: boolean): {
   return { mode: 'multiRow', checkboxes: true, headerCheckbox: false, enableClickSelection: false };
 }
 
+/** AG Grid's width for a column that declares neither `width` nor `flex`. */
+const AG_GRID_DEFAULT_COLUMN_WIDTH = 200;
+
 /** A flex column with no minimum of its own stays wide enough to read its header ("Nom", "Total"). */
 export const FLEX_COLUMN_MIN_WIDTH = 160;
 
@@ -424,7 +427,10 @@ function useColumnState(
         colId: field,
         hide: isRequired ? false : isDefaultHidden,
         pinned: col.pinned || undefined,
-        width: col.width || undefined,
+        // The width AG Grid gives a column that declares none, so a reset undoes a resize there too.
+        width: col.width || (col.flex ? undefined : AG_GRID_DEFAULT_COLUMN_WIDTH),
+        // Gives a flex column its share again after the user resized it (AG Grid then drops its flex).
+        flex: col.flex ?? null,
       };
     });
   }, [columns, requiredColumns, defaultHiddenColumns]);
@@ -626,6 +632,18 @@ export default function ServerDataGrid<T extends { id?: string | number }>({
 
       if (agGridCol.minWidth == null && typeof agGridCol.flex === 'number' && agGridCol.flex > 0) {
         agGridCol.minWidth = FLEX_COLUMN_MIN_WIDTH;
+      }
+
+      // AG Grid applies `width` and `flex` again to the columns it has each time a page hands new
+      // column definitions (its labels, data it loaded): a width the user set by hand, or restored
+      // from the saved layout, would be lost. As initial values they size a new column only.
+      if (agGridCol.width !== undefined) {
+        agGridCol.initialWidth ??= agGridCol.width;
+        delete agGridCol.width;
+      }
+      if (agGridCol.flex !== undefined) {
+        agGridCol.initialFlex ??= agGridCol.flex;
+        delete agGridCol.flex;
       }
 
       return {
