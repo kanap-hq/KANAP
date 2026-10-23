@@ -295,6 +295,11 @@ export default function TechnologiesPage() {
             };
           }}
           warning={t('pages.technologies.delete.warning', { count: selectedRows.length })}
+          itemLabels={{
+            toDelete: (count) => t('pages.technologies.delete.toDelete', { count }),
+            deleted: (count) => t('pages.technologies.delete.deleted', { count }),
+            title: (count) => t('pages.technologies.delete.title', { count }),
+          }}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
         />

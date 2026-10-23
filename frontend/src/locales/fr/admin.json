@@ -1163,7 +1163,15 @@
     "templateLabel": "Modèle",
     "title": "Comptes standards (Admin plateforme)",
     "deleteWarning_one": "Cette action est irréversible. Le compte est retiré de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes.",
-    "deleteWarning_other": "Cette action est irréversible. Les comptes sont retirés de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes."
+    "deleteWarning_other": "Cette action est irréversible. Les comptes sont retirés de ce modèle. Les plans comptables déjà chargés depuis ce modèle gardent leurs comptes.",
+    "delete": {
+      "toDelete_one": "{{count}} compte standard sera supprimé :",
+      "toDelete_other": "{{count}} comptes standards seront supprimés :",
+      "deleted_one": "{{count}} compte standard supprimé",
+      "deleted_other": "{{count}} comptes standards supprimés",
+      "title_one": "Supprimer le compte standard sélectionné",
+      "title_other": "Supprimer les {{count}} comptes standards sélectionnés"
+    }
   },
   "tenants": {
     "actions": {

@@ -186,7 +186,7 @@
       "tier_2": {"source": "Tier 2 (workstations)", "en": "Tier 2 (workstations)", "fr": "Tier 2 (postes de travail)", "de": "Tier 2 (Arbeitsplätze)", "es": "Tier 2 (puestos de trabajo)"}
     },
     "technologyFamilies": {
-      "operating_system": {"source": "Operating system", "en": "Operating system", "fr": "Système d’exploitation", "de": "Betriebssystem", "es": "Sistema operativo"},
+      "operating_system": {"source": "Operating system", "en": "Operating system", "fr": "Système d'exploitation", "de": "Betriebssystem", "es": "Sistema operativo"},
       "database": {"source": "Database", "en": "Database", "fr": "Base de données", "de": "Datenbank", "es": "Base de datos"},
       "application_server": {"source": "Application server", "en": "Application server", "fr": "Serveur d’applications", "de": "Anwendungsserver", "es": "Servidor de aplicaciones"},
       "web_server": {"source": "Web server", "en": "Web server", "fr": "Serveur web", "de": "Webserver", "es": "Servidor web"},

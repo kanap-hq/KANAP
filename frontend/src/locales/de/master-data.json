@@ -557,7 +557,13 @@
     },
     "delete": {
       "warning_one": "Er wird aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die ihn nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
-      "warning_other": "Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden."
+      "warning_other": "Sie werden aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die sie nennen. Diese Einträge bleiben erhalten. Dies kann nicht rückgängig gemacht werden.",
+      "toDelete_one": "{{count}} Kontakt wird gelöscht:",
+      "toDelete_other": "{{count}} Kontakte werden gelöscht:",
+      "deleted_one": "{{count}} Kontakt gelöscht",
+      "deleted_other": "{{count}} Kontakte gelöscht",
+      "title_one": "Ausgewählten Kontakt löschen",
+      "title_other": "{{count}} ausgewählte Kontakte löschen"
     }
   },
   "coa": {
@@ -852,6 +858,18 @@
       "budgetLines_other": "{{count}} Budgetzeilen",
       "confirmAnyway": "Trotzdem löschen"
     },
+    "delete": {
+      "toDelete_one": "{{count}} Wert wird gelöscht:",
+      "toDelete_other": "{{count}} Werte werden gelöscht:",
+      "kept_one": "{{count}} Wert kann nicht gelöscht werden und bleibt erhalten:",
+      "kept_other": "{{count}} Werte können nicht gelöscht werden und bleiben erhalten:",
+      "deleted_one": "{{count}} Wert gelöscht",
+      "deleted_other": "{{count}} Werte gelöscht",
+      "title_one": "Ausgewählten Wert löschen",
+      "title_other": "{{count}} ausgewählte Werte löschen",
+      "keptDone_one": "{{count}} Wert behalten",
+      "keptDone_other": "{{count}} Werte behalten"
+    },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX-Zeile hat einen Wert für diese Dimension. Sie behält ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.",
       "capex_other": "{{count}} CAPEX-Zeilen haben einen Wert für diese Dimension. Sie behalten ihn, ausgeblendet, solange die Dimension nur für OPEX-Zeilen gilt.",
@@ -990,6 +1008,14 @@
       "failedToUpdate": "Fehler beim Aktualisieren der Kategorie"
     },
     "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesem Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.",
+    "delete": {
+      "toDelete_one": "{{count}} Geschäftsprozess wird gelöscht:",
+      "toDelete_other": "{{count}} Geschäftsprozesse werden gelöscht:",
+      "deleted_one": "{{count}} Geschäftsprozess gelöscht",
+      "deleted_other": "{{count}} Geschäftsprozesse gelöscht",
+      "title_one": "Ausgewählten Geschäftsprozess löschen",
+      "title_other": "{{count}} ausgewählte Geschäftsprozesse löschen"
+    },
     "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Schnittstellen und Anfragen, die mit diesen Prozessen verknüpft sind, bleiben ohne die Verknüpfung erhalten."
   },
   "admin": {

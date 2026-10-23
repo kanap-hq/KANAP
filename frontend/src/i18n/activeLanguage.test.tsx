@@ -62,6 +62,7 @@ describe('i18n loads the active language only', () => {
     expect(downloads).toEqual(downloaded('fr'));
     expect(i18n.hasResourceBundle('en', 'common')).toBe(false);
     expect(i18n.t('auth:reset.submit')).toBe(frAuth.reset.submit);
+    expect(document.documentElement.lang).toBe('fr');
   });
 
   it('renders a public page in French from the first render', async () => {
@@ -104,6 +105,7 @@ describe('i18n loads the active language only', () => {
     expect(i18n.language).toBe('de');
     expect(i18n.resolvedLanguage).toBe('de');
     expect(screen.getByTestId('label')).toHaveTextContent(deAuth.reset.submit);
+    expect(document.documentElement.lang).toBe('de');
   });
 
   it('still downloads the texts when a component switches with i18n.changeLanguage directly', async () => {
@@ -116,5 +118,16 @@ describe('i18n loads the active language only', () => {
     expect(downloaded('es')).toHaveLength(namespaceCount);
     // The language is applied again once the texts are in, after they first render.
     await waitFor(() => expect(i18n.resolvedLanguage).toBe('es'));
+    expect(document.documentElement.lang).toBe('es');
+  });
+
+  it('marks the page with the active language', async () => {
+    const { changeAppLanguage } = await import('./index');
+
+    await act(() => changeAppLanguage('en-GB'));
+    expect(document.documentElement.lang).toBe('en');
+
+    await act(() => changeAppLanguage('fr'));
+    expect(document.documentElement.lang).toBe('fr');
   });
 });
