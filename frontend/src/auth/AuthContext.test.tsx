@@ -252,15 +252,32 @@ describe('AuthProvider and ProtectedRoute', () => {
       expect(screen.getByTestId('location')).toHaveTextContent(/^\/login$/);
     });
 
-    it('goes to the login page without a stored session', async () => {
-      http.refreshPost.mockRejectedValue(networkError());
+  });
+
+  describe('load without a session', () => {
+    it('an anonymous visitor lands on the login page without a refresh request', async () => {
+      http.refreshPost.mockRejectedValue(httpError(400));
 
       renderApp();
       await advance(12_100);
 
-      expect(http.refreshPost).toHaveBeenCalledTimes(4);
+      expect(http.refreshPost).not.toHaveBeenCalled();
       expect(screen.getByText('Login Page')).toBeInTheDocument();
       expect(screen.queryByText(serverUnavailableLine)).not.toBeInTheDocument();
+    });
+
+    it('a legacy refresh token in storage is still exchanged', async () => {
+      window.localStorage.setItem('refresh_token', 'legacy-refresh-token');
+      http.refreshPost.mockResolvedValueOnce(freshTokens);
+
+      renderApp();
+      await advance();
+      await advance();
+
+      expect(http.refreshPost).toHaveBeenCalledTimes(1);
+      expect(http.refreshPost.mock.calls[0][1]).toEqual({ refresh_token: 'legacy-refresh-token' });
+      expect(getAccessToken()).toBe('fresh-access-token');
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
     });
   });
 
