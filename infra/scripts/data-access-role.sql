@@ -57,6 +57,14 @@
 -- On PostgreSQL 16 a CREATEROLE role that is not a member of the application role can run the
 -- install (it receives the admin option on the role it creates). On PostgreSQL 15 the grant on
 -- public needs a superuser or the database owner.
+--
+-- The uninstall needs more: a superuser, or a role with the privileges of the application role
+-- (to revoke the grants it gave) and of kanap_data_limited (DROP OWNED refuses anyone else,
+-- whatever CREATEROLE), plus, on PostgreSQL 16, CREATEROLE and the admin option on
+-- kanap_data_limited (DROP ROLE). A CREATEROLE role that only installed it lacks the first two;
+-- the script stops with that message before changing anything. Such a role can give itself the
+-- second (GRANT kanap_data_limited TO CURRENT_USER WITH INHERIT TRUE); the first is a membership
+-- in the application role.
 
 \set ON_ERROR_STOP on
 \set QUIET on
@@ -262,6 +270,25 @@ BEGIN
   IF v_limited IS NULL THEN
     RAISE NOTICE 'data-access-role: role kanap_data_limited absent, nothing to remove';
   ELSE
+    -- Before anything changes: who may remove it (see the header).
+    IF NOT (SELECT rolsuper FROM pg_roles WHERE rolname = current_user) THEN
+      SELECT string_agg(item, '; ' ORDER BY n) INTO v_left
+      FROM (VALUES
+        (1, CASE WHEN NOT pg_has_role(current_user, to_regrole(v_app), 'USAGE')
+                 THEN format('the privileges of "%s" (a membership with INHERIT)', v_app) END),
+        (2, CASE WHEN NOT pg_has_role(current_user, v_limited, 'USAGE')
+                 THEN 'the privileges of kanap_data_limited (GRANT kanap_data_limited TO CURRENT_USER WITH INHERIT TRUE)' END),
+        (3, CASE WHEN current_setting('server_version_num')::int >= 160000
+                      AND NOT ((SELECT rolcreaterole FROM pg_roles WHERE rolname = current_user)
+                               AND pg_has_role(current_user, v_limited, 'MEMBER WITH ADMIN OPTION'))
+                 THEN 'CREATEROLE with the admin option on kanap_data_limited' END)
+      ) AS missing(n, item)
+      WHERE item IS NOT NULL;
+      IF v_left IS NOT NULL THEN
+        RAISE EXCEPTION 'data-access-role: uninstall needs a superuser, or a role with the privileges of "%" and of kanap_data_limited (and on PostgreSQL 16 CREATEROLE with the admin option on kanap_data_limited). "%" lacks: %. Nothing was changed.',
+          v_app, current_user, v_left;
+      END IF;
+    END IF;
     DROP OWNED BY kanap_data_limited;
     SELECT string_agg(DISTINCT d.datname, ', ' ORDER BY d.datname) INTO v_left
     FROM pg_shdepend s

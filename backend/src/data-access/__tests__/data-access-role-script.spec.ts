@@ -17,7 +17,9 @@ import { APP_URL, LIMITED_ROLE, adminUrlForAppDatabase, appRoleName, connect } f
  * - PostgreSQL 15: by default the script neither requires nor grants the direct grant on public of
  *   template1; with -v include_template1=on it grants it there, and a database created afterwards
  *   from template1 lets the application role create before the script runs in it. The template1
- *   grant is put back as it was.
+ *   grant is put back as it was;
+ * - the uninstall by a CREATEROLE role without the privileges of the application role and of the
+ *   limited role stops with a message that says what it needs, before changing anything.
  *
  * Needs DATA_ACCESS_ADMIN_DATABASE_URL (a superuser; CI sets it) and psql on the PATH; skips
  * without the variable. Locally, against a throwaway server only, never the shared dev server
@@ -37,6 +39,14 @@ function withDatabase(url: string, database: string): string {
   const out = new URL(url);
   out.pathname = `/${database}`;
   return out.toString();
+}
+
+function spawnScript(url: string, extra: string[]) {
+  return spawnSync(
+    'psql',
+    ['-X', '-v', 'ON_ERROR_STOP=1', '-v', `app_role=${APP_ROLE}`, ...extra, '-f', SCRIPT, '-d', url],
+    { encoding: 'utf8' },
+  );
 }
 
 function runScript(adminUrl: string, extra: string[] = []): string {
@@ -177,6 +187,39 @@ async function testTemplate1Option(adminUrl: string): Promise<void> {
   console.log('  include_template1: off by default, on grants template1 for databases created later: OK');
 }
 
+async function testUninstallRefused(adminUrl: string): Promise<void> {
+  const dba = 'data_access_role_spec_dba';
+  const server = await connect(withDatabase(adminUrl, 'postgres'));
+  try {
+    await server.query(`DROP ROLE IF EXISTS ${dba}`);
+    await server.query(`CREATE ROLE ${dba} LOGIN PASSWORD '${dba}' CREATEROLE`);
+    try {
+      const url = new URL(adminUrl);
+      url.username = dba;
+      url.password = dba;
+      const result = spawnScript(url.toString(), ['-v', 'mode=uninstall']);
+      assert.notEqual(result.status, 0, 'the uninstall stops');
+      assert.match(result.stderr, /uninstall needs a superuser/, `a message that says what it needs: ${result.stderr}`);
+      assert.match(result.stderr, /Nothing was changed/);
+      const state = await roleState(adminUrl);
+      assert.equal(state.member, true, 'the role and its membership are still there');
+      const app = await connect(APP_URL);
+      try {
+        const { rows } = await app.query(`SELECT has_table_privilege($1, 'companies', 'SELECT') AS granted`, [LIMITED_ROLE]);
+        assert.equal(rows[0].granted, true, 'the grants are still there');
+      } finally {
+        await app.end();
+      }
+    } finally {
+      await server.query(`DROP OWNED BY ${dba}`).catch(() => undefined);
+      await server.query(`DROP ROLE IF EXISTS ${dba}`);
+    }
+  } finally {
+    await server.end();
+  }
+  console.log('  uninstall by a CREATEROLE role without the privileges: stops with its message, nothing changed: OK');
+}
+
 async function run(): Promise<void> {
   const adminUrl = adminUrlForAppDatabase();
   if (!adminUrl) {
@@ -187,6 +230,7 @@ async function run(): Promise<void> {
   await testTwice(adminUrl);
   await testFreshDatabase(adminUrl);
   await testTemplate1Option(adminUrl);
+  await testUninstallRefused(adminUrl);
   console.log('data access role script: all scenarios passed');
 }
 
