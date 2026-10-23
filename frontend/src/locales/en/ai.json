@@ -1,6 +1,8 @@
 {
   "conversationList": {
     "archive": "Archive",
+    "archiveConfirmMessage": "The conversation leaves your list. It cannot be reopened.",
+    "archiveConfirmTitle": "Archive this conversation?",
     "dateGroups": {
       "lastWeek": "Last 7 days",
       "older": "Older",

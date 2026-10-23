@@ -1,6 +1,8 @@
 {
   "conversationList": {
     "archive": "Archivar",
+    "archiveConfirmMessage": "La conversación sale de su lista. No se podrá volver a abrir.",
+    "archiveConfirmTitle": "¿Archivar esta conversación?",
     "dateGroups": {
       "lastWeek": "Últimos 7 días",
       "older": "Más antiguo",
