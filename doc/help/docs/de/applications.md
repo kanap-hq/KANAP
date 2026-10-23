@@ -89,7 +89,7 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
 **Standardspalten**:
-- **Name**: Anwendungsname mit Kategorie-Beschriftung und einem Badge „Enthalten in: {Suite}" für Komponenten einer Suite
+- **Name**: Anwendungsname, darunter eine Zeile „Enthalten in: {Suite}" für eine Anwendung, die in einer Suite enthalten ist
 - **Zu prüfende Schwachstellen**: die noch zu prüfenden Schwachstellen der Technologien, die die Anwendung deklariert oder die ihre Bereitstellungsserver erfasst haben, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für eine deaktivierte Anwendung oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Vorhanden, wenn Schwachstellen verfolgt werden. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)
 - **Kategorie**: Der Hauptzweck der Anwendung
 - **Umgebungen**: Farbige Chips, die aktive Umgebungen zeigen (Prod, Pre-prod, QA, Test, Dev, Sandbox). Bewegen Sie den Mauszeiger darüber für Basis-URL und Lebenszyklus.

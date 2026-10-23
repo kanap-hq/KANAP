@@ -89,7 +89,7 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - Su selección se recuerda entre sesiones: al volver a la página se restaura su última elección.
 
 **Columnas predeterminadas**:
-- **Nombre**: Nombre de la aplicación con la categoría como subtítulo y una insignia "Incluido en: {suite}" para los componentes de una suite
+- **Nombre**: Nombre de la aplicación, con debajo una línea "Incluida en: {suite}" para una aplicación incluida en una suite
 - **Vulnerabilidades por revisar**: las vulnerabilidades aún por revisar en las tecnologías que la aplicación declara o que sus servidores de despliegue tienen registradas y, en naranja, cuántas son críticas o altas (`5 · 2`). Vacía para una aplicación desactivada o cuando no queda ninguna. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Presente cuando se siguen las vulnerabilidades. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)
 - **Categoría**: El propósito principal de la aplicación
 - **Entornos**: Chips de colores que muestran entornos activos (Prod, Pre-prod, QA, Test, Dev, Sandbox). Pase el ratón para ver la URL base y el ciclo de vida.

@@ -550,8 +550,8 @@ export default function ApplicationsPage() {
     return Cell;
   }, [buildAppHref, buildSuiteHref, handleInternalNavigate]);
 
-  // Two lines in the row: the name, then one quiet line (the category, and the suite the application
-  // belongs to), cut with an ellipsis in a narrow column. The full line is on hover.
+  // The name, and for an application included in a suite a quiet second line naming that suite, cut
+  // with an ellipsis in a narrow column (the full line is on hover). The category has its own column.
   const NameWithSuiteCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
       const data = params.data as AppRow | undefined;
@@ -561,8 +561,6 @@ export default function ApplicationsPage() {
       const showSuite = !!firstSuite && suitesCount > 0 && !suitesColVisible;
       const extra = suitesCount > 1 ? ` +${suitesCount - 1}` : '';
       const includedIn = showSuite ? `${t('pages.applications.includedIn')} ${firstSuite}${extra}` : '';
-      const category = data?.category ? categoryLabel(data.category) : '';
-      const secondary = [category, includedIn].filter(Boolean).join(' · ');
       return (
         <Box
           component="span"
@@ -585,10 +583,10 @@ export default function ApplicationsPage() {
           >
             {name}
           </Link>
-          {secondary && (
+          {includedIn && (
             <Box
               component="span"
-              title={secondary}
+              title={includedIn}
               sx={{
                 display: 'block',
                 overflow: 'hidden',
@@ -599,34 +597,30 @@ export default function ApplicationsPage() {
                 color: 'kanap.text.tertiary',
               }}
             >
-              {category}
-              {category && includedIn ? ' · ' : ''}
-              {includedIn && (
-                <Box
-                  component="a"
-                  href={buildSuiteHref(data)}
-                  sx={{
-                    color: 'inherit',
-                    textDecoration: 'none',
-                    cursor: 'pointer',
-                    '&:hover': { textDecoration: 'underline' },
-                    ...aboveCellLinkSx,
-                  }}
-                  onClick={(e: React.MouseEvent) => {
-                    e.stopPropagation();
-                    handleInternalNavigate(e, buildSuiteHref(data));
-                  }}
-                >
-                  {includedIn}
-                </Box>
-              )}
+              <Box
+                component="a"
+                href={buildSuiteHref(data)}
+                sx={{
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' },
+                  ...aboveCellLinkSx,
+                }}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  handleInternalNavigate(e, buildSuiteHref(data));
+                }}
+              >
+                {includedIn}
+              </Box>
             </Box>
           )}
         </Box>
       );
     };
     return Cell;
-  }, [buildAppHref, buildSuiteHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
+  }, [buildAppHref, buildSuiteHref, handleInternalNavigate, suitesColVisible, t]);
 
   const EnvironmentCell = useMemo(() => {
     const mode = theme.palette.mode;

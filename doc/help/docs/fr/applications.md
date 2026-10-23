@@ -89,7 +89,7 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - Votre sélection est mémorisée entre les sessions : revenir sur la page restaure votre dernier choix.
 
 **Colonnes par défaut** :
-- **Nom** : Nom de l'application avec libellé de catégorie et badge « Inclus dans : {suite} » pour les composants d'une suite
+- **Nom** : Nom de l'application, avec en dessous une ligne « Incluse dans : {suite} » pour une application incluse dans une suite
 - **Vulnérabilités à traiter** : les vulnérabilités encore à traiter sur les technologies que l'application déclare ou que ses serveurs de déploiement ont renseignées, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour une application désactivée ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Présente quand les vulnérabilités sont suivies. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts)
 - **Catégorie** : L'objectif principal de l'application
 - **Environnements** : Pastilles colorées montrant les environnements actifs (Prod, Pré-prod, QA, Test, Dev, Sandbox). Survolez pour voir l'URL de base et le cycle de vie.

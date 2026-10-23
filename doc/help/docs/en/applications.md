@@ -89,7 +89,7 @@ The Applications grid provides a comprehensive view of your application portfoli
 - Your selection is remembered across sessions: returning to the page restores your last choice.
 
 **Default columns**:
-- **Name**: Application name with category caption and an "Included in: {suite}" badge for components of a suite
+- **Name**: Application name, with an "Included in: {suite}" line under it for an application included in a suite
 - **Vulnerabilities to review**: the vulnerabilities still to review on the technologies the application declares or that its deployment servers have recorded, then, in orange, how many are critical or high (`5 · 2`). Empty for a disabled application or when none is left. Click it to open the [Vulnerabilities](vulnerabilities.md) page filtered on the application. Present when vulnerabilities are followed. See [What KANAP counts](vulnerabilities.md#what-kanap-counts)
 - **Category**: The application's primary purpose
 - **Environments**: Coloured chips showing active environments (Prod, Pre-prod, QA, Test, Dev, Sandbox). Hover for the base URL and lifecycle.

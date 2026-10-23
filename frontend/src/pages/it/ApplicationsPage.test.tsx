@@ -102,12 +102,32 @@ describe('ApplicationsPage', () => {
         <Cell value="Exchange Online" data={{ id: 'a-1', name: 'Exchange Online', suites_count: 1, first_suite_name: 'Microsoft 365' }} />
       </MemoryRouter>,
     );
-    // One quiet line under the name (category, suite), cut with its full text on hover.
+    // One quiet line under the name (the suite), cut with its full text on hover.
     const chip = screen.getByText(/pages\.applications\.includedIn/).parentElement!;
     expect(chip).toHaveAttribute('title', 'pages.applications.includedIn Microsoft 365');
     const style = window.getComputedStyle(chip);
     expect(style.whiteSpace).toBe('nowrap');
     expect(style.textOverflow).toBe('ellipsis');
+  });
+
+  it('leaves the category to its own column: the name cell names only the suite, or nothing else', () => {
+    renderPage();
+    act(() => {
+      lastProps().onColumnStateChange([{ colId: 'name' }, { colId: 'suites_count', hide: true }]);
+    });
+    const Cell = lastProps().columns.find((column) => column.field === 'name')!.cellRenderer!;
+    const { container } = render(
+      <MemoryRouter>
+        <Cell value="Exchange Online" data={{ id: 'a-1', name: 'Exchange Online', category: 'productivity', suites_count: 1, first_suite_name: 'Microsoft 365' }} />
+        <Cell value="Payroll" data={{ id: 'a-2', name: 'Payroll', category: 'lob', suites_count: 0, first_suite_name: null }} />
+      </MemoryRouter>,
+    );
+    const included = screen.getByText(/pages\.applications\.includedIn/).parentElement!;
+    expect(included.textContent).toBe('pages.applications.includedIn Microsoft 365');
+    expect(container.textContent).not.toMatch(/productivity|lob|·/i);
+    // The application outside any suite: its name alone, one line.
+    const payroll = screen.getByText('Payroll').parentElement!;
+    expect(payroll.children).toHaveLength(1);
   });
 
   it('shows one dash for an empty value, and explains the derived users column', () => {
