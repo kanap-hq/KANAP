@@ -51,7 +51,7 @@ The list gives you a filterable overview of every connection in your registry.
 
 **Actions**:
   - **Add connection**: Create a new connection (requires `infrastructure:member`)
-  - **Delete connection**: Remove selected connections (requires `infrastructure:admin`). Their servers, interfaces and documents stay; only their links to the connection go.
+  - **Delete connection**: Remove selected connections (requires `infrastructure:admin`). Their servers, interfaces and documents stay; only their links to the connection go. To delete a single connection, open it and use **Delete** in its header, which needs `infrastructure:member` (see [The Connections workspace](#the-connections-workspace)).
 
 ---
 
