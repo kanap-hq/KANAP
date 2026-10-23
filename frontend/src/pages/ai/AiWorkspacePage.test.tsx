@@ -1,12 +1,13 @@
 import React from 'react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
-import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import AiWorkspacePage from './AiWorkspacePage';
 import { aiConversationsApi } from '../../ai/aiApi';
 import type { AiMutationPreview, ChatConversation, ChatMessage } from '../../ai/aiTypes';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 let featuresState = {
   config: {
@@ -138,7 +139,9 @@ function renderPage(client: QueryClient) {
   return render(
     <ThemeProvider theme={theme}>
       <QueryClientProvider client={client}>
-        <AiWorkspacePage />
+        <KanapDialogProvider>
+          <AiWorkspacePage />
+        </KanapDialogProvider>
       </QueryClientProvider>
     </ThemeProvider>,
   );
@@ -429,7 +432,9 @@ describe('AiWorkspacePage', () => {
     view.rerender(
       <ThemeProvider theme={createAppTheme('light')}>
         <QueryClientProvider client={client}>
-          <AiWorkspacePage />
+          <KanapDialogProvider>
+            <AiWorkspacePage />
+          </KanapDialogProvider>
         </QueryClientProvider>
       </ThemeProvider>,
     );
@@ -474,6 +479,11 @@ describe('AiWorkspacePage', () => {
 
     fireEvent.click(screen.getByText('Archive conversation'));
 
+    const dialog = await screen.findByRole('dialog');
+    expect(dialog).toHaveTextContent('conversationList.archiveConfirmTitle');
+    expect(aiConversationsApi.archive).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'conversationList.archive' }));
+
     await waitFor(() => {
       expect(chatState.newConversation).toHaveBeenCalledTimes(1);
       expect(aiConversationsApi.archive).toHaveBeenCalledWith('conv-1');
@@ -482,5 +492,49 @@ describe('AiWorkspacePage', () => {
     expect(client.getQueryData<ChatConversation[]>(['ai-conversations'])).toEqual([
       conversations[1],
     ]);
+  });
+
+  it('keeps the conversation when the archive confirmation is cancelled', async () => {
+    const client = new QueryClient({
+      defaultOptions: {
+        queries: { retry: false },
+        mutations: { retry: false },
+      },
+    });
+    const conversations: ChatConversation[] = [
+      {
+        id: 'conv-1',
+        title: 'Active conversation',
+        provider: 'openai',
+        model: 'gpt-4o',
+        created_at: '2026-03-23T10:00:00.000Z',
+        updated_at: '2026-03-23T10:00:00.000Z',
+      },
+      {
+        id: 'conv-2',
+        title: 'Other conversation',
+        provider: 'openai',
+        model: 'gpt-4o',
+        created_at: '2026-03-23T11:00:00.000Z',
+        updated_at: '2026-03-23T11:00:00.000Z',
+      },
+    ];
+
+    client.setQueryData(['ai-conversations'], conversations);
+    chatState.conversationId = 'conv-1';
+
+    renderPage(client);
+
+    fireEvent.click(screen.getByText('Archive conversation'));
+
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.cancel' }));
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+    });
+    expect(chatState.newConversation).not.toHaveBeenCalled();
+    expect(aiConversationsApi.archive).not.toHaveBeenCalled();
+    expect(client.getQueryData<ChatConversation[]>(['ai-conversations'])).toEqual(conversations);
   });
 });
