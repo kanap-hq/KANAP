@@ -61,7 +61,7 @@ const content: HomeContent = {
     eyebrow: 'Toda la gobernanza de TI',
     title: 'Cuatro pilares, un agente de IA, los mismos datos.',
     intro:
-      'Cada módulo funciona por sí solo: empiece por el presupuesto y añada el mapa de sistemas, el portafolio o la documentación cuando esté listo. Todos trabajan sobre el mismo repositorio.',
+      'Cada módulo funciona por sí solo: empiece por el presupuesto y añada el Panorama IT, el portafolio o la documentación cuando esté listo. Todos trabajan sobre el mismo repositorio.',
     items: [
       {
         slug: '/features/budget',
@@ -78,16 +78,16 @@ const content: HomeContent = {
       },
       {
         slug: '/features/it-landscape',
-        title: 'Mapa de sistemas',
+        title: 'Panorama IT',
         blurb:
-          'Para arquitectos, responsables de aplicaciones y equipos de infraestructura. Aplicaciones, interfaces y servidores documentados, y mapas que muestran el sistema de un vistazo.',
+          'Para arquitectos, responsables de aplicaciones, infraestructura y seguridad. Aplicaciones, tecnologías y servidores documentados, vulnerabilidades y fin de soporte seguidos hasta la aplicación de negocio.',
         bullets: [
-          'Aplicaciones e instancias por entorno',
-          'Interfaces, flujos y middleware',
-          'Servidores e infraestructura, importación desde NetBox',
-          'Mapas interactivos de interfaces y conexiones',
+          'Aplicaciones, interfaces y flujos',
+          'Tecnologías, versiones y fin de soporte',
+          'Vulnerabilidades hasta la aplicación de negocio',
+          'Servidores, importación desde NetBox, mapas interactivos',
         ],
-        ctaLabel: 'Descubrir el mapa',
+        ctaLabel: 'Descubrir el Panorama IT',
       },
       {
         slug: '/features/portfolio',

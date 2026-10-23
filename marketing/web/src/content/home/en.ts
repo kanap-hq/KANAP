@@ -78,14 +78,14 @@ const content: HomeContent = {
       },
       {
         slug: '/features/it-landscape',
-        title: 'Landscape',
+        title: 'IT landscape',
         blurb:
-          'For architects, application owners and infrastructure teams. Applications, interfaces and servers documented, and maps that show the landscape at a glance.',
+          'For architects, application owners, infrastructure and security teams. Applications, technologies and servers documented, vulnerabilities and end of support traced to the business application.',
         bullets: [
-          'Applications and instances per environment',
-          'Interfaces, flows and middleware',
-          'Servers and infrastructure, NetBox import',
-          'Interactive interface and connection maps',
+          'Applications, interfaces and flows',
+          'Technologies, versions and end of support',
+          'Vulnerabilities traced to the business application',
+          'Servers, NetBox import, interactive maps',
         ],
         ctaLabel: 'Explore the landscape',
       },

@@ -80,12 +80,12 @@ const content: HomeContent = {
         slug: '/features/it-landscape',
         title: 'IT-Landschaft',
         blurb:
-          'Für Architekten, Anwendungsverantwortliche und Infrastrukturteams. Anwendungen, Schnittstellen und Server dokumentiert, und Karten, die die Landschaft auf einen Blick zeigen.',
+          'Für Architekten, Anwendungsverantwortliche, Infrastruktur- und Sicherheitsteams. Anwendungen, Technologien und Server dokumentiert, Schwachstellen und Supportende bis zur Fachanwendung verfolgt.',
         bullets: [
-          'Anwendungen und Instanzen pro Umgebung',
-          'Schnittstellen, Datenflüsse und Middleware',
-          'Server und Infrastruktur, Import aus NetBox',
-          'Interaktive Schnittstellen- und Verbindungskarten',
+          'Anwendungen, Schnittstellen und Datenflüsse',
+          'Technologien, Versionen und Supportende',
+          'Schwachstellen bis zur Fachanwendung',
+          'Server, Import aus NetBox, interaktive Karten',
         ],
         ctaLabel: 'Landschaft entdecken',
       },
