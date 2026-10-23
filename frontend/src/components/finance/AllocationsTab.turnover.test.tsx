@@ -10,7 +10,7 @@ import { OPEX_FINANCE_CONFIG } from './config';
 import { KanapDialogProvider } from '../design';
 
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), put: vi.fn() } }));
-vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' } }) }));
+vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ profile: { id: 'me' }, hasLevel: () => true }) }));
 
 import api from '../../api';
 import AllocationsTab from './AllocationsTab';
