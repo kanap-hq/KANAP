@@ -233,6 +233,7 @@ export const TENANT_SCOPED_TABLES = [
   'technology_versions',
   'technology_vulnerabilities',
   'user_dashboard_config',
+  'user_data_access_nodes',
   'user_notification_preferences',
   'user_page_roles',
   'user_roles',
