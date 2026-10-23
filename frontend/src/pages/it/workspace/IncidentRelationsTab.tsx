@@ -18,7 +18,7 @@ import {
 } from '../../../components/workspace/relations';
 import { useRelationLabels } from '../../../components/workspace/relations/labels';
 import { buildItemPath } from '../../../utils/item-ref';
-import { incidentEntriesQueryKey } from './IncidentJournalTab';
+import { incidentEntriesQueryKey } from './incidentWorkspace';
 
 type Suggestion = {
   type: 'technology';

@@ -59,3 +59,8 @@ export const incidentComposerSx = [
   longFormSurfaceFieldSx,
   { maxWidth: 'none', '& .MuiInputBase-root': { minHeight: 0 } },
 ] as const;
+
+/** The journal of one incident (`IncidentJournalTab`), by uuid. */
+export function incidentEntriesQueryKey(incidentId: string) {
+  return ['incident-entries', incidentId] as const;
+}

@@ -35,7 +35,7 @@ import PortfolioDetailWorkspaceShell, {
   type PortfolioDetailWorkspaceTab,
 } from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
 import IncidentAttachmentsTab from './workspace/IncidentAttachmentsTab';
-import IncidentJournalTab, { incidentEntriesQueryKey } from './workspace/IncidentJournalTab';
+import IncidentJournalTab from './workspace/IncidentJournalTab';
 import IncidentMetadataBar from './workspace/IncidentMetadataBar';
 import IncidentOverviewTab from './workspace/IncidentOverviewTab';
 import IncidentPropertiesDrawer, {
@@ -46,6 +46,7 @@ import IncidentRelationsTab from './workspace/IncidentRelationsTab';
 import {
   INCIDENT_STATUS_FLOW,
   incidentComposerSx,
+  incidentEntriesQueryKey,
   incidentSectionLabelSx,
   incidentStatusLabel,
   isForwardStatusMove,
