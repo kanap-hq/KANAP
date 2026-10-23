@@ -31,6 +31,10 @@ const P = {
   projects: 100,
   tasks: 400,
   departments: 10,
+  // Shape options (defaults reproduce the 5,000-line baseline of 2026-10-01 byte for byte).
+  companies: 3, // 3 to 5 paying companies
+  divisions: 9, // groups of the cost-centre tree under the root
+  noCostCenterShare: 0, // share of OPEX/CAPEX lines written without a cost centre
   costedShare: 0.2,
   allocationShare: 0.2,
 };
@@ -88,11 +92,14 @@ const ROLES_STAFF = ['Chef de projet', 'Développeur', 'Architecte', 'Administra
 const CC_DOMAINS = ['Distribution', 'Boutiques', 'Finance', 'RH', 'Production', 'Logistique', 'Infrastructure', 'Poste de travail', 'Sécurité', 'Pilotage'];
 
 // ── Companies (two files: year columns are relative to the import year) ────
+if (P.companies < 3 || P.companies > 5) throw new Error('--companies must be between 3 and 5');
 const COMPANIES = [
   { name: 'Perf Groupe SA', country: 'FR', city: 'Paris', currency: 'EUR', headcount: 4200, it: 3600, turnover: 820 },
   { name: 'Perf Nederland BV', country: 'NL', city: 'Rotterdam', currency: 'EUR', headcount: 1500, it: 1200, turnover: 260 },
   { name: 'Perf UK Ltd', country: 'GB', city: 'London', currency: 'GBP', headcount: 900, it: 700, turnover: 150 },
-];
+  { name: 'Perf Deutschland GmbH', country: 'DE', city: 'Munich', currency: 'EUR', headcount: 1100, it: 850, turnover: 200 },
+  { name: 'Perf Iberia SL', country: 'ES', city: 'Madrid', currency: 'EUR', headcount: 600, it: 450, turnover: 90 },
+].slice(0, P.companies);
 const companyHeader = (base) => ['name', 'country_iso', 'address1', 'address2', 'postal_code', 'city', 'state', 'reg_number', 'vat_number', 'base_currency', 'status', 'disabled_at', 'notes',
   ...[base - 1, base, base + 1].flatMap((y) => [`headcount_${y}`, `it_users_${y}`, `turnover_${y}`])];
 for (const base of [Y - 1, Y + 1]) {
@@ -177,13 +184,15 @@ const owners = users.filter((u) => u.role !== 'Portfolio Member');
 
 // ── Cost centres: 3 levels (1 root, divisions, cost centres) ───────────────
 const ccRows = [];
-const divisions = 9;
+const divisions = P.divisions;
 ccRows.push(['DSI', 'group', 'DSI Groupe Perf', '', '', '', 'Racine', 'enabled']);
 for (let d = 0; d < divisions; d += 1) ccRows.push([`DIV-${pad(d + 1, 2)}`, 'group', `Division ${CC_DOMAINS[d % CC_DOMAINS.length]} ${d + 1}`, 'DSI', '', '', 'Division', 'enabled']);
 const costCenters = [];
+const SPREAD = [0, 0, 1, 0, 2, 1, 0, 3, 0, 1, 4, 2, 0, 3, 1, 0];
 for (let i = 0; i < P.costCenters - divisions - 1; i += 1) {
   const div = `DIV-${pad((i % divisions) + 1, 2)}`;
-  const company = COMPANIES[i % 7 === 0 ? 2 : i % 3 === 0 ? 1 : 0];
+  // Uneven spread of the centres over the companies (the first one carries about half of them).
+  const company = P.companies === 3 ? COMPANIES[i % 7 === 0 ? 2 : i % 3 === 0 ? 1 : 0] : COMPANIES[SPREAD[i % SPREAD.length]];
   const code = `${company.country}-${pad(i + 1, 4)}`;
   const owner = owners[i % owners.length];
   costCenters.push({ code, company: company.name });
@@ -329,6 +338,12 @@ function itemBudget(kind, name, annual, life, isCosted) {
   }
 }
 
+// A line without cost centre keeps a paying company and an empty cost-centre cell.
+function pickCostCenter() {
+  if (P.noCostCenterShare > 0 && chance(P.noCostCenterShare)) return { code: '', company: pick(COMPANIES).name };
+  return pick(costCenters);
+}
+
 const usedOpexNames = new Set();
 for (let i = 0; i < P.opex; i += 1) {
   const supplier = pickSupplier();
@@ -337,7 +352,7 @@ for (let i = 0; i < P.opex; i += 1) {
   let name = `${product} · ${supplier.split(' ')[0]} · ${pad(i + 1, 5)}`;
   while (usedOpexNames.has(name)) name += '+';
   usedOpexNames.add(name);
-  const cc = pick(costCenters);
+  const cc = pickCostCenter();
   const life = lifetime();
   const cur = currency();
   const annual = Math.round(Math.exp(between(Math.log(2000), Math.log(900000))));
@@ -356,7 +371,7 @@ out('14-spend-items.csv', ['product_name', 'description', 'supplier_name', 'comp
   'y_minus1_budget', 'y_minus1_landing', 'y_budget', 'y_follow_up', 'y_landing', 'y_revision', 'y_plus1_budget', 'y_plus1_revision'], opexItems);
 
 for (let i = 0; i < P.capex; i += 1) {
-  const cc = pick(costCenters);
+  const cc = pickCostCenter();
   const life = lifetime();
   const cur = currency();
   const description = `Investissement ${pick(PRODUCTS)} ${pad(i + 1, 5)}`;

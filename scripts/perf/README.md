@@ -8,6 +8,7 @@ Scripts to build a large tenant and measure KANAP under load. No dependencies, N
 | `load-tenant.mjs` | Loads the dataset through the API and the real CSV import endpoints, and times each step |
 | `bench.mjs` | `single`: one request at a time, warm, per heavy endpoint. `load`: N virtual users replaying the list and workspace request patterns, with server-side sampling |
 | `explain.sql` | `EXPLAIN (ANALYZE, BUFFERS)` of the list's main SQL and of the chargeback amounts query, read-only |
+| `sql-bench.mjs` + `sql/*.sql` | SQL-level bench: the statements the API runs (captured), `EXPLAIN (ANALYZE)` in a read-only transaction, medians, JIT, plan fingerprint |
 | `lib/http.mjs` | HTTP client on `node:http` (6 connections per virtual user, like a browser over HTTP/1.1) |
 
 ## Environment used on 2026-10-01
@@ -49,6 +50,52 @@ PGPASSWORD=app psql -h 127.0.0.1 -U app -d appdb_perf -v tenant=perf -f $W/scrip
 To start from an empty database again: stop the container, drop and recreate `appdb_perf` with the
 extensions `citext, pgcrypto, uuid-ossp, unaccent, pg_trgm` (owner `app`), start the container
 (migrations run at boot and create the tenant and the admin), then steps 2 to 4.
+
+## Dataset shape options
+
+`generate-dataset.mjs` keeps its defaults (3 companies, 300 cost-centre rows with 10 groups, every line on a
+cost centre), so the 5,000-line files are the same as before. Extra options for the data-scoped access
+baseline (10,000 and 50,000 lines):
+
+```bash
+node scripts/perf/generate-dataset.mjs --out $S/ds-10k --opex 10000 --capex 2000 --suppliers 3000 \
+  --contracts 1600 --tasks 800 --projects 200 --companies 5 --divisions 7 --cost-centers 200 --no-cost-center-share 0.08
+# 50,000 lines: --opex 50000 --capex 10000 --suppliers 7500 --contracts 8000 --tasks 4000 --projects 500
+```
+
+- `--companies 3..5`: paying companies (the cost centres spread unevenly over them; the first carries about half).
+- `--divisions N` and `--cost-centers N`: N groups under the root, and the total of group and centre rows
+  (7 and 200 give 8 groups and 192 centres).
+- `--no-cost-center-share 0.08`: share of lines written without a cost centre (they keep a paying company).
+- `--contracts`, `--tasks`, `--projects`, `--suppliers`, `--capex`: the generator does not scale them with
+  `--opex`; pass them for a proportional dataset.
+
+`load-tenant.mjs` sends a budget scope larger than 20,000 rows (the budget file limit) as several files of
+`--budget-chunk-rows` rows (default 10,000), and creates the `ppe_type` and `investment_type` dimensions the CAPEX
+file names (`--only capexdims`; tenants created since the recommended dimensions do not have them). Each perf
+database needs its own API container (the migrations and the tenant come from its boot), e.g. ports 18090 and 18091.
+
+## SQL bench (`sql-bench.mjs`)
+
+Measures the statements of the heavy endpoints without the HTTP layer, on one perf database. The statements are
+the SQL the API runs, captured from the database log (`ALTER DATABASE <db> SET log_min_duration_statement = 0`, one
+call of the endpoint, read `docker logs kanap-db-1`, `ALTER DATABASE <db> RESET log_min_duration_statement`) and
+stored in `sql/<name>.sql` with their parameters inlined and a header naming the endpoint and the source file.
+Values that depend on the dataset are `{{placeholders}}` resolved at run time (see `LOOKUPS` in the script).
+
+```bash
+node scripts/perf/sql-bench.mjs --db appdb_perf10k --tenant perf --out out.json            # unscoped administrator
+node scripts/perf/sql-bench.mjs --db appdb_perf10k --apply-user <user uuid> --compare out.json
+```
+
+Each repetition is `BEGIN READ ONLY; set_config('app.current_tenant', ...); [hook]; EXPLAIN (ANALYZE, SUMMARY,
+FORMAT JSON) <statement>; ROLLBACK`, after `--warmup` (2) runs, `--reps` (10) timed runs. It records the median and
+p90 of the planning and execution times, whether a `JIT` section is present, and a plan fingerprint (sha1 of the
+node types, relation and index names, join types and aggregate strategies; no cost, rows or timing).
+`--apply-user` runs `SELECT data_access_apply('<uuid>')` right after the tenant setting and fails with a clear
+message while the function does not exist. `--compare` prints, per statement, the ratios of times and whether the
+fingerprint changed. `--only a,b` picks statements. A `-- group: fiche` header adds a statement to a group whose
+medians are summed (the budget line workspace).
 
 ## Line lifecycle in the dataset
 
