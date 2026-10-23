@@ -30,9 +30,11 @@ export interface ServiceOpts {
   /**
    * The Relations badge counts budget lines and contracts only for a caller who reads them, as the
    * Relations tab shows them. `false` leaves them out; left unset (internal callers), they count.
+   * Projects follow the same rule.
    */
   readsBudget?: boolean;
   readsContracts?: boolean;
+  readsProjects?: boolean;
 }
 
 /**

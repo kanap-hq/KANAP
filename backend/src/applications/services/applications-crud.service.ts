@@ -345,7 +345,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     await this.assertVisible(resolvedAppId, opts?.accessScope, mg);
-    const projectCountSql = opts?.projectAccessScope
+    // Projects count only for a caller who reads them, within a Business Contributor's scope.
+    const readsProjects = opts?.readsProjects !== false;
+    const projectCountSql = !readsProjects
+      ? 'SELECT 0'
+      : opts?.projectAccessScope
       ? `SELECT COUNT(*)
          FROM application_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
@@ -353,7 +357,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
            AND l.tenant_id = app_current_tenant()
            AND ${projectParticipantCondition('p', '$2')}`
       : `SELECT COUNT(*) FROM application_projects l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
-    const params: unknown[] = opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
+    const params: unknown[] = readsProjects && opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
     // Requests count only for a caller who reads them, within a Business Contributor's scope.
     const requestScope = opts?.requestsAccess?.scope;
     if (requestScope) params.push(requestScope.userId);

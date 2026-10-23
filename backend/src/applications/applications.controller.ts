@@ -5,7 +5,7 @@ import { PermissionGuard } from '../auth/permission.guard';
 import { RequireAnyLevel, RequireLevel } from '../auth/require-level.decorator';
 import { ApplicationsService, ApplicationsRelationsService } from './services';
 import { incidentViewerFromContext } from '../incidents/incident-visibility';
-import { buildRelationsAccess, hasLevel } from '../common/relations/relations-access';
+import { buildRelationsAccess } from '../common/relations/relations-access';
 import { relationKindOrThrow, type RelationsContext } from './services/applications-relations.service';
 import { ApplicationsDeleteService } from './applications-delete.service';
 import { ApplicationsCsvService } from './applications-csv.service';
@@ -868,15 +868,17 @@ export class ApplicationsController {
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ opex: number; capex: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
-    const readsRequests = hasLevel(ctx, 'portfolio_requests', 'reader');
-    // The same rule as the Relations tab: a module the caller cannot read adds nothing to the badge.
+    // The same rule as the Relations tab for budget lines, contracts, projects and requests: a module
+    // the caller cannot read adds nothing to the badge, and a Business Contributor counts only the
+    // projects and requests it takes part in.
     const { access } = buildRelationsAccess(ctx, { read: RELATIONS_READ });
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
       readsBudget: access.budget_lines,
       readsContracts: access.contracts,
-      projectAccessScope: await this.readProjectScope(ctx),
-      requestsAccess: readsRequests ? { scope: await this.participationScope(ctx, 'portfolio_requests') } : null,
+      readsProjects: access.projects,
+      projectAccessScope: access.projects ? await this.readProjectScope(ctx) : undefined,
+      requestsAccess: access.requests ? { scope: await this.participationScope(ctx, 'portfolio_requests') } : null,
     });
   }
 
