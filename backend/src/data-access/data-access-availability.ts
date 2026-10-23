@@ -251,30 +251,38 @@ export async function runDataAccessStartup(dataSource: DataSource, logger: DataA
     logger.warn(`${LOG_PREFIX} startup synchronisation not run (${errorMessage(error)}): retried at next start`);
     availability = { available: false, missing: [] };
   }
-  const entry = entryOf(dataSource);
-  entry.value = availability;
-  entry.at = Date.now();
+  // A check that could not run (it reports nothing missing) is not kept: the next read checks again.
+  if (availability.available || availability.missing.length > 0) {
+    const entry = entryOf(dataSource);
+    entry.value = availability;
+    entry.at = Date.now();
+  }
   return availability;
 }
 
 /**
- * The availability as this process knows it: kept for a minute, then checked again (read-only).
- * Never throws: a failed check reads as unavailable, with a warning.
+ * The availability as this process knows it: kept for a minute, then checked again (read-only),
+ * one check at a time. Never throws: a check that fails for a technical reason (pool full, timeout)
+ * reads as unavailable, with a warning, and is not kept: the next read checks again.
  */
 export async function dataAccessAvailability(dataSource: DataSource): Promise<DataAccessAvailability> {
   const entry = entryOf(dataSource);
   if (entry.value && Date.now() - entry.at < AVAILABILITY_TTL_MS) return entry.value;
   if (!entry.pending) {
     entry.pending = withDedicatedSession(dataSource, checkDataAccessAvailability)
-      .catch((error) => {
-        console.warn(`${LOG_PREFIX} availability not checked (${errorMessage(error)}): read as unavailable`);
-        return { available: false, missing: [] } as DataAccessAvailability;
-      })
-      .then((value) => {
-        entry.value = value;
-        entry.at = Date.now();
+      .then(
+        (value) => {
+          entry.value = value;
+          entry.at = Date.now();
+          return value;
+        },
+        (error) => {
+          console.warn(`${LOG_PREFIX} availability not checked (${errorMessage(error)}): read as unavailable`);
+          return { available: false, missing: [] } as DataAccessAvailability;
+        },
+      )
+      .finally(() => {
         entry.pending = null;
-        return value;
       });
   }
   return entry.pending;
