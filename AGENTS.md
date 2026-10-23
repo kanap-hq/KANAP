@@ -267,6 +267,9 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
   `SECURITY INVOKER`: repeat `SECURITY DEFINER` in the new definition. The inventory spec catches
   the reset.
 - A migration file exports nothing but its migration class: TypeORM instantiates every export.
+- A data-access policy reads the mode through a subquery tested `IS NOT NULL`
+  (`(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`): an equality
+  is estimated at 0.5 % of the rows on every scoped table and turns the plans into nested loops.
 - Checks on tenant policies filter on the policies `TO PUBLIC` (`polroles = '{0}'`): the
   data-access policies target `kanap_data_limited` and sit on the same tables.
 
