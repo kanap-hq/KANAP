@@ -70,7 +70,7 @@ User-facing on-premise guides are in `/help/docs/en/on-premise/` (published to [
 
 **Patterns** (`features/patterns/`)
 - **[workspace-patterns.md](features/patterns/workspace-patterns.md)**: ⭐ **Comprehensive workspace implementation guide** (RLS, tenant deletion, lifecycle, editor patterns)
-- **[backend-patterns.md](features/patterns/backend-patterns.md)**: ⭐ **Backend patterns & abstractions** (BaseDeleteService, TenancyManager, service decomposition, DTOs)
+- **[backend-patterns.md](features/patterns/backend-patterns.md)**: ⭐ **Backend patterns & abstractions** (BaseDeleteService, tenant context, service decomposition, DTOs)
 - **[csv-import-export.md](features/patterns/csv-import-export.md)**: CSV workflows, validation, templates
 
 **Workspaces** (`features/workspaces/`)
@@ -178,7 +178,7 @@ Six allocation methods for cost distribution:
 ### Backend Patterns
 Shared abstractions for consistency and maintainability:
 - **BaseDeleteService**: Consolidated delete logic with cascade relations, storage cleanup, audit logging
-- **TenancyManager**: Request-scoped tenant context and transaction management
+- **Tenant context**: Host resolution middleware, `TenantInterceptor` and `withTenant()`
 - **Service Decomposition**: Large services split into focused sub-services using facade pattern
 - **Type Safety**: Zod DTOs, typed decorators (`@Tenant()`), response types
 

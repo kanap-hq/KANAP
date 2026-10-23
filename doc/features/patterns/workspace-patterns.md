@@ -7,7 +7,7 @@
 **Last Updated**: 2026-01-24
 
 **Related Documentation**:
-- [backend-patterns.md](backend-patterns.md) - Backend patterns & abstractions (BaseDeleteService, TenancyManager, service decomposition)
+- [backend-patterns.md](backend-patterns.md) - Backend patterns & abstractions (BaseDeleteService, tenant context, service decomposition)
 - [../frontend-architecture.md](../frontend-architecture.md) - Frontend hooks and components (useModuleItemNav, WorkspaceLayout)
 
 ---

@@ -7,7 +7,6 @@ import {
   TENANT_RESETTING_CODE,
   tenantSlugFromHost,
 } from '../request-tenancy.middleware';
-import { TenancyMiddleware } from '../tenancy.middleware';
 
 // The tenancy middleware main.ts mounts (plan planning/perf-scale, lot 1D): a
 // failed tenant lookup (pool exhausted, database down) answers 503 busy with
@@ -182,23 +181,6 @@ function testSlugs() {
   assert.equal(tenantSlugFromHost('example.com'), null);
 }
 
-/** The NestJS-level TenancyMiddleware answers the same 503 busy. */
-async function testClassMiddleware() {
-  const failing = new TenancyMiddleware({ resolveFromHost: async () => { throw new Error('pool exhausted'); } } as any);
-  const captured: Captured = { headers: {}, nextCalled: false };
-  await quietly(() => failing.use({ headers: { host: 'acme.kanap.net' }, path: '/spend-items', method: 'GET' } as any, fakeResponse(captured), () => { captured.nextCalled = true; }));
-  assert.equal(captured.nextCalled, false);
-  assert.equal(captured.status, 503);
-  assert.equal(captured.body?.code, 'busy');
-
-  const unknown = new TenancyMiddleware({ resolveFromHost: async () => null } as any);
-  const req: any = { headers: { host: 'nobody.kanap.net' }, path: '/spend-items' };
-  const after: Captured = { headers: {}, nextCalled: false };
-  await unknown.use(req, fakeResponse(after), () => { after.nextCalled = true; });
-  assert.equal(after.nextCalled, true, 'an unknown tenant keeps going without tenant, as before');
-  assert.equal(req.tenant, null);
-}
-
 /**
  * A tenant whose sample data status is `resetting` (demo-data.service.ts): its write requests
  * are refused with 409 tenant_resetting before any route runs, in every way a tenant is
@@ -275,7 +257,6 @@ async function main() {
   await testNextErrorIsNotALookupFailure();
   testSlugs();
   testRoutePathTrimsTrailingSlashes();
-  await testClassMiddleware();
   await testWritesRefusedWhileResetting();
   console.log('request-tenancy.middleware.spec: ok');
 }
