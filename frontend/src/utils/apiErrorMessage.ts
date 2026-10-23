@@ -80,6 +80,10 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
     if (typeof params.field === 'string' && params.field) {
       params.field = t(`errors:fields.${params.field}`, { defaultValue: params.field });
     }
+    // An environment the sentence names (`pre_prod`) is shown by its name (Pre-production).
+    if (typeof params.environment === 'string' && params.environment) {
+      params.environment = t(`it:pages.applications.environments.${params.environment}.name`, { defaultValue: params.environment });
+    }
     const translated = t(`errors:${code}`, {
       ...params,
       defaultValue: message || fallback,

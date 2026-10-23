@@ -160,20 +160,29 @@ export default function DeploymentsEditor({
   const usedEnvironments = React.useMemo(() => new Set(deployments.map((deployment) => deployment.environment)), [deployments]);
   const duplicateEnvironment = !deploymentDraft.id && usedEnvironments.has(deploymentDraft.environment);
 
-  const loadAssignments = React.useCallback(async (deploymentId: string) => {
+  // The servers of every deployment, in one call. Reloaded when a deployment is added or removed,
+  // or after a server change; a change of lifecycle or URL leaves them as they are.
+  const deploymentIds = deployments.map((deployment) => deployment.id).join(',');
+  const loadAssignments = React.useCallback(async () => {
     try {
-      const res = await api.get<{ items: Assignment[] }>(`/app-deployments/${deploymentId}/servers`);
-      setAssignments((prev) => ({ ...prev, [deploymentId]: res.data.items || [] }));
+      const res = await api.get<{ items: Assignment[] }>(`/applications/${applicationId}/deployment-servers`);
+      const byDeployment: Record<string, Assignment[]> = {};
+      for (const row of res.data.items || []) {
+        (byDeployment[row.app_instance_id] ||= []).push(row);
+      }
+      setAssignments(byDeployment);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.loadAssignmentsFailed')));
     }
-  }, [t]);
+  }, [applicationId, t]);
 
   React.useEffect(() => {
-    deployments.forEach((deployment) => {
-      void loadAssignments(deployment.id);
-    });
-  }, [deployments, loadAssignments]);
+    if (!deploymentIds) {
+      setAssignments({});
+      return;
+    }
+    void loadAssignments();
+  }, [deploymentIds, loadAssignments]);
 
   const patchDeployment = React.useCallback(async (deploymentId: string, patch: Partial<DeploymentDraft>) => {
     setError(null);
@@ -281,7 +290,7 @@ export default function DeploymentsEditor({
         setMessage(t('components.serverAssignments.serverAssigned'));
       }
       setAssignmentDialogOpen(false);
-      await loadAssignments(assignmentDraft.deploymentId);
+      await loadAssignments();
       await onRefresh();
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveAssignmentFailed')));
@@ -300,7 +309,7 @@ export default function DeploymentsEditor({
     try {
       await api.delete(`/app-deployments/${deploymentId}/servers/${assignmentId}`);
       setMessage(t('workspace.application.deployments.assignmentRemoved'));
-      await loadAssignments(deploymentId);
+      await loadAssignments();
       await onRefresh();
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeAssignmentFailed')));

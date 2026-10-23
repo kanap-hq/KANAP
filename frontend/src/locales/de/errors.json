@@ -173,8 +173,8 @@
   "ROLE_BUILT_IN": "Diese Rolle ist in KANAP enthalten und kann nicht gelöscht werden. Duplizieren Sie sie, um eine änderbare Rolle zu erhalten.",
   "ROLE_IN_USE_one": "Diese Rolle ist {{usages}} zugewiesen. Weisen Sie ihm zuerst eine andere Rolle zu.",
   "ROLE_IN_USE_other": "Diese Rolle ist {{usages}} zugewiesen. Weisen Sie ihnen zuerst eine andere Rolle zu.",
-  "APP_INSTANCE_IN_USE_one": "Diese Instanz hat noch {{usages}}. Entfernen Sie sie zuerst.",
-  "APP_INSTANCE_IN_USE_other": "Diese Instanz hat noch {{usages}}. Entfernen Sie sie zuerst.",
+  "DEPLOYMENT_IN_USE_one": "Diese Bereitstellung hat noch {{usages}}. Entfernen Sie sie zuerst.",
+  "DEPLOYMENT_IN_USE_other": "Diese Bereitstellung hat noch {{usages}}. Entfernen Sie sie zuerst.",
   "INTERFACE_HAS_BINDINGS_one": "Diese Schnittstelle hat {{usages}}. Löschen Sie ihre Bindung mit, oder entfernen Sie sie zuerst.",
   "INTERFACE_HAS_BINDINGS_other": "Diese Schnittstelle hat {{usages}}. Löschen Sie ihre Bindungen mit, oder entfernen Sie sie zuerst.",
   "MAPPING_SET_DEFAULT": "Der Standard-Mapping-Satz kann nicht gelöscht werden. Machen Sie zuerst einen anderen Satz zum Standard.",
@@ -204,9 +204,16 @@
   "suite_cycle": "Diese Anwendung enthält bereits {{name}}: Sie kann nicht dazugehören.",
   "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
   "NO_ACCESS": "Diesem Konto wurde noch kein Zugriff gewährt. Wenden Sie sich an einen Administrator.",
+  "assignment_duplicate": "Dieser Server hat diese Rolle in dieser Bereitstellung bereits.",
+  "assignment_cluster": "Ein Cluster kann nicht zugeordnet werden: Wählen Sie einen bestimmten Server.",
+  "assignment_role_invalid": "Unbekannte Rolle. Wählen Sie eine Rolle aus der Liste.",
+  "deployment_environment_taken": "Diese Anwendung hat bereits eine Bereitstellung {{environment}}.",
+  "deployment_lifecycle_invalid": "Unbekannter Lebenszyklus: {{value}}. Wählen Sie einen Lebenszyklus aus der Liste.",
+  "date_invalid": "{{field}} ist kein gültiges Datum.",
   "fields": {
     "rto_minutes": "Das Wiederanlaufzeitziel (RTO)",
     "rpo_minutes": "Das Wiederherstellungspunktziel (RPO)",
-    "maxMtdMinutes": "Die maximal tolerierbare Ausfallzeit"
+    "maxMtdMinutes": "Die maximal tolerierbare Ausfallzeit",
+    "since_date": "Das Datum „Seit“"
   }
 }

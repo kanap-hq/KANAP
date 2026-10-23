@@ -77,6 +77,26 @@ describe('DeploymentsEditor servers', () => {
     expect(screen.getAllByRole('button', { name: /CAVE-EDGE-01/ })).toHaveLength(2);
   });
 
+  it('reads the servers of every deployment in one call, and not again when a deployment only changes', async () => {
+    const qa: DeploymentRecord = { ...deployment, id: 'dep-2', environment: 'qa' };
+    const view = (deployments: DeploymentRecord[]) => (
+      <MemoryRouter>
+        <ThemeProvider theme={theme}>
+          <KanapDialogProvider>
+            <DeploymentsEditor applicationId="app-1" deployments={deployments} onRefresh={vi.fn()} readOnly />
+          </KanapDialogProvider>
+        </ThemeProvider>
+      </MemoryRouter>
+    );
+    const { rerender } = render(view([deployment, qa]));
+    await screen.findByRole('link', { name: 'CAVE-EDGE-01' });
+    expect(apiGet).toHaveBeenCalledTimes(1);
+    expect(apiGet).toHaveBeenCalledWith('/applications/app-1/deployment-servers');
+    rerender(view([{ ...deployment, lifecycle: 'retired' }, { ...qa }]));
+    await screen.findByRole('link', { name: 'CAVE-EDGE-01' });
+    expect(apiGet).toHaveBeenCalledTimes(1);
+  });
+
   it('shows a dash for a row without a server', async () => {
     apiGet.mockResolvedValue({
       data: { items: [{ id: 'asg-2', app_instance_id: 'dep-1', server_id: 'srv-2', role: 'web', since_date: null, notes: null, server: null }] },

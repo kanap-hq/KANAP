@@ -58,6 +58,26 @@ describe('getApiErrorMessage', () => {
     }
   });
 
+  it('translates the deployment and server refusals, the environment by its name', () => {
+    const fr = i18n.getFixedT('fr');
+    const taken = { response: { status: 409, data: { code: 'deployment_environment_taken', message: 'Environment', params: { environment: 'pre_prod' } } } };
+    expect(getApiErrorMessage(taken, fr, 'fallback')).toBe('Cette application a déjà un déploiement Préproduction.');
+    expect(getApiErrorMessage(taken, t, 'fallback')).toBe('This application already has a Pre-production deployment.');
+    const duplicate = { response: { status: 409, data: { code: 'assignment_duplicate', message: 'Asset already assigned' } } };
+    expect(getApiErrorMessage(duplicate, fr, 'fallback')).toBe('Ce serveur a déjà ce rôle sur ce déploiement.');
+    const date = { response: { status: 400, data: { code: 'date_invalid', message: 'since_date', params: { field: 'since_date', value: 'x' } } } };
+    expect(getApiErrorMessage(date, fr, 'fallback')).toBe('La date « Depuis » n’est pas une date valide.');
+    const inUse = { response: { status: 409, data: { code: 'DEPLOYMENT_IN_USE', message: 'Cannot delete', usages: [{ type: 'server_assignments', total: 2 }] } } };
+    expect(getApiErrorMessage(inUse, t, 'fallback')).toMatch(/^This deployment still has 2 .+\. Remove them first\.$/);
+    for (const code of ['assignment_duplicate', 'assignment_cluster', 'assignment_role_invalid', 'deployment_environment_taken', 'deployment_lifecycle_invalid', 'date_invalid']) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', environment: 'prod', field: 'since_date' } } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|since_date|\bprod\b/);
+      }
+    }
+  });
+
   it('translates a turnover that cannot be compared because every selected company lacks a rate', () => {
     const missing = {
       response: {

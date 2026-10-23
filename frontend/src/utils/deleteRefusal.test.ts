@@ -109,7 +109,7 @@ describe('deleteFailureReason', () => {
     expect(deleteFailureReason(asset, i18n.fr.t, 'fr')).toBe('Cet actif est utilisé par 1 connexion. Retirez-le de cet élément avant de le supprimer.');
     // Every sentence that points back at what holds the record has both forms, in each language.
     const codes = ['ASSET_IN_USE', 'COST_CENTER_HAS_NODES', 'CHART_OF_ACCOUNTS_IN_USE', 'ANALYTICS_DIMENSION_HAS_VALUES', 'TEAM_NOT_EMPTY',
-      'ROLE_IN_USE', 'APP_INSTANCE_IN_USE', 'INTERFACE_HAS_BINDINGS', 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS'];
+      'ROLE_IN_USE', 'DEPLOYMENT_IN_USE', 'INTERFACE_HAS_BINDINGS', 'KNOWLEDGE_FOLDER_HAS_SUBFOLDERS'];
     for (const language of LANGUAGES) {
       for (const code of codes) {
         expect(i18n[language].exists(`errors:${code}_one`), `${language} ${code}_one`).toBe(true);

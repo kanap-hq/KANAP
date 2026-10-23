@@ -173,8 +173,8 @@
   "ROLE_BUILT_IN": "Este rol viene con KANAP y no se puede eliminar. Duplíquelo para obtener un rol que pueda modificar.",
   "ROLE_IN_USE_one": "Este rol está asignado a {{usages}}. Asígnele primero otro rol.",
   "ROLE_IN_USE_other": "Este rol está asignado a {{usages}}. Asígneles primero otro rol.",
-  "APP_INSTANCE_IN_USE_one": "Esta instancia todavía tiene {{usages}}. Quite primero esa relación.",
-  "APP_INSTANCE_IN_USE_other": "Esta instancia todavía tiene {{usages}}. Quite primero esas relaciones.",
+  "DEPLOYMENT_IN_USE_one": "Este despliegue todavía tiene {{usages}}. Quite primero esa relación.",
+  "DEPLOYMENT_IN_USE_other": "Este despliegue todavía tiene {{usages}}. Quite primero esas relaciones.",
   "INTERFACE_HAS_BINDINGS_one": "Esta interfaz tiene {{usages}}. Elimine su enlace con ella, o quítelo primero.",
   "INTERFACE_HAS_BINDINGS_other": "Esta interfaz tiene {{usages}}. Elimine sus enlaces con ella, o quítelos primero.",
   "MAPPING_SET_DEFAULT": "El conjunto de correspondencias predeterminado no se puede eliminar. Defina primero otro conjunto como predeterminado.",
@@ -204,9 +204,16 @@
   "suite_cycle": "Esta aplicación ya contiene {{name}}: no puede formar parte de ella.",
   "forbidden": "No tiene permisos para esta acción.",
   "NO_ACCESS": "Esta cuenta aún no tiene acceso. Solicítelo a un administrador.",
+  "assignment_duplicate": "Este servidor ya tiene este rol en este despliegue.",
+  "assignment_cluster": "No se puede asignar un clúster: elija un servidor concreto.",
+  "assignment_role_invalid": "Rol desconocido. Elija un rol de la lista.",
+  "deployment_environment_taken": "Esta aplicación ya tiene un despliegue {{environment}}.",
+  "deployment_lifecycle_invalid": "Ciclo de vida desconocido: {{value}}. Elija un ciclo de vida de la lista.",
+  "date_invalid": "{{field}} no es una fecha válida.",
   "fields": {
     "rto_minutes": "El objetivo de tiempo de recuperación (RTO)",
     "rpo_minutes": "El objetivo de punto de recuperación (RPO)",
-    "maxMtdMinutes": "El tiempo máximo de inactividad tolerable"
+    "maxMtdMinutes": "El tiempo máximo de inactividad tolerable",
+    "since_date": "La fecha «Desde»"
   }
 }
