@@ -547,8 +547,10 @@ policies that target one role only, so nothing changes for anyone else.
   mode `all` and Administrators are never affected.
 - **Inventories.** `data-access/__tests__/data-access-inventory.spec.ts` checks the call points and
   the role changes, and that every path outside the interceptor (`@SkipTenantTransaction()`,
-  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`) is classified in
-  `data-access/data-access-paths.inventory.ts`.
+  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is
+  classified in `data-access/data-access-paths.inventory.ts`, with the number of call sites per
+  member and, for a controller marked as a whole, its route methods: a second call or a new route
+  fails the spec until someone classifies it.
 - **Uninstall.** A lot's `down()` removes its policies through the sync. The script's
   `mode=uninstall` runs `DROP OWNED BY kanap_data_limited` in each database, then `DROP ROLE`, then
   `ALTER ROLE <app> INHERIT` on PostgreSQL 15. The direct grant on `public` stays.

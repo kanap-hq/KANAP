@@ -16,8 +16,11 @@ import {
  * 2. Role changes (`SET ROLE`, `RESET ROLE`, `set_config('role'`) appear only in the foundations
  *    migration (inside `data_access_apply`) and in the data-access specs.
  * 3. Every path outside the tenant interceptor (`@SkipTenantTransaction()`, `{ transaction: false }`,
- *    `tenantExecutor.run(`, `withTenantExecution(`) is classified in
+ *    `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is classified in
  *    `data-access/data-access-paths.inventory.ts`, and the inventory names no site that is gone.
+ *    Each entry counts its call sites in its member, and a class-level `@SkipTenantTransaction()`
+ *    lists the route methods of its class: a second call in a classified member, or a new route in
+ *    a classified controller, fails until it is looked at.
  */
 
 const SRC = backendPath('src');
@@ -156,41 +159,73 @@ function enclosingMember(lines: string[], index: number, rel: string): string {
   throw new Error(`${rel}:${index + 1}: no enclosing member found`);
 }
 
-/** The class a decorator line applies to (class-level `@SkipTenantTransaction()`), or its method. */
-function decoratedTarget(lines: string[], index: number, rel: string): string {
+const ROUTE_DECORATOR = /^ {2}@(?:Get|Post|Put|Patch|Delete|All|Head|Options|Sse)\s*\(/;
+
+/** The route methods of the class declared at `classIndex` (up to its closing brace at column 0). */
+function routeMethods(lines: string[], classIndex: number, rel: string): string[] {
+  const routes: string[] = [];
+  for (let i = classIndex + 1; i < lines.length && !/^}/.test(lines[i]); i += 1) {
+    if (!ROUTE_DECORATOR.test(lines[i])) continue;
+    let j = i + 1;
+    for (; j < Math.min(lines.length, i + 12); j += 1) {
+      if (/^ {2}@/.test(lines[j])) continue;
+      const member = MEMBER.exec(lines[j]);
+      if (member && !NOT_MEMBERS.has(member[1])) {
+        routes.push(member[1]);
+        break;
+      }
+    }
+    if (j >= Math.min(lines.length, i + 12)) throw new Error(`${rel}:${i + 1}: no method found for the route decorator`);
+    i = j;
+  }
+  return routes.sort();
+}
+
+/**
+ * The target of a `@SkipTenantTransaction()` line: its method, or its class with the class's route
+ * methods (class-level decorator).
+ */
+function decoratedTarget(lines: string[], index: number, rel: string): { member: string; routes?: string[] } {
   for (let i = index + 1; i < Math.min(lines.length, index + 12); i += 1) {
     const cls = CLASS.exec(lines[i]);
-    if (cls) return cls[1];
+    if (cls) return { member: cls[1], routes: routeMethods(lines, i, rel) };
     const member = MEMBER.exec(lines[i]);
-    if (member && !NOT_MEMBERS.has(member[1])) return member[1];
+    if (member && !NOT_MEMBERS.has(member[1])) return { member: member[1] };
   }
   throw new Error(`${rel}:${index + 1}: no target found for @SkipTenantTransaction()`);
 }
 
-type FoundSite = { file: string; member: string; site: DataAccessPathSite };
+type FoundSite = { file: string; member: string; site: DataAccessPathSite; count: number; routes?: string[] };
 
 const SITE_PATTERNS: Array<{ site: DataAccessPathSite; pattern: RegExp }> = [
   { site: 'transaction_false', pattern: /\btransaction\s*:\s*false\b/g },
   { site: 'tenant_executor_run', pattern: /\btenantExecutor\s*\.\s*run\s*\(/g },
   { site: 'with_tenant_execution', pattern: /\bwithTenantExecution\s*\(/g },
+  { site: 'with_tenant', pattern: /\bwithTenant\s*\(/g },
 ];
+
+const key = (s: { file: string; member: string; site: string }) => `${s.file}#${s.member}#${s.site}`;
 
 function scanPaths(): FoundSite[] {
   const found = new Map<string, FoundSite>();
-  const add = (site: FoundSite) => found.set(`${site.file}#${site.member}#${site.site}`, site);
+  const add = (site: Omit<FoundSite, 'count'>) => {
+    const existing = found.get(key(site));
+    if (existing) existing.count += 1;
+    else found.set(key(site), { ...site, count: 1 });
+  };
   for (const rel of sourceFiles()) {
     if (rel in DATA_ACCESS_PATHS_IGNORED_FILES) continue;
     const code = codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8'));
     const lines = code.split('\n');
     lines.forEach((line, index) => {
       if (/@SkipTenantTransaction\s*\(\s*\)/.test(line)) {
-        add({ file: rel, member: decoratedTarget(lines, index, rel), site: 'skip_tenant_transaction' });
+        add({ file: rel, ...decoratedTarget(lines, index, rel), site: 'skip_tenant_transaction' });
       }
     });
     for (const { site, pattern } of SITE_PATTERNS) {
       for (const match of code.matchAll(pattern)) {
         const before = code.slice(0, match.index ?? 0);
-        if (site === 'with_tenant_execution' && /\bfunction\s*$/.test(before)) continue;
+        if (/\bfunction\s*$/.test(before)) continue;
         const index = before.split('\n').length - 1;
         add({ file: rel, member: enclosingMember(lines, index, rel), site });
       }
@@ -200,23 +235,37 @@ function scanPaths(): FoundSite[] {
 }
 
 function testPathsInventory(): void {
-  const key = (s: { file: string; member: string; site: string }) => `${s.file}#${s.member}#${s.site}`;
-  const found = new Set(scanPaths().map(key));
-  const listed = new Set<string>();
+  const found = new Map(scanPaths().map((site) => [key(site), site]));
+  const listed = new Map<string, (typeof DATA_ACCESS_PATHS)[number]>();
   for (const entry of DATA_ACCESS_PATHS) {
     const k = key(entry);
     assert.ok(!listed.has(k), `listed twice: ${k}`);
-    listed.add(k);
+    listed.set(k, entry);
     assert.ok(entry.reason.trim().length > 0, `${k}: a reason is required`);
   }
   for (const rel of Object.keys(DATA_ACCESS_PATHS_IGNORED_FILES)) {
     assert.ok(fs.existsSync(path.join(SRC, rel)), `ignored file is gone: ${rel}`);
   }
-  const missing = [...found].filter((k) => !listed.has(k)).sort();
-  const stale = [...listed].filter((k) => !found.has(k)).sort();
+  const missing = [...found.keys()].filter((k) => !listed.has(k)).sort();
+  const stale = [...listed.keys()].filter((k) => !found.has(k)).sort();
   assert.deepEqual(missing, [], `sites to classify in data-access/data-access-paths.inventory.ts:\n${missing.join('\n')}`);
   assert.deepEqual(stale, [], `inventory entries with no site in the code:\n${stale.join('\n')}`);
-  console.log(`  paths outside the interceptor: ${found.size} sites classified: OK`);
+
+  // Same number of call sites per member, same route methods per classified controller.
+  const changed: string[] = [];
+  for (const [k, site] of found) {
+    const entry = listed.get(k)!;
+    const expected = entry.count ?? 1;
+    if (site.count !== expected) changed.push(`${k}: ${site.count} call sites in the code, ${expected} listed`);
+    const routes = site.routes ?? [];
+    const listedRoutes = [...(entry.routes ?? [])].sort();
+    if (routes.join(',') !== listedRoutes.join(',')) {
+      changed.push(`${k}: routes in the code [${routes.join(', ')}], listed [${listedRoutes.join(', ')}]`);
+    }
+  }
+  assert.deepEqual(changed, [], `sites changed since they were classified (look at them, then update the count or the routes):\n${changed.join('\n')}`);
+  const calls = [...found.values()].reduce((sum, site) => sum + site.count, 0);
+  console.log(`  paths outside the interceptor: ${found.size} sites (${calls} calls) classified: OK`);
 }
 
 function main(): void {
