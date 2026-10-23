@@ -336,7 +336,7 @@ Depuis la liste des Actifs :
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
      - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les cellules vides effacent les valeurs existantes : remplacement complet de tous les champs
+     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouveaux actifs ou mettre à jour les existants
      - `Mise à jour uniquement` : Ne modifier que les actifs existants, ignorer les nouveaux
@@ -398,7 +398,7 @@ Le système normalise automatiquement les valeurs lors de l'import, donc `Virtua
 
 Les actifs sont identifiés par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée :
 - En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour l'actif
-- En mode `Remplacer` : Tous les champs sont mis à jour, les valeurs vides effacent les données existantes
+- En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Le nom, l'`id`, le statut et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Pour les colonnes d'adresses IP, seules les sous-colonnes présentes dans le fichier sont appliquées. Un nouvel actif reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom.
 

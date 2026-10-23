@@ -531,7 +531,7 @@ Depuis la liste des Applications :
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
      - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les champs fournis sont mis à jour ; les cellules de classification vides conservent la valeur existante et `__CLEAR__` l'efface explicitement
+     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée, sauf dans les colonnes de classification (utilisez `__CLEAR__`). Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles applications ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les applications existantes, ignorer les nouvelles
@@ -637,7 +637,7 @@ Le système normalise automatiquement les valeurs lors de l'import, donc `Métie
 
 Les applications sont identifiées par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée :
 - En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour l'application
-- En mode `Remplacer` : les champs fournis sont mis à jour ; les cellules de classification vides conservent la valeur existante et `__CLEAR__` l'efface explicitement
+- En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Une cellule de classification vide garde sa valeur, et `__CLEAR__` l'efface. Le nom, l'`id`, le cycle de vie et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Une nouvelle application reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom.
 
