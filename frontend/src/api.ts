@@ -51,6 +51,7 @@ let refreshFlight: { generation: number; promise: Promise<RefreshOutcome> } | nu
 // an older generation belongs to a session that no longer exists.
 let sessionGeneration = 0;
 const sessionEndedListeners = new Set<() => void>();
+const refreshRateLimitedListeners = new Set<(retryAfterMs: number | null) => void>();
 
 export function getSessionGeneration(): number {
   return sessionGeneration;
@@ -66,6 +67,17 @@ export function subscribeSessionEnded(listener: () => void): () => void {
   sessionEndedListeners.add(listener);
   return () => {
     sessionEndedListeners.delete(listener);
+  };
+}
+
+/**
+ * Notified each time the server answers a refresh with 429 (too many attempts), with the wait its
+ * Retry-After asks for (capped), or null without one. The refresh itself waits and tries again.
+ */
+export function subscribeRefreshRateLimited(listener: (retryAfterMs: number | null) => void): () => void {
+  refreshRateLimitedListeners.add(listener);
+  return () => {
+    refreshRateLimitedListeners.delete(listener);
   };
 }
 
@@ -105,15 +117,18 @@ function refreshRefused(error: unknown): boolean {
   return status !== undefined && status >= 400 && status < 500 && status !== 408 && status !== 429;
 }
 
-// On a 429 the server's Retry-After (seconds or HTTP date, capped) when it sends one; otherwise
-// the backoff step.
-function retryDelayMs(error: unknown, attempt: number): number {
-  const backoff = REFRESH_RETRY_DELAYS_MS[attempt];
+// The wait a 429 asks for in Retry-After (seconds or HTTP date, capped), or null without one.
+function retryAfterMs(error: unknown): number | null {
   const response = (error as HttpErrorLike)?.response;
   const retryAfter = String(response?.headers?.['retry-after'] ?? '').trim();
-  if (response?.status !== 429 || !retryAfter) return backoff;
+  if (response?.status !== 429 || !retryAfter) return null;
   const ms = /^\d+$/.test(retryAfter) ? Number(retryAfter) * 1000 : Date.parse(retryAfter) - Date.now();
-  return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS) : backoff;
+  return Number.isFinite(ms) ? Math.min(Math.max(ms, 0), MAX_RETRY_AFTER_MS) : null;
+}
+
+// On a 429 the server's Retry-After when it sends one; otherwise the backoff step.
+function retryDelayMs(error: unknown, attempt: number): number {
+  return retryAfterMs(error) ?? REFRESH_RETRY_DELAYS_MS[attempt];
 }
 
 async function performTokenRefresh(generation: number, body?: { refresh_token?: string }): Promise<RefreshOutcome> {
@@ -141,6 +156,10 @@ async function performTokenRefresh(generation: number, body?: { refresh_token?: 
       }
       if (refreshRefused(error)) {
         return clearAuthSession();
+      }
+      if ((error as HttpErrorLike)?.response?.status === 429) {
+        const wait = retryAfterMs(error);
+        refreshRateLimitedListeners.forEach((listener) => listener(wait));
       }
       if (attempt >= REFRESH_RETRY_DELAYS_MS.length) {
         return { status: 'unavailable' };

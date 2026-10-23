@@ -226,6 +226,24 @@ describe('api auth recovery', () => {
       expect(getAccessToken()).toBe('fresh-access-token');
     });
 
+    it('tells its listeners about each 429, with the wait Retry-After asks for', async () => {
+      const { axiosMock, requestTokenRefreshOutcome, subscribeRefreshRateLimited } = await loadClients();
+      const waits: Array<number | null> = [];
+      const unsubscribe = subscribeRefreshRateLimited((wait) => waits.push(wait));
+      axiosMock.post
+        .mockRejectedValueOnce(rateLimited('5'))
+        .mockRejectedValueOnce(httpError(429))
+        .mockResolvedValueOnce(freshTokens);
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(5_000);
+      await vi.advanceTimersByTimeAsync(3_000);
+
+      await expect(outcome).resolves.toMatchObject({ status: 'refreshed' });
+      expect(waits).toEqual([5_000, null]);
+      unsubscribe();
+    });
+
     it('waits as long as Retry-After asks on a 429, in seconds or as a date, capped at 60 s', async () => {
       vi.setSystemTime(new Date('2026-10-01T10:00:00Z'));
       const { axiosMock, getAccessToken, requestTokenRefreshOutcome } = await loadClients();

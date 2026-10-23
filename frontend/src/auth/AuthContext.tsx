@@ -4,6 +4,7 @@ import api, {
   bumpSessionGeneration,
   getSessionGeneration,
   requestTokenRefreshOutcome,
+  subscribeRefreshRateLimited,
   subscribeSessionEnded,
   type RefreshOutcome,
 } from '../api';
@@ -107,6 +108,8 @@ type AuthContextType = {
   isAuthenticating: boolean;
   /** At load the server could not be reached while this browser holds a session: retrying. */
   serverUnavailable: boolean;
+  /** The server answered the last refresh with 429 (too many attempts): retrying after its wait. */
+  refreshRateLimited: boolean;
   /** The server ended the session (refused refresh, idle deadline): the login page says so. */
   sessionExpired: boolean;
   profile: Profile | null;
@@ -151,6 +154,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [tokenExpiresAt, setTokenExpiresAt] = useState<number | null>(() => getAccessTokenExpiresAt());
   const [isAuthenticating, setIsAuthenticating] = useState(true);
   const [serverUnavailable, setServerUnavailable] = useState(false);
+  const [refreshRateLimited, setRefreshRateLimited] = useState(false);
   const [sessionExpired, setSessionExpired] = useState(false);
   const [profile, setProfile] = useState<Profile | null>(null);
   const [claims, setClaims] = useState<Claims | null>(null);
@@ -233,6 +237,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       // Unavailable: keep the session; the expiry timer and the 401 interceptor retry later.
       // Superseded: the session was cleared meanwhile; nothing to apply or clear.
       if (outcome.status === 'unavailable' || outcome.status === 'superseded') return outcome.status;
+      setRefreshRateLimited(false);
       if (outcome.status === 'ended' || isIdleExpired()) {
         clearAuthState({ clearActivity: true });
         return 'ended';
@@ -276,6 +281,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     });
   }, []);
 
+  // The server rate limits the refresh: the loading screen says so until a refresh goes through.
+  useEffect(() => subscribeRefreshRateLimited(() => setRefreshRateLimited(true)), []);
+
   // A refresh ended the session, possibly from a request interceptor: drop the identity and
   // let the login page say the session expired.
   useEffect(() => {
@@ -312,6 +320,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       }
       if (!cancelled) {
         setServerUnavailable(false);
+        setRefreshRateLimited(false);
         setIsAuthenticating(false);
       }
     };
@@ -366,8 +375,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : !!(claims.isGlobalAdmin || claims.isPlatformAdmin || Object.keys(claims.permissions || {}).length > 0);
 
   const value = useMemo(
-    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
-    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
+    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
+    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

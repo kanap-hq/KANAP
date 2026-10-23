@@ -17,6 +17,7 @@ vi.mock('../api', () => ({
   getSessionGeneration: () => 0,
   bumpSessionGeneration: vi.fn(),
   subscribeSessionEnded: () => () => {},
+  subscribeRefreshRateLimited: () => () => {},
 }));
 
 vi.mock('../tenant/TenantContext', () => ({
