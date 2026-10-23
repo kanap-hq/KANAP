@@ -75,6 +75,8 @@ Textfelder werden gespeichert, wenn Sie sie verlassen oder Enter drücken, Liste
 
 Drücken Sie **Escape** oder klicken Sie auf die Schließen-Schaltfläche, um zur Liste zurückzukehren.
 
+**Löschen**, ein Papierkorb-Symbol oben rechts, wird Kontakt-Administratoren (`contacts:admin`) angezeigt. Nach einer Bestätigung wird der Kontakt gelöscht und aus den Lieferanten, Budgetzeilen, Verträgen, Anwendungen, Assets, Standorten, Projekten und Anfragen entfernt, die ihn nennen; diese Einträge bleiben erhalten. Sie kehren zur Liste zurück.
+
 ### Verwendet in
 
 Der Abschnitt **Verwendet in**, unter den Notizen, listet alles auf, womit der Kontakt verknüpft ist, eine Liste pro Typ, jede mit ihrer Anzahl: Lieferanten, Budgetzeilen (OPEX und CAPEX, mit ihrer Referenz `BL-`), Verträge, Anwendungen, Assets, Standorte, Projekte (`PRJ-`) und Anfragen (`REQ-`). Jede Zeile zeigt die Rolle des Kontakts dort: den Kontakttyp bei Lieferanten, Budgetzeilen und Verträgen, die bei der Anwendung, dem Asset oder dem Standort eingetragene Rolle.

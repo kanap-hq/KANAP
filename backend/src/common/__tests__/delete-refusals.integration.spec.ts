@@ -10,6 +10,8 @@ import { ChartOfAccounts } from '../../accounts/chart-of-accounts.entity';
 import { ChartOfAccountsDeleteService } from '../../accounts/chart-of-accounts-delete.service';
 import { Asset } from '../../assets/asset.entity';
 import { AssetsDeleteService } from '../../assets/assets-delete.service';
+import { BusinessProcess } from '../../business-processes/business-process.entity';
+import { BusinessProcessesDeleteService } from '../../business-processes/business-processes-delete.service';
 import { Company } from '../../companies/company.entity';
 import { Department } from '../../departments/department.entity';
 import { DepartmentsDeleteService } from '../../departments/departments-delete.service';
@@ -310,10 +312,47 @@ async function testDepartments() {
   });
 }
 
+async function testBusinessProcesses() {
+  await withRollback(async (runner, t) => {
+    const svc = new BusinessProcessesDeleteService(runner.manager.getRepository(BusinessProcess), noAudit);
+    const process = (name: string) => one(runner, `INSERT INTO business_processes (tenant_id, name) VALUES ($1, $2) RETURNING id`, [t, name]);
+    const app = (name: string, n: number) =>
+      one(runner, `INSERT INTO applications (tenant_id, name, sequential_id) VALUES ($1, $2, $3) RETURNING id`, [t, name, `APP-${n}`]);
+    const free = await process('Spare');
+    const used = await process('Order to cash');
+    const linked = await process('Procure to pay');
+    const erp = await app('ERP', 1);
+    const crm = await app('CRM', 2);
+    for (const [application, bp] of [[erp, used], [crm, used], [erp, linked]]) {
+      await runner.query(`INSERT INTO application_business_processes (tenant_id, application_id, business_process_id) VALUES ($1, $2, $3)`, [t, application, bp]);
+    }
+    await runner.query(
+      `INSERT INTO interfaces (tenant_id, name, business_purpose, source_application_id, target_application_id, data_category,
+                               integration_route_type, interface_reference, business_process_id)
+       VALUES ($1, 'Orders', 'Orders', $2, $3, 'master_data', 'direct', 'INT-1', $4)`,
+      [t, erp, crm, used],
+    );
+    const usages = [{ type: 'applications', total: 2 }, { type: 'interfaces', total: 1 }];
+
+    assert.deepEqual(await svc.deleteCheck([free, used, linked, 'nope'], { manager: runner.manager }), {
+      refused: [
+        { id: used, name: 'Order to cash', code: 'BUSINESS_PROCESS_IN_USE', usages },
+        { id: linked, name: 'Procure to pay', code: 'BUSINESS_PROCESS_IN_USE', usages: [{ type: 'applications', total: 1 }] },
+      ],
+    });
+    assert.equal(await count(runner, 'business_processes', [free, used, linked]), 3, 'the check deletes nothing');
+    await expectRefusal(runner, () => svc.delete(used, { manager: runner.manager }), 'BUSINESS_PROCESS_IN_USE', usages,
+      /^Cannot delete business process "Order to cash": it is used by 2 applications and 1 interface\. Disable it instead\.$/);
+    const bulk = await svc.bulkDelete([free, used], null, { manager: runner.manager });
+    assert.deepEqual(bulk.deleted, [free]);
+    assert.deepEqual(bulk.failed.map((f) => [f.code, f.usages]), [['BUSINESS_PROCESS_IN_USE', usages]]);
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
-    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testNoForeignKeyRefusesAUserDelete, testAccountsAndCharts, testDepartments]) {
+    for (const test of [testAssets, testCostCenters, testCalendars, testUsers, testNoForeignKeyRefusesAUserDelete, testAccountsAndCharts, testDepartments, testBusinessProcesses]) {
       await test();
       console.log(`  ok ${test.name}`);
     }

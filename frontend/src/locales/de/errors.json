@@ -165,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} ist nicht zulässig. Die Kennzahlen der Unternehmen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "DATA_FROZEN_ACTION_departments": "{{action}} ist nicht zulässig. Die Kennzahlen der Abteilungen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen.",
+  "BUSINESS_PROCESS_IN_USE": "Dieser Geschäftsprozess wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "BUILT_IN_RECORD": "Dieses Element ist in KANAP enthalten und kann nicht gelöscht werden. Deaktivieren Sie es stattdessen.",
   "RECORD_USED_BY": "Dieses Element wird von {{usages}} verwendet. Deaktivieren Sie es, statt es zu löschen.",
   "TEAM_NOT_EMPTY_one": "Dieses Team hat noch {{usages}}. Verschieben Sie es zuerst in ein anderes Team, oder deaktivieren Sie das Team.",

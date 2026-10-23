@@ -47,7 +47,7 @@ La liste affiche tous les processus métier de votre tenant.
 - **Gérer les catégories** (`business_processes:member`) : ouvrir le dialogue de gestion des catégories.
 - **Importer CSV** (Admin) : import en masse de processus depuis un fichier CSV.
 - **Exporter CSV** (Admin) : exporter les processus que la liste affiche, ou tous les processus, en CSV.
-- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Les interfaces et les demandes liées à un processus supprimé sont conservées, sans ce lien.
+- **Supprimer la sélection** (Admin) : supprimer une ou plusieurs lignes sélectionnées. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : désactivez-le plutôt. Avant toute suppression, la confirmation liste les processus conservés, avec la raison. Les demandes liées à un processus supprimé sont conservées, sans ce lien.
 
 ---
 
@@ -60,6 +60,7 @@ L'espace de travail comporte un seul onglet **Vue d'ensemble** à gauche, et une
 - **Préc / Suiv** : naviguer entre les processus dans l'ordre de la liste actuelle.
 - **Réinitialiser** : annuler les modifications non enregistrées.
 - **Enregistrer** : persister les modifications.
+- **Supprimer** (icône corbeille, Admin) : supprimer le processus et revenir à la liste. Un processus utilisé par des applications ou des interfaces ne peut pas être supprimé : le message les compte. Désactivez-le plutôt.
 - **Fermer** (icône X) : revenir à la liste en conservant vos filtres et tri intacts.
 
 Si vous quittez la page avec des modifications non enregistrées, vous serez invité à enregistrer ou annuler.

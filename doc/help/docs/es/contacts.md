@@ -75,6 +75,8 @@ Los campos de texto se guardan al salir de ellos o al pulsar Intro, las listas e
 
 Pulse **Escape** o haga clic en el botón de cerrar para volver a la lista.
 
+**Eliminar**, un icono de papelera arriba a la derecha, se muestra a los administradores de contactos (`contacts:admin`). Tras una confirmación, el contacto se elimina y se quita de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que lo mencionan; esos elementos se conservan. Vuelve a la lista.
+
 ### Usado en
 
 La sección **Usado en**, bajo las notas, lista todo aquello a lo que está vinculado el contacto, una lista por tipo, cada una con su número: proveedores, líneas presupuestarias (OPEX y CAPEX, con su referencia `BL-`), contratos, aplicaciones, activos, ubicaciones, proyectos (`PRJ-`) y solicitudes (`REQ-`). Cada fila muestra el rol del contacto: el tipo de contacto para proveedores, líneas presupuestarias y contratos, el rol escrito en la aplicación, el activo o la ubicación.

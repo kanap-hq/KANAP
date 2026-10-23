@@ -16,6 +16,10 @@ type Props = {
   name: string;
   /** Message key shown when the delete fails without a known refusal code. */
   deleteFailed: string;
+  /** What the confirmation says the delete does, when more than "This cannot be undone.": the links it removes. */
+  confirmMessage?: string;
+  /** False for a record whose delete nothing refuses (no `delete-check` route): the confirmation comes first. */
+  checkUsages?: boolean;
   onDeleted: () => void;
 };
 
@@ -25,7 +29,7 @@ type Props = {
  * asks, deletes, and hands back so the page can return to the list without loading the deleted
  * record again.
  */
-export default function RecordDeleteButton({ base, id, name, deleteFailed, onDeleted }: Props) {
+export default function RecordDeleteButton({ base, id, name, deleteFailed, confirmMessage, checkUsages = true, onDeleted }: Props) {
   const { t } = useTranslation(['master-data', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
@@ -37,7 +41,7 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, onDel
     setBusy(true);
     const title = t('common:delete.recordTitle', { name });
     try {
-      const refusal = await recordRefusal(base, id);
+      const refusal = checkUsages ? await recordRefusal(base, id) : null;
       if (refusal) {
         await dialogs.alert({ title, message: deleteFailureReason(refusal, t, locale) });
         setBusy(false);
@@ -45,7 +49,7 @@ export default function RecordDeleteButton({ base, id, name, deleteFailed, onDel
       }
       const confirmed = await dialogs.confirm({
         title,
-        message: t('common:delete.cannotUndo'),
+        message: confirmMessage ?? t('common:delete.cannotUndo'),
         confirmLabel: t('common:buttons.delete'),
         intent: 'danger',
       });

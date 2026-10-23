@@ -555,7 +555,8 @@
       "typeRequired": "Elija un tipo de contacto para este proveedor.",
       "saveFailed": "No se pudo guardar el contacto.",
       "createFailed": "No se pudo crear el contacto.",
-      "loadFailed": "No se pudo cargar el contacto."
+      "loadFailed": "No se pudo cargar el contacto.",
+      "deleteFailed": "Error al eliminar el contacto."
     },
     "delete": {
       "warning_one": "Se quita de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que lo mencionan. Esos elementos se conservan. Esta acción no se puede deshacer.",
@@ -1009,7 +1010,7 @@
       "failedToCreate": "Error al crear la categoría",
       "failedToUpdate": "Error al actualizar la categoría"
     },
-    "deleteWarning_one": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
+    "deleteWarning_one": "Esta acción no se puede deshacer. Las solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
     "delete": {
       "toDelete_one": "Se eliminará {{count}} proceso de negocio:",
       "toDelete_other": "Se eliminarán {{count}} procesos de negocio:",
@@ -1018,7 +1019,10 @@
       "title_one": "Eliminar el proceso de negocio seleccionado",
       "title_other": "Eliminar los {{count}} procesos de negocio seleccionados"
     },
-    "deleteWarning_other": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a estos procesos se conservan, sin el vínculo."
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las solicitudes vinculadas a estos procesos se conservan, sin el vínculo.",
+    "messages": {
+      "deleteFailed": "Error al eliminar el proceso de negocio."
+    }
   },
   "admin": {
     "copy": {

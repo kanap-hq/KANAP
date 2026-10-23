@@ -165,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} is not allowed. Company metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "DATA_FROZEN_ACTION_departments": "{{action}} is not allowed. Department metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "DEPARTMENT_IN_USE": "This department is used in the allocations of {{usages}}. Disable it instead of deleting it.",
+  "BUSINESS_PROCESS_IN_USE": "This business process is used by {{usages}}. Disable it instead of deleting it.",
   "BUILT_IN_RECORD": "This item comes with KANAP and cannot be deleted. Disable it instead.",
   "RECORD_USED_BY": "This item is used by {{usages}}. Disable it instead of deleting it.",
   "TEAM_NOT_EMPTY_one": "This team still has {{usages}}. Move it to another team first, or disable the team.",
