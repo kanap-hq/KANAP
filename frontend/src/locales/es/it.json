@@ -3298,7 +3298,7 @@
     "saveResidencyFailed": "No se pudo guardar la residencia de los datos.",
     "saveOwnersFailed": "No se pudieron guardar los responsables.",
     "saveAudienceFailed": "No se pudo guardar la audiencia.",
-    "copyReferenceFailed": "No se pudo copiar la referencia.",
+    "copyReferenceFailed": "No se pudo copiar: el navegador lo rechazó.",
     "restoreFailed": "No se pudo restablecer el vínculo.",
     "versionCreated": "Versión creada: {{reference}}"
   },

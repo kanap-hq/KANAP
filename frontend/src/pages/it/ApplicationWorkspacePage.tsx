@@ -1509,8 +1509,9 @@ export default function ApplicationWorkspacePage() {
     try {
       await navigator.clipboard.writeText(reference);
       feedbackRef.current.info(t('workspace.application.referenceCopied'));
-    } catch (err) {
-      setError(getApiErrorMessage(err, t, t('messages.copyReferenceFailed')));
+    } catch {
+      // The browser's own message is in English and technical: the plain sentence instead.
+      setError(t('messages.copyReferenceFailed'));
     }
   }, [t]);
 

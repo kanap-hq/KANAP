@@ -3298,7 +3298,7 @@
     "saveResidencyFailed": "La résidence des données n'a pas pu être enregistrée.",
     "saveOwnersFailed": "Les responsables n'ont pas pu être enregistrés.",
     "saveAudienceFailed": "L'audience n'a pas pu être enregistrée.",
-    "copyReferenceFailed": "La référence n'a pas pu être copiée.",
+    "copyReferenceFailed": "Copie impossible : le navigateur l'a refusée.",
     "restoreFailed": "Le lien n'a pas pu être rétabli.",
     "versionCreated": "Version créée : {{reference}}"
   },

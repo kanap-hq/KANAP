@@ -3298,7 +3298,7 @@
     "saveResidencyFailed": "The data residency could not be saved.",
     "saveOwnersFailed": "The owners could not be saved.",
     "saveAudienceFailed": "The audience could not be saved.",
-    "copyReferenceFailed": "The reference could not be copied.",
+    "copyReferenceFailed": "Copy failed: the browser refused it.",
     "restoreFailed": "The link could not be restored.",
     "versionCreated": "Version created: {{reference}}"
   },

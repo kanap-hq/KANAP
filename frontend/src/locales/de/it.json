@@ -3298,7 +3298,7 @@
     "saveResidencyFailed": "Der Datenstandort konnte nicht gespeichert werden.",
     "saveOwnersFailed": "Die Verantwortlichen konnten nicht gespeichert werden.",
     "saveAudienceFailed": "Die Zielgruppe konnte nicht gespeichert werden.",
-    "copyReferenceFailed": "Die Referenz konnte nicht kopiert werden.",
+    "copyReferenceFailed": "Kopieren nicht möglich: Der Browser hat es abgelehnt.",
     "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden.",
     "versionCreated": "Version erstellt: {{reference}}"
   },
