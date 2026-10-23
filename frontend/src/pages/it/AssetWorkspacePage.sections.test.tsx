@@ -249,6 +249,21 @@ describe('Asset workspace: section placement', () => {
       await waitFor(() => expect(toggle).toBeChecked());
     });
 
+    it('reads the members only once the server has made the asset a cluster', async () => {
+      let resolvePatch: (value: unknown) => void = () => {};
+      patch.mockImplementation(() => new Promise((resolve) => { resolvePatch = resolve; }));
+      del.mockResolvedValue({ data: {} });
+      renderAt('/it/assets/asset-1/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      fireEvent.click(toggle);
+      await waitFor(() => expect(patch).toHaveBeenCalledWith('/assets/asset-1', { is_cluster: true }));
+      const membersReads = () => get.mock.calls.filter(([url]) => String(url).endsWith('/members')).length;
+      expect(membersReads()).toBe(0);
+      resolvePatch({ data: { ...ASSET, is_cluster: true } });
+      await waitFor(() => expect(membersReads()).toBe(1));
+    });
+
     it('saves at once, and removes nothing, when a cluster becomes a server', async () => {
       patch.mockResolvedValue({ data: { ...ASSET, is_cluster: false } });
       renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, is_cluster: true });

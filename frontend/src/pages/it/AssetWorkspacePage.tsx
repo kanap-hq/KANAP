@@ -426,6 +426,8 @@ export default function AssetWorkspacePage() {
   const [hostname, setHostname] = React.useState('');
   const [ipAddresses, setIpAddresses] = React.useState<IpAddressEntry[]>([]);
   const [isCluster, setIsCluster] = React.useState(false);
+  // True while the Cluster switch is saved: the cluster lists wait for the server to agree.
+  const [clusterSwitchSaving, setClusterSwitchSaving] = React.useState(false);
   const [status, setStatus] = React.useState<string>('active');
   const [goLiveDate, setGoLiveDate] = React.useState<string>('');
   const [endOfLifeDate, setEndOfLifeDate] = React.useState<string>('');
@@ -457,6 +459,7 @@ export default function AssetWorkspacePage() {
   }, [byField.serverProvider]);
 
   const loadClusterMembers = React.useCallback(async () => {
+    if (clusterSwitchSaving) return;
     if (isCreate || !id || !isCluster) {
       setClusterMembers([]);
       setClusterError(null);
@@ -474,9 +477,10 @@ export default function AssetWorkspacePage() {
     } finally {
       setClusterLoading(false);
     }
-  }, [id, isCluster, isCreate]);
+  }, [clusterSwitchSaving, id, isCluster, isCreate]);
 
   const loadClustersForServer = React.useCallback(async () => {
+    if (clusterSwitchSaving) return;
     if (isCreate || !id || isCluster) {
       setClustersForServer([]);
       setClustersError(null);
@@ -494,7 +498,7 @@ export default function AssetWorkspacePage() {
     } finally {
       setClustersLoading(false);
     }
-  }, [id, isCluster, isCreate]);
+  }, [clusterSwitchSaving, id, isCluster, isCreate]);
 
   React.useEffect(() => { void loadClusterMembers(); }, [loadClusterMembers]);
   React.useEffect(() => { void loadClustersForServer(); }, [loadClustersForServer]);
@@ -1362,11 +1366,14 @@ export default function AssetWorkspacePage() {
                 setDirty(true);
                 return;
               }
+              setClusterSwitchSaving(true);
               void (async () => {
                 try {
                   await patchAsset({ is_cluster: next });
                 } catch {
                   return;
+                } finally {
+                  setClusterSwitchSaving(false);
                 }
                 // The impact reads the members of a cluster.
                 void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
