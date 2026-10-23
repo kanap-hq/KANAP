@@ -6,6 +6,7 @@ import { catchError, finalize, mergeMap } from 'rxjs/operators';
 import { IS_PUBLIC_KEY } from '../auth/public.decorator';
 import { SKIP_TENANT_TRANSACTION_KEY } from './skip-tenant-transaction.decorator';
 import { DatabaseConnectionError } from './filters/database-error.mapping';
+import { applyDataAccess } from '../data-access/data-access';
 import { connectRequestRunner, rememberRequestDbTimeouts, resolveRequestDbTimeouts, startTenantTransaction } from './request-db-timeouts';
 
 @Injectable()
@@ -76,6 +77,15 @@ export class TenantInterceptor implements NestInterceptor {
         await startTenantTransaction(runner, tenantId, timeouts);
         rememberRequestDbTimeouts(req, timeouts);
         (req as any).queryRunner = runner;
+      }
+      // The person's data access for this transaction (spec §6.3), on the runner opened here or
+      // taken over from TenantInitGuard. Kept on the request for a reconnection
+      // (createRequestReleaseConnection). A refusal (503 / 401) is a handler error: rolled back
+      // and released below.
+      const userId = req?.user?.sub;
+      if ((!existing || ownedByGuard) && typeof userId === 'string' && userId) {
+        await applyDataAccess(runner, userId);
+        req.dataAccessUserId = userId;
       }
       return true;
     })()).pipe(
