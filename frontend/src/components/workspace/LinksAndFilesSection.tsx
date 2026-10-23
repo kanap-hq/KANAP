@@ -229,7 +229,7 @@ export default function LinksAndFilesSection({
               ) : null),
             } : undefined}
             onRemove={canEdit ? (row) => (row.kind === 'link' ? onRemoveLink(row.link) : onRemoveFile(row.file)) : undefined}
-            removeLabel={(row) => t('linksAndFiles.removeNamed', { name: nameOf(row) })}
+            removeLabel={(row) => t(row.kind === 'file' ? 'linksAndFiles.removeFileNamed' : 'linksAndFiles.removeNamed', { name: nameOf(row) })}
           />
         )}
       </RelationsSection>

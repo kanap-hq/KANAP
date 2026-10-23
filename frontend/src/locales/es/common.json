@@ -765,7 +765,8 @@
     "departments": "Departamentos",
     "allDepartments": "Todos los departamentos",
     "newCategoryName": "Nombre de la nueva categoría",
-    "removeNamed": "Quitar {{name}}"
+    "removeNamed": "Quitar {{name}}",
+    "chooseServer": "Elegir un servidor"
   },
   "documentEditor": {
     "expandDocument": "Expandir documento",
@@ -1296,6 +1297,7 @@
       "url": "p. ej., https://status.example.com"
     },
     "linksTitle": "Enlaces web",
-    "linksEmpty": "Ningún enlace web."
+    "linksEmpty": "Ningún enlace web.",
+    "removeFileNamed": "Eliminar el archivo {{name}}"
   }
 }

@@ -1753,7 +1753,8 @@
         "routed": "Enrutadas ({{count}})",
         "viaNames": "vía {{names}}",
         "unbound": "Sin entorno",
-        "unboundHint": "Aún no tiene enlace en ningún entorno. Añada un enlace en la ficha de la interfaz."
+        "unboundHint": "Aún no tiene enlace en ningún entorno. Añada un enlace en la ficha de la interfaz.",
+        "loadFailed": "No se pudieron cargar las interfaces."
       },
       "deployments": {
         "addDeployment": "Añadir despliegue",
@@ -1765,23 +1766,24 @@
         "deleteAria": "Eliminar el despliegue {{env}}",
         "deleteConfirm": "¿Eliminar el despliegue {{env}}?",
         "since": "Desde",
-        "newServerAssignment": "Nueva asignación de servidor",
-        "editServerAssignment": "Editar asignación de servidor",
-        "removeServerAssignment": "Quitar asignación de servidor",
-        "editAssignmentAria": "Editar la asignación de {{name}}",
-        "removeAssignmentAria": "Quitar la asignación de {{name}}",
-        "removeAssignmentConfirm": "¿Quitar esta asignación de servidor?",
+        "newServerAssignment": "Añadir un servidor",
+        "editServerAssignment": "Editar servidor",
+        "removeServerAssignment": "Quitar servidor",
+        "editAssignmentAria": "Editar {{name}}",
+        "removeAssignmentAria": "Quitar {{name}}",
+        "removeAssignmentConfirm": "¿Quitar este servidor del despliegue?",
         "created": "Despliegue creado",
         "updated": "Despliegue actualizado",
         "removed": "Despliegue eliminado",
-        "assignmentUpdated": "Asignación de servidor actualizada",
-        "assignmentRemoved": "Asignación de servidor quitada",
-        "loadAssignmentsFailed": "Error al cargar las asignaciones de servidor",
+        "assignmentUpdated": "Servidor actualizado",
+        "assignmentRemoved": "Servidor quitado",
+        "loadAssignmentsFailed": "Error al cargar los servidores",
         "updateFailed": "Error al actualizar el despliegue",
         "saveFailed": "Error al guardar el despliegue",
         "removeFailed": "Error al eliminar el despliegue",
-        "saveAssignmentFailed": "Error al guardar la asignación de servidor",
-        "removeAssignmentFailed": "Error al quitar la asignación de servidor"
+        "saveAssignmentFailed": "Error al guardar el servidor",
+        "removeAssignmentFailed": "Error al quitar el servidor",
+        "baseUrlHelp": "La dirección que se abre para acceder a este despliegue, por ejemplo https://app.example.com."
       },
       "relations": {
         "noChildApps": "Todavía no hay aplicaciones secundarias vinculadas.",
@@ -1790,7 +1792,7 @@
         "deleteUrl": "Eliminar URL",
         "uploadingFiles_one": "Subiendo {{count}} archivo…",
         "uploadingFiles_other": "Subiendo {{count}} archivos…",
-        "deleteAttachment": "¿Eliminar el adjunto «{{name}}»?",
+        "deleteAttachment": "¿Eliminar el archivo «{{name}}»?",
         "sections": {
           "budgetLines": "Líneas presupuestarias",
           "contracts": "Contratos",
@@ -1802,7 +1804,7 @@
           "applications": "Aplicaciones",
           "assets": "Activos",
           "processes": "Procesos de negocio",
-          "related": "Relacionados"
+          "related": "Sugerencias"
         },
         "empty": {
           "budgetLines": "Ninguna línea presupuestaria vinculada.",
@@ -1904,6 +1906,14 @@
           "action": "Registrar en un servidor",
           "actionNamed": "Registrar {{name}} en un servidor",
           "changeVersion": "Cambiar la versión de {{name}}"
+        },
+        "loadFailed": "No se pudieron cargar las relaciones.",
+        "feedback": {
+          "linked": "{{name}} vinculado.",
+          "unlinked": "{{name}} desvinculado.",
+          "linkAdded": "Enlace añadido.",
+          "linkUpdated": "Enlace actualizado.",
+          "linkRemoved": "Enlace retirado."
         }
       },
       "untitled": "Aplicación sin nombre",
@@ -3103,7 +3113,7 @@
       "addAssignment": "Añadir asignación",
       "noServersAssigned": "No hay servidores asignados.",
       "assignmentUpdated": "Asignación actualizada",
-      "serverAssigned": "Servidor asignado",
+      "serverAssigned": "Servidor añadido",
       "assignmentRemoved": "Asignación eliminada",
       "addFirstInstance": "Añada primero una instancia para gestionar las asignaciones de servidor.",
       "addServerTo": "Añadir servidor a {{env}}",

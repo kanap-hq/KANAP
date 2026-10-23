@@ -1753,7 +1753,8 @@
         "routed": "Relayées ({{count}})",
         "viaNames": "via {{names}}",
         "unbound": "Sans environnement",
-        "unboundHint": "Liée à aucun environnement pour l’instant. Ajoutez une liaison dans la fiche de l’interface."
+        "unboundHint": "Liée à aucun environnement pour l’instant. Ajoutez une liaison dans la fiche de l’interface.",
+        "loadFailed": "Les interfaces n'ont pas pu être chargées."
       },
       "deployments": {
         "addDeployment": "Ajouter un déploiement",
@@ -1765,23 +1766,24 @@
         "deleteAria": "Supprimer le déploiement {{env}}",
         "deleteConfirm": "Supprimer le déploiement {{env}} ?",
         "since": "Depuis",
-        "newServerAssignment": "Nouvelle affectation serveur",
-        "editServerAssignment": "Modifier l'affectation serveur",
-        "removeServerAssignment": "Retirer l'affectation serveur",
-        "editAssignmentAria": "Modifier l'affectation de {{name}}",
-        "removeAssignmentAria": "Retirer l'affectation de {{name}}",
-        "removeAssignmentConfirm": "Retirer cette affectation serveur ?",
+        "newServerAssignment": "Ajouter un serveur",
+        "editServerAssignment": "Modifier le serveur",
+        "removeServerAssignment": "Retirer le serveur",
+        "editAssignmentAria": "Modifier {{name}}",
+        "removeAssignmentAria": "Retirer {{name}}",
+        "removeAssignmentConfirm": "Retirer ce serveur du déploiement ?",
         "created": "Déploiement créé",
         "updated": "Déploiement mis à jour",
         "removed": "Déploiement supprimé",
-        "assignmentUpdated": "Affectation serveur mise à jour",
-        "assignmentRemoved": "Affectation serveur retirée",
-        "loadAssignmentsFailed": "Échec du chargement des affectations serveur",
+        "assignmentUpdated": "Serveur mis à jour",
+        "assignmentRemoved": "Serveur retiré",
+        "loadAssignmentsFailed": "Échec du chargement des serveurs",
         "updateFailed": "Échec de la mise à jour du déploiement",
         "saveFailed": "Échec de l'enregistrement du déploiement",
         "removeFailed": "Échec de la suppression du déploiement",
-        "saveAssignmentFailed": "Échec de l'enregistrement de l'affectation serveur",
-        "removeAssignmentFailed": "Échec du retrait de l'affectation serveur"
+        "saveAssignmentFailed": "Échec de l'enregistrement du serveur",
+        "removeAssignmentFailed": "Échec du retrait du serveur",
+        "baseUrlHelp": "L'adresse que l'on ouvre pour atteindre ce déploiement, par exemple https://app.example.com."
       },
       "relations": {
         "noChildApps": "Aucune application enfant liée pour le moment.",
@@ -1790,7 +1792,7 @@
         "deleteUrl": "Supprimer l'URL",
         "uploadingFiles_one": "Téléversement de {{count}} fichier…",
         "uploadingFiles_other": "Téléversement de {{count}} fichiers…",
-        "deleteAttachment": "Supprimer la pièce jointe « {{name}} » ?",
+        "deleteAttachment": "Supprimer le fichier « {{name}} » ?",
         "sections": {
           "budgetLines": "Lignes budgétaires",
           "contracts": "Contrats",
@@ -1802,7 +1804,7 @@
           "applications": "Applications",
           "assets": "Actifs",
           "processes": "Processus métier",
-          "related": "Apparentés"
+          "related": "Suggestions"
         },
         "empty": {
           "budgetLines": "Aucune ligne budgétaire liée.",
@@ -1904,6 +1906,14 @@
           "action": "Renseigner sur un serveur",
           "actionNamed": "Renseigner {{name}} sur un serveur",
           "changeVersion": "Modifier la version de {{name}}"
+        },
+        "loadFailed": "Les relations n'ont pas pu être chargées.",
+        "feedback": {
+          "linked": "{{name}} lié.",
+          "unlinked": "{{name}} délié.",
+          "linkAdded": "Lien ajouté.",
+          "linkUpdated": "Lien modifié.",
+          "linkRemoved": "Lien retiré."
         }
       },
       "untitled": "Application sans nom",
@@ -2328,7 +2338,7 @@
         "addSuggestion": "Ajouter {{vendor}} · {{product}}",
         "seeMore_one": "Voir l’autre",
         "seeMore_other": "Voir les {{count}} autres",
-        "suggestionsFailed": "Les suggestions n’ont pas pu être chargées.",
+        "suggestionsFailed": "Les suggestions n'ont pas pu être chargées.",
         "hint": "Tapez une partie du nom du produit : la liste propose les noms exacts que les éditeurs écrivent dans leurs fiches, avec leur nombre de vulnérabilités. Un nom doit être identique à celui de la fiche, dans sa section Product status sur",
         "site": "cve.org",
         "versionHint": "Une version limite le nom aux versions de la technologie dont le libellé commence par elle, ex. 2019."
@@ -3103,7 +3113,7 @@
       "addAssignment": "Ajouter une affectation",
       "noServersAssigned": "Aucun serveur affecté.",
       "assignmentUpdated": "Affectation mise à jour",
-      "serverAssigned": "Serveur affecté",
+      "serverAssigned": "Serveur ajouté",
       "assignmentRemoved": "Affectation supprimée",
       "addFirstInstance": "Ajoutez d'abord une instance pour gérer les affectations serveur.",
       "addServerTo": "Ajouter un serveur à {{env}}",

@@ -42,7 +42,10 @@ function useServerOptions(search: string, opts?: { allowClusters?: boolean }) {
             q: search || undefined,
             limit: 50,
             sort: 'name:ASC',
-            is_cluster: opts?.allowClusters === false ? false : undefined,
+            // The assets list reads this from its filter model (the grid's format), not from a plain parameter.
+            filters: opts?.allowClusters === false
+              ? JSON.stringify({ is_cluster: { filterType: 'set', values: ['false'] } })
+              : undefined,
           },
         });
         if (isMounted) setOptions(res.data.items || []);
@@ -122,7 +125,7 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
         <TextField
           {...params}
           required={required}
-          placeholder={placeholder ?? (naked ? t('selects.notSet') : undefined)}
+          placeholder={placeholder ?? (naked ? t('selects.chooseServer') : undefined)}
           helperText={helperText}
           variant="standard"
           sx={textFieldSx}

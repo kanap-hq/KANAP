@@ -1753,7 +1753,8 @@
         "routed": "Routed ({{count}})",
         "viaNames": "via {{names}}",
         "unbound": "Without environment",
-        "unboundHint": "Not bound in any environment yet. Add a binding on the interface's page."
+        "unboundHint": "Not bound in any environment yet. Add a binding on the interface's page.",
+        "loadFailed": "The interfaces could not be loaded."
       },
       "deployments": {
         "addDeployment": "Add deployment",
@@ -1765,23 +1766,24 @@
         "deleteAria": "Delete {{env}} deployment",
         "deleteConfirm": "Delete {{env}} deployment?",
         "since": "Since",
-        "newServerAssignment": "New server assignment",
-        "editServerAssignment": "Edit server assignment",
-        "removeServerAssignment": "Remove server assignment",
-        "editAssignmentAria": "Edit {{name}} assignment",
-        "removeAssignmentAria": "Remove {{name}} assignment",
-        "removeAssignmentConfirm": "Remove this server assignment?",
+        "newServerAssignment": "Add a server",
+        "editServerAssignment": "Edit server",
+        "removeServerAssignment": "Remove server",
+        "editAssignmentAria": "Edit {{name}}",
+        "removeAssignmentAria": "Remove {{name}}",
+        "removeAssignmentConfirm": "Remove this server from the deployment?",
         "created": "Deployment created",
         "updated": "Deployment updated",
         "removed": "Deployment removed",
-        "assignmentUpdated": "Server assignment updated",
-        "assignmentRemoved": "Server assignment removed",
-        "loadAssignmentsFailed": "Failed to load server assignments",
+        "assignmentUpdated": "Server updated",
+        "assignmentRemoved": "Server removed",
+        "loadAssignmentsFailed": "Failed to load servers",
         "updateFailed": "Failed to update deployment",
         "saveFailed": "Failed to save deployment",
         "removeFailed": "Failed to remove deployment",
-        "saveAssignmentFailed": "Failed to save server assignment",
-        "removeAssignmentFailed": "Failed to remove server assignment"
+        "saveAssignmentFailed": "Failed to save server",
+        "removeAssignmentFailed": "Failed to remove server",
+        "baseUrlHelp": "The address people open to reach this deployment, for example https://app.example.com."
       },
       "relations": {
         "noChildApps": "No child applications linked yet.",
@@ -1790,7 +1792,7 @@
         "deleteUrl": "Delete URL",
         "uploadingFiles_one": "Uploading {{count}} file…",
         "uploadingFiles_other": "Uploading {{count}} files…",
-        "deleteAttachment": "Delete attachment \"{{name}}\"?",
+        "deleteAttachment": "Delete file \"{{name}}\"?",
         "sections": {
           "budgetLines": "Budget lines",
           "contracts": "Contracts",
@@ -1802,7 +1804,7 @@
           "applications": "Applications",
           "assets": "Assets",
           "processes": "Business processes",
-          "related": "Related"
+          "related": "Suggestions"
         },
         "empty": {
           "budgetLines": "No budget line linked.",
@@ -1904,6 +1906,14 @@
           "action": "Record on a server",
           "actionNamed": "Record {{name}} on a server",
           "changeVersion": "Change the version of {{name}}"
+        },
+        "loadFailed": "The relations could not be loaded.",
+        "feedback": {
+          "linked": "{{name}} linked.",
+          "unlinked": "{{name}} unlinked.",
+          "linkAdded": "Link added.",
+          "linkUpdated": "Link updated.",
+          "linkRemoved": "Link removed."
         }
       },
       "untitled": "Untitled application",
@@ -3103,7 +3113,7 @@
       "addAssignment": "Add assignment",
       "noServersAssigned": "No servers assigned.",
       "assignmentUpdated": "Assignment updated",
-      "serverAssigned": "Server assigned",
+      "serverAssigned": "Server added",
       "assignmentRemoved": "Assignment removed",
       "addFirstInstance": "Add an instance first to manage server assignments.",
       "addServerTo": "Add server to {{env}}",

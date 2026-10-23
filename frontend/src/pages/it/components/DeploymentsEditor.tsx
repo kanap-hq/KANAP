@@ -15,9 +15,11 @@ import {
   TableHead,
   TableRow,
   TextField,
+  Tooltip,
   Typography,
   useTheme,
 } from '@mui/material';
+import { useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
@@ -33,15 +35,12 @@ import { getDotColor, LIFECYCLE_COLORS } from '../../../utils/statusColors';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../../i18n/useLocale';
+import { formatShortDate } from '../../../lib/dateFormat';
+import { APPLICATION_ENVIRONMENTS, compareEnvironments, environmentLabelKey } from '../../../utils/applicationEnvironments';
+import { useApplicationFeedback } from '../applicationFeedback';
+import { invalidateTechnologyLinks } from './technologyLinkQueries';
 
-const ENV_OPTIONS = [
-  { value: 'prod', labelKey: 'enums.environment.prod' },
-  { value: 'pre_prod', labelKey: 'enums.environment.preProd' },
-  { value: 'qa', labelKey: 'enums.environment.qa' },
-  { value: 'test', labelKey: 'enums.environment.test' },
-  { value: 'dev', labelKey: 'enums.environment.dev' },
-  { value: 'sandbox', labelKey: 'enums.environment.sandbox' },
-] as const;
+const ENV_OPTIONS = APPLICATION_ENVIRONMENTS;
 
 export type DeploymentRecord = {
   id: string;
@@ -66,6 +65,8 @@ type Assignment = {
   server: {
     id: string;
     name: string;
+    /** The business reference (`AST-7`) the server's page is addressed by. */
+    asset_reference?: string | null;
     provider: string;
     environment: string;
   };
@@ -98,10 +99,7 @@ type DeploymentsEditorProps = {
 };
 
 function formatDate(value: string | null | undefined, locale: string) {
-  if (!value) return '—';
-  const date = new Date(String(value).includes('T') ? String(value) : `${value}T00:00:00`);
-  if (Number.isNaN(date.getTime())) return '—';
-  return date.toLocaleDateString(locale, { day: '2-digit', month: 'short', year: 'numeric' });
+  return formatShortDate(value ? String(value).slice(0, 10) : null, locale, { year: 'always', empty: '—' });
 }
 
 function createDeploymentDraft(deployment?: DeploymentRecord): DeploymentDraft {
@@ -126,10 +124,12 @@ export default function DeploymentsEditor({
   const { t } = useTranslation(['it', 'common', 'errors']);
   const locale = useLocale();
   const dialogs = useKanapDialogs();
+  const feedback = useApplicationFeedback();
+  const queryClient = useQueryClient();
   const { byField, labelFor } = useItOpsEnumOptions();
   const envLabel = React.useCallback((value: string) => {
-    const option = ENV_OPTIONS.find((item) => item.value === value);
-    return option ? t(option.labelKey) : value;
+    const key = environmentLabelKey(value);
+    return key ? t(key) : value;
   }, [t]);
   const [assignments, setAssignments] = React.useState<Record<string, Assignment[]>>({});
   const [deploymentDialogOpen, setDeploymentDialogOpen] = React.useState(false);
@@ -137,8 +137,13 @@ export default function DeploymentsEditor({
   const [assignmentDialogOpen, setAssignmentDialogOpen] = React.useState(false);
   const [assignmentDraft, setAssignmentDraft] = React.useState<AssignmentDraft | null>(null);
   const [saving, setSaving] = React.useState(false);
-  const [message, setMessage] = React.useState<string | null>(null);
   const [error, setError] = React.useState<string | null>(null);
+  // The refusal of the dialog that is open, shown in it (the page's alert sits behind the dialog's veil).
+  const [dialogError, setDialogError] = React.useState<string | null>(null);
+  const sortedDeployments = React.useMemo(
+    () => [...deployments].sort((a, b) => compareEnvironments(a.environment, b.environment)),
+    [deployments],
+  );
   const [lifecycleAnchor, setLifecycleAnchor] = React.useState<{ id: string; element: HTMLElement } | null>(null);
 
   const lifecycleOptions = React.useMemo(() => {
@@ -188,11 +193,13 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.patch(`/app-deployments/${deploymentId}`, patch);
+      feedback.info(t('workspace.application.deployments.updated'));
       await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.updateFailed')));
     }
-  }, [onRefresh, t]);
+  }, [feedback, onRefresh, queryClient, t]);
 
   const openCreateDeployment = React.useCallback(() => {
     const firstAvailable = ENV_OPTIONS.find((env) => !usedEnvironments.has(env.value));
@@ -207,17 +214,19 @@ export default function DeploymentsEditor({
       status: 'enabled',
       notes: null,
     }));
+    setDialogError(null);
     setDeploymentDialogOpen(true);
   }, [applicationId, usedEnvironments]);
 
   const openEditDeployment = React.useCallback((deployment: DeploymentRecord) => {
     setDeploymentDraft(createDeploymentDraft(deployment));
+    setDialogError(null);
     setDeploymentDialogOpen(true);
   }, []);
 
   const saveDeployment = React.useCallback(async () => {
     setSaving(true);
-    setError(null);
+    setDialogError(null);
     try {
       const payload = {
         environment: deploymentDraft.environment,
@@ -229,19 +238,20 @@ export default function DeploymentsEditor({
       };
       if (deploymentDraft.id) {
         await api.patch(`/app-deployments/${deploymentDraft.id}`, payload);
-        setMessage(t('workspace.application.deployments.updated'));
+        feedback.info(t('workspace.application.deployments.updated'));
       } else {
         await api.post(`/applications/${applicationId}/deployments`, payload);
-        setMessage(t('workspace.application.deployments.created'));
+        feedback.info(t('workspace.application.deployments.created'));
       }
       setDeploymentDialogOpen(false);
       await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
-      setError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveFailed')));
+      setDialogError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveFailed')));
     } finally {
       setSaving(false);
     }
-  }, [applicationId, deploymentDraft, onRefresh, t]);
+  }, [applicationId, deploymentDraft, feedback, onRefresh, queryClient, t]);
 
   const deleteDeployment = React.useCallback(async (deployment: DeploymentRecord) => {
     if (!(await dialogs.confirm({
@@ -252,12 +262,13 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.delete(`/app-deployments/${deployment.id}`);
-      setMessage(t('workspace.application.deployments.removed'));
+      feedback.info(t('workspace.application.deployments.removed'));
       await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeFailed')));
     }
-  }, [dialogs, envLabel, onRefresh, t]);
+  }, [dialogs, envLabel, feedback, onRefresh, queryClient, t]);
 
   const openAssignmentDialog = React.useCallback((deploymentId: string, assignment?: Assignment) => {
     setAssignmentDraft({
@@ -268,13 +279,14 @@ export default function DeploymentsEditor({
       since_date: assignment?.since_date ? String(assignment.since_date).slice(0, 10) : '',
       notes: assignment?.notes || '',
     });
+    setDialogError(null);
     setAssignmentDialogOpen(true);
   }, [serverRoleOptions]);
 
   const saveAssignment = React.useCallback(async () => {
     if (!assignmentDraft) return;
     setSaving(true);
-    setError(null);
+    setDialogError(null);
     try {
       const payload = {
         server_id: assignmentDraft.server_id,
@@ -284,20 +296,21 @@ export default function DeploymentsEditor({
       };
       if (assignmentDraft.assignmentId) {
         await api.patch(`/app-deployments/${assignmentDraft.deploymentId}/servers/${assignmentDraft.assignmentId}`, payload);
-        setMessage(t('workspace.application.deployments.assignmentUpdated'));
+        feedback.info(t('workspace.application.deployments.assignmentUpdated'));
       } else {
         await api.post(`/app-deployments/${assignmentDraft.deploymentId}/servers`, payload);
-        setMessage(t('components.serverAssignments.serverAssigned'));
+        feedback.info(t('components.serverAssignments.serverAssigned'));
       }
       setAssignmentDialogOpen(false);
       await loadAssignments();
       await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
-      setError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveAssignmentFailed')));
+      setDialogError(getApiErrorMessage(err, t, t('workspace.application.deployments.saveAssignmentFailed')));
     } finally {
       setSaving(false);
     }
-  }, [assignmentDraft, loadAssignments, onRefresh, t]);
+  }, [assignmentDraft, feedback, loadAssignments, onRefresh, queryClient, t]);
 
   const deleteAssignment = React.useCallback(async (deploymentId: string, assignmentId: string) => {
     if (!(await dialogs.confirm({
@@ -308,17 +321,17 @@ export default function DeploymentsEditor({
     setError(null);
     try {
       await api.delete(`/app-deployments/${deploymentId}/servers/${assignmentId}`);
-      setMessage(t('workspace.application.deployments.assignmentRemoved'));
+      feedback.info(t('workspace.application.deployments.assignmentRemoved'));
       await loadAssignments();
       await onRefresh();
+      void invalidateTechnologyLinks(queryClient);
     } catch (err: any) {
       setError(getApiErrorMessage(err, t, t('workspace.application.deployments.removeAssignmentFailed')));
     }
-  }, [dialogs, loadAssignments, onRefresh, t]);
+  }, [dialogs, feedback, loadAssignments, onRefresh, queryClient, t]);
 
   return (
     <Stack spacing={2.75}>
-      {message && <Alert severity="success" onClose={() => setMessage(null)}>{message}</Alert>}
       {error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
       {!readOnly && (
@@ -329,7 +342,7 @@ export default function DeploymentsEditor({
         </Box>
       )}
 
-      {deployments.map((deployment) => {
+      {sortedDeployments.map((deployment) => {
         const rows = assignments[deployment.id] || [];
         const lifecycleColor = getDotColor(LIFECYCLE_COLORS[deployment.lifecycle] || 'default', theme.palette.mode);
         return (
@@ -359,10 +372,12 @@ export default function DeploymentsEditor({
                 {labelFor('lifecycleStatus', deployment.lifecycle) || deployment.lifecycle}
               </Box>
               <Box sx={{ display: 'inline-flex', gap: '6px', fontSize: 12, minWidth: 0 }}>
-                <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('components.instances.baseUrl')}</Box>
-                <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {deployment.base_url || '—'}
-                </Box>
+                <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary, flexShrink: 0, whiteSpace: 'nowrap' })}>{t('components.instances.baseUrl')}</Box>
+                <Tooltip title={deployment.base_url || ''} disableHoverListener={!deployment.base_url}>
+                  <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {deployment.base_url || '—'}
+                  </Box>
+                </Tooltip>
               </Box>
               <Box sx={{ fontSize: 12 }}>
                 <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary, mr: '6px' })}>SSO</Box>
@@ -387,13 +402,19 @@ export default function DeploymentsEditor({
                 </>
               )}
             </Box>
+            {deployment.notes && (
+              <Typography sx={(muiTheme) => ({ fontSize: 12, color: muiTheme.palette.kanap.text.secondary, whiteSpace: 'pre-wrap', mb: 1.25 })}>
+                {deployment.notes}
+              </Typography>
+            )}
 
             <Table size="small" sx={(muiTheme) => ({
               '& th': { fontSize: 11, fontWeight: 500, color: muiTheme.palette.kanap.text.tertiary, borderBottom: `1px solid ${muiTheme.palette.kanap.border.default}` },
               '& td': { fontSize: 13, color: muiTheme.palette.kanap.text.primary, borderBottom: `1px solid ${muiTheme.palette.kanap.border.soft}` },
               '& tbody tr:hover': { bgcolor: muiTheme.palette.kanap.bg.hover },
               '& .hover-actions': { opacity: 0, transition: 'opacity 120ms' },
-              '& tbody tr:hover .hover-actions': { opacity: 1 },
+              '& tbody tr:hover .hover-actions, & tbody tr:focus-within .hover-actions': { opacity: 1 },
+              '& .hover-actions .MuiIconButton-root:focus-visible': { outline: `2px solid ${muiTheme.palette.primary.main}`, outlineOffset: 1 },
             })}>
               <TableHead>
                 <TableRow>
@@ -418,7 +439,7 @@ export default function DeploymentsEditor({
                       {row.server?.name ? (
                         <MLink
                           component={RouterLink}
-                          to={`/it/assets/${row.server.id || row.server_id}`}
+                          to={row.server.asset_reference ? `/it/assets/${row.server.asset_reference}/overview` : `/it/assets/${row.server.id || row.server_id}`}
                           underline="hover"
                           color="inherit"
                           onClick={(event: React.MouseEvent) => event.stopPropagation()}
@@ -429,7 +450,7 @@ export default function DeploymentsEditor({
                       ) : '—'}
                     </TableCell>
                     <TableCell>{labelFor('serverRole', row.role) || row.role || '—'}</TableCell>
-                    <TableCell>{row.hosting?.label || (row.hosting?.code ? labelFor('hostingType', row.hosting.code) : '—')}</TableCell>
+                    <TableCell>{(row.hosting?.code ? labelFor('hostingType', row.hosting.code) : '') || row.hosting?.label || '—'}</TableCell>
                     <TableCell>{formatDate(row.since_date, locale)}</TableCell>
                     {!readOnly && (
                       <TableCell align="right">
@@ -475,14 +496,14 @@ export default function DeploymentsEditor({
       <KanapDialog
         open={deploymentDialogOpen}
         title={deploymentDraft.id ? t('workspace.application.deployments.editDeployment') : t('workspace.application.deployments.newDeployment')}
-        onClose={() => setDeploymentDialogOpen(false)}
+        onClose={() => { setDeploymentDialogOpen(false); setDialogError(null); }}
         onSave={saveDeployment}
         saveLabel={t('common:buttons.save')}
         saveDisabled={duplicateEnvironment || !deploymentDraft.environment || !deploymentDraft.lifecycle}
         saveLoading={saving}
       >
         <Stack spacing={1.25}>
-          {error && <Alert severity="error">{error}</Alert>}
+          {dialogError && <Alert severity="error">{dialogError}</Alert>}
           <PropertyRow label={t('common.environment')} required>
             <Select
               value={deploymentDraft.environment}
@@ -518,6 +539,9 @@ export default function DeploymentsEditor({
               fullWidth
               sx={drawerFieldValueSx}
             />
+            <Typography sx={(muiTheme) => ({ mt: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
+              {t('workspace.application.deployments.baseUrlHelp')}
+            </Typography>
           </PropertyRow>
           <PropertyRow
             label={t('components.instances.ssoEnabled')}
@@ -550,7 +574,7 @@ export default function DeploymentsEditor({
       <KanapDialog
         open={assignmentDialogOpen}
         title={assignmentDraft?.assignmentId ? t('workspace.application.deployments.editServerAssignment') : t('workspace.application.deployments.newServerAssignment')}
-        onClose={() => setAssignmentDialogOpen(false)}
+        onClose={() => { setAssignmentDialogOpen(false); setDialogError(null); }}
         onSave={saveAssignment}
         saveLabel={t('common:buttons.save')}
         saveDisabled={!assignmentDraft?.server_id || !assignmentDraft?.role}
@@ -558,6 +582,7 @@ export default function DeploymentsEditor({
       >
         {assignmentDraft && (
           <Stack spacing={1.25}>
+            {dialogError && <Alert severity="error">{dialogError}</Alert>}
             <PropertyRow label={t('common:selects.server')} required>
               <ServerSelect
                 value={assignmentDraft.server_id}

@@ -1753,7 +1753,8 @@
         "routed": "Weitergeleitet ({{count}})",
         "viaNames": "über {{names}}",
         "unbound": "Ohne Umgebung",
-        "unboundHint": "Noch in keiner Umgebung verbunden. Fügen Sie auf der Seite der Schnittstelle eine Bindung hinzu."
+        "unboundHint": "Noch in keiner Umgebung verbunden. Fügen Sie auf der Seite der Schnittstelle eine Bindung hinzu.",
+        "loadFailed": "Die Schnittstellen konnten nicht geladen werden."
       },
       "deployments": {
         "addDeployment": "Bereitstellung hinzufügen",
@@ -1765,23 +1766,24 @@
         "deleteAria": "Bereitstellung {{env}} löschen",
         "deleteConfirm": "Bereitstellung {{env}} löschen?",
         "since": "Seit",
-        "newServerAssignment": "Neue Serverzuordnung",
-        "editServerAssignment": "Serverzuordnung bearbeiten",
-        "removeServerAssignment": "Serverzuordnung entfernen",
-        "editAssignmentAria": "Zuordnung von {{name}} bearbeiten",
-        "removeAssignmentAria": "Zuordnung von {{name}} entfernen",
-        "removeAssignmentConfirm": "Diese Serverzuordnung entfernen?",
+        "newServerAssignment": "Server hinzufügen",
+        "editServerAssignment": "Server bearbeiten",
+        "removeServerAssignment": "Server entfernen",
+        "editAssignmentAria": "{{name}} bearbeiten",
+        "removeAssignmentAria": "{{name}} entfernen",
+        "removeAssignmentConfirm": "Diesen Server aus der Bereitstellung entfernen?",
         "created": "Bereitstellung erstellt",
         "updated": "Bereitstellung aktualisiert",
         "removed": "Bereitstellung entfernt",
-        "assignmentUpdated": "Serverzuordnung aktualisiert",
-        "assignmentRemoved": "Serverzuordnung entfernt",
-        "loadAssignmentsFailed": "Fehler beim Laden der Serverzuordnungen",
+        "assignmentUpdated": "Server aktualisiert",
+        "assignmentRemoved": "Server entfernt",
+        "loadAssignmentsFailed": "Fehler beim Laden der Server",
         "updateFailed": "Fehler beim Aktualisieren der Bereitstellung",
         "saveFailed": "Fehler beim Speichern der Bereitstellung",
         "removeFailed": "Fehler beim Entfernen der Bereitstellung",
-        "saveAssignmentFailed": "Fehler beim Speichern der Serverzuordnung",
-        "removeAssignmentFailed": "Fehler beim Entfernen der Serverzuordnung"
+        "saveAssignmentFailed": "Fehler beim Speichern des Servers",
+        "removeAssignmentFailed": "Fehler beim Entfernen des Servers",
+        "baseUrlHelp": "Die Adresse, unter der diese Bereitstellung erreichbar ist, zum Beispiel https://app.example.com."
       },
       "relations": {
         "noChildApps": "Noch keine untergeordneten Anwendungen verknüpft.",
@@ -1790,7 +1792,7 @@
         "deleteUrl": "URL löschen",
         "uploadingFiles_one": "{{count}} Datei wird hochgeladen…",
         "uploadingFiles_other": "{{count}} Dateien werden hochgeladen…",
-        "deleteAttachment": "Anhang „{{name}}“ löschen?",
+        "deleteAttachment": "Datei „{{name}}“ löschen?",
         "sections": {
           "budgetLines": "Budgetzeilen",
           "contracts": "Verträge",
@@ -1802,7 +1804,7 @@
           "applications": "Anwendungen",
           "assets": "Assets",
           "processes": "Geschäftsprozesse",
-          "related": "Verwandt"
+          "related": "Vorschläge"
         },
         "empty": {
           "budgetLines": "Keine Budgetzeile verknüpft.",
@@ -1904,6 +1906,14 @@
           "action": "Auf einem Server erfassen",
           "actionNamed": "{{name}} auf einem Server erfassen",
           "changeVersion": "Version von {{name}} ändern"
+        },
+        "loadFailed": "Die Beziehungen konnten nicht geladen werden.",
+        "feedback": {
+          "linked": "{{name}} verknüpft.",
+          "unlinked": "{{name}} getrennt.",
+          "linkAdded": "Link hinzugefügt.",
+          "linkUpdated": "Link aktualisiert.",
+          "linkRemoved": "Link entfernt."
         }
       },
       "untitled": "Unbenannte Anwendung",
@@ -3103,7 +3113,7 @@
       "addAssignment": "Zuordnung hinzufügen",
       "noServersAssigned": "Keine Server zugeordnet.",
       "assignmentUpdated": "Zuordnung aktualisiert",
-      "serverAssigned": "Server zugeordnet",
+      "serverAssigned": "Server hinzugefügt",
       "assignmentRemoved": "Zuordnung entfernt",
       "addFirstInstance": "Fügen Sie zuerst eine Instanz hinzu, um Serverzuordnungen zu verwalten.",
       "addServerTo": "Server zu {{env}} hinzufügen",
