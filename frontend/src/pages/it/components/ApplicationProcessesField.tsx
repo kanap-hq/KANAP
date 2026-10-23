@@ -51,8 +51,12 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
 
   const failed = (e: unknown) => setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
 
+  // One link at a time. The field stays enabled meanwhile: an Autocomplete disabled while it has
+  // the focus closes its list during its own render, which updates this component mid-render.
+  const savingRef = React.useRef(false);
   const add = async (option: ProcessOption | null) => {
-    if (!option) return;
+    if (!option || savingRef.current) return;
+    savingRef.current = true;
     setError(null);
     setSaving(true);
     try {
@@ -60,6 +64,7 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
     } catch (e) {
       failed(e);
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
     await queryClient.invalidateQueries({ queryKey: key });
@@ -141,7 +146,6 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
                 }}
               />
             )}
-            disabled={saving}
             ListboxProps={{ sx: drawerAutocompleteListboxSx }}
             size="small"
           />

@@ -92,6 +92,22 @@ describe('ApplicationProcessesField', () => {
     await waitFor(() => expect(onChange).toHaveBeenCalled());
   });
 
+  it('keeps the field enabled and focused while a process is saved', async () => {
+    let resolve: (value: unknown) => void = () => undefined;
+    mocked.post.mockImplementation(() => new Promise((done) => { resolve = done; }) as never);
+    renderField(PROCESSES);
+    await screen.findByText('Order to cash');
+    const input = screen.getByRole('combobox', { name: 'workspace.application.ownership.businessProcesses' }) as HTMLInputElement;
+    input.focus();
+    fireEvent.mouseDown(input);
+    fireEvent.keyDown(input, { key: 'ArrowDown' });
+    fireEvent.click(await screen.findByRole('option', { name: 'Procure to pay' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+    expect(input.disabled).toBe(false);
+    expect(document.activeElement).toBe(input);
+    resolve({ data: { ok: true } });
+  });
+
   it('removes a process at once from its hover action', async () => {
     mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
     const { onChange } = renderField(PROCESSES);
