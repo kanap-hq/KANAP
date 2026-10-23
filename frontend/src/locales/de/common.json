@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Vollständig ersetzen",
-        "description": "Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Ein Pflichtfeld kann nicht geleert werden."
+        "description": "Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: Die Prüfung zeigt sie an."
       }
     },
     "exportRows": {

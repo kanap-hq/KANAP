@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Reemplazo completo",
-        "description": "Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Un campo obligatorio no se puede vaciar."
+        "description": "Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la verificación los señala."
       }
     },
     "exportRows": {

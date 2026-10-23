@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Remplacement complet",
-        "description": "Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Un champ obligatoire ne peut pas être vidé."
+        "description": "Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la vérification les signale."
       }
     },
     "exportRows": {

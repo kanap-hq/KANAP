@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Full replace",
-        "description": "Replace the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. A required field cannot be cleared."
+        "description": "Replace the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: the check points them out."
       }
     },
     "exportRows": {
