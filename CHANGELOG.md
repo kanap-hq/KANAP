@@ -17,6 +17,21 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.10.6 (2026-10-23)
+
+Security update of the base images: Node.js 24.22.1, nginx 1.31.8 and current CA certificates.
+
+### Changes
+- None.
+
+### Fixes
+- The images run Node.js 24.22.1 (October 2026 security release: Brotli decoder, TLS hostname and DNS fixes, and a root certificate store without the compromised eMudhra keys) and nginx 1.31.8 (five security fixes), on Alpine packages with OpenSSL 3.5.9 and the CA certificates of 2026-10-20. The `ip-address` library of the API moves to 10.7.4 (GHSA-rxp7-6hxx-x8q5). (#725)
+
+### On-premise
+- Action required: none. The usual upgrade rebuilds the images on the new base images.
+- Migrations: none
+- Recommended: none
+
 ## 26.10.5 (2026-10-23)
 
 A technology layer with its catalog and vulnerabilities, Relations tabs on one model for every record, and amounts in several currencies handled throughout the budget.
