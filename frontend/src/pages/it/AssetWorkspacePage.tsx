@@ -1901,110 +1901,113 @@ export default function AssetWorkspacePage() {
                 </Box>
               )}
               {!isCreate && (
-                <>
-                  <Box>
-                    {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
-                    {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
-                    {isCluster && (
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        {t('workspace.asset.assignments.clusterCannotHost')}
-                      </Alert>
-                    )}
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                      <SectionLabel>{t('workspace.asset.assignments.title')}</SectionLabel>
-                      <Button
-                        variant="action"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={openAssignDialog}
-                        disabled={serverRoleOptions.length === 0 || isCluster}
-                      >
-                        {t('workspace.asset.assignments.addAssignment')}
-                      </Button>
-                    </Stack>
-                    <Table size="small" sx={denseTableSx}>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
-                          <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {assignments.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6}>
-                              <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {assignments.map((assignment) => (
-                          <TableRow key={assignment.id}>
-                            <TableCell>
-                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}>
-                                {assignment.application.name}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{environmentLabel(assignment.environment)}</TableCell>
-                            <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
-                            <TableCell>{assignment.notes || '-'}</TableCell>
-                            <TableCell align="right">
-                              <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => void handleRemoveAssignment(assignment)}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-
-                  <Box>
-                    <EntityKnowledgePanel
-                      entityType="assets"
-                      entityId={id}
-                      canCreate={canCreateKnowledge}
-                      controlsMaxWidth={560}
-                    />
-                  </Box>
-                </>
+                <Box>
+                  <EntityKnowledgePanel
+                    entityType="assets"
+                    entityId={id}
+                    canCreate={canCreateKnowledge}
+                    controlsMaxWidth={560}
+                  />
+                </Box>
               )}
             </Stack>
           )}
           {validTab === 'operations' && (
-            <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
+            <Stack spacing={3.5}>
+              {!isCreate && (
+                <Box>
+                  {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
+                  {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
+                  {isCluster && (
+                    <Alert severity="info" sx={{ mb: 2 }}>
+                      {t('workspace.asset.assignments.clusterCannotHost')}
+                    </Alert>
+                  )}
+                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                    <SectionLabel>{t('workspace.asset.operations.hostedApplications')}</SectionLabel>
+                    <Button
+                      variant="action"
+                      size="small"
+                      startIcon={<AddIcon />}
+                      onClick={openAssignDialog}
+                      disabled={serverRoleOptions.length === 0 || isCluster}
+                    >
+                      {t('workspace.asset.assignments.addAssignment')}
+                    </Button>
+                  </Stack>
+                  <Table size="small" sx={denseTableSx}>
+                    <TableHead>
+                      <TableRow>
+                        <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
+                        <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
+                        <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
+                        <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
+                        <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
+                        <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
+                      </TableRow>
+                    </TableHead>
+                    <TableBody>
+                      {assignments.length === 0 && (
+                        <TableRow>
+                          <TableCell colSpan={6}>
+                            <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {assignments.map((assignment) => (
+                        <TableRow key={assignment.id}>
+                          <TableCell>
+                            <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}>
+                              {assignment.application.name}
+                            </Button>
+                          </TableCell>
+                          <TableCell>{environmentLabel(assignment.environment)}</TableCell>
+                          <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
+                          <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
+                          <TableCell>{assignment.notes || '-'}</TableCell>
+                          <TableCell align="right">
+                            <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}
+                                >
+                                  <EditIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                            <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
+                              <span>
+                                <IconButton
+                                  size="small"
+                                  color="error"
+                                  onClick={() => void handleRemoveAssignment(assignment)}
+                                >
+                                  <DeleteIcon fontSize="small" />
+                                </IconButton>
+                              </span>
+                            </Tooltip>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </Box>
+              )}
               {!isCreate && id && (
-                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+                <Box sx={{ maxWidth: 900 }}>
+                  <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+                </Box>
               )}
               {reachVulnerabilities && id && (
-                <ReachVulnerabilitiesSection
-                  data={reachVulnerabilities}
-                  kind="asset"
-                  subjectReference={data?.asset_reference || id}
-                  heading={<SectionLabel>{t('pages.vulnerabilities.section.title')}</SectionLabel>}
-                />
+                <Box sx={{ maxWidth: 900 }}>
+                  <ReachVulnerabilitiesSection
+                    data={reachVulnerabilities}
+                    kind="asset"
+                    subjectReference={data?.asset_reference || id}
+                    heading={<SectionLabel>{t('pages.vulnerabilities.section.title')}</SectionLabel>}
+                  />
+                </Box>
               )}
             </Stack>
           )}
