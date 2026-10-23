@@ -72,6 +72,11 @@ async function testRoleMissing(admin: PgClient): Promise<void> {
 async function testRoleInherited(admin: PgClient): Promise<void> {
   const { rows } = await admin.query(`SELECT current_setting('server_version_num')::int >= 160000 AS pg16`);
   await inRolledBack(admin, async () => {
+    // The person first: once the application role inherits the limited role, the data-access
+    // policies apply to it without context and refuse its writes (the search entries of the seed).
+    await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    const person = await limitedPerson(admin);
+    await admin.query('RESET ROLE');
     if (rows[0].pg16) {
       await admin.query(`GRANT ${LIMITED_ROLE} TO "${APP_ROLE}" WITH INHERIT TRUE`);
     } else {
@@ -80,7 +85,6 @@ async function testRoleInherited(admin: PgClient): Promise<void> {
     await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
     const { rows: inherit } = await admin.query(`SELECT pg_has_role(current_user, $1, 'USAGE') AS inherits`, [LIMITED_ROLE]);
     assert.equal(inherit[0].inherits, true, 'the scenario makes the application role inherit');
-    const person = await limitedPerson(admin);
     assert.equal(await sqlState(() => admin.query(`SELECT data_access_apply($1)`, [person])), 'KDA01', 'role inherited: KDA01');
   });
   console.log(`  role inherited (${rows[0].pg16 ? 'membership INHERIT TRUE' : 'ALTER ROLE INHERIT'}): limited person refused: OK`);
