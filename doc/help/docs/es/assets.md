@@ -90,15 +90,17 @@ Los activos pueden organizarse en clústeres:
 - **Activo regular**: Una instancia individual de infraestructura
 - **Clúster**: Un grupo de activos que actúan como una única unidad lógica
 
-Al editar un activo, active el conmutador **Clúster** en la pestaña Técnico para marcarlo como clúster. Los activos clúster pueden ser puntos finales en conexiones, pero las asignaciones de aplicaciones deben hacerse sobre los hosts miembros, no sobre el clúster en sí.
+Para marcar un activo como clúster, active el conmutador **Clúster** en su panel de propiedades. Los activos clúster pueden ser puntos finales en conexiones. Las aplicaciones se asignan a los hosts miembros.
 
-Los miembros del clúster se gestionan desde la pestaña **Técnico** del espacio de trabajo del clúster mediante **Editar miembros**.
+Los miembros del clúster se gestionan desde la pestaña **Dependencias** del espacio de trabajo del clúster mediante **Editar miembros**. Consulte [Dependencias](#dependencies).
 
 ---
 
 ## El espacio de trabajo de Activos
 
 Haga clic en cualquier fila para abrir el espacio de trabajo. El espacio de trabajo tiene un **encabezado** con metadatos rápidos, un **panel de propiedades** a la derecha (la tarjeta de identidad del activo, siempre visible) y un **área de contenido** en el centro que cambia con cada pestaña.
+
+Las pestañas son **Vista general**, **Operación**, **Red**, **Hardware** (solo para tipos de activos físicos), **Dependencias** y **Relaciones**. Al crear un activo, **Vista general** y **Red** están abiertas. Las demás pestañas se abren en cuanto hace clic en **Crear**.
 
 ### Encabezado
 
@@ -113,76 +115,67 @@ El encabezado muestra:
 
 ### Panel de propiedades (panel derecho)
 
-El panel muestra la tarjeta de identidad del activo en cada pestaña. Las ediciones se guardan automáticamente.
+El panel muestra la tarjeta de identidad del activo en cada pestaña. Las ediciones se guardan automáticamente. Los campos se reparten en tres grupos.
 
-**Identificación y ubicación**:
+**Tipo y zona**:
 - **Tipo de activo** (obligatorio)
-- **Ubicación** (obligatorio)
-- **Sublocalización** (cuando la ubicación tiene sublocalizaciones definidas)
-- **Tipo de alojamiento**, **Proveedor de nube / Empresa operadora**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación
-
-**Estado**:
+- **Clúster**: actívelo para marcar el activo como clúster. El cambio se guarda de inmediato. Un clúster no tiene sistema operativo propio, así que activar el conmutador quita el sistema operativo del activo. Consulte [Clústeres](#clusteres)
 - **Entorno**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Zona de administración**: La zona de su modelo de administración a la que pertenece el activo, por ejemplo el Tier 0 para un controlador de dominio y el hipervisor que lo ejecuta. Elija entre las zonas configuradas en **Panorama IT > Configuración**. El activo aparece entonces en esa zona en la página [Zonas de administración](administration-view.md)
+
+**Ubicación**:
+- **Ubicación** (obligatorio)
+- **Sub-ubicación** (cuando la ubicación tiene sub-ubicaciones definidas)
+- **Tipo de alojamiento**, **Empresa operadora** o **Proveedor cloud**, **País**, **Ciudad**: de solo lectura, derivados de la ubicación
+
+**Ciclo de vida**:
 - **Ciclo de vida**: Activo, Obsoleto, Retirado, etc. (configurable en Configuración)
-- **Puesta en marcha**: Cuándo entró el activo en producción
-- **Fin de vida**: Fecha planificada o efectiva de retiro
+- **Fecha de puesta en marcha**: Cuándo entró el activo en producción
+- **Fecha de fin de vida**: Fecha planificada o efectiva de retiro
 
 ---
 
-### Visión general
+### Vista general
 
-La pestaña Visión general es la página de inicio del activo.
+La pestaña Vista general es la página de inicio del activo.
+
+**Netbox**: en un activo vinculado a Netbox, una línea en la parte superior indica cuándo se sincronizó por última vez, con **Abrir en Netbox**. También indica cuando el objeto ya no está en Netbox, cuando su estado en Netbox requiere atención y cuando el activo está **Gestionado por Netbox**. Consulte [Sincronización con Netbox](netbox.md).
+
+**Datos básicos** (al crear un activo): **Nombre**, **Tipo de activo**, **Ubicación** y **Entorno**.
 
 **Descripción**: Una descripción enriquecida del activo. Se guarda automáticamente mientras edita.
 
-**Identidad**:
-- **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
-- **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
-- **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
-- **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
+**Soporte**: el soporte del proveedor del activo, para cualquier tipo de activo. Aparece una vez creado el activo y se guarda solo mientras escribe.
 
-**Asignaciones** (no se muestra para activos clúster): Lista las aplicaciones que se ejecutan en este activo. Cada fila muestra:
+- **Proveedor**: Seleccionar del directorio de proveedores
+- **Contrato de soporte**: Vincular a un registro de contrato
+- **Nivel de soporte**: Texto libre (p. ej., Oro, Plata, 24x7)
+- **Vencimiento del soporte**: Fecha de expiración
+- **Notas**
+
+**Contactos de soporte**: Una tabla donde puede añadir contactos del directorio de contactos, cada uno con una etiqueta de rol de texto libre. La tabla muestra automáticamente el correo, teléfono y móvil de cada contacto.
+
+**Conocimiento**: Artículos de conocimiento vinculados a este activo. Con `knowledge:member` puede crear nuevos artículos directamente desde esta sección. Aparece una vez creado el activo.
+
+---
+
+### Operación { #operations }
+
+La pestaña Operación muestra lo que se ejecuta en el activo: las aplicaciones que aloja, las tecnologías que lleva y sus vulnerabilidades. Se abre una vez creado el activo.
+
+**Aplicaciones alojadas**: las aplicaciones que se ejecutan en este activo. Cada fila muestra:
 
 | Columna | Qué muestra |
 |---------|-------------|
-| **Aplicación** | Nombre de la aplicación (clicable: salta a los Despliegues de la aplicación) |
+| **Aplicación** | Nombre de la aplicación. Haga clic en él para abrir la aplicación en su pestaña **Despliegues** |
 | **Entorno** | El entorno de despliegue al que pertenece la asignación |
 | **Rol** | Rol del servidor (Web, Base de datos, Aplicación, etc.) |
 | **Desde** | Fecha en que se asignó el servidor |
 | **Notas** | Notas de texto libre |
 
-Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. Use los iconos de la fila para editar o eliminar.
+Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación.
 
-Si este activo es un clúster, un aviso en línea reemplaza la tabla de asignaciones y le pide que asigne en su lugar los hosts miembros.
-
-**Conexiones**: Una vista de solo lectura de todas las conexiones que involucran a este activo. Cada fila muestra el ID y nombre de la conexión (clicable: abre el espacio de trabajo de Conexión), topología (Servidor a Servidor o Multi-servidor), protocolos, etiquetas de los puntos finales de origen y destino, y estado del ciclo de vida. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
-
-**Conocimiento**: Artículos de conocimiento vinculados a este activo. Con `knowledge:member` puede crear nuevos artículos directamente desde esta sección.
-
----
-
-### Técnico { #technical }
-
-La pestaña Técnico reúne, en este orden, el clúster, las direcciones IP, las tecnologías que lleva el servidor y sus vulnerabilidades.
-
-**Gestión de clúster**:
-- Conmutador **Clúster**: marcar este activo como clúster.
-- Si el activo **es un clúster**: una sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en **Editar miembros** para añadir o quitar miembros mediante un diálogo de búsqueda.
-- Si el activo **no es un clúster**: una sección **Pertenencia a clúster** muestra los clústeres a los que pertenece este activo (si los hay).
-
-**Direcciones IP**:
-
-Los activos admiten múltiples direcciones IP, cada una con su propia configuración de red:
-
-- Haga clic en **Añadir dirección IP** para añadir una nueva entrada.
-- **Tipo**: El propósito de la dirección IP (Host, IPMI, Gestión, iSCSI o tipos personalizados de Configuración)
-- **Dirección IP**: La dirección en sí
-- **Subred**: Subred de red de la lista configurada (filtrada por la ubicación del activo)
-- **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
-- **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
-
-Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
+En un clúster, un aviso encima de la tabla le pide que asigne en su lugar los hosts miembros, y **Añadir asignación** no está disponible. Tampoco lo está mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**.
 
 **Tecnologías**: lo que lleva el servidor, por ejemplo Windows Server, SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
 
@@ -202,7 +195,7 @@ Un servidor tiene un sistema operativo: una tecnología de la familia **Sistema 
 - **Añádalo** como cualquier tecnología. Si el servidor aún no tiene sistema operativo, la primera tecnología de esa familia que añada pasa a serlo.
 - **Quítelo** con su cruz. Si queda otra tecnología de la familia en el servidor, esa pasa a ser el sistema operativo.
 - **Cambie la versión** haciendo clic en ella, como en cualquier tecnología.
-- Un **clúster** no tiene sistema operativo propio: cada miembro tiene el suyo.
+- Un **clúster** no tiene sistema operativo propio: cada miembro tiene el suyo. Activar el conmutador **Clúster** de un activo quita su sistema operativo.
 
 Para que VMware ESXi o FortiOS sea el sistema operativo de un host, ponga esa tecnología en la familia **Sistema operativo** (su campo **Familia**, en la tecnología).
 
@@ -224,9 +217,38 @@ Cuando se siguen las vulnerabilidades, la última sección de la pestaña lista 
 
 ---
 
+### Red { #network }
+
+La pestaña Red reúne la identidad de red del activo, sus direcciones IP y sus conexiones. Está abierta al crear un activo. Si el nombre de host no es válido al hacer clic en **Crear**, la pestaña se abre sobre el error.
+
+En un activo gestionado por Netbox, una línea en la parte superior indica que Netbox rellena los campos que proporciona y que los demás quedan a su cargo.
+
+**Identidad**:
+- **Nombre de host**: El nombre de host de red del activo. Se rellena previamente desde el nombre del activo en la creación; puede sobrescribirlo en cualquier momento. Obligatorio cuando se selecciona un dominio. Admite letras, dígitos, guiones y puntos, y cada parte entre puntos puede tener 63 caracteres como máximo, de modo que un nombre como `DL3.ROBOT-15MS.IE2000` es válido tal cual.
+- **Dominio**: El dominio Active Directory o DNS al que pertenece el activo. Elija entre los dominios configurados en **Panorama IT > Configuración**. Las opciones del sistema incluyen "Workgroup" (independiente) y "N/A" (no aplicable).
+- **FQDN**: Nombre de Dominio Completamente Cualificado, calculado automáticamente desde el nombre de host y el sufijo DNS del dominio. Solo lectura.
+- **Alias**: Nombres DNS o alias adicionales para este activo. Escriba y pulse Enter para añadir.
+
+**Direcciones IP**:
+
+Los activos admiten múltiples direcciones IP, cada una con su propia configuración de red:
+
+- Haga clic en **Añadir dirección IP** para añadir una nueva entrada.
+- **Tipo**: El propósito de la dirección IP (Host, IPMI, Gestión, iSCSI o tipos personalizados de Configuración)
+- **Dirección IP**: La dirección en sí
+- **Subred**: Subred de red de la lista configurada (filtrada por la ubicación del activo)
+- **Zona de red**: Derivada automáticamente de la subred seleccionada (solo lectura)
+- **VLAN**: Derivada automáticamente de la subred seleccionada (solo lectura)
+
+Esto le permite documentar múltiples interfaces de red por activo, por ejemplo, un servidor físico con tanto una IP de host como una dirección de gestión IPMI en subredes diferentes.
+
+**Conexiones**: Una vista de solo lectura de todas las conexiones que involucran a este activo, una vez creado. Cada fila muestra el ID y nombre de la conexión (clicable: abre el espacio de trabajo de Conexión), topología (Servidor a Servidor o Multi-servidor), protocolos, etiquetas de los puntos finales de origen y destino, y estado del ciclo de vida. Para crear o editar una conexión, navegue a **Panorama IT > Conexiones**.
+
+---
+
 ### Hardware
 
-*Solo visible para tipos de activos físicos.*
+*Solo visible para tipos de activos físicos. Se abre una vez creado el activo.*
 
 Hace seguimiento de los detalles físicos del hardware. Se guarda automáticamente mientras escribe.
 
@@ -240,25 +262,9 @@ Hace seguimiento de los detalles físicos del hardware. Se guarda automáticamen
 
 ---
 
-### Soporte
+### Dependencias { #dependencies }
 
-*Solo visible para tipos de activos físicos.*
-
-Hace seguimiento de información de soporte y contactos del proveedor.
-
-- **Proveedor**: Seleccionar del directorio de proveedores
-- **Contrato de soporte**: Vincular a un registro de contrato
-- **Nivel de soporte**: Texto libre (p. ej., Oro, Plata, 24x7)
-- **Caducidad del soporte**: Fecha de expiración
-- **Notas**
-
-**Contactos de soporte**: Una tabla donde puede añadir contactos del directorio de contactos, cada uno con una etiqueta de rol de texto libre. La tabla muestra automáticamente el correo, teléfono y móvil de cada contacto.
-
----
-
-### Relaciones
-
-La pestaña Relaciones muestra lo que se detiene con este activo y después con qué está vinculado: otros activos, líneas presupuestarias, contratos, proyectos, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las tecnologías del activo están en la pestaña [Técnico](#technical). Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los registros vinculados que puede ver, así como los enlaces y archivos.
+La pestaña Dependencias muestra la posición del activo entre los demás activos: lo que se detiene con él, su clúster y sus relaciones con otros activos. Se abre una vez creado el activo. La insignia de la pestaña cuenta las relaciones entre activos, más los miembros de un clúster o los clústeres a los que pertenece el activo.
 
 **Si este servidor cae**: la pestaña empieza por lo que se detiene con este activo. Una línea de resumen cuenta las aplicaciones, activos, clústeres y procesos de negocio afectados, y después una tabla por tipo:
 
@@ -267,7 +273,12 @@ La pestaña Relaciones muestra lo que se detiene con este activo y después con 
 - **Clústeres**: los clústeres con un miembro caído. **Caído** cuando no queda ningún miembro en pie, si no **Degradado** con el número de miembros caídos. Las aplicaciones de un clúster caído caen con él.
 - **Procesos de negocio**: los procesos de las aplicaciones afectadas.
 
-Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza en cuanto añade o quita una relación entre activos, más abajo.
+Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla muestra sus 50 primeras filas y cuenta el resto. Las aplicaciones y los procesos requieren el derecho de leerlos. La sección se actualiza en cuanto añade o quita una relación entre activos, cambia los miembros de un clúster o activa o desactiva el conmutador **Clúster**.
+
+**Clúster**:
+
+- En un **clúster**, una nota recuerda que un clúster puede ser un punto final en conexiones y que las aplicaciones se asignan a sus hosts miembros. La sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en un nombre para abrir ese activo. Haga clic en **Editar miembros** para añadir o quitar miembros mediante un diálogo de búsqueda.
+- En **cualquier otro activo**, la sección **Pertenencia al clúster** muestra los clústeres a los que pertenece este activo, con su entorno y su estado. Haga clic en un nombre para abrir el clúster.
 
 **Relaciones entre activos**, una tabla por sentido:
 
@@ -278,7 +289,15 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 | **Depende de** | Los activos que este necesita para funcionar, por ejemplo un servidor de base de datos |
 | **Requerido por** | Los activos que necesitan este |
 
-Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el estado. Un activo retirado o desactivado sigue en la lista con el nombre atenuado.
+Cada tabla muestra la referencia (`AST-12`), el nombre, el tipo, el entorno y el estado. Un activo retirado o desactivado sigue en la lista con el nombre atenuado. Haga clic en una fila para abrir el activo.
+
+Con `infrastructure:member`, **Añadir**, a la derecha de una sección, abre una búsqueda de activo. Elija un resultado: la relación se guarda al instante. Para quitar una relación, pase el cursor sobre la fila y haga clic en la cruz al final. Los lectores ven las tablas en solo lectura.
+
+---
+
+### Relaciones
+
+La pestaña Relaciones muestra con qué está vinculado el activo: líneas presupuestarias, contratos, proyectos, tareas e incidentes, cada uno en su propia tabla, y después sus enlaces y archivos. Las relaciones entre activos están en la pestaña [Dependencias](#dependencies), y las tecnologías del activo en la pestaña [Operación](#operations). La pestaña se abre una vez creado el activo. Haga clic en una fila para abrir el registro. La insignia de la pestaña cuenta los registros vinculados que puede ver, así como los enlaces y archivos.
 
 **Registros vinculados**, una tabla cada uno:
 
@@ -440,7 +459,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Use clústeres**: Agrupe activos relacionados (p. ej., clúster web, clúster de bases de datos) para simplificar la gestión. Asigne aplicaciones a los hosts miembros, no al clúster en sí.
 - **Haga seguimiento del ciclo de vida**: Marque los activos obsoletos y retirados para mantener los conteos de inventario precisos.
 - **Vincule a ubicaciones**: Asigne activos a ubicaciones para que el tipo de alojamiento, país y ciudad se rellenen automáticamente.
-- **Asigne a aplicaciones**: Use la pestaña Visión general para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
+- **Asigne a aplicaciones**: Use la sección **Aplicaciones alojadas** de la pestaña Operación para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.
 - **Use la pestaña Relaciones**: Conecte activos a líneas presupuestarias, contratos y proyectos para visibilidad financiera.
 - **Vincule tareas aquí**: Añada una tarea en Relaciones > Tareas. El vínculo también aparece en la actividad de la tarea.
 - **Adjunte documentación**: Suba archivos de configuración, diagramas de arquitectura o documentos del proveedor directamente a la pestaña Relaciones.

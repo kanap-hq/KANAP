@@ -181,7 +181,7 @@ Remplissez les champs principaux :
 | **Environnement** | L'environnement qu'il sert | `Prod` |
 | **Description** | Tout contexte supplémentaire |  |
 
-Le panneau **Propriétés** à droite contient le reste : **Sous-site**, **Cycle de vie**, **Mise en service** et **Fin de vie**. Une fois un site sélectionné, plusieurs **champs en lecture seule** sont dérivés automatiquement :
+Le panneau **Propriétés** à droite contient le reste : l'interrupteur **Cluster**, la **Zone d'administration**, le **Sous-site**, le **Cycle de vie**, la **Date de mise en service** et la **Date de fin de vie**. Une fois un site sélectionné, plusieurs **champs en lecture seule** sont dérivés automatiquement :
 
 - **Type d'hébergement** (sur site, cloud, colocation, etc.)
 - **Fournisseur cloud / Société exploitante** (ex. : AWS, Azure, ou la société qui exploite le site)
@@ -191,21 +191,25 @@ Le panneau **Propriétés** à droite contient le reste : **Sous-site**, **Cycle
 !!! info "Le site est la clé"
     Le site détermine automatiquement de nombreux attributs de votre actif. Les sites se gèrent dans **Cartographie SI > Sites** : configurez-les une fois et chaque actif qui leur est rattaché hérite du type d'hébergement, du fournisseur, du pays et de la ville. Vous n'avez pas à les saisir manuellement.
 
-Cliquez sur **Créer** pour déverrouiller l'espace de travail complet. Pour les types d'actifs physiques, des onglets supplémentaires **Matériel** et **Support** deviennent disponibles pour suivre les numéros de série, les détails du fabricant et les contrats de support fournisseur.
+### Onglet Réseau
 
-### Onglet Technique
-
-Allez dans l'onglet **Technique** pour ajouter :
+L'onglet **Réseau** est ouvert pendant la création de l'actif. Remplissez :
 
 | Section | Champs | Détails |
 |---------|--------|---------|
-| **Gestion du cluster** | Interrupteur Cluster | Activez-le si cet actif est un cluster, puis ajoutez ses serveurs membres |
 | **Identité** | Nom d'hôte, Domaine, FQDN, Alias | Le FQDN est calculé automatiquement à partir du nom d'hôte et du domaine |
-| **Technologies** | Système d'exploitation et autres technologies, avec leurs versions | Ajoutez Windows Server, Ubuntu ou une autre technologie de la famille **Système d'exploitation** : elle devient le système d'exploitation du serveur |
 | **Adresses IP** | Type, Adresse IP, Sous-réseau | La zone réseau et le VLAN sont dérivés du sous-réseau |
 
 !!! info "Plusieurs adresses IP"
     Un serveur peut avoir plusieurs adresses IP : ajoutez-en autant que nécessaire (ex. : interface de management, VLAN de production, réseau de sauvegarde). Chaque entrée peut avoir son propre type et sous-réseau, et la zone réseau et le VLAN sont dérivés automatiquement.
+
+Cliquez sur **Créer** pour déverrouiller l'espace de travail complet. L'onglet **Vue d'ensemble** gagne alors une section **Support** pour le contrat de support fournisseur et les contacts. Pour les types d'actifs physiques, un onglet **Matériel** suit les numéros de série et les détails du fabricant.
+
+### Onglet Exploitation
+
+Allez dans l'onglet **Exploitation** pour ajouter les **Technologies** que porte le serveur, avec leurs versions. Ajoutez Windows Server, Ubuntu ou une autre technologie de la famille **Système d'exploitation** : elle devient le système d'exploitation du serveur.
+
+Si cet actif est un cluster, activez l'interrupteur **Cluster** dans le panneau **Propriétés**, puis ajoutez ses serveurs membres avec **Modifier les membres** dans l'onglet **Dépendances**.
 
 ---
 
@@ -226,7 +230,7 @@ Il y a **deux façons** de créer cette affectation :
 ### Depuis le côté Actif
 
 1. Ouvrez votre actif
-2. Dans l'onglet **Vue d'ensemble**, repérez la section **Affectations**
+2. Dans l'onglet **Exploitation**, repérez la section **Applications hébergées**
 3. Cliquez sur **Ajouter une affectation**
 4. Remplissez les champs de l'affectation :
 
@@ -295,8 +299,8 @@ Puis utilisez la [Carte des interfaces](../interface-map.md) pour visualiser le 
 | Ajouter les infos de conformité | Ouvrir l'app > onglet Conformité |
 | Créer un serveur | Cartographie SI > Actifs > Ajouter un actif |
 | Lier un serveur à une app (depuis l'app) | Ouvrir l'app > onglet Déploiements > Ajouter un serveur |
-| Lier un serveur à une app (depuis l'actif) | Ouvrir l'actif > onglet Vue d'ensemble > Affectations > Ajouter une affectation |
-| Voir les connexions du serveur | Ouvrir l'actif > onglet Vue d'ensemble > Connexions |
+| Lier un serveur à une app (depuis l'actif) | Ouvrir l'actif > onglet Exploitation > Applications hébergées > Ajouter une affectation |
+| Voir les connexions du serveur | Ouvrir l'actif > onglet Réseau > Connexions |
 | Voir la carte des connexions | Cartographie SI > Carte des connexions |
 | Voir la carte des interfaces | Cartographie SI > Carte des interfaces |
 | Configurer les menus déroulants | Cartographie SI > Paramètres |

@@ -210,7 +210,7 @@ La pestaña Despliegues documenta dónde se ejecuta realmente la aplicación: un
 
 Haga clic en **Añadir servidor** en el encabezado del despliegue para vincular un activo. Los activos de tipo clúster están excluidos. Asigne en su lugar los hosts miembros del clúster.
 
-**Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Visión general del activo mostrará las mismas asignaciones de forma inversa.
+**Consejo**: Documente primero los servidores en **Panorama IT > Activos**, luego vincúlelos aquí. La pestaña Operación del activo muestra las mismas asignaciones de forma inversa, en **Aplicaciones alojadas**.
 
 ---
 

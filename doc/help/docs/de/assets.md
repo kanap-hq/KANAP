@@ -90,15 +90,17 @@ Assets können in Cluster organisiert werden:
 - **Reguläres Asset**: Eine einzelne Infrastruktur-Instanz
 - **Cluster**: Eine Gruppe von Assets, die als eine einzige logische Einheit fungiert
 
-Beim Bearbeiten eines Assets schalten Sie **Cluster** im Reiter Technisch um, um es als Cluster zu markieren. Cluster-Assets können Endpunkte in Verbindungen sein, aber Anwendungszuweisungen müssen auf den Member-Hosts erfolgen, nicht auf dem Cluster selbst.
+Um ein Asset als Cluster zu markieren, schalten Sie den Schalter **Cluster** in seiner Eigenschaftsleiste ein. Cluster-Assets können Endpunkte in Verbindungen sein. Anwendungen werden den Mitglieds-Hosts zugeordnet.
 
-Cluster-Mitglieder werden im Reiter **Technisch** des Cluster-Arbeitsbereichs über **Mitglieder bearbeiten** verwaltet.
+Cluster-Mitglieder werden im Reiter **Abhängigkeiten** des Cluster-Arbeitsbereichs über **Mitglieder bearbeiten** verwaltet. Siehe [Abhängigkeiten](#dependencies).
 
 ---
 
 ## Der Assets-Arbeitsbereich
 
 Klicken Sie auf eine Zeile, um den Arbeitsbereich zu öffnen. Der Arbeitsbereich hat eine **Kopfzeile** mit schnellen Metadaten, eine **Eigenschaftsleiste** auf der rechten Seite (die Identitätskarte des Assets, immer sichtbar) und einen **Inhaltsbereich** in der Mitte, der mit jedem Reiter wechselt.
+
+Die Reiter sind **Übersicht**, **Betrieb**, **Netzwerk**, **Hardware** (nur physische Asset-Typen), **Abhängigkeiten** und **Beziehungen**. Wenn Sie ein Asset erstellen, sind **Übersicht** und **Netzwerk** geöffnet. Die anderen Reiter öffnen sich, sobald Sie auf **Erstellen** klicken.
 
 ### Kopfzeile
 
@@ -113,20 +115,23 @@ Die Kopfzeile zeigt:
 
 ### Eigenschaftsleiste (rechtes Panel)
 
-Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert.
+Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen werden automatisch gespeichert. Die Felder bilden drei Gruppen.
 
-**Identifizierung & Standort**:
+**Typ und Zone**:
 - **Asset-Typ** (erforderlich)
-- **Standort** (erforderlich)
-- **Unter-Standort** (wenn der Standort definierte Unter-Standorte hat)
-- **Hosting-Typ**, **Cloud-Anbieter / Betreiber-Unternehmen**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet
-
-**Status**:
+- **Cluster**: Schalten Sie ihn ein, um das Asset als Cluster zu markieren. Die Änderung wird sofort gespeichert. Ein Cluster hat kein eigenes Betriebssystem, daher entfernt das Einschalten das Betriebssystem des Assets. Siehe [Cluster](#cluster)
 - **Umgebung**: Prod, Pre-prod, QA, Test, Dev, Sandbox
 - **Administrationszone**: Die Zone Ihres Administrationsmodells, zu der das Asset gehört, zum Beispiel Tier 0 für einen Domänencontroller und den Hypervisor, auf dem er läuft. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Zonen. Das Asset erscheint dann in dieser Zone auf der Seite [Administrationszonen](administration-view.md)
+
+**Standort**:
+- **Standort** (erforderlich)
+- **Unterstandort** (wenn der Standort definierte Unterstandorte hat)
+- **Hosting-Typ**, **Betreiberunternehmen** oder **Cloud-Anbieter**, **Land**, **Stadt**: schreibgeschützt, vom Standort abgeleitet
+
+**Lebenszyklus**:
 - **Lebenszyklus**: Aktiv, Veraltet, Außer Betrieb usw. (konfigurierbar in den Einstellungen)
-- **Go-Live**: Wann das Asset in Produktion ging
-- **End-of-Life**: Geplantes oder tatsächliches Stilllegungsdatum
+- **Inbetriebnahmedatum**: Wann das Asset in Produktion ging
+- **Datum Lebensende**: Geplantes oder tatsächliches Stilllegungsdatum
 
 ---
 
@@ -134,55 +139,43 @@ Die Leiste zeigt die Identitätskarte des Assets in jedem Reiter. Bearbeitungen 
 
 Der Reiter Übersicht ist die Startseite des Assets.
 
+**Netbox**: Bei einem mit Netbox verknüpften Asset zeigt eine Zeile oben, wann es zuletzt synchronisiert wurde, mit **In Netbox öffnen**. Sie meldet auch, wenn das Objekt nicht mehr in Netbox ist, wenn sein Netbox-Status Aufmerksamkeit verlangt und wenn das Asset den Vermerk **Wird von Netbox verwaltet** trägt. Siehe [Netbox-Synchronisierung](netbox.md).
+
+**Grunddaten** (wenn Sie ein Asset erstellen): **Name**, **Asset-Typ**, **Standort** und **Umgebung**.
+
 **Beschreibung**: Eine Rich-Text-Beschreibung des Assets. Speichert automatisch beim Bearbeiten.
 
-**Identität**:
-- **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
-- **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup" (eigenständig) und „N/A" (nicht zutreffend).
-- **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
-- **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
+**Support**: der Lieferantensupport des Assets, für jeden Asset-Typ. Er erscheint, sobald das Asset erstellt ist, und speichert sich beim Tippen von selbst.
 
-**Zuweisungen** (nicht für Cluster-Assets angezeigt): Listet die Anwendungen auf, die auf diesem Asset laufen. Jede Zeile zeigt:
+- **Lieferant**: Aus dem Lieferantenverzeichnis auswählen
+- **Support-Vertrag**: Verknüpfung zu einem Vertragsdatensatz
+- **Support-Stufe**: Freitext (z. B. Gold, Silber, 24x7)
+- **Ablauf des Supports**: Ablaufdatum
+- **Notizen**
 
-| Spalte | Was sie zeigt |
-|--------|---------------|
-| **Anwendung** | Anwendungsname (anklickbar: springt zu den Bereitstellungen der Anwendung) |
-| **Umgebung** | Die Bereitstellungsumgebung, zu der die Zuweisung gehört |
-| **Rolle** | Server-Rolle (Web, Datenbank, Anwendung usw.) |
-| **Seit** | Datum, an dem der Server zugewiesen wurde |
-| **Notizen** | Freitext-Notizen |
+**Support-Kontakte**: Eine Tabelle, in der Sie Kontakte aus dem Kontaktverzeichnis hinzufügen können, jeweils mit einer Freitext-Rollenbezeichnung. Die Tabelle zeigt automatisch die E-Mail, das Telefon und das Mobil jedes Kontakts an.
 
-Klicken Sie auf **Zuweisung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung anzuhängen. Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optionales Datum / Notizen. Verwenden Sie die Zeilensymbole zum Bearbeiten oder Entfernen.
-
-Wenn dieses Asset ein Cluster ist, ersetzt ein Inline-Hinweis die Zuweisungstabelle und fordert Sie auf, stattdessen Member-Hosts zuzuweisen.
-
-**Verbindungen**: Eine schreibgeschützte Ansicht aller Verbindungen, die dieses Asset betreffen. Jede Zeile zeigt die Verbindungs-ID und den Namen (anklickbar: öffnet den Verbindungs-Arbeitsbereich), die Topologie (Server zu Server oder Multi-Server), Protokolle, Quell- und Zielendpunkt-Bezeichnungen sowie den Lebenszyklus-Status. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
-
-**Wissensdatenbank**: Verknüpfte Wissensartikel für dieses Asset. Mit `knowledge:member` können Sie neue Artikel direkt aus diesem Bereich erstellen.
+**Wissensdatenbank**: Verknüpfte Wissensartikel für dieses Asset. Mit `knowledge:member` können Sie neue Artikel direkt aus diesem Bereich erstellen. Der Bereich erscheint, sobald das Asset erstellt ist.
 
 ---
 
-### Technisch { #technical }
+### Betrieb { #operations }
 
-Der Reiter Technisch enthält in dieser Reihenfolge den Cluster, die IP-Adressen, die vom Server getragenen Technologien und ihre Schwachstellen.
+Der Reiter Betrieb zeigt, was auf dem Asset läuft: die Anwendungen, die es hostet, die Technologien, die es trägt, und ihre Schwachstellen. Er öffnet sich, sobald das Asset erstellt ist.
 
-**Cluster-Verwaltung**:
-- **Cluster**-Schalter: dieses Asset als Cluster markieren.
-- Wenn das Asset **ein Cluster ist**: Ein Bereich **Mitglieder** listet die Member-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf **Mitglieder bearbeiten**, um Mitglieder über einen Suchdialog hinzuzufügen oder zu entfernen.
-- Wenn das Asset **kein Cluster ist**: Ein Bereich **Cluster-Mitgliedschaft** zeigt die Cluster, zu denen dieses Asset gehört (falls vorhanden).
+**Gehostete Anwendungen**: die Anwendungen, die auf diesem Asset laufen. Jede Zeile zeigt:
 
-**IP-Adressen**:
+| Spalte | Was sie zeigt |
+|--------|---------------|
+| **Anwendung** | Anwendungsname. Klicken Sie darauf, um die Anwendung auf ihrem Reiter **Bereitstellungen** zu öffnen |
+| **Umgebung** | Die Bereitstellungsumgebung, zu der die Zuordnung gehört |
+| **Rolle** | Server-Rolle (Web, Datenbank, Anwendung usw.) |
+| **Seit** | Datum, an dem der Server zugeordnet wurde |
+| **Notizen** | Freitext-Notizen |
 
-Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfiguration:
+Klicken Sie auf **Zuordnung hinzufügen**, um dieses Asset einer Anwendungs-Bereitstellung zuzuordnen. Wählen Sie die Anwendung, dann die Umgebung (die Anwendung muss bereits eine Bereitstellung in dieser Umgebung haben), dann die Rolle und optional Datum und Notizen. Der Stift am Ende einer Zeile öffnet die Anwendung: Die Zuordnung wird in ihrem Reiter **Bereitstellungen** bearbeitet. Das Papierkorbsymbol entfernt die Zuordnung nach einer Bestätigung.
 
-- Klicken Sie auf **IP-Adresse hinzufügen**, um einen neuen Eintrag hinzuzufügen.
-- **Typ**: Der Zweck der IP-Adresse (Host, IPMI, Management, iSCSI oder benutzerdefinierte Typen aus den Einstellungen)
-- **IP-Adresse**: Die Adresse selbst
-- **Subnetz**: Netzwerk-Subnetz aus der konfigurierten Liste (gefiltert nach Standort des Assets)
-- **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
-- **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
-
-So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
+Bei einem Cluster fordert ein Hinweis über der Tabelle Sie auf, stattdessen die Mitglieds-Hosts zuzuordnen, und **Zuordnung hinzufügen** ist nicht verfügbar. Die Schaltfläche ist auch nicht verfügbar, solange in **IT-Landschaft > Einstellungen** keine Serverrolle eingerichtet ist.
 
 **Technologien**: was der Server trägt, zum Beispiel Windows Server, SQL Server, vSphere oder Active Directory. Spalten: **Ref.**, **Name**, **Familie**, **Version** und, wenn der Server eine Technologie über einen anderen trägt, **Über**.
 
@@ -202,7 +195,7 @@ Ein Server hat ein Betriebssystem: eine Technologie der Familie **Betriebssystem
 - **Fügen Sie es hinzu** wie jede Technologie. Hat der Server noch kein Betriebssystem, wird die erste Technologie dieser Familie, die Sie hinzufügen, zu seinem Betriebssystem.
 - **Entfernen Sie es** mit seinem Kreuz. Bleibt eine andere Technologie der Familie auf dem Server, wird diese zum Betriebssystem.
 - **Ändern Sie die Version** per Klick darauf, wie bei jeder Technologie.
-- Ein **Cluster** hat kein eigenes Betriebssystem: Jedes Mitglied hat sein eigenes.
+- Ein **Cluster** hat kein eigenes Betriebssystem: Jedes Mitglied hat sein eigenes. Das Einschalten des Schalters **Cluster** eines Assets entfernt sein Betriebssystem.
 
 Damit VMware ESXi oder FortiOS das Betriebssystem eines Hosts ist, ordnen Sie diese Technologie der Familie **Betriebssystem** zu (ihr Feld **Familie**, an der Technologie).
 
@@ -224,9 +217,38 @@ Wenn Schwachstellen verfolgt werden, listet der letzte Abschnitt des Reiters die
 
 ---
 
+### Netzwerk { #network }
+
+Der Reiter Netzwerk enthält die Netzwerkidentität des Assets, seine IP-Adressen und seine Verbindungen. Er ist geöffnet, wenn Sie ein Asset erstellen. Ist der Hostname beim Klick auf **Erstellen** fehlerhaft, öffnet sich der Reiter auf dem Fehler.
+
+Bei einem von Netbox verwalteten Asset sagt eine Zeile oben, dass Netbox die Felder füllt, die es liefert, und dass Sie die übrigen selbst ausfüllen.
+
+**Identität**:
+- **Hostname**: Der Netzwerk-Hostname des Assets. Wird bei der Erstellung automatisch aus dem Asset-Namen vorausgefüllt; Sie können ihn jederzeit überschreiben. Erforderlich, wenn eine Domäne ausgewählt ist. Erlaubt sind Buchstaben, Ziffern, Bindestriche und Punkte, wobei jeder Teil zwischen zwei Punkten höchstens 63 Zeichen lang ist. Ein Name wie `DL3.ROBOT-15MS.IE2000` ist also so gültig.
+- **Domäne**: Die Active Directory- oder DNS-Domäne, zu der das Asset gehört. Wählen Sie aus den in **IT-Landschaft > Einstellungen** konfigurierten Domänen. Systemoptionen umfassen „Workgroup“ (eigenständig) und „N/A“ (nicht zutreffend).
+- **FQDN**: Fully Qualified Domain Name, automatisch aus Hostname und DNS-Suffix der Domäne berechnet. Schreibgeschützt.
+- **Aliase**: Zusätzliche DNS-Namen oder Aliase für dieses Asset. Tippen und Enter drücken zum Hinzufügen.
+
+**IP-Adressen**:
+
+Assets unterstützen mehrere IP-Adressen, jede mit ihrer eigenen Netzwerkkonfiguration:
+
+- Klicken Sie auf **IP-Adresse hinzufügen**, um einen neuen Eintrag hinzuzufügen.
+- **Typ**: Der Zweck der IP-Adresse (Host, IPMI, Management, iSCSI oder benutzerdefinierte Typen aus den Einstellungen)
+- **IP-Adresse**: Die Adresse selbst
+- **Subnetz**: Netzwerk-Subnetz aus der konfigurierten Liste (gefiltert nach Standort des Assets)
+- **Netzwerkzone**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
+- **VLAN**: Automatisch aus dem ausgewählten Subnetz abgeleitet (schreibgeschützt)
+
+So können Sie mehrere Netzwerkschnittstellen pro Asset dokumentieren, zum Beispiel einen physischen Server mit sowohl einer Host-IP als auch einer IPMI-Management-Adresse in verschiedenen Subnetzen.
+
+**Verbindungen**: Eine schreibgeschützte Ansicht aller Verbindungen, die dieses Asset betreffen, sobald es erstellt ist. Jede Zeile zeigt die Verbindungs-ID und den Namen (anklickbar: öffnet den Verbindungs-Arbeitsbereich), die Topologie (Server zu Server oder Multi-Server), Protokolle, Quell- und Zielendpunkt-Bezeichnungen sowie den Lebenszyklus-Status. Um eine Verbindung zu erstellen oder zu bearbeiten, navigieren Sie zu **IT-Landschaft > Verbindungen**.
+
+---
+
 ### Hardware
 
-*Nur sichtbar für physische Asset-Typen.*
+*Nur sichtbar für physische Asset-Typen. Der Reiter öffnet sich, sobald das Asset erstellt ist.*
 
 Verfolgt physische Hardware-Details. Speichert automatisch beim Tippen.
 
@@ -240,25 +262,9 @@ Verfolgt physische Hardware-Details. Speichert automatisch beim Tippen.
 
 ---
 
-### Support
+### Abhängigkeiten { #dependencies }
 
-*Nur sichtbar für physische Asset-Typen.*
-
-Verfolgt Lieferantensupport und Kontaktinformationen.
-
-- **Lieferant**: Aus dem Lieferantenverzeichnis auswählen
-- **Supportvertrag**: Verknüpfung zu einem Vertragsdatensatz
-- **Support-Stufe**: Freitext (z. B. Gold, Silber, 24x7)
-- **Support-Ablauf**: Ablaufdatum
-- **Notizen**
-
-**Supportkontakte**: Eine Tabelle, in der Sie Kontakte aus dem Kontaktverzeichnis hinzufügen können, jeweils mit einer Freitext-Rollenbezeichnung. Die Tabelle zeigt automatisch die E-Mail, das Telefon und das Mobil jedes Kontakts an.
-
----
-
-### Verknüpfungen
-
-Der Reiter Verknüpfungen zeigt, was mit diesem Asset ausfällt, und danach, womit es verknüpft ist: andere Assets, Budgetzeilen, Verträge, Projekte, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach seine Links und Dateien. Die Technologien des Assets stehen im Reiter [Technisch](#technical). Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Datensätze, die Sie sehen dürfen, sowie die Links und Dateien.
+Der Reiter Abhängigkeiten zeigt, wie das Asset zu den anderen Assets steht: was mit ihm ausfällt, sein Cluster und seine Beziehungen zu anderen Assets. Er öffnet sich, sobald das Asset erstellt ist. Das Reiter-Badge zählt die Beziehungen zwischen Assets sowie die Mitglieder eines Clusters oder die Cluster, zu denen das Asset gehört.
 
 **Wenn dieser Server ausfällt**: Der Reiter beginnt mit dem, was mit diesem Asset ausfällt. Eine Übersichtszeile zählt die betroffenen Anwendungen, Assets, Cluster und Geschäftsprozesse, danach folgt eine Tabelle pro Art:
 
@@ -267,7 +273,12 @@ Der Reiter Verknüpfungen zeigt, was mit diesem Asset ausfällt, und danach, wom
 - **Cluster**: Cluster mit einem ausgefallenen Mitglied. **Ausgefallen**, wenn kein Mitglied mehr steht, sonst **Beeinträchtigt** mit der Zahl der ausgefallenen Mitglieder. Die Anwendungen eines ausgefallenen Clusters fallen mit ihm aus.
 - **Geschäftsprozesse**: die Prozesse der betroffenen Anwendungen.
 
-Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie weiter unten eine Beziehung zwischen Assets hinzufügen oder entfernen.
+Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede Tabelle zeigt ihre ersten 50 Zeilen und zählt den Rest. Anwendungen und Prozesse erfordern das Recht, sie zu lesen. Der Abschnitt aktualisiert sich, sobald Sie eine Beziehung zwischen Assets hinzufügen oder entfernen, die Mitglieder eines Clusters ändern oder den Schalter **Cluster** ein- oder ausschalten.
+
+**Cluster**:
+
+- Bei einem **Cluster** erinnert ein Hinweis daran, dass ein Cluster Endpunkt von Verbindungen sein kann und dass Anwendungen seinen Mitglieds-Hosts zugeordnet werden. Der Abschnitt **Mitglieder** listet die Mitglieds-Assets auf (Name, Umgebung, Status, Betriebssystem). Klicken Sie auf einen Namen, um dieses Asset zu öffnen. Klicken Sie auf **Mitglieder bearbeiten**, um Mitglieder über einen Suchdialog hinzuzufügen oder zu entfernen.
+- Bei **jedem anderen Asset** zeigt der Abschnitt **Cluster-Mitgliedschaft** die Cluster, zu denen dieses Asset gehört, mit ihrer Umgebung und ihrem Status. Klicken Sie auf einen Namen, um den Cluster zu öffnen.
 
 **Beziehungen zwischen Assets**, eine Tabelle pro Richtung:
 
@@ -278,7 +289,15 @@ Ausgemusterte Assets unterbrechen die Kette: Durch sie fällt nichts aus. Jede T
 | **Hängt ab von** | Die Assets, die dieses zum Betrieb braucht, zum Beispiel ein Datenbankserver |
 | **Benötigt von** | Die Assets, die dieses brauchen |
 
-Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt.
+Jede Tabelle zeigt Referenz (`AST-12`), Name, Typ, Umgebung und Status. Ein ausgemustertes oder deaktiviertes Asset bleibt mit ausgegrautem Namen aufgeführt. Klicken Sie auf eine Zeile, um das Asset zu öffnen.
+
+Mit `infrastructure:member` öffnet **Hinzufügen** rechts neben einem Abschnitt eine Suche nach einem Asset. Wählen Sie ein Ergebnis: Die Beziehung wird sofort gespeichert. Um eine Beziehung zu entfernen, fahren Sie mit der Maus über die Zeile und klicken Sie auf das Kreuz am Zeilenende. Leser sehen die Tabellen schreibgeschützt.
+
+---
+
+### Beziehungen
+
+Der Reiter Beziehungen zeigt, womit das Asset verknüpft ist: Budgetzeilen, Verträge, Projekte, Aufgaben und Vorfälle, jeweils in einer eigenen Tabelle, danach seine Links und Dateien. Die Beziehungen zwischen Assets stehen im Reiter [Abhängigkeiten](#dependencies), die Technologien des Assets im Reiter [Betrieb](#operations). Der Reiter öffnet sich, sobald das Asset erstellt ist. Klicken Sie auf eine Zeile, um den Datensatz zu öffnen. Das Reiter-Badge zählt die verknüpften Datensätze, die Sie sehen dürfen, sowie die Links und Dateien.
 
 **Verknüpfte Datensätze**, jeweils eine Tabelle:
 
@@ -440,7 +459,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Cluster verwenden**: Gruppieren Sie verwandte Assets (z. B. Web-Cluster, Datenbank-Cluster), um die Verwaltung zu vereinfachen. Weisen Sie Anwendungen den Member-Hosts zu, nicht dem Cluster selbst.
 - **Lebenszyklus verfolgen**: Markieren Sie veraltete und außer Betrieb genommene Assets, um die Inventarzählung genau zu halten.
 - **Mit Standorten verknüpfen**: Weisen Sie Assets Standorten zu, sodass Hosting-Typ, Land und Stadt automatisch ausgefüllt werden.
-- **Anwendungen zuweisen**: Verwenden Sie den Reiter Übersicht, um Assets mit Anwendungs-Bereitstellungen zu verknüpfen. Die gleichen Zuweisungen erscheinen unter dem Reiter Bereitstellungen der Anwendung.
-- **Reiter Verknüpfungen verwenden**: Verbinden Sie Assets mit Budgetzeilen, Verträgen und Projekten für finanzielle Sichtbarkeit.
-- **Aufgaben hier verknüpfen**: Fügen Sie eine Aufgabe unter Verknüpfungen > Aufgaben hinzu. Die Verknüpfung erscheint auch in der Aktivität der Aufgabe.
-- **Dokumentation anhängen**: Laden Sie Konfigurationsdateien, Architekturdiagramme oder Lieferantendokumente direkt in den Reiter Verknüpfungen hoch.
+- **Anwendungen zuweisen**: Verwenden Sie den Abschnitt **Gehostete Anwendungen** des Reiters Betrieb, um Assets mit Anwendungs-Bereitstellungen zu verknüpfen. Die gleichen Zuweisungen erscheinen unter dem Reiter Bereitstellungen der Anwendung.
+- **Reiter Beziehungen verwenden**: Verbinden Sie Assets mit Budgetzeilen, Verträgen und Projekten für finanzielle Sichtbarkeit.
+- **Aufgaben hier verknüpfen**: Fügen Sie eine Aufgabe unter Beziehungen > Aufgaben hinzu. Die Verknüpfung erscheint auch in der Aktivität der Aufgabe.
+- **Dokumentation anhängen**: Laden Sie Konfigurationsdateien, Architekturdiagramme oder Lieferantendokumente direkt in den Reiter Beziehungen hoch.

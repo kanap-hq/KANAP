@@ -77,7 +77,7 @@ Fournisseurs cloud utilisés par les serveurs et les sites (ex. : AWS, Azure, GC
 **Colonnes** : Nom, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Vue d'ensemble > Champ **Fournisseur**
+- Espace de travail Actifs > Tiroir des propriétés > **Fournisseur cloud** (lecture seule, dérivé du site)
 - Espace de travail Sites > Onglet Vue d'ensemble > **Fournisseur cloud** (lorsque le type d'hébergement est cloud)
 
 ### Types d'hébergement
@@ -162,8 +162,8 @@ Survolez les en-têtes **Forêt**, **Nombre de comptes** et **Nombre d'ordinateu
 - **Approbations** : le bouton indique combien d'approbations a le domaine. Cliquez dessus pour lister les autres domaines avec lesquels il a une relation d'approbation, tels qu'affichés dans Domaines et approbations Active Directory. **Ajouter un domaine approuvé** en ajoute un ; choisissez son **Sens** : **sortante** (ce domaine approuve l'autre, dont les comptes peuvent accéder à ses ressources), **entrante** (l'autre domaine approuve celui-ci) ou **bidirectionnelle** (les deux). La boîte de dialogue montre aussi, en lecture seule, les approbations déclarées sur d'autres domaines envers celui-ci. Le bouton apparaît une fois le domaine enregistré, et demande au moins un autre domaine dans la liste.
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Technique > Sélecteur **Domaine**
-- Espace de travail Actifs > Onglet Technique > **FQDN** (auto-calculé depuis hostname + suffixe DNS)
+- Espace de travail Actifs > Onglet Réseau > Sélecteur **Domaine**
+- Espace de travail Actifs > Onglet Réseau > **FQDN** (auto-calculé depuis hostname + suffixe DNS)
 - **Cartographie SI > Zones d'administration** : domaines groupés par forêt, avec leurs approbations, leurs comptages et leurs contrôleurs de domaine. Voir [Zones d'administration](administration-view.md#services-dannuaire-et-domaines).
 
 **Entrées système** (ne peuvent pas être modifiées ni supprimées) :
@@ -203,7 +203,7 @@ Types d'adresses IP des actifs. Utile pour distinguer différentes interfaces r�
 **Valeurs par défaut** : Host, IPMI, Management, iSCSI
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Technique > Section **Adresses IP** > Menu déroulant **Type**
+- Espace de travail Actifs > Onglet Réseau > Section **Adresses IP** > Menu déroulant **Type**
 
 Les actifs peuvent avoir plusieurs adresses IP, chacune avec son propre type. Par exemple, un serveur physique peut avoir :
 - Une IP **Host** pour le trafic applicatif
@@ -218,7 +218,7 @@ Zones réseau utilisées pour classer les sous-réseaux et décrire la connectiv
 
 **Où c'est utilisé** :
 - Liste des sous-réseaux > Sélecteur **Zone réseau**
-- Espace de travail Actifs > Onglet Technique > **Zone réseau** (auto-remplie lorsqu'un sous-réseau est sélectionné)
+- Espace de travail Actifs > Onglet Réseau > **Zone réseau** (auto-remplie lorsqu'un sous-réseau est sélectionné)
 
 ### Sous-réseaux
 
@@ -227,7 +227,7 @@ Définissez les sous-réseaux avec la notation CIDR et, si besoin, leur VLAN. Ch
 **Colonnes** : Site, CIDR, VLAN (1-4094), Zone réseau, Description, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Technique > Sélecteur **Sous-réseau**
+- Espace de travail Actifs > Onglet Réseau > Sélecteur **Sous-réseau**
 
 **Règles de validation** :
 - Le CIDR doit être une notation IPv4 valide (ex. : `192.168.1.0/24`)
@@ -258,7 +258,7 @@ Types logiques des serveurs et des actifs d'infrastructure (ex. : Serveur physiq
 **Colonnes** : Nom, Physique, Ne plus proposer
 
 **Où c'est utilisé** :
-- Espace de travail Actifs > Onglet Vue d'ensemble > Champ **Type**
+- Espace de travail Actifs > Tiroir des propriétés > Champ **Type d'actif**
 
 ---
 
@@ -419,7 +419,7 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Zones d'administration** | Actifs (panneau de propriétés > Zone d'administration), Technologies de la famille Annuaire et identité (panneau de propriétés > Zone d'administration), page Zones d'administration |
 | **Fournisseurs cloud** | Actifs (Fournisseur), Sites (Fournisseur cloud) |
 | **Types de connexion** | Connexions (Type de connexion) |
-| **Domaines** | Actifs (Onglet Technique > Domaine, FQDN), page Zones d'administration |
+| **Domaines** | Actifs (Onglet Réseau > Domaine, FQDN), page Zones d'administration |
 | **Entités** | Connexions (Entité source/cible), Carte des connexions (placement par niveau du graphe) |
 | **Types d'hébergement** | Sites (Vue d'ensemble), Technologies (Type d'hébergement) |
 | **Modèles d'intégration** | Segments d'interface (Modèle) |
@@ -429,12 +429,12 @@ Cette approche vous permet de faire évoluer votre taxonomie au fil du temps san
 | **Protocoles d'interface** | Liaisons d'interfaces (Protocole) |
 | **Types de déclenchement d'interface** | Segments d'interface (Déclenchement) |
 | **Catégories d'incident** | Incidents (Catégorie) |
-| **Types d'adresse IP** | Actifs (Onglet Technique > Adresses IP > Type) |
+| **Types d'adresse IP** | Actifs (Onglet Réseau > Adresses IP > Type) |
 | **Statuts du cycle de vie** | Applications, Instances, Interfaces, Liaisons, Actifs |
 | **Zones réseau** | Sous-réseaux (Zone réseau), Actifs (auto-rempli depuis le sous-réseau) |
-| **Sous-réseaux** | Actifs (Onglet Technique > Adresses IP > Sélecteur de sous-réseau) |
+| **Sous-réseaux** | Actifs (Onglet Réseau > Adresses IP > Sélecteur de sous-réseau) |
 | **Rôles de serveur** | Applications > Onglet Serveurs (rôle lors de la liaison actif-app), Carte des connexions (placement par niveau du graphe) |
-| **Types d'actif** | Actifs (Vue d'ensemble > Type) |
+| **Types d'actif** | Actifs (Tiroir des propriétés > Type d'actif) |
 | **Familles de technologies** | Technologies (Famille), page Zones d'administration (services d'annuaire) |
 
 ---

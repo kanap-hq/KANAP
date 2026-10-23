@@ -304,7 +304,7 @@ Ein Abschnitt erscheint nur, wenn Sie sein Modul lesen dürfen. **Hinzufügen** 
 Dass ein Server eine Technologie trägt, erfassen Sie von beiden Seiten:
 
 - Von der Technologie aus: Reiter **Server**, **Hinzufügen**, dann Server und Version wählen.
-- Vom Server aus: Reiter **Technisch** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#technical).
+- Vom Server aus: Reiter **Betrieb** des Assets, Abschnitt **Technologien**, **Hinzufügen**, dann Technologie und Version wählen. Siehe [Assets](assets.md#operations).
 
 Erfassen Sie die Technologie auf dem Server, auf dem sie installiert ist: dem Host für einen Hypervisor, jedem Domänencontroller für Active Directory, dem Datenbankserver für SQL Server. Die Server, die darin laufen, oder die Mitglieder seines Clusters zeigen sie dann ohne weitere Eingabe. Eine Cloud-Technologie wie Entra ID läuft auf keinem Ihrer Server: Deklarieren Sie sie stattdessen bei den Anwendungen.
 
@@ -363,7 +363,7 @@ Eine große Datei braucht Zeit zum Laden und hält die Verknüpfungen ihrer Tech
 ## Wo Technologien erscheinen
 
 - **Anwendungen**: Der Abschnitt **Technologien** oben im Reiter Betrieb listet, wovon eine Anwendung abhängt. Siehe [Anwendungen](applications.md#operations).
-- **Assets**: Der Abschnitt **Technologien** im Reiter Technisch eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#technical).
+- **Assets**: Der Abschnitt **Technologien** im Reiter Betrieb eines Assets listet, was der Server trägt, sein Betriebssystem zuerst. Siehe [Assets](assets.md#operations).
 - **Verträge**, **Budgetzeilen** und **Vorfälle**: ein Feld **Technologien** in ihrem Reiter Verknüpfungen bzw. Beziehungen, für Benutzer, die die Infrastruktur lesen dürfen.
 - Bericht **Supportende**: die Versionen, die ihr Supportende erreichen, Betriebssysteme eingeschlossen, und was sie betreffen. Siehe [Supportende](end-of-support.md).
 - **Schwachstellen**: die bekannten Schwachstellen der Versionen im Einsatz und die Server und Anwendungen, die sie erreichen. Siehe [Schwachstellen](vulnerabilities.md).

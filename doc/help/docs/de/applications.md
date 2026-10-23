@@ -210,7 +210,7 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft: 
 
 Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Cluster-Assets sind ausgeschlossen. Weisen Sie stattdessen Cluster-Member-Hosts zu.
 
-**Tipp**: Dokumentieren Sie Server zuerst in **IT-Landschaft > Assets** und verknüpfen Sie sie dann hier. Der Reiter Übersicht des Assets zeigt dieselben Zuordnungen umgekehrt an.
+**Tipp**: Dokumentieren Sie Server zuerst in **IT-Landschaft > Assets** und verknüpfen Sie sie dann hier. Der Reiter Betrieb des Assets zeigt dieselben Zuordnungen umgekehrt an, unter **Gehostete Anwendungen**.
 
 ---
 

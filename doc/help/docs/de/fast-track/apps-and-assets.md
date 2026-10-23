@@ -181,7 +181,7 @@ Füllen Sie die Kernfelder aus:
 | **Umgebung** | Welche Umgebung er bedient | `Prod` |
 | **Beschreibung** | Zusätzlicher Kontext |  |
 
-Der Bereich **Eigenschaften** rechts enthält den Rest: **Unter-Standort**, **Lebenszyklus**, **Go-live** und **End of Life**. Sobald ein Standort ausgewählt ist, werden mehrere **schreibgeschützte Felder** automatisch abgeleitet:
+Der Bereich **Eigenschaften** rechts enthält den Rest: den Schalter **Cluster**, **Administrationszone**, **Unterstandort**, **Lebenszyklus**, **Inbetriebnahmedatum** und **Datum Lebensende**. Sobald ein Standort ausgewählt ist, werden mehrere **schreibgeschützte Felder** automatisch abgeleitet:
 
 - **Hosting-Typ** (On-Premises, Cloud, Colocation usw.)
 - **Cloud-Anbieter / Betreiberunternehmen** (z. B. AWS, Azure oder das Unternehmen, das die Einrichtung betreibt)
@@ -191,21 +191,25 @@ Der Bereich **Eigenschaften** rechts enthält den Rest: **Unter-Standort**, **Le
 !!! info "Der Standort ist der Schlüssel"
     Der Standort bestimmt viele Attribute Ihres Assets automatisch. Standorte werden unter **IT-Landschaft > Standorte** verwaltet. Richten Sie sie einmal ein, und jedes zugeordnete Asset erbt Hosting-Typ, Anbieter, Land und Stadt. Sie müssen diese nicht manuell ausfüllen.
 
-Klicken Sie auf **Erstellen**, um den vollständigen Arbeitsbereich freizuschalten. Für physische Asset-Typen werden zusätzliche **Hardware**- und **Support**-Tabs verfügbar, um Seriennummern, Herstellerdetails und Lieferanten-Supportverträge zu erfassen.
+### Netzwerk-Tab
 
-### Technik-Tab
-
-Gehen Sie zum Tab **Technik**, um Folgendes hinzuzufügen:
+Der Tab **Netzwerk** ist geöffnet, während Sie das Asset erstellen. Füllen Sie aus:
 
 | Abschnitt | Felder | Details |
 |---------|--------|---------|
-| **Cluster-Verwaltung** | Cluster-Schalter | Schalten Sie ihn ein, wenn dieses Asset ein Cluster ist, und fügen Sie dann seine Mitgliedsserver hinzu |
 | **Identität** | Hostname, Domäne, FQDN, Aliase | Der FQDN wird automatisch aus Hostname und Domäne berechnet |
-| **Technologien** | Betriebssystem und weitere Technologien, mit ihren Versionen | Fügen Sie Windows Server, Ubuntu oder eine andere Technologie der Familie **Betriebssystem** hinzu: Sie wird zum Betriebssystem des Servers |
 | **IP-Adressen** | Typ, IP-Adresse, Subnetz | Netzwerkzone und VLAN werden aus dem Subnetz abgeleitet |
 
 !!! info "Mehrere IP-Adressen"
     Ein Server kann mehrere IP-Adressen haben. Fügen Sie so viele wie nötig hinzu (z. B. Management-Schnittstelle, Produktions-VLAN, Backup-Netz). Jeder Eintrag kann seinen eigenen Typ und sein eigenes Subnetz haben, Netzwerkzone und VLAN werden automatisch abgeleitet.
+
+Klicken Sie auf **Erstellen**, um den vollständigen Arbeitsbereich freizuschalten. Der Tab **Übersicht** erhält dann einen Abschnitt **Support** für den Support-Vertrag des Lieferanten und die Kontakte. Für physische Asset-Typen erfasst ein Tab **Hardware** Seriennummern und Herstellerdetails.
+
+### Betriebs-Tab
+
+Gehen Sie zum Tab **Betrieb**, um die **Technologien** hinzuzufügen, die der Server trägt, mit ihren Versionen. Fügen Sie Windows Server, Ubuntu oder eine andere Technologie der Familie **Betriebssystem** hinzu: Sie wird zum Betriebssystem des Servers.
+
+Wenn dieses Asset ein Cluster ist, schalten Sie im Bereich **Eigenschaften** den Schalter **Cluster** ein und fügen Sie dann seine Mitgliedsserver mit **Mitglieder bearbeiten** im Tab **Abhängigkeiten** hinzu.
 
 ---
 
@@ -226,7 +230,7 @@ Es gibt **zwei Wege**, diese Zuordnung zu erstellen:
 ### Von der Asset-Seite
 
 1. Öffnen Sie Ihr Asset
-2. Suchen Sie im Tab **Übersicht** den Abschnitt **Zuordnungen**
+2. Suchen Sie im Tab **Betrieb** den Abschnitt **Gehostete Anwendungen**
 3. Klicken Sie auf **Zuordnung hinzufügen**
 4. Füllen Sie die Felder der Zuordnung aus:
 
@@ -295,8 +299,8 @@ Verwenden Sie dann die [Schnittstellenkarte](../interface-map.md), um den vollst
 | Compliance-Infos hinzufügen | App öffnen > Compliance-Tab |
 | Einen Server erstellen | IT-Landschaft > Assets > Asset hinzufügen |
 | Server mit App verknüpfen (von App) | App öffnen > Tab Bereitstellungen > Server hinzufügen |
-| Server mit App verknüpfen (von Asset) | Asset öffnen > Tab Übersicht > Zuordnungen > Zuordnung hinzufügen |
-| Server-Verbindungen anzeigen | Asset öffnen > Tab Übersicht > Verbindungen |
+| Server mit App verknüpfen (von Asset) | Asset öffnen > Tab Betrieb > Gehostete Anwendungen > Zuordnung hinzufügen |
+| Server-Verbindungen anzeigen | Asset öffnen > Tab Netzwerk > Verbindungen |
 | Verbindungskarte anzeigen | IT-Landschaft > Verbindungskarte |
 | Schnittstellenkarte anzeigen | IT-Landschaft > Schnittstellenkarte |
 | Dropdowns konfigurieren | IT-Landschaft > Einstellungen |

@@ -68,7 +68,7 @@ Les comptes par serveur et par application, dans les listes, sur les fiches, au 
 
 Une machine virtuelle ou un invité ne compte pas les vulnérabilités de son hôte. Une vulnérabilité de VMware ESXi ne compte que sur les hôtes ESXi. Compter par les hôtes mettrait une seule vulnérabilité d'un hyperviseur sur presque tous les serveurs et applications d'un parc virtualisé.
 
-La portée par un autre actif reste visible, sans être comptée : dans le panneau latéral d'une vulnérabilité, sous **Par un autre actif**, et sur la fiche d'un actif, dans la partie **Par un autre actif** de sa section **Vulnérabilités**. Voir [Actifs](assets.md#technical).
+La portée par un autre actif reste visible, sans être comptée : dans le panneau latéral d'une vulnérabilité, sous **Par un autre actif**, et sur la fiche d'un actif, dans la partie **Par un autre actif** de sa section **Vulnérabilités**. Voir [Actifs](assets.md#operations).
 
 ## La liste
 
@@ -182,7 +182,7 @@ Les destinataires sont les responsables IT de la technologie dont le compte est 
 - **Liste des technologies** : la colonne **Vulnérabilités à traiter**, en orange quand certaines sont critiques ou élevées. Voir [Technologies](technologies.md#travailler-avec-la-liste).
 - **Fiche technologie** : la section **Vulnérabilités** de l'onglet Conformité. Voir [Technologies](technologies.md#vulnerabilites).
 - **Listes des actifs et des applications** : la colonne **Vulnérabilités à traiter**. Voir [Actifs](assets.md#working-with-the-list) et [Applications](applications.md#working-with-the-list).
-- **Fiches actif et application** : la section **Vulnérabilités** et le badge des vulnérabilités graves dans l'en-tête. Voir [Actifs](assets.md#technical) et [Applications](applications.md#operations).
+- **Fiches actif et application** : la section **Vulnérabilités** et le badge des vulnérabilités graves dans l'en-tête. Voir [Actifs](assets.md#operations) et [Applications](applications.md#operations).
 - **Tableau de bord** : la tuile **Vulnérabilités du parc**. Voir [Mon tableau de bord](my-dashboard.md#vulnerabilities).
 - **Plaid** : l'assistant répond aux questions sur les vulnérabilités. Voir [Plaid](ai-assistant.md#tool-calls).
 

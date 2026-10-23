@@ -103,7 +103,7 @@ Si entran activos en el filtro entre el recuento y la confirmación, KANAP recha
 - **Entrante**: el otro dominio confía en este.
 - **Bidireccional**: ambos.
 
-Los **Controladores de dominio** no se introducen a mano. KANAP toma los servidores del dominio (el campo **Dominio** de la pestaña Técnico del activo) que no están retirados y que:
+Los **Controladores de dominio** no se introducen a mano. KANAP toma los servidores del dominio (el campo **Dominio** de la pestaña Red del activo) que no están retirados y que:
 
 - llevan una tecnología de la familia **Directorio e identidad** que no está retirada, como Active Directory, o
 - están asignados con el rol de servidor **Controlador de dominio** a una aplicación en servicio.

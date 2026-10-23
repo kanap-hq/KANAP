@@ -77,7 +77,7 @@ Proveedores cloud utilizados por los servidores y las ubicaciones (p. ej., AWS, 
 **Columnas**: Nombre, Dejar de proponer
 
 **Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Visión general → campo **Proveedor**
+- Espacio de trabajo de Activos → panel de propiedades → **Proveedor cloud** (solo lectura, derivado de la ubicación)
 - Espacio de trabajo de Ubicaciones → pestaña Visión general → **Proveedor cloud** (cuando el tipo de alojamiento es cloud)
 
 ### Tipos de alojamiento
@@ -162,8 +162,8 @@ Pase el cursor sobre los encabezados **Bosque**, **Número de cuentas** y **Núm
 - **Confianzas**: el botón indica cuántas confianzas tiene el dominio. Haga clic en él para listar los otros dominios con los que tiene una relación de confianza, tal como aparecen en Dominios y confianzas de Active Directory. **Añadir un dominio de confianza** añade uno; elija su **Dirección**: **saliente** (este dominio confía en el otro, cuyas cuentas pueden acceder a sus recursos), **entrante** (el otro dominio confía en este) o **bidireccional** (ambos). El cuadro de diálogo muestra también, en solo lectura, las confianzas declaradas en otros dominios hacia este. El botón aparece una vez guardado el dominio, y necesita al menos otro dominio en la lista.
 
 **Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Técnico → selector de **Dominio**
-- Espacio de trabajo de Activos → pestaña Técnico → **FQDN** (calculado automáticamente desde hostname + sufijo DNS)
+- Espacio de trabajo de Activos → pestaña Red → selector de **Dominio**
+- Espacio de trabajo de Activos → pestaña Red → **FQDN** (calculado automáticamente desde hostname + sufijo DNS)
 - **Panorama IT > Zonas de administración**: dominios agrupados por bosque, con sus confianzas, recuentos y controladores de dominio. Consulte [Zonas de administración](administration-view.md#servicios-de-directorio-y-dominios).
 
 **Entradas del sistema** (no pueden modificarse ni eliminarse):
@@ -203,7 +203,7 @@ Tipos de direcciones IP de los activos. Útil para distinguir entre diferentes i
 **Valores predeterminados**: Host, IPMI, Gestión, iSCSI
 
 **Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Técnico → sección **Direcciones IP** → desplegable de **Tipo**
+- Espacio de trabajo de Activos → pestaña Red → sección **Direcciones IP** → desplegable de **Tipo**
 
 Los activos pueden tener múltiples direcciones IP, cada una con su propio tipo. Por ejemplo, un servidor físico podría tener:
 - Una IP de **Host** para tráfico de aplicaciones
@@ -218,7 +218,7 @@ Zonas de red utilizadas para clasificar las subredes y describir la conectividad
 
 **Dónde se usa**:
 - Lista de subredes → selector de **Zona de red**
-- Espacio de trabajo de Activos → pestaña Técnico → **Zona de red** (auto-rellenada cuando se selecciona una subred)
+- Espacio de trabajo de Activos → pestaña Red → **Zona de red** (auto-rellenada cuando se selecciona una subred)
 
 ### Subredes
 
@@ -227,7 +227,7 @@ Defina las subredes con notación CIDR y, si procede, su VLAN. Cada subred perte
 **Columnas**: Ubicación, CIDR, VLAN (1-4094), Zona de red, Descripción, Dejar de proponer
 
 **Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Técnico → selector de **Subred**
+- Espacio de trabajo de Activos → pestaña Red → selector de **Subred**
 
 **Reglas de validación**:
 - CIDR debe ser notación IPv4 válida (p. ej., `192.168.1.0/24`)
@@ -258,7 +258,7 @@ Tipos lógicos de servidores y activos de infraestructura (p. ej., Servidor fís
 **Columnas**: Nombre, Físico, Dejar de proponer
 
 **Dónde se usa**:
-- Espacio de trabajo de Activos → pestaña Visión general → campo **Tipo**
+- Espacio de trabajo de Activos → panel de propiedades → campo **Tipo de activo**
 
 ---
 
@@ -419,7 +419,7 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Zonas de administración** | Activos (panel de propiedades → Zona de administración), Tecnologías de la familia Directorio e identidad (panel de propiedades → Zona de administración), página Zonas de administración |
 | **Proveedores cloud** | Activos (Proveedor), Ubicaciones (Proveedor cloud) |
 | **Tipos de conexión** | Conexiones (Tipo de conexión) |
-| **Dominios** | Activos (pestaña Técnico → Dominio, FQDN), página Zonas de administración |
+| **Dominios** | Activos (pestaña Red → Dominio, FQDN), página Zonas de administración |
 | **Entidades** | Conexiones (Entidad de origen/destino), Mapa de conexiones (ubicación por nivel del grafo) |
 | **Tipos de alojamiento** | Ubicaciones (Visión general), Tecnologías (Tipo de alojamiento) |
 | **Patrones de integración** | Segmentos de interfaz (Patrón) |
@@ -429,12 +429,12 @@ Este enfoque le permite evolucionar su taxonomía con el tiempo sin romper los r
 | **Protocolos de interfaz** | Enlaces de interfaz (Protocolo) |
 | **Tipos de disparador de interfaz** | Segmentos de interfaz (Disparador) |
 | **Categorías de incidente** | Incidentes (Categoría) |
-| **Tipos de dirección IP** | Activos (pestaña Técnico → Direcciones IP → Tipo) |
+| **Tipos de dirección IP** | Activos (pestaña Red → Direcciones IP → Tipo) |
 | **Estados del ciclo de vida** | Aplicaciones, Instancias de app, Interfaces, Enlaces, Activos |
 | **Zonas de red** | Subredes (Zona de red), Activos (auto-rellenado desde subred) |
-| **Subredes** | Activos (pestaña Técnico → Direcciones IP → Selector de subred) |
+| **Subredes** | Activos (pestaña Red → Direcciones IP → Selector de subred) |
 | **Roles de servidor** | Aplicaciones → pestaña Servidores (rol al vincular activo a app), Mapa de conexiones (ubicación por nivel del grafo) |
-| **Tipos de activo** | Activos (Visión general → Tipo) |
+| **Tipos de activo** | Activos (panel de propiedades → Tipo de activo) |
 | **Familias de tecnologías** | Tecnologías (Familia), página Zonas de administración (servicios de directorio) |
 
 ---

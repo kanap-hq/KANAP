@@ -77,7 +77,7 @@ Cloud-Anbieter, die von Servern und Standorten verwendet werden (z. B. AWS, Azur
 **Spalten**: Name, Nicht mehr anbieten
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Reiter Übersicht → Feld **Anbieter**
+- Assets-Arbeitsbereich → Eigenschaftsleiste → **Cloud-Anbieter** (schreibgeschützt, vom Standort abgeleitet)
 - Standorte-Arbeitsbereich → Reiter Übersicht → **Cloud-Anbieter** (wenn der Hosting-Typ Cloud ist)
 
 ### Hosting-Typen
@@ -162,8 +162,8 @@ Fahren Sie mit der Maus über die Spaltenköpfe **Gesamtstruktur**, **Anzahl der
 - **Vertrauensstellungen**: Die Schaltfläche zeigt, wie viele Vertrauensstellungen die Domäne hat. Ein Klick listet die anderen Domänen, mit denen sie eine Vertrauensstellung hat, wie in „Active Directory-Domänen und -Vertrauensstellungen“ angezeigt. **Vertrauenswürdige Domäne hinzufügen** fügt eine hinzu; wählen Sie ihre **Richtung**: **ausgehend** (diese Domäne vertraut der anderen, deren Konten auf ihre Ressourcen zugreifen können), **eingehend** (die andere Domäne vertraut dieser) oder **bidirektional** (beides). Der Dialog zeigt außerdem, nur lesend, die Vertrauensstellungen, die in anderen Domänen zu dieser erfasst sind. Die Schaltfläche erscheint, sobald die Domäne gespeichert ist, und braucht mindestens eine weitere Domäne in der Liste.
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Reiter Technik → Auswahl **Domäne**
-- Assets-Arbeitsbereich → Reiter Technik → **FQDN** (automatisch aus Hostname + DNS-Suffix berechnet)
+- Assets-Arbeitsbereich → Reiter Netzwerk → Auswahl **Domäne**
+- Assets-Arbeitsbereich → Reiter Netzwerk → **FQDN** (automatisch aus Hostname + DNS-Suffix berechnet)
 - **IT-Landschaft > Administrationszonen**: Domänen nach Gesamtstruktur gruppiert, mit ihren Vertrauensstellungen, Anzahlen und Domänencontrollern. Siehe [Administrationszonen](administration-view.md#verzeichnisdienste-und-domanen).
 
 **Systemeinträge** (können weder geändert noch gelöscht werden):
@@ -203,7 +203,7 @@ Typen von IP-Adressen für Assets. Nützlich, um verschiedene Netzwerkschnittste
 **Standardwerte**: Host, IPMI, Management, iSCSI
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Reiter Technik → Bereich **IP-Adressen** → Dropdown **Typ**
+- Assets-Arbeitsbereich → Reiter Netzwerk → Bereich **IP-Adressen** → Dropdown **Typ**
 
 Assets können mehrere IP-Adressen mit jeweils eigenem Typ haben. Ein physischer Server kann zum Beispiel haben:
 - Eine **Host**-IP für den Anwendungsverkehr
@@ -218,7 +218,7 @@ Netzwerkzonen zur Einordnung von Subnetzen und zur Beschreibung der Konnektivit�
 
 **Verwendung**:
 - Subnetzliste → Auswahl **Netzwerkzone**
-- Assets-Arbeitsbereich → Reiter Technik → **Netzwerkzone** (automatisch ausgefüllt, wenn ein Subnetz ausgewählt wird)
+- Assets-Arbeitsbereich → Reiter Netzwerk → **Netzwerkzone** (automatisch ausgefüllt, wenn ein Subnetz ausgewählt wird)
 
 ### Subnetze
 
@@ -227,7 +227,7 @@ Definieren Sie Subnetze in CIDR-Notation, mit optionaler VLAN-Zuordnung. Jedes S
 **Spalten**: Standort, CIDR, VLAN (1-4094), Netzwerkzone, Beschreibung, Nicht mehr anbieten
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Reiter Technik → Auswahl **Subnetz**
+- Assets-Arbeitsbereich → Reiter Netzwerk → Auswahl **Subnetz**
 
 **Validierungsregeln**:
 - CIDR muss eine gültige IPv4-Notation sein (z. B. `192.168.1.0/24`)
@@ -258,7 +258,7 @@ Logische Typen für Server und Infrastruktur-Assets (z. B. Physischer Server, Vi
 **Spalten**: Name, Physisch, Nicht mehr anbieten
 
 **Verwendung**:
-- Assets-Arbeitsbereich → Reiter Übersicht → Feld **Typ**
+- Assets-Arbeitsbereich → Eigenschaftsleiste → Feld **Asset-Typ**
 
 ---
 
@@ -419,7 +419,7 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Administrationszonen** | Assets (Eigenschaftsleiste → Administrationszone), Technologien der Familie Verzeichnis und Identität (Eigenschaftenfeld → Administrationszone), Seite Administrationszonen |
 | **Cloud-Anbieter** | Assets (Anbieter), Standorte (Cloud-Anbieter) |
 | **Verbindungstypen** | Verbindungen (Verbindungstyp) |
-| **Domänen** | Assets (Reiter Technik → Domäne, FQDN), Seite Administrationszonen |
+| **Domänen** | Assets (Reiter Netzwerk → Domäne, FQDN), Seite Administrationszonen |
 | **Entitäten** | Verbindungen (Quell-/Zielentität), Verbindungskarte (Platzierung nach Graph-Ebene) |
 | **Hosting-Typen** | Standorte (Übersicht), Technologien (Hosting-Typ) |
 | **Integrationsmuster** | Schnittstellenabschnitte (Muster) |
@@ -429,12 +429,12 @@ So können Sie Ihre Taxonomie im Laufe der Zeit weiterentwickeln, ohne bestehend
 | **Schnittstellenprotokolle** | Schnittstellenbindungen (Protokoll) |
 | **Auslösertypen für Schnittstellen** | Schnittstellenabschnitte (Auslöser) |
 | **Vorfallkategorien** | Vorfälle (Kategorie) |
-| **IP-Adresstypen** | Assets (Reiter Technik → IP-Adressen → Typ) |
+| **IP-Adresstypen** | Assets (Reiter Netzwerk → IP-Adressen → Typ) |
 | **Lebenszyklus-Status** | Anwendungen, App-Instanzen, Schnittstellen, Bindungen, Assets |
 | **Netzwerkzonen** | Subnetze (Netzwerkzone), Assets (automatisch aus dem Subnetz) |
-| **Subnetze** | Assets (Reiter Technik → IP-Adressen → Subnetzauswahl) |
+| **Subnetze** | Assets (Reiter Netzwerk → IP-Adressen → Subnetzauswahl) |
 | **Serverrollen** | Anwendungen → Reiter Server (Rolle beim Verknüpfen eines Assets mit der Anwendung), Verbindungskarte (Platzierung nach Graph-Ebene) |
-| **Asset-Typen** | Assets (Übersicht → Typ) |
+| **Asset-Typen** | Assets (Eigenschaftsleiste → Asset-Typ) |
 | **Technologiefamilien** | Technologien (Familie), Seite Administrationszonen (Verzeichnisdienste) |
 
 ---
