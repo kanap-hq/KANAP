@@ -130,9 +130,9 @@ export class ApplicationsCsvService {
         SELECT o.application_id, o.user_id, o.owner_type, u.email
         FROM application_owners o
         JOIN users u ON u.id = o.user_id
-        WHERE o.application_id = ANY($1)
+        WHERE o.tenant_id = $2 AND o.application_id = ANY($1)
         ORDER BY o.created_at ASC
-      `, [appIds]);
+      `, [appIds, tenantId]);
 
       const ownersByApp = new Map<string, any[]>();
       for (const owner of ownersWithUsers) {
@@ -149,9 +149,9 @@ export class ApplicationsCsvService {
       const residencyRows = await manager.query(`
         SELECT application_id, country_iso
         FROM application_data_residency
-        WHERE application_id = ANY($1)
+        WHERE tenant_id = $2 AND application_id = ANY($1)
         ORDER BY created_at ASC
-      `, [appIds]);
+      `, [appIds, tenantId]);
 
       const residencyByApp = new Map<string, any[]>();
       for (const row of residencyRows) {
