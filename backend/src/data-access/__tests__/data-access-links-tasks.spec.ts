@@ -617,6 +617,65 @@ async function testTaskPlacement(s: Seed2): Promise<void> {
   console.log('  task placement: a responsible person never moves a task onto a line or contract out of edit access (§2.5): OK');
 }
 
+/**
+ * The SECURITY DEFINER access functions stay inside the tenant of the transaction by their own
+ * predicate, not only through the tenant policies of their owner (defence in depth): with FORCE
+ * row level security lifted on the tables they read, the owner bypasses the tenant policies, and
+ * the objects of another tenant must still be out of reach.
+ */
+async function testTenantPredicate(s: Seed2): Promise<void> {
+  await apply(s.persons.ulla);
+  await client.query('SAVEPOINT data_access_tenant');
+  try {
+    const tables = ['spend_items', 'spend_versions', 'spend_round_inputs', 'contracts', 'contract_spend_items', 'tasks', 'applications', 'application_spend_items'];
+    for (const table of tables) await client.query(`ALTER TABLE ${table} NO FORCE ROW LEVEL SECURITY`);
+    // Another tenant, with a line, a contract linked to it, a task and an application of that line.
+    const other = await seedLines(client);
+    const otherLine = other.lines.L1;
+    const supplier = (await q(`INSERT INTO suppliers (tenant_id, name) VALUES (app_current_tenant(), 'Other supplier') RETURNING id`))[0].id;
+    const contract = (await q(
+      `INSERT INTO contracts (tenant_id, name, company_id, supplier_id, start_date) VALUES (app_current_tenant(), 'Other contract', $1, $2, '2026-01-01') RETURNING id`,
+      [other.fr, supplier],
+    ))[0].id;
+    await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [contract, otherLine]);
+    const task = (await q(
+      `INSERT INTO tasks (tenant_id, title, item_number, related_object_type, related_object_id) VALUES (app_current_tenant(), 'Other task', $1, 'spend_item', $2) RETURNING id`,
+      [taskNumber++, otherLine],
+    ))[0].id;
+    const application = (await q(`INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), 'Other application') RETURNING id`))[0].id;
+    await q(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [application, otherLine]);
+    await q(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+
+    for (const person of ['claire', 'rob'] as const) {
+      assert.equal(await apply(s.persons[person]), 'limited');
+      const values = (await q(`
+        SELECT data_access_contract_visible($1) AS contract_visible,
+               data_access_contract_modifiable($1) AS contract_modifiable,
+               data_access_task_visible($2) AS task_visible,
+               data_access_task_modifiable($2) AS task_modifiable,
+               $1 IN (SELECT data_access_visible_contract_ids()) AS in_contracts,
+               $2 IN (SELECT data_access_searchable_task_ids()) AS in_tasks,
+               data_access_hidden_count('application', $3) AS hidden,
+               data_access_reference('task', $2) AS reference,
+               data_access_line_of_version($4) AS line_of_version,
+               data_access_line_of_round_input($5) AS line_of_round_input`,
+      [contract, task, application, other.versions.L1, other.roundInputs.L1]))[0];
+      assert.deepEqual(values, {
+        contract_visible: false, contract_modifiable: false, task_visible: false, task_modifiable: false,
+        in_contracts: false, in_tasks: false, hidden: null, reference: null, line_of_version: null, line_of_round_input: null,
+      }, `${person}: the objects of another tenant stay out of reach`);
+      // The person's own tenant is still served (reading everything).
+      assert.equal((await q(`SELECT data_access_contract_visible($1) AS v`, [s.contracts.CF]))[0].v, true, `${person}: own contract`);
+      await apply(s.persons.ulla);
+    }
+  } finally {
+    await client.query('ROLLBACK TO SAVEPOINT data_access_tenant');
+    await q(`SELECT set_config('app.current_tenant', $1, true)`, [s.tenantId]);
+    await apply(s.persons.ulla);
+  }
+  console.log('  access functions: another tenant out of reach by their own predicate: OK');
+}
+
 async function sqlStateOf(sql: string, params: unknown[]): Promise<string> {
   const state = await write(sql, params);
   assert.notEqual(state, 'ok', `expected an error: ${sql}`);
@@ -670,6 +729,7 @@ async function run(): Promise<void> {
       await testPersons(s);
       await testBulkReplacement(s);
       await testTaskPlacement(s);
+      await testTenantPredicate(s);
       await testSearchIndexSetForm(s);
       await testRoleWithoutContext(s);
     } finally {

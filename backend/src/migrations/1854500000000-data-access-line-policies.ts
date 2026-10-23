@@ -210,15 +210,23 @@ const modifiableContract = (p: string) => `(${EDIT_ALL}
       OR (${p}cost_center_id = ANY (${EDIT_NODES})
           AND data_access_placable_contract(${p}company_id, ${p}cost_center_id)))`;
 
+/**
+ * The tenant of the transaction, on a table read by a SECURITY DEFINER function (`p`: its alias
+ * with the dot). Those functions read without the data-access policies and rely on the tenant
+ * policies of their owner (FORCE row level security); the predicate keeps them inside the tenant
+ * if that ever changes (defence in depth). The policies themselves keep the tenant policies alone.
+ */
+const IN_TENANT = (p: string) => `${p}tenant_id = app_current_tenant()`;
+
 /** A line, named by `ref`, readable. */
 const lineReadableById = (ref: string, reach: Reach) => reach === 'filtered'
   ? `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref})`
-  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${readableLine('i.')})`;
+  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${IN_TENANT('i.')} AND ${readableLine('i.')})`;
 
 /** A line, named by `ref`, modifiable (and so readable). */
 const lineModifiableById = (ref: string, reach: Reach) => reach === 'filtered'
   ? `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${modifiableLine('i.')})`
-  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${readableLine('i.')} AND ${modifiableLine('i.')})`;
+  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${IN_TENANT('i.')} AND ${readableLine('i.')} AND ${modifiableLine('i.')})`;
 
 /**
  * A contract, named by `ref`, modifiable: through the depth function, like its visibility, so a
@@ -601,7 +609,7 @@ async function createPlacementFunctions(queryRunner: QueryRunner): Promise<void>
     SECURITY DEFINER
     SET search_path = public, pg_temp
     AS $fn$
-      SELECT v.spend_item_id FROM public.spend_versions v WHERE v.id = p_version
+      SELECT v.spend_item_id FROM public.spend_versions v WHERE v.id = p_version AND ${IN_TENANT('v.')}
     $fn$
   `);
   await queryRunner.query(`
@@ -614,8 +622,8 @@ async function createPlacementFunctions(queryRunner: QueryRunner): Promise<void>
     AS $fn$
       SELECT v.spend_item_id
       FROM public.spend_round_inputs r
-      JOIN public.spend_versions v ON v.id = r.version_id
-      WHERE r.id = p_round_input
+      JOIN public.spend_versions v ON v.id = r.version_id AND ${IN_TENANT('v.')}
+      WHERE r.id = p_round_input AND ${IN_TENANT('r.')}
     $fn$
   `);
   for (const signature of LINE_HELPER_SIGNATURES) {
@@ -634,9 +642,9 @@ const LINE_HELPER_SIGNATURES = ['data_access_line_of_version(uuid)', 'data_acces
  */
 const readableContract = (p: string, reach: Reach) => `(${readableContractDirect(p)}
       OR EXISTS (SELECT 1 FROM public.contract_spend_items l JOIN public.spend_items i ON i.id = l.spend_item_id
-                 WHERE l.contract_id = ${p}id${reach === 'definer' ? ` AND ${readableLine('i.')}` : ''})
+                 WHERE l.contract_id = ${p}id${reach === 'definer' ? ` AND ${IN_TENANT('l.')} AND ${IN_TENANT('i.')} AND ${readableLine('i.')}` : ''})
       OR EXISTS (SELECT 1 FROM public.spend_items i
-                 WHERE i.contract_id = ${p}id${reach === 'definer' ? ` AND ${readableLine('i.')}` : ''}))`;
+                 WHERE i.contract_id = ${p}id${reach === 'definer' ? ` AND ${IN_TENANT('i.')} AND ${readableLine('i.')}` : ''}))`;
 
 /**
  * The SECURITY DEFINER access functions of run 2B, by signature: EXECUTE revoked from PUBLIC,
@@ -693,7 +701,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
       SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${readableContract('c.', 'definer')}
-        FROM public.contracts c WHERE c.id = p_contract), false) END
+        FROM public.contracts c WHERE c.id = p_contract AND ${IN_TENANT('c.')}), false) END
     $fn$
   `);
 
@@ -707,7 +715,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
       SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${modifiableContract('c.')}
-        FROM public.contracts c WHERE c.id = p_contract), false) END
+        FROM public.contracts c WHERE c.id = p_contract AND ${IN_TENANT('c.')}), false) END
     $fn$
   `);
 
@@ -719,7 +727,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
       SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${taskReadable('t.', 'definer')}
-        FROM public.tasks t WHERE t.id = p_task), false) END
+        FROM public.tasks t WHERE t.id = p_task AND ${IN_TENANT('t.')}), false) END
     $fn$
   `);
 
@@ -731,7 +739,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
       SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${taskModifiable('t.', 'definer')}
-        FROM public.tasks t WHERE t.id = p_task), false) END
+        FROM public.tasks t WHERE t.id = p_task AND ${IN_TENANT('t.')}), false) END
     $fn$
   `);
 
@@ -747,7 +755,8 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     ${definer}
     AS $fn$
       SELECT c.id FROM public.contracts c
-      WHERE CASE WHEN ${MODE_LIMITED} THEN ${readableContract('c.', 'definer')} ELSE NOT (${ROLE_TAKEN}) END
+      WHERE ${IN_TENANT('c.')}
+        AND CASE WHEN ${MODE_LIMITED} THEN ${readableContract('c.', 'definer')} ELSE NOT (${ROLE_TAKEN}) END
     $fn$
   `);
 
@@ -758,7 +767,8 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     ${definer}
     AS $fn$
       SELECT t.id FROM public.tasks t
-      WHERE CASE WHEN ${MODE_LIMITED} THEN ${taskReadable('t.', 'definer', 'set', false)} ELSE NOT (${ROLE_TAKEN}) END
+      WHERE ${IN_TENANT('t.')}
+        AND CASE WHEN ${MODE_LIMITED} THEN ${taskReadable('t.', 'definer', 'set', false)} ELSE NOT (${ROLE_TAKEN}) END
     $fn$
   `);
 
@@ -770,8 +780,8 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
         END IF;
         SELECT count(*)::int INTO v_count
         FROM public.${h.link} l
-        JOIN public.spend_items i ON i.id = l.${h.lineColumn}
-        WHERE l.${h.objectColumn} = p_id AND l.tenant_id = app_current_tenant()
+        JOIN public.spend_items i ON i.id = l.${h.lineColumn} AND ${IN_TENANT('i.')}
+        WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')}
           AND NOT coalesce(${readableLine('i.')}, false);
         RETURN v_count;
       END IF;`).join('');
@@ -826,7 +836,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
       IF v_type IN ${LINE_TASK_TYPES} THEN
         SELECT CASE WHEN i.nature = 'capex' THEN 'CPX' ELSE 'OPX' END || '-' || i.item_number
         INTO v_reference
-        FROM public.spend_items i WHERE i.id = v_object;
+        FROM public.spend_items i WHERE i.id = v_object AND ${IN_TENANT('i.')};
         RETURN v_reference;
       END IF;
       RETURN NULL;
