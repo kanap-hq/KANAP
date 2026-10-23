@@ -2250,6 +2250,8 @@
       "loading": "Loading technology…",
       "notFound": "Technology not found.",
       "untitled": "Untitled technology",
+      "previous": "Previous technology",
+      "next": "Next technology",
       "deleteMessage": "{{name}} will be deleted. This cannot be undone.",
       "deleteMessageWithUsages": "{{name}} will be deleted with {{usages}}. This cannot be undone.",
       "deleteAnyway": "Delete anyway",

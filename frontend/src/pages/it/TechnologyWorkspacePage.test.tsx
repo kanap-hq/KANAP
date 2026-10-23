@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor, within } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -37,6 +37,13 @@ vi.mock('../portfolio/workspace/PortfolioDetailWorkspaceShell', () => ({
   default: (props: any) => (
     <div>
       <div data-testid="reference">{props.itemReference}</div>
+      {props.nav && (
+        <div data-testid="nav">
+          <button disabled={!props.nav.hasPrev} onClick={props.nav.onPrev}>{props.nav.previousLabel}</button>
+          <span>{`${props.nav.currentIndex} / ${props.nav.totalCount}`}</span>
+          <button disabled={!props.nav.hasNext} onClick={props.nav.onNext}>{props.nav.nextLabel}</button>
+        </div>
+      )}
       <h1>{props.title}</h1>
       <div role="tablist">
         {props.tabs.map((tab: any) => <button key={tab.key} role="tab" disabled={tab.disabled} data-badge={tab.badge ?? ''}>{tab.label}</button>)}
@@ -79,15 +86,21 @@ const DETAIL = {
   ],
 };
 
-function renderPage() {
+function LocationProbe() {
+  const location = useLocation();
+  return <div data-testid="location">{`${location.pathname}${location.search}`}</div>;
+}
+
+function renderPage(entry = '/it/technologies/TEC-3/overview') {
   const client = new QueryClient({ defaultOptions: { queries: { retry: false } } });
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/technologies/TEC-3/overview']}>
+          <MemoryRouter initialEntries={[entry]}>
             <Routes>
               <Route path="/it/technologies/:id/:tab" element={<TechnologyWorkspacePage />} />
+              <Route path="/it/technologies/TEC-9/:tab" element={<LocationProbe />} />
               <Route path="/it/technologies" element={<div>list page</div>} />
             </Routes>
           </MemoryRouter>
@@ -117,6 +130,27 @@ describe('TechnologyWorkspacePage', () => {
       return { data: { items: [], has_more: false } };
     });
     patch.mockImplementation(async (_url: string, body: any) => ({ data: { ...DETAIL, ...body } }));
+  });
+
+  it('shows the position in the list and opens the next technology on the same tab, with the list sort and filters', async () => {
+    const base = get.getMockImplementation()!;
+    get.mockImplementation(async (url: string, config?: any) => {
+      if (url === '/technologies/ids') return { data: { ids: ['tech-0', 'tech-1', 'tech-9'], refs: ['TEC-1', 'TEC-3', 'TEC-9'], total: 3 } };
+      return base(url, config);
+    });
+    const filters = JSON.stringify({ family: { filterType: 'set', values: ['database'] } });
+    renderPage(`/it/technologies/TEC-3/servers?sort=editor%3ADESC&filters=${encodeURIComponent(filters)}`);
+
+    const nav = await screen.findByTestId('nav');
+    expect(within(nav).getByText('2 / 3')).toBeInTheDocument();
+    const idsCall = get.mock.calls.find(([url]) => url === '/technologies/ids')!;
+    expect(idsCall[1].params).toMatchObject({ sort: 'editor:DESC', filters });
+    expect(within(nav).getByRole('button', { name: 'workspace.technology.previous' })).toBeEnabled();
+
+    fireEvent.click(within(nav).getByRole('button', { name: 'workspace.technology.next' }));
+    expect(await screen.findByTestId('location')).toHaveTextContent(
+      `/it/technologies/TEC-9/servers?sort=editor%3ADESC&filters=${encodeURIComponent(filters)}`,
+    );
   });
 
   it('shows the reference, the name, the ready tabs and the tabs of the next lots disabled', async () => {

@@ -8,6 +8,7 @@ import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { useKanapDialogs } from '../../components/design';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
+import { useTechnologyItemNav } from '../../hooks/useModuleItemNav';
 import { useLocale } from '../../i18n/useLocale';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
 import { refusalCounts } from '../../utils/deleteRefusal';
@@ -124,6 +125,17 @@ export default function TechnologyWorkspacePage() {
   };
 
   const listSearch = searchParams.toString();
+  // Previous / next through the list, with its sort, search and filters, on the current tab.
+  const nav = useTechnologyItemNav({
+    id: technologyId,
+    sort: searchParams.get('sort'),
+    q: searchParams.get('q'),
+    filters: searchParams.get('filters'),
+    enabled: !!technologyId,
+  });
+  const openNeighbour = (reference: string | null) => {
+    if (reference) navigate(`/it/technologies/${reference}/${routeTab}${listSearch ? `?${listSearch}` : ''}`);
+  };
   const closeWorkspace = React.useCallback(() => {
     navigate(`/it/technologies${listSearch ? `?${listSearch}` : ''}`);
   }, [listSearch, navigate]);
@@ -199,6 +211,16 @@ export default function TechnologyWorkspacePage() {
         onBack={closeWorkspace}
         itemReference={technology.reference}
         onCopyReference={() => { void navigator.clipboard?.writeText(technology.reference); }}
+        nav={nav.total > 0 ? {
+          currentIndex: nav.index + 1,
+          totalCount: nav.total,
+          hasPrev: nav.hasPrev,
+          hasNext: nav.hasNext,
+          onPrev: () => openNeighbour(nav.prevId),
+          onNext: () => openNeighbour(nav.nextId),
+          previousLabel: t('workspace.technology.previous'),
+          nextLabel: t('workspace.technology.next'),
+        } : undefined}
         title={technology.name}
         titleFallback={t('workspace.technology.untitled')}
         canEditTitle={canManage}
