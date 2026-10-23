@@ -30,7 +30,7 @@ import {
   INTEGRATED_DOCUMENT_SLOT_DEFINITIONS,
   IntegratedDocumentSlotKey,
 } from './integrated-document.constants';
-import { KnowledgeService, RelationEntityType } from './knowledge.service';
+import { DocumentSourceGrant, KnowledgeService, RelationEntityType } from './knowledge.service';
 import {
   DocumentSourceAccessContext,
   buildIncidentReviewImportContext,
@@ -302,6 +302,29 @@ export class IntegratedDocumentsService {
     return opts?.allowFrozenIncident
       ? buildIncidentReviewImportContext(params)
       : buildIncidentReviewSourceContext(params);
+  }
+
+  /**
+   * The access a source record gives to its integrated document, once `resolveManagedDocumentId`
+   * checked the source permission for `accessMode`: write for an edit, read otherwise. None on the
+   * incident review path, which carries its own `sourceContext`.
+   */
+  private sourceGrant(
+    sourceEntityType: SourceScopedEntityType,
+    sourceEntityId: string,
+    slotKey: string,
+    documentId: string,
+    accessMode: SourceAccessMode,
+    sourceContext: DocumentSourceAccessContext | null,
+  ): DocumentSourceGrant | null {
+    if (sourceContext) return null;
+    return {
+      documentId,
+      sourceEntityType,
+      sourceEntityId,
+      slotKey,
+      level: accessMode === 'edit' ? 'writer' : 'reader',
+    };
   }
 
   private assertSupportedSlot(sourceEntityType: SourceScopedEntityType, slotKey: string): asserts slotKey is IntegratedDocumentSlotKey {
@@ -2134,6 +2157,7 @@ export class IntegratedDocumentsService {
         manager,
         initializer: opts?.initializer,
         sourceContext: provisioningContext,
+        boundToSource: true,
         // A blank explicit content leaves the template, a stored content, in place.
         storedContent: opts?.storedContent
           || (!String(explicitContent ?? '').trim() && opts?.useTemplateWhenBlank !== false),
@@ -3357,7 +3381,9 @@ export class IntegratedDocumentsService {
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, managedSlotKey, normalizedUserId, manager,
     );
-    return this.knowledge.acquireLock(documentId, normalizedUserId, { manager, sourceContext });
+    return this.knowledge.acquireLock(documentId, normalizedUserId, {
+      manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, managedSlotKey, documentId, 'edit', sourceContext),
+    });
   }
 
   async heartbeatLockBySource(
@@ -3382,7 +3408,9 @@ export class IntegratedDocumentsService {
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, managedSlotKey, normalizedUserId, manager,
     );
-    return this.knowledge.heartbeatLock(documentId, normalizedUserId, lockToken, { manager, sourceContext });
+    return this.knowledge.heartbeatLock(documentId, normalizedUserId, lockToken, {
+      manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, managedSlotKey, documentId, 'edit', sourceContext),
+    });
   }
 
   async releaseLockBySource(
@@ -3407,7 +3435,9 @@ export class IntegratedDocumentsService {
     const sourceContext = await this.buildSourceAccessContext(
       sourceEntityType, sourceEntityId, managedSlotKey, normalizedUserId, manager,
     );
-    return this.knowledge.releaseLock(documentId, normalizedUserId, lockToken, { manager, sourceContext });
+    return this.knowledge.releaseLock(documentId, normalizedUserId, lockToken, {
+      manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, managedSlotKey, documentId, 'edit', sourceContext),
+    });
   }
 
   /**
@@ -3479,7 +3509,7 @@ export class IntegratedDocumentsService {
       },
       normalizedUserId,
       lockToken,
-      { manager, sourceContext },
+      { manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext) },
     );
 
     if (
@@ -3533,6 +3563,7 @@ export class IntegratedDocumentsService {
       manager,
       sourceField: 'content_markdown',
       sourceContext,
+      sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext),
     });
   }
 
@@ -3559,7 +3590,9 @@ export class IntegratedDocumentsService {
       const sourceContext = await this.buildSourceAccessContext(
         sourceEntityType, sourceEntityId, slotKey, normalizedUserId, manager,
       );
-      return this.knowledge.importDocument(documentId, file, normalizedUserId, lockToken, { manager, sourceContext });
+      return this.knowledge.importDocument(documentId, file, normalizedUserId, lockToken, {
+        manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext),
+      });
     }
 
     let manager = this.getManager(opts);
@@ -3586,7 +3619,8 @@ export class IntegratedDocumentsService {
       sourceEntityType, sourceEntityId, slotKey, normalizedUserId, manager,
     );
     return this.knowledge.finalizeImportedDocument(
-      documentId, released.result, normalizedUserId, lockToken, { manager, sourceContext },
+      documentId, released.result, normalizedUserId, lockToken,
+      { manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext) },
     );
   }
 
@@ -3615,6 +3649,7 @@ export class IntegratedDocumentsService {
       manager,
       sourceField: 'content_markdown',
       sourceContext,
+      sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, slotKey, documentId, 'edit', sourceContext),
     });
   }
 
@@ -3670,7 +3705,8 @@ export class IntegratedDocumentsService {
       sourceEntityType, sourceEntityId, managedSlotKey, normalizedUserId, manager,
     );
     const result = await this.knowledge.revert(
-      documentId, versionNumber, normalizedUserId, lockToken, { manager, sourceContext },
+      documentId, versionNumber, normalizedUserId, lockToken,
+      { manager, sourceContext, sourceGrant: this.sourceGrant(sourceEntityType, sourceEntityId, managedSlotKey, documentId, 'edit', sourceContext) },
     );
     const sourceRows = await manager.query<Array<{ tenant_id: string }>>(
       `SELECT tenant_id

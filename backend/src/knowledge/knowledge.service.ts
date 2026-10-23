@@ -198,7 +198,23 @@ type KnowledgeLibraryDetailView = KnowledgeLibraryView & {
  */
 export type DocumentAccessOptions = {
   sourceContext?: DocumentSourceAccessContext | null;
+  /**
+   * An integrated document reached through its source record (an application's overview, a
+   * project's purpose, ...): `IntegratedDocumentsService` sets it after checking the source
+   * permission at `level` and resolving `documentId` from that record's binding. It stands for
+   * the Knowledge library ACL on that one document only, never on an incident review (which has
+   * its own `sourceContext`). Never accepted from a DTO, a header or an AI tool argument.
+   */
+  sourceGrant?: DocumentSourceGrant | null;
   tenantId?: string | null;
+};
+
+export type DocumentSourceGrant = {
+  documentId: string;
+  sourceEntityType: string;
+  sourceEntityId: string;
+  slotKey: string;
+  level: 'reader' | 'writer';
 };
 
 export type { DocumentSourceAccessContext };
@@ -1044,6 +1060,22 @@ export class KnowledgeService {
         // neighbourhood (relations, template) has to be withheld.
         granted_by_source_context: true,
       };
+    }
+
+    const grant = opts?.sourceGrant ?? null;
+    if (!binding && grant && grant.documentId === documentId && (mode === 'read' || grant.level === 'writer')) {
+      // The grant holds only for the document bound to that very source slot.
+      const bound = await this.getIntegratedBinding(documentId, manager);
+      if (
+        bound
+        && String(bound.source_entity_type) === grant.sourceEntityType
+        && String(bound.source_entity_id) === grant.sourceEntityId
+        && String(bound.slot_key) === grant.slotKey
+      ) {
+        const library = await this.getLibraryOrThrow(await resolveLibraryId(), manager);
+        // No Knowledge level is granted: the source permission decides, below `admin`.
+        return { ...this.toKnowledgeLibraryView(library, grant.level, null), granted_by_source_context: true };
+      }
     }
 
     const libraryId = await resolveLibraryId();
@@ -4055,6 +4087,11 @@ export class KnowledgeService {
        * budget is kept as it is (markdown-rich-text.ts).
        */
       storedContent?: boolean;
+      /**
+       * Set by `IntegratedDocumentsService` only: the document is created in the library its
+       * slot settings name and bound to a source record whose permission the caller checked.
+       */
+      boundToSource?: boolean;
     } & DocumentAccessOptions,
   ): Promise<Document> {
     const manager = this.getManager(opts);
@@ -4080,7 +4117,7 @@ export class KnowledgeService {
     // source entity's own permissions and visibility. Requiring Knowledge write
     // on Managed Docs here would stop an incident reporter from creating an
     // incident at all.
-    if (normalizedUserId && !opts?.sourceContext) {
+    if (normalizedUserId && !opts?.sourceContext && !opts?.boundToSource) {
       await this.assertLibraryWritable(String(body.library_id), manager, normalizedUserId);
     }
 
