@@ -37,6 +37,30 @@ import {
  * - Proper FK resolution
  * - Two-phase import with validation
  */
+
+type ExportLanguage = 'en' | 'fr' | 'de' | 'es';
+
+/** The screen's names of the fixed values (not tenant catalogs), per export language. Both columns are export-only. */
+const FIXED_EXPORT_LABELS: Record<string, Record<string, Record<ExportLanguage, string>>> = {
+  classification_review_state: {
+    incomplete: { en: 'To complete', fr: 'À compléter', de: 'Zu vervollständigen', es: 'Por completar' },
+    stale: { en: 'Review needed', fr: 'À revoir', de: 'Erneut prüfen', es: 'Por revisar' },
+    reviewed: { en: 'Reviewed', fr: 'Revu', de: 'Geprüft', es: 'Revisado' },
+  },
+  users_mode: {
+    manual: { en: 'Manual', fr: 'Manuel', de: 'Manuell', es: 'Manual' },
+    it_users: { en: 'IT users', fr: 'Utilisateurs IT', de: 'IT-Benutzer', es: 'Usuarios IT' },
+    headcount: { en: 'Headcount', fr: 'Effectif', de: 'Mitarbeiterzahl', es: 'Plantilla' },
+  },
+};
+
+export function exportFixedLabelsIn(row: Record<string, any>, language: ExportLanguage): void {
+  for (const [field, labels] of Object.entries(FIXED_EXPORT_LABELS)) {
+    const label = labels[String(row[field])]?.[language];
+    if (label) row[field] = label;
+  }
+}
+
 @Injectable()
 export class ApplicationsCsvService {
   constructor(
@@ -110,6 +134,7 @@ export class ApplicationsCsvService {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
       Object.assign(app, classificationReadState(app));
+      exportFixedLabelsIn(app, opts.language);
       exportCatalogLabelsIn(app, {
         category: { list: 'applicationCategories', options: settings.applicationCategories },
         lifecycle: { list: 'lifecycleStates', options: settings.lifecycleStates },

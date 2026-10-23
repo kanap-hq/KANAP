@@ -264,6 +264,9 @@ async function testFrenchExportImportsBack() {
     const statusColumn = header.split(';').indexOf('status');
     assert.ok(statusColumn >= 0, 'the export has the status');
     assert.equal(atlasLine.split(';')[statusColumn], 'Activé', 'named as the screen names it in French');
+    const cellOf = (column: string) => atlasLine.split(';')[header.split(';').indexOf(column)];
+    assert.equal(cellOf('users_mode'), 'Utilisateurs IT', 'the users mode is named as the screen names it in French');
+    assert.equal(cellOf('classification_review_state'), 'À compléter', 'the review state is named as the screen names it in French');
     const result = await ctx.csv.import(
       { buffer: Buffer.from(exported.content), originalname: 'export.csv' } as Express.Multer.File,
       { dryRun: false, mode: 'enrich', operation: 'upsert' },
