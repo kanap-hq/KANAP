@@ -117,13 +117,28 @@ export function budgetLinesSection({
         hint: t(`ops:budget.${row.nature}`),
       }));
     },
+    // A disabled line stays listed, muted, and is left out of the total, which says so below it.
     totals: (lines) => {
-      const amounts = lines.map((row) => row.amount).filter((amount): amount is number => amount != null);
-      if (amounts.length === 0) return [];
-      return [{
+      const disabled = lines.filter((row) => row.status === 'disabled').length;
+      const amounts = lines
+        .filter((row) => row.status !== 'disabled')
+        .map((row) => row.amount)
+        .filter((amount): amount is number => amount != null);
+      if (amounts.length === 0 && disabled === 0) return [];
+      const total = {
         key: 'total',
         label: t('workspace.application.relations.total'),
         cells: { amount: formatAmount(amounts.reduce((sum, value) => sum + value, 0)) },
+      };
+      if (disabled === 0) return [total];
+      return [total, {
+        key: 'disabled',
+        label: (
+          <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+            {t('workspace.application.relations.disabledNotCounted', { count: disabled })}
+          </Box>
+        ),
+        cells: {},
       }];
     },
     notice: (lines) => <FxMissingNotice items={fxMissingOfLines(lines, year)} sx={{ mt: 0.75 }} />,

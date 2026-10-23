@@ -1892,6 +1892,8 @@
         "suggestions_one": "{{count}} Vorschlag",
         "suggestions_other": "{{count}} Vorschläge",
         "total": "Gesamt",
+        "disabledNotCounted_one": "{{count}} deaktivierte Zeile nicht gezählt",
+        "disabledNotCounted_other": "{{count}} deaktivierte Zeilen nicht gezählt",
         "technologyServers": {
           "proposal": "{{technology}} {{version}} auch erfassen auf",
           "proposalUnknown": "{{technology}} (Version unbekannt) auch erfassen auf",

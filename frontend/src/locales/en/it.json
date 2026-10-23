@@ -1892,6 +1892,8 @@
         "suggestions_one": "{{count}} suggestion",
         "suggestions_other": "{{count}} suggestions",
         "total": "Total",
+        "disabledNotCounted_one": "{{count}} disabled line not counted",
+        "disabledNotCounted_other": "{{count}} disabled lines not counted",
         "technologyServers": {
           "proposal": "Also record {{technology}} {{version}} on",
           "proposalUnknown": "Also record {{technology}} (version unknown) on",

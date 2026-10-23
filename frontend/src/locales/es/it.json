@@ -1892,6 +1892,8 @@
         "suggestions_one": "{{count}} sugerencia",
         "suggestions_other": "{{count}} sugerencias",
         "total": "Total",
+        "disabledNotCounted_one": "{{count}} línea desactivada no contabilizada",
+        "disabledNotCounted_other": "{{count}} líneas desactivadas no contabilizadas",
         "technologyServers": {
           "proposal": "Registrar también {{technology}} {{version}} en",
           "proposalUnknown": "Registrar también {{technology}} (versión desconocida) en",
