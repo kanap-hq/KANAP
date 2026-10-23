@@ -26,7 +26,7 @@ import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessag
 import { getDotColor } from '../../utils/statusColors';
 import { useCoaList } from '../coa/useCoaList';
 import { CoaField, CountryField, CurrencyField, defaultCoaFor } from './CompanyFields';
-import CompanyDeleteButton from './CompanyDeleteButton';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import CompanyMetricsTab from './CompanyMetricsTab';
 
 type TabKey = 'overview' | 'details';
@@ -421,7 +421,7 @@ export default function CompanyWorkspacePage() {
               </Typography>
             )}
             {data && canDelete && (
-              <CompanyDeleteButton companyId={data.id} companyName={data.name} onDeleted={() => { setDeletedId(data.id); handleClose(); }} />
+              <RecordDeleteButton base="/companies" id={data.id} name={data.name} deleteFailed="companies.messages.deleteFailed" onDeleted={() => { setDeletedId(data.id); handleClose(); }} />
             )}
           </>
         ) : undefined}
