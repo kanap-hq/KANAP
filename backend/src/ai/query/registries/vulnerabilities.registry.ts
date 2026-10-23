@@ -1,5 +1,6 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
-import { EFFECTIVE_SCORE, SCORE_SOURCE_SQL } from '../../../vulnerabilities/vulnerabilities.service';
+import { SCORE_SOURCE_SQL } from '../../../vulnerabilities/vulnerabilities.service';
+import { EFFECTIVE_SCORE } from '../../../vulnerabilities/vulnerability-reach-counts';
 import { vulnerabilityAlertsSql } from '../../../vulnerabilities/vulnerability-alerts';
 import { EFFECTIVE_SEVERITY, exploitedSql } from '../../../vulnerabilities/vulnerability-reach-counts';
 import {
