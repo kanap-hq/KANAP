@@ -126,6 +126,32 @@ async function testExpansion(): Promise<void> {
   console.log('  expansion, settings, jit, second call: OK');
 }
 
+/** Limited, then an unscoped person or an Administrator in the same transaction: back to none. */
+async function testSecondCallAll(): Promise<void> {
+  await inTransaction(async () => {
+    const tree = await seedTree(client);
+    const reader = await seedRole(client, tree.tenantId, 'Reader');
+    const admin = await seedRole(client, tree.tenantId, 'Administrator');
+    const limited = await seedPerson(client, tree.tenantId, 'limited', reader);
+    await seedNodes(client, tree.tenantId, limited, [{ type: 'company', id: tree.companies.c1, access: 'edit' }]);
+    const everyone = await seedPerson(client, tree.tenantId, 'all', reader);
+    const administrator = await seedPerson(client, tree.tenantId, 'limited', admin);
+
+    for (const [label, id] of [['mode all', everyone], ['administrator', administrator]] as const) {
+      assert.equal(await apply(limited), 'limited', `${label}: first call limited`);
+      assert.equal(await currentUser(), LIMITED_ROLE);
+      assert.equal(await apply(id), 'all', `${label}: second call all`);
+      assert.equal(await currentUser(), APP_ROLE, `${label}: back to the application role`);
+      assertNoSettings(await readSettings(client), `${label} after a limited call`);
+      assert.deepEqual(await ctx(), { mode: 'all' }, `${label}: ctx reads all`);
+    }
+    // And limited again afterwards.
+    assert.equal(await apply(limited), 'limited');
+    assert.equal(await currentUser(), LIMITED_ROLE);
+  });
+  console.log('  second call for an unscoped person or an Administrator: role and settings reset: OK');
+}
+
 async function testAllNodesAndEmptyList(): Promise<void> {
   await inTransaction(async () => {
     const tree = await seedTree(client);
@@ -392,6 +418,7 @@ async function run(): Promise<void> {
       // The grants the API sets at its start (lot 1 run B); the specs do not wait for it.
       await client.query(`SELECT data_access_sync_policies()`);
       await testExpansion();
+      await testSecondCallAll();
       await testAllNodesAndEmptyList();
       await testEndOfTransaction();
       await testExpectedPolicies();

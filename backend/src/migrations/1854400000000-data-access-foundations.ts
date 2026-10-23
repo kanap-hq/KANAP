@@ -350,13 +350,12 @@ async function createFunctions(queryRunner: QueryRunner): Promise<void> {
         RAISE EXCEPTION 'data access: person not found' USING ERRCODE = 'KDA02';
       END IF;
 
-      -- 2. All data: nothing changes.
-      IF v_mode = 'all' THEN
-        RETURN 'all';
-      END IF;
-
-      -- 3. Administrator, by role name, as auth/business-contributor-scope.ts: nothing changes.
-      IF EXISTS (
+      -- 2. All data, or 3. Administrator (by role name, as auth/business-contributor-scope.ts):
+      -- nothing changes. In a transaction a previous call made limited (the preview of lot 6 may
+      -- apply an unscoped person after a limited one), the access goes back to none: the nine
+      -- settings cleared and the session role back (role 'none'), so 'all' never runs with the
+      -- previous person's role and settings. jit stays off until the transaction ends.
+      IF v_mode = 'all' OR EXISTS (
         SELECT 1
         FROM (
           SELECT u.role_id FROM users u WHERE u.id = p_user AND u.tenant_id = v_tenant
@@ -366,6 +365,19 @@ async function createFunctions(queryRunner: QueryRunner): Promise<void> {
         JOIN roles r ON r.id = assigned.role_id AND r.tenant_id = v_tenant
         WHERE lower(trim(r.role_name)) = 'administrator'
       ) THEN
+        IF current_user = '${LIMITED_ROLE}' OR NULLIF(current_setting('app.da_mode', true), '') IS NOT NULL THEN
+          PERFORM
+            set_config('app.da_mode', '', true),
+            set_config('app.da_user', '', true),
+            set_config('app.da_read_all', '', true),
+            set_config('app.da_edit_all', '', true),
+            set_config('app.da_read_companies', '', true),
+            set_config('app.da_edit_companies', '', true),
+            set_config('app.da_read_nodes', '', true),
+            set_config('app.da_edit_nodes', '', true),
+            set_config('app.da_edit_node_companies', '', true);
+          PERFORM set_config('role', 'none', true);
+        END IF;
         RETURN 'all';
       END IF;
 
