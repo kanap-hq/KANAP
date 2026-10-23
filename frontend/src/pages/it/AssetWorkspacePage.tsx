@@ -849,6 +849,8 @@ export default function AssetWorkspacePage() {
     }
     if (hostnameMalformed) {
       setError(t('workspace.asset.technical.hostnameInvalid'));
+      // The host name sits in the Network tab: show it where it can be fixed.
+      if (isCreate && validTab !== 'network') handleTabChange('network');
       return;
     }
     setSaving(true);
@@ -1898,16 +1900,126 @@ export default function AssetWorkspacePage() {
                   <SupportInfoPanel assetId={id} />
                 </Box>
               )}
+              {!isCreate && (
+                <>
+                  <Box>
+                    {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
+                    {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
+                    {isCluster && (
+                      <Alert severity="info" sx={{ mb: 2 }}>
+                        {t('workspace.asset.assignments.clusterCannotHost')}
+                      </Alert>
+                    )}
+                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+                      <SectionLabel>{t('workspace.asset.assignments.title')}</SectionLabel>
+                      <Button
+                        variant="action"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={openAssignDialog}
+                        disabled={serverRoleOptions.length === 0 || isCluster}
+                      >
+                        {t('workspace.asset.assignments.addAssignment')}
+                      </Button>
+                    </Stack>
+                    <Table size="small" sx={denseTableSx}>
+                      <TableHead>
+                        <TableRow>
+                          <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
+                          <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
+                          <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
+                        </TableRow>
+                      </TableHead>
+                      <TableBody>
+                        {assignments.length === 0 && (
+                          <TableRow>
+                            <TableCell colSpan={6}>
+                              <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
+                            </TableCell>
+                          </TableRow>
+                        )}
+                        {assignments.map((assignment) => (
+                          <TableRow key={assignment.id}>
+                            <TableCell>
+                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}>
+                                {assignment.application.name}
+                              </Button>
+                            </TableCell>
+                            <TableCell>{environmentLabel(assignment.environment)}</TableCell>
+                            <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
+                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
+                            <TableCell>{assignment.notes || '-'}</TableCell>
+                            <TableCell align="right">
+                              <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}
+                                  >
+                                    <EditIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                              <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
+                                <span>
+                                  <IconButton
+                                    size="small"
+                                    color="error"
+                                    onClick={() => void handleRemoveAssignment(assignment)}
+                                  >
+                                    <DeleteIcon fontSize="small" />
+                                  </IconButton>
+                                </span>
+                              </Tooltip>
+                            </TableCell>
+                          </TableRow>
+                        ))}
+                      </TableBody>
+                    </Table>
+                  </Box>
+
+                  <Box>
+                    <EntityKnowledgePanel
+                      entityType="assets"
+                      entityId={id}
+                      canCreate={canCreateKnowledge}
+                      controlsMaxWidth={560}
+                    />
+                  </Box>
+                </>
+              )}
+            </Stack>
+          )}
+          {validTab === 'operations' && (
+            <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
+              {!isCreate && id && (
+                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
+              )}
+              {reachVulnerabilities && id && (
+                <ReachVulnerabilitiesSection
+                  data={reachVulnerabilities}
+                  kind="asset"
+                  subjectReference={data?.asset_reference || id}
+                  heading={<SectionLabel>{t('pages.vulnerabilities.section.title')}</SectionLabel>}
+                />
+              )}
+            </Stack>
+          )}
+          {validTab === 'network' && (
+            <Stack spacing={3.5}>
+              {netboxManaged ? (
+                <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary' }}>
+                  {t('pages.netbox.assetSource.managedFields')}
+                </Typography>
+              ) : null}
               {/* IDENTITY SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
                   <SectionLabel>{t('workspace.asset.technical.identity')}</SectionLabel>
                 </Box>
-                {netboxManaged ? (
-                  <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
-                    {t('pages.netbox.assetSource.managedFields')}
-                  </Typography>
-                ) : null}
                 <Stack spacing={0} sx={{ maxWidth: 560 }}>
                   <PropertyRow label={t('workspace.asset.technical.hostname')} valueSx={{ maxWidth: 520 }}>
                     <TextField
@@ -2007,164 +2119,11 @@ export default function AssetWorkspacePage() {
                   />
                 </Stack>
               </Box>
-              {!isCreate && (
-                <>
-                  <Box>
-                    {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
-                    {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
-                    {isCluster && (
-                      <Alert severity="info" sx={{ mb: 2 }}>
-                        {t('workspace.asset.assignments.clusterCannotHost')}
-                      </Alert>
-                    )}
-                    <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                      <SectionLabel>{t('workspace.asset.assignments.title')}</SectionLabel>
-                      <Button
-                        variant="action"
-                        size="small"
-                        startIcon={<AddIcon />}
-                        onClick={openAssignDialog}
-                        disabled={serverRoleOptions.length === 0 || isCluster}
-                      >
-                        {t('workspace.asset.assignments.addAssignment')}
-                      </Button>
-                    </Stack>
-                    <Table size="small" sx={denseTableSx}>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('workspace.asset.assignments.application')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.environment')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
-                          <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
-                          <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {assignments.length === 0 && (
-                          <TableRow>
-                            <TableCell colSpan={6}>
-                              <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
-                            </TableCell>
-                          </TableRow>
-                        )}
-                        {assignments.map((assignment) => (
-                          <TableRow key={assignment.id}>
-                            <TableCell>
-                              <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}>
-                                {assignment.application.name}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{environmentLabel(assignment.environment)}</TableCell>
-                            <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
-                            <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
-                            <TableCell>{assignment.notes || '-'}</TableCell>
-                            <TableCell align="right">
-                              <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}
-                                  >
-                                    <EditIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                              <Tooltip title={t('workspace.asset.assignments.removeAssignment')}>
-                                <span>
-                                  <IconButton
-                                    size="small"
-                                    color="error"
-                                    onClick={() => void handleRemoveAssignment(assignment)}
-                                  >
-                                    <DeleteIcon fontSize="small" />
-                                  </IconButton>
-                                </span>
-                              </Tooltip>
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </Box>
-
-                  <Box>
-                    <Box sx={{ mb: 1 }}>
-                      <SectionLabel>{t('workspace.asset.connections.title')}</SectionLabel>
-                    </Box>
-                    {connectionsError && <Alert severity="error" sx={{ mb: 2 }}>{connectionsError}</Alert>}
-                    {!connectionsLoading && (
-                      connections.length === 0 ? (
-                        <Typography variant="body2" color="text.secondary">{t('workspace.asset.connections.noConnections')}</Typography>
-                      ) : (
-                        <Table size="small" sx={denseTableSx}>
-                          <TableHead>
-                            <TableRow>
-                              <TableCell>{t('workspace.asset.connections.connectionId')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.name')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.topology')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.protocols')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.source')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.destination')}</TableCell>
-                              <TableCell>{t('workspace.asset.connections.lifecycle')}</TableCell>
-                            </TableRow>
-                          </TableHead>
-                          <TableBody>
-                            {connections.map((conn) => (
-                              <TableRow key={conn.id} hover>
-                                <TableCell>
-                                  <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)} sx={{ fontFamily: "'JetBrains Mono Variable', monospace", textTransform: 'none' }}>
-                                    {conn.connection_reference}
-                                  </Button>
-                                </TableCell>
-                                <TableCell>
-                                  <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)}>
-                                    {conn.name}
-                                  </Button>
-                                </TableCell>
-                                <TableCell>{topologyLabel(conn.topology)}</TableCell>
-                                <TableCell>
-                                  <Stack direction="row" spacing={0.5} flexWrap="wrap">
-                                    {(conn.protocol_labels || []).map((p) => (
-                                      <Box key={p} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{p}</Box>
-                                    ))}
-                                  </Stack>
-                                </TableCell>
-                                <TableCell>{conn.source_label || '-'}</TableCell>
-                                <TableCell>{conn.destination_label || '-'}</TableCell>
-                                <TableCell>{labelFor('lifecycleStatus', conn.lifecycle) || conn.lifecycle}</TableCell>
-                              </TableRow>
-                            ))}
-                          </TableBody>
-                        </Table>
-                      )
-                    )}
-                  </Box>
-
-                  <Box>
-                    <EntityKnowledgePanel
-                      entityType="assets"
-                      entityId={id}
-                      canCreate={canCreateKnowledge}
-                      controlsMaxWidth={560}
-                    />
-                  </Box>
-                </>
-              )}
-            </Stack>
-          )}
-          {validTab === 'operations' && (
-            <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
               {/* NETWORK INFORMATION SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
                   <SectionLabel>{t('workspace.asset.technical.ipAddresses')}</SectionLabel>
                 </Box>
-                {netboxManaged ? (
-                  <Typography variant="caption" sx={{ display: 'block', color: 'kanap.text.tertiary', mb: 1 }}>
-                    {t('pages.netbox.assetSource.managedFields')}
-                  </Typography>
-                ) : null}
                 <Stack spacing={2}>
                   {/* Keep the network block in the main work area; it is too wide for the properties drawer. */}
                   <Button
@@ -2302,17 +2261,59 @@ export default function AssetWorkspacePage() {
                   })}
                 </Stack>
               </Box>
-
-              {!isCreate && id && (
-                <AssetTechnologiesSection assetId={id} canManage={canManage} heading={(title) => <SectionLabel>{title}</SectionLabel>} />
-              )}
-              {reachVulnerabilities && id && (
-                <ReachVulnerabilitiesSection
-                  data={reachVulnerabilities}
-                  kind="asset"
-                  subjectReference={data?.asset_reference || id}
-                  heading={<SectionLabel>{t('pages.vulnerabilities.section.title')}</SectionLabel>}
-                />
+              {!isCreate && (
+                <Box>
+                  <Box sx={{ mb: 1 }}>
+                    <SectionLabel>{t('workspace.asset.connections.title')}</SectionLabel>
+                  </Box>
+                  {connectionsError && <Alert severity="error" sx={{ mb: 2 }}>{connectionsError}</Alert>}
+                  {!connectionsLoading && (
+                    connections.length === 0 ? (
+                      <Typography variant="body2" color="text.secondary">{t('workspace.asset.connections.noConnections')}</Typography>
+                    ) : (
+                      <Table size="small" sx={denseTableSx}>
+                        <TableHead>
+                          <TableRow>
+                            <TableCell>{t('workspace.asset.connections.connectionId')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.name')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.topology')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.protocols')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.source')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.destination')}</TableCell>
+                            <TableCell>{t('workspace.asset.connections.lifecycle')}</TableCell>
+                          </TableRow>
+                        </TableHead>
+                        <TableBody>
+                          {connections.map((conn) => (
+                            <TableRow key={conn.id} hover>
+                              <TableCell>
+                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)} sx={{ fontFamily: "'JetBrains Mono Variable', monospace", textTransform: 'none' }}>
+                                  {conn.connection_reference}
+                                </Button>
+                              </TableCell>
+                              <TableCell>
+                                <Button size="small" onClick={() => navigate(`/it/connections/${conn.connection_reference || conn.id}/overview`)}>
+                                  {conn.name}
+                                </Button>
+                              </TableCell>
+                              <TableCell>{topologyLabel(conn.topology)}</TableCell>
+                              <TableCell>
+                                <Stack direction="row" spacing={0.5} flexWrap="wrap">
+                                  {(conn.protocol_labels || []).map((p) => (
+                                    <Box key={p} component="span" sx={{ color: 'text.secondary', fontSize: '0.8125rem' }}>{p}</Box>
+                                  ))}
+                                </Stack>
+                              </TableCell>
+                              <TableCell>{conn.source_label || '-'}</TableCell>
+                              <TableCell>{conn.destination_label || '-'}</TableCell>
+                              <TableCell>{labelFor('lifecycleStatus', conn.lifecycle) || conn.lifecycle}</TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
+                    )
+                  )}
+                </Box>
               )}
             </Stack>
           )}
