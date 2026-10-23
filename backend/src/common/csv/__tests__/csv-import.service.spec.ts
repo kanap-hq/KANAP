@@ -26,6 +26,17 @@ function createMockFile(content: string): Express.Multer.File {
   } as Express.Multer.File;
 }
 
+/** The columns full replace reads: those of the stored rows, nullable, and the id. */
+function storedColumns(rows: any[] = []) {
+  const names = new Set<string>(['id', ...rows.flatMap((row) => Object.keys(row))]);
+  return [...names].map((name) => ({
+    column_name: name,
+    is_nullable: name === 'id' ? 'NO' : 'YES',
+    data_type: name === 'id' ? 'uuid' : 'text',
+    column_default: name === 'id' ? 'gen_random_uuid()' : null,
+  }));
+}
+
 /**
  * Mock EntityManager for testing
  */
@@ -33,6 +44,7 @@ function createMockManager(data: Record<string, any[]>) {
   const saved: any[] = [];
   return {
     query: async (sql: string, params: any[]) => {
+      if (sql.includes('information_schema.columns')) return storedColumns(data[params[0]]);
       const tableMatch = sql.match(/FROM (\w+)/i);
       const tableName = tableMatch?.[1] || '';
       const tenantId = params[0];
@@ -332,6 +344,15 @@ task-1;Task;;done;;`;
 
   assert.equal(result.ok, true);
   assert.equal(result.updated, 1);
+}
+
+async function testReplaceWithoutStoredColumnsIsRefused() {
+  const service = new CsvImportService(new CsvResolverService(), new CsvJsonValidators());
+  const manager = { ...createMockManager({}), query: async () => [] };
+  await assert.rejects(
+    service.import(createTestConfig(), createMockFile('id;title\n;Task'), { ...defaultParams, mode: 'replace' }, { manager, tenantId: 't1' }),
+    /Full replace cannot read the columns of the table "tasks"/,
+  );
 }
 
 async function testUpdateOnlyOperationSkipsInserts() {
@@ -795,6 +816,7 @@ Task;16/10/2026 14:30;;;16/10/2026 15:00`;
   await testNonCsvFilesAreRefusedBeforeTheHeader();
   await testAccentedWindows1252FileStillImports();
   await testFilesOfEveryLanguageLoad();
+  await testReplaceWithoutStoredColumnsIsRefused();
 
   console.log('CSV import service tests passed.');
 })().catch((err) => {

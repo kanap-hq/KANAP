@@ -848,6 +848,11 @@ export class CsvImportService {
    * Full replace: the stored columns of the table and the properties a blank cell never
    * empties. A property that names no stored column (one the hooks or the entity service
    * read) is emptied to null, as before.
+   *
+   * The rules come from the database, not from the entity metadata: the database decides what
+   * a write accepts, and the two disagree (portfolio_projects.priority_override and
+   * criteria_values are nullable columns declared NOT NULL on the entity; tenant_id has a
+   * default the entity does not declare).
    */
   private async loadReplaceRules(config: CsvEntityConfig, manager: EntityManager): Promise<ReplaceRules> {
     const rows = await manager.query(
@@ -866,6 +871,9 @@ export class CsvImportService {
       else if (!nullable && row.data_type === 'jsonb' && /^'\[\]'::jsonb$/.test(fallback)) empty = () => [];
       else if (!nullable && row.data_type === 'jsonb' && /^'\{\}'::jsonb$/.test(fallback)) empty = () => ({});
       columns.set(row.column_name, { nullable, hasDefault: row.column_default != null, empty });
+    }
+    if (columns.size === 0) {
+      throw new Error(`Full replace cannot read the columns of the table "${config.tableName}".`);
     }
     const kept = new Set<string>(config.upsertKey);
     for (const field of config.fields) {
