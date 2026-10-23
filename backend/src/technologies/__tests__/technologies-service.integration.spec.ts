@@ -690,10 +690,47 @@ async function testCatalogFamilyForTenant() {
   });
 }
 
+/**
+ * The id list of the previous / next band (`listIds`): the rows and the order of the list, with its
+ * sort, search and grid filters, every row and not one page.
+ */
+async function testListIds() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'tec-ids');
+    const { technologies } = services();
+    const opts = { manager: runner.manager, tenantId };
+    await technologies.create({ name: 'PostgreSQL', editor: 'PGDG', family: 'database' }, opts);
+    await technologies.create({ name: 'Oracle Database', editor: 'Oracle', family: 'database' }, opts);
+    await technologies.create({ name: 'MySQL', editor: 'Oracle', family: 'database' }, opts);
+    await technologies.create({ name: 'Tomcat', editor: 'Apache', family: 'application_server' }, opts);
+
+    const same = async (query: Record<string, any>) => {
+      const page = await technologies.list({ ...query, limit: 500 }, opts);
+      const ids = await technologies.listIds(query, opts);
+      assert.deepEqual(ids.ids, page.items.map((item) => item.id), `same order as the list for ${JSON.stringify(query)}`);
+      assert.deepEqual(ids.refs, page.items.map((item) => item.reference));
+      assert.equal(ids.total, page.total);
+      return page.items.map((item) => item.name);
+    };
+    assert.deepEqual(await same({}), ['MySQL', 'Oracle Database', 'PostgreSQL', 'Tomcat'], 'by name by default');
+    assert.deepEqual(await same({ sort: 'name:DESC' }), ['Tomcat', 'PostgreSQL', 'Oracle Database', 'MySQL']);
+    const filters = JSON.stringify({ family: { filterType: 'set', values: ['database'] } });
+    // Two Oracle rows: the id breaks the tie, the same way in both.
+    const byEditor = await same({ sort: 'editor:DESC', filters });
+    assert.equal(byEditor.length, 3, 'filtered on the family');
+    assert.equal(byEditor[0], 'PostgreSQL', 'then by editor');
+    assert.deepEqual(await same({ sort: 'name:DESC', q: 'oracle' }), ['Oracle Database', 'MySQL']);
+    assert.deepEqual(await same({ filters: JSON.stringify({ family: { filterType: 'set', values: [] } }) }), []);
+    // Beyond one page of the grid: every row.
+    assert.equal((await technologies.listIds({ limit: 1 }, opts)).ids.length, 4);
+  });
+}
+
 runSpecs('technologies-service.integration.spec', [
   ['create and validate', testCreateAndValidate],
   ['CVE.org names', testCveNames],
   ['hosting type', testHostingType],
+  ['id list of the record band', testListIds],
   ['catalog family for the tenant', testCatalogFamilyForTenant],
   ['version labels', testVersionLabels],
   ['version order', testVersionOrder],

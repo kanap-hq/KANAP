@@ -154,6 +154,54 @@ function gridFilters(raw: unknown): Partial<Record<(typeof GRID_SET_COLUMNS)[num
 }
 
 /**
+ * The list's filters (`family`, `editor` exact without case, `lifecycle`, `hosting_type`, `q` on name,
+ * editor and reference, the grid's `filters`) and its order, shared by the page and the id list so
+ * both follow the same rows in the same order.
+ */
+function listScope(query: Record<string, any>, tenantId: string) {
+  const params: unknown[] = [tenantId];
+  const bind = (value: unknown) => { params.push(value); return `$${params.length}`; };
+  const where = ['t.tenant_id = $1'];
+  const list = (value: unknown) => (Array.isArray(value) ? value : String(value ?? '').split(','))
+    .map((v) => String(v).trim()).filter(Boolean);
+  // The list grid's set filters (`filters`, JSON) narrow the same columns as the plain parameters.
+  const grid = gridFilters(query.filters);
+  for (const column of GRID_SET_COLUMNS) {
+    const filter = grid[column];
+    if (!filter) continue;
+    const expr = column === 'editor' ? 'lower(t.editor)' : `t.${column}`;
+    const values = column === 'editor' ? filter.values.map((v) => v.toLowerCase()) : filter.values;
+    const parts = [
+      ...(values.length ? [`${expr} = ANY(${bind(values)}::text[])`] : []),
+      ...(filter.blank ? [`t.${column} IS NULL`] : []),
+    ];
+    where.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
+  }
+  for (const [column, expr] of Object.entries(GRID_TEXT_COLUMNS)) {
+    const clause = gridTextClause(expr, gridTextModel(query.filters, column), bind);
+    if (clause) where.push(clause);
+  }
+  const families = list(query.family);
+  if (families.length) where.push(`t.family = ANY(${bind(families)}::text[])`);
+  const editors = list(query.editor).map((v) => v.toLowerCase());
+  if (editors.length) where.push(`lower(t.editor) = ANY(${bind(editors)}::text[])`);
+  const lifecycles = list(query.lifecycle);
+  if (lifecycles.length) where.push(`t.lifecycle = ANY(${bind(lifecycles)}::text[])`);
+  const hostingTypes = list(query.hosting_type);
+  if (hostingTypes.length) where.push(`t.hosting_type = ANY(${bind(hostingTypes)}::text[])`);
+  const q = String(query.q ?? '').trim().slice(0, 100);
+  if (q) {
+    const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
+    where.push(`(t.name ILIKE ${needle} OR t.editor ILIKE ${needle} OR ('TEC-' || t.item_number) ILIKE ${needle})`);
+  }
+  // `sort` takes a field (`name`) with `direction`, or the grid's `field:DIR` (`name:DESC`).
+  const [sortField, sortDirection] = String(query.sort ?? 'name').split(':');
+  const sort = SORTS[sortField] ?? SORTS.name;
+  const direction = String(sortDirection ?? query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+  return { where: where.join(' AND '), orderBy: `${sort} ${direction} NULLS LAST, t.id`, params, bind };
+}
+
+/**
  * The technologies of a tenant (lot S): list with its counters, record, versions, owners, web links
  * and attachments. Every statement carries the tenant besides RLS. Writes are audited on the table
  * they change, `recordId` the technology (or the row for links and attachments, as the
@@ -177,45 +225,7 @@ export class TechnologiesService {
    */
   async list(query: Record<string, any>, opts: Opts) {
     const { manager: mg, tenantId } = opts;
-    const params: unknown[] = [tenantId];
-    const bind = (value: unknown) => { params.push(value); return `$${params.length}`; };
-    const where = ['t.tenant_id = $1'];
-    const list = (value: unknown) => (Array.isArray(value) ? value : String(value ?? '').split(','))
-      .map((v) => String(v).trim()).filter(Boolean);
-    // The list grid's set filters (`filters`, JSON) narrow the same columns as the plain parameters.
-    const grid = gridFilters(query.filters);
-    for (const column of GRID_SET_COLUMNS) {
-      const filter = grid[column];
-      if (!filter) continue;
-      const expr = column === 'editor' ? 'lower(t.editor)' : `t.${column}`;
-      const values = column === 'editor' ? filter.values.map((v) => v.toLowerCase()) : filter.values;
-      const parts = [
-        ...(values.length ? [`${expr} = ANY(${bind(values)}::text[])`] : []),
-        ...(filter.blank ? [`t.${column} IS NULL`] : []),
-      ];
-      where.push(parts.length ? `(${parts.join(' OR ')})` : 'false');
-    }
-    for (const [column, expr] of Object.entries(GRID_TEXT_COLUMNS)) {
-      const clause = gridTextClause(expr, gridTextModel(query.filters, column), bind);
-      if (clause) where.push(clause);
-    }
-    const families = list(query.family);
-    if (families.length) where.push(`t.family = ANY(${bind(families)}::text[])`);
-    const editors = list(query.editor).map((v) => v.toLowerCase());
-    if (editors.length) where.push(`lower(t.editor) = ANY(${bind(editors)}::text[])`);
-    const lifecycles = list(query.lifecycle);
-    if (lifecycles.length) where.push(`t.lifecycle = ANY(${bind(lifecycles)}::text[])`);
-    const hostingTypes = list(query.hosting_type);
-    if (hostingTypes.length) where.push(`t.hosting_type = ANY(${bind(hostingTypes)}::text[])`);
-    const q = String(query.q ?? '').trim().slice(0, 100);
-    if (q) {
-      const needle = bind(`%${q.replace(/[\\%_]/g, (c) => `\\${c}`)}%`);
-      where.push(`(t.name ILIKE ${needle} OR t.editor ILIKE ${needle} OR ('TEC-' || t.item_number) ILIKE ${needle})`);
-    }
-    // `sort` takes a field (`name`) with `direction`, or the grid's `field:DIR` (`name:DESC`).
-    const [sortField, sortDirection] = String(query.sort ?? 'name').split(':');
-    const sort = SORTS[sortField] ?? SORTS.name;
-    const direction = String(sortDirection ?? query.direction ?? 'asc').toLowerCase() === 'desc' ? 'DESC' : 'ASC';
+    const { where, orderBy, params, bind } = listScope(query, tenantId);
     const limit = Math.min(Math.max(Number(query.limit) || 100, 1), 500);
     // `offset`, or the grid's `page` (from 1).
     const offset = query.offset !== undefined
@@ -252,8 +262,8 @@ export class TechnologiesService {
                  ORDER BY lower(u.last_name), lower(u.first_name), u.id
               ) AS it_owner_names
          FROM technologies t
-        WHERE ${where.join(' AND ')}
-        ORDER BY ${sort} ${direction} NULLS LAST, t.id
+        WHERE ${where}
+        ORDER BY ${orderBy}
         LIMIT ${bind(limit)} OFFSET ${bind(offset)}`,
       params,
     );
@@ -275,6 +285,25 @@ export class TechnologiesService {
       limit,
       offset,
       page: Math.floor(offset / limit) + 1,
+    };
+  }
+
+  /** The ids and references of the whole list (up to 10 000), in the grid's order: the record's previous / next band. */
+  async listIds(query: Record<string, any>, opts: Opts) {
+    const { manager: mg, tenantId } = opts;
+    const { where, orderBy, params } = listScope(query, tenantId);
+    const rows: Array<{ id: string; item_number: number; total: string }> = await mg.query(
+      `SELECT t.id, t.item_number, count(*) OVER () AS total
+         FROM technologies t
+        WHERE ${where}
+        ORDER BY ${orderBy}
+        LIMIT 10000`,
+      params,
+    );
+    return {
+      ids: rows.map((row) => row.id),
+      refs: rows.map((row) => technologyReference(row.item_number)),
+      total: Number(rows[0]?.total ?? 0),
     };
   }
 

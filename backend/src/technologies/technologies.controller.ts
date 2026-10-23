@@ -144,6 +144,14 @@ export class TechnologiesController {
     return this.svc.list(query, this.opts(ctx));
   }
 
+  /** The ids and references of the whole list, with its sort and filters: the record's previous / next band. */
+  @UseGuards(PermissionGuard)
+  @RequireLevel('infrastructure', 'reader')
+  @Get('ids')
+  listIds(@Query() query: Record<string, any>, @Tenant() ctx: TenantRequest) {
+    return this.svc.listIds(query, this.opts(ctx));
+  }
+
   /** Picker search (`q`) and hydration of chosen values (`ids`), see common/lookup. */
   @UseGuards(PermissionGuard)
   @RequireLevel('infrastructure', 'reader')

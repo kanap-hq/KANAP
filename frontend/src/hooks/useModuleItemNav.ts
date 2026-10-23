@@ -240,3 +240,14 @@ export function useIncidentItemNav(params: ModuleItemNavParams): ModuleItemNavRe
     defaultSort: 'detected_at:DESC',
   });
 }
+
+/**
+ * Technology item navigation (routes use the TEC-n reference)
+ */
+export function useTechnologyItemNav(params: ModuleItemNavParams): ModuleItemNavResult {
+  return useModuleItemNav(params, {
+    endpoint: '/technologies/ids',
+    queryKey: 'technologies-ids',
+    defaultSort: 'name:ASC',
+  });
+}
