@@ -7,7 +7,6 @@ import { versionOrderSql } from '../../technologies/version-order';
 import {
   EFFECTIVE_CVSS_VECTOR,
   EFFECTIVE_CVSS_VERSION,
-  EFFECTIVE_SCORE,
   EFFECTIVE_SUMMARY,
   SCORE_SOURCE_SQL,
   vulnerabilitySubjectIds,
@@ -16,6 +15,7 @@ import { vulnerabilityAlertsSql } from '../../vulnerabilities/vulnerability-aler
 import {
   applicationLinksSql,
   assetLinksSql,
+  EFFECTIVE_SCORE,
   EFFECTIVE_SEVERITY,
   exploitedSql,
   linkNamesRowSql,

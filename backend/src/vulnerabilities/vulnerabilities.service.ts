@@ -14,7 +14,7 @@ import { compareVersionLabels, versionOrderSql } from '../technologies/version-o
 import type { ParsedAffected, ParsedAffectedVersion } from './cve-record';
 import { probesOf, productsOf, readCveNames, VulnerabilityMatchService } from './vulnerability-match.service';
 import { vulnerabilityAlertsSql } from './vulnerability-alerts';
-import { applicationCountsForTenantSql, applicationLinksSql, assetCountsForTenantSql, assetLinksSql, directReachOfTechnologies, EFFECTIVE_SEVERITY, exploitedSql, rowOnApplicationsSql, rowOnAssetsSql, technologyInEstateSql } from './vulnerability-reach-counts';
+import { applicationCountsForTenantSql, applicationLinksSql, assetCountsForTenantSql, assetLinksSql, directReachOfTechnologies, EFFECTIVE_SCORE, EFFECTIVE_SEVERITY, exploitedSql, rowOnApplicationsSql, rowOnAssetsSql, technologyInEstateSql } from './vulnerability-reach-counts';
 import { severityOf, VULNERABILITY_STATES, type MatchBasis, type VulnerabilityState } from './vulnerability-rules';
 
 export type VulnOpts = { manager: EntityManager; tenantId: string; userId?: string | null };
@@ -85,11 +85,11 @@ const EUVD_VULNERABILITY_URL = 'https://euvd.enisa.europa.eu/vulnerability/';
  * The NVD cache wins when it holds a score. A CVE the NVD received and has not scored yet
  * (`cvss_score` null) falls back to the CVE.org record (`r`). The summary text falls back only
  * when the cache summary is blank, whether or not the cache has a score.
- * The severity is `EFFECTIVE_SEVERITY` of `vulnerability-reach-counts.ts`, the one definition.
+ * The severity and the score are `EFFECTIVE_SEVERITY` and `EFFECTIVE_SCORE` of
+ * `vulnerability-reach-counts.ts`, the one definition.
  * `score_source` is `nvd` when that cache score belongs to an NVD row (`nvd_status` set). A CVE
  * only CVE.org matched is copied into the cache with `nvd_status` null, and stays `cve_org`.
  */
-export const EFFECTIVE_SCORE = `(COALESCE(c.cvss_score, r.cvss_score))`;
 export const EFFECTIVE_SUMMARY = `(CASE WHEN NULLIF(btrim(c.summary), '') IS NOT NULL THEN c.summary ELSE COALESCE(r.summary, c.summary) END)`;
 export const EFFECTIVE_CVSS_VERSION = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_version ELSE COALESCE(r.cvss_version, c.cvss_version) END)`;
 export const EFFECTIVE_CVSS_VECTOR = `(CASE WHEN c.cvss_score IS NOT NULL THEN c.cvss_vector ELSE COALESCE(r.cvss_vector, c.cvss_vector) END)`;
