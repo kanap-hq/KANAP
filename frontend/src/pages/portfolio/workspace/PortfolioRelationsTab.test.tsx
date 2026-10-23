@@ -404,7 +404,7 @@ describe('PortfolioRelationsTab', () => {
     }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=contract.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=contract.pdf)' }));
     expect(mocked.delete).not.toHaveBeenCalled();
     expect(await screen.findByText('workspace.application.relations.deleteAttachment(name=contract.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));
