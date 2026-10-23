@@ -121,6 +121,9 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     });
 
     const saved = await repo.save(newApp as any) as Application;
+    // The reference (`APP-n`) is given by the database: the page names the new version with it.
+    const [{ sequential_id }] = await mg.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [saved.id, saved.tenant_id]);
+    saved.sequential_id = sequential_id;
 
     const copyOpts = {
       copyOwners: body.copyOwners !== false,
@@ -326,13 +329,9 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
   /** The source's integrated description, copied into the new application's own document (none, nothing to copy). */
   private async copyOverviewInternal(sourceId: string, target: Application, userId: string | null, mg: EntityManager) {
     if (!this.integratedDocuments) return;
-    const [{ sequential_id }] = await mg.query(
-      `SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`,
-      [target.id, target.tenant_id],
-    );
     await this.integratedDocuments.copyApplicationOverview(
       sourceId,
-      { id: target.id, tenant_id: target.tenant_id, item_number: null, name: target.name, reference_label: String(sequential_id || '').trim() || target.id },
+      { id: target.id, tenant_id: target.tenant_id, item_number: null, name: target.name, reference_label: String(target.sequential_id || '').trim() || target.id },
       userId,
       { manager: mg },
     );
