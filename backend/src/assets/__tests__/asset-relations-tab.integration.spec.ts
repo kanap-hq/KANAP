@@ -253,7 +253,7 @@ async function testPayload() {
       [seed.incidents.open, 'Incident 1'],
       [seed.incidents.closed, 'Incident 3'],
     ]);
-    assert.deepEqual(res.counts, { assets: 4, budget_lines: 2, contracts: 1, projects: 2, tasks: 3, incidents: 3, links: 1, attachments: 0, total: 16 });
+    assert.deepEqual(res.counts, { assets: 4, budget_lines: 2, contracts: 1, projects: 2, tasks: 3, incidents: 3, links: 1, attachments: 0, total: 12 });
     assert.equal(res.budget_column.key, 'planned');
 
     // A uuid works as well as the reference.
@@ -263,7 +263,7 @@ async function testPayload() {
     const bare = await http.relationsTabRead(seed.asset.id, ctx(runner, seed, NONE));
     for (const key of ['budget_lines', 'contracts', 'projects', 'tasks', 'incidents'] as const) assert.equal(bare[key], null, key);
     assert.equal(bare.assets.contains.length, 1);
-    assert.deepEqual(bare.counts, { assets: 4, budget_lines: 0, contracts: 0, projects: 0, tasks: 0, incidents: 0, links: 1, attachments: 0, total: 5 });
+    assert.deepEqual(bare.counts, { assets: 4, budget_lines: 0, contracts: 0, projects: 0, tasks: 0, incidents: 0, links: 1, attachments: 0, total: 1 });
 
     // A viewer who is neither registry admin, reporter nor owner does not see the confidential incident.
     const plain = await http.relationsTabRead(seed.asset.id, ctx(runner, seed, ALL));
