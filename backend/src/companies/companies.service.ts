@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, HttpStatus, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Brackets, EntityManager, In, Repository, SelectQueryBuilder } from 'typeorm';
 import { Company } from './company.entity';
@@ -710,8 +710,29 @@ export class CompaniesService {
     return found;
   }
 
+  /**
+   * Name, country and city are NOT NULL columns: an empty one is refused with a 400 naming the
+   * field (`code: 'required'`) before the database. Create requires them; update refuses them
+   * only when the body sends them.
+   */
+  private assertRequiredFields(body: CompanyUpsertDto, mode: 'create' | 'update') {
+    for (const [field, label] of [['name', 'Name'], ['country_iso', 'Country'], ['city', 'City']] as const) {
+      const value = body[field];
+      if (mode === 'update' && value === undefined) continue;
+      if (typeof value === 'string' && value.trim() !== '') continue;
+      throw new BadRequestException({
+        statusCode: HttpStatus.BAD_REQUEST,
+        error: 'Bad Request',
+        code: 'required',
+        field,
+        message: `${label} is required.`,
+      });
+    }
+  }
+
   async create(body: CompanyUpsertDto, userId?: string, opts?: { manager?: EntityManager; audit?: AuditSourceOptions }) {
     const repo = this.getRepo(opts?.manager);
+    this.assertRequiredFields(body ?? {}, 'create');
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     await this.assertNameFree(repo.manager, rest.name);
     const lifecycle = resolveLifecycleState({ nextStatus: statusInput, nextDisabledAt: disabled_at });
@@ -768,6 +789,7 @@ export class CompaniesService {
     const repo = this.getRepo(opts?.manager);
     const existing = await this.get(id, { manager: opts?.manager });
     const before = { ...existing };
+    this.assertRequiredFields(body ?? {}, 'update');
     const { status: statusInput, disabled_at, ...rest } = body ?? {};
     if (rest.name !== undefined && rest.name !== before.name) await this.assertNameFree(repo.manager, rest.name, id);
     Object.assign(existing, rest);
