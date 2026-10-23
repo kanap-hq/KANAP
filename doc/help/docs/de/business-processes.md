@@ -47,7 +47,7 @@ Die Liste zeigt alle Geschäftsprozesse Ihres Mandanten.
 - **Kategorien verwalten** (`business_processes:member`): den Dialog zur Kategorieverwaltung öffnen.
 - **CSV importieren** (Admin): Prozesse aus einer CSV-Datei massenimportieren.
 - **CSV exportieren** (Admin): die Prozesse der Liste, oder alle Prozesse, als CSV exportieren.
-- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Schnittstellen und Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
+- **Ausgewählte löschen** (Admin): eine oder mehrere ausgewählte Zeilen löschen. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Deaktivieren Sie ihn stattdessen. Bevor etwas gelöscht wird, listet die Bestätigung die behaltenen Prozesse mit dem Grund auf. Anfragen, die mit einem gelöschten Prozess verknüpft sind, bleiben ohne die Verknüpfung erhalten.
 
 ---
 
@@ -60,6 +60,7 @@ Der Arbeitsbereich hat einen einzelnen **Übersichts**-Tab auf der linken Seite 
 - **Zurück / Weiter**: zwischen Prozessen in der aktuellen Listenreihenfolge wechseln.
 - **Zurücksetzen**: nicht gespeicherte Änderungen verwerfen.
 - **Speichern**: Änderungen speichern.
+- **Löschen** (Papierkorb-Symbol, Admin): den Prozess löschen und zur Liste zurückkehren. Ein Prozess, den Anwendungen oder Schnittstellen verwenden, kann nicht gelöscht werden: Die Meldung zählt sie auf. Deaktivieren Sie ihn stattdessen.
 - **Schließen** (X-Symbol): zur Liste zurückkehren, Filter und Sortierung beibehalten.
 
 Wenn Sie mit nicht gespeicherten Änderungen navigieren, werden Sie aufgefordert, zu speichern oder zu verwerfen.

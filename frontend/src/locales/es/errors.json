@@ -165,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} no está permitido. Los indicadores de las empresas de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "DATA_FROZEN_ACTION_departments": "{{action}} no está permitido. Los indicadores de los departamentos de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "DEPARTMENT_IN_USE": "Este departamento se usa en las asignaciones de {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "BUSINESS_PROCESS_IN_USE": "Este proceso de negocio se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "BUILT_IN_RECORD": "Este elemento viene con KANAP y no se puede eliminar. Desactívelo en su lugar.",
   "RECORD_USED_BY": "Este elemento lo usan {{usages}}. Desactívelo en lugar de eliminarlo.",
   "TEAM_NOT_EMPTY_one": "Este equipo todavía tiene {{usages}}. Muévalo primero a otro equipo, o desactive el equipo.",

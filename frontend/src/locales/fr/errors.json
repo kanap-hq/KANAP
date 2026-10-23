@@ -165,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} n'est pas autorisé. Les indicateurs des sociétés pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
   "DATA_FROZEN_ACTION_departments": "{{action}} n'est pas autorisé. Les indicateurs des départements pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
   "DEPARTMENT_IN_USE": "Ce département est utilisé dans les ventilations de {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "BUSINESS_PROCESS_IN_USE": "Ce processus métier est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "BUILT_IN_RECORD": "Cet élément est fourni avec KANAP et ne peut pas être supprimé. Désactivez-le plutôt.",
   "RECORD_USED_BY": "Cet élément est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "TEAM_NOT_EMPTY_one": "Cette équipe contient encore {{usages}}. Rattachez d’abord cet élément à une autre équipe, ou désactivez l’équipe.",

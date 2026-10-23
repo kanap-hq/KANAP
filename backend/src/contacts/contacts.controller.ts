@@ -81,7 +81,7 @@ export class ContactsController {
   }
 
   @UseGuards(PermissionGuard)
-  @RequireLevel('contacts', 'member')
+  @RequireLevel('contacts', 'admin')
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: any) { return this.svc.delete(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }); }
 

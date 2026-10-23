@@ -6,9 +6,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options?.field ? `${key}:${String(options.field)}` : key
@@ -23,9 +24,9 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => auth.canEdit, profile: { id: 'user-1' } }),
+  useAuth: () => ({ hasLevel: (_resource: string, level: string) => auth.canEdit && (level !== 'admin' || auth.canAdmin), profile: { id: 'user-1' } }),
 }));
-vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 // The supplier picker searches the API: a stub picks a supplier or clears it.
 vi.mock('../../components/fields/SupplierSelect', () => ({
   // One field in the tab order, as the real picker; the buttons only drive the tests.
@@ -45,6 +46,7 @@ const mocked = api as unknown as {
   get: ReturnType<typeof vi.fn>;
   post: ReturnType<typeof vi.fn>;
   patch: ReturnType<typeof vi.fn>;
+  delete: ReturnType<typeof vi.fn>;
 };
 
 const CONTACT = {
@@ -75,13 +77,15 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
-          <LocationProbe />
-          <Routes>
-            <Route path="/master-data/contacts/:id" element={<ContactWorkspacePage />} />
-            <Route path="/master-data/contacts/:id/:tab" element={<ContactWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/master-data/contacts/:id" element={<ContactWorkspacePage />} />
+              <Route path="/master-data/contacts/:id/:tab" element={<ContactWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -93,6 +97,8 @@ describe('ContactWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canEdit = true;
+    auth.canAdmin = true;
+    mocked.delete.mockResolvedValue({ data: {} });
     stored = { ...CONTACT };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/contacts/c-1') return { data: stored };
@@ -112,6 +118,24 @@ describe('ContactWorkspacePage', () => {
     expect(screen.getByRole('link', { name: 'Supplier A' })).toHaveAttribute('href', '/master-data/suppliers/s-1/overview');
     expect(screen.queryByRole('button', { name: /save/i })).toBeNull();
     expect(screen.queryByRole('button', { name: /reset/i })).toBeNull();
+  });
+
+  it('hides delete from someone who is not a contacts admin', async () => {
+    auth.canAdmin = false;
+    renderAt('/master-data/contacts/c-1/overview');
+    await screen.findByText('Alex Martin');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  });
+
+  it('deletes a contact after a confirmation that names the links it removes, then returns to the list', async () => {
+    renderAt('/master-data/contacts/c-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('contacts.delete.warning')).toBeInTheDocument();
+    expect(mocked.post).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/contacts/c-1'));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/contacts');
   });
 
   it('shows the email as title when the contact has no name', async () => {
@@ -419,6 +443,8 @@ describe('ContactWorkspacePage: used by', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canEdit = true;
+    auth.canAdmin = true;
+    mocked.delete.mockResolvedValue({ data: {} });
     stored = { ...CONTACT };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/contacts/c-1') return { data: stored };

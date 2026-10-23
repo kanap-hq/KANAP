@@ -47,7 +47,7 @@ The list shows all business processes for your tenant.
 - **Manage Categories** (`business_processes:member`): open the category management dialog.
 - **Import CSV** (Admin): bulk-import processes from a CSV file.
 - **Export CSV** (Admin): export the processes the list shows, or all processes, to CSV.
-- **Delete Selected** (Admin): delete one or more selected rows. Interfaces and requests linked to a deleted process stay, without the link.
+- **Delete Selected** (Admin): delete one or more selected rows. A process that applications or interfaces use cannot be deleted: disable it instead. Before anything is deleted, the confirmation lists the processes kept, with the reason. Requests linked to a deleted process stay, without the link.
 
 ---
 
@@ -60,6 +60,7 @@ The workspace has a single **Overview** tab on the left, and a toolbar across th
 - **Prev / Next**: step through processes in the current list order.
 - **Reset**: discard unsaved changes.
 - **Save**: persist changes.
+- **Delete** (trash icon, Admin): delete the process and return to the list. A process that applications or interfaces use cannot be deleted: the message counts them. Disable it instead.
 - **Close** (X icon): return to the list, keeping your filters and sort intact.
 
 If you navigate away with unsaved changes, you will be prompted to save or discard them.

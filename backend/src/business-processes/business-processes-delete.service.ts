@@ -5,8 +5,34 @@ import { BusinessProcess } from './business-process.entity';
 import { AuditService } from '../audit/audit.service';
 import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult, DeleteOptions } from '../common/delete.types';
-import { RecordInUseException, refusalDetails } from '../common/record-in-use';
+import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
 import { withSavepoint } from '../common/savepoint.util';
+
+/** The applications and interfaces that name each of `ids`: their links would go with the process. */
+async function processUsages(manager: EntityManager, ids: string[]): Promise<Map<string, UsageCount[]>> {
+  const rows: Array<{ id: string; applications: number; interfaces: number }> = ids.length === 0 ? [] : await manager.query(
+    `SELECT bp.id::text AS id,
+            (SELECT count(DISTINCT abp.application_id)::int FROM application_business_processes abp
+              WHERE abp.tenant_id = bp.tenant_id AND abp.business_process_id = bp.id) AS applications,
+            (SELECT count(*)::int FROM interfaces i
+              WHERE i.tenant_id = bp.tenant_id AND i.business_process_id = bp.id) AS interfaces
+       FROM business_processes bp
+      WHERE bp.tenant_id = app_current_tenant() AND bp.id = ANY($1::uuid[])`,
+    [ids],
+  );
+  return new Map(rows.map((row) => {
+    const usages: UsageCount[] = [];
+    if (row.applications > 0) usages.push({ type: 'applications', total: row.applications });
+    if (row.interfaces > 0) usages.push({ type: 'interfaces', total: row.interfaces });
+    return [row.id, usages];
+  }));
+}
+
+/** The refusal of a process's delete (`BUSINESS_PROCESS_IN_USE`: applications and interfaces counted, disable it instead), or null. */
+function processRefusal(name: string, usages: UsageCount[] | undefined): RecordInUseException | null {
+  if (!usages || usages.length === 0) return null;
+  return new RecordInUseException('BUSINESS_PROCESS_IN_USE', 'business process', name, usages);
+}
 
 @Injectable()
 export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessProcess> {
@@ -35,6 +61,9 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
       throw new NotFoundException('Business process not found');
     }
 
+    // The links to applications and interfaces would go with the process: counted first, for the refusal.
+    const refusal = processRefusal(existing.name, (await processUsages(manager, [id])).get(id));
+    if (refusal) throw refusal;
     try {
       await repo.delete({ id } as any);
     } catch (error: any) {
@@ -60,6 +89,19 @@ export class BusinessProcessesDeleteService extends BaseDeleteService<BusinessPr
         { manager },
       );
     }
+  }
+
+  /** The check before a delete (`POST /business-processes/delete-check`): which of `ids` would be refused, and why. Nothing is written. */
+  async deleteCheck(ids: unknown[], opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
+    const manager = opts?.manager ?? this.repository.manager;
+    const wanted = checkIds(ids);
+    if (wanted.length === 0) return { refused: [] };
+    const rows: Array<{ id: string; name: string }> = await manager.query(
+      `SELECT id::text AS id, name FROM business_processes WHERE tenant_id = app_current_tenant() AND id = ANY($1::uuid[])`,
+      [wanted],
+    );
+    const usages = await processUsages(manager, wanted);
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => processRefusal(row.name, usages.get(row.id)));
   }
 
   /**
