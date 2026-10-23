@@ -1,6 +1,7 @@
 // @database-spec
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
+import { ApplicationsController } from '../applications.controller';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { context, inRolledBackTransaction, NO_ACCESS, relationsService, runSpecs, seedRelations, YEAR } from './application-relations.fixtures';
 
@@ -137,7 +138,35 @@ async function testBadgeCountsRequestsNotTasks() {
   });
 }
 
-runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes, testBadgeCountsRequestsNotTasks])
+/**
+ * The badge follows the same rule as the tab (recette C1b n° 32): an IT Landscape Reader, who reads
+ * neither the budget nor the contracts, sees no section for them and counts none of them.
+ */
+async function testBadgeFollowsModuleRights() {
+  await inRolledBackTransaction(async (runner) => {
+    const seed = await seedRelations(runner, 'badge-rights');
+    const crud = new ApplicationsCrudService(undefined as any, undefined as any, undefined as any, undefined as any, undefined as any);
+    const all = await crud.relationCounts(seed.appId, { manager: runner.manager, requestsAccess: {} });
+    assert.ok(all.opex > 0 && all.contracts > 0, 'the seed links budget lines and contracts');
+
+    const controller = Object.create(ApplicationsController.prototype) as ApplicationsController;
+    Object.assign(controller, { svc: { relationCounts: (id: string, opts: any) => crud.relationCounts(id, opts) } });
+    const itLandscapeReader = {
+      applications: 'reader', infrastructure: 'reader', locations: 'reader', incidents: 'reader', settings: 'reader',
+      tasks: 'reader', users: 'reader', companies: 'reader', departments: 'reader', cost_centers: 'reader',
+      working_day_profiles: 'reader', suppliers: 'reader', contacts: 'reader',
+    };
+    const ctx = { tenantId: seed.tenantId, userId: seed.userId, userRoles: ['IT Landscape Reader'], isAdmin: false, permissions: itLandscapeReader, manager: runner.manager };
+    const reader = await controller.relationCounts(seed.appId, ctx as any);
+    assert.deepEqual([reader.opex, reader.capex, reader.contracts, reader.requests], [0, 0, 0, 0], 'no budget, contract or request counted');
+    assert.equal(reader.total, reader.projects + reader.links + reader.attachments);
+
+    const withBudget = await controller.relationCounts(seed.appId, { ...ctx, permissions: { ...itLandscapeReader, budget: 'reader', contracts: 'reader' } } as any);
+    assert.deepEqual([withBudget.opex, withBudget.capex, withBudget.contracts], [all.opex, all.capex, all.contracts], 'counted with the read rights');
+  });
+}
+
+runSpecs('application-relations.integration.spec', [testSections, testSuggestions, testHiddenWithoutReadAccess, testParticipationScopes, testBadgeCountsRequestsNotTasks, testBadgeFollowsModuleRights])
   .catch((err) => {
     console.error(err);
     process.exit(1);

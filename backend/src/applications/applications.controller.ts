@@ -50,6 +50,18 @@ import { ApplicationAttachment } from './application-attachment.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 
+/** The module each Relations section needs read access to (the tab and its badge). */
+const RELATIONS_READ = {
+  budget_lines: 'budget',
+  contracts: 'contracts',
+  incidents: 'incidents',
+  processes: 'business_processes',
+  projects: 'portfolio_projects',
+  requests: 'portfolio_requests',
+  tasks: 'tasks',
+  technologies: 'infrastructure',
+} as const;
+
 @UseGuards(JwtAuthGuard)
 @Controller('applications')
 export class ApplicationsController {
@@ -112,16 +124,7 @@ export class ApplicationsController {
    */
   private async relationsContext(ctx: TenantRequest): Promise<RelationsContext> {
     const rights = buildRelationsAccess(ctx, {
-      read: {
-        budget_lines: 'budget',
-        contracts: 'contracts',
-        incidents: 'incidents',
-        processes: 'business_processes',
-        projects: 'portfolio_projects',
-        requests: 'portfolio_requests',
-        tasks: 'tasks',
-        technologies: 'infrastructure',
-      },
+      read: RELATIONS_READ,
       write: { technologies: 'infrastructure', processes: 'business_processes' },
       contribute: { incidents: 'incidents' },
     });
@@ -866,8 +869,12 @@ export class ApplicationsController {
     @Tenant() ctx: TenantRequest,
   ): Promise<{ opex: number; capex: number; contracts: number; projects: number; requests: number; technologies: number; processes: number; links: number; attachments: number; total: number }> {
     const readsRequests = hasLevel(ctx, 'portfolio_requests', 'reader');
+    // The same rule as the Relations tab: a module the caller cannot read adds nothing to the badge.
+    const { access } = buildRelationsAccess(ctx, { read: RELATIONS_READ });
     return this.svc.relationCounts(id, {
       ...(await this.readApplicationOpts(ctx)),
+      readsBudget: access.budget_lines,
+      readsContracts: access.contracts,
       projectAccessScope: await this.readProjectScope(ctx),
       requestsAccess: readsRequests ? { scope: await this.participationScope(ctx, 'portfolio_requests') } : null,
     });
