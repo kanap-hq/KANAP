@@ -31,6 +31,8 @@ import { NeverRejects } from '../common/never-rejects';
 import { authRefusalOf } from './auth-refused.exception';
 import { LoginAttemptLimit } from './login-attempt-limit';
 import { Response } from 'express';
+import { dataAccessAvailability } from '../data-access/data-access-availability';
+import { readDataAccessProfile } from '../data-access/data-access-profile';
 import {
   REFRESH_TOKEN_COOKIE_NAME,
   clearRefreshTokenCookie,
@@ -251,6 +253,13 @@ export class AuthController {
       roles, // All assigned roles
       external_auth_provider: user.external_auth_provider ?? null,
     };
+    // Data-scoped access (spec §6.7): availability, mode, nodes and covered modules.
+    const dataAccess = await readDataAccessProfile(
+      manager ?? this.dataSource.manager,
+      user.id,
+      await dataAccessAvailability(this.dataSource),
+    );
+
     return {
       profile,
       claims: {
@@ -261,6 +270,7 @@ export class AuthController {
       },
       subscription,
       tenantAuth,
+      dataAccess,
     };
   }
 

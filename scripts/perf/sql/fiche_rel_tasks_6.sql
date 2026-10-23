@@ -1,0 +1,7 @@
+-- fiche_rel_tasks_6
+-- group: fiche
+-- family: fiche
+-- endpoint: GET /spend-items/:id/tasks (workspace of line BL-2500)
+-- source: backend/src/spend/spend-items.controller.ts, backend/src/spend/spend-items.service.ts, backend/src/spend/spend-versions.* 
+-- captured on appdb_perf10k (tenant perf, admin) on 2026-10-23, 0.03 ms in the API.
+SELECT "Task"."id" AS "Task_id", "Task"."tenant_id" AS "Task_tenant_id", "Task"."item_number" AS "Task_item_number", "Task"."title" AS "Task_title", "Task"."description" AS "Task_description", "Task"."status" AS "Task_status", "Task"."due_date" AS "Task_due_date", "Task"."assignee_user_id" AS "Task_assignee_user_id", "Task"."related_object_type" AS "Task_related_object_type", "Task"."related_object_id" AS "Task_related_object_id", "Task"."task_type_id" AS "Task_task_type_id", "Task"."source_id" AS "Task_source_id", "Task"."company_id" AS "Task_company_id", "Task"."phase_id" AS "Task_phase_id", "Task"."priority_level" AS "Task_priority_level", "Task"."start_date" AS "Task_start_date", "Task"."labels" AS "Task_labels", "Task"."category_id" AS "Task_category_id", "Task"."stream_id" AS "Task_stream_id", "Task"."creator_id" AS "Task_creator_id", "Task"."owner_ids" AS "Task_owner_ids", "Task"."viewer_ids" AS "Task_viewer_ids", "Task"."created_at" AS "Task_created_at", "Task"."updated_at" AS "Task_updated_at" FROM "tasks" "Task" WHERE (("Task"."related_object_type" = 'spend_item') AND ("Task"."related_object_id" = '{{item_id}}')) ORDER BY "Task"."created_at" DESC;

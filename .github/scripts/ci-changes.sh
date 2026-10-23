@@ -15,7 +15,8 @@
 #   - frontend/: frontend, builds, and backend full for the modules the backend specs import
 #     (auditLogLabels, contractTerms, reportAggregates) and the Dockerfiles (container-images
 #     spec);
-#   - infra/, any Dockerfile: backend full (container-images and admin-password-policy specs);
+#   - infra/, any Dockerfile: backend full (container-images, admin-password-policy and
+#     data-access-role-script specs);
 #   - doc/help/docs/: backend docs (markdown-size, markdown-worker and admin-password-policy
 #     read the manual) and frontend (the noDashes locale test reads it), without the builds;
 #   - anything else (doc/, marketing/, scripts/, translation-state/, root files): no suite; the

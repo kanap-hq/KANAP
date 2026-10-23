@@ -1,0 +1,7 @@
+-- chargeback_company_6
+-- group: chargeback
+-- family: chargeback
+-- endpoint: GET /reports/chargeback/company?companyId=<company>&year=2026&metric=budget&scope=opex
+-- source: backend/src/spend/chargeback-report.controller.ts -> backend/src/spend/chargeback-report.service.ts (generateCompany)
+-- captured on appdb_perf10k (tenant perf, admin) on 2026-10-23, 18.28 ms in the API.
+SELECT "SpendVersion"."id" AS "SpendVersion_id", "SpendVersion"."tenant_id" AS "SpendVersion_tenant_id", "SpendVersion"."spend_item_id" AS "SpendVersion_spend_item_id", "SpendVersion"."version_name" AS "SpendVersion_version_name", "SpendVersion"."input_grain" AS "SpendVersion_input_grain", "SpendVersion"."is_approved" AS "SpendVersion_is_approved", "SpendVersion"."as_of_date" AS "SpendVersion_as_of_date", "SpendVersion"."budget_year" AS "SpendVersion_budget_year", "SpendVersion"."allocation_method" AS "SpendVersion_allocation_method", "SpendVersion"."allocation_driver" AS "SpendVersion_allocation_driver", "SpendVersion"."notes" AS "SpendVersion_notes", "SpendVersion"."reporting_currency" AS "SpendVersion_reporting_currency", "SpendVersion"."fx_rate_set_id" AS "SpendVersion_fx_rate_set_id", "SpendVersion"."created_at" AS "SpendVersion_created_at", "SpendVersion"."updated_at" AS "SpendVersion_updated_at", "SpendVersion"."budget_rev" AS "SpendVersion_budget_rev" FROM "spend_versions" "SpendVersion" WHERE (("SpendVersion"."tenant_id" = '{{tenant_id}}') AND ("SpendVersion"."id" IN ({{chargeback_version_ids_in}})));

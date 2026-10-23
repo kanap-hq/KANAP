@@ -1,0 +1,7 @@
+-- contracts_page_17
+-- group: contracts_page
+-- family: contracts_page
+-- endpoint: GET /contracts?page=1&limit=50&sort=name:ASC
+-- source: backend/src/contracts/contracts.controller.ts (list)
+-- captured on appdb_perf10k (tenant perf, admin) on 2026-10-23, 0.29 ms in the API.
+SELECT "c"."id" AS "c_id", "c"."tenant_id" AS "c_tenant_id", "c"."name" AS "c_name", "c"."status" AS "c_status", "c"."disabled_at" AS "c_disabled_at", "c"."company_id" AS "c_company_id", "c"."supplier_id" AS "c_supplier_id", "c"."owner_user_id" AS "c_owner_user_id", "c"."start_date" AS "c_start_date", "c"."duration_months" AS "c_duration_months", "c"."auto_renewal" AS "c_auto_renewal", "c"."notice_period_months" AS "c_notice_period_months", "c"."yearly_amount_at_signature" AS "c_yearly_amount_at_signature", "c"."currency" AS "c_currency", "c"."billing_frequency" AS "c_billing_frequency", "c"."notes" AS "c_notes", "c"."created_at" AS "c_created_at", "c"."updated_at" AS "c_updated_at", ("c"."name") COLLATE "und-x-icu" AS "sort_name" FROM "contracts" "c" LEFT JOIN "companies" "comp" ON "comp"."id" = "c"."company_id" AND "comp"."tenant_id" = "c"."tenant_id"  LEFT JOIN "suppliers" "sup" ON "sup"."id" = "c"."supplier_id" AND "sup"."tenant_id" = "c"."tenant_id" WHERE ( "c"."tenant_id" = app_current_tenant() AND (("c"."disabled_at" IS NULL OR "c"."disabled_at" > '2026-10-23 16:20:12.594+00')) ) AND ( "c"."id" IN ({{chargeback_item_ids_in}}) ) ORDER BY sort_name ASC, "c"."created_at" DESC, "c"."id" ASC;

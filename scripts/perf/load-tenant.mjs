@@ -28,6 +28,10 @@ const opts = {
   userPassword: 'PerfUser2026!',
   chunkBytes: 900 * 1024,
   concurrency: 4,
+  // A budget file is limited to 20,000 rows: larger scopes are sent as several files of this many rows.
+  budgetChunkRows: 10000,
+  // Monthly budget file parts to send, e.g. `opex:2,opex:3,capex` (default: all). Lets several loaders share a big scope.
+  budgetOnly: '',
   only: '',
 };
 const argv = process.argv.slice(2);
@@ -52,7 +56,11 @@ const lower = (v) => String(v ?? '').trim().toLowerCase();
 const listItems = (payload) => (Array.isArray(payload) ? payload : Array.isArray(payload?.items) ? payload.items : []);
 
 async function api(method, route, body) {
-  const res = await client.request(method, route, { json: body, token });
+  let res = await client.request(method, route, { json: body, token });
+  if (res.status === 401) {
+    await login();
+    res = await client.request(method, route, { json: body, token });
+  }
   if (res.status < 200 || res.status >= 300) {
     const err = new Error(`${method} ${route} → ${res.status || res.error} ${JSON.stringify(res.data)?.slice(0, 500)}`);
     err.res = res;
@@ -151,8 +159,9 @@ const importFile = (name, route) => step(`import ${name}`, () => importCsvText(n
 //
 // The item files and the monthly rows keep their old shape: the shared helper
 // (backend/scripts/lib/budget-file.mjs) converts them and runs the two-step budget file
-// route (preflight, then import). One file per scope each time, no chunking:
-// the route's cap is 48 MB and the perf dataset fits in one file per scope.
+// route (preflight, then import). One file per scope when it fits
+// (the route's cap is 48 MB and 20,000 rows: the 5,000-line dataset does), else files of
+// --budget-chunk-rows rows.
 
 /** Y: the calendar year the source files' relative `y_*` columns are read against. */
 const BUDGET_YEAR = new Date().getFullYear();
@@ -164,7 +173,12 @@ async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) 
   if (bytes !== undefined) {
     options.form = { filename, bytes, ...(snapshot === undefined ? {} : { fields: { snapshot: JSON.stringify(snapshot) } }) };
   }
-  const res = await client.request(method, route, options);
+  let res = await client.request(method, route, options);
+  if (res.status === 401) {
+    // The access token is short-lived and a big budget file runs for a long time: sign in again.
+    await login();
+    res = await client.request(method, route, { ...options, token });
+  }
   return { status: res.status, data: res.data };
 }
 
@@ -172,6 +186,37 @@ async function budgetRequest(method, route, { bytes, filename, snapshot } = {}) 
 const numbersByName = (index, scope) => new Map(
   [...index[scope].values()].map((item) => [scope === 'opex' ? item.product_name : item.description, String(item.reference)]),
 );
+
+/** Splits a CSV text (header + rows, no newline inside a cell unless quoted) into texts of at most `maxRows` rows. */
+function splitCsvRows(csvText, maxRows) {
+  const lines = [];
+  let open = '';
+  for (const line of csvText.replace(/\n$/, '').split('\n')) {
+    open = open ? `${open}\n${line}` : line;
+    if ((open.match(/"/g) ?? []).length % 2 === 0) { lines.push(open); open = ''; }
+  }
+  const [header, ...rows] = lines;
+  if (rows.length <= maxRows) return [csvText];
+  const parts = [];
+  for (let i = 0; i < rows.length; i += maxRows) parts.push([header, ...rows.slice(i, i + maxRows)].join('\n') + '\n');
+  return parts;
+}
+
+/** loadBudgetFile over one or several files; the counts and times are summed. */
+async function loadBudgetFiles({ scope, csvText, filename }) {
+  const parts = splitCsvRows(csvText, opts.budgetChunkRows);
+  const picked = opts.budgetOnly ? opts.budgetOnly.split(',').filter((x) => x === scope || x.startsWith(`${scope}:`)) : null;
+  const wantPart = (i) => !opts.budgetOnly || (picked.includes(scope) || picked.includes(`${scope}:${i + 1}`));
+  const total = { preflightMs: 0, importMs: 0, created: 0, updated: 0, unchanged: 0, rows: 0 };
+  for (let i = 0; i < parts.length; i += 1) {
+    if (!wantPart(i)) continue;
+    const name = parts.length === 1 ? filename : filename.replace(/\.csv$/, `-${i + 1}.csv`);
+    if (parts.length > 1) log(`  budget file part ${i + 1}/${parts.length}`);
+    const r = await loadBudgetFile({ request: budgetRequest, scope, csvText: parts[i], filename: name });
+    for (const k of Object.keys(total)) total[k] += r[k];
+  }
+  return { ...total, files: parts.length };
+}
 
 const withRate = (result, csvText) => ({
   ...result,
@@ -186,7 +231,7 @@ async function budgetLines(scope, existing, defaultDimensionCode) {
   const disabled = source.filter((row) => lower(row.status) === 'disabled' && !row.disabled_at).length;
   if (disabled) findings.push({ step: `${name} (budget file)`, kind: 'disabled rows without a date', count: disabled });
   const csvText = buildLinesFile(scope, source, { year: BUDGET_YEAR, defaultDimensionCode, existingNumbers: numbersByName(existing, scope) });
-  const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: name });
+  const result = await loadBudgetFiles({ scope, csvText, filename: name });
   return withRate(result, csvText);
 }
 
@@ -201,7 +246,7 @@ async function budgetRowsFile(index) {
     const missing = scopeRows.filter((row) => !index[scope].has(row.item_name)).length;
     if (missing) findings.push({ step: `budget rows ${scope}`, kind: 'rows without item', count: missing });
     const csvText = buildMonthlyFile(scope, scopeRows, { numbersByName: numbersByName(index, scope) });
-    const result = await loadBudgetFile({ request: budgetRequest, scope, csvText, filename: `29-budget-rows-${scope}.csv` });
+    const result = await loadBudgetFiles({ scope, csvText, filename: `29-budget-rows-${scope}.csv` });
     out[scope] = withRate(result, csvText);
   }
   return { rows: rows.length, partial, ...out };
@@ -241,6 +286,29 @@ async function settings() {
     if (!existingAxes.some((a) => lower(a.code) === axis.code)) await api('POST', '/analytics-axes', { ...axis, description: 'Perf' });
   }
   return { categories: analytics.categories.length, axes: analytics.axes.length };
+}
+
+/**
+ * The CAPEX file names the PP&E type and the investment type of each line. A tenant created
+ * since the recommended dimensions has neither: they are created here, with the values the
+ * generator uses (the priority dimension is a recommended one and already exists).
+ */
+async function capexDimensions() {
+  const wanted = [
+    { code: 'ppe_type', name: 'PP&E type', sort_order: 50, values: ['Hardware', 'Software'] },
+    { code: 'investment_type', name: 'Investment type', sort_order: 60, values: ['Replacement', 'Business growth'] },
+  ];
+  const existing = listItems(await api('GET', '/analytics-axes'));
+  const created = [];
+  for (const axis of wanted) {
+    if (existing.some((a) => lower(a.code) === axis.code)) continue;
+    await api('POST', '/analytics-axes', { code: axis.code, name: axis.name, sort_order: axis.sort_order, description: 'Perf' });
+    created.push(axis.code);
+  }
+  const csv = ['axis_code;name;description;status', ...wanted.flatMap((a) => a.values.map((v) => `${a.code};${v};;enabled`))].join('\n') + '\n';
+  const res = await client.request('POST', '/analytics-categories/import?dryRun=false', { form: { filename: 'capex-dimension-values.csv', bytes: Buffer.from(csv, 'utf8') }, token });
+  if (res.status < 200 || res.status >= 300 || res.data?.ok === false) throw new Error(`capex dimension values: ${res.status} ${JSON.stringify(res.data)?.slice(0, 400)}`);
+  return { created };
 }
 
 async function chartOfAccounts() {
@@ -421,6 +489,7 @@ async function main() {
     await importFile('28-working-day-calendars.csv', '/working-day-profiles/import');
     await importFile('13-contracts.csv', '/contracts/import');
   }
+  if (want('capexdims')) await step('CAPEX dimensions (PP&E type, investment type)', capexDimensions);
   let index = null;
   const getIndex = async () => (index ??= await step('item index (list pages)', async () => {
     const i = await itemIndex();

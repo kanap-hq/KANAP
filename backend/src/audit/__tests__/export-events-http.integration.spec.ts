@@ -110,6 +110,18 @@ async function main() {
      VALUES ($1, $2, 'Export events probe', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
     [tenantId, `export-events-${tenantId.slice(0, 8)}`],
   );
+  // The request's person must exist in the tenant: data_access_apply refuses an unknown one.
+  await dataSource.transaction(async (manager) => {
+    await manager.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
+    const [role] = await manager.query(
+      `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Export probe', 'Export probe') RETURNING id`,
+      [tenantId],
+    );
+    await manager.query(
+      `INSERT INTO users (id, tenant_id, email, role_id, status) VALUES ($1, $2, $3, $4, 'enabled')`,
+      [userId, tenantId, `export-probe-${tenantId.slice(0, 8)}@example.test`, role.id],
+    );
+  });
   const app = await NestFactory.create(ExportProbeModule, { logger: false });
   app.use((req: any, _res: any, next: () => void) => {
     req.tenant = { id: tenantId, slug: 'export-probe', name: 'Export events probe' };

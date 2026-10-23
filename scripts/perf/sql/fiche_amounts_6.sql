@@ -1,0 +1,7 @@
+-- fiche_amounts_6
+-- group: fiche
+-- family: fiche
+-- endpoint: GET /spend-versions/:id/amounts?year=2026 (workspace of line BL-2500)
+-- source: backend/src/spend/spend-items.controller.ts, backend/src/spend/spend-items.service.ts, backend/src/spend/spend-versions.* 
+-- captured on appdb_perf10k (tenant perf, admin) on 2026-10-23, 0.02 ms in the API.
+SELECT "SpendVersion"."id" AS "SpendVersion_id", "SpendVersion"."tenant_id" AS "SpendVersion_tenant_id", "SpendVersion"."spend_item_id" AS "SpendVersion_spend_item_id", "SpendVersion"."version_name" AS "SpendVersion_version_name", "SpendVersion"."input_grain" AS "SpendVersion_input_grain", "SpendVersion"."is_approved" AS "SpendVersion_is_approved", "SpendVersion"."as_of_date" AS "SpendVersion_as_of_date", "SpendVersion"."budget_year" AS "SpendVersion_budget_year", "SpendVersion"."allocation_method" AS "SpendVersion_allocation_method", "SpendVersion"."allocation_driver" AS "SpendVersion_allocation_driver", "SpendVersion"."notes" AS "SpendVersion_notes", "SpendVersion"."reporting_currency" AS "SpendVersion_reporting_currency", "SpendVersion"."fx_rate_set_id" AS "SpendVersion_fx_rate_set_id", "SpendVersion"."created_at" AS "SpendVersion_created_at", "SpendVersion"."updated_at" AS "SpendVersion_updated_at", "SpendVersion"."budget_rev" AS "SpendVersion_budget_rev" FROM "spend_versions" "SpendVersion" WHERE (("SpendVersion"."id" = '{{version_id}}')) LIMIT 1;

@@ -1,6 +1,7 @@
 import { BadRequestException } from '@nestjs/common';
 import { DataSource, EntityManager, QueryRunner } from 'typeorm';
 import { DatabaseConnectionError } from './filters/database-error.mapping';
+import { applyDataAccess } from '../data-access/data-access';
 import {
   connectRequestRunner,
   RequestDbTimeouts,
@@ -73,12 +74,15 @@ export async function createTenantQueryRunner(
   dataSource: DataSource,
   tenantId: string,
   timeouts: RequestDbTimeouts = requestDbTimeoutDefaults(),
+  userId?: string | null,
 ): Promise<QueryRunner> {
   const runner = dataSource.createQueryRunner();
   try {
     await connectRequestRunner(runner);
     // The request goes on in this transaction: same tenant and bounded waits as the one it replaces.
     await startTenantTransaction(runner, tenantId, timeouts);
+    // And the same data access (spec §6.3): the person TenantInterceptor applied it for.
+    if (userId) await applyDataAccess(runner, userId);
     return runner;
   } catch (error) {
     try {
@@ -161,7 +165,12 @@ export function createRequestReleaseConnection(
 
     const result = await fn();
     // The route's waits (an import keeps its raised ones), not the defaults.
-    const nextRunner = await createTenantQueryRunner(dataSource, normalizedTenantId, requestDbTimeoutsOf(req));
+    const nextRunner = await createTenantQueryRunner(
+      dataSource,
+      normalizedTenantId,
+      requestDbTimeoutsOf(req),
+      req?.dataAccessUserId ?? null,
+    );
     req.queryRunner = nextRunner;
     req._tenantRunnerOwner = true;
     req._tenantRunnerReleased = false;

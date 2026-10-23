@@ -80,47 +80,18 @@ export class ContactsDeleteService extends BaseDeleteService<Contact> {
 
 ## Tenancy Management
 
-### TenancyManager Service
+### Tenant context of a request
 
-Tenant context is managed through a dedicated `TenancyManager` service that consolidates host resolution, transaction management, and context binding.
-
-**Location:** `backend/src/common/tenancy/`
-
-**Module Structure:**
-```
-backend/src/common/tenancy/
-├── index.ts                    # Barrel exports
-├── tenancy.module.ts           # @Global() module
-├── tenancy.manager.ts          # Main service
-├── tenancy.middleware.ts       # Host resolution middleware
-├── tenancy.interceptor.ts      # Transaction lifecycle
-└── __tests__/
-    └── tenancy.manager.spec.ts
-```
-
-**TenancyManager API:**
-```typescript
-@Injectable({ scope: Scope.REQUEST })
-export class TenancyManager {
-  // Context management
-  resolveFromHost(host: string): Promise<TenantContext | null>
-  setContext(context: TenantContext): void
-  getContext(): TenantContext | null
-  getTenantId(): string  // Throws if not set
-
-  // Transaction management
-  getQueryRunner(): Promise<QueryRunner>
-  getManager(): Promise<EntityManager>
-  commit(): Promise<void>
-  rollback(): Promise<void>
-  executeInTransaction<T>(callback: (manager: EntityManager) => Promise<T>): Promise<T>
-}
-```
+The tenant comes from the Host header (`backend/src/common/tenancy/request-tenancy.middleware.ts`,
+mounted by `applyTenancyAndPipeline` in `backend/src/http-app.ts`). `TenantInterceptor`
+(`backend/src/common/tenant.interceptor.ts`) opens the request transaction, sets `app.current_tenant`
+and applies the person's data access. Outside a request, use `withTenant()` or `withTenantExecution()`
+(`backend/src/common/tenant-runner.ts`).
 
 **Security:** All tenant SQL uses parameterized queries to prevent SQL injection:
 ```typescript
 // Good - parameterized
-await runner.query(`SET LOCAL app.current_tenant = $1`, [tenantId]);
+await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
 
 // Bad - string interpolation (NEVER DO THIS)
 await runner.query(`SET LOCAL app.current_tenant = '${tenantId}'`);
@@ -397,12 +368,9 @@ async create(data: CreateDto, @Tenant() ctx: TenantRequest) {
 backend/src/common/
 ├── base-delete.service.ts      # Delete service abstraction
 ├── delete.types.ts             # Delete-related types
-├── tenancy/                    # Tenant context management
-│   ├── tenancy.manager.ts
-│   ├── tenancy.module.ts
-│   ├── tenancy.middleware.ts
-│   ├── tenancy.interceptor.ts
-│   └── index.ts
+├── tenancy/                    # Tenant resolution from the Host header
+│   ├── request-tenancy.middleware.ts
+│   └── request-tenant-context.ts
 ├── dto/                        # Common DTOs
 │   └── list-query.dto.ts
 ├── types/                      # Common types

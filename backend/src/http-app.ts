@@ -53,8 +53,6 @@ export function applyTenancyAndPipeline(app: INestApplication, ds: DataSource): 
   // Tenancy resolution middleware: attach { slug, id? } based on Host header (or the single-tenant
   // slug); a failed lookup answers 503 busy, a write to a tenant being reset 409. See
   // common/tenancy/request-tenancy.middleware.ts.
-  // NOTE: TenancyMiddleware is available in common/tenancy for use with NestJS module-level
-  // middleware configuration. New code should prefer using TenancyManager and @Tenant() decorator in controllers.
   app.use(createRequestTenancyMiddleware({
     query: (sql, params) => ds.query(sql, params),
     singleTenant: Features.SINGLE_TENANT,
