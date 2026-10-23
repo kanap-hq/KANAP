@@ -289,15 +289,19 @@ export class PortfolioRequestsController {
       const tenantId = tenantRows[0].id;
       // Set the tenant context for RLS (parameterized to prevent SQL injection)
       await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [tenantId]);
-      // Only embedded images (source_field set) are served on this inline route.
-      const rows = await runner.query(
-        `SELECT storage_path, mime_type, size FROM portfolio_request_attachments WHERE id = $1 AND source_field IS NOT NULL LIMIT 1`,
-        [attachmentId],
+      // Require the caller to be an authenticated tenant user with >= reader on portfolio_requests;
+      // the attachment is then read under the person's data access (spec §6.3).
+      const allowed = await this.knowledge.canAccessInlineAttachment(
+        runner.manager, tenantId, refreshToken, 'portfolio_requests', { applyDataAccess: true },
       );
-      // Require the caller to be an authenticated tenant user with >= reader on portfolio_requests.
-      const allowed = rows.length > 0
-        && await this.knowledge.canAccessInlineAttachment(runner.manager, tenantId, refreshToken, 'portfolio_requests');
-      if (!allowed) {
+      // Only embedded images (source_field set) are served on this inline route.
+      const rows = allowed
+        ? await runner.query(
+          `SELECT storage_path, mime_type, size FROM portfolio_request_attachments WHERE id = $1 AND source_field IS NOT NULL LIMIT 1`,
+          [attachmentId],
+        )
+        : [];
+      if (!rows.length) {
         await runner.rollbackTransaction();
         res.status(404).send('Attachment not found');
         return;
