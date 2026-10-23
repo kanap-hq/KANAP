@@ -250,7 +250,7 @@ export default function ApplicationTechnologiesSection({
                 {index > 0 && ', '}
                 <Link
                   component={RouterLink}
-                  to={`/it/assets/${via.asset_id}/technical`}
+                  to={`/it/assets/${via.asset_id}/operations`}
                   onClick={(event: React.MouseEvent) => event.stopPropagation()}
                   underline="hover"
                   sx={{ color: 'inherit' }}

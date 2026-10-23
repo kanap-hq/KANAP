@@ -168,10 +168,24 @@ type ServerConnectionRow = {
   destination_label?: string | null;
 };
 
-type TabKey = 'overview' | 'technical' | 'hardware' | 'support' | 'dependencies' | 'relations';
+type TabKey = 'overview' | 'operations' | 'network' | 'hardware' | 'dependencies' | 'relations';
 
-const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'technical', 'hardware', 'support', 'dependencies', 'relations']);
-const OVERVIEW_LEGACY_TABS = new Set(['knowledge', 'assignments', 'connections']);
+const VALID_ASSET_TABS = new Set<TabKey>(['overview', 'operations', 'network', 'hardware', 'dependencies', 'relations']);
+/** Former tab keys, and the tab that holds their sections now. Old links land there. */
+const LEGACY_TAB_TARGETS: Record<string, TabKey> = {
+  technical: 'operations',
+  support: 'overview',
+  connections: 'network',
+  knowledge: 'overview',
+  assignments: 'operations',
+};
+const legacyTabTarget = (key: string | undefined): TabKey | null => (
+  key && Object.prototype.hasOwnProperty.call(LEGACY_TAB_TARGETS, key) ? LEGACY_TAB_TARGETS[key] : null
+);
+/** Tabs shown for physical assets only. */
+const PHYSICAL_ONLY_TABS: ReadonlySet<string> = new Set<TabKey>(['hardware']);
+/** Tabs that need a saved asset: a creation falls back to the overview. */
+const CREATE_DISABLED_TABS: ReadonlySet<string> = new Set<TabKey>(['operations', 'hardware', 'dependencies', 'relations']);
 
 const ENV_OPTION_KEYS = [
   { value: 'prod', labelKey: 'enums.environment.prod' },
@@ -267,8 +281,7 @@ export default function AssetWorkspacePage() {
   const rawTab = params.tab as string | undefined;
   const tab = React.useMemo<TabKey>(() => {
     if (VALID_ASSET_TABS.has(rawTab as TabKey)) return rawTab as TabKey;
-    if (rawTab && OVERVIEW_LEGACY_TABS.has(rawTab)) return 'overview';
-    return 'overview';
+    return legacyTabTarget(rawTab) ?? 'overview';
   }, [rawTab]);
   const isCreate = routeId === 'new';
   const [canonicalAssetId, setCanonicalAssetId] = React.useState<string | null>(null);
@@ -562,21 +575,20 @@ export default function AssetWorkspacePage() {
     if (!data) return; // Wait for data to load
     if (!routeMatchesLoadedAsset) return;
     if (!settings) return; // Wait for asset type metadata before deciding physical-only tabs
-    const physicalOnlyTabs = ['hardware', 'support'];
-    if (physicalOnlyTabs.includes(tab) && !isPhysicalAsset) {
+    if (PHYSICAL_ONLY_TABS.has(tab) && !isPhysicalAsset) {
       navigate(`/it/assets/${workspaceRouteId}/overview`, { replace: true });
     }
   }, [tab, isPhysicalAsset, isCreate, data, navigate, routeMatchesLoadedAsset, settings, workspaceRouteId]);
 
   // Compute valid tab value for Tabs component (prevents MUI warning)
-  const validTab = React.useMemo(() => {
+  const validTab = React.useMemo<TabKey>(() => {
+    if (isCreate && CREATE_DISABLED_TABS.has(tab)) return 'overview'; // Fallback while redirect happens
     if (!settings) return tab;
-    const physicalOnlyTabs = ['hardware', 'support'];
-    if (physicalOnlyTabs.includes(tab) && !isPhysicalAsset) {
+    if (PHYSICAL_ONLY_TABS.has(tab) && !isPhysicalAsset) {
       return 'overview'; // Fallback while redirect happens
     }
     return tab;
-  }, [tab, isPhysicalAsset, settings]);
+  }, [isCreate, tab, isPhysicalAsset, settings]);
 
   const domainOptions = React.useMemo(
     () => (settings?.domains || []).map((d) => ({
@@ -1105,12 +1117,16 @@ export default function AssetWorkspacePage() {
     return sp;
   }, [searchParams]);
 
+  // A former or unknown tab key, or a tab a creation cannot open, gets the address of the tab shown.
   React.useEffect(() => {
-    if (!rawTab || VALID_ASSET_TABS.has(rawTab as TabKey)) return;
+    if (!rawTab) return;
+    const createBlocked = isCreate && CREATE_DISABLED_TABS.has(tab);
+    if (VALID_ASSET_TABS.has(rawTab as TabKey) && !createBlocked) return;
     if (!isCreate && data && !routeMatchesLoadedAsset) return;
     const qs = listContextParams.toString();
-    navigate(`/it/assets/${workspaceRouteId}/overview${qs ? `?${qs}` : ''}`, { replace: true });
-  }, [data, isCreate, listContextParams, navigate, rawTab, routeMatchesLoadedAsset, workspaceRouteId]);
+    const target: TabKey = createBlocked ? 'overview' : tab;
+    navigate(`/it/assets/${workspaceRouteId}/${target}${qs ? `?${qs}` : ''}`, { replace: true });
+  }, [data, isCreate, listContextParams, navigate, rawTab, routeMatchesLoadedAsset, tab, workspaceRouteId]);
 
   const handleReset = () => {
     setName(data?.name || '');
@@ -1195,15 +1211,14 @@ export default function AssetWorkspacePage() {
     navigate(`/it/assets${qs ? `?${qs}` : ''}`);
   };
 
-  const physicalOnlyTabs = ['hardware', 'support'];
-  const showPhysicalTabs = isPhysicalAsset || (!settings && physicalOnlyTabs.includes(tab));
+  const showPhysicalTabs = isPhysicalAsset || (!settings && PHYSICAL_ONLY_TABS.has(tab));
 
   const workspaceTabs = [
     { key: 'overview', label: t('workspace.asset.tabs.overview') },
-    { key: 'technical', label: t('workspace.asset.tabs.technical') },
+    { key: 'operations', label: t('workspace.asset.tabs.operations'), disabled: isCreate },
+    { key: 'network', label: t('workspace.asset.tabs.network') },
     ...(showPhysicalTabs ? [
       { key: 'hardware', label: t('workspace.asset.tabs.hardware'), disabled: isCreate },
-      { key: 'support', label: t('workspace.asset.tabs.support'), disabled: isCreate },
     ] : []),
     {
       key: 'dependencies',
@@ -1749,7 +1764,7 @@ export default function AssetWorkspacePage() {
         actions={actions}
         properties={properties}
       >
-          {tab === 'overview' && (
+          {validTab === 'overview' && (
             <Stack spacing={3.5}>
               {!isCreate && netboxLink ? (
                 <Stack
@@ -2136,7 +2151,7 @@ export default function AssetWorkspacePage() {
               )}
             </Stack>
           )}
-          {tab === 'technical' && (
+          {validTab === 'operations' && (
             <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
               {/* NETWORK INFORMATION SECTION */}
               <Box>
@@ -2299,7 +2314,7 @@ export default function AssetWorkspacePage() {
               )}
             </Stack>
           )}
-          {tab === 'hardware' && isPhysicalAsset && !isCreate && (
+          {validTab === 'hardware' && isPhysicalAsset && !isCreate && (
             <HardwareInfoPanel
               ref={hardwareRef}
               assetId={id}
@@ -2307,14 +2322,8 @@ export default function AssetWorkspacePage() {
               netboxOwns={netboxOwns}
             />
           )}
-          {tab === 'support' && isPhysicalAsset && !isCreate && (
-            <SupportInfoPanel
-              ref={supportRef}
-              assetId={id}
-            />
-          )}
-          {tab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} clusterSection={clusterSection} />}
-          {tab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
+          {validTab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} clusterSection={clusterSection} />}
+          {validTab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog
         open={memberDialogOpen}
