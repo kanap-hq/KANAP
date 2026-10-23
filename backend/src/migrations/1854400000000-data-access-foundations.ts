@@ -69,7 +69,7 @@ export class DataAccessFoundations1854400000000 implements MigrationInterface {
         cost_center_id uuid NULL,
         access text NOT NULL,
         created_at timestamptz NOT NULL DEFAULT now(),
-        created_by uuid NULL,
+        created_by uuid NULL REFERENCES users(id) ON DELETE SET NULL,
         CONSTRAINT user_data_access_nodes_node_type_check
           CHECK (node_type IN ('all', 'company', 'cost_center')),
         CONSTRAINT user_data_access_nodes_access_check CHECK (access IN ('read', 'edit')),
@@ -110,6 +110,12 @@ export class DataAccessFoundations1854400000000 implements MigrationInterface {
     await queryRunner.query(`
       CREATE INDEX IF NOT EXISTS idx_user_data_access_nodes_tenant_cost_center
       ON user_data_access_nodes (tenant_id, cost_center_id)
+    `);
+    // Deleting a user clears created_by (ON DELETE SET NULL): indexed like every clearing key
+    // (common/__tests__/reference-keys.inventory.integration.spec.ts).
+    await queryRunner.query(`
+      CREATE INDEX IF NOT EXISTS idx_user_data_access_nodes_created_by
+      ON user_data_access_nodes (created_by)
     `);
     await queryRunner.query(`ALTER TABLE user_data_access_nodes ENABLE ROW LEVEL SECURITY`);
     await queryRunner.query(`ALTER TABLE user_data_access_nodes FORCE ROW LEVEL SECURITY`);
