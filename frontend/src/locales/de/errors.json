@@ -197,6 +197,14 @@
   "duration_invalid": "{{field}} muss eine ganze Zahl von Minuten sein.",
   "owner_email_unknown": "Kein Benutzer mit der E-Mail-Adresse {{email}}.",
   "dates_inconsistent": "Supportende und Stilllegungsdatum dürfen nicht vor dem Go-live-Datum liegen.",
-  "suite_has_children": "Lösen Sie zuerst die {{count}} zugeordneten Anwendungen.",
-  "forbidden": "Sie haben keine Berechtigung für diese Aktion."
+  "suite_has_children_one": "Lösen Sie zuerst die zugeordnete Anwendung.",
+  "suite_has_children_other": "Lösen Sie zuerst die {{count}} zugeordneten Anwendungen.",
+  "suite_cycle": "Diese Anwendung enthält bereits {{name}}: Sie kann nicht dazugehören.",
+  "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
+  "NO_ACCESS": "Diesem Konto wurde noch kein Zugriff gewährt. Wenden Sie sich an einen Administrator.",
+  "fields": {
+    "rto_minutes": "Das Wiederanlaufzeitziel (RTO)",
+    "rpo_minutes": "Das Wiederherstellungspunktziel (RPO)",
+    "maxMtdMinutes": "Die maximal tolerierbare Ausfallzeit"
+  }
 }

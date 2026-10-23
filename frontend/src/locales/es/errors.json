@@ -197,6 +197,14 @@
   "duration_invalid": "{{field}} debe ser un número entero de minutos.",
   "owner_email_unknown": "Ningún usuario con el correo {{email}}.",
   "dates_inconsistent": "El fin de soporte y la fecha de retiro no pueden ser anteriores a la puesta en producción.",
-  "suite_has_children": "Desvincule primero las {{count}} aplicaciones asociadas.",
-  "forbidden": "No tiene permisos para esta acción."
+  "suite_has_children_one": "Desvincule primero la aplicación asociada.",
+  "suite_has_children_other": "Desvincule primero las {{count}} aplicaciones asociadas.",
+  "suite_cycle": "Esta aplicación ya contiene {{name}}: no puede formar parte de ella.",
+  "forbidden": "No tiene permisos para esta acción.",
+  "NO_ACCESS": "Esta cuenta aún no tiene acceso. Solicítelo a un administrador.",
+  "fields": {
+    "rto_minutes": "El objetivo de tiempo de recuperación (RTO)",
+    "rpo_minutes": "El objetivo de punto de recuperación (RPO)",
+    "maxMtdMinutes": "El tiempo máximo de inactividad tolerable"
+  }
 }

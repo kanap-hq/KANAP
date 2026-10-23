@@ -57,22 +57,29 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   const message = stringifyErrorValue(payload?.message) || stringifyErrorValue(apiError?.message);
   const status = apiError?.response?.status;
 
-  // A refusal with no code of its own (Nest's "Forbidden resource"): the plain sentence.
-  if (status === 403 && !stringifyErrorValue(payload?.code)) {
+  const code = getApiErrorCode(apiError);
+
+  // A refusal with no code of its own (Nest's "Forbidden resource", `error: 'Forbidden'`): the
+  // plain sentence. A coded one (`TRIAL_EXPIRED`, `NO_ACCESS`) says why below. The code of the
+  // answer only: axios gives every failed request a code of its own (`ERR_BAD_REQUEST`).
+  const answerCode = getApiErrorCode({ response: apiError?.response });
+  if (status === 403 && (!answerCode || answerCode === 'Forbidden')) {
     const translated = t('errors:forbidden', { defaultValue: message || fallback });
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }
   }
 
-  const code = getApiErrorCode(apiError);
-
   if (code) {
     const variant = stringifyErrorValue(payload?.variant);
     const usages = Array.isArray(payload?.usages) ? (payload.usages as DeleteFailure['usages']) : null;
     // The language of `t` (a fixed one), else the interface's.
     const language = (t as { lng?: string }).lng || i18next.resolvedLanguage || i18next.language || 'en';
-    const params = payload?.params && typeof payload.params === 'object' ? (payload.params as Record<string, unknown>) : {};
+    const params = payload?.params && typeof payload.params === 'object' ? { ...(payload.params as Record<string, unknown>) } : {};
+    // A field the sentence names (`rto_minutes`) is shown as the screen names it (`errors:fields.*`).
+    if (typeof params.field === 'string' && params.field) {
+      params.field = t(`errors:fields.${params.field}`, { defaultValue: params.field });
+    }
     const translated = t(`errors:${code}`, {
       ...params,
       defaultValue: message || fallback,

@@ -197,6 +197,14 @@
   "duration_invalid": "{{field}} doit être un nombre entier de minutes.",
   "owner_email_unknown": "Aucun utilisateur avec le courriel {{email}}.",
   "dates_inconsistent": "La fin de support et la date de retrait ne peuvent pas précéder la mise en service.",
-  "suite_has_children": "Retirez d'abord les {{count}} applications rattachées.",
-  "forbidden": "Vous n'avez pas les droits pour cette action."
+  "suite_has_children_one": "Retirez d'abord l'application rattachée.",
+  "suite_has_children_other": "Retirez d'abord les {{count}} applications rattachées.",
+  "suite_cycle": "Cette application contient déjà {{name}} : elle ne peut pas en faire partie.",
+  "forbidden": "Vous n'avez pas les droits pour cette action.",
+  "NO_ACCESS": "Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.",
+  "fields": {
+    "rto_minutes": "L'objectif de temps de reprise (RTO)",
+    "rpo_minutes": "L'objectif de point de reprise (RPO)",
+    "maxMtdMinutes": "La durée maximale d'interruption admissible"
+  }
 }
