@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
@@ -10,6 +10,9 @@ import AssetWorkspacePage from './AssetWorkspacePage';
 import { invalidateTechnologyLinks } from './components/technologyLinkQueries';
 
 const get = vi.hoisted(() => vi.fn());
+const patch = vi.hoisted(() => vi.fn());
+const post = vi.hoisted(() => vi.fn());
+const del = vi.hoisted(() => vi.fn());
 const t = vi.hoisted(() => (key: string) => key);
 
 vi.mock('react-i18next', () => ({
@@ -21,7 +24,7 @@ vi.mock('react-i18next', () => ({
 }));
 const features = vi.hoisted(() => ({ vulnerabilityFeed: false }));
 vi.mock('../../config/FeaturesContext', () => ({ useFeatures: () => ({ config: { features } }) }));
-vi.mock('../../api', () => ({ default: { get, patch: vi.fn(), post: vi.fn(), delete: vi.fn() } }));
+vi.mock('../../api', () => ({ default: { get, patch, post, delete: del } }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => resource === 'infrastructure' && level === 'member' }),
 }));
@@ -46,7 +49,9 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => <div>dependencies-tab</div> }));
+vi.mock('./workspace/AssetDependenciesTab', () => ({
+  default: ({ clusterSection }: { clusterSection?: React.ReactNode }) => <div>dependencies-tab{clusterSection}</div>,
+}));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => <div>technologies-section</div> }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => <div /> }));
@@ -122,6 +127,9 @@ const follows = (first: Element, second: Element) =>
 describe('Asset workspace: section placement', () => {
   beforeEach(() => {
     get.mockReset();
+    patch.mockReset();
+    post.mockReset();
+    del.mockReset();
     wire.counts = { assets: 0, total: 0 };
     wire.members = [];
     wire.clusters = [];
@@ -158,8 +166,9 @@ describe('Asset workspace: section placement', () => {
     renderAt('/it/assets/asset-1/technical');
     const ipAddresses = await screen.findByText('workspace.asset.technical.ipAddresses');
     const technologies = await screen.findByText('technologies-section');
-    const cluster = screen.getByText('workspace.asset.technical.clusterManagement');
-    expect(follows(cluster, ipAddresses)).toBe(true);
+    expect(screen.queryByText('workspace.asset.technical.clusterManagement')).toBeNull();
+    expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
+    expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
     expect(follows(ipAddresses, technologies)).toBe(true);
     expect(screen.queryByText('workspace.asset.technical.identity')).toBeNull();
   });
@@ -170,10 +179,10 @@ describe('Asset workspace: section placement', () => {
     expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toBeEnabled();
   });
 
-  it('keeps cluster management and IP addresses in the technical tab when creating an asset', async () => {
+  it('keeps IP addresses, and no cluster section, in the technical tab when creating an asset', async () => {
     renderAt('/it/assets/new/technical');
-    expect(await screen.findByText('workspace.asset.technical.clusterManagement')).toBeInTheDocument();
-    expect(screen.getByText('workspace.asset.technical.ipAddresses')).toBeInTheDocument();
+    expect(await screen.findByText('workspace.asset.technical.ipAddresses')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.asset.technical.clusterManagement')).toBeNull();
     expect(screen.queryByText('technologies-section')).toBeNull();
   });
 
@@ -184,6 +193,105 @@ describe('Asset workspace: section placement', () => {
     expect(screen.queryByText('workspace.asset.untitled')).toBeNull();
     answer({ data: { ...ASSET, name: '' } });
     expect(await screen.findByText('workspace.asset.untitled')).toBeInTheDocument();
+  });
+
+  describe('properties panel', () => {
+    const PANEL_ORDER = [
+      'workspace.asset.overview.assetType',
+      'workspace.asset.meta.cluster',
+      'workspace.asset.technical.environment',
+      'workspace.asset.technical.adminZone',
+      'workspace.asset.overview.location',
+      'workspace.asset.overview.lifecycle',
+      'workspace.asset.overview.goLiveDate',
+      'workspace.asset.overview.endOfLifeDate',
+    ];
+
+    const expectPanelOrder = () => {
+      // The metadata bar above repeats the location: the panel's row is the last match.
+      const nodes = PANEL_ORDER.map((label) => screen.getAllByText(label).slice(-1)[0]);
+      for (let i = 1; i < nodes.length; i += 1) expect(follows(nodes[i - 1], nodes[i])).toBe(true);
+    };
+
+    it('lists Type, Cluster, Environment, Administration zone, then Location, then Lifecycle and dates', async () => {
+      renderAt('/it/assets/asset-1/technical');
+      await screen.findByText('workspace.asset.technical.ipAddresses');
+      expectPanelOrder();
+    });
+
+    it('shows the same rows when creating an asset', async () => {
+      renderAt('/it/assets/new/technical');
+      await screen.findByText('workspace.asset.technical.ipAddresses');
+      expectPanelOrder();
+    });
+
+    it('sets the cluster state without any call when creating an asset', async () => {
+      renderAt('/it/assets/new/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      expect(toggle).toBeEnabled();
+      expect(toggle).not.toBeChecked();
+      fireEvent.click(toggle);
+      expect(toggle).toBeChecked();
+      expect(patch).not.toHaveBeenCalled();
+      expect(post).not.toHaveBeenCalled();
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it('saves at once, and removes the operating system, when an asset becomes a cluster', async () => {
+      patch.mockResolvedValue({ data: { ...ASSET, is_cluster: true } });
+      del.mockResolvedValue({ data: {} });
+      renderAt('/it/assets/asset-1/overview');
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeEnabled());
+      fireEvent.click(toggle);
+      await waitFor(() => expect(patch).toHaveBeenCalledWith('/assets/asset-1', { is_cluster: true }));
+      await waitFor(() => expect(del).toHaveBeenCalledWith('/assets/asset-1/operating-system'));
+      await waitFor(() => expect(toggle).toBeChecked());
+    });
+
+    it('saves at once, and removes nothing, when a cluster becomes a server', async () => {
+      patch.mockResolvedValue({ data: { ...ASSET, is_cluster: false } });
+      renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, is_cluster: true });
+      const toggle = await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' });
+      await waitFor(() => expect(toggle).toBeChecked());
+      fireEvent.click(toggle);
+      await waitFor(() => expect(patch).toHaveBeenCalledWith('/assets/asset-1', { is_cluster: false }));
+      expect(del).not.toHaveBeenCalled();
+    });
+
+    it('loads the cluster list that the Dependencies badge counts after the switch', async () => {
+      wire.counts = { assets: 0, total: 0 };
+      wire.members = [{ id: 'm1' }, { id: 'm2' }];
+      wire.clusters = [{ id: 'c1' }];
+      patch.mockResolvedValue({ data: { ...ASSET, is_cluster: true } });
+      del.mockResolvedValue({ data: {} });
+      renderAt('/it/assets/asset-1/overview');
+      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies1'));
+      fireEvent.click(await screen.findByRole('checkbox', { name: 'workspace.asset.meta.cluster' }));
+      await waitFor(() => expect(screen.getByRole('tab', { name: /workspace.asset.tabs.dependencies/ }).textContent).toBe('workspace.asset.tabs.dependencies2'));
+    });
+  });
+
+  describe('cluster sections of the Dependencies tab', () => {
+    it('hands a cluster its info, its members and the edit button', async () => {
+      wire.members = [{ id: 'm1', name: 'node-1', environment: 'prod', status: 'active', operating_system: 'Linux' }];
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      expect(await screen.findByText('workspace.asset.overview.clusterInfo')).toBeInTheDocument();
+      expect(await screen.findByText('node-1')).toBeInTheDocument();
+      expect(screen.getByText('workspace.asset.technical.members')).toBeInTheDocument();
+      expect(screen.getByRole('button', { name: 'workspace.asset.technical.editMembers' })).toBeEnabled();
+      expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
+      expect(screen.queryByText('workspace.asset.technical.saveClusterFirst')).toBeNull();
+    });
+
+    it('hands a server its cluster membership, without the cluster info', async () => {
+      wire.clusters = [{ id: 'c1', name: 'cluster-1', environment: 'prod', status: 'active' }];
+      renderAt('/it/assets/asset-1/dependencies');
+      expect(await screen.findByText('workspace.asset.technical.clusterMembership')).toBeInTheDocument();
+      expect(await screen.findByText('cluster-1')).toBeInTheDocument();
+      expect(screen.queryByText('workspace.asset.overview.clusterInfo')).toBeNull();
+      expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
+    });
   });
 
   describe('dependencies and relations tabs', () => {
@@ -246,7 +354,7 @@ describe('Asset workspace: section placement', () => {
 
     it('asks nothing when creating an asset', async () => {
       renderAt('/it/assets/new/technical');
-      await screen.findByText('workspace.asset.technical.clusterManagement');
+      await screen.findByText('workspace.asset.technical.ipAddresses');
       expect(screen.queryByText('pages.vulnerabilities.section.title')).toBeNull();
       expect(vulnerabilityCalls()).toBe(0);
     });
