@@ -42,19 +42,32 @@ const ENVIRONMENT_FILTER_FIELDS = new Set(['environment', 'binding_environments'
 /**
  * Sort keys. Criticality sorts by its rank in the tenant catalog, from the least severe up,
  * as the connections list does; a value outside the catalog has no rank and sorts last.
+ * The business process column sorts by the process name; data category by its stored code.
  */
 const INTERFACE_SORT_EXPRESSIONS: Record<string, string> = {
   interface_reference: 'i.interface_reference',
   interface_id: 'i.interface_id',
   name: 'i.name',
+  source_application_name: 'sa.name',
+  target_application_name: 'ta.name',
+  business_process_id: 'bp.name',
   lifecycle: 'i.lifecycle',
   criticality: classificationRankSql('i.criticality', 'sortCritCodes', 'sortCritRanks'),
+  data_category: 'i.data_category',
+  contains_pii: 'i.contains_pii',
   created_at: 'i.created_at',
   updated_at: 'i.updated_at',
 };
 
 /** The interface list columns that sort alphabetically. */
-const INTERFACE_TEXT_SORTS = new Set(['interface_reference', 'interface_id', 'name']);
+const INTERFACE_TEXT_SORTS = new Set([
+  'interface_reference',
+  'interface_id',
+  'name',
+  'source_application_name',
+  'target_application_name',
+  'business_process_id',
+]);
 
 /**
  * Service for listing, filtering, and querying interfaces.
