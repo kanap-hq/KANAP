@@ -504,6 +504,54 @@ See `doc/features/patterns/backend-patterns.md` for usage examples.
 
 See also: `doc/frontend-architecture.md` for detailed UI guidelines.
 
+### Data-scoped access (foundations)
+
+Data-scoped access limits a person to some companies and cost centres in the budget block (spec:
+`planning/data-scoped-access/spec.md`). The database enforces it with restrictive RLS
+policies that target one role only, so nothing changes for anyone else.
+
+- **The role.** `kanap_data_limited` is `NOLOGIN`. The application role may take it (`SET ROLE`)
+  but never inherits it: otherwise its policies would apply to every request. PostgreSQL 16 and
+  later: `GRANT ... WITH INHERIT FALSE, SET TRUE`. PostgreSQL 15: the application role becomes
+  `NOINHERIT` and gets `USAGE, CREATE` on `public` directly in each database it owns.
+- **The role script.** `infra/scripts/data-access-role.sql` (`mode=install` or `mode=uninstall`)
+  is the only step that needs a superuser or a `CREATEROLE` role. It is idempotent and runs before
+  or after the migrations. Dev (PostgreSQL 15): run it on every database the application role owns
+  and on `template1`, then once more to apply `NOINHERIT` (loop in the script header); new dev
+  volumes get it from `infra/db-init/`. CI: one step before the migrations. QA and prod: the
+  operator runs it once per server after the deploy, then restarts the API. On-premise: optional;
+  without it, nobody can be limited.
+- **Grants and policies.** The application sets them itself, in each database:
+  `data_access_sync_policies()` grants the role its table rights and recreates its policies from
+  `data_access_expected_policies()`, the single list of expected policies. Each migration that
+  changes the list calls it. Without the role, it does nothing.
+- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
+  runs the sync when the role exists and a grant or a policy is missing, with a 5 s lock timeout.
+  A failure is logged and retried at the next start. It then checks the availability (role,
+  membership, inheritance, `CREATE` on `public` on PostgreSQL 15, policies, grants) and logs one
+  `[DATA-ACCESS]` line. Every process keeps the result for a minute. `GET /auth/me` returns it in
+  `dataAccess`, with the person's mode and nodes. The check is informative only.
+- **Per transaction.** `data_access_apply(user)` sets nine `app.da_*` settings and takes the role
+  with `set_config(..., true)`, so both end with the transaction and a pooled connection carries
+  nothing. `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
+  `TenantInterceptor`, the reconnection in `createTenantQueryRunner`,
+  `AiTenantExecutionService.runWithContext`, and the public routes of the inline attachments. A
+  limited person cannot run without a transaction (`{ transaction: false }` is refused).
+- **Fail closed.** For a limited person, `data_access_apply` refuses when the role is missing,
+  inherited or cannot be taken, or when an expected policy is missing: SQLSTATE `KDA01`, answered
+  503 `DATA_ACCESS_UNAVAILABLE`. A person outside the tenant gets `KDA02`, answered 401. Persons in
+  mode `all` and Administrators are never affected.
+- **Inventories.** `data-access/__tests__/data-access-inventory.spec.ts` checks the call points and
+  the role changes, and that every path outside the interceptor (`@SkipTenantTransaction()`,
+  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`) is classified in
+  `data-access/data-access-paths.inventory.ts`.
+- **Uninstall.** A lot's `down()` removes its policies through the sync. The script's
+  `mode=uninstall` runs `DROP OWNED BY kanap_data_limited` in each database, then `DROP ROLE`, then
+  `ALTER ROLE <app> INHERIT` on PostgreSQL 15. The direct grant on `public` stays.
+- **Restore.** A backup restored on a server without the role brings back neither the policies nor
+  the role's grants, and `pg_dump --no-privileges` drops the grants too. Limited persons are then
+  refused until the script runs and the API restarts, which recreates what is missing.
+
 ### Authentication & SSO
 - Local email/password + JWT is the baseline for every user. Access tokens come from `AuthService.signToken`; a refresh token is kept in an `HttpOnly` cookie (`auth-cookie.util.ts`) and feeds `/auth/me`, guards and the SPA's Axios interceptor.
 - `JwtAuthGuard` verifies with a key built once from `JWT_SECRET` (`auth/jwt-key.ts`, rebuilt only if the secret changes). Given the secret as a string, jsonwebtoken first tried it as a public key (a thrown error) then built the key on every authenticated request: about 980 µs of main-thread time per request, 19 µs with the key built once (measured on Node 20).
