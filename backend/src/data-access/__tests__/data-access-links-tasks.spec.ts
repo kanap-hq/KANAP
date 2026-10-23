@@ -621,6 +621,47 @@ async function testTaskPlacement(s: Seed2): Promise<void> {
 }
 
 /**
+ * Hand-over (§4.4): a responsible person (assignee, owner) of a task whose line is out of access
+ * hands it to someone else; the UPDATE policy no longer requires the person to stay a participant
+ * (the object is guarded by the placement trigger). PostgreSQL still applies the SELECT policy to
+ * the new row of an UPDATE that reads the table (its WHERE clause): a hand-over that leaves the
+ * person without any participation, so without sight of the task, is refused (42501). Changing
+ * the object stays refused.
+ */
+async function testTaskHandOver(s: Seed2): Promise<void> {
+  const asPaul = async (sql: string, params: unknown[]): Promise<string> => {
+    assert.equal(await apply(s.persons.paul), 'limited');
+    try {
+      await client.query('SAVEPOINT data_access_hand_over');
+      try {
+        const result = (await client.query(sql, params)) as unknown as { rowCount: number };
+        return result.rowCount === 1 ? 'ok' : `rows ${result.rowCount}`;
+      } catch (error: any) {
+        return String(error?.code ?? error);
+      } finally {
+        await client.query('ROLLBACK TO SAVEPOINT data_access_hand_over');
+      }
+    } finally {
+      await apply(s.persons.ulla);
+    }
+  };
+  const asObserver = `viewer_ids = viewer_ids || to_jsonb($3::text)`;
+  assert.equal(await asPaul(`UPDATE tasks SET assignee_user_id = $2, ${asObserver} WHERE id = $1`, [s.tasks.tAssignee, s.persons.marta, s.persons.paul]), 'ok',
+    'paul: the assignee hands a task of L5 (out of access) to Marta and follows it as observer');
+  assert.equal(await asPaul(`UPDATE tasks SET owner_ids = '[]'::jsonb, assignee_user_id = $2, ${asObserver} WHERE id = $1`, [s.tasks.tOwner, s.persons.marta, s.persons.paul]), 'ok',
+    'paul: the owner hands a task of L5 over and follows it as observer');
+  assert.equal(await asPaul(`UPDATE tasks SET assignee_user_id = $2 WHERE id = $1`, [s.tasks.tAssignee, s.persons.marta]), '42501',
+    'paul: a hand-over that leaves him without sight of the task (SELECT policy on the new row)');
+  assert.equal(await asPaul(`UPDATE tasks SET related_object_id = $2 WHERE id = $1`, [s.tasks.tAssignee, s.lines.L1]), '42501',
+    'paul: the assignee changes the object of the task');
+  assert.equal(await asPaul(`UPDATE tasks SET assignee_user_id = $2, related_object_id = $4, ${asObserver} WHERE id = $1`, [s.tasks.tAssignee, s.persons.marta, s.persons.paul, s.lines.L1]), '42501',
+    'paul: hand over and move at once');
+  assert.equal(await asPaul(`UPDATE tasks SET assignee_user_id = $2 WHERE id = $1`, [s.tasks.tViewer, s.persons.marta]), 'rows 0',
+    'paul: an observer does not hand the task over');
+  console.log('  hand-over: a responsible person hands a task out of access over (staying observer), never moves it (§4.4): OK');
+}
+
+/**
  * The SECURITY DEFINER access functions stay inside the tenant of the transaction by their own
  * predicate, not only through the tenant policies of their owner (defence in depth): with FORCE
  * row level security lifted on the tables they read, the owner bypasses the tenant policies, and
@@ -732,6 +773,7 @@ async function run(): Promise<void> {
       await testPersons(s);
       await testBulkReplacement(s);
       await testTaskPlacement(s);
+      await testTaskHandOver(s);
       await testTenantPredicate(s);
       await testSearchIndexSetForm(s);
       await testRoleWithoutContext(s);

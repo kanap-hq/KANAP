@@ -279,7 +279,11 @@ function taskPolicies(): PolicyRow[] {
   return [
     { table: t, command: 'SELECT', using: guarded(taskReadable(p, 'filtered')), check: null },
     { table: t, command: 'INSERT', using: null, check: guarded(taskObjectModifiable(p, 'filtered')) },
-    { table: t, command: 'UPDATE', using: guarded(taskModifiable(p, 'filtered')), check: guarded(taskModifiable(p, 'filtered')) },
+    // WITH CHECK: the old row passed USING (object modifiable, or responsible), and a new object
+    // that is a line or a contract is checked by the placement trigger of the tasks; nothing
+    // requires the person to stay a participant, so a responsible person may hand the task over
+    // (spec §4.4). The guard still refuses the role taken without context.
+    { table: t, command: 'UPDATE', using: guarded(taskModifiable(p, 'filtered')), check: guarded('true') },
     // Today's deletion rule stays in the service (route permission); the database adds the object.
     { table: t, command: 'DELETE', using: guarded(taskObjectModifiable(p, 'filtered')), check: null },
   ];
