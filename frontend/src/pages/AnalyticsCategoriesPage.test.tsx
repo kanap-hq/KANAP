@@ -283,6 +283,9 @@ describe('AnalyticsCategoriesPage', () => {
     fireEvent.click(screen.getByRole('button', { name: 'buttons.deleteSelected (2)' }));
     const dialog = await screen.findByRole('dialog');
     expect(within(dialog).getByText('analytics.forceDelete.valuesUsed')).toBeInTheDocument();
+    // The dialog names values, not items.
+    expect(within(dialog).getByText('analytics.delete.title')).toBeInTheDocument();
+    expect(within(dialog).getByText('analytics.delete.toDelete')).toBeInTheDocument();
     fireEvent.click(within(dialog).getByRole('button', { name: 'analytics.forceDelete.confirmAnyway' }));
     await waitFor(() => expect(apiDelete).toHaveBeenCalledWith('/analytics-categories/bulk', { data: { ids: ['v-used', 'v-free'], force: true } }));
   });

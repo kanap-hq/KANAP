@@ -557,7 +557,13 @@
     },
     "delete": {
       "warning_one": "Il est retiré des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui le citent. Ces éléments restent. Cette action est irréversible.",
-      "warning_other": "Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent. Ces éléments restent. Cette action est irréversible."
+      "warning_other": "Ils sont retirés des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui les citent. Ces éléments restent. Cette action est irréversible.",
+      "toDelete_one": "{{count}} contact sera supprimé :",
+      "toDelete_other": "{{count}} contacts seront supprimés :",
+      "deleted_one": "{{count}} contact supprimé",
+      "deleted_other": "{{count}} contacts supprimés",
+      "title_one": "Supprimer le contact sélectionné",
+      "title_other": "Supprimer les {{count}} contacts sélectionnés"
     }
   },
   "coa": {
@@ -852,6 +858,18 @@
       "budgetLines_other": "{{count}} lignes budgétaires",
       "confirmAnyway": "Supprimer quand même"
     },
+    "delete": {
+      "toDelete_one": "{{count}} valeur sera supprimée :",
+      "toDelete_other": "{{count}} valeurs seront supprimées :",
+      "kept_one": "{{count}} valeur ne peut pas être supprimée et est conservée :",
+      "kept_other": "{{count}} valeurs ne peuvent pas être supprimées et sont conservées :",
+      "deleted_one": "{{count}} valeur supprimée",
+      "deleted_other": "{{count}} valeurs supprimées",
+      "title_one": "Supprimer la valeur sélectionnée",
+      "title_other": "Supprimer les {{count}} valeurs sélectionnées",
+      "keptDone_one": "{{count}} valeur conservée",
+      "keptDone_other": "{{count}} valeurs conservées"
+    },
     "appliesToConflict": {
       "capex_one": "{{count}} ligne CAPEX a une valeur pour cette dimension. Elle la garde, masquée tant que la dimension est réservée aux lignes OPEX.",
       "capex_other": "{{count}} lignes CAPEX ont une valeur pour cette dimension. Elles la gardent, masquée tant que la dimension est réservée aux lignes OPEX.",
@@ -990,6 +1008,14 @@
       "failedToUpdate": "Échec de la mise à jour de la catégorie"
     },
     "deleteWarning_one": "Cette action est irréversible. Les interfaces et les demandes liées à ce processus sont conservées, sans ce lien.",
+    "delete": {
+      "toDelete_one": "{{count}} processus métier sera supprimé :",
+      "toDelete_other": "{{count}} processus métier seront supprimés :",
+      "deleted_one": "{{count}} processus métier supprimé",
+      "deleted_other": "{{count}} processus métier supprimés",
+      "title_one": "Supprimer le processus métier sélectionné",
+      "title_other": "Supprimer les {{count}} processus métier sélectionnés"
+    },
     "deleteWarning_other": "Cette action est irréversible. Les interfaces et les demandes liées à ces processus sont conservées, sans ce lien."
   },
   "admin": {

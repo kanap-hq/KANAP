@@ -1163,7 +1163,15 @@
     "templateLabel": "Template",
     "title": "Standard accounts (platform admin)",
     "deleteWarning_one": "This cannot be undone. The account leaves this template. Charts of accounts already loaded from it keep their accounts.",
-    "deleteWarning_other": "This cannot be undone. The accounts leave this template. Charts of accounts already loaded from it keep their accounts."
+    "deleteWarning_other": "This cannot be undone. The accounts leave this template. Charts of accounts already loaded from it keep their accounts.",
+    "delete": {
+      "toDelete_one": "{{count}} standard account will be deleted:",
+      "toDelete_other": "{{count}} standard accounts will be deleted:",
+      "deleted_one": "{{count}} standard account deleted",
+      "deleted_other": "{{count}} standard accounts deleted",
+      "title_one": "Delete the selected standard account",
+      "title_other": "Delete the {{count}} selected standard accounts"
+    }
   },
   "tenants": {
     "actions": {

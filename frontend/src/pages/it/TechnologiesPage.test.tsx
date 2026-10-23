@@ -161,6 +161,21 @@ describe('TechnologiesPage', () => {
     expect(result.warning).toBe('pages.technologies.delete.warningCounted');
   });
 
+  it('names technologies in the bulk delete dialog and the message once done, in the four languages', async () => {
+    renderPage();
+    const labels = deleteButton.props!.itemLabels;
+    expect(labels.toDelete(2)).toBe('pages.technologies.delete.toDelete');
+    expect(labels.deleted(2)).toBe('pages.technologies.delete.deleted');
+    expect(labels.title(2)).toBe('pages.technologies.delete.title');
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const it = (await import(`../../locales/${lang}/it.json`)).default as any;
+      for (const key of ['toDelete', 'deleted', 'title']) {
+        expect(it.pages.technologies.delete[`${key}_one`], `${lang} ${key}`).toBeTruthy();
+        expect(it.pages.technologies.delete[`${key}_other`], `${lang} ${key}`).toBeTruthy();
+      }
+    }
+  });
+
   it('shows no writing action to a reader', () => {
     auth.levels = { infrastructure: 'reader' };
     renderPage();

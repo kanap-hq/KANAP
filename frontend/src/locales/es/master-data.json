@@ -557,7 +557,13 @@
     },
     "delete": {
       "warning_one": "Se quita de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que lo mencionan. Esos elementos se conservan. Esta acción no se puede deshacer.",
-      "warning_other": "Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan. Esos elementos se conservan. Esta acción no se puede deshacer."
+      "warning_other": "Se quitan de los proveedores, líneas presupuestarias, contratos, aplicaciones, activos, ubicaciones, proyectos y solicitudes que los mencionan. Esos elementos se conservan. Esta acción no se puede deshacer.",
+      "toDelete_one": "Se eliminará {{count}} contacto:",
+      "toDelete_other": "Se eliminarán {{count}} contactos:",
+      "deleted_one": "{{count}} contacto eliminado",
+      "deleted_other": "{{count}} contactos eliminados",
+      "title_one": "Eliminar el contacto seleccionado",
+      "title_other": "Eliminar los {{count}} contactos seleccionados"
     }
   },
   "coa": {
@@ -852,6 +858,18 @@
       "budgetLines_other": "{{count}} líneas presupuestarias",
       "confirmAnyway": "Eliminar de todos modos"
     },
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} valor:",
+      "toDelete_other": "Se eliminarán {{count}} valores:",
+      "kept_one": "{{count}} valor no se puede eliminar y se conserva:",
+      "kept_other": "{{count}} valores no se pueden eliminar y se conservan:",
+      "deleted_one": "{{count}} valor eliminado",
+      "deleted_other": "{{count}} valores eliminados",
+      "title_one": "Eliminar el valor seleccionado",
+      "title_other": "Eliminar los {{count}} valores seleccionados",
+      "keptDone_one": "{{count}} valor conservado",
+      "keptDone_other": "{{count}} valores conservados"
+    },
     "appliesToConflict": {
       "capex_one": "{{count}} línea CAPEX tiene un valor para esta dimensión. Lo conserva, oculto mientras la dimensión sea solo para líneas OPEX.",
       "capex_other": "{{count}} líneas CAPEX tienen un valor para esta dimensión. Lo conservan, oculto mientras la dimensión sea solo para líneas OPEX.",
@@ -990,6 +1008,14 @@
       "failedToUpdate": "Error al actualizar la categoría"
     },
     "deleteWarning_one": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a este proceso se conservan, sin el vínculo.",
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} proceso de negocio:",
+      "toDelete_other": "Se eliminarán {{count}} procesos de negocio:",
+      "deleted_one": "{{count}} proceso de negocio eliminado",
+      "deleted_other": "{{count}} procesos de negocio eliminados",
+      "title_one": "Eliminar el proceso de negocio seleccionado",
+      "title_other": "Eliminar los {{count}} procesos de negocio seleccionados"
+    },
     "deleteWarning_other": "Esta acción no se puede deshacer. Las interfaces y solicitudes vinculadas a estos procesos se conservan, sin el vínculo."
   },
   "admin": {

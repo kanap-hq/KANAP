@@ -557,7 +557,13 @@
     },
     "delete": {
       "warning_one": "It is removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name it. These records stay. This cannot be undone.",
-      "warning_other": "They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them. These records stay. This cannot be undone."
+      "warning_other": "They are removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name them. These records stay. This cannot be undone.",
+      "toDelete_one": "{{count}} contact will be deleted:",
+      "toDelete_other": "{{count}} contacts will be deleted:",
+      "deleted_one": "{{count}} contact deleted",
+      "deleted_other": "{{count}} contacts deleted",
+      "title_one": "Delete the selected contact",
+      "title_other": "Delete the {{count}} selected contacts"
     }
   },
   "coa": {
@@ -852,6 +858,18 @@
       "budgetLines_other": "{{count}} budget lines",
       "confirmAnyway": "Delete anyway"
     },
+    "delete": {
+      "toDelete_one": "{{count}} value will be deleted:",
+      "toDelete_other": "{{count}} values will be deleted:",
+      "kept_one": "{{count}} value cannot be deleted and is kept:",
+      "kept_other": "{{count}} values cannot be deleted and are kept:",
+      "deleted_one": "{{count}} value deleted",
+      "deleted_other": "{{count}} values deleted",
+      "title_one": "Delete the selected value",
+      "title_other": "Delete the {{count}} selected values",
+      "keptDone_one": "{{count}} value kept",
+      "keptDone_other": "{{count}} values kept"
+    },
     "appliesToConflict": {
       "capex_one": "{{count}} CAPEX line has a value for this dimension. It keeps it, hidden while the dimension is for OPEX lines only.",
       "capex_other": "{{count}} CAPEX lines have a value for this dimension. They keep it, hidden while the dimension is for OPEX lines only.",
@@ -990,6 +1008,14 @@
       "failedToUpdate": "Failed to update category"
     },
     "deleteWarning_one": "This cannot be undone. Interfaces and requests linked to this process stay, without the link.",
+    "delete": {
+      "toDelete_one": "{{count}} business process will be deleted:",
+      "toDelete_other": "{{count}} business processes will be deleted:",
+      "deleted_one": "{{count}} business process deleted",
+      "deleted_other": "{{count}} business processes deleted",
+      "title_one": "Delete the selected business process",
+      "title_other": "Delete the {{count}} selected business processes"
+    },
     "deleteWarning_other": "This cannot be undone. Interfaces and requests linked to these processes stay, without the link."
   },
   "admin": {

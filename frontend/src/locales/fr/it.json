@@ -225,7 +225,13 @@
         "warning_one": "Cette technologie et ses liens aux serveurs et applications seront supprimés.",
         "warning_other": "Ces {{count}} technologies et leurs liens aux serveurs et applications seront supprimés.",
         "warningCounted_one": "Cette technologie sera supprimée avec {{usages}}.",
-        "warningCounted_other": "Ces {{count}} technologies seront supprimées avec {{usages}}."
+        "warningCounted_other": "Ces {{count}} technologies seront supprimées avec {{usages}}.",
+        "toDelete_one": "{{count}} technologie sera supprimée :",
+        "toDelete_other": "{{count}} technologies seront supprimées :",
+        "deleted_one": "{{count}} technologie supprimée",
+        "deleted_other": "{{count}} technologies supprimées",
+        "title_one": "Supprimer la technologie sélectionnée",
+        "title_other": "Supprimer les {{count}} technologies sélectionnées"
       },
       "create": {
         "title": "Nouvelle technologie",
@@ -265,6 +271,14 @@
       },
       "deleteWarning_one": "Cette action est irréversible. Ses serveurs, interfaces et documents sont conservés ; seuls leurs liens avec cette connexion sont supprimés.",
       "deleteWarning_other": "Cette action est irréversible. Leurs serveurs, interfaces et documents sont conservés ; seuls leurs liens avec ces connexions sont supprimés.",
+      "delete": {
+        "toDelete_one": "{{count}} connexion sera supprimée :",
+        "toDelete_other": "{{count}} connexions seront supprimées :",
+        "deleted_one": "{{count}} connexion supprimée",
+        "deleted_other": "{{count}} connexions supprimées",
+        "title_one": "Supprimer la connexion sélectionnée",
+        "title_other": "Supprimer les {{count}} connexions sélectionnées"
+      },
       "serverCount_one": "{{count}} serveur",
       "serverCount_other": "{{count}} serveurs"
     },

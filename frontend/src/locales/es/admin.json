@@ -1163,7 +1163,15 @@
     "templateLabel": "Plantilla",
     "title": "Cuentas estándar (Admin plataforma)",
     "deleteWarning_one": "Esta acción no se puede deshacer. La cuenta se retira de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas.",
-    "deleteWarning_other": "Esta acción no se puede deshacer. Las cuentas se retiran de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas."
+    "deleteWarning_other": "Esta acción no se puede deshacer. Las cuentas se retiran de esta plantilla. Los planes de cuentas ya cargados desde ella conservan sus cuentas.",
+    "delete": {
+      "toDelete_one": "Se eliminará {{count}} cuenta estándar:",
+      "toDelete_other": "Se eliminarán {{count}} cuentas estándar:",
+      "deleted_one": "{{count}} cuenta estándar eliminada",
+      "deleted_other": "{{count}} cuentas estándar eliminadas",
+      "title_one": "Eliminar la cuenta estándar seleccionada",
+      "title_other": "Eliminar las {{count}} cuentas estándar seleccionadas"
+    }
   },
   "tenants": {
     "actions": {
