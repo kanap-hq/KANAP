@@ -4,6 +4,7 @@ import {
   Box,
   Button,
   IconButton,
+  Link as MLink,
   Menu,
   MenuItem,
   Select,
@@ -17,6 +18,7 @@ import {
   Typography,
   useTheme,
 } from '@mui/material';
+import { Link as RouterLink } from 'react-router-dom';
 import AddIcon from '@mui/icons-material/Add';
 import DeleteOutlineIcon from '@mui/icons-material/DeleteOutline';
 import EditOutlinedIcon from '@mui/icons-material/EditOutlined';
@@ -404,7 +406,18 @@ export default function DeploymentsEditor({
                 {rows.map((row) => (
                   <TableRow key={row.id}>
                     <TableCell sx={(muiTheme) => ({ fontFamily: MONO_FONT_FAMILY, fontSize: '12px !important', color: `${muiTheme.palette.kanap.text.secondary} !important` })}>
-                      {row.server?.name || '—'}
+                      {row.server?.name ? (
+                        <MLink
+                          component={RouterLink}
+                          to={`/it/assets/${row.server.id || row.server_id}`}
+                          underline="hover"
+                          color="inherit"
+                          onClick={(event: React.MouseEvent) => event.stopPropagation()}
+                          sx={{ '&:hover': { color: 'primary.main' } }}
+                        >
+                          {row.server.name}
+                        </MLink>
+                      ) : '—'}
                     </TableCell>
                     <TableCell>{labelFor('serverRole', row.role) || row.role || '—'}</TableCell>
                     <TableCell>{row.hosting?.label || (row.hosting?.code ? labelFor('hostingType', row.hosting.code) : '—')}</TableCell>
