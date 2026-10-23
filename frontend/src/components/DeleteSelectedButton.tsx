@@ -67,7 +67,8 @@ export interface DeleteSelectedButtonProps<T> {
    */
   itemLabels?: {
     toDelete: (count: number) => string;
-    kept: (count: number) => string;
+    /** Only for lists whose delete can refuse items. */
+    kept?: (count: number) => string;
     deleted?: (count: number) => string;
     /** Several selected items: "Delete the 2 selected companies". One item stays named. */
     title?: (count: number) => string;
@@ -241,7 +242,7 @@ export default function DeleteSelectedButton<T>({
   const releasedIds = new Set(released.map((item) => item.id));
   const toDelete = items.filter((item) => !refusedById.has(item.id) || releasedIds.has(item.id));
   const shownKept = keptItems.filter((item) => !releasedIds.has(item.id));
-  const keptLabel = (count: number) => itemLabels?.kept(count) ?? t('delete.itemsKept', { count });
+  const keptLabel = (count: number) => itemLabels?.kept?.(count) ?? t('delete.itemsKept', { count });
   /** "Delete Acme?" for one item, "Delete the 3 selected items" for several: one item is always named. */
   const selectionTitle = (named: Item[]) => (named.length === 1
     ? t('delete.recordTitle', { name: named[0].name })

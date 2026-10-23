@@ -357,6 +357,11 @@ export default function ConnectionsPage() {
           gridApi={gridApiRef.current}
           // Nothing refuses a connection's delete: the warning says what goes with it.
           warning={t('pages.connections.deleteWarning', { count: selectedRows.length })}
+          itemLabels={{
+            toDelete: (count) => t('pages.connections.delete.toDelete', { count }),
+            deleted: (count) => t('pages.connections.delete.deleted', { count }),
+            title: (count) => t('pages.connections.delete.title', { count }),
+          }}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         />
       )}

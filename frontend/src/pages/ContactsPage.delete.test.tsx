@@ -44,4 +44,23 @@ describe('ContactsPage delete', () => {
       }
     }
   });
+
+  it('names contacts in the dialog and the message once done, in the four languages', async () => {
+    render(
+      <ThemeProvider theme={createAppTheme('light')}>
+        <MemoryRouter><ContactsPage /></MemoryRouter>
+      </ThemeProvider>,
+    );
+    const labels = deleteButton.props?.itemLabels;
+    expect(labels.toDelete(2)).toBe('contacts.delete.toDelete:2');
+    expect(labels.deleted(2)).toBe('contacts.delete.deleted:2');
+    expect(labels.title(2)).toBe('contacts.delete.title:2');
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const md = (await import(`../locales/${lang}/master-data.json`)).default as any;
+      for (const key of ['toDelete', 'deleted', 'title']) {
+        expect(md.contacts.delete[`${key}_one`], `${lang} ${key}`).toBeTruthy();
+        expect(md.contacts.delete[`${key}_other`], `${lang} ${key}`).toBeTruthy();
+      }
+    }
+  });
 });

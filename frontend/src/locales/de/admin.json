@@ -1163,7 +1163,15 @@
     "templateLabel": "Vorlage",
     "title": "Standardkonten (Plattform-Admin)",
     "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Das Konto wird aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten.",
-    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Die Konten werden aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten."
+    "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Die Konten werden aus dieser Vorlage entfernt. Bereits aus ihr geladene Kontenpläne behalten ihre Konten.",
+    "delete": {
+      "toDelete_one": "{{count}} Standardkonto wird gelöscht:",
+      "toDelete_other": "{{count}} Standardkonten werden gelöscht:",
+      "deleted_one": "{{count}} Standardkonto gelöscht",
+      "deleted_other": "{{count}} Standardkonten gelöscht",
+      "title_one": "Ausgewähltes Standardkonto löschen",
+      "title_other": "{{count}} ausgewählte Standardkonten löschen"
+    }
   },
   "tenants": {
     "actions": {
