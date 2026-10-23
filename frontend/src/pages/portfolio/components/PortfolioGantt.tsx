@@ -775,7 +775,8 @@ export function PortfolioGantt({
         '& .wx-table .wx-grid .wx-header .wx-cell': {
           fontSize: '11px',
         },
-        '& .wx-table .wx-grid .wx-header .wx-cell:first-child': {
+        // Header cells are all divs: `:first-of-type` is `:first-child` without Emotion's warning.
+        '& .wx-table .wx-grid .wx-header .wx-cell:first-of-type': {
           fontSize: '12px',
           fontWeight: 500,
         },
