@@ -167,7 +167,7 @@ The Operations tab shows what runs on the asset: the applications it hosts, the 
 
 | Column | What it shows |
 |--------|---------------|
-| **Application** | Application name. Click it to open the application |
+| **Application** | Application name. Click it to open the application on its **Deployments** tab |
 | **Environment** | The deployment environment the assignment belongs to |
 | **Role** | Server role (Web, Database, Application, etc.) |
 | **Since** | Date the server was assigned |
