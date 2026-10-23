@@ -66,6 +66,24 @@ async function stored(runner: QueryRunner, table: string, id: string): Promise<a
   return row;
 }
 
+/**
+ * The preflight, then the load of the same file: the same errors and counts, and the load writes
+ * what the preflight announced.
+ */
+async function preflightThenLoad(
+  runner: QueryRunner,
+  tenantId: string,
+  config: CsvEntityConfig,
+  csv: string,
+  params: Partial<CsvImportParams> = {},
+): Promise<CsvImportResult> {
+  const preflight = await run(runner, tenantId, config, csv, { ...params, dryRun: true });
+  const result = await run(runner, tenantId, config, csv, { ...params, dryRun: false });
+  const counts = (r: CsvImportResult) => [r.ok, r.errors, r.inserted, r.updated, r.skipped, r.unchanged];
+  assert.deepEqual(counts(result), counts(preflight), `${config.entityName}: the load matches its preflight`);
+  return result;
+}
+
 /** Every column the import reads, as the export writes them. */
 async function fullExport(runner: QueryRunner, tenantId: string, config: CsvEntityConfig, id: string): Promise<string> {
   const rows = await runner.query(`SELECT * FROM ${config.tableName} WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
@@ -195,6 +213,32 @@ async function testAssets() {
 
     result = await run(runner, tenantId, assetCsvConfig, 'name;location_reference;kind;environment;status\nsrv-01;LOC-1;vm;prod;', { dryRun: true });
     assert.deepEqual(result.errors.map((e) => [e.column, e.code]), [['status', 'CSV_VALUE_CANNOT_BE_EMPTIED']]);
+
+    // Partial nested columns: only the sub-columns the file holds change, on the stored list.
+    const twoIps = randomUUID();
+    await runner.query(
+      `INSERT INTO assets (id, tenant_id, name, kind, environment, status, location_id, provider, ip_addresses)
+       VALUES ($1, $2, 'srv-02', 'vm', 'prod', 'active', $3, 'on_prem', $4::jsonb)`,
+      [twoIps, tenantId, locationId, JSON.stringify([
+        { type: 'mgmt', ip: '10.0.0.1', subnet_cidr: '10.0.0.0/24' },
+        { type: 'mgmt', ip: '10.0.1.1', subnet_cidr: '10.0.1.0/24' },
+      ])],
+    );
+    for (const mode of ['replace', 'enrich'] as const) {
+      result = await preflightThenLoad(runner, tenantId, assetCsvConfig, `name;location_reference;kind;environment;ip_1_type;ip_1_address\nsrv-02;LOC-1;vm;prod;mgmt;10.0.0.${mode === 'replace' ? 9 : 8}`, { mode });
+      assert.equal(result.updated, 1, `${mode}: ${JSON.stringify(result.errors)}`);
+      assert.deepEqual((await stored(runner, 'assets', twoIps)).ip_addresses, [
+        { type: 'mgmt', ip: `10.0.0.${mode === 'replace' ? 9 : 8}`, subnet_cidr: '10.0.0.0/24' },
+        { type: 'mgmt', ip: '10.0.1.1', subnet_cidr: '10.0.1.0/24' },
+      ], `${mode}: the second IP and the first subnet are kept`);
+    }
+    // A blank sub-column the file holds clears that sub-property only.
+    result = await preflightThenLoad(runner, tenantId, assetCsvConfig, 'name;location_reference;kind;environment;ip_2_subnet_cidr\nsrv-02;LOC-1;vm;prod;');
+    assert.equal(result.updated, 1, JSON.stringify(result.errors));
+    assert.deepEqual((await stored(runner, 'assets', twoIps)).ip_addresses, [
+      { type: 'mgmt', ip: '10.0.0.8', subnet_cidr: '10.0.0.0/24' },
+      { type: 'mgmt', ip: '10.0.1.1', subnet_cidr: null },
+    ]);
   });
 }
 

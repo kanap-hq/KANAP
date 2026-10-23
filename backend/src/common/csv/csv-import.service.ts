@@ -478,9 +478,9 @@ export class CsvImportService {
         parsedRow.isInsert = false;
       }
 
-      // Assemble NESTED fields into their parent objects
-      this.assembleNestedFields(importFields, raw, parsedRow);
-      if (replace) this.emptyBlankNestedFields(importFields, raw, parsedRow, replace);
+      // Assemble NESTED fields into their parent objects (full replace: onto the stored list)
+      if (replace) this.replaceNestedFields(importFields, raw, parsedRow, replace);
+      else this.assembleNestedFields(importFields, raw, parsedRow);
 
       // Apply enrich mode: preserve existing values for empty cells
       if (context.params.mode === 'enrich' && existingEntity) {
@@ -888,8 +888,13 @@ export class CsvImportService {
     }
   }
 
-  /** Full replace: nested columns the file holds, all blank, empty their property. */
-  private emptyBlankNestedFields(
+  /**
+   * Full replace, nested columns (`ip_1_type`, `ip_1_address`, ...): the sub-columns the file
+   * holds are applied onto the stored list of an existing row. A blank one clears its
+   * sub-property, a sub-column the file leaves out keeps its value, and an entry left with no
+   * value is taken out. A list left empty is emptied as any other field.
+   */
+  private replaceNestedFields(
     fields: CsvFieldDefinition[],
     raw: Record<string, string>,
     row: CsvImportRow,
@@ -901,10 +906,24 @@ export class CsvImportService {
       byProperty.set(field.entityProperty, [...(byProperty.get(field.entityProperty) ?? []), field]);
     }
     for (const [property, propFields] of byProperty) {
-      if (property in row.parsed) continue;
       const held = propFields.filter((field) => this.hasColumn(raw, field.csvColumn));
       if (held.length === 0) continue;
-      this.emptyField(property, held[0].csvColumn, row, replace);
+      const stored = row.existingEntity?.[property];
+      const entries: Array<Record<string, unknown>> = Array.isArray(stored)
+        ? stored.map((entry) => (entry && typeof entry === 'object' ? { ...entry } : {}))
+        : [];
+      for (const field of held) {
+        const path = field.nestedPath!.match(/^\[(\d+)\]\.(.+)$/);
+        if (!path) continue;
+        const index = Number(path[1]);
+        while (entries.length <= index) entries.push({});
+        const value = (raw[field.csvColumn] ?? '').trim();
+        if (value === '') delete entries[index][path[2]];
+        else entries[index][path[2]] = value;
+      }
+      const kept = entries.filter((entry) => Object.values(entry).some((value) => value != null && value !== ''));
+      if (kept.length > 0) row.parsed[property] = kept;
+      else this.emptyField(property, held[0].csvColumn, row, replace);
     }
   }
 
