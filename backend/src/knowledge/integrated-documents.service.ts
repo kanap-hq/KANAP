@@ -25,6 +25,8 @@ import { IntegratedDocumentBinding } from './integrated-document-binding.entity'
 import {
   INCIDENT_REVIEW_SLOT,
   incidentReviewLanguage,
+  integratedDocumentSlotLabel,
+  integratedDocumentSlotLabels,
   incidentReviewTemplateMarkdown,
   isIncidentReviewSystemTemplate,
   INTEGRATED_DOCUMENT_SLOT_DEFINITIONS,
@@ -352,16 +354,54 @@ export class IntegratedDocumentsService {
     );
   }
 
+  /** `REF - name - slot`, with the slot named by `label` (the English `displayName` by default). */
   private formatManagedTitle(
     sourceEntityType: SourceScopedEntityType,
     source: SourceDescriptor,
     slotKey: IntegratedDocumentSlotKey,
+    label?: string,
   ): string {
     const definition = this.getSlotDefinition(sourceEntityType, slotKey);
     const config = SOURCE_ENTITY_CONFIG[sourceEntityType];
     const ref = String(source.reference_label || '').trim()
       || (source.item_number && config.referencePrefix ? `${config.referencePrefix}-${source.item_number}` : source.id);
-    return `${ref} - ${source.name} - ${definition.displayName}`;
+    return `${ref} - ${source.name} - ${label ?? definition.displayName}`;
+  }
+
+  /** The titles a managed document may carry: one per known name of its slot (any language). */
+  private acceptedManagedTitles(
+    sourceEntityType: SourceScopedEntityType,
+    source: SourceDescriptor,
+    slotKey: IntegratedDocumentSlotKey,
+  ): string[] {
+    const definition = this.getSlotDefinition(sourceEntityType, slotKey);
+    return integratedDocumentSlotLabels(definition).map((label) => this.formatManagedTitle(sourceEntityType, source, slotKey, label));
+  }
+
+  /** The slot's name a title ends with, among the known ones; the English one otherwise. */
+  private managedTitleLabel(
+    sourceEntityType: SourceScopedEntityType,
+    slotKey: IntegratedDocumentSlotKey,
+    title: string | null | undefined,
+  ): string {
+    const definition = this.getSlotDefinition(sourceEntityType, slotKey);
+    const text = String(title ?? '');
+    return integratedDocumentSlotLabels(definition)
+      .sort((a, b) => b.length - a.length)
+      .find((label) => text.endsWith(` - ${label}`)) ?? definition.displayName;
+  }
+
+  /** The slot's name in the language of the user who creates the document (`users.locale`), English otherwise. */
+  private async creatorSlotLabel(
+    sourceEntityType: SourceScopedEntityType,
+    slotKey: IntegratedDocumentSlotKey,
+    userId: string | null | undefined,
+    manager: EntityManager,
+  ): Promise<string> {
+    const rows: Array<{ locale: string | null }> = userId
+      ? await manager.query(`SELECT locale FROM users WHERE id = $1 AND tenant_id = app_current_tenant()`, [userId])
+      : [];
+    return integratedDocumentSlotLabel(this.getSlotDefinition(sourceEntityType, slotKey), incidentReviewLanguage(rows[0]?.locale));
   }
 
   private getImportChangeNote(sourceEntityType: SourceScopedEntityType): string {
@@ -2135,7 +2175,7 @@ export class IntegratedDocumentsService {
     const created = await this.knowledge.createManagedDocument(
       {
         tenantId: source.tenant_id,
-        title: this.formatManagedTitle(sourceEntityType, source, slotKey),
+        title: this.formatManagedTitle(sourceEntityType, source, slotKey, await this.creatorSlotLabel(sourceEntityType, slotKey, userId, manager)),
         summary: null,
         content_markdown: initialContent,
         folder_id: slotSetting.folder_id,
@@ -2504,7 +2544,8 @@ export class IntegratedDocumentsService {
       }
       const slotKey = binding.slot_key as IntegratedDocumentSlotKey;
       const document = await this.getDocumentOrThrow(binding.document_id, manager);
-      const nextTitle = this.formatManagedTitle(sourceEntityType, source, slotKey);
+      // The slot keeps the name the title carries, in whichever language it was created.
+      const nextTitle = this.formatManagedTitle(sourceEntityType, source, slotKey, this.managedTitleLabel(sourceEntityType, slotKey, document.title));
       if (document.title === nextTitle) {
         continue;
       }
@@ -3040,15 +3081,15 @@ export class IntegratedDocumentsService {
        WHERE d.id = $1
          AND d.tenant_id = app_current_tenant()
        LIMIT 1`,
-      [binding.document_id, context.source.id],
+      // `$2` is only in the query of a source with a relation table (not applications).
+      config.relationTable && config.relationIdColumn ? [binding.document_id, context.source.id] : [binding.document_id],
     );
     if (documentRows.length !== 1) {
       throw new Error(`Managed document ${binding.document_id} not found for ${sourceEntityType}:${slotKey}:${context.source.id}`);
     }
 
     const document = documentRows[0];
-    const expectedTitle = this.formatManagedTitle(sourceEntityType, context.source, slotKey);
-    if (document.title !== expectedTitle) {
+    if (!this.acceptedManagedTitles(sourceEntityType, context.source, slotKey).includes(document.title)) {
       throw new Error(`Managed document title mismatch for ${sourceEntityType}:${slotKey}:${context.source.id}`);
     }
     if (document.status !== 'published') {
@@ -3199,15 +3240,15 @@ export class IntegratedDocumentsService {
        WHERE d.id = $1
          AND d.tenant_id = app_current_tenant()
        LIMIT 1`,
-      [bindingRows[0].document_id, source.id],
+      // `$2` is only in the query of a source with a relation table (not applications).
+      config.relationTable && config.relationIdColumn ? [bindingRows[0].document_id, source.id] : [bindingRows[0].document_id],
     );
     if (documentRows.length !== 1) {
       throw new Error(`Managed document ${bindingRows[0].document_id} not found for ${sourceEntityType}:${slotKey}:${source.id}`);
     }
 
     const document = documentRows[0];
-    const expectedTitle = this.formatManagedTitle(sourceEntityType, source, slotKey);
-    if (document.title !== expectedTitle) {
+    if (!this.acceptedManagedTitles(sourceEntityType, source, slotKey).includes(document.title)) {
       throw new Error(`Managed document title mismatch for ${sourceEntityType}:${slotKey}:${source.id}`);
     }
     if (document.status !== 'published') {

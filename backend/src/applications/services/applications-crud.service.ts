@@ -26,6 +26,7 @@ import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { projectParticipantCondition, requestParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
+import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import {
   applicationBadRequest,
   applicationNameKey,
@@ -57,6 +58,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly notifications: NotificationsService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
+    @Optional() private readonly integratedDocuments?: IntegratedDocumentsService,
   ) {
     super(appRepo);
   }
@@ -321,6 +323,16 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     Object.assign(existing, patch, { updated_at: new Date() });
     const saved = (await repo.save(existing as any)) as Application;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    // A renamed application: its description document's title follows (`APP-4 - New name - Overview`).
+    if ((before as any).name !== saved.name) {
+      await this.integratedDocuments?.syncTitles('applications', {
+        id: saved.id,
+        tenant_id: saved.tenant_id,
+        item_number: null,
+        name: saved.name,
+        reference_label: String((saved as any).sequential_id || '').trim() || saved.id,
+      }, userId ?? null, { manager: mg });
+    }
     // Entering or leaving service: its declared technologies are matched again with the vulnerabilities.
     const instant = (value: unknown) => (value ? new Date(value as string).getTime() : null);
     if ((before as any).status !== saved.status || instant((before as any).disabled_at) !== instant(saved.disabled_at)) {

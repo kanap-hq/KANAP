@@ -204,6 +204,31 @@ export const INTEGRATED_DOCUMENT_SLOT_DEFINITIONS: IntegratedDocumentSlotDefinit
   },
 ];
 
+/**
+ * The slot's name at the end of a managed document's title (`APP-4 - CRM - Overview`), in each
+ * interface language. A document takes the name in its creator's language (`users.locale`) and
+ * keeps it: a rename of the record keeps the name the title already carries.
+ */
+export const INTEGRATED_DOCUMENT_SLOT_LABELS: Record<string, Record<IncidentReviewLanguage, string>> = {
+  'applications:overview': { en: 'Overview', fr: "Vue d'ensemble", de: 'Übersicht', es: 'Visión general' },
+  'requests:purpose': { en: 'Purpose', fr: 'Objectif', de: 'Zweck', es: 'Propósito' },
+  'requests:risks_mitigations': { en: 'Risks & Mitigations', fr: 'Risques et atténuations', de: 'Risiken und Gegenmaßnahmen', es: 'Riesgos y mitigaciones' },
+  'projects:purpose': { en: 'Purpose', fr: 'Objectif', de: 'Zweck', es: 'Propósito' },
+  'interfaces:specification': { en: 'Specification', fr: 'Spécification', de: 'Spezifikation', es: 'Especificación' },
+  'incidents:review': { en: 'Incident review', fr: "Revue d'incident", de: 'Vorfallanalyse', es: 'Revisión del incidente' },
+};
+
+/** The slot's name in one language; the English `displayName` when the table has none. */
+export function integratedDocumentSlotLabel(definition: IntegratedDocumentSlotDefinition, language: IncidentReviewLanguage): string {
+  return INTEGRATED_DOCUMENT_SLOT_LABELS[`${definition.sourceEntityType}:${definition.slotKey}`]?.[language] ?? definition.displayName;
+}
+
+/** Every name of the slot a title may carry: the English `displayName` first, then the other languages. */
+export function integratedDocumentSlotLabels(definition: IntegratedDocumentSlotDefinition): string[] {
+  const labels = INTEGRATED_DOCUMENT_SLOT_LABELS[`${definition.sourceEntityType}:${definition.slotKey}`];
+  return [...new Set([definition.displayName, ...(labels ? Object.values(labels) : [])])];
+}
+
 export function getIntegratedDocumentSlotKey(
   sourceEntityType: IntegratedDocumentSlottedEntityType,
   slotKey: IntegratedDocumentSlotKey,
