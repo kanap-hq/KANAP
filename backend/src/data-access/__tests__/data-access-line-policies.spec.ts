@@ -442,6 +442,34 @@ async function testNothingChangesUnscoped(s: Seed): Promise<void> {
   console.log('  unscoped: same rows and plans with the policies installed (§10.2): OK');
 }
 
+/**
+ * The SECURITY DEFINER functions of data-scoped access read without the data-access policies:
+ * none is callable through PUBLIC; the application role and the limited role hold EXECUTE.
+ */
+async function testDefinerGrants(): Promise<void> {
+  const rows = await q(`
+    SELECT p.oid::regprocedure::text AS fn,
+           EXISTS (SELECT 1 FROM aclexplode(coalesce(p.proacl, acldefault('f', p.proowner))) a
+                   WHERE a.grantee = 0 AND a.privilege_type = 'EXECUTE') AS public_execute,
+           has_function_privilege($1, p.oid, 'EXECUTE') AS limited_execute,
+           has_function_privilege(current_user, p.oid, 'EXECUTE') AS app_execute
+    FROM pg_proc p
+    WHERE p.pronamespace = 'public'::regnamespace AND p.proname LIKE 'data\\_access\\_%' AND p.prosecdef
+    ORDER BY 1`, [LIMITED_ROLE]);
+  const names = rows.map((r) => r.fn);
+  for (const helper of ['data_access_line_of_version(uuid)', 'data_access_line_of_round_input(uuid)']) {
+    assert.ok(names.includes(helper), `${helper} is SECURITY DEFINER`);
+  }
+  for (const row of rows) {
+    assert.deepEqual(
+      { public: row.public_execute, limited: row.limited_execute, app: row.app_execute },
+      { public: false, limited: true, app: true },
+      `${row.fn}: EXECUTE for the application and limited roles only`,
+    );
+  }
+  console.log(`  ${rows.length} SECURITY DEFINER access functions: no EXECUTE through PUBLIC: OK`);
+}
+
 async function run(): Promise<void> {
   client = await connect(APP_URL);
   try {
@@ -462,6 +490,7 @@ async function run(): Promise<void> {
       await testDefinerTriggers(s);
       await testRowEstimates(s);
       await testAdministratorAndAll(s);
+      await testDefinerGrants();
     } finally {
       await client.query('ROLLBACK');
     }

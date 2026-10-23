@@ -452,7 +452,9 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  *
  * 1. `data_access_placable_line(company, centre)` and `data_access_placable_contract(company,
  *    place)` (spec §6.4, the contract one used from lot 5), and the SECURITY DEFINER helpers
- *    `data_access_line_of_version(version)` and `data_access_line_of_round_input(round_input)`.
+ *    `data_access_line_of_version(version)` and `data_access_line_of_round_input(round_input)`
+ *    (EXECUTE revoked from PUBLIC, granted to the application role and, by the sync, to the
+ *    limited role).
  *    Run 2B: the SECURITY DEFINER depth functions `data_access_contract_visible(contract)`,
  *    `data_access_contract_modifiable(contract)`, `data_access_task_visible(task)`,
  *    `data_access_task_modifiable(task)`, the set functions of the search index
@@ -589,7 +591,8 @@ async function createPlacementFunctions(queryRunner: QueryRunner): Promise<void>
 
   // The line of a version, and of a round input, read without the data-access policies (owner:
   // the application role, which no data-access policy targets; the tenant policy still applies).
-  // They return an id the caller already names by its child row, nothing else.
+  // They return an id the caller already names by its child row, nothing else. EXECUTE revoked
+  // from PUBLIC, granted to the application role here and to the limited role by the sync.
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_line_of_version(p_version uuid)
     RETURNS uuid
@@ -615,7 +618,14 @@ async function createPlacementFunctions(queryRunner: QueryRunner): Promise<void>
       WHERE r.id = p_round_input
     $fn$
   `);
+  for (const signature of LINE_HELPER_SIGNATURES) {
+    await queryRunner.query(`REVOKE EXECUTE ON FUNCTION ${signature} FROM PUBLIC`);
+    await queryRunner.query(`GRANT EXECUTE ON FUNCTION ${signature} TO CURRENT_USER`);
+  }
 }
+
+/** The SECURITY DEFINER helpers of the grandchild policies (see lineRef). */
+const LINE_HELPER_SIGNATURES = ['data_access_line_of_version(uuid)', 'data_access_line_of_round_input(uuid)'];
 
 /**
  * lisible_contrat (spec §6.4) on the contract `p`: direct, or through a readable line that names it
@@ -896,7 +906,7 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
       ALTER DEFAULT PRIVILEGES IN SCHEMA public
         GRANT USAGE, SELECT ON SEQUENCES TO ${LIMITED_ROLE};
       -- The SECURITY DEFINER access functions the policies call (EXECUTE revoked from PUBLIC).
-${ACCESS_DEFINER_SIGNATURES.map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
+${[...LINE_HELPER_SIGNATURES, ...ACCESS_DEFINER_SIGNATURES].map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
 
       -- Every policy that targets the role and is not expected goes; every one under inheritance.
       FOR r IN
