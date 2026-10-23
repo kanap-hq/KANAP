@@ -256,7 +256,9 @@ export class InterfacesListService extends InterfacesBaseService {
   }
 
   /**
-   * List interfaces by application.
+   * The interfaces of an application: one row per interface and environment it is bound in, and
+   * one row with `environment: null` for an interface the application is the source or target of
+   * that has no binding yet. Count interfaces by distinct `id`.
    */
   async listByApplication(applicationId: string, tenantId: string, opts?: ServiceOpts) {
     if (!tenantId) throw new Error('Tenant context is required');
@@ -271,7 +273,7 @@ export class InterfacesListService extends InterfacesBaseService {
       interface_reference: string;
       interface_code: string;
       interface_name: string;
-      environment: string;
+      environment: string | null;
       integration_route_type: string;
       source_application_id: string | null;
       source_application_name: string | null;
@@ -315,22 +317,31 @@ export class InterfacesListService extends InterfacesBaseService {
            SELECT 1
            FROM interface_middleware_applications mw
            WHERE mw.interface_id = i.id
+             AND mw.tenant_id = i.tenant_id
              AND mw.application_id = $2
          ) AS is_middleware,
          EXISTS (
            SELECT 1
            FROM interface_bindings b2
            WHERE b2.interface_id = i.id
+             AND b2.tenant_id = i.tenant_id
              AND b2.integration_tool_application_id = $2
          ) AS is_integration_tool
-       FROM interface_bindings b
-       JOIN interfaces i ON i.id = b.interface_id
-       JOIN interface_legs l ON l.id = b.interface_leg_id
-       JOIN app_instances si ON si.id = b.source_instance_id
-       JOIN app_instances ti ON ti.id = b.target_instance_id
-       LEFT JOIN applications sa ON sa.id = i.source_application_id
-       LEFT JOIN applications ta ON ta.id = i.target_application_id
+       FROM interfaces i
+       LEFT JOIN (
+         interface_bindings b
+         JOIN interface_legs l ON l.id = b.interface_leg_id AND l.tenant_id = b.tenant_id
+         JOIN app_instances si ON si.id = b.source_instance_id AND si.tenant_id = b.tenant_id
+         JOIN app_instances ti ON ti.id = b.target_instance_id AND ti.tenant_id = b.tenant_id
+       ) ON b.interface_id = i.id AND b.tenant_id = i.tenant_id
+       LEFT JOIN applications sa ON sa.id = i.source_application_id AND sa.tenant_id = i.tenant_id
+       LEFT JOIN applications ta ON ta.id = i.target_application_id AND ta.tenant_id = i.tenant_id
        WHERE i.tenant_id = $1
+         AND (
+           b.id IS NOT NULL
+           -- An interface without any binding: listed for its source and target applications.
+           OR (i.source_application_id = $2 OR i.target_application_id = $2)
+         )
          AND (
            i.source_application_id = $2
            OR i.target_application_id = $2
@@ -338,11 +349,12 @@ export class InterfacesListService extends InterfacesBaseService {
              SELECT 1
              FROM interface_middleware_applications mw2
              WHERE mw2.interface_id = i.id
+               AND mw2.tenant_id = i.tenant_id
                AND mw2.application_id = $2
            )
            OR b.integration_tool_application_id = $2
          )
-       ORDER BY i.id, b.environment, b.created_at ASC`,
+       ORDER BY i.id, b.environment NULLS LAST, b.created_at ASC`,
       [tenantId, appId],
     );
 
