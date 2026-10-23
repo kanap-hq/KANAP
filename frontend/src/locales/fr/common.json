@@ -547,7 +547,7 @@
     "overridePresetNote": "Ces paramètres remplacent la sélection de préréglage du workflow.",
     "emptyCellHandling": "Gestion des cellules vides",
     "preserveExisting": "Conserver l'existant",
-    "setToNull": "Mettre à null",
+    "setToNull": "Effacer la valeur enregistrée",
     "operation": "Opération",
     "insertAndUpdate": "Insertion et mise à jour",
     "updateOnly": "Mise à jour uniquement",
@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Remplacement complet",
-        "description": "Remplace toutes les valeurs, cellules vides comprises. Une cellule vide efface la valeur enregistrée."
+        "description": "Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Un champ obligatoire ne peut pas être vidé."
       }
     },
     "exportRows": {
