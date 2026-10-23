@@ -3,10 +3,10 @@ import { fireEvent, render, screen } from '@testing-library/react';
 import { MemoryRouter, Route, Routes } from 'react-router-dom';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// A refresh answered 429 at load (too many attempts): one line that says so and a retry button,
-// instead of a spinner that never ends.
+// A refresh answered 429 at load (too many attempts): one line that says so and a retry button
+// that tries again in the page, instead of a spinner that never ends.
 
-const auth = vi.hoisted(() => ({ refreshRateLimited: true, serverUnavailable: false }));
+const auth = vi.hoisted(() => ({ refreshRateLimited: true, serverUnavailable: false, retryRefresh: vi.fn() }));
 vi.mock('react-i18next', () => ({ useTranslation: () => ({ t: (key: string) => key, i18n: { language: 'en' } }) }));
 vi.mock('../auth/AuthContext', () => ({
   useAuth: () => ({
@@ -14,6 +14,7 @@ vi.mock('../auth/AuthContext', () => ({
     isAuthenticating: true,
     serverUnavailable: auth.serverUnavailable,
     refreshRateLimited: auth.refreshRateLimited,
+    retryRefresh: auth.retryRefresh,
     sessionExpired: false,
     profile: null,
     claims: null,
@@ -45,16 +46,18 @@ describe('ProtectedRoute while the refresh is rate limited', () => {
   beforeEach(() => {
     auth.refreshRateLimited = true;
     auth.serverUnavailable = false;
+    auth.retryRefresh.mockReset();
   });
 
-  it('says there were too many attempts and reloads the page on retry', () => {
+  it('says there were too many attempts and tries again in the page on retry', () => {
     const reload = vi.fn();
     vi.stubGlobal('location', { ...window.location, reload });
     renderPage();
     expect(screen.getByRole('status')).toHaveTextContent('session.rateLimited');
     expect(screen.queryByRole('progressbar')).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: 'session.retry' }));
-    expect(reload).toHaveBeenCalledTimes(1);
+    expect(auth.retryRefresh).toHaveBeenCalledTimes(1);
+    expect(reload).not.toHaveBeenCalled();
     vi.unstubAllGlobals();
   });
 

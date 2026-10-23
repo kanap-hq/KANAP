@@ -22,6 +22,7 @@ export default function ProtectedRoute() {
     isAuthenticating,
     serverUnavailable,
     refreshRateLimited,
+    retryRefresh,
     sessionExpired,
     profile,
     claims,
@@ -45,12 +46,13 @@ export default function ProtectedRoute() {
         px={2}
       >
         {refreshRateLimited ? (
-          // Too many attempts: the refresh tries again by itself after the wait the server asks for.
+          // Too many attempts: the refresh tries again by itself after the wait the server asks for;
+          // Retry starts the next attempt now, in the page.
           <Stack spacing={1.5} alignItems="center">
             <Typography role="status" sx={{ fontSize: 13, color: 'kanap.text.secondary', textAlign: 'center' }}>
               {t('session.rateLimited')}
             </Typography>
-            <Button variant="action" onClick={() => window.location.reload()}>
+            <Button variant="action" onClick={retryRefresh}>
               {t('session.retry')}
             </Button>
           </Stack>

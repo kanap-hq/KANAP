@@ -226,22 +226,44 @@ describe('api auth recovery', () => {
       expect(getAccessToken()).toBe('fresh-access-token');
     });
 
-    it('tells its listeners about each 429, with the wait Retry-After asks for', async () => {
-      const { axiosMock, requestTokenRefreshOutcome, subscribeRefreshRateLimited } = await loadClients();
-      const waits: Array<number | null> = [];
-      const unsubscribe = subscribeRefreshRateLimited((wait) => waits.push(wait));
+    it('tells its listeners about each failed attempt, 429 or not, with the wait before the next one', async () => {
+      const { axiosMock, requestTokenRefreshOutcome, subscribeRefreshFailure } = await loadClients();
+      const failures: unknown[] = [];
+      const unsubscribe = subscribeRefreshFailure((failure) => failures.push(failure));
       axiosMock.post
         .mockRejectedValueOnce(rateLimited('5'))
         .mockRejectedValueOnce(httpError(429))
+        .mockRejectedValueOnce(httpError(503))
         .mockResolvedValueOnce(freshTokens);
 
       const outcome = requestTokenRefreshOutcome();
       await vi.advanceTimersByTimeAsync(5_000);
       await vi.advanceTimersByTimeAsync(3_000);
+      await vi.advanceTimersByTimeAsync(8_000);
 
       await expect(outcome).resolves.toMatchObject({ status: 'refreshed' });
-      expect(waits).toEqual([5_000, null]);
+      expect(failures).toEqual([
+        { rateLimited: true, waitMs: 5_000 },
+        { rateLimited: true, waitMs: 3_000 },
+        { rateLimited: false, waitMs: 8_000 },
+      ]);
       unsubscribe();
+    });
+
+    it('starts the next attempt at once when asked to retry now, without waiting for Retry-After', async () => {
+      const { axiosMock, requestTokenRefreshOutcome, retryRefreshNow } = await loadClients();
+      axiosMock.post.mockRejectedValueOnce(rateLimited('30')).mockResolvedValueOnce(freshTokens);
+
+      const outcome = requestTokenRefreshOutcome();
+      await vi.advanceTimersByTimeAsync(0);
+      expect(axiosMock.post).toHaveBeenCalledTimes(1);
+      retryRefreshNow();
+      await vi.advanceTimersByTimeAsync(0);
+
+      await expect(outcome).resolves.toMatchObject({ status: 'refreshed' });
+      expect(axiosMock.post).toHaveBeenCalledTimes(2);
+      // Nothing waits any more: a later call does nothing.
+      retryRefreshNow();
     });
 
     it('waits as long as Retry-After asks on a 429, in seconds or as a date, capped at 60 s', async () => {
