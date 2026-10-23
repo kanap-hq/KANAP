@@ -442,6 +442,8 @@
       "complianceRestrictedLowCyber_other": "{{count}} Anwendungen mit den vertraulichsten Daten und der niedrigsten Cyber-Kritikalität",
       "loadError": "Diese Kachel konnte nicht geladen werden.",
       "clearHistory": "Verlauf löschen",
+      "clearHistoryTitle": "Verlauf löschen?",
+      "clearHistoryMessage": "Die Liste der zuletzt angesehenen Elemente wird geleert. Die Datensätze selbst bleiben unverändert.",
       "scope": {
         "my": "Meine",
         "team": "Mein Team",

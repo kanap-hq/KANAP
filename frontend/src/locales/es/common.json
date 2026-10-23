@@ -442,6 +442,8 @@
       "complianceRestrictedLowCyber_other": "{{count}} aplicaciones con los datos más confidenciales y la criticidad cibernética más baja",
       "loadError": "No se pudo cargar este mosaico.",
       "clearHistory": "Borrar historial",
+      "clearHistoryTitle": "¿Borrar historial?",
+      "clearHistoryMessage": "Se vaciará la lista de elementos vistos recientemente. Los registros en sí no se modifican.",
       "scope": {
         "my": "Mías",
         "team": "Mi equipo",

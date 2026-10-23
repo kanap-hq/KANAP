@@ -1,10 +1,11 @@
 import React from 'react';
-import { render, screen, waitFor } from '@testing-library/react';
+import { fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
+import { KanapDialogProvider } from '../../../components/design';
 
 const t = (key: string) => key;
 vi.mock('react-i18next', () => ({
@@ -39,7 +40,9 @@ function renderTile() {
   return render(
     <QueryClientProvider client={client}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter><RecentlyViewedTile config={{ limit: 5 }} /></MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter><RecentlyViewedTile config={{ limit: 5 }} /></MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -75,5 +78,29 @@ describe('RecentlyViewedTile', () => {
     renderTile();
     await waitFor(() => expect(api.post.mock.calls.length).toBe(1));
     expect(screen.getByText('Decide the renewal')).toBeInTheDocument();
+  });
+
+  it('clears the history once the confirmation is accepted', async () => {
+    const values = stubStorage({ [KEY]: JSON.stringify([{ type: 'task', id: TASK, label: 'Decide the renewal', viewedAt: Date.now() }]) });
+    api.post.mockResolvedValue({ data: { existing: [{ type: 'task', id: TASK }] } });
+    renderTile();
+    fireEvent.click(screen.getByRole('button', { name: 'dashboard.tiles.clearHistory' }));
+    expect(await screen.findByText('dashboard.tiles.clearHistoryMessage')).toBeInTheDocument();
+    expect(screen.getByText('Decide the renewal')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'buttons.clear' }));
+    await waitFor(() => expect(screen.queryByText('Decide the renewal')).toBeNull());
+    expect(screen.getByText('dashboard.tiles.noRecentlyViewed')).toBeInTheDocument();
+    expect(values.has(KEY)).toBe(false);
+  });
+
+  it('keeps the history when the confirmation is cancelled', async () => {
+    const values = stubStorage({ [KEY]: JSON.stringify([{ type: 'task', id: TASK, label: 'Decide the renewal', viewedAt: Date.now() }]) });
+    api.post.mockResolvedValue({ data: { existing: [{ type: 'task', id: TASK }] } });
+    renderTile();
+    fireEvent.click(screen.getByRole('button', { name: 'dashboard.tiles.clearHistory' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'buttons.cancel' }));
+    await waitFor(() => expect(screen.queryByText('dashboard.tiles.clearHistoryMessage')).toBeNull());
+    expect(screen.getByText('Decide the renewal')).toBeInTheDocument();
+    expect(JSON.parse(values.get(KEY)!).map((item: { id: string }) => item.id)).toEqual([TASK]);
   });
 });
