@@ -335,6 +335,9 @@ function ApplicationProperties({
 
   React.useEffect(() => {
     const departmentDetails = departmentDetailsQuery.data || {};
+    // Wait for the company of every chosen department: a row rebuilt without it would vanish and
+    // come back, which unmounts its fields and drops the focus on the page.
+    if (selectedDepartmentIds.some((id) => !departmentDetails[id]) && departmentDetailsQuery.isFetching) return;
     const companyRows = (app.companies || []).map((row) => ({
       key: `company:${row.company_id}`,
       company_id: row.company_id,
@@ -353,8 +356,12 @@ function ApplicationProperties({
       department_ids: departmentIds,
     }));
     const nextRows = [...companyRows, ...departmentRows];
-    setAudienceRows(nextRows.length ? nextRows : []);
-  }, [app.companies, app.departments, departmentDetailsQuery.data]);
+    // A company keeps the row it already has, so its fields stay mounted and keep the focus.
+    setAudienceRows((previous) => nextRows.map((row) => {
+      const kept = previous.find((item) => item.company_id === row.company_id);
+      return kept ? { ...row, key: kept.key } : row;
+    }));
+  }, [app.companies, app.departments, departmentDetailsQuery.data, departmentDetailsQuery.isFetching, selectedDepartmentIds]);
 
   const savingOwnersRef = React.useRef(false);
   const replaceOwners = React.useCallback(async (owners: ApplicationDetail['owners']) => {

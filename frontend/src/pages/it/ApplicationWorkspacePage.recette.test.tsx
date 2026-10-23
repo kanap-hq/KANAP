@@ -28,7 +28,16 @@ vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => nul
 vi.mock('../../components/fields/SupplierSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/ContactSelect', () => ({ default: () => null }));
 vi.mock('../../components/fields/CompanySelect', () => ({ default: () => null }));
-vi.mock('../../components/fields/DepartmentMultiSelect', () => ({ default: () => null }));
+const departmentField = vi.hoisted(() => ({ mounts: 0 }));
+vi.mock('../../components/fields/DepartmentMultiSelect', async () => {
+  const { useEffect } = await import('react');
+  return {
+    default: function DepartmentField({ onChange }: { onChange: (ids: string[]) => void }) {
+      useEffect(() => { departmentField.mounts += 1; }, []);
+      return <button type="button" onClick={() => onChange(['d-1'])}>pick department</button>;
+    },
+  };
+});
 vi.mock('../../components/fields/TeamMemberMultiSelect', () => ({
   default: ({ label, onChange }: { label: string; onChange: (ids: string[]) => Promise<void> }) => (
     <button type="button" onClick={() => { void onChange(['u-9']); }}>{`pick ${label}`}</button>
@@ -55,9 +64,10 @@ const application = {
   predecessor_id: 'app-0', is_suite: false, deployments: [],
 };
 
-function renderPage(path = '/it/applications/app-1/overview') {
+function renderPage(path = '/it/applications/app-1/overview', detail: () => unknown = () => application) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/applications/app-1') return { data: application } as never;
+    if (url === '/applications/app-1') return { data: detail() } as never;
+    if (url === '/departments/d-1') return { data: { id: 'd-1', company_id: 'co-1', name: 'Finance' } } as never;
     if (url === '/applications/app-1/version-lineage') {
       return { data: { predecessors: [{ id: 'app-0', sequential_id: 'APP-3', name: 'Atlas 1' }], successors: [{ id: 'app-2', sequential_id: 'APP-9', name: 'Atlas 3' }] } } as never;
     }
@@ -159,6 +169,25 @@ describe('Application workspace, recette C1a', () => {
     (navigator.clipboard.writeText as ReturnType<typeof vi.fn>).mockRejectedValueOnce(SERVER_ERROR);
     fireEvent.click(screen.getByText('APP-1'));
     expect(await screen.findByText('messages.copyReferenceFailed')).toBeTruthy();
+  });
+
+  it('keeps the department field mounted while a chosen department is saved', async () => {
+    let current: typeof application = { ...application, companies: [{ company_id: 'co-1' }] as never };
+    renderPage(undefined, () => current);
+    mocked.post.mockImplementation(async (url: string) => {
+      if (url.endsWith('/companies/bulk-replace')) return { data: [] } as never;
+      if (url.endsWith('/departments/bulk-replace')) {
+        current = { ...current, companies: [], departments: [{ department_id: 'd-1' }] as never };
+        return { data: current.departments } as never;
+      }
+      return { data: {} } as never;
+    });
+    const pick = await screen.findByRole('button', { name: 'pick department' });
+    const mountsBefore = departmentField.mounts;
+    fireEvent.click(pick);
+    await waitFor(() => expect(mocked.get).toHaveBeenCalledWith('/departments/d-1'));
+    await waitFor(() => expect(screen.getByText('workspace.application.ownership.audienceDepartmentsOnly')).toBeTruthy());
+    expect(departmentField.mounts).toBe(mountsBefore);
   });
 
   it('keeps an empty title open with the message', async () => {

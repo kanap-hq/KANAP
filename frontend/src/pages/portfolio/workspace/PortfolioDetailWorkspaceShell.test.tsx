@@ -143,6 +143,22 @@ describe('PortfolioDetailWorkspaceShell Escape', () => {
     expect(onBack).not.toHaveBeenCalled();
   });
 
+  it('ignores an Escape on the body while a menu or list is open elsewhere', () => {
+    const onBack = vi.fn();
+    renderShell({ onBack });
+    const popup = document.createElement('div');
+    popup.className = 'MuiPopper-root';
+    document.body.appendChild(popup);
+    try {
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      expect(onBack).not.toHaveBeenCalled();
+    } finally {
+      popup.remove();
+    }
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
   it('ignores an Escape that arrives on the body just after a field or list was used', () => {
     const onBack = vi.fn();
     renderShell({ onBack, properties: <ul role="listbox"><li role="option">Finance</li></ul> });

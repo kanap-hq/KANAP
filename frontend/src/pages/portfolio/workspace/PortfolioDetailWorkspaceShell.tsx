@@ -89,6 +89,12 @@ const WIDGET_SELECTOR = [
 /** After a use of such a widget, a body focus is the widget closing, not a person pressing Escape on the page. */
 const WIDGET_SETTLE_MS = 1000;
 
+/** An open menu, list, popover or dialog (tooltips and kept-mounted hidden modals aside). */
+const OPEN_OVERLAY_SELECTOR = [
+  '.MuiPopover-root:not(.MuiModal-hidden)', '.MuiModal-root:not(.MuiModal-hidden)',
+  '.MuiPopper-root:not(.MuiTooltip-popper)', '[role="dialog"]', '[role="listbox"]', '[role="menu"]',
+].join(',');
+
 function isInsideWidget(target: EventTarget | null) {
   return target instanceof Element && !!target.closest(WIDGET_SELECTOR);
 }
@@ -332,8 +338,16 @@ export default function PortfolioDetailWorkspaceShell({
 
   // The last time a field, list, menu or dialog was used (pointer, key or focus leaving it).
   const lastWidgetUse = React.useRef(0);
+  // Whether a menu, list or dialog was open when Escape was pressed. Read in the capture phase,
+  // before the widget closes itself on that same press.
+  const overlayOpenAtEscape = React.useRef(false);
   React.useEffect(() => {
-    const mark = (event: Event) => { if (isInsideWidget(event.target)) lastWidgetUse.current = Date.now(); };
+    const mark = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') {
+        overlayOpenAtEscape.current = !!document.querySelector(OPEN_OVERLAY_SELECTOR);
+      }
+      if (isInsideWidget(event.target)) lastWidgetUse.current = Date.now();
+    };
     const events = ['pointerdown', 'keydown', 'focusout'] as const;
     events.forEach((name) => window.addEventListener(name, mark, true));
     return () => events.forEach((name) => window.removeEventListener(name, mark, true));
@@ -351,10 +365,11 @@ export default function PortfolioDetailWorkspaceShell({
 
       if (isTypingTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
 
-      // Escape belongs to the field, list, menu or dialog it comes from, and to the one that has
-      // just closed (the focus is then on the page body): it leaves the page only on a plain press.
+      // Escape belongs to the field, list, menu or dialog it comes from, to one still open, and to
+      // the one that has just closed (the focus is then on the page body): it leaves the page only
+      // on a plain press.
       if (event.key === 'Escape') {
-        if (event.defaultPrevented || isInsideWidget(event.target)) return;
+        if (event.defaultPrevented || isInsideWidget(event.target) || overlayOpenAtEscape.current) return;
         const active = document.activeElement;
         if ((!active || active === document.body) && Date.now() - lastWidgetUse.current < WIDGET_SETTLE_MS) return;
       }
