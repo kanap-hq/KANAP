@@ -1,0 +1,55 @@
+name: Fix
+description: A bug or a small improvement with a clear reproduction, ready to be worked on.
+title: "<area>: <what is wrong, in one line>"
+labels: ["bug"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        One issue per defect. Keep it public-safe: no customer or company name, no credentials, no internal host.
+        Reproduce on the Fromage & Co demo data (`backend/fixtures/fromage-co/`) whenever possible.
+  - type: textarea
+    id: observed
+    attributes:
+      label: What happens
+      description: The behaviour as a user sees it.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen
+    validations:
+      required: true
+  - type: input
+    id: where
+    attributes:
+      label: Where
+      description: Route, page, tab or dialog.
+      placeholder: /it/applications/APP-43/deployments
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      description: Numbered steps, with the data to use.
+    validations:
+      required: true
+  - type: textarea
+    id: pointers
+    attributes:
+      label: Code pointers
+      description: Files, functions, an existing pattern to reuse. Optional, but it saves a lot of exploration.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: What must be true for the fix to be complete, including tests and the four locales when text changes.
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What this issue deliberately leaves alone.
