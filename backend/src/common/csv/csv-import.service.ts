@@ -45,6 +45,25 @@ export interface CsvImportOptions {
   itOpsSettings?: import('../../it-ops-settings/it-ops-settings.service').ItOpsSettings;
 }
 
+/** What a full replace needs to know of a stored column to empty it. */
+interface StoredColumn {
+  nullable: boolean;
+  hasDefault: boolean;
+  /** The empty value of a NOT NULL list or object column (`[]`, `{}`); undefined for any other. */
+  empty?: () => unknown[] | Record<string, never>;
+}
+
+/**
+ * Full replace: the columns of the table, the properties a cell never empties (the identity
+ * column and the matching key), and, per row, the properties emptied by a blank cell with the
+ * column that emptied them (checked once the entity hooks ran).
+ */
+interface ReplaceRules {
+  columns: Map<string, StoredColumn>;
+  kept: Set<string>;
+  emptied: WeakMap<CsvImportRow, Map<string, string>>;
+}
+
 /**
  * Service for importing entities from CSV format.
  *
@@ -130,10 +149,16 @@ export class CsvImportService {
       timeZones,
     };
 
+    // Full replace empties the cells of the columns the file holds, by the stored column's rules.
+    const replace = params.mode === 'replace'
+      ? await this.loadReplaceRules(config, opts.manager)
+      : null;
+
     // Phase 1: Validate and parse all rows
-    const parsedRows = await this.validateAndParseRows(config, rows, importFields, context);
+    const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
 
     if (config.afterValidate) await config.afterValidate(parsedRows, context);
+    if (replace) this.checkEmptiedColumns(parsedRows, replace);
 
     // Check for duplicate upsert keys within the file
     const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
@@ -409,6 +434,7 @@ export class CsvImportService {
     rows: Record<string, string>[],
     importFields: CsvFieldDefinition[],
     context: CsvImportContext,
+    replace: ReplaceRules | null,
   ): Promise<CsvImportRow[]> {
     const parsedRows: CsvImportRow[] = [];
 
@@ -442,7 +468,7 @@ export class CsvImportService {
 
       // Parse and validate each field
       for (const field of importFields) {
-        await this.parseField(field, raw, parsedRow, context);
+        await this.parseField(field, raw, parsedRow, context, replace);
       }
 
       // Resolve identity
@@ -454,6 +480,7 @@ export class CsvImportService {
 
       // Assemble NESTED fields into their parent objects
       this.assembleNestedFields(importFields, raw, parsedRow);
+      if (replace) this.emptyBlankNestedFields(importFields, raw, parsedRow, replace);
 
       // Apply enrich mode: preserve existing values for empty cells
       if (context.params.mode === 'enrich' && existingEntity) {
@@ -489,6 +516,7 @@ export class CsvImportService {
     raw: Record<string, string>,
     row: CsvImportRow,
     context: CsvImportContext,
+    replace: ReplaceRules | null,
   ): Promise<void> {
     // Handle numbered column arrays
     if (
@@ -509,6 +537,11 @@ export class CsvImportService {
       return;
     }
 
+    // A column the file leaves out is never touched, whatever the mode.
+    if (!this.hasColumn(raw, field.csvColumn)) {
+      return;
+    }
+
     const rawValue = this.getRawValue(field, raw);
 
     // Required validation
@@ -524,8 +557,8 @@ export class CsvImportService {
 
     // Empty value handling
     if (rawValue === '' || rawValue === null) {
-      if (context.params.mode === 'replace') {
-        row.parsed[field.entityProperty] = null;
+      if (replace) {
+        this.emptyField(field.entityProperty, field.csvColumn, row, replace);
       }
       // In enrich mode, empty cells are handled after identity resolution
       return;
@@ -733,6 +766,12 @@ export class CsvImportService {
     const maxItems = field.maxItems ?? this.DEFAULT_MAX_ITEMS;
     const values: any[] = [];
 
+    // A list the file leaves out (none of its numbered columns) is never touched.
+    const columns = Array.from({ length: maxItems }, (_, i) => `${baseName}_${i + 1}`);
+    if (!columns.some((colName) => this.hasColumn(raw, colName))) {
+      return;
+    }
+
     for (let i = 1; i <= maxItems; i++) {
       const colName = `${baseName}_${i}`;
       const rawValue = (raw[colName] ?? '').trim();
@@ -792,6 +831,106 @@ export class CsvImportService {
    */
   private getRawValue(field: CsvFieldDefinition, raw: Record<string, string>): string {
     return (raw[field.csvColumn] ?? '').trim();
+  }
+
+  /** Whether the file holds the column: a blank cell is there, a column left out is not. */
+  private hasColumn(raw: Record<string, string>, csvColumn: string): boolean {
+    return Object.prototype.hasOwnProperty.call(raw, csvColumn);
+  }
+
+  /**
+   * Full replace: the stored columns of the table and the properties a blank cell never
+   * empties. A property that names no stored column (one the hooks or the entity service
+   * read) is emptied to null, as before.
+   */
+  private async loadReplaceRules(config: CsvEntityConfig, manager: EntityManager): Promise<ReplaceRules> {
+    const rows = await manager.query(
+      `SELECT column_name, is_nullable, data_type, column_default
+         FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = $1`,
+      [config.tableName],
+    );
+    const columns = new Map<string, StoredColumn>();
+    for (const row of Array.isArray(rows) ? rows : []) {
+      if (!row?.column_name) continue;
+      const nullable = row.is_nullable === 'YES';
+      const fallback = String(row.column_default ?? '');
+      let empty: StoredColumn['empty'];
+      if (!nullable && row.data_type === 'ARRAY') empty = () => [];
+      else if (!nullable && row.data_type === 'jsonb' && /^'\[\]'::jsonb$/.test(fallback)) empty = () => [];
+      else if (!nullable && row.data_type === 'jsonb' && /^'\{\}'::jsonb$/.test(fallback)) empty = () => ({});
+      columns.set(row.column_name, { nullable, hasDefault: row.column_default != null, empty });
+    }
+    const kept = new Set<string>(config.upsertKey);
+    for (const field of config.fields) {
+      if (field.isIdentityColumn) kept.add(field.entityProperty);
+    }
+    return { columns, kept, emptied: new WeakMap() };
+  }
+
+  /**
+   * Full replace, a blank cell of a column the file holds: the empty list or object of a NOT
+   * NULL list column, null otherwise. The identity column and the matching key keep their value.
+   * A NOT NULL column without an empty value is checked once the hooks ran (checkEmptiedColumns).
+   */
+  private emptyField(property: string, csvColumn: string, row: CsvImportRow, replace: ReplaceRules): void {
+    if (replace.kept.has(property)) return;
+    const column = replace.columns.get(property);
+    if (column?.empty) {
+      row.parsed[property] = column.empty();
+      return;
+    }
+    row.parsed[property] = null;
+    if (column && !column.nullable) {
+      let emptied = replace.emptied.get(row);
+      if (!emptied) replace.emptied.set(row, (emptied = new Map()));
+      emptied.set(property, csvColumn);
+    }
+  }
+
+  /** Full replace: nested columns the file holds, all blank, empty their property. */
+  private emptyBlankNestedFields(
+    fields: CsvFieldDefinition[],
+    raw: Record<string, string>,
+    row: CsvImportRow,
+    replace: ReplaceRules,
+  ): void {
+    const byProperty = new Map<string, CsvFieldDefinition[]>();
+    for (const field of fields) {
+      if (field.type !== CsvFieldType.NESTED || !field.nestedPath) continue;
+      byProperty.set(field.entityProperty, [...(byProperty.get(field.entityProperty) ?? []), field]);
+    }
+    for (const [property, propFields] of byProperty) {
+      if (property in row.parsed) continue;
+      const held = propFields.filter((field) => this.hasColumn(raw, field.csvColumn));
+      if (held.length === 0) continue;
+      this.emptyField(property, held[0].csvColumn, row, replace);
+    }
+  }
+
+  /**
+   * Full replace, once the hooks ran: a NOT NULL column a blank cell emptied, and no hook gave
+   * a value back. A new row takes the column's default; any other row reports the cell.
+   */
+  private checkEmptiedColumns(rows: CsvImportRow[], replace: ReplaceRules): void {
+    for (const row of rows) {
+      const emptied = replace.emptied.get(row);
+      if (!emptied) continue;
+      for (const [property, csvColumn] of emptied) {
+        if (row.parsed[property] !== null) continue;
+        if (row.isInsert && replace.columns.get(property)?.hasDefault) {
+          delete row.parsed[property];
+          continue;
+        }
+        row.errors.push({
+          row: row.rowNumber,
+          column: csvColumn,
+          message: `${csvColumn} cannot be emptied. Leave the column out of the file to keep the stored value.`,
+          code: 'CSV_VALUE_CANNOT_BE_EMPTIED',
+          params: { column: csvColumn },
+        });
+      }
+    }
   }
 
   /**

@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "Este campo no se puede vaciar. Quite la columna del archivo para conservar el valor guardado.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",
   "CSV_DATE_INVALID": "«{{value}}» no es una fecha. Use 2026-09-02 o 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "«{{value}}» no es válido. Use sí o no.",
