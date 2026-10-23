@@ -202,6 +202,8 @@ i18n
 // switch, then the language is applied again so `resolvedLanguage` points at them.
 i18n.on('languageChanged', (lng) => {
   const locale = resolveSupportedLocale(lng);
+  // Screen readers, spell checkers and the browser's translation prompt read the page language here.
+  document.documentElement.lang = locale;
   if (i18n.hasResourceBundle(locale, 'common')) return;
   void loadLocale(locale).then(
     () => {
