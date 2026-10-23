@@ -39,7 +39,7 @@ Different teams can use categories to focus on their area of responsibility:
 Navigate to **IT Landscape > Applications** to see your list. Click **New App / Service** to create your first entry.
 
 **Required fields**:
-- **Name**: A recognizable name for the application or service
+- **Name**: A recognizable name for the application or service, up to 200 characters. See [Unique names](#unique-names)
 - **Category**: The primary purpose of this application (see categories above)
 - **Lifecycle**: Current status (Active, Proposed, Deprecated, Retired, or any custom code defined in Settings)
 
@@ -59,7 +59,15 @@ Classification fields are optional when you create an application. **Business cr
 - **Notes**: Free-form internal notes
 - **Can have child apps**: Enable to use this application as a "suite" that groups other applications
 
+**End of support** and **Retired date** cannot be earlier than **Go live**.
+
 Once you save, the workspace unlocks all tabs for detailed documentation.
+
+### Unique names { #unique-names }
+
+Two applications cannot share a name. The comparison ignores upper and lower case, and the spaces at the start and end of the name: `CRM` and ` crm ` are the same name. When the name is taken, the message names the application that has it, with its reference (`APP-12`). The rule applies when you create, rename, copy or import an application, and when you create a new version.
+
+Applications that already shared a name before this rule stay editable. Their name is checked only when it changes.
 
 **Tip**: Start by documenting your most critical applications. Use the **Deployments** tab to capture which environments exist (Prod, QA, Dev) and which servers run them, then link interfaces, contracts and budget lines as you go.
 
@@ -88,8 +96,10 @@ The Applications grid provides a comprehensive view of your application portfoli
 - **Lifecycle**: Current status
 - **Criticality**: Business importance level
 - **Publisher**: Software publisher
-- **Derived Users (Y)**: Calculated user count for the current year (based on the audience set in the properties drawer)
+- **Derived users {year}**: the users counted for the companies and departments of the audience in the current year, or the nearest year with data. A user count entered by hand replaces it. The header tooltip says so
 - **Created**: When the record was created
+
+A cell with no value shows a dash.
 
 **Default sort**: **Name** ascending (A to Z).
 
@@ -111,14 +121,14 @@ The Applications grid provides a comprehensive view of your application portfoli
 **Filtering**:
 - Quick search: matches name and editor/publisher
 - Criticality, cyber criticality, data class and recovery wave filters list their values in catalog order (most critical first, waves in restoration order).
-- Most columns use checkbox set filters showing only values present in the current result set; the floating filter shows `All`, `None`, or `N selected` with an **x** to clear.
+- Most columns use checkbox set filters showing only values present in the current result set. **All** ticks every value and **None** unticks them all. The floating filter shows `All`, `None`, or `N selected` with an **x** to clear.
 - Retired applications are hidden by default; use the **Lifecycle** filter to include Retired.
 - **Vulnerabilities to review** filters on **With severe vulnerabilities**, **With vulnerabilities** or **Without**, and sorts by the critical or high vulnerabilities, then by the total. Disabled applications come last and are in none of the filter values.
 
 **Actions**:
 - **New App / Service**: Create a new entry (`applications:member`)
 - **Import CSV**: Bulk import from CSV file (`applications:admin`)
-- **Export CSV**: Export the list to CSV (`applications:admin`). Catalog-backed columns (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) are exported as their names; the import accepts a name or the internal code.
+- **Export CSV**: Export the applications the list shows to CSV (`applications:admin`). See [Export options](#export-options).
 - **Copy item**: Duplicate a selected application with all its core relations (`applications:member`). See [Copying applications](#copying-applications) for what is and is not copied.
 - **Delete Selected**: Remove selected applications (`applications:admin`). An application that is the source or target of an interface cannot be deleted: disable it instead, or delete its interfaces first. Before the confirmation, the window lists those applications as kept, with their count of interfaces. The others are deleted with their deployments and their links to other records; the confirmation counts the deployments
 
@@ -150,9 +160,11 @@ The drawer is the application's identity card. It is shown on every tab and edit
 
 **Identity**:
 - **Category**, **Supplier**, **Publisher**
+- **Included in**: the suites this application belongs to. Pick one in **Add a suite**: the list offers the applications that have **Can have child apps** checked. Each name opens the suite. To remove one, hover its name and click the cross at its end. A suite can belong to another suite, but a link that would make a loop is refused (a suite inside one of its own components, for example)
 
-**Lifecycle dates**:
-- **Go live**, **End of support**, **Retired date**
+**Version and lifecycle dates**:
+- **Version**. Under it, **Previous version** opens the application this one was created from with **New version**, and **Next version** opens the applications created from it. These links show only when such applications exist
+- **Go live**, **End of support**, **Retired date**. **End of support** and **Retired date** cannot be earlier than **Go live**
 
 **Business processes and owners**:
 - **Business processes**: the processes the application supports. Each name opens the process. Type in the field to search and add one; hover a name and click the cross to remove it. Each change is saved at once. The process shows the same link in its own **Applications** section. A disabled process stays listed, greyed out. Changing the list needs `business_processes:member` as well; without read access to business processes the field is hidden.
@@ -161,8 +173,11 @@ The drawer is the application's identity card. It is shown on every tab and edit
 
 To remove an owner, hover the name and click the cross at its end.
 
+Removing an owner, a business process, a suite or a support contact shows a message with **Undo**, which puts it back.
+
 **Audience**:
 - Add **Company / Departments** rows to record who uses this application. Pick a company and optionally restrict to specific departments.
+- A line under the audience says what it covers. With no department chosen, the audience is the whole company. With departments chosen, it is only those departments: clear them to include the whole company again.
 - A live **Users** count is shown.
 - **Calculation method**: **Derived** (computed from the audience based on master-data IT Users / Headcount metrics) or **Manual** (a single override number you type in).
 
@@ -172,7 +187,7 @@ To remove an owner, hover the name and click the cross at its end.
 
 The Overview tab is the application's narrative. It contains:
 
-**Description**: A rich-text description of the application. The editor autosaves as you type.
+**Description**: A rich-text description of the application. The editor autosaves as you type. Anyone who can edit the application can edit its description, without a Knowledge permission. The description is kept as a managed document in Knowledge, titled with the application's reference and name, in the language of the person who created it. Renaming the application, in the workspace or by CSV import, updates that title.
 
 **Connections**: A read-only summary built from the application's interfaces. For non-middleware apps it shows two rows: **Receives from** and **Sends to**. For ETL/middleware apps it shows a single **Connected to** row. Each entry is a clickable pill that opens the related application; "+ N more in Interfaces" jumps to the Interfaces tab.
 
@@ -238,7 +253,7 @@ The Operations tab holds, in this order, how users access the application (**Tec
 - **Access methods** (multi-select): how users access this application. Options are configurable in [IT Landscape Settings](it-ops-settings.md). Defaults include Web, Locally installed application, Mobile application, Proprietary HMI (industrial interface), Terminal / CLI, VDI / Remote Desktop, Kiosk.
 - **External facing**: whether the application is accessible from the internet
 - **Data integration / ETL**: whether the application participates in data integration pipelines (also flips this app into "middleware" mode for the Interfaces and Connections views)
-- **Can have child apps**: turn this application into a Suite that groups other applications
+- **Can have child apps**: turn this application into a Suite that groups other applications. You cannot uncheck it while applications are included in the suite: remove them from the suite first
 
 **Technologies** lists what the application depends on, from two sources shown in the **Link** column. Columns: reference (`TEC-4`), name, family, versions, link, servers it comes through (**Via**), end of standard support.
 
@@ -396,7 +411,7 @@ For major application upgrades where you need to run old and new versions in par
 
 The wizard has three steps:
 
-1. **Version details**: new application name, version label, **Go live** and **End of support** dates.
+1. **Version details**: new application name, version label, **Go live** and **End of support** dates. The name must be free (see [Unique names](#unique-names)), and **End of support** cannot be earlier than **Go live**.
 2. **Copy options**: choose what to copy from the source. Defaults shown below.
 3. **Interfaces**: pick which interfaces to migrate to the new version.
 
@@ -405,6 +420,8 @@ The new version is created as a separate application with:
 - A link to its predecessor (used by the version timeline)
 - Copied data based on your selections
 - Duplicated interfaces pointing to the new version
+
+Once it is created, a message gives the new version's reference. The two applications then link to each other through **Previous version** and **Next version** in the properties drawer.
 
 Classification and continuity values are copied, but the new version starts with a reset review and no copied last recovery test.
 
@@ -423,7 +440,9 @@ Classification and continuity values are copied, but the new version starts with
 | Deployments | Off |
 | Deployment bindings | Off (only available when Deployments is selected) |
 
-**Not copied** (must be set up fresh): suite membership, attachments, server assignments.
+**Always copied**: the description, the business processes, the access methods, the **External facing**, **Data integration / ETL** and **Can have child apps** boxes, and the user count entered by hand.
+
+**Not copied** (must be set up fresh): suite membership, attachments, the source's dates, the last recovery test, the classification review and server assignments. The wizard lists them.
 
 ### Interface migration
 
@@ -447,7 +466,7 @@ Use this when you want to create an independent duplicate of an application, typ
 
 1. Select an application in the grid
 2. Click **Copy item**
-3. The system creates a copy with " (copy)" appended to the name
+3. The system creates a copy named after the source, with a suffix in the language of your screen: "CRM (copy)", "CRM (copie)" in French. When that name is taken, the copy is numbered: "CRM (copy 2)", then "CRM (copy 3)"
 4. You're navigated to the new application to make changes
 
 **What gets copied**: All core fields (except last DR test date), including classification and continuity values, owners, companies, departments, suites, OPEX/CAPEX lines, contracts, links, data residency, and support contacts. The copied application's review is reset.
@@ -462,7 +481,7 @@ Use this when you want to create an independent duplicate of an application, typ
 | **User options** | None (automatic) | 3-step wizard |
 | **Lineage** | No predecessor link | Sets predecessor |
 | **Lifecycle** | Preserved | Reset to Proposed |
-| **Name** | "(copy)" suffix | User-specified |
+| **Name** | "(copy)" suffix, numbered when taken | User-specified, must be free |
 
 **Relations**:
 
@@ -474,6 +493,7 @@ Use this when you want to create an independent duplicate of an application, typ
 | Data residency | Yes | Optional (default: yes) |
 | Links | Yes | Optional (default: yes) |
 | Support contacts | Yes | Optional (default: yes) |
+| Business processes | No | Yes |
 | Suites (membership) | Yes | No |
 | OPEX lines | Yes | Optional (default: yes) |
 | CAPEX lines | Yes | Optional (default: yes) |
@@ -489,11 +509,12 @@ Use this when you want to create an independent duplicate of an application, typ
 | Field | Copy item | New version |
 |-------|-----------|--------------------|
 | Description | Yes | Yes |
+| Access methods | Yes | Yes |
 | ETL enabled | Yes | Yes |
 | Support notes | Yes | Yes |
 | Last DR test | No | No |
 | Version fields | No | User-specified |
-| Users override | Yes | Reset to null |
+| Users override | Yes | Yes |
 | Users year | Yes | Reset to current year |
 
 ---
@@ -511,7 +532,11 @@ From the Applications list:
 
 **Permissions required**: `applications:admin` for import/export operations.
 
-### Export options
+### Export options { #export-options }
+
+**What the file holds**: the applications the list shows. The export follows the column filters, the quick search and the **Show** choice (**My apps**, **My team's apps** or **All apps**). The dialog says how many applications the file will hold. Without a **Lifecycle** filter, retired applications are left out, as in the list.
+
+**Language of the values**: catalog values (category, lifecycle, criticality, cyber criticality, recovery wave, data class, access methods) and the status are written as the screen shows them, in the language of your screen: `Active` in English, `Actif` in French. A name your organization gave a value in **IT Landscape > Settings** stays as it is.
 
 **Presets**:
 
@@ -537,9 +562,24 @@ From the Applications list:
      - `Update only`: Only modify existing applications, skip new ones
      - `Insert only`: Only create new applications, skip existing ones
 
+     The operation applies to the owners and the data residency too: a row the operation skips leaves them as they are.
+
 3. **Validate first**: Click **Preflight** to validate your file without making changes. Review errors and warnings.
 
 4. **Apply changes**: If validation passes, click **Import** to commit changes.
+
+### Row checks
+
+The preflight check applies the same rules as the workspace. A row is refused when:
+
+- its name is longer than 200 characters, or another application already has it (see [Unique names](#unique-names));
+- its name matches two existing applications: add the `id` column to choose one;
+- its category or lifecycle matches no code or name of the catalog;
+- an owner email matches no user;
+- its **End of support** or **Retired date** is earlier than its **Go live**;
+- `is_suite` is `no` for a suite that still has applications in it.
+
+A file with one refused row loads nothing. See [CSV files](csv-files.md).
 
 ### Field reference
 
@@ -548,15 +588,14 @@ From the Applications list:
 | CSV Column | Description | Required | Notes |
 |------------|-------------|----------|-------|
 | `id` | Application UUID | No | For updates; leave blank for new applications |
-| `name` | Application name | Yes | Used as unique identifier for matching |
+| `name` | Application name | Yes | Up to 200 characters. Used to match existing applications |
 | `description` | What the application does | No | |
-| `category` | Primary purpose | No | Accepts code or label from Settings |
+| `category` | Primary purpose | No | Accepts code or label from Settings. An unknown value refuses the row |
 | `supplier_name` | Vendor name | No | Must match existing supplier |
 | `editor` | Software publisher | No | Free text (e.g., Microsoft, SAP) |
 | `criticality` | Business criticality | No | Accepts code or label from Settings; `__CLEAR__` clears it |
-| `lifecycle` | Current status | No | Accepts code or label from Settings |
+| `lifecycle` | Current status | No | Accepts code or label from Settings. An unknown value refuses the row |
 | `is_suite` | Can have child apps | No | `yes` or `no` |
-| `status` | Enabled/disabled | No | `enabled` or `disabled` |
 
 **Version fields**:
 
@@ -585,7 +624,7 @@ From the Applications list:
 | `data_class` | Data classification | Accepts code or label from Settings |
 | `last_dr_test` | Last DR test date | Date format: YYYY-MM-DD |
 | `contains_pii` | Stores personal data | `yes` or `no` |
-| `data_residency` | Data storage countries | Export only (ISO codes) |
+| `data_residency` | Data storage countries | ISO country codes, comma-separated (e.g., `FR,DE`). In `Enrich` mode an empty cell keeps the countries |
 
 **Classification fields**:
 
@@ -603,14 +642,16 @@ A blank classification cell preserves the existing value in both Enrich and Repl
 
 | CSV Column | Description | Notes |
 |------------|-------------|-------|
-| `business_owner_email_1` through `_4` | Business owner emails | Must match existing users by email |
-| `it_owner_email_1` through `_4` | IT owner emails | Must match existing users by email |
+| `business_owner_email_1` through `_4` | Business owner emails | Must match an existing user's email. An unknown email refuses the row |
+| `it_owner_email_1` through `_4` | IT owner emails | Must match an existing user's email. An unknown email refuses the row |
+
+In `Enrich` mode, when all the owner cells of a type are empty, the application keeps its owners of that type.
 
 **Export-only fields** (included in Full Export but not importable):
 
 | CSV Column | Description |
 |------------|-------------|
-| `data_residency` | Data storage countries (ISO codes, comma-separated) |
+| `status` | Enabled or disabled, in the language of your screen. Change it on the application itself |
 | `users_mode` | User count method (`manual`, `it_users`, `headcount`) |
 | `users_year` | Reference year for user calculations |
 | `users_override` | Manual user count override |
@@ -631,15 +672,17 @@ For fields configured in **IT Landscape > Settings**, you can use either the int
 | Lifecycle | `active`, `proposed`, `deprecated` | `Active`, `Proposed`, `Deprecated` |
 | Data Class | `public`, `internal`, `confidential` | `Public`, `Internal`, `Confidential` |
 
-The system automatically normalizes values during import, so `Line-of-business`, `line-of-business`, and `lob` all resolve to the same category.
+The system automatically normalizes values during import, so `Line-of-business`, `line-of-business`, and `lob` all resolve to the same category. The labels the screen shows are accepted in English, French, German and Spanish: `Active`, `Actif`, `Aktiv` and `Activo` all name the same lifecycle. A file exported in one language therefore imports in another.
 
 ### Matching and updates
 
-Applications are matched by **name** (case-insensitive). When a match is found:
+Applications are matched by **name**, ignoring upper and lower case and the spaces at the start and end. When a match is found:
 - With `Enrich` mode: Only non-empty CSV values update the application
 - With `Replace` mode: All supplied fields are updated; blank classification cells preserve existing classifications, and `__CLEAR__` explicitly clears them
 
-If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name.
+If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name. When two existing applications share the name of a row, the row is refused: add the `id` column to choose one.
+
+A row matched by `id` with a different name renames the application. The new name must be free. The title of the application's description document follows the new name.
 
 ### Limitations
 
@@ -648,7 +691,7 @@ If you include the `id` column with a valid UUID, matching uses ID first, then f
 - **Interfaces excluded**: Integration definitions are not part of CSV import/export
 - **Maximum 4 owners per type**: Up to 4 business owners and 4 IT owners can be imported/exported
 - **User metrics are export-only**: Audience and user count fields (`users_mode`, `users_year`, `users_override`) are managed in the workspace
-- **Data residency is export-only**: Country selections must be managed in the Compliance tab
+- **Status is export-only**: Enable or disable an application in its workspace
 
 ### Troubleshooting
 

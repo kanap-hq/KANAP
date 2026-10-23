@@ -101,7 +101,7 @@ Managed documents keep the writing experience inside Knowledge, but the source w
 
 This protects the link between the document and the operational record that owns it.
 
-Access follows the source object as well. The clearest case is the **Incidents** folder: an incident review can only be opened by someone who is allowed to see that incident, whatever their Knowledge permissions are, it becomes read-only once the incident is closed or cancelled, and it disappears from lists, search, exports and the assistant for anyone excluded from a restricted incident. See [Incidents](incidents.md).
+Access follows the source object as well. Anyone who can edit an application, an interface, a project or a request can edit its managed documents from that record, without a Knowledge permission. The clearest case is the **Incidents** folder: an incident review can only be opened by someone who is allowed to see that incident, whatever their Knowledge permissions are, it becomes read-only once the incident is closed or cancelled, and it disappears from lists, search, exports and the assistant for anyone excluded from a restricted incident. See [Incidents](incidents.md).
 
 ## Working with the Knowledge list
 
