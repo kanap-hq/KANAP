@@ -173,6 +173,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_task_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: a task modifiable (object modifiable or responsible), for the writes of its elements' },
   { name: 'data_access_visible_contract_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §6.4): the visible contracts, once per statement, for the search index policy' },
   { name: 'data_access_visible_task_ids', cls: 'access', reason: 'SECURITY DEFINER set function (spec §6.4): the visible tasks, once per statement, for the search index policy' },
+  { name: 'data_access_tasks_placement', cls: 'access', reason: 'placement trigger of the tasks (SECURITY INVOKER): a new line or contract object must be modifiable in mode limited' },
   { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read' },
   { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names' },
 

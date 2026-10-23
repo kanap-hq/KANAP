@@ -538,6 +538,66 @@ async function testSearchIndexSetForm(s: Seed2): Promise<void> {
   console.log('  search index: contracts and tasks through the set functions, read once per statement: OK');
 }
 
+/**
+ * Placement of a task (§2.5, §6.4): a responsible person (assignee, owner) writes a task whose
+ * object is out of access, but never moves it onto a line or a contract it cannot modify; the
+ * placement trigger refuses with 42501 (the UPDATE policy does not see the old row).
+ */
+async function testTaskPlacement(s: Seed2): Promise<void> {
+  const move = async (person: keyof Seed['persons'], task: TaskLabel, type: string, id: string): Promise<string> => {
+    assert.ok(['all', 'limited'].includes(await apply(s.persons[person])));
+    await client.query('SAVEPOINT data_access_task_move');
+    try {
+      const result = (await client.query(
+        `UPDATE tasks SET related_object_type = $2, related_object_id = $3 WHERE id = $1`, [s.tasks[task], type, id],
+      )) as unknown as { rowCount: number };
+      return result.rowCount === 1 ? 'ok' : `rows ${result.rowCount}`;
+    } catch (error: any) {
+      return String(error?.code ?? error);
+    } finally {
+      await client.query('ROLLBACK TO SAVEPOINT data_access_task_move');
+      await apply(s.persons.ulla);
+    }
+  };
+  const cases: Array<[keyof Seed['persons'], TaskLabel, string, string, string]> = [
+    // Paul, assignee of a task of L5 (out of his access): L1 and CE are readable, not modifiable.
+    ['paul', 'tAssignee', 'spend_item', s.lines.L1, '42501'],
+    ['paul', 'tOwner', 'spend_item', s.lines.L2, '42501'],
+    ['paul', 'tAssignee', 'contract', s.contracts.CE, '42501'],
+    ['paul', 'tAssignee', 'contract', s.contracts.CN, '42501'],
+    ['paul', 'tAssignee', 'capex_item', s.lines.L5, 'ok'], // the same object: no move
+    // Marta modifies L3, L4, L5 and CE.
+    ['marta', 'tL4', 'spend_item', s.lines.L3, 'ok'],
+    ['marta', 'tL4', 'spend_item', s.lines.L1, '42501'],
+    ['marta', 'tL4', 'spend_item', s.lines.L2, '42501'], // readable only
+    ['marta', 'tL4', 'contract', s.contracts.CE, 'ok'],
+    ['marta', 'tL4', 'contract', s.contracts.CF, '42501'],
+    ['marta', 'tProject', 'spend_item', s.lines.L1, '42501'], // from another type
+    ['marta', 'tProject', 'capex_item', s.lines.L5, 'ok'],
+    ['claire', 'tL1', 'contract', s.contracts.CN, 'ok'],
+    ['ulla', 'tAssignee', 'spend_item', s.lines.L1, 'ok'], // mode all: no rule
+  ];
+  for (const [person, task, type, id, expected] of cases) {
+    assert.equal(await move(person, task, type, id), expected, `${person}: move ${task} to ${type} ${id}`);
+  }
+
+  // The review's probe: Nina (no node), assignee of a task of L4, moves it to L1, then to CF.
+  await client.query('SAVEPOINT data_access_nina_assignee');
+  try {
+    await apply(s.persons.ulla);
+    await client.query(`UPDATE tasks SET assignee_user_id = $2 WHERE id = $1`, [s.tasks.tL4, s.persons.nina]);
+    assert.equal(await move('nina', 'tL4', 'spend_item', s.lines.L1), '42501', 'nina: assignee moves her task to L1');
+    assert.equal(await move('nina', 'tL4', 'contract', s.contracts.CF), '42501', 'nina: assignee moves her task to a hidden contract');
+    assert.equal(await move('nina', 'tL4', 'spend_item', s.lines.L6), 'ok', 'nina: to the line she owns');
+    await apply(s.persons.nina);
+    assert.equal(await affected(`UPDATE tasks SET title = 'Renamed by its assignee' WHERE id = $1`, [s.tasks.tL4]), 1, 'nina: the assignee still writes her task');
+  } finally {
+    await client.query('ROLLBACK TO SAVEPOINT data_access_nina_assignee');
+    await apply(s.persons.ulla);
+  }
+  console.log('  task placement: a responsible person never moves a task onto a line or contract out of edit access (§2.5): OK');
+}
+
 async function sqlStateOf(sql: string, params: unknown[]): Promise<string> {
   const state = await write(sql, params);
   assert.notEqual(state, 'ok', `expected an error: ${sql}`);
@@ -575,6 +635,7 @@ async function run(): Promise<void> {
       await testUnscoped(s);
       await testPersons(s);
       await testBulkReplacement(s);
+      await testTaskPlacement(s);
       await testSearchIndexSetForm(s);
       await testRoleWithoutContext(s);
     } finally {

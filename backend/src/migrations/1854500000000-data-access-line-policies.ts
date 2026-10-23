@@ -454,13 +454,16 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  * 3. The placement trigger of the lines (spec §6.4): BEFORE UPDATE OF paying_company_id,
  *    cost_center_id, SECURITY INVOKER; in mode limited, a new place outside
  *    data_access_placable_line() is refused with 42501.
+ *    The placement trigger of the tasks: BEFORE UPDATE OF related_object_type, related_object_id;
+ *    in mode limited, a new object that is a line or a contract the person cannot modify is
+ *    refused with 42501.
  * 4. The trigger functions that maintain derived data become SECURITY DEFINER, search_path pinned.
  * 5. One sync under lock_timeout 5 s: without the role it does nothing, and nothing changes for
  *    anyone; with it, the policies apply only to the transactions that took the role. When the
  *    session role inherits the limited role, the sync drops every policy on it and creates none.
  *
  * Idempotent (CREATE OR REPLACE, DROP ... IF EXISTS, catalog checks). down() restores the lot 1
- * functions, syncs (the policies go), drops the trigger and the functions, and reverts the
+ * functions, syncs (the policies go), drops the triggers and the functions, and reverts the
  * trigger functions to SECURITY INVOKER.
  */
 export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
@@ -471,6 +474,7 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
     await createAccessFunctions(queryRunner);
     await createPolicyFunctions(queryRunner);
     await createPlacementTrigger(queryRunner);
+    await createTaskPlacementTrigger(queryRunner);
     const pinned = await makeDefiners(queryRunner);
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
@@ -498,6 +502,8 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
     await queryRunner.query(`SELECT data_access_sync_policies()`);
     await queryRunner.query(`SET LOCAL lock_timeout = DEFAULT`);
 
+    await queryRunner.query(`DROP TRIGGER IF EXISTS tasks_data_access_placement ON tasks`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_tasks_placement()`);
     await queryRunner.query(`DROP TRIGGER IF EXISTS spend_items_data_access_placement ON spend_items`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_spend_items_placement()`);
     for (const signature of [...ACCESS_DEFINER_SIGNATURES].reverse()) {
@@ -971,6 +977,50 @@ async function createPlacementTrigger(queryRunner: QueryRunner): Promise<void> {
     CREATE TRIGGER spend_items_data_access_placement
     BEFORE UPDATE OF paying_company_id, cost_center_id ON spend_items
     FOR EACH ROW EXECUTE FUNCTION data_access_spend_items_placement()
+  `);
+}
+
+async function createTaskPlacementTrigger(queryRunner: QueryRunner): Promise<void> {
+  // The UPDATE policy of tasks lets a responsible person (assignee, owner) write a task whose
+  // object is out of access, and it does not see the old row: without this trigger, that person
+  // would move the task onto any line or contract (spec §2.5, a participation never places). A new
+  // object that is a line or a contract must be modifiable by the person: modifiable_ligne for a
+  // line (read under its SELECT policy, SECURITY INVOKER), modifiable_contrat for a contract (the
+  // depth function). Creation is covered by the INSERT policy (object modifiable).
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_tasks_placement()
+    RETURNS trigger
+    LANGUAGE plpgsql
+    SECURITY INVOKER
+    SET search_path = public, pg_temp
+    AS $fn$
+    BEGIN
+      IF NULLIF(current_setting('app.da_mode', true), '') IS DISTINCT FROM 'limited' THEN
+        RETURN NEW;
+      END IF;
+      IF NEW.related_object_type IS NOT DISTINCT FROM OLD.related_object_type
+         AND NEW.related_object_id IS NOT DISTINCT FROM OLD.related_object_id THEN
+        RETURN NEW;
+      END IF;
+      IF NEW.related_object_type IN ${LINE_TASK_TYPES}
+         AND NOT ${lineModifiableById('NEW.related_object_id', 'filtered')} THEN
+        RAISE EXCEPTION 'permission denied: this line is outside your data access'
+          USING ERRCODE = '42501';
+      END IF;
+      IF NEW.related_object_type = 'contract'
+         AND NOT coalesce(${contractModifiableById('NEW.related_object_id')}, false) THEN
+        RAISE EXCEPTION 'permission denied: this contract is outside your data access'
+          USING ERRCODE = '42501';
+      END IF;
+      RETURN NEW;
+    END
+    $fn$
+  `);
+  await queryRunner.query(`DROP TRIGGER IF EXISTS tasks_data_access_placement ON tasks`);
+  await queryRunner.query(`
+    CREATE TRIGGER tasks_data_access_placement
+    BEFORE UPDATE OF related_object_type, related_object_id ON tasks
+    FOR EACH ROW EXECUTE FUNCTION data_access_tasks_placement()
   `);
 }
 
