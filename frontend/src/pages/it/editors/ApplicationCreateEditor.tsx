@@ -12,6 +12,7 @@ import { drawerFieldValueSx } from '../../../theme/formSx';
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import useApplicationClassificationCatalog from '../../../hooks/useApplicationClassificationCatalog';
+import { APPLICATION_NAME_MAX } from '../applicationLimits';
 export type ApplicationCreateEditorHandle = {
   isDirty: () => boolean;
   save: () => Promise<string | null>;
@@ -142,7 +143,7 @@ export default forwardRef<ApplicationCreateEditorHandle, Props>(function Applica
     <Stack spacing={2}>
       {!!serverError && <Alert severity="error">{serverError}</Alert>}
       <PropertyRow label={t('common.name')} required>
-        <TextField value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} required fullWidth variant="standard" sx={drawerFieldValueSx} />
+        <TextField value={name} onChange={(e) => { setName(e.target.value); markDirty(); }} required fullWidth variant="standard" sx={drawerFieldValueSx} inputProps={{ maxLength: APPLICATION_NAME_MAX }} />
       </PropertyRow>
       <PropertyRow label={t('workspace.application.overview.description')}>
         <TextField value={description} onChange={(e) => { setDescription(e.target.value); markDirty(); }} fullWidth variant="standard" sx={drawerFieldValueSx} />

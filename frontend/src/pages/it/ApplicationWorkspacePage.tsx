@@ -45,6 +45,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { CRITICALITY_COLORS, getDotColor, LIFECYCLE_COLORS } from '../../utils/statusColors';
 import { filterCountryOptions, useCountryOptions } from '../../i18n/countries';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
+import { APPLICATION_NAME_MAX } from './applicationLimits';
 import { PortfolioMetadataItem, PortfolioStatusMetadata } from '../portfolio/workspace/PortfolioMetadataBar';
 import SendLinkButton from '../../components/workspace/SendLinkButton';
 import DeploymentsEditor from './components/DeploymentsEditor';
@@ -1496,6 +1497,7 @@ export default function ApplicationWorkspacePage() {
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
         canEditTitle={isCreate || canManage}
         onTitleSave={(value) => { void patchApplication({ name: value }); }}
+        titleMaxLength={APPLICATION_NAME_MAX}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
           totalCount: nav.total,

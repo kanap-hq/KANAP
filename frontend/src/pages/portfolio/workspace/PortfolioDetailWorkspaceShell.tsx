@@ -51,6 +51,8 @@ type PortfolioDetailWorkspaceShellProps = {
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
   onTitleSave?: (nextTitle: string) => void;
+  /** The longest title the record accepts (the input stops there). */
+  titleMaxLength?: number;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
@@ -139,11 +141,13 @@ function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
 function EditableTitle({
   canEdit,
   fallback,
+  maxLength,
   onSave,
   value,
 }: {
   canEdit: boolean;
   fallback: string;
+  maxLength?: number;
   onSave?: (nextTitle: string) => void;
   value: string;
 }) {
@@ -205,6 +209,7 @@ function EditableTitle({
     <Box
       component="input"
       value={draft}
+      {...(maxLength ? { maxLength } : {})}
       onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
       onBlur={commit}
       onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
@@ -252,6 +257,7 @@ export default function PortfolioDetailWorkspaceShell({
   onSaveShortcut,
   onTabChange,
   onTitleSave,
+  titleMaxLength,
   properties,
   tabs,
   title,
@@ -439,6 +445,7 @@ export default function PortfolioDetailWorkspaceShell({
                         value={title}
                         fallback={titleFallback}
                         canEdit={canEditTitle}
+                        maxLength={titleMaxLength}
                         onSave={onTitleSave}
                       />
                       {titleError && <FormHelperText error sx={{ mt: 0.5 }}>{titleError}</FormHelperText>}
