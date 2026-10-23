@@ -44,7 +44,9 @@ async function testTablesAreTenantIsolated() {
   }
   const policies = await dataSource.query(
     `SELECT tablename, policyname, cmd, qual, with_check FROM pg_policies
-      WHERE schemaname = 'public' AND tablename = ANY($1::text[]) ORDER BY tablename`,
+      WHERE schemaname = 'public' AND tablename = ANY($1::text[])
+        AND roles = '{public}'::name[] -- tenant policies; the data-access ones target kanap_data_limited only
+      ORDER BY tablename`,
     [TABLES],
   );
   assert.deepEqual(policies.map((row: any) => [row.tablename, row.policyname, row.cmd]), TABLES.map((table) => [table, `${table}_tenant_isolation`, 'ALL']));

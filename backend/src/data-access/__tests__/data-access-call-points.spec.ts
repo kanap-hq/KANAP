@@ -242,6 +242,7 @@ async function testRefusals(app: INestApplication) {
   assert.equal(stranger.body.code, 'INVALID_TOKEN');
 
   if (!hasRole) return;
+  const expectedBefore = (await dataSource.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`))[0].n;
   // KDA01: an expected policy is missing. The request rolls back, which restores the function.
   const broken = await call(app, 'GET', 'who', { 'x-da-user': seed.limited, 'x-da-break': '1' });
   assert.equal(broken.status, 503, `access unavailable: ${broken.text}`);
@@ -249,7 +250,7 @@ async function testRefusals(app: INestApplication) {
   assert.equal(broken.body.message, 'Data access is temporarily unavailable. Contact the person who runs KANAP.');
   assert.ok(!/KDA01|data access unavailable/.test(broken.text), `no database text in the answer: ${broken.text}`);
   const expected = await dataSource.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`);
-  assert.equal(expected[0].n, 0, 'the rollback restored data_access_expected_policies()');
+  assert.equal(expected[0].n, expectedBefore, 'the rollback restored data_access_expected_policies()');
   // The pool's connection is clean and the next limited request works again.
   const again = await call(app, 'GET', 'who', { 'x-da-user': seed.limited });
   assert.equal(again.status, 200, again.text);
