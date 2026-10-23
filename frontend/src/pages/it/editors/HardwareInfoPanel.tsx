@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React from 'react';
 import { Alert, Stack, TextField, Typography } from '@mui/material';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
@@ -8,11 +8,6 @@ import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../../theme/formS
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-export type HardwareInfoPanelHandle = {
-  save: () => Promise<void>;
-  reset: () => void;
-  isDirty: () => boolean;
-};
 
 type HardwareInfo = {
   serial_number?: string | null;
@@ -37,12 +32,12 @@ type Props = {
   netboxOwns?: (field: 'serial_number' | 'manufacturer' | 'model' | 'rack_location' | 'rack_unit') => boolean;
 };
 
-export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoPanel({
+export default function HardwareInfoPanel({
   assetId,
   onDirtyChange,
   netboxManaged = false,
   netboxOwns = () => false,
-}, ref) {
+}: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const readOnly = !hasLevel('infrastructure', 'member');
@@ -61,6 +56,10 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
 
   const [baseline, setBaseline] = React.useState<HardwareInfo>({});
   const failedSaveSignatureRef = React.useRef<string | null>(null);
+  // Set from the start of a save to its end, before the re-render that shows it.
+  const savingRef = React.useRef(false);
+  // What the unmount sends when a change is still waiting for its autosave.
+  const pendingFlushRef = React.useRef<(() => void) | null>(null);
 
   const dirty = React.useMemo(() => {
     return (
@@ -131,6 +130,7 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
 
   const save = React.useCallback(async () => {
     if (readOnly) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -142,6 +142,7 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
       setError(getApiErrorMessage(e, t, t('messages.saveHardwareInfoFailed')));
       throw e;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
   }, [assetId, hardwarePayload, readOnly, saveSignature, t]);
@@ -155,21 +156,17 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
     return () => window.clearTimeout(timer);
   }, [dirty, loading, readOnly, save, saveSignature, saving]);
 
-  const reset = () => {
-    setSerialNumber(baseline.serial_number || '');
-    setManufacturer(baseline.manufacturer || '');
-    setModel(baseline.model || '');
-    setPurchaseDate(baseline.purchase_date || '');
-    setRackLocation(baseline.rack_location || '');
-    setRackUnit(baseline.rack_unit || '');
-    setNotes(baseline.notes || '');
-  };
+  // Leaving the tab before the autosave fires still saves the change, once, without touching state.
+  React.useEffect(() => {
+    const pending = dirty && !loading && !saving && !readOnly && failedSaveSignatureRef.current !== saveSignature;
+    pendingFlushRef.current = pending
+      ? () => { void api.post(`/assets/${assetId}/hardware-info`, hardwarePayload).catch(() => undefined); }
+      : null;
+  });
 
-  useImperativeHandle(ref, () => ({
-    save,
-    reset,
-    isDirty: () => dirty,
-  }), [save, dirty, baseline]);
+  React.useEffect(() => () => {
+    if (!savingRef.current) pendingFlushRef.current?.();
+  }, []);
 
   return (
     <Stack spacing={2} maxWidth={520}>
@@ -274,4 +271,4 @@ export default forwardRef<HardwareInfoPanelHandle, Props>(function HardwareInfoP
       </PropertyRow>
     </Stack>
   );
-});
+}

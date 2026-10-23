@@ -38,8 +38,8 @@ import OptionWithHint from '../../components/fields/OptionWithHint';
 import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
-import HardwareInfoPanel, { HardwareInfoPanelHandle } from './editors/HardwareInfoPanel';
-import SupportInfoPanel, { SupportInfoPanelHandle } from './editors/SupportInfoPanel';
+import HardwareInfoPanel from './editors/HardwareInfoPanel';
+import SupportInfoPanel from './editors/SupportInfoPanel';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
 import AssetRelationsTab from './workspace/AssetRelationsTab';
 import { assetRelationsKey, fetchAssetRelationsTab } from './workspace/assetRelationsData';
@@ -289,9 +289,6 @@ export default function AssetWorkspacePage() {
   const canManage = hasLevel('infrastructure', 'member');
   const canDelete = hasLevel('infrastructure', 'admin');
 
-  // Refs for panel components
-  const hardwareRef = React.useRef<HardwareInfoPanelHandle>(null);
-  const supportRef = React.useRef<SupportInfoPanelHandle>(null);
   const notesSaveTimerRef = React.useRef<number | null>(null);
 
   const [data, setData] = React.useState<AssetRecord | null>(null);
@@ -882,9 +879,6 @@ export default function AssetWorkspacePage() {
       navigate(`/it/assets/${newId}/overview`);
     } else {
         await api.patch(`/assets/${id}`, payload);
-        // Save panel data if they have changes
-        try { await hardwareRef.current?.save(); } catch { /* panel handles error */ }
-        try { await supportRef.current?.save(); } catch { /* panel handles error */ }
         setDirty(false);
         await load();
       }
@@ -1896,6 +1890,14 @@ export default function AssetWorkspacePage() {
                   />
                 </React.Suspense>
               </Box>
+              {!isCreate && id && (
+                <Box>
+                  <Box sx={{ mb: 1 }}>
+                    <SectionLabel>{t('workspace.asset.support.title')}</SectionLabel>
+                  </Box>
+                  <SupportInfoPanel assetId={id} />
+                </Box>
+              )}
               {/* IDENTITY SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
@@ -2316,7 +2318,6 @@ export default function AssetWorkspacePage() {
           )}
           {validTab === 'hardware' && isPhysicalAsset && !isCreate && (
             <HardwareInfoPanel
-              ref={hardwareRef}
               assetId={id}
               netboxManaged={netboxManaged}
               netboxOwns={netboxOwns}
