@@ -20,7 +20,7 @@
         "assets": "Assets",
         "applications": "Anwendungen",
         "tasks": "Aufgaben",
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "access": "Zugriff"
       },
       "filters": {
@@ -89,7 +89,7 @@
         "criticality": "Kritikalität",
         "publisher": "Herausgeber",
         "derivedUsers": "Abgeleitete Benutzer {{year}}",
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "supplier": "Lieferant",
         "businessOwners": "Fachverantwortliche",
         "itOwners": "IT-Verantwortliche",
@@ -184,7 +184,7 @@
         "goLive": "Inbetriebnahme",
         "endOfLife": "Lebensende",
         "assignments": "Zuordnungen",
-        "created": "Erstellt"
+        "created": "Erstellt am"
       },
       "filters": {
         "noCluster": "(Kein Cluster)",
@@ -300,7 +300,7 @@
         "pii": "PII",
         "risk": "Risiko",
         "lifecycle": "Lebenszyklus",
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "linkedInterfaces": "Verknüpfte Schnittstellen",
         "endpoints": "Endpunkte"
       },
@@ -733,7 +733,7 @@
         "targetApp": "Zielanwendung",
         "lifecycle": "Lebenszyklus",
         "criticality": "Kritikalität",
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "businessProcess": "Geschäftsprozess",
         "dataCategory": "Datenkategorie",
         "containsPii": "Enthält PII",
@@ -754,7 +754,7 @@
         "country": "Land",
         "city": "Stadt",
         "assets": "Assets",
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "subLocations": "Unterstandorte"
       }
     },
@@ -1619,8 +1619,8 @@
         "notifiedOn": "Gemeldet am",
         "notifiedParties": "Informierte Parteien",
         "notifiedPartiesPlaceholder": "z. B. Aufsichtsbehörde, Versicherer, betroffene Kunden",
-        "created": "Erstellt",
-        "updated": "Aktualisiert",
+        "created": "Erstellt am",
+        "updated": "Aktualisiert am",
         "notSet": "Nicht festgelegt"
       },
       "messages": {
@@ -2623,8 +2623,8 @@
         "removeHops": "Entfernen Sie alle Hops, um die Topologie zu ändern",
         "derivedFromInterfaces": "Aus Schnittstellen abgeleitet",
         "linkToDerive": "Verknüpfen Sie eine Schnittstellen-Bindung, um das abgeleitete Risiko zu aktivieren",
-        "created": "Erstellt",
-        "updated": "Aktualisiert"
+        "created": "Erstellt am",
+        "updated": "Aktualisiert am"
       },
       "protocolsTable": {
         "protocol": "Protokoll",
@@ -2719,8 +2719,8 @@
         "addMiddleware": "Middleware hinzufügen",
         "reference": "Referenz",
         "assignedOnCreate": "Wird bei der Erstellung vergeben",
-        "created": "Erstellt",
-        "updated": "Aktualisiert",
+        "created": "Erstellt am",
+        "updated": "Aktualisiert am",
         "businessOwners": "Fachliche Verantwortliche",
         "itOwners": "IT-Verantwortliche",
         "impactedCompanies": "Betroffene Unternehmen",

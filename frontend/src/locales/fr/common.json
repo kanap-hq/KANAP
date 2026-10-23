@@ -809,7 +809,7 @@
     "statusColumn": "Statut",
     "linkedVia": "Lié via",
     "sourceObject": "Objet source",
-    "updatedColumn": "Mis à jour",
+    "updatedColumn": "Mis à jour le",
     "openColumn": "Ouvrir",
     "restrictedDocuments_one": "{{count}} document autonome est disponible pour cet élément. Vous devez disposer du rôle Lecteur pour le consulter.",
     "restrictedDocuments_other": "{{count}} documents autonomes sont disponibles pour cet élément. Vous devez disposer du rôle Lecteur pour les consulter.",

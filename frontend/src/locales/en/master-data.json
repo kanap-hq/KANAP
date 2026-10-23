@@ -25,8 +25,8 @@
     "columns": {
       "name": "Name",
       "status": "Status",
-      "created": "Created",
-      "updated": "Updated",
+      "created": "Created on",
+      "updated": "Updated on",
       "description": "Description",
       "country": "Country",
       "notes": "Notes",
@@ -344,7 +344,7 @@
       "country": "Country",
       "years": "Years",
       "status": "Status",
-      "updated": "Updated"
+      "updated": "Updated on"
     },
     "fields": {
       "code": "Code",

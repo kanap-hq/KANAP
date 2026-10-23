@@ -25,8 +25,8 @@
     "columns": {
       "name": "Nom",
       "status": "Statut",
-      "created": "Créé",
-      "updated": "Mis à jour",
+      "created": "Créé le",
+      "updated": "Mis à jour le",
       "description": "Description",
       "country": "Pays",
       "notes": "Notes",
@@ -344,7 +344,7 @@
       "country": "Pays",
       "years": "Années",
       "status": "Statut",
-      "updated": "Mis à jour"
+      "updated": "Mis à jour le"
     },
     "fields": {
       "code": "Code",

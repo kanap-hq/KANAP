@@ -953,7 +953,7 @@
       "assignee": "Assignee",
       "requestor": "Requestor",
       "dueDate": "Due date",
-      "created": "Created",
+      "created": "Created on",
       "lastChanged": "Last changed",
       "description": "Description",
       "source": "Source",
@@ -999,7 +999,7 @@
       "company": "Company",
       "start": "Start",
       "end": "End",
-      "created": "Created",
+      "created": "Created on",
       "lastChanged": "Last changed"
     },
     "actions": {
@@ -1026,7 +1026,7 @@
       "company": "Company",
       "requestor": "Requestor",
       "targetDate": "Target date",
-      "created": "Created",
+      "created": "Created on",
       "lastChanged": "Last changed"
     },
     "actions": {

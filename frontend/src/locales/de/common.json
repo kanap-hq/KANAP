@@ -809,7 +809,7 @@
     "statusColumn": "Status",
     "linkedVia": "Verknüpft über",
     "sourceObject": "Quellobjekt",
-    "updatedColumn": "Aktualisiert",
+    "updatedColumn": "Aktualisiert am",
     "openColumn": "Öffnen",
     "restrictedDocuments_one": "{{count}} eigenständiges Wissensdokument ist für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um es anzuzeigen.",
     "restrictedDocuments_other": "{{count}} eigenständige Wissensdokumente sind für dieses Element verfügbar. Sie benötigen die Rolle Wissensleser, um sie anzuzeigen.",

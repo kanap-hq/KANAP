@@ -953,7 +953,7 @@
       "assignee": "Assigné à",
       "requestor": "Demandeur",
       "dueDate": "Échéance",
-      "created": "Créé",
+      "created": "Créé le",
       "lastChanged": "Dernière modification",
       "description": "Description",
       "source": "Source",
@@ -999,7 +999,7 @@
       "company": "Société",
       "start": "Début",
       "end": "Fin",
-      "created": "Créé",
+      "created": "Créé le",
       "lastChanged": "Dernière modification"
     },
     "actions": {
@@ -1026,7 +1026,7 @@
       "company": "Société",
       "requestor": "Demandeur",
       "targetDate": "Date cible",
-      "created": "Créé",
+      "created": "Créé le",
       "lastChanged": "Dernière modification"
     },
     "actions": {
