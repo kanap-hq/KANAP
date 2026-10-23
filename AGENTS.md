@@ -252,6 +252,11 @@ Every query must be scoped by `tenant_id`. This is critical for tenant isolation
   installation. A foreign key on rows naming a missing object: delete link rows, set a nullable
   column to NULL, and add the key `NOT VALID` on a NOT NULL column, validated once it is clean;
   log the counts (`backend/src/common/migration-reference-keys.ts`).
+- Only `data_access_apply` makes a transaction take the limited role `kanap_data_limited`, always
+  inside a transaction, and only from the call points listed in
+  `backend/src/data-access/data-access-paths.inventory.ts`.
+- Every table belongs to the application role: the grants of `kanap_data_limited` and the default
+  privileges cover only the tables it owns.
 
 ## Cloud and on-premise modes
 

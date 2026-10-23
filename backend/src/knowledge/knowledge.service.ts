@@ -86,6 +86,7 @@ import { trailingDigits } from '../common/text-scan';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal } from '../common/record-in-use';
 import { textSortKey } from '../common/list-sort';
 import { applyDocumentColumnFilters } from './knowledge-list-filters';
+import { applyDataAccess } from '../data-access/data-access';
 
 /** The document list columns that sort alphabetically, and the expressions they read. */
 const KNOWLEDGE_TEXT_SORTS: Record<string, string> = {
@@ -1617,16 +1618,34 @@ export class KnowledgeService {
    * the refresh_token cookie within the tenant and requires >= reader on the
    * given RBAC resource. Returns false (→ caller 404s) when the cookie is
    * missing/expired/invalid or the user lacks permission.
+   *
+   * `applyDataAccess`: when allowed, the person's data access is applied to the
+   * manager's transaction (spec §6.3) before returning, so the caller reads the
+   * attachment under it. The caller then checks access before reading the row.
    */
   async canAccessInlineAttachment(
     manager: EntityManager,
     tenantId: string,
     refreshToken: string | null | undefined,
     resource: string,
+    opts?: { applyDataAccess?: boolean },
   ): Promise<boolean> {
-    const userId = await this.resolveUserIdFromRefreshToken(manager, tenantId, refreshToken);
+    const userId = await this.resolveInlineAttachmentViewer(manager, tenantId, refreshToken, resource);
     if (!userId) return false;
-    return this.canAccessResourceForUser(manager, userId, resource);
+    if (opts?.applyDataAccess) await applyDataAccess(manager, userId);
+    return true;
+  }
+
+  /** The person of the session cookie when allowed to read `resource` (>= reader), else null. */
+  async resolveInlineAttachmentViewer(
+    manager: EntityManager,
+    tenantId: string,
+    refreshToken: string | null | undefined,
+    resource: string,
+  ): Promise<string | null> {
+    const userId = await this.resolveUserIdFromRefreshToken(manager, tenantId, refreshToken);
+    if (!userId) return null;
+    return (await this.canAccessResourceForUser(manager, userId, resource)) ? userId : null;
   }
 
   /**
@@ -6502,6 +6521,8 @@ export class KnowledgeService {
         await runner.rollbackTransaction();
         return null;
       }
+      // The attachment is read under the person's data access (spec §6.3).
+      await applyDataAccess(runner, userId);
 
       const meta = await this.getInlineAttachmentMetaForUser(runner.manager, tenantId, userId, attachmentId);
       if (!meta) {

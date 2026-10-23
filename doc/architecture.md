@@ -347,7 +347,7 @@ An internal tenant is a demonstration or test tenant that runs with no money flo
 - **Frontend autosave** (`frontend/src/hooks/useAutosave.ts`): `retry` and `busy` are retried by itself after the longer of the server's `Retry-After` and its own backoff (1, 2, then 4 s), at most three times per pending edit in all (flushes included), with the edit kept on screen; once they are spent the edit stays pending and marked not saved, an explicit save or navigation tries once more, and leaving asks for confirmation instead of blocking. A conflict (`duplicate`, `parent_gone`, `in_use`) is not retried: the message shows and the screen reloads the server state. Workspace pages (OPEX, CAPEX, incident, contributor) buffer unsaved fields per item (`frontend/src/hooks/patchBuffer.ts`): a field is only ever sent to the item it was typed on, and a refused field is never sent again with a later edit. A 409 `edit_conflict` (someone else changed the field, see "Edit conflicts" below) is neither retried nor dropped: the autosave shows its `conflict` state, the page keeps the edit and asks the user per field (`EditConflictBanner`), and leaving with a choice not made asks for confirmation, through the workspace's own controls and through the app's links (`frontend/src/hooks/leaveGuard.ts`).
 - **Client abort** (`backend/src/common/request-finalizer.middleware.ts`): a response closed before it finished, while the request still holds its runner, rolls the transaction back and releases the connection; the handler's later queries fail at once (`ClientAbortedError`) instead of running outside the transaction. The exception filter answers nothing: it drops the abort's own fallout (`ClientAbortedError`, TypeORM's "already released" errors, a refusal below 500) and logs any other error at error level. One warning line, `client aborted, transaction rolled back`; an abort that lands during the COMMIT leaves the commit to finish and says `client aborted during the commit, its changes may be saved`. A handler that answers itself (`@Res()`, the file downloads) ends its response while `TenantInterceptor` commits: the finalizer then leaves the runner to the interceptor and sends nothing on that connection.
 - Outside a request (public endpoints, scheduled tasks, directory sync) `withTenant()` in `backend/src/common/tenant-runner.ts` opens an equivalent scoped transaction.
-- `TenancyManager` (`backend/src/common/tenancy/`) is a request-scoped abstraction over the same context. It is available and imported, but the live host-resolution path is `createRequestTenancyMiddleware` (`backend/src/common/tenancy/request-tenancy.middleware.ts`), mounted by `applyTenancyAndPipeline` (`backend/src/http-app.ts`, called from `backend/src/main.ts`). A failed tenant lookup (pool exhausted, database down) answers 503 `busy` instead of going on without a tenant; an unknown tenant answers 404 `TENANT_NOT_FOUND` as before. A tenant whose sample data status is `resetting` gets 409 `tenant_resetting` on its write requests (reads, token refresh and sign-out go on), so nothing written during the reset survives it.
+- The host-resolution path is `createRequestTenancyMiddleware` (`backend/src/common/tenancy/request-tenancy.middleware.ts`), mounted by `applyTenancyAndPipeline` (`backend/src/http-app.ts`, called from `backend/src/main.ts`). A failed tenant lookup (pool exhausted, database down) answers 503 `busy` instead of going on without a tenant; an unknown tenant answers 404 `TENANT_NOT_FOUND` as before. A tenant whose sample data status is `resetting` gets 409 `tenant_resetting` on its write requests (reads, token refresh and sign-out go on), so nothing written during the reset survives it.
 - **Sample data** (cloud only, `backend/src/demo-data/demo-data.service.ts`): an administrator loads the Fromage & Co set into a workspace still in its starting state (no business data, no configuration a reset would erase: own charts of accounts or accounts, calendars beyond the starting company's, dimension values other than the seeded values of the recommended dimensions, in any of the four seed languages, or of the three CAPEX dimensions of older tenants, portfolio classification, AI integrations and agents). The API runs `fixtures/fromage-co/setup-tenant.mjs --server-mode` as a child process (no shell, an environment of `PATH`, `NODE_ENV` and the `KANAP_DEMO_*` inputs only, the administrator's access token in that environment only) against itself on `127.0.0.1:$PORT` with the tenant's Host. The state lives in `tenants.metadata.demo` (`idle`, `loading`, `loaded`, `failed`, `resetting`), written by conditional updates of that key with a run id, so several API processes agree on it. A failed, timed out (12 min, and 60 s under the access token lifetime) or interrupted load is reset to the post-activation state (`TenantResetService`) once its process has ended. A load or a reset whose heartbeat (15 s, one write at a time) is older than 2 minutes was left by a stopped API process: the lead process (at start-up, then every 2 minutes) and every status read take it over. Loads over every tenant are capped by `DEMO_LOAD_MAX_CONCURRENT` (default 2), claimed under one advisory lock.
 
 ### Budget Writes: Lock Order and Freshness Counters
@@ -406,7 +406,7 @@ An internal tenant is a demonstration or test tenant that runs with no money flo
 
 ### Current Coverage (RLS + tenant_id)
 Every table with a `tenant_id` column has `ENABLE` + `FORCE ROW LEVEL SECURITY` and a `USING`/`WITH CHECK` policy binding `tenant_id` to the session tenant (221 tables on 2026-09-28, none enabled without force). Since migration `1853580000000` no policy casts the raw setting any more: 201 read the tenant through `app_current_tenant()` and 20 keep the equivalent `NULLIF(current_setting('app.current_tenant', true), '')::uuid` form. Both yield NULL when the context is missing or empty, so every row is filtered out instead of raising `invalid input syntax for type uuid`, and neither falls back to another tenant. Families covered today:
-- Identity and RBAC: users, roles, role_permissions (tenant-scoped, aligned with the parent role), user_roles, refresh_tokens, password_reset_tokens, user_notification_preferences, user_dashboard_config.
+- Identity and RBAC: users, roles, role_permissions (tenant-scoped, aligned with the parent role), user_roles, refresh_tokens, password_reset_tokens, user_notification_preferences, user_dashboard_config, user_data_access_nodes (the nodes of a person limited by data-scoped access).
 - Master data: companies, departments, suppliers and supplier_contacts, contacts, locations (+ contacts, links, sub-items), business_processes (+ categories), accounts, chart of accounts, company_metrics, department_metrics, analytics_axes (the tenant's analytics dimensions, exactly one `is_default` per tenant) and analytics_categories (their values; a value references its dimension by `(tenant_id, axis_id)`), cost_centers (groups and cost centers in one tree; the parent and the OPEX/CAPEX lines reference a node by `(tenant_id, id)`, so these foreign keys cannot cross tenants even though FK checks bypass RLS), working_day_profiles (working-day calendars: per year, the working days of the twelve months; a standard calendar also names a country, `country_iso`, and maybe a region, `region_code`, set at creation only: its years follow that country's public holidays, generated in memory from the bundled `date-holidays` rules, and `days_by_year` holds only the years edited by hand; a quantity × price line references its calendar by `(tenant_id, working_day_profile_id)` with `ON DELETE RESTRICT`, so a line cannot name another tenant's calendar and a calendar in use cannot be deleted).
 - Budget: spend_items, spend_versions, spend_amounts, spend_allocations, spend_round_inputs (period, provenance and FTE of each budget column) and spend_round_input_lines (the quantity × price lines a column is computed from; a line references its round by `(tenant_id, round_input_id)`, backed by the round's `UNIQUE (tenant_id, id)`, and goes with it), spend_links/attachments/contacts/tasks; capex_items, capex_versions, capex_amounts, capex_allocations, capex_round_inputs and capex_round_input_lines (same shape), capex_links/attachments/contacts (dormant since lot Z1: the CAPEX lines are in `spend_*`, see "Budget Line Nature"; lot Z2 drops them); spend_version_totals and capex_version_totals (derived, keyed by `version_id`: the sums of the five amount columns over the months of the version's own budget year, kept by statement triggers on the amounts tables as increments, never deleted by them. A version with a month in its year has exactly one row holding those sums; a version without such a month has no row or a row of zeros, its months having been deleted after the row was created; the row goes with its version. A TRUNCATE of an amounts table truncates its totals, and a version's budget year cannot change once it has months. Never exported, rebuilt by the tenant import with `budget_version_totals_rebuild()`, checked by `backend/scripts/verify-version-totals.ts`); spend_item_analytics_values and capex_item_analytics_values (one value per line and dimension; the value is referenced by `(tenant_id, category_id, axis_id)`, so a line can only hold a value of its own tenant that belongs to the named dimension); contracts, contract_spend_items, contract_capex_items, contract_attachments, contract_links, contract_contacts, contract_compliance_items (the compliance register, one row per contract and requirement; it references its contract by `(tenant_id, contract_id)` with `ON DELETE CASCADE`, backed by the contracts' `UNIQUE (tenant_id, id)`, so a row cannot name another tenant's contract); currency_rate_sets, freeze_states; subscriptions.
 - Portfolio: portfolio_requests and portfolio_projects with team, dependencies, phases, milestones, criteria, settings, types/categories/streams, teams, skills, employment types, task types, phase templates, effort allocations, time entries, request link tables (applications, assets, business processes, capex, opex, projects), and the shared `portfolio_activities` history.
@@ -453,7 +453,7 @@ Every column that names a row by its id (`*_id`, `*_ids`, any `uuid` column othe
 
 ## Backend Patterns & Abstractions
 - **BaseDeleteService** consolidates delete logic with cascade, storage cleanup and audit logging.
-- **TenancyManager** and `withTenant()` for tenant context outside the request path.
+- `withTenant()` and `withTenantExecution()` for tenant context outside the request path.
 - **Service decomposition**: large services split with a facade pattern.
 - **Type safety**: Zod DTOs (`ZodValidationPipe` registered globally next to `ValidationPipe`), typed decorators, response types.
 
@@ -503,6 +503,60 @@ See `doc/features/patterns/backend-patterns.md` for usage examples.
 ```
 
 See also: `doc/frontend-architecture.md` for detailed UI guidelines.
+
+### Data-scoped access (foundations)
+
+Data-scoped access limits a person to some companies and cost centres in the budget block (spec:
+`planning/data-scoped-access/spec.md`). The database enforces it with restrictive RLS
+policies that target one role only, so nothing changes for anyone else.
+
+- **The role.** `kanap_data_limited` is `NOLOGIN`. The application role may take it (`SET ROLE`)
+  but never inherits it: otherwise its policies would apply to every request. PostgreSQL 16 and
+  later: `GRANT ... WITH INHERIT FALSE, SET TRUE`. PostgreSQL 15: the application role becomes
+  `NOINHERIT` and gets `USAGE, CREATE` on `public` directly in each database it owns.
+- **The role script.** `infra/scripts/data-access-role.sql` (`mode=install` or `mode=uninstall`)
+  is the only step that needs a superuser or a `CREATEROLE` role. It is idempotent and runs before
+  or after the migrations. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every
+  database the application role owns, then once more to apply `NOINHERIT` (loop in the script
+  header); new dev volumes get it from `infra/db-init/`. The option also grants on `template1`, so
+  the databases created later (lane copies, test databases) let the application role create in
+  `public`. By default the script requires and grants only the databases the application role owns:
+  on a PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
+  future databases too. CI: one step before the migrations. QA and prod: the
+  operator runs it once per server after the deploy, then restarts the API. On-premise: optional;
+  without it, nobody can be limited.
+- **Grants and policies.** The application sets them itself, in each database:
+  `data_access_sync_policies()` grants the role its table rights and recreates its policies from
+  `data_access_expected_policies()`, the single list of expected policies. Each migration that
+  changes the list calls it. Without the role, it does nothing.
+- **Startup.** The lead process (`data-access/data-access-availability.ts`, called from `main.ts`)
+  runs the sync when the role exists and a grant or a policy is missing, with a 5 s lock timeout.
+  A failure is logged and retried at the next start. It then checks the availability (role,
+  membership, inheritance, `CREATE` on `public` on PostgreSQL 15, policies, grants) and logs one
+  `[DATA-ACCESS]` line. Every process keeps the result for a minute. `GET /auth/me` returns it in
+  `dataAccess`, with the person's mode and nodes. The check is informative only.
+- **Per transaction.** `data_access_apply(user)` sets nine `app.da_*` settings and takes the role
+  with `set_config(..., true)`, so both end with the transaction and a pooled connection carries
+  nothing. `applyDataAccess()` (`data-access/data-access.ts`) calls it from these call points only:
+  `TenantInterceptor`, the reconnection in `createTenantQueryRunner`,
+  `AiTenantExecutionService.runWithContext`, and the public routes of the inline attachments. A
+  limited person cannot run without a transaction (`{ transaction: false }` is refused).
+- **Fail closed.** For a limited person, `data_access_apply` refuses when the role is missing,
+  inherited or cannot be taken, or when an expected policy is missing: SQLSTATE `KDA01`, answered
+  503 `DATA_ACCESS_UNAVAILABLE`. A person outside the tenant gets `KDA02`, answered 401. Persons in
+  mode `all` and Administrators are never affected.
+- **Inventories.** `data-access/__tests__/data-access-inventory.spec.ts` checks the call points and
+  the role changes, and that every path outside the interceptor (`@SkipTenantTransaction()`,
+  `{ transaction: false }`, `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is
+  classified in `data-access/data-access-paths.inventory.ts`, with the number of call sites per
+  member and, for a controller marked as a whole, its route methods: a second call or a new route
+  fails the spec until someone classifies it.
+- **Uninstall.** A lot's `down()` removes its policies through the sync. The script's
+  `mode=uninstall` runs `DROP OWNED BY kanap_data_limited` in each database, then `DROP ROLE`, then
+  `ALTER ROLE <app> INHERIT` on PostgreSQL 15. The direct grant on `public` stays.
+- **Restore.** A backup restored on a server without the role brings back neither the policies nor
+  the role's grants, and `pg_dump --no-privileges` drops the grants too. Limited persons are then
+  refused until the script runs and the API restarts, which recreates what is missing.
 
 ### Authentication & SSO
 - Local email/password + JWT is the baseline for every user. Access tokens come from `AuthService.signToken`; a refresh token is kept in an `HttpOnly` cookie (`auth-cookie.util.ts`) and feeds `/auth/me`, guards and the SPA's Axios interceptor.

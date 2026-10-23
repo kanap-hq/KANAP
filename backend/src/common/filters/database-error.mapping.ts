@@ -19,6 +19,12 @@ import { QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedErro
  *   25P03 idle_in_transaction_session_timeout (the server ended a request
  *   transaction left idle too long, e.g. a saturated event loop)
  *                                 → 503 `busy` with Retry-After
+ * - KDA01 (data_access_apply)    → 503 `DATA_ACCESS_UNAVAILABLE`: data-scoped
+ *   access is not available (role or policies missing), a person whose access
+ *   is limited is refused until the person who runs KANAP fixes it
+ * - KDA02 (data_access_apply)    → 401 `INVALID_TOKEN`: the session names a
+ *   person who is not in the tenant (an invalid session; the client's refresh
+ *   then signs out)
  * - DatabaseConnectionError: the request could not get a connection (pool
  *   exhausted, database unreachable), or its connection ended while it still
  *   held its transaction (the server ended it, see 25P03 above; nothing it
@@ -32,7 +38,14 @@ import { QueryRunnerAlreadyReleasedError, QueryRunnerProviderAlreadyReleasedErro
  * (`spend/budget-locks.ts`). Not `retry`: nothing to send again at once, the
  * user waits for the other operation, so no client retries it by itself.
  */
-export type DatabaseErrorCode = 'duplicate' | 'parent_gone' | 'in_use' | 'retry' | 'busy';
+export type DatabaseErrorCode =
+  | 'duplicate'
+  | 'parent_gone'
+  | 'in_use'
+  | 'retry'
+  | 'busy'
+  | 'DATA_ACCESS_UNAVAILABLE'
+  | 'INVALID_TOKEN';
 
 /** Seconds a client waits before retrying a `busy` answer. */
 export const BUSY_RETRY_AFTER_SECONDS = 2;
@@ -43,6 +56,18 @@ const MESSAGES: Record<DatabaseErrorCode, string> = {
   in_use: 'This change would remove something that is still used elsewhere, so it was not saved.',
   retry: 'Another change to the same data was saved at the same moment, so this one did not go through. Please try again.',
   busy: 'This data is busy with another operation. Please try again in a few seconds.',
+  DATA_ACCESS_UNAVAILABLE: 'Data access is temporarily unavailable. Contact the person who runs KANAP.',
+  INVALID_TOKEN: 'Invalid token',
+};
+
+const STATUS: Record<DatabaseErrorCode, { status: HttpStatus; error: string }> = {
+  duplicate: { status: HttpStatus.CONFLICT, error: 'Conflict' },
+  parent_gone: { status: HttpStatus.CONFLICT, error: 'Conflict' },
+  in_use: { status: HttpStatus.CONFLICT, error: 'Conflict' },
+  retry: { status: HttpStatus.CONFLICT, error: 'Conflict' },
+  busy: { status: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' },
+  DATA_ACCESS_UNAVAILABLE: { status: HttpStatus.SERVICE_UNAVAILABLE, error: 'Service Unavailable' },
+  INVALID_TOKEN: { status: HttpStatus.UNAUTHORIZED, error: 'Unauthorized' },
 };
 
 /** The `busy` message when the cause is the connection, not a lock or a long statement. */
@@ -109,6 +134,10 @@ function codeFor(sqlState: string, error: unknown): DatabaseErrorCode | null {
     case '57014':
     case '25P03':
       return 'busy';
+    case 'KDA01':
+      return 'DATA_ACCESS_UNAVAILABLE';
+    case 'KDA02':
+      return 'INVALID_TOKEN';
     default:
       return null;
   }
@@ -142,9 +171,9 @@ export function mapDatabaseError(error: unknown): MappedDatabaseError | null {
   if (!sqlState) return null;
   const code = codeFor(sqlState, error);
   if (!code) return null;
-  const status = code === 'busy' ? HttpStatus.SERVICE_UNAVAILABLE : HttpStatus.CONFLICT;
+  const { status, error: reason } = STATUS[code];
   const exception = new HttpException(
-    { statusCode: status, error: status === HttpStatus.CONFLICT ? 'Conflict' : 'Service Unavailable', code, message: MESSAGES[code] },
+    { statusCode: status, error: reason, code, message: MESSAGES[code] },
     status,
     { cause: error },
   );

@@ -10,7 +10,7 @@
     "delete": "Eliminar",
     "close": "Cerrar",
     "create": "Crear",
-    "add": "Agregar",
+    "add": "Añadir",
     "remove": "Quitar",
     "deleteSelected": "Eliminar",
     "view": "Ver",
@@ -418,7 +418,7 @@
       "comment": "Comentario",
       "decision": "Decisión",
       "change": "Cambio",
-      "addedComment": "{{author}} agregó un comentario",
+      "addedComment": "{{author}} añadió un comentario",
       "recordedDecision": "{{author}} registró una decisión",
       "changedStatus": "{{author}} cambió el estado del proyecto",
       "createdTask": "{{author}} creó una tarea de proyecto",
@@ -733,7 +733,7 @@
     "newCategory": "Nueva categoría",
     "editCategories": "Editar categorías",
     "inactiveSuffix": "(inactivo)",
-    "addTeamMember": "Agregar miembro del equipo…",
+    "addTeamMember": "Añadir miembro del equipo…",
     "noTeamMembers": "No hay miembros del equipo asignados.",
     "cluster": "Clúster:",
     "account": "Cuenta",
@@ -822,7 +822,7 @@
     "share": "Compartir",
     "searchUsersOrEmail": "Buscar usuarios o escribir un correo electrónico…",
     "messageOptional": "Mensaje (opcional)",
-    "addPersonalMessage": "Agregar un mensaje personal…",
+    "addPersonalMessage": "Añadir un mensaje personal…",
     "copied": "Copiado.",
     "copyLink": "Copiar enlace",
     "typeEmailAddress": "Escribir una dirección de correo electrónico",
@@ -918,7 +918,7 @@
     }
   },
   "settingsSection": {
-    "addItem": "Agregar elemento",
+    "addItem": "Añadir elemento",
     "saveChanges": "Guardar cambios"
   },
   "contacts": {
@@ -935,10 +935,10 @@
     "jobTitle": "Cargo",
     "mobile": "Móvil",
     "fromSupplier": "Del proveedor",
-    "manuallyAdded": "Agregado manualmente",
+    "manuallyAdded": "Añadido manualmente",
     "removeContact": "Quitar contacto",
     "insufficientPermission": "Permiso insuficiente",
-    "syncFromSupplier": "Agregar los contactos del proveedor"
+    "syncFromSupplier": "Añadir los contactos del proveedor"
   },
   "export": {
     "button": "Exportar",

@@ -106,7 +106,7 @@
       "amount": "Importe",
       "total": "Total",
       "mustSum100": "Los porcentajes manuales deben sumar 100 %.",
-      "addRow": "Agregar fila",
+      "addRow": "Añadir fila",
       "autoDistributeInfo": "El remanente se distribuye automáticamente entre las empresas activas según el método seleccionado. No se requiere selección manual.",
       "totalAutoHint": "(<= 100 % permitido; remanente distribuido automáticamente)",
       "totalManualHint": "(solo vista previa: los totales guardados usan métricas en tiempo real)",
@@ -274,7 +274,7 @@
       "amount": "Importe",
       "total": "Total",
       "mustSum100": "Los porcentajes manuales deben sumar 100 %.",
-      "addRow": "Agregar fila",
+      "addRow": "Añadir fila",
       "autoDistributeInfo": "El remanente se distribuye automáticamente entre las empresas activas según el método seleccionado. No se requiere selección manual.",
       "totalAutoHint": "(<= 100 % permitido; remanente distribuido automáticamente)",
       "totalManualHint": "(solo vista previa: los totales guardados usan métricas en tiempo real)",
@@ -1516,7 +1516,7 @@
       "selectionsSubtitle_other": "{{type}}: {{count}} selecciones",
       "selectionsSubtitle_all_one": "OPEX y CAPEX: {{count}} selección",
       "selectionsSubtitle_all_other": "OPEX y CAPEX: {{count}} selecciones",
-      "addSelection": "Agregar"
+      "addSelection": "Añadir"
     },
     "consolidation": {
       "title": "Presupuesto por cuenta de consolidación",

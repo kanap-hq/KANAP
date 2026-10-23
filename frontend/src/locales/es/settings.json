@@ -46,7 +46,7 @@
     "portfolio": {
       "title": "Notificaciones del portafolio",
       "statusChanges": "Cambios de estado",
-      "teamAdditions": "Cuando me agregan a un equipo",
+      "teamAdditions": "Cuando me añaden a un equipo",
       "teamChangesAsLead": "Cambios de equipo en elementos que lidero",
       "comments": "Comentarios"
     },
