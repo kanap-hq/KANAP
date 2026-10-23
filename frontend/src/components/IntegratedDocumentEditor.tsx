@@ -120,10 +120,10 @@ function MarkdownEditorLoadingFallback({ minRows }: { minRows: number }) {
   );
 }
 
-export const IntegratedDocumentEditor = React.forwardRef<
+const DocumentEditorForOneSlot = React.forwardRef<
   IntegratedDocumentEditorHandle,
   IntegratedDocumentEditorProps
->(function IntegratedDocumentEditor(
+>(function DocumentEditorForOneSlot(
   {
     entityType,
     entityId,
@@ -700,6 +700,10 @@ export const IntegratedDocumentEditor = React.forwardRef<
   const lockHolderLabel = activeLockInfo?.holder_name || 'another user';
   const loadErrorMessage = React.useMemo(() => {
     if (!loadError) return null;
+    // A document the server cannot find for this user ("Library not found") carries no code of
+    // its own: a plain sentence rather than the server's words.
+    const response = (loadError as { response?: { status?: number; data?: { code?: unknown } } }).response;
+    if (response?.status === 404 && !response.data?.code) return t('documentEditor.notReachable');
     return getApiErrorMessage(loadError, t, t('documentEditor.failedToLoad'));
   }, [loadError, t]);
   const lockExpiryLabel = React.useMemo(() => {
@@ -965,6 +969,19 @@ export const IntegratedDocumentEditor = React.forwardRef<
       )}
     </Box>
   );
+});
+
+/**
+ * Every piece of the editor's state belongs to one document: its edit mode, its lock, its draft and
+ * revision. A host that shows another record in the same place (previous / next in a record
+ * header) gets a fresh editor for it; the previous one releases its own lock as it unmounts.
+ */
+export const IntegratedDocumentEditor = React.forwardRef<
+  IntegratedDocumentEditorHandle,
+  IntegratedDocumentEditorProps
+>(function IntegratedDocumentEditor(props, ref) {
+  const { entityType, entityId, slotKey } = props;
+  return <DocumentEditorForOneSlot key={`${entityType}:${entityId || 'draft'}:${slotKey}`} ref={ref} {...props} />;
 });
 
 export default IntegratedDocumentEditor;

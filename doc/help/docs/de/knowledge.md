@@ -101,7 +101,7 @@ Verwaltete Dokumente halten das Schreiberlebnis innerhalb der Wissensdatenbank, 
 
 Dies schützt die Verknüpfung zwischen dem Dokument und dem operativen Datensatz, dem es gehört.
 
-Auch der Zugriff folgt dem Quellobjekt. Der deutlichste Fall ist der Ordner **Vorfälle**: Eine Vorfallanalyse kann nur öffnen, wer den zugehörigen Vorfall sehen darf, unabhängig von seinen Berechtigungen in der Wissensdatenbank. Sie wird schreibgeschützt, sobald der Vorfall geschlossen oder abgebrochen ist, und sie verschwindet aus Listen, Suche, Exporten und dem Assistenten für alle, die von einem eingeschränkten Vorfall ausgeschlossen sind. Siehe [Vorfälle](incidents.md).
+Auch der Zugriff folgt dem Quellobjekt. Wer eine Anwendung, eine Schnittstelle, ein Projekt oder eine Anfrage bearbeiten darf, darf auch ihre verwalteten Dokumente von diesem Datensatz aus bearbeiten, ohne Berechtigung für die Wissensdatenbank. Der deutlichste Fall ist der Ordner **Vorfälle**: Eine Vorfallanalyse kann nur öffnen, wer den zugehörigen Vorfall sehen darf, unabhängig von seinen Berechtigungen in der Wissensdatenbank. Sie wird schreibgeschützt, sobald der Vorfall geschlossen oder abgebrochen ist, und sie verschwindet aus Listen, Suche, Exporten und dem Assistenten für alle, die von einem eingeschränkten Vorfall ausgeschlossen sind. Siehe [Vorfälle](incidents.md).
 
 ## Arbeiten mit der Wissensliste
 

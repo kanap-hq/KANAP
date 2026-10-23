@@ -377,6 +377,36 @@ describe('IntegratedDocumentEditor — incidents:review', () => {
     expect(screen.queryByLabelText('markdown-editor')).toBeNull();
   });
 
+  it('opens the next record read only, with its own text, and edits it with its own lock', async () => {
+    // Previous / next in a record header keeps the editor mounted and only changes the record.
+    // The editor used to stay in edit mode with the first record's text and no lock: the second
+    // record's description could no longer be opened.
+    const OTHER_ENDPOINT = '/incidents/inc-2/integrated-documents/review';
+    vi.mocked(api.get).mockImplementation(async (url: string) => (
+      url === OTHER_ENDPOINT ? documentPayload('Second record', 7) : documentPayload('First record', 3)
+    ) as any);
+    vi.mocked(api.post)
+      .mockResolvedValueOnce({ data: { lock_token: 'lock-1', expires_at: null } } as any)
+      .mockResolvedValueOnce({ data: { lock_token: 'lock-2', expires_at: null } } as any);
+    const { rerender } = await renderEditor({ autosaveDelayMs: 60_000 });
+    await startEditing();
+
+    await act(async () => {
+      rerender({ autosaveDelayMs: 60_000, entityId: 'inc-2' });
+    });
+    await waitFor(() => expect(api.delete).toHaveBeenCalledWith(
+      `${REVIEW_ENDPOINT}/locks`,
+      { headers: { 'X-Lock-Token': 'lock-1' } },
+    ));
+    expect(await screen.findByText('Second record')).toBeInTheDocument();
+    expect(screen.queryByLabelText('markdown-editor')).toBeNull();
+
+    const editor = await startEditing();
+    expect(api.post).toHaveBeenLastCalledWith(`${OTHER_ENDPOINT}/locks`);
+    expect(editor).not.toBeDisabled();
+    expect(editor).toHaveValue('Second record');
+  });
+
   it('does not save again when nothing changed since the last save', async () => {
     const { ref } = await renderEditor({ autosaveDelayMs: 60_000 });
     const editor = await startEditing();

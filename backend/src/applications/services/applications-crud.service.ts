@@ -26,6 +26,18 @@ import { shareRecipientsOf } from '../../notifications/share-recipients';
 import { NotificationsService } from '../../notifications/notifications.service';
 import { projectParticipantCondition, requestParticipantCondition } from '../../auth/business-contributor-scope';
 import { buildDerivedUsersByApp } from './derived-users';
+import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
+import {
+  applicationBadRequest,
+  applicationNameKey,
+  assertApplicationDates,
+  assertApplicationNameFree,
+  assertSuiteHasNoChildren,
+  fitApplicationName,
+  freeApplicationName,
+  lockApplicationNames,
+  normalizeApplicationName,
+} from '../application-rules';
 
 type OwnerQueryRow = ApplicationOwner & {
   email?: string | null;
@@ -46,6 +58,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     private readonly itOpsSettings: ItOpsSettingsService,
     private readonly notifications: NotificationsService,
     @Optional() private readonly cpeEvents?: TechnologyCpeEvents,
+    @Optional() private readonly integratedDocuments?: IntegratedDocumentsService,
   ) {
     super(appRepo);
   }
@@ -219,12 +232,16 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const repo = mg.getRepository(Application);
     const tenantId = await this.getCurrentTenantId(mg);
     const catalog = await this.itOpsSettings.lockClassificationCatalog(tenantId, mg);
+    const name = normalizeApplicationName(body.name);
     const classification = classificationPatch(body, null, catalog);
     const nowYear = new Date().getFullYear();
     const lifecycle = await this.normalizeLifecycle(body.lifecycle, tenantId, mg, 'active');
     const category = await this.normalizeCategory((body as any).category, tenantId, mg, { useDefaultForEmpty: true });
+    assertApplicationDates(body as any);
+    await lockApplicationNames(mg, tenantId);
+    await assertApplicationNameFree(mg, tenantId, name);
     const entity = repo.create({
-      name: (body.name || '').toString().trim(),
+      name,
       supplier_id: body.supplier_id ?? null,
       description: body.description ?? null,
       editor: (body.editor ?? null) as any,
@@ -254,7 +271,6 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       status: 'enabled',
       disabled_at: null,
     });
-    if (!entity.name) throw new BadRequestException('name is required');
     const saved = (await repo.save(entity as any)) as Application;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager: mg });
     return Object.assign(saved, classificationReadState(saved));
@@ -290,9 +306,33 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     if (patch.category !== undefined) {
       patch.category = await this.normalizeCategory(patch.category, existing.tenant_id, mg);
     }
+    if (patch.name !== undefined) {
+      patch.name = normalizeApplicationName(patch.name);
+      // Only a changed name is checked: an application sharing its name with another (older data) stays editable.
+      if (applicationNameKey(patch.name) !== applicationNameKey(existing.name)) {
+        await lockApplicationNames(mg, tenantId);
+        await assertApplicationNameFree(mg, tenantId, patch.name, existing.id);
+      }
+    }
+    if (['go_live_date', 'end_of_support_date', 'retired_date'].some((field) => patch[field] !== undefined)) {
+      assertApplicationDates({ ...existing, ...patch });
+    }
+    if (patch.is_suite !== undefined && !patch.is_suite && existing.is_suite) {
+      await assertSuiteHasNoChildren(mg, tenantId, existing.id);
+    }
     Object.assign(existing, patch, { updated_at: new Date() });
     const saved = (await repo.save(existing as any)) as Application;
     await this.audit.log({ table: 'applications', recordId: saved.id, action: 'update', before, after: saved, userId }, { manager: mg });
+    // A renamed application: its description document's title follows (`APP-4 - New name - Overview`).
+    if ((before as any).name !== saved.name) {
+      await this.integratedDocuments?.syncTitles('applications', {
+        id: saved.id,
+        tenant_id: saved.tenant_id,
+        item_number: null,
+        name: saved.name,
+        reference_label: String((saved as any).sequential_id || '').trim() || saved.id,
+      }, userId ?? null, { manager: mg });
+    }
     // Entering or leaving service: its declared technologies are matched again with the vulnerabilities.
     const instant = (value: unknown) => (value ? new Date(value as string).getTime() : null);
     if ((before as any).status !== saved.status || instant((before as any).disabled_at) !== instant(saved.disabled_at)) {
@@ -484,7 +524,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       const catalog = await this.itOpsSettings.lockClassificationCatalog(tenantId, manager);
       const source = await this.ensureApp(id, manager, opts?.accessScope);
       const { id: sourceId, sequential_id, created_at, updated_at, ...properties } = source;
-      const entity = manager.getRepository(Application).create({ ...properties, ...copyClassification(source, catalog), name: name?.trim() || `${source.name} (copy)` });
+      // A name already taken gets a numbered variant (`CRM (copy 2)`): copying twice never fails.
+      await lockApplicationNames(manager, tenantId);
+      const requested = normalizeApplicationName(String(name ?? '').trim() || fitApplicationName(source.name, ' (copy)'));
+      const copyName = await freeApplicationName(manager, tenantId, requested);
+      const entity = manager.getRepository(Application).create({ ...properties, ...copyClassification(source, catalog), name: copyName });
       const saved = await manager.getRepository(Application).save(entity);
       await this.audit.log({ table: 'applications', recordId: saved.id, action: 'create', before: null, after: saved, userId }, { manager });
       return saved;
@@ -505,7 +549,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     }
     const normalized = String(value).trim().toLowerCase();
     if (!allowed.includes(normalized)) {
-      throw new BadRequestException(`Invalid lifecycle "${value}"`);
+      throw applicationBadRequest('lifecycle_invalid', `Invalid lifecycle "${value}"`, { value: String(value) });
     }
     return normalized;
   }
@@ -527,10 +571,15 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     manager?: any,
     opts?: { useDefaultForEmpty?: boolean },
   ): Promise<string> {
-    return this.itOpsSettings.resolveApplicationCategoryCode(tenantId, value, {
-      manager,
-      useDefaultForEmpty: opts?.useDefaultForEmpty,
-    });
+    try {
+      return await this.itOpsSettings.resolveApplicationCategoryCode(tenantId, value, {
+        manager,
+        useDefaultForEmpty: opts?.useDefaultForEmpty,
+      });
+    } catch (error) {
+      if (error instanceof BadRequestException) throw applicationBadRequest('category_invalid', error.message, { value: String(value ?? '') });
+      throw error;
+    }
   }
 
   // Derived users

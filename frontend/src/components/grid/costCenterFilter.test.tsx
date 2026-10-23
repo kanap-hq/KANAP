@@ -161,9 +161,9 @@ describe('CheckboxSetFilter with cost center groups', () => {
     expect(box('US-10 · New York')).toBeChecked();
   });
 
-  it('"Clear" then a group keeps only the lines below it, its parent partly ticked', () => {
+  it('"None" then a group keeps only the lines below it, its parent partly ticked', () => {
     const { applied } = renderFilter();
-    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     click('FR · France');
     advance();
     expect(applied()?.mode).toBeUndefined();

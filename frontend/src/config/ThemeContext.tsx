@@ -739,7 +739,10 @@ export function usePrintLightMode() {
   }, []);
 }
 
-function useBlurPointerOpenedTriggerOnEscape() {
+// A menu or popover opened by pointer must not leave its trigger looking pressed
+// after Escape, so the trigger is blurred. A dialog is different: MUI gives focus
+// back to the button that opened it, and keyboard users need it there.
+export function useBlurPointerOpenedTriggerOnEscape() {
   useEffect(() => {
     let openedByPointer = false;
     const onPointerDown = () => {
@@ -751,6 +754,8 @@ function useBlurPointerOpenedTriggerOnEscape() {
         return;
       }
       if (event.key !== 'Escape' || !openedByPointer) return;
+      const target = event.target;
+      if (target instanceof Element && target.closest('.MuiDialog-root')) return;
       window.setTimeout(() => {
         const el = document.activeElement;
         if (!(el instanceof HTMLElement)) return;

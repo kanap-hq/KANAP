@@ -882,7 +882,7 @@ const CheckboxSetFilter = React.forwardRef<any, CheckboxSetFilterProps>((props, 
           {t('labels.all')}
         </Button>
         <Button size="small" onClick={handleClear}>
-          {t('buttons.clear')}
+          {t('labels.none')}
         </Button>
       </Stack>
     </Box>

@@ -62,7 +62,8 @@ export default function TeamMemberMultiSelect({
   }, []);
 
   const handleAdd = useCallback(async (user: User | null) => {
-    if (!user) {
+    // One change at a time; the field stays enabled meanwhile, so the focus stays on it.
+    if (!user || loading) {
       return;
     }
     setLoading(true);
@@ -74,7 +75,7 @@ export default function TeamMemberMultiSelect({
     } finally {
       setLoading(false);
     }
-  }, [value, onChange]);
+  }, [value, onChange, loading]);
 
   const handleRemove = useCallback(async (userId: string) => {
     setLoading(true);
@@ -154,7 +155,7 @@ export default function TeamMemberMultiSelect({
             }}
           />
         )}
-        disabled={disabled || loading}
+        disabled={disabled}
         ListboxProps={hideLabel ? { sx: drawerAutocompleteListboxSx } : undefined}
         size="small"
       />

@@ -88,7 +88,7 @@
         "lifecycle": "Ciclo de vida",
         "criticality": "Criticidad",
         "publisher": "Editor",
-        "derivedUsers": "Usuarios derivados (A)",
+        "derivedUsers": "Usuarios derivados {{year}}",
         "created": "Creado",
         "supplier": "Proveedor",
         "businessOwners": "Responsables de negocio",
@@ -104,13 +104,12 @@
         "components": "Componentes",
         "dataClass": "Clasificación de datos",
         "containsPii": "Contiene PII",
-        "dataResidency": "Residencia de datos"
+        "dataResidency": "Residencia de datos",
+        "derivedUsersHelp": "Usuarios contados para las empresas y departamentos de la audiencia en {{year}} (o el año más cercano con datos), salvo que se indique un número de usuarios a mano."
       },
       "delete": {
         "warning_one": "Sus despliegues y sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
         "warning_other": "Sus despliegues y sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
-        "warningCounted_one": "Sus {{deployments}} y sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
-        "warningCounted_other": "Sus {{deployments}} y sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
         "warningLinks_one": "Sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
         "warningLinks_other": "Sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
         "toDelete_one": "{{count}} aplicación se eliminará:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} aplicación no se puede eliminar y se conserva:",
         "kept_other": "{{count}} aplicaciones no se pueden eliminar y se conservan:",
         "deleted_one": "{{count}} aplicación eliminada",
-        "deleted_other": "{{count}} aplicaciones eliminadas"
+        "deleted_other": "{{count}} aplicaciones eliminadas",
+        "warningCounted_one": "Se eliminan con ella: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+        "warningCounted_other": "Se eliminan con ellas: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+        "title_one": "Eliminar {{count}} aplicación",
+        "title_other": "Eliminar {{count}} aplicaciones",
+        "keptDone_one": "{{count}} aplicación conservada",
+        "keptDone_other": "{{count}} aplicaciones conservadas",
+        "keptReason_one": "Se conserva: {{usages}} la usa.",
+        "keptReason_other": "Se conserva: {{usages}} la usan."
+      },
+      "exportScope_one": "{{count}} aplicación, según los filtros de la lista.",
+      "exportScope_other": "{{count}} aplicaciones, según los filtros de la lista.",
+      "exportScopeAll": "Todas las aplicaciones ({{count}}), sin las retiradas.",
+      "importNote": "Para vaciar un valor de clasificación, escriba __CLEAR__ en la celda.",
+      "copySuffix": "(copia)",
+      "copyFailed": "No se pudo copiar la aplicación.",
+      "copyLinksFailed": "La copia se creó, pero no se pudieron copiar todos sus vínculos.",
+      "environments": {
+        "prod": {
+          "name": "Producción",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Preproducción",
+          "short": "Pre"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Desarrollo",
+          "short": "Des"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1636,7 +1676,12 @@
         "receivesFrom": "Recibe de",
         "sendsTo": "Envía a",
         "moreInInterfaces_one": "+ {{count}} más en Interfaces",
-        "moreInInterfaces_other": "+ {{count}} más en Interfaces"
+        "moreInInterfaces_other": "+ {{count}} más en Interfaces",
+        "includedIn": "Incluida en",
+        "includedInPlaceholder": "Añadir una suite",
+        "previousVersion": "Versión anterior",
+        "nextVersion": "Versión siguiente",
+        "canHaveChildAppsHelp": "Márquela si es una suite: las aplicaciones que contiene podrán vincularse a ella."
       },
       "ownership": {
         "businessOwners": "Responsables de negocio",
@@ -1659,8 +1704,11 @@
         "addAudience": "+ Añadir audiencia",
         "removeAudienceRow": "Quitar esta fila de audiencia",
         "usersValue": "Usuarios: {{value}}",
+        "usersNoDepartmentHeadcount": "No hay plantilla registrada para estos departamentos.",
         "businessProcesses": "Procesos de negocio",
-        "addBusinessProcess": "Añadir un proceso de negocio…"
+        "addBusinessProcess": "Añadir un proceso de negocio…",
+        "audienceWholeCompany": "Toda la sociedad. Elija departamentos para acotar la audiencia.",
+        "audienceDepartmentsOnly": "Solo los departamentos elegidos. Quítelos para incluir toda la sociedad."
       },
       "technical": {
         "title": "Información técnica",
@@ -1684,7 +1732,9 @@
         "unnamedContact": "Contacto sin nombre",
         "removeContact": "Quitar a {{name}}",
         "supportNotesPlaceholder": "Añada notas de soporte…",
-        "newSupportContact": "Nuevo contacto de soporte"
+        "newSupportContact": "Nuevo contacto de soporte",
+        "externalFacingHelp": "Se puede acceder a la aplicación desde Internet: clientes, socios o personal remoto.",
+        "dataIntegrationEtlHelp": "La aplicación transfiere datos entre otras aplicaciones. Aparece entonces como middleware en las interfaces."
       },
       "interfaces": {
         "title": "Interfaces",
@@ -1746,6 +1796,7 @@
           "requests": "Solicitudes",
           "tasks": "Tareas",
           "technologies": "Tecnologías",
+          "technologiesHelp": "Las tecnologías que usa la aplicación, con sus versiones: declaradas aquí o encontradas en sus servidores.",
           "applications": "Aplicaciones",
           "assets": "Activos",
           "processes": "Procesos de negocio",
@@ -1860,11 +1911,11 @@
         "goLive": "Puesta en marcha"
       },
       "deleteMessage": "Esto elimina definitivamente {{name}}, con sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con sus {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
       "convert": {
         "action": "Convertir en tecnología",
         "title": "Convertir {{name}} en tecnología",
-        "test": "Conviértala cuando otra aplicación pueda caer o volverse vulnerable por su causa.",
+        "test": "Conviértala cuando otra aplicación pueda caer o volverse vulnerable por culpa de esta aplicación.",
         "loading": "Comprobando lo que cambia la conversión…",
         "family": "Familia",
         "familyPlaceholder": "Elegir una familia",
@@ -1933,6 +1984,14 @@
           "managed_documents": "Documentos gestionados, movidos a los documentos sin clasificar"
         },
         "hiddenMoves": "Otros vínculos que no ve también pasan."
+      },
+      "referenceCopied": "Copiado",
+      "undo": {
+        "undo": "Deshacer",
+        "contactRemoved": "Contacto de soporte retirado.",
+        "processRemoved": "Proceso de negocio desvinculado.",
+        "ownerRemoved": "Responsable retirado.",
+        "suiteRemoved": "Vínculo con la suite retirado."
       }
     },
     "asset": {
@@ -3078,7 +3137,7 @@
       "copyInstances": "Despliegues",
       "copyBindings": "Enlaces de despliegue",
       "bindingsHint": "Los enlaces conectan los segmentos de interfaz con los despliegues. Los detalles específicos del entorno se borrarán.",
-      "suitesNotCopied": "Nota: las suites y los archivos adjuntos no se copian.",
+      "suitesNotCopied": "No se copian: las suites, los archivos adjuntos, las fechas, la última prueba de recuperación y la revisión de la clasificación.",
       "selectInterfaces": "Seleccione las interfaces a migrar a la nueva versión. Las interfaces seleccionadas se duplicarán y vincularán a la nueva versión.",
       "loadingInterfaces": "Cargando interfaces…",
       "noInterfaces": "No se encontraron interfaces para esta aplicación.",
@@ -3098,7 +3157,8 @@
       "next": "Siguiente",
       "createVersion": "Crear versión",
       "nameRequired": "El nombre de la aplicación es obligatorio",
-      "defaultName": "{{name}} - nueva versión"
+      "defaultName": "{{name}} - nueva versión",
+      "alwaysCopied": "Siempre se copian: la descripción, los procesos de negocio, los métodos de acceso, las casillas de exposición externa, ETL y aplicaciones hijas, y el número de usuarios introducido a mano."
     },
     "versionTimeline": {
       "title": "Historial de versiones"
@@ -3250,7 +3310,13 @@
     "saveSupportInfoFailed": "Error al guardar la información de soporte",
     "saveClassificationFailed": "No se pudo guardar la clasificación",
     "reviewFailed": "Error en la revisión",
-    "deleteApplicationFailed": "Error al eliminar la aplicación"
+    "deleteApplicationFailed": "Error al eliminar la aplicación",
+    "saveResidencyFailed": "No se pudo guardar la residencia de los datos.",
+    "saveOwnersFailed": "No se pudieron guardar los responsables.",
+    "saveAudienceFailed": "No se pudo guardar la audiencia.",
+    "copyReferenceFailed": "No se pudo copiar: el navegador lo rechazó.",
+    "restoreFailed": "No se pudo restablecer el vínculo.",
+    "versionCreated": "Versión creada: {{reference}}"
   },
   "validation": {
     "missingFormData": "Datos de formulario incompletos",
@@ -3341,6 +3407,7 @@
     "the_catalog_could_not_be_saved_reload_settings_and_try_again": "No se pudieron guardar los catálogos. Vuelva a cargar la configuración.",
     "incomplete_inheritance": "Herencia incompleta",
     "data_residency": "Residencia de los datos",
+    "data_residency_help": "Los países donde la aplicación almacena sus datos.",
     "business_help": "Impacto de una interrupción en la actividad que esta aplicación sostiene. Cada nivel indica la interrupción que la actividad puede tolerar; elija el nivel cuya definición corresponda.",
     "cyber_help": "Elija el nivel más alto justificado por una consecuencia plausible: divulgación, alteración o destrucción, interrupción, propagación o toma de control, consecuencias físicas. ¡No confunda la criticidad cibernética con el nivel de riesgo!",
     "confidentiality_help": "Protección necesaria frente a la divulgación. Orienta la evaluación cibernética sin calcularla automáticamente.",
@@ -3368,7 +3435,7 @@
     "never_reviewed": "Nunca revisada",
     "changed_since_review": "Modificada desde la revisión",
     "reviewed_on": "Revisada el {{date}}",
-    "rto_exceeds_level_downtime": "El RTO alcanza o supera el MTD del nivel {{level}} ({{duration}}).",
+    "rto_exceeds_level_downtime": "El RTO alcanza o supera el tiempo máximo tolerable de interrupción (MTD) del nivel {{level}} ({{duration}}).",
     "recovery_dependency": "Intercambio con {{app}}, prevista en {{wave}}",
     "summary_reviewed_one": "{{count}} revisada",
     "summary_reviewed_other": "{{count}} revisadas",
@@ -3382,7 +3449,25 @@
     "e_g_critical": "p. ej., Crítica",
     "e_g_high": "p. ej., Alta",
     "e_g_confidential": "p. ej., Confidencial",
-    "e_g_foundation": "p. ej., Base"
+    "e_g_foundation": "p. ej., Base",
+    "contains_personal_data_help": "Márquela si la aplicación almacena o trata datos de personas identificables.",
+    "duration_positive_minutes": "Introduzca un número de minutos mayor que 0.",
+    "duration_positive_hours": "Introduzca un número de horas mayor que 0.",
+    "duration_positive_days": "Introduzca un número de días mayor que 0.",
+    "duration_positive_weeks": "Introduzca un número de semanas mayor que 0.",
+    "duration_zero_minutes": "Introduzca un número de minutos, 0 o más.",
+    "duration_zero_hours": "Introduzca un número de horas, 0 o más.",
+    "duration_zero_days": "Introduzca un número de días, 0 o más.",
+    "duration_zero_weeks": "Introduzca un número de semanas, 0 o más.",
+    "unit_minutes_one": "minuto",
+    "unit_minutes_other": "minutos",
+    "unit_hours_one": "hora",
+    "unit_hours_other": "horas",
+    "unit_days_one": "día",
+    "unit_days_other": "días",
+    "unit_weeks_one": "semana",
+    "unit_weeks_other": "semanas",
+    "duration_whole_minutes": "Esta duración no da un número entero de minutos."
   },
   "catalogDefaults": {
     "applicationCategories": {

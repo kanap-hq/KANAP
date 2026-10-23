@@ -17,19 +17,27 @@ import {
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import api from '../../api';
+import { getWithListContext } from '../../lib/listContext';
 import { useCsvExport } from './useCsvExport';
 import { csvRequestErrorMessage } from './csvRequestError';
 import { screenLanguage } from './readings';
 import { CsvFieldSelector } from './CsvFieldSelector';
 import { CsvFieldInfo, CsvExportPreset } from './csv.types';
+import { csvEntityOf, csvPresetLabel } from './csvLabels';
 
 interface CsvExportDialogV2Props {
   open: boolean;
   onClose: () => void;
   endpoint: string;
   title?: string;
-  params?: Record<string, string | number | boolean | null | undefined>;
+  /**
+   * Sent with the export. A list passes what its grid asked (filters, quick search, scope): the
+   * file holds the rows the list shows. Filters too long for an address go as a saved list context.
+   */
+  params?: Record<string, unknown>;
   presets?: CsvExportPreset[];
+  /** One line saying which rows the file holds, under the description ("6 applications, following the filters of the list."). */
+  scopeSummary?: string;
 }
 
 export default function CsvExportDialogV2({
@@ -39,6 +47,7 @@ export default function CsvExportDialogV2({
   title: titleProp,
   params,
   presets: propPresets = [],
+  scopeSummary,
 }: CsvExportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
   // The file follows the screen: separator, days, decimal mark and yes or no.
@@ -48,6 +57,7 @@ export default function CsvExportDialogV2({
   const [loadingFields, setLoadingFields] = useState(false);
   const [showFieldSelector, setShowFieldSelector] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const entity = csvEntityOf(endpoint);
 
   const {
     preset,
@@ -106,7 +116,7 @@ export default function CsvExportDialogV2({
       }
       // 'full' preset: no params needed - backend returns all exportable fields
 
-      const res = await api.get(`${endpoint}/export`, { params: queryParams, responseType: 'blob' });
+      const res = await getWithListContext(`${endpoint}/export`, queryParams, { responseType: 'blob' });
       const blob = new Blob([res.data], { type: 'text/csv;charset=utf-8' });
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -134,7 +144,7 @@ export default function CsvExportDialogV2({
 
   const availablePresets: CsvExportPreset[] = [
     { name: 'full', label: t('csv.fullExport') },
-    ...presets,
+    ...presets.map((p) => ({ ...p, label: csvPresetLabel(t, entity, p) })),
     { name: 'custom', label: t('csv.customSelection') },
   ];
 
@@ -149,6 +159,11 @@ export default function CsvExportDialogV2({
             <Typography variant="body2" sx={{ mb: 2 }}>
               {t('csv.exportDescriptionFlexible')}
             </Typography>
+            {scopeSummary && (
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {scopeSummary}
+              </Typography>
+            )}
 
             {/* Preset selector */}
             <FormControl fullWidth size="small" sx={{ mb: 2 }}>
@@ -191,6 +206,7 @@ export default function CsvExportDialogV2({
                   fields={fieldsInfo.filter((f) => f.exportable)}
                   selectedFields={selectedFields}
                   onToggle={toggleField}
+                  entity={entity}
                 />
               </Box>
             )}

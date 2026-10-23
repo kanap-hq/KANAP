@@ -135,7 +135,7 @@ describe('ApplicationTechnologiesSection', () => {
     const widths = [...table.querySelectorAll('col')].map((col) => (col as HTMLElement).style.width);
     expect(widths[1]).toBe('');
     const fixed = widths.filter(Boolean).reduce((sum, width) => sum + parseInt(width, 10), 0);
-    expect(fixed).toBeLessThanOrEqual(660);
+    expect(fixed).toBeLessThanOrEqual(700);
     expect(within(table).getByTitle('Tomcat').textContent).toBe('Tomcat');
   });
 

@@ -1,5 +1,5 @@
 import React from 'react';
-import { render, screen } from '@testing-library/react';
+import { fireEvent, render, screen } from '@testing-library/react';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
@@ -36,6 +36,14 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.getByRole('button', { name: 'workspace.closeProperties' })).toBeInTheDocument();
     expect(screen.getByRole('complementary')).toHaveTextContent('drawer fields');
     expect(screen.getByText('content')).toBeInTheDocument();
+  });
+
+  it('says the record is read only when the person cannot change it', () => {
+    const { unmount } = renderShell({ readOnly: true });
+    expect(screen.getByText('common:labels.readOnly')).toBeTruthy();
+    unmount();
+    renderShell();
+    expect(screen.queryByText('common:labels.readOnly')).toBeNull();
   });
 
   it('draws neither the tab nor the drawer without properties', () => {
@@ -125,5 +133,61 @@ describe('PortfolioDetailWorkspaceShell scrolling', () => {
     expect(getComputedStyle(body).flexDirection).toBe('column');
     // Below md the properties are forced open and stack under the content.
     expect(body).toContainElement(screen.getByRole('complementary'));
+  });
+});
+
+describe('PortfolioDetailWorkspaceShell Escape', () => {
+  it('goes back on a plain Escape', () => {
+    const onBack = vi.fn();
+    renderShell({ onBack });
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('leaves Escape to a list, a menu or a dialog it comes from', () => {
+    const onBack = vi.fn();
+    renderShell({ onBack, properties: <ul role="listbox"><li role="option">Finance</li></ul> });
+    fireEvent.keyDown(screen.getByRole('option'), { key: 'Escape' });
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it('ignores an Escape on the body while a menu or list is open elsewhere', () => {
+    const onBack = vi.fn();
+    renderShell({ onBack });
+    const popup = document.createElement('div');
+    popup.className = 'MuiPopper-root';
+    document.body.appendChild(popup);
+    try {
+      fireEvent.keyDown(document.body, { key: 'Escape' });
+      expect(onBack).not.toHaveBeenCalled();
+    } finally {
+      popup.remove();
+    }
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).toHaveBeenCalledTimes(1);
+  });
+
+  it('ignores an Escape that arrives on the body just after a field or list was used', () => {
+    const onBack = vi.fn();
+    renderShell({ onBack, properties: <ul role="listbox"><li role="option">Finance</li></ul> });
+    fireEvent.pointerDown(screen.getByRole('option'));
+    fireEvent.keyDown(document.body, { key: 'Escape' });
+    expect(onBack).not.toHaveBeenCalled();
+  });
+
+  it('keeps an empty title open with the message when one is given', () => {
+    const onTitleSave = vi.fn();
+    renderShell({ canEditTitle: true, onTitleSave, titleRequiredMessage: 'The name is required' });
+    fireEvent.click(screen.getByText('Title'));
+    const input = screen.getByDisplayValue('Title');
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(screen.getByRole('alert')).toHaveTextContent('The name is required');
+    expect(screen.getByDisplayValue('')).toBeInTheDocument();
+    expect(onTitleSave).not.toHaveBeenCalled();
+    fireEvent.change(input, { target: { value: 'New title' } });
+    expect(screen.queryByRole('alert')).toBeNull();
+    fireEvent.keyDown(input, { key: 'Enter' });
+    expect(onTitleSave).toHaveBeenCalledWith('New title');
   });
 });

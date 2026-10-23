@@ -11,12 +11,15 @@ import {
 import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import { useTranslation } from 'react-i18next';
 import { CsvFieldInfo } from './csv.types';
+import { csvFieldLabel, csvGroupLabel } from './csvLabels';
 
 interface CsvFieldSelectorProps {
   fields: CsvFieldInfo[];
   selectedFields: Set<string>;
   onToggle: (fieldName: string) => void;
   groupBy?: 'group' | 'none';
+  /** The entity whose field labels the language knows (`applications`); the server's labels otherwise. */
+  entity?: string;
 }
 
 export function CsvFieldSelector({
@@ -24,6 +27,7 @@ export function CsvFieldSelector({
   selectedFields,
   onToggle,
   groupBy = 'group',
+  entity = '',
 }: CsvFieldSelectorProps) {
   const { t } = useTranslation('common');
   // Group fields: '' holds the fields without a group (or every field when not grouped)
@@ -60,7 +64,7 @@ export function CsvFieldSelector({
             <AccordionSummary expandIcon={<ExpandMoreIcon />}>
               <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, width: '100%' }}>
                 <Typography variant="subtitle2">
-                  {groupName || (groupBy === 'none' ? t('labels.all') : t('csv.otherGroup'))}
+                  {groupName ? csvGroupLabel(t, groupName) : (groupBy === 'none' ? t('labels.all') : t('csv.otherGroup'))}
                 </Typography>
                 <Typography variant="body2" color="text.secondary" sx={{ fontSize: '0.8125rem' }}>
                   {`${selectedCount}/${groupFields.length}`}
@@ -81,7 +85,7 @@ export function CsvFieldSelector({
                     }
                     label={
                       <Typography variant="body2">
-                        {field.label}
+                        {csvFieldLabel(t, entity, field)}
                         {field.required && (
                           <Typography component="span" color="error" sx={{ ml: 0.5 }}>
                             *

@@ -48,8 +48,9 @@ describe('CsvImportDialogV2', () => {
   });
 
   it('shows the server message when the template download fails', async () => {
-    const body = new Blob([JSON.stringify({ statusCode: 403, message: 'Insufficient permission' })], { type: 'application/json' });
-    get.mockRejectedValueOnce({ response: { status: 403, data: body } });
+    // A 403 without a code reads as the missing-right sentence (apiErrorMessage): a 400 keeps the server words.
+    const body = new Blob([JSON.stringify({ statusCode: 400, message: 'Insufficient permission' })], { type: 'application/json' });
+    get.mockRejectedValueOnce({ response: { status: 400, data: body } });
     renderDialog();
     fireEvent.click(screen.getByRole('button', { name: 'csv.downloadTemplate' }));
     expect(await screen.findByRole('alert')).toHaveTextContent('Insufficient permission');

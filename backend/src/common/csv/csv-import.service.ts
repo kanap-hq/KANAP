@@ -1249,8 +1249,9 @@ export class CsvImportService {
     // Load by upsert key
     if (upsertKeys.length > 0 && config.upsertKey.length > 0) {
       // Build query dynamically based on upsert key fields
+      const column = (key: string) => (config.upsertKeyIgnoresOuterSpaces ? `BTRIM(${key}::text)` : `${key}::text`);
       const conditions = config.upsertKey
-        .map((key, i) => `LOWER(${key}::text) = ANY($${i + 2})`)
+        .map((key, i) => `LOWER(${column(key)}) = ANY($${i + 2})`)
         .join(' AND ');
 
       const params: any[] = [context.tenantId];
@@ -1265,8 +1266,12 @@ export class CsvImportService {
       );
 
       for (const entity of byKey) {
+        // The stored value read as the query compared it (`BTRIM` removes the space character only).
         const keyStr = config.upsertKey
-          .map((k) => String(entity[k] ?? '').toLowerCase())
+          .map((k) => {
+            const value = String(entity[k] ?? '');
+            return (config.upsertKeyIgnoresOuterSpaces ? value.replace(/^ +| +$/g, '') : value).toLowerCase();
+          })
           .join('|');
         entities.set(`key:${keyStr}`, entity);
       }

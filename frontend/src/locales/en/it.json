@@ -88,7 +88,7 @@
         "lifecycle": "Lifecycle",
         "criticality": "Criticality",
         "publisher": "Publisher",
-        "derivedUsers": "Derived users (Y)",
+        "derivedUsers": "Derived users {{year}}",
         "created": "Created",
         "supplier": "Supplier",
         "businessOwners": "Business owners",
@@ -104,13 +104,12 @@
         "components": "Components",
         "dataClass": "Data class",
         "containsPii": "Contains PII",
-        "dataResidency": "Data residency"
+        "dataResidency": "Data residency",
+        "derivedUsersHelp": "Users counted for the companies and departments of the audience in {{year}} (or the nearest year with data), unless a user count is entered by hand."
       },
       "delete": {
         "warning_one": "Its deployments and its links to other records are deleted with it. This cannot be undone.",
         "warning_other": "Their deployments and their links to other records are deleted with them. This cannot be undone.",
-        "warningCounted_one": "Its {{deployments}} and its links to other records are deleted with it. This cannot be undone.",
-        "warningCounted_other": "Their {{deployments}} and their links to other records are deleted with them. This cannot be undone.",
         "warningLinks_one": "Its links to other records are deleted with it. This cannot be undone.",
         "warningLinks_other": "Their links to other records are deleted with them. This cannot be undone.",
         "toDelete_one": "{{count}} application will be deleted:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} application cannot be deleted and is kept:",
         "kept_other": "{{count}} applications cannot be deleted and are kept:",
         "deleted_one": "{{count}} application deleted",
-        "deleted_other": "{{count}} applications deleted"
+        "deleted_other": "{{count}} applications deleted",
+        "warningCounted_one": "Deleted with it: {{removed}} and its links to other records. This cannot be undone.",
+        "warningCounted_other": "Deleted with them: {{removed}} and their links to other records. This cannot be undone.",
+        "title_one": "Delete {{count}} application",
+        "title_other": "Delete {{count}} applications",
+        "keptDone_one": "{{count}} application kept",
+        "keptDone_other": "{{count}} applications kept",
+        "keptReason_one": "Kept: {{usages}} uses it.",
+        "keptReason_other": "Kept: {{usages}} use it."
+      },
+      "exportScope_one": "{{count}} application, following the filters of the list.",
+      "exportScope_other": "{{count}} applications, following the filters of the list.",
+      "exportScopeAll": "All applications ({{count}}), retired ones excluded.",
+      "importNote": "To clear a classification value, write __CLEAR__ in the cell.",
+      "copySuffix": "(copy)",
+      "copyFailed": "The application could not be copied.",
+      "copyLinksFailed": "The copy was created, but its links could not all be copied.",
+      "environments": {
+        "prod": {
+          "name": "Production",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Pre-production",
+          "short": "Pre"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Development",
+          "short": "Dev"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1636,7 +1676,12 @@
         "receivesFrom": "Receives from",
         "sendsTo": "Sends to",
         "moreInInterfaces_one": "+ {{count}} more in Interfaces",
-        "moreInInterfaces_other": "+ {{count}} more in Interfaces"
+        "moreInInterfaces_other": "+ {{count}} more in Interfaces",
+        "includedIn": "Included in",
+        "includedInPlaceholder": "Add a suite",
+        "previousVersion": "Previous version",
+        "nextVersion": "Next version",
+        "canHaveChildAppsHelp": "Check it for a suite: the applications it contains can then be linked to it."
       },
       "ownership": {
         "businessOwners": "Business owners",
@@ -1659,8 +1704,11 @@
         "addAudience": "+ Add audience",
         "removeAudienceRow": "Remove audience row",
         "usersValue": "Users: {{value}}",
+        "usersNoDepartmentHeadcount": "No headcount is recorded for these departments.",
         "businessProcesses": "Business processes",
-        "addBusinessProcess": "Add a business process…"
+        "addBusinessProcess": "Add a business process…",
+        "audienceWholeCompany": "Whole company. Choose departments to narrow the audience.",
+        "audienceDepartmentsOnly": "Only the selected departments. Clear them to include the whole company."
       },
       "technical": {
         "title": "Technical information",
@@ -1684,7 +1732,9 @@
         "unnamedContact": "Unnamed contact",
         "removeContact": "Remove {{name}}",
         "supportNotesPlaceholder": "Add support notes…",
-        "newSupportContact": "New support contact"
+        "newSupportContact": "New support contact",
+        "externalFacingHelp": "The application can be reached from the internet, by customers, partners or remote staff.",
+        "dataIntegrationEtlHelp": "The application moves data between other applications. It then appears as middleware on interfaces."
       },
       "interfaces": {
         "title": "Interfaces",
@@ -1746,6 +1796,7 @@
           "requests": "Requests",
           "tasks": "Tasks",
           "technologies": "Technologies",
+          "technologiesHelp": "The technologies the application uses, with their versions: declared here, or found on its servers.",
           "applications": "Applications",
           "assets": "Assets",
           "processes": "Business processes",
@@ -1860,11 +1911,11 @@
         "goLive": "Go live"
       },
       "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone.",
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with {{deployments}} and its links to other records. This cannot be undone.",
       "convert": {
         "action": "Convert to technology",
         "title": "Convert {{name}} to a technology",
-        "test": "Convert when another application can fail or become vulnerable because of it.",
+        "test": "Convert when another application can fail or become vulnerable because of this one.",
         "loading": "Checking what the conversion changes…",
         "family": "Family",
         "familyPlaceholder": "Choose a family",
@@ -1933,6 +1984,14 @@
           "managed_documents": "Managed documents, moved to the unfiled documents"
         },
         "hiddenMoves": "Other links you cannot see also move."
+      },
+      "referenceCopied": "Copied",
+      "undo": {
+        "undo": "Undo",
+        "contactRemoved": "Support contact removed.",
+        "processRemoved": "Business process unlinked.",
+        "ownerRemoved": "Owner removed.",
+        "suiteRemoved": "Suite link removed."
       }
     },
     "asset": {
@@ -3078,7 +3137,7 @@
       "copyInstances": "Deployments",
       "copyBindings": "Deployment bindings",
       "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
-      "suitesNotCopied": "Note: Suites and attachments are not copied.",
+      "suitesNotCopied": "Not copied: suites, attachments, dates, the last recovery test and the classification review.",
       "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
       "loadingInterfaces": "Loading interfaces…",
       "noInterfaces": "No interfaces found for this application.",
@@ -3098,7 +3157,8 @@
       "next": "Next",
       "createVersion": "Create version",
       "nameRequired": "Application name is required",
-      "defaultName": "{{name}} - new version"
+      "defaultName": "{{name}} - new version",
+      "alwaysCopied": "Always copied: the description, the business processes, the access methods, the external exposure, ETL and child application boxes, and the manual number of users."
     },
     "versionTimeline": {
       "title": "Version history"
@@ -3250,7 +3310,13 @@
     "saveSupportInfoFailed": "Failed to save support info",
     "saveClassificationFailed": "Classification could not be saved",
     "reviewFailed": "Review failed",
-    "deleteApplicationFailed": "Failed to delete application"
+    "deleteApplicationFailed": "Failed to delete application",
+    "saveResidencyFailed": "The data residency could not be saved.",
+    "saveOwnersFailed": "The owners could not be saved.",
+    "saveAudienceFailed": "The audience could not be saved.",
+    "copyReferenceFailed": "Copy failed: the browser refused it.",
+    "restoreFailed": "The link could not be restored.",
+    "versionCreated": "Version created: {{reference}}"
   },
   "validation": {
     "missingFormData": "Missing form data",
@@ -3341,6 +3407,7 @@
     "the_catalog_could_not_be_saved_reload_settings_and_try_again": "The catalog could not be saved. Reload settings and try again.",
     "incomplete_inheritance": "Incomplete inheritance",
     "data_residency": "Data residency",
+    "data_residency_help": "The countries where the application stores its data.",
     "business_help": "Impact of an interruption on the activity this application supports. Each level states the interruption the activity can tolerate; choose the level whose definition matches.",
     "cyber_help": "Choose the highest level justified by a plausible consequence: disclosure, alteration or destruction, interruption, propagation or takeover, physical consequences. Do not confuse cyber criticality with the level of risk!",
     "confidentiality_help": "Protection required against disclosure. It informs the cyber assessment without automatically calculating cyber criticality.",
@@ -3368,7 +3435,7 @@
     "never_reviewed": "Never reviewed",
     "changed_since_review": "Changed since review",
     "reviewed_on": "Reviewed on {{date}}",
-    "rto_exceeds_level_downtime": "The RTO reaches or exceeds the maximum tolerable downtime of the {{level}} level ({{duration}}).",
+    "rto_exceeds_level_downtime": "The RTO reaches or exceeds the maximum tolerable downtime (MTD) of the {{level}} level ({{duration}}).",
     "recovery_dependency": "Exchanges with {{app}}, planned in {{wave}}",
     "summary_reviewed_one": "{{count}} reviewed",
     "summary_reviewed_other": "{{count}} reviewed",
@@ -3382,7 +3449,25 @@
     "e_g_critical": "e.g., Critical",
     "e_g_high": "e.g., High",
     "e_g_confidential": "e.g., Confidential",
-    "e_g_foundation": "e.g., Foundation"
+    "e_g_foundation": "e.g., Foundation",
+    "contains_personal_data_help": "Check it when the application stores or processes data about identifiable people.",
+    "duration_positive_minutes": "Enter a number of minutes greater than 0.",
+    "duration_positive_hours": "Enter a number of hours greater than 0.",
+    "duration_positive_days": "Enter a number of days greater than 0.",
+    "duration_positive_weeks": "Enter a number of weeks greater than 0.",
+    "duration_zero_minutes": "Enter a number of minutes, 0 or more.",
+    "duration_zero_hours": "Enter a number of hours, 0 or more.",
+    "duration_zero_days": "Enter a number of days, 0 or more.",
+    "duration_zero_weeks": "Enter a number of weeks, 0 or more.",
+    "unit_minutes_one": "minute",
+    "unit_minutes_other": "minutes",
+    "unit_hours_one": "hour",
+    "unit_hours_other": "hours",
+    "unit_days_one": "day",
+    "unit_days_other": "days",
+    "unit_weeks_one": "week",
+    "unit_weeks_other": "weeks",
+    "duration_whole_minutes": "This duration does not make a whole number of minutes."
   },
   "catalogDefaults": {
     "applicationCategories": {

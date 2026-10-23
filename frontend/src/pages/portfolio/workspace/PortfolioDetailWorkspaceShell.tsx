@@ -12,6 +12,7 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
@@ -47,14 +48,20 @@ type PortfolioDetailWorkspaceShellProps = {
   metadata?: React.ReactNode;
   nav?: PortfolioDetailWorkspaceNav;
   onBack: () => void;
+  /** The person may read the record but not change it: a discreet "Read only" mention next to the title. */
+  readOnly?: boolean;
   onCopyReference?: () => void;
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
   onTitleSave?: (nextTitle: string) => void;
+  /** The longest title the record accepts (the input stops there). */
+  titleMaxLength?: number;
   /** Omitted (e.g. on a create page), the shell draws no Properties tab and no drawer. */
   properties?: React.ReactNode;
   tabs: PortfolioDetailWorkspaceTab[];
   title: string;
+  /** Shown under the title field when it is validated empty; the field then stays in edit. Absent: an empty title just reverts. */
+  titleRequiredMessage?: string;
   /** A refusal of the last title save (a name another record has), shown under the click-to-edit title. */
   titleError?: string | null;
   /** Replaces the click-to-edit title, for a title made of several fields (a contact's first and last name). */
@@ -74,6 +81,25 @@ function getStoredDrawerState(storageKey: string) {
   } catch {
     return true;
   }
+}
+
+/** What handles its own Escape or keeps the keyboard: fields, lists, menus, dialogs. */
+const WIDGET_SELECTOR = [
+  'input', 'textarea', 'select', '[contenteditable="true"]',
+  '[role="dialog"]', '[role="listbox"]', '[role="combobox"]', '[role="menu"]', '[role="option"]', '[role="menuitem"]',
+  '.MuiPopover-root', '.MuiPopper-root', '.MuiModal-root',
+].join(',');
+/** After a use of such a widget, a body focus is the widget closing, not a person pressing Escape on the page. */
+const WIDGET_SETTLE_MS = 1000;
+
+/** An open menu, list, popover or dialog (tooltips and kept-mounted hidden modals aside). */
+const OPEN_OVERLAY_SELECTOR = [
+  '.MuiPopover-root:not(.MuiModal-hidden)', '.MuiModal-root:not(.MuiModal-hidden)',
+  '.MuiPopper-root:not(.MuiTooltip-popper)', '[role="dialog"]', '[role="listbox"]', '[role="menu"]',
+].join(',');
+
+function isInsideWidget(target: EventTarget | null) {
+  return target instanceof Element && !!target.closest(WIDGET_SELECTOR);
 }
 
 function isTypingTarget(target: EventTarget | null) {
@@ -139,16 +165,22 @@ function NavChip({ nav }: { nav: PortfolioDetailWorkspaceNav }) {
 function EditableTitle({
   canEdit,
   fallback,
+  maxLength,
   onSave,
+  requiredMessage,
   value,
 }: {
   canEdit: boolean;
   fallback: string;
+  maxLength?: number;
   onSave?: (nextTitle: string) => void;
+  requiredMessage?: string;
   value: string;
 }) {
   const [editing, setEditing] = React.useState(false);
   const [draft, setDraft] = React.useState(value);
+  const [emptyError, setEmptyError] = React.useState(false);
+  const inputRef = React.useRef<HTMLInputElement | null>(null);
 
   React.useEffect(() => {
     if (!editing) setDraft(value);
@@ -159,11 +191,18 @@ function EditableTitle({
 
   const commit = React.useCallback(() => {
     const trimmed = draft.trim();
+    if (!trimmed && requiredMessage) {
+      // An empty title is refused out loud: the message shows and the field stays open.
+      setEmptyError(true);
+      requestAnimationFrame(() => inputRef.current?.focus());
+      return;
+    }
     if (trimmed && trimmed !== value) {
       onSave?.(trimmed);
     }
+    setEmptyError(false);
     setEditing(false);
-  }, [draft, onSave, value]);
+  }, [draft, onSave, requiredMessage, value]);
 
   if (!canEdit) {
     return (
@@ -202,10 +241,14 @@ function EditableTitle({
   }
 
   return (
+    <>
     <Box
       component="input"
+      ref={inputRef}
       value={draft}
-      onChange={(event: React.ChangeEvent<HTMLInputElement>) => setDraft(event.target.value)}
+      aria-invalid={emptyError || undefined}
+      {...(maxLength ? { maxLength } : {})}
+      onChange={(event: React.ChangeEvent<HTMLInputElement>) => { setDraft(event.target.value); setEmptyError(false); }}
       onBlur={commit}
       onKeyDown={(event: React.KeyboardEvent<HTMLInputElement>) => {
         if (event.key === 'Enter') {
@@ -214,6 +257,7 @@ function EditableTitle({
         }
         if (event.key === 'Escape') {
           setDraft(value);
+          setEmptyError(false);
           setEditing(false);
         }
       }}
@@ -230,6 +274,8 @@ function EditableTitle({
         width: '100%',
       })}
     />
+    {emptyError && requiredMessage && <FormHelperText error role="alert" sx={{ mt: 0.5 }}>{requiredMessage}</FormHelperText>}
+    </>
   );
 }
 
@@ -248,10 +294,13 @@ export default function PortfolioDetailWorkspaceShell({
   metadata,
   nav,
   onBack,
+  readOnly = false,
   onCopyReference,
   onSaveShortcut,
   onTabChange,
   onTitleSave,
+  titleMaxLength,
+  titleRequiredMessage,
   properties,
   tabs,
   title,
@@ -291,6 +340,23 @@ export default function PortfolioDetailWorkspaceShell({
     }
   }, [drawerOpen, drawerStorageKey, forceDrawerOpen]);
 
+  // The last time a field, list, menu or dialog was used (pointer, key or focus leaving it).
+  const lastWidgetUse = React.useRef(0);
+  // Whether a menu, list or dialog was open when Escape was pressed. Read in the capture phase,
+  // before the widget closes itself on that same press.
+  const overlayOpenAtEscape = React.useRef(false);
+  React.useEffect(() => {
+    const mark = (event: Event) => {
+      if (event instanceof KeyboardEvent && event.key === 'Escape') {
+        overlayOpenAtEscape.current = !!document.querySelector(OPEN_OVERLAY_SELECTOR);
+      }
+      if (isInsideWidget(event.target)) lastWidgetUse.current = Date.now();
+    };
+    const events = ['pointerdown', 'keydown', 'focusout'] as const;
+    events.forEach((name) => window.addEventListener(name, mark, true));
+    return () => events.forEach((name) => window.removeEventListener(name, mark, true));
+  }, []);
+
   React.useEffect(() => {
     const handler = (event: KeyboardEvent) => {
       if ((event.ctrlKey || event.metaKey) && event.key.toLowerCase() === 's') {
@@ -302,6 +368,15 @@ export default function PortfolioDetailWorkspaceShell({
       }
 
       if (isTypingTarget(event.target) || event.ctrlKey || event.metaKey || event.altKey) return;
+
+      // Escape belongs to the field, list, menu or dialog it comes from, to one still open, and to
+      // the one that has just closed (the focus is then on the page body): it leaves the page only
+      // on a plain press.
+      if (event.key === 'Escape') {
+        if (event.defaultPrevented || isInsideWidget(event.target) || overlayOpenAtEscape.current) return;
+        const active = document.activeElement;
+        if ((!active || active === document.body) && Date.now() - lastWidgetUse.current < WIDGET_SETTLE_MS) return;
+      }
 
       // In create mode only Escape (close) is meaningful — no prev/next, no drawer toggle.
       if (isCreate && event.key !== 'Escape') return;
@@ -358,6 +433,7 @@ export default function PortfolioDetailWorkspaceShell({
               component="button"
               type="button"
               onClick={onBack}
+              aria-label={backLabel}
               sx={(theme) => ({
                 display: 'inline-flex',
                 alignItems: 'center',
@@ -439,12 +515,23 @@ export default function PortfolioDetailWorkspaceShell({
                         value={title}
                         fallback={titleFallback}
                         canEdit={canEditTitle}
+                        maxLength={titleMaxLength}
                         onSave={onTitleSave}
+                        requiredMessage={titleRequiredMessage}
                       />
                       {titleError && <FormHelperText error sx={{ mt: 0.5 }}>{titleError}</FormHelperText>}
                     </>
                   )}
                 </Box>
+                {readOnly && (
+                  <Box
+                    component="span"
+                    sx={(theme) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexShrink: 0, fontSize: 12, color: theme.palette.kanap.text.tertiary })}
+                  >
+                    <LockOutlinedIcon sx={{ fontSize: 13 }} />
+                    {t('common:labels.readOnly')}
+                  </Box>
+                )}
               </Box>
 
               {metadata && (

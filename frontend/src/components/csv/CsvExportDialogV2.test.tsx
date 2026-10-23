@@ -36,4 +36,21 @@ describe('CsvExportDialogV2', () => {
       params: expect.objectContaining({ scope: 'data', language: 'fr' }),
     })));
   });
+
+  it('sends the filters of the list and says which rows the file holds', async () => {
+    render(
+      <CsvExportDialogV2
+        open
+        onClose={() => undefined}
+        endpoint="/applications"
+        params={{ q: 'erp', filters: '{"lifecycle":{"filterType":"set","values":["active"]}}', ownerUserId: 'u1' }}
+        scopeSummary="6 applications, following the filters of the list."
+      />,
+    );
+    expect(await screen.findByText('6 applications, following the filters of the list.')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: 'csv.exportData' }));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/applications/export', expect.objectContaining({
+      params: expect.objectContaining({ q: 'erp', ownerUserId: 'u1', scope: 'data', filters: expect.stringContaining('lifecycle') }),
+    })));
+  });
 });
