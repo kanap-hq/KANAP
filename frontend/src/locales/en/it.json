@@ -20,7 +20,7 @@
         "assets": "Assets",
         "applications": "Applications",
         "tasks": "Tasks",
-        "created": "Created",
+        "created": "Created on",
         "access": "Access"
       },
       "filters": {
@@ -89,7 +89,7 @@
         "criticality": "Criticality",
         "publisher": "Publisher",
         "derivedUsers": "Derived users {{year}}",
-        "created": "Created",
+        "created": "Created on",
         "supplier": "Supplier",
         "businessOwners": "Business owners",
         "itOwners": "IT owners",
@@ -184,7 +184,7 @@
         "goLive": "Go-live",
         "endOfLife": "End-of-life",
         "assignments": "Assignments",
-        "created": "Created"
+        "created": "Created on"
       },
       "filters": {
         "noCluster": "(No cluster)",
@@ -300,7 +300,7 @@
         "pii": "PII",
         "risk": "Risk",
         "lifecycle": "Lifecycle",
-        "created": "Created",
+        "created": "Created on",
         "linkedInterfaces": "Linked interfaces",
         "endpoints": "Endpoints"
       },
@@ -733,7 +733,7 @@
         "targetApp": "Target app",
         "lifecycle": "Lifecycle",
         "criticality": "Criticality",
-        "created": "Created",
+        "created": "Created on",
         "businessProcess": "Business process",
         "dataCategory": "Data category",
         "containsPii": "Contains PII",
@@ -754,7 +754,7 @@
         "country": "Country",
         "city": "City",
         "assets": "Assets",
-        "created": "Created",
+        "created": "Created on",
         "subLocations": "Sub-locations"
       }
     },
@@ -1619,8 +1619,8 @@
         "notifiedOn": "Notified on",
         "notifiedParties": "Parties informed",
         "notifiedPartiesPlaceholder": "e.g., regulator, insurer, affected customers",
-        "created": "Created",
-        "updated": "Updated",
+        "created": "Created on",
+        "updated": "Updated on",
         "notSet": "Not set"
       },
       "messages": {
@@ -2623,8 +2623,8 @@
         "removeHops": "Remove all hops to change topology",
         "derivedFromInterfaces": "Derived from interfaces",
         "linkToDerive": "Link an interface binding to enable derived risk",
-        "created": "Created",
-        "updated": "Updated"
+        "created": "Created on",
+        "updated": "Updated on"
       },
       "protocolsTable": {
         "protocol": "Protocol",
@@ -2719,8 +2719,8 @@
         "addMiddleware": "Add middleware",
         "reference": "Reference",
         "assignedOnCreate": "Assigned on create",
-        "created": "Created",
-        "updated": "Updated",
+        "created": "Created on",
+        "updated": "Updated on",
         "businessOwners": "Business owners",
         "itOwners": "IT owners",
         "impactedCompanies": "Impacted companies",

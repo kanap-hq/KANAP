@@ -953,7 +953,7 @@
       "assignee": "Asignado a",
       "requestor": "Solicitante",
       "dueDate": "Fecha de vencimiento",
-      "created": "Creada",
+      "created": "Creado el",
       "lastChanged": "Última modificación",
       "description": "Descripción",
       "source": "Origen",
@@ -999,7 +999,7 @@
       "company": "Empresa",
       "start": "Inicio",
       "end": "Fin",
-      "created": "Creado",
+      "created": "Creado el",
       "lastChanged": "Última modificación"
     },
     "actions": {
@@ -1026,7 +1026,7 @@
       "company": "Empresa",
       "requestor": "Solicitante",
       "targetDate": "Fecha objetivo",
-      "created": "Creada",
+      "created": "Creado el",
       "lastChanged": "Última modificación"
     },
     "actions": {

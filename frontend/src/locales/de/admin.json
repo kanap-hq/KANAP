@@ -60,7 +60,7 @@
     },
     "keys": {
       "columns": {
-        "created": "Erstellt",
+        "created": "Erstellt am",
         "expires": "Läuft ab",
         "label": "Bezeichnung",
         "lastUsed": "Zuletzt verwendet",
@@ -749,7 +749,7 @@
       "loadedByDefault": "Standardmäßig geladen",
       "name": "Name",
       "scope": "Geltungsbereich",
-      "updated": "Aktualisiert",
+      "updated": "Aktualisiert am",
       "version": "Version"
     },
     "dialog": {
@@ -1350,7 +1350,7 @@
       "businessPhone": "Geschäftstelefon",
       "mobilePhone": "Mobiltelefon",
       "mfaEnabled": "MFA aktiviert",
-      "created": "Erstellt",
+      "created": "Erstellt am",
       "status": "Status",
       "accountType": "Kontotyp",
       "roles": "Rollen",

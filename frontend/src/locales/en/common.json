@@ -809,7 +809,7 @@
     "statusColumn": "Status",
     "linkedVia": "Linked via",
     "sourceObject": "Source object",
-    "updatedColumn": "Updated",
+    "updatedColumn": "Updated on",
     "openColumn": "Open",
     "restrictedDocuments_one": "{{count}} standalone knowledge document is available for this item. You need the Knowledge Reader role to view them.",
     "restrictedDocuments_other": "{{count}} standalone knowledge documents are available for this item. You need the Knowledge Reader role to view them.",

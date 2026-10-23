@@ -953,7 +953,7 @@
       "assignee": "Zuständig",
       "requestor": "Antragsteller",
       "dueDate": "Fälligkeitsdatum",
-      "created": "Erstellt",
+      "created": "Erstellt am",
       "lastChanged": "Zuletzt geändert",
       "description": "Beschreibung",
       "source": "Quelle",
@@ -999,7 +999,7 @@
       "company": "Unternehmen",
       "start": "Start",
       "end": "Ende",
-      "created": "Erstellt",
+      "created": "Erstellt am",
       "lastChanged": "Zuletzt geändert"
     },
     "actions": {
@@ -1026,7 +1026,7 @@
       "company": "Unternehmen",
       "requestor": "Antragsteller",
       "targetDate": "Zieldatum",
-      "created": "Erstellt",
+      "created": "Erstellt am",
       "lastChanged": "Zuletzt geändert"
     },
     "actions": {

@@ -809,7 +809,7 @@
     "statusColumn": "Estado",
     "linkedVia": "Vinculado por",
     "sourceObject": "Objeto de origen",
-    "updatedColumn": "Actualizado",
+    "updatedColumn": "Actualizado el",
     "openColumn": "Abrir",
     "restrictedDocuments_one": "{{count}} documento independiente está disponible para este elemento. Necesita el rol de Lector para verlo.",
     "restrictedDocuments_other": "{{count}} documentos independientes están disponibles para este elemento. Necesita el rol de Lector para verlos.",

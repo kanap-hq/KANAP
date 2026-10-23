@@ -20,7 +20,7 @@
         "assets": "Activos",
         "applications": "Aplicaciones",
         "tasks": "Tareas",
-        "created": "Creado",
+        "created": "Creado el",
         "access": "Acceso"
       },
       "filters": {
@@ -89,7 +89,7 @@
         "criticality": "Criticidad",
         "publisher": "Editor",
         "derivedUsers": "Usuarios derivados {{year}}",
-        "created": "Creado",
+        "created": "Creado el",
         "supplier": "Proveedor",
         "businessOwners": "Responsables de negocio",
         "itOwners": "Responsables IT",
@@ -184,7 +184,7 @@
         "goLive": "Puesta en marcha",
         "endOfLife": "Fin de vida",
         "assignments": "Asignaciones",
-        "created": "Creado"
+        "created": "Creado el"
       },
       "filters": {
         "noCluster": "(Sin clúster)",
@@ -300,7 +300,7 @@
         "pii": "PII",
         "risk": "Riesgo",
         "lifecycle": "Ciclo de vida",
-        "created": "Creado",
+        "created": "Creado el",
         "linkedInterfaces": "Interfaces asociadas",
         "endpoints": "Puntos de conexión"
       },
@@ -733,7 +733,7 @@
         "targetApp": "Aplicación destino",
         "lifecycle": "Ciclo de vida",
         "criticality": "Criticidad",
-        "created": "Creado",
+        "created": "Creado el",
         "businessProcess": "Proceso de negocio",
         "dataCategory": "Categoría de datos",
         "containsPii": "Contiene PII",
@@ -754,7 +754,7 @@
         "country": "País",
         "city": "Ciudad",
         "assets": "Activos",
-        "created": "Creado",
+        "created": "Creado el",
         "subLocations": "Sub-ubicaciones"
       }
     },
@@ -1619,8 +1619,8 @@
         "notifiedOn": "Notificado el",
         "notifiedParties": "Partes informadas",
         "notifiedPartiesPlaceholder": "p. ej., regulador, aseguradora, clientes afectados",
-        "created": "Creado",
-        "updated": "Actualizado",
+        "created": "Creado el",
+        "updated": "Actualizado el",
         "notSet": "No definido"
       },
       "messages": {
@@ -2623,8 +2623,8 @@
         "removeHops": "Elimine todos los saltos para cambiar la topología",
         "derivedFromInterfaces": "Derivado de las interfaces",
         "linkToDerive": "Asocie un enlace de interfaz para activar el riesgo derivado",
-        "created": "Creada",
-        "updated": "Actualizada"
+        "created": "Creado el",
+        "updated": "Actualizado el"
       },
       "protocolsTable": {
         "protocol": "Protocolo",
@@ -2719,8 +2719,8 @@
         "addMiddleware": "Añadir middleware",
         "reference": "Referencia",
         "assignedOnCreate": "Se asigna al crear",
-        "created": "Creada",
-        "updated": "Actualizada",
+        "created": "Creado el",
+        "updated": "Actualizado el",
         "businessOwners": "Responsables de negocio",
         "itOwners": "Responsables de IT",
         "impactedCompanies": "Empresas afectadas",
