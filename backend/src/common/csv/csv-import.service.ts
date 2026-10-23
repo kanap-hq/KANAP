@@ -53,15 +53,21 @@ interface StoredColumn {
   empty?: () => unknown[] | Record<string, never>;
 }
 
+/** A property a blank cell emptied: the column of the cell and the empty value it was given. */
+interface EmptiedProperty {
+  csvColumn: string;
+  value: unknown;
+}
+
 /**
  * Full replace: the columns of the table, the properties a cell never empties (the identity
- * column and the matching key), and, per row, the properties emptied by a blank cell with the
- * column that emptied them (checked once the entity hooks ran).
+ * column and the matching key), and, per row, the properties emptied by a blank cell (checked
+ * once the entity hooks ran).
  */
 interface ReplaceRules {
   columns: Map<string, StoredColumn>;
   kept: Set<string>;
-  emptied: WeakMap<CsvImportRow, Map<string, string>>;
+  emptied: WeakMap<CsvImportRow, Map<string, EmptiedProperty>>;
 }
 
 /**
@@ -158,7 +164,7 @@ export class CsvImportService {
     const parsedRows = await this.validateAndParseRows(config, rows, importFields, context, replace);
 
     if (config.afterValidate) await config.afterValidate(parsedRows, context);
-    if (replace) this.checkEmptiedColumns(parsedRows, replace);
+    if (replace) this.checkEmptiedColumns(parsedRows, replace, params.operation);
 
     // Check for duplicate upsert keys within the file
     const duplicateErrors = this.checkDuplicateKeys(config, parsedRows);
@@ -871,21 +877,16 @@ export class CsvImportService {
   /**
    * Full replace, a blank cell of a column the file holds: the empty list or object of a NOT
    * NULL list column, null otherwise. The identity column and the matching key keep their value.
-   * A NOT NULL column without an empty value is checked once the hooks ran (checkEmptiedColumns).
+   * New rows and NOT NULL columns without an empty value are settled once the hooks ran
+   * (checkEmptiedColumns).
    */
   private emptyField(property: string, csvColumn: string, row: CsvImportRow, replace: ReplaceRules): void {
     if (replace.kept.has(property)) return;
-    const column = replace.columns.get(property);
-    if (column?.empty) {
-      row.parsed[property] = column.empty();
-      return;
-    }
-    row.parsed[property] = null;
-    if (column && !column.nullable) {
-      let emptied = replace.emptied.get(row);
-      if (!emptied) replace.emptied.set(row, (emptied = new Map()));
-      emptied.set(property, csvColumn);
-    }
+    const value = replace.columns.get(property)?.empty?.() ?? null;
+    row.parsed[property] = value;
+    let emptied = replace.emptied.get(row);
+    if (!emptied) replace.emptied.set(row, (emptied = new Map()));
+    emptied.set(property, { csvColumn, value });
   }
 
   /**
@@ -928,19 +929,23 @@ export class CsvImportService {
   }
 
   /**
-   * Full replace, once the hooks ran: a NOT NULL column a blank cell emptied, and no hook gave
-   * a value back. A new row takes the column's default; any other row reports the cell.
+   * Full replace, once the hooks ran, for the properties a blank cell emptied and no hook changed:
+   * a new row takes the column's default; a NOT NULL column with no empty value is a row error.
+   * Rows an insert-only import skips are not checked.
    */
-  private checkEmptiedColumns(rows: CsvImportRow[], replace: ReplaceRules): void {
+  private checkEmptiedColumns(rows: CsvImportRow[], replace: ReplaceRules, operation: CsvImportParams['operation']): void {
     for (const row of rows) {
       const emptied = replace.emptied.get(row);
       if (!emptied) continue;
-      for (const [property, csvColumn] of emptied) {
-        if (row.parsed[property] !== null) continue;
-        if (row.isInsert && replace.columns.get(property)?.hasDefault) {
+      if (operation === 'insert_only' && !row.isInsert) continue;
+      for (const [property, { csvColumn, value }] of emptied) {
+        if (row.parsed[property] !== value) continue;
+        const column = replace.columns.get(property);
+        if (row.isInsert && column?.hasDefault) {
           delete row.parsed[property];
           continue;
         }
+        if (value !== null || !column || column.nullable) continue;
         row.errors.push({
           row: row.rowNumber,
           column: csvColumn,

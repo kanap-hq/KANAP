@@ -282,7 +282,7 @@ async function testPortfolio() {
       [requestId, tenantId],
     );
     await runner.query(
-      `INSERT INTO portfolio_projects (id, tenant_id, item_number, name, status, execution_progress) VALUES ($1, $2, 1, 'Cloud move', 'in_progress', 40)`,
+      `INSERT INTO portfolio_projects (id, tenant_id, item_number, name, status, execution_progress) VALUES ($1, $2, 100, 'Cloud move', 'in_progress', 40)`,
       [projectId, tenantId],
     );
     // A full export reads back without error. These rows have no document binding (seeded in SQL),
@@ -293,8 +293,28 @@ async function testPortfolio() {
       assert.equal(preflight.ok, true);
     }
 
-    const result = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;status\nCloud move;', { dryRun: true });
+    let result = await run(runner, tenantId, portfolioProjectCsvConfig, 'name;status\nCloud move;', { dryRun: true });
     assert.deepEqual(result.errors.map((e) => [e.column, e.code]), [['status', 'CSV_VALUE_CANNOT_BE_EMPTIED']]);
+
+    // Insert only: the matched row is skipped, so its blank NOT NULL cell blocks nothing. A new row
+    // takes the defaults of its blank columns, nullable ones included.
+    result = await preflightThenLoad(
+      runner, tenantId, portfolioProjectCsvConfig,
+      'name;status;criteria_values;priority_override\nCloud move;;;\nNew portal;;;',
+      { operation: 'insert_only' },
+    );
+    assert.deepEqual([result.ok, result.inserted, result.skipped], [true, 1, 1], JSON.stringify(result.errors));
+    const [created] = await runner.query(
+      `SELECT status, criteria_values, priority_override FROM portfolio_projects WHERE tenant_id = $1 AND name = 'New portal'`,
+      [tenantId],
+    );
+    assert.deepEqual([created.criteria_values, created.priority_override], [{}, false]);
+    const [{ status_default: statusDefault }] = await runner.query(
+      `SELECT column_default AS status_default FROM information_schema.columns
+        WHERE table_schema = current_schema() AND table_name = 'portfolio_projects' AND column_name = 'status'`,
+    );
+    assert.equal(statusDefault, `'${created.status}'::text`, 'status takes its default');
+    assert.equal((await stored(runner, 'portfolio_projects', projectId)).status, 'in_progress');
   });
 }
 
