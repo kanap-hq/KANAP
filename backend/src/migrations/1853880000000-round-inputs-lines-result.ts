@@ -66,8 +66,9 @@ type Report = { updated: number; fteDiffers: number; skipped: number; byReason: 
  *   and `budget_changed_at` (a bump would show every line concerned as
  *   changed since its budget file export, by nobody, at deploy time). Run
  *   as a migration, without a tenant context, the trigger would bump nothing
- *   anyway: it is not SECURITY DEFINER, and FORCE row level security on the
- *   versions hides every version from its update. Disabling it guards the
+ *   anyway: it was not SECURITY DEFINER then (it is since 1854500000000,
+ *   data-scoped access; FORCE still binds its owner), and FORCE row level
+ *   security on the versions hides every version from its update. Disabling it guards the
  *   other cases: a run with a tenant context set, or a later change of the
  *   versions' row level security.
  *
