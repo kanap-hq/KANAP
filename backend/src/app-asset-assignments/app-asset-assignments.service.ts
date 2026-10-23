@@ -22,6 +22,7 @@ type AssignmentRow = {
   created_at: Date;
   updated_at: Date;
   asset_name: string;
+  asset_reference: string | null;
   asset_kind: string;
   asset_provider: string;
   asset_environment: string;
@@ -31,7 +32,7 @@ type AssignmentRow = {
   location_hosting_type: string | null;
 };
 
-const ASSIGNMENT_COLUMNS = `aaa.*, a.name AS asset_name, a.kind AS asset_kind, a.provider AS asset_provider,
+const ASSIGNMENT_COLUMNS = `aaa.*, a.name AS asset_name, a.asset_reference AS asset_reference, a.kind AS asset_kind, a.provider AS asset_provider,
               a.environment AS asset_environment, a.region AS asset_region, a.zone AS asset_zone, a.status AS asset_status,
               l.hosting_type AS location_hosting_type`;
 
@@ -191,6 +192,7 @@ export class AppAssetAssignmentsService {
       asset: {
         id: row.asset_id,
         name: row.asset_name,
+        asset_reference: row.asset_reference,
         kind: row.asset_kind,
         provider: row.asset_provider,
         environment: row.asset_environment,
@@ -202,6 +204,7 @@ export class AppAssetAssignmentsService {
       server: {
         id: row.asset_id,
         name: row.asset_name,
+        asset_reference: row.asset_reference,
         kind: row.asset_kind,
         provider: row.asset_provider,
         environment: row.asset_environment,
