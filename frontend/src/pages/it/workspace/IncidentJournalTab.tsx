@@ -10,7 +10,7 @@ import { fieldResetSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { formatRelativeTime } from '../../../utils/portfolioI18n';
 import IncidentDateTimeField from './IncidentDateTimeField';
-import { incidentInitials, incidentSeverityLabel, incidentStatusLabel } from './incidentWorkspace';
+import { incidentEntriesQueryKey, incidentInitials, incidentSeverityLabel, incidentStatusLabel } from './incidentWorkspace';
 
 type Props = {
   incidentId: string;
@@ -49,10 +49,6 @@ const SYSTEM_ENTRY_KEYS: Record<string, string> = {
   'Incident review imported from CSV': 'workspace.incident.journal.systemEntries.reviewImportedFromCsv',
   'Incident review imported': 'workspace.incident.journal.systemEntries.reviewImported',
 };
-
-export function incidentEntriesQueryKey(incidentId: string) {
-  return ['incident-entries', incidentId] as const;
-}
 
 export default function IncidentJournalTab({ incidentId, canAdd, onEntryAdded }: Props) {
   const { t } = useTranslation('it');

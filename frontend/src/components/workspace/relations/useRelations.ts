@@ -3,6 +3,7 @@ import { useQuery, useQueryClient, type QueryKey } from '@tanstack/react-query';
 import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { incidentEntriesQueryKey } from '../../../pages/it/workspace/incidentWorkspace';
 import type { AnyRow } from './types';
 
 export type UseRelationsOptions = {
@@ -53,6 +54,20 @@ export function useRelations<TData extends object>({
     onChange?.();
   }, [onChange, queryClient, queryKey]);
 
+  /**
+   * A link or unlink of an incident writes an entry in its journal: its detail (which carries the
+   * Journal badge, cached under its uuid or its reference), journal and Relations tab reload.
+   */
+  const refreshTarget = React.useCallback((kind: string, targetId: string) => {
+    if (kind !== 'incidents') return;
+    void queryClient.invalidateQueries({
+      queryKey: ['incident'],
+      predicate: (q) => (q.state.data as { id?: string } | undefined)?.id === targetId,
+    });
+    void queryClient.invalidateQueries({ queryKey: incidentEntriesQueryKey(targetId) });
+    void queryClient.invalidateQueries({ queryKey: ['incident-relations', targetId] });
+  }, [queryClient]);
+
   const failed = React.useCallback((e: unknown) => {
     setError(getApiErrorMessage(e, t, t('messages.saveRelationsFailed')));
   }, [t]);
@@ -69,11 +84,12 @@ export function useRelations<TData extends object>({
     }
     try {
       await api.post(`${path}/${kind}`, { id: targetId });
+      refreshTarget(kind, targetId);
     } catch (e) {
       failed(e);
     }
     await refresh();
-  }, [dropLinkedSuggestion, failed, path, queryClient, queryKey, refresh]);
+  }, [dropLinkedSuggestion, failed, path, queryClient, queryKey, refresh, refreshTarget]);
 
   const unlink = React.useCallback(async (kind: string, targetId: string) => {
     setError(null);
@@ -94,8 +110,9 @@ export function useRelations<TData extends object>({
       failed(e);
       return;
     }
+    refreshTarget(kind, targetId);
     await refresh();
-  }, [failed, groupOf, path, queryClient, queryKey, refresh]);
+  }, [failed, groupOf, path, queryClient, queryKey, refresh, refreshTarget]);
 
   return { data, error, setError, link, unlink, refresh };
 }
