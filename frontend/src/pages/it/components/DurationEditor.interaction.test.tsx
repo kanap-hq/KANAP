@@ -33,7 +33,7 @@ describe('DurationEditor interactions', () => {
     renderEditor({ value: 1440, onCommit });
 
     expect(screen.getByRole('spinbutton', { name: 'Recovery duration' })).toHaveValue(1);
-    expect(screen.getByRole('combobox', { name: 'Recovery duration unit' })).toHaveTextContent('days');
+    expect(screen.getByRole('combobox', { name: 'Recovery duration unit' })).toHaveTextContent('day');
 
     chooseUnit('hours');
 
@@ -70,8 +70,30 @@ describe('DurationEditor interactions', () => {
     fireEvent.change(input, { target: { value: '0.01' } });
     fireEvent.blur(input);
 
-    expect(screen.getByRole('alert')).toHaveTextContent('Enter a positive whole number of minutes.');
+    expect(screen.getByRole('alert')).toHaveTextContent('This duration does not make a whole number of minutes.');
     expect(onCommit).not.toHaveBeenCalled();
+  });
+
+  it('names the chosen unit in the message and accepts decimals that make whole minutes', () => {
+    const { onCommit } = renderEditor();
+    const input = screen.getByRole('spinbutton', { name: 'Recovery duration' });
+
+    fireEvent.change(input, { target: { value: '0' } });
+    fireEvent.blur(input);
+    expect(screen.getByRole('alert')).toHaveTextContent('Enter a number of hours greater than 0.');
+    expect(screen.getByRole('alert')).not.toHaveTextContent('whole');
+
+    fireEvent.change(input, { target: { value: '1.5' } });
+    fireEvent.blur(input);
+    expect(onCommit).toHaveBeenCalledWith(90);
+  });
+
+  it('writes the unit in the singular for the value 1', () => {
+    renderEditor({ value: 60 });
+    expect(screen.getByRole('combobox', { name: 'Recovery duration unit' })).toHaveTextContent('hour');
+    expect(screen.getByRole('combobox', { name: 'Recovery duration unit' })).not.toHaveTextContent('hours');
+    fireEvent.change(screen.getByRole('spinbutton', { name: 'Recovery duration' }), { target: { value: '2' } });
+    expect(screen.getByRole('combobox', { name: 'Recovery duration unit' })).toHaveTextContent('hours');
   });
 
   it('reports changed and invalid drafts as blocking until the stored value catches up', () => {

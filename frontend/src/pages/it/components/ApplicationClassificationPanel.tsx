@@ -71,6 +71,11 @@ const rowSx = { display: 'grid', gridTemplateColumns: '180px minmax(0, 1fr)', co
 const valueSx = { maxWidth: 520 } as const;
 const sectionTitleSx = (theme: any) => ({ fontSize: 16, fontWeight: 500, color: theme.palette.kanap.text.primary, mb: 1.25 });
 
+/** The help button of a field: a short sentence in a tooltip, as the criticality fields have. */
+export function HelpTip({ label, help }: { label: string; help: string }) {
+  return <Tooltip title={help} enterTouchDelay={0}><IconButton size="small" aria-label={label} sx={{ p: 0.25 }}><HelpOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>;
+}
+
 export function HelpLabel({ text, help }: { text: string; help: string }) {
   return <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>{classificationText(text)}<Tooltip title={classificationText(help)} enterTouchDelay={0}><IconButton size="small" aria-label={classificationText(text)} sx={{ p: 0.25 }}><HelpOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip></Box>;
 }
@@ -140,7 +145,7 @@ export default function ApplicationClassificationPanel({ app, canManage, onPatch
           <PropertyRow label={<HelpLabel text="Data confidentiality" help="Confidentiality help" />} sx={rowSx} valueSx={valueSx}>
             <LevelSelect value={app.data_class} ariaLabel={classificationText('Data confidentiality')} options={catalog?.dataClasses || []} placeholder={classificationText('Choose data confidentiality')} disabled={!canManage} onChange={(value) => patch({ data_class: value })} />
           </PropertyRow>
-          <PropertyRow label={classificationText('Contains personal data')} sx={rowSx} valueSx={valueSx}><input type="checkbox" checked={!!app.contains_pii} disabled={!canManage} onChange={(event) => patch({ contains_pii: event.target.checked })} /></PropertyRow>
+          <PropertyRow label={<Box component="label" htmlFor="application-contains-pii" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>{classificationText('Contains personal data')}<HelpTip label={classificationText('Contains personal data')} help={t('classification.contains_personal_data_help')} /></Box>} sx={rowSx} valueSx={valueSx}><input id="application-contains-pii" type="checkbox" aria-label={classificationText('Contains personal data')} checked={!!app.contains_pii} disabled={!canManage} onChange={(event) => patch({ contains_pii: event.target.checked })} /></PropertyRow>
           {children}
         </Stack>
       </Box>
