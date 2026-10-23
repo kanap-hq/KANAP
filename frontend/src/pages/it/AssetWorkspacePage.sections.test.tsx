@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation, useNavigate } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -106,6 +106,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return typeof asset === 'function' ? asset() : { data: asset };
     if (url === VULNERABILITIES_URL) return typeof reach === 'function' ? reach() : { data: reach };
+    if (url === '/assets/asset-2' || url === '/assets/by-ref/AST-2') return { data: { ...ASSET, id: 'asset-2', asset_reference: 'AST-2', is_cluster: false } };
     if (url === '/locations') return { data: { items: [] } };
     if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } };
     if (url.endsWith('/sub-items')) return { data: [] };
@@ -132,7 +133,13 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
 }
 
 function LocationProbe() {
-  return <div data-testid="location">{useLocation().pathname}</div>;
+  const navigate = useNavigate();
+  return (
+    <>
+      <div data-testid="location">{useLocation().pathname}</div>
+      <button type="button" data-testid="go-asset-2" onClick={() => navigate('/it/assets/asset-2/dependencies')}>go</button>
+    </>
+  );
 }
 
 const currentPath = () => screen.getByTestId('location').textContent;
@@ -322,6 +329,14 @@ describe('Asset workspace: section placement', () => {
       expect(membersReads()).toBe(0);
       resolvePatch({ data: { ...ASSET, is_cluster: true } });
       await waitFor(() => expect(membersReads()).toBe(1));
+    });
+
+    it('reads the clusters of the next asset, never its members, after a move from a cluster', async () => {
+      renderAt('/it/assets/asset-1/dependencies', REACH, { ...ASSET, is_cluster: true });
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/members'));
+      fireEvent.click(screen.getByTestId('go-asset-2'));
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/clusters'));
+      expect(get.mock.calls.filter(([url]) => url === '/assets/asset-2/members')).toHaveLength(0);
     });
 
     it('saves at once, and removes nothing, when a cluster becomes a server', async () => {

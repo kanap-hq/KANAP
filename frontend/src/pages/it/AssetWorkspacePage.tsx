@@ -468,9 +468,14 @@ export default function AssetWorkspacePage() {
     return other?.code || providers[0]?.code || '';
   }, [byField.serverProvider]);
 
+  // The cluster lists follow the loaded asset, once it is the one of the route: the local switch state
+  // still holds the previous asset's value for a render after a move to another asset.
+  const loadedAssetId = !isCreate && data?.id === id ? data.id : null;
+  const loadedIsCluster = !!data?.is_cluster;
   const loadClusterMembers = React.useCallback(async () => {
     if (clusterSwitchSaving) return;
-    if (isCreate || !id || !isCluster) {
+    if (!isCreate && !loadedAssetId) return;
+    if (isCreate || !id || !loadedIsCluster) {
       setClusterMembers([]);
       setClusterError(null);
       setClusterLoading(false);
@@ -487,11 +492,12 @@ export default function AssetWorkspacePage() {
     } finally {
       setClusterLoading(false);
     }
-  }, [clusterSwitchSaving, id, isCluster, isCreate]);
+  }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
   const loadClustersForServer = React.useCallback(async () => {
     if (clusterSwitchSaving) return;
-    if (isCreate || !id || isCluster) {
+    if (!isCreate && !loadedAssetId) return;
+    if (isCreate || !id || loadedIsCluster) {
       setClustersForServer([]);
       setClustersError(null);
       setClustersLoading(false);
@@ -508,7 +514,7 @@ export default function AssetWorkspacePage() {
     } finally {
       setClustersLoading(false);
     }
-  }, [clusterSwitchSaving, id, isCluster, isCreate]);
+  }, [clusterSwitchSaving, id, isCreate, loadedAssetId, loadedIsCluster]);
 
   React.useEffect(() => { void loadClusterMembers(); }, [loadClusterMembers]);
   React.useEffect(() => { void loadClustersForServer(); }, [loadClustersForServer]);
