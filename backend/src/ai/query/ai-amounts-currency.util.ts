@@ -21,6 +21,11 @@ function describeFxMissing(pairs: Array<{ currency: string; year: number; lines:
   return pairs.map((pair) => `${pair.currency} ${pair.year} (${pair.lines} ${pair.lines === 1 ? 'line' : 'lines'})`).join(', ');
 }
 
+/** `Alpine (XTS, 2026), Kyoto (XTS, 2026)`. */
+function describeTurnoverFxMissing(items: Array<{ companyId: string; companyName: string; currency: string; year: number }>): string {
+  return items.map((item) => `${item.companyName || item.companyId} (${item.currency}, ${item.year})`).join(', ');
+}
+
 /**
  * For the families whose results carry amounts (budget lines, contracts); null for the others.
  * `fxMissing`: the pairs a sum left out for lack of a rate (an aggregate's `amounts_fx_missing`),
@@ -52,4 +57,23 @@ export async function aiAmountsCurrency(
     };
   }
   return null;
+}
+
+/**
+ * Company turnover aggregates (sum, avg, min, max). Rows of query_entities keep each company's
+ * own value; only the aggregate is in the reporting currency. `fxMissing` names the companies
+ * a value left out (`turnover_fx_missing`).
+ */
+export async function aiCompanyTurnoverCurrency(
+  context: AiExecutionContextWithManager,
+  fxMissing?: Array<{ companyId: string; companyName: string; currency: string; year: number }>,
+): Promise<AiAmountsCurrency> {
+  const currency = await readReportingCurrency(context.manager, context.tenantId);
+  const leftOut = fxMissing?.length
+    ? ` These values leave out the companies without a ${currency} rate listed in turnover_fx_missing: ${describeTurnoverFxMissing(fxMissing)}. Tell the user that those companies are not included in the figures until a rate is entered.`
+    : '';
+  return {
+    amounts_currency: currency,
+    amounts_currency_note: `The turnover values are in millions of ${currency}. ${currency} is the reporting currency: each company's turnover is converted from its base currency at the year's rate.${leftOut}`,
+  };
 }

@@ -1,5 +1,14 @@
 import { AiEntityFilterRegistry } from '../ai-filter.types';
 
+/**
+ * Metric year of `aggregate_entities`. The tool takes no year, so the join uses
+ * the database's current date, the same year headcount and IT users aggregate.
+ */
+export const COMPANY_AGGREGATE_METRIC_YEAR_SQL = 'EXTRACT(YEAR FROM CURRENT_DATE)::int';
+
+const COMPANY_METRIC_JOIN =
+  `LEFT JOIN company_metrics m ON m.company_id = c.id AND m.tenant_id = c.tenant_id AND m.fiscal_year = ${COMPANY_AGGREGATE_METRIC_YEAR_SQL}`;
+
 export const companiesRegistry: AiEntityFilterRegistry = {
   entityType: 'companies',
   fields: {
@@ -85,7 +94,7 @@ export const companiesRegistry: AiEntityFilterRegistry = {
       ai: 'turnover_year',
       grid: 'turnover_year',
       type: 'number',
-      description: 'Company turnover for the selected metric year. Query year defaults to the current year.',
+      description: 'Company turnover for the selected metric year, in millions of the company\'s base currency (turnover_currency on each row). Query year defaults to the current year. aggregate_entities converts the values into the reporting currency named by amounts_currency, at the year\'s rate. A company whose currency has no rate is left out and named in turnover_fx_missing.',
       sortable: true,
       groupable: false,
       aggregable: true,
@@ -133,32 +142,24 @@ export const companiesRegistry: AiEntityFilterRegistry = {
       base_currency: { expression: 'c.base_currency' },
       metrics_frozen: {
         expression: `CASE WHEN COALESCE(m.is_frozen, false) THEN 'true' ELSE 'false' END`,
-        joins: [
-          `LEFT JOIN company_metrics m ON m.company_id = c.id AND m.tenant_id = c.tenant_id AND m.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::int`,
-        ],
+        joins: [COMPANY_METRIC_JOIN],
       },
     },
     metricFields: {
       headcount_year: {
         expression: 'm.headcount',
         type: 'number',
-        joins: [
-          `LEFT JOIN company_metrics m ON m.company_id = c.id AND m.tenant_id = c.tenant_id AND m.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::int`,
-        ],
+        joins: [COMPANY_METRIC_JOIN],
       },
       it_users_year: {
         expression: 'm.it_users',
         type: 'number',
-        joins: [
-          `LEFT JOIN company_metrics m ON m.company_id = c.id AND m.tenant_id = c.tenant_id AND m.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::int`,
-        ],
+        joins: [COMPANY_METRIC_JOIN],
       },
       turnover_year: {
         expression: 'm.turnover',
         type: 'number',
-        joins: [
-          `LEFT JOIN company_metrics m ON m.company_id = c.id AND m.tenant_id = c.tenant_id AND m.fiscal_year = EXTRACT(YEAR FROM CURRENT_DATE)::int`,
-        ],
+        joins: [COMPANY_METRIC_JOIN],
       },
     },
   },
