@@ -456,7 +456,8 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  *    data_access_placable_line() is refused with 42501.
  * 4. The trigger functions that maintain derived data become SECURITY DEFINER, search_path pinned.
  * 5. One sync under lock_timeout 5 s: without the role it does nothing, and nothing changes for
- *    anyone; with it, the policies apply only to the transactions that took the role.
+ *    anyone; with it, the policies apply only to the transactions that took the role. When the
+ *    session role inherits the limited role, the sync drops every policy on it and creates none.
  *
  * Idempotent (CREATE OR REPLACE, DROP ... IF EXISTS, catalog checks). down() restores the lot 1
  * functions, syncs (the policies go), drops the trigger and the functions, and reverts the
@@ -474,13 +475,19 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
 
     await queryRunner.query(`SET LOCAL lock_timeout = '5s'`);
     await queryRunner.query(`SELECT data_access_sync_policies()`);
-    const roleRows = await queryRunner.query(`SELECT to_regrole($1) IS NOT NULL AS present`, [LIMITED_ROLE]);
+    const [role] = await queryRunner.query(
+      `SELECT to_regrole($1) IS NOT NULL AS present,
+              (SELECT count(*)::int FROM pg_policy p WHERE to_regrole($1) = ANY (p.polroles)) AS policies`,
+      [LIMITED_ROLE],
+    );
     await queryRunner.query(`SET LOCAL lock_timeout = DEFAULT`);
 
+    // The sync creates no policy when the session role inherits the limited role (warning above).
+    const outcome = !role?.present ? 'absent, no policy created' : `present, ${role.policies} policies in place`;
     console.log(
       `${LOG_PREFIX} ${dataAccessPolicyRows().length} expected policies, placement trigger ready, `
       + `${DEFINER_FUNCTIONS.length} trigger functions SECURITY DEFINER (search_path pinned on ${pinned}); `
-      + `limited role ${roleRows?.[0]?.present ? 'present, policies created' : 'absent, no policy created'}`,
+      + `limited role ${outcome}`,
     );
   }
 
@@ -835,10 +842,17 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
       v_name text;
       v_expected int;
       v_created int := 0;
+      v_inherits boolean;
+      v_dropped int := 0;
     BEGIN
       IF v_role IS NULL THEN
         RETURN;
       END IF;
+      -- The session role inherits the limited role (a misconfigured membership, spec §10.6): every
+      -- policy on the limited role would then apply to the session role itself, without context,
+      -- and refuse everything to everyone (migrations included). The policies go and none is
+      -- created; data_access_apply() refuses a limited person (KDA01), unscoped persons are served.
+      v_inherits := current_user <> '${LIMITED_ROLE}' AND pg_has_role(current_user, v_role, 'USAGE');
 
       IF NOT has_schema_privilege(v_role, 'public', 'USAGE') THEN
         GRANT USAGE ON SCHEMA public TO ${LIMITED_ROLE};
@@ -857,7 +871,7 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
       -- The SECURITY DEFINER access functions the policies call (EXECUTE revoked from PUBLIC).
 ${ACCESS_DEFINER_SIGNATURES.map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
 
-      -- Every policy that targets the role and is not expected goes.
+      -- Every policy that targets the role and is not expected goes; every one under inheritance.
       FOR r IN
         SELECT p.polname, c.relname
         FROM pg_policy p
@@ -865,13 +879,19 @@ ${ACCESS_DEFINER_SIGNATURES.map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig}
         JOIN pg_namespace n ON n.oid = c.relnamespace
         WHERE n.nspname = 'public'
           AND v_role = ANY (p.polroles)
-          AND NOT EXISTS (
+          AND (v_inherits OR NOT EXISTS (
             SELECT 1 FROM data_access_expected_policies() e
             WHERE e.policy_name = p.polname AND e.table_name = c.relname
-          )
+          ))
       LOOP
         EXECUTE format('DROP POLICY %I ON public.%I', r.polname, r.relname);
+        v_dropped := v_dropped + 1;
       END LOOP;
+      IF v_inherits THEN
+        RAISE WARNING 'data access: role % inherits ${LIMITED_ROLE}; % data-access policies dropped, none created (limited persons are refused until the membership is fixed)',
+          current_user, v_dropped;
+        RETURN;
+      END IF;
 
       -- The definitions and data_access_expected_policies() are written from one list: a pair
       -- that drifted apart is refused (the whole sync rolls back) rather than leave a limited
