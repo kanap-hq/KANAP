@@ -373,6 +373,36 @@ async function testEmptyResidencyCell() {
   });
 }
 
+async function testImportRenameSyncsDocumentTitle() {
+  await inTenant(async (ctx) => {
+    const atlas = await seedApp(ctx, 'Atlas');
+    const nova = await seedApp(ctx, 'Nova');
+    const calls: Array<{ type: string; source: any }> = [];
+    const manager = ctx.runner.manager;
+    const audit = new AuditService(manager.getRepository(AuditLog));
+    const resolver = new CsvResolverService();
+    const csv = new ApplicationsCsvService(
+      manager.getRepository(Application), null as any, null as any,
+      new CsvExportService(resolver), new CsvImportService(resolver, new CsvJsonValidators()), resolver, audit,
+      new ApplicationsListService(manager.getRepository(Application)),
+      new ItOpsSettingsService(manager.getRepository(Tenant), manager.getRepository(Location), audit),
+      { syncTitles: async (type: string, source: any) => { calls.push({ type, source }); return 1; } } as any,
+    );
+    const run = (lines: string[], dryRun = false) => csv.import(
+      { buffer: Buffer.from(lines.join('\n') + '\n'), originalname: 'apps.csv' } as Express.Multer.File,
+      { dryRun, mode: 'enrich', operation: 'upsert' },
+      { manager, tenantId: ctx.tenantId },
+    );
+    let result = await run(['id;name', `${atlas};Atlas Prime`], true);
+    assert.equal(calls.length, 0, 'a dry run renames nothing');
+    result = await run(['id;name;description', `${atlas};Atlas Prime;`, `${nova};Nova;changed`, ';Vega;new']);
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(calls.map((call) => [call.type, call.source.id, call.source.name]), [['applications', atlas, 'Atlas Prime']], 'only the renamed application');
+    const [{ sequential_id }] = await ctx.runner.query(`SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`, [atlas, ctx.tenantId]);
+    assert.equal(calls[0].source.reference_label, String(sequential_id || '').trim() || atlas);
+  });
+}
+
 async function testCopyOfALongName() {
   await inTenant(async (ctx) => {
     for (const length of [196, APPLICATION_NAME_MAX]) {
@@ -417,6 +447,7 @@ runSpecs('application-rules.integration.spec', [
   ['new version copies', testNewVersionCopies],
   ['operation limits owners and residency', testOperationLimitsOwnersAndResidency],
   ['empty residency cell', testEmptyResidencyCell],
+  ['import rename syncs the document title', testImportRenameSyncsDocumentTitle],
   ['copy of a long name', testCopyOfALongName],
   ['suite cycles', testSuiteCycles],
 ]).catch((error) => {

@@ -4,13 +4,14 @@ import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
 import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
 import { lockApplicationNames } from './application-rules';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
 import { Application } from './application.entity';
 import { ApplicationOwner } from './application-owner.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { AuditService } from '../audit/audit.service';
+import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import {
   CsvExportService,
   CsvImportService,
@@ -48,6 +49,7 @@ export class ApplicationsCsvService {
     private readonly audit: AuditService,
     private readonly listService: ApplicationsListService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    @Optional() private readonly integratedDocuments?: IntegratedDocumentsService,
   ) {}
 
   /**
@@ -243,15 +245,45 @@ export class ApplicationsCsvService {
         for (const entity of entities) if (entity?.id) written.add(String(entity.id));
       },
     };
+    // The names before the load, to find the renamed applications afterwards.
+    const namesBefore = params.dryRun ? new Map<string, string>() : new Map<string, string>(
+      (await opts.manager.query(`SELECT id::text AS id, name FROM applications WHERE tenant_id = $1`, [opts.tenantId]))
+        .map((row: { id: string; name: string }) => [row.id, row.name] as const),
+    );
     const result = await this.importSvc.import(config, file, params, { ...opts, itOpsSettings });
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
       await this.handleOwnerImport(file, params.mode, written, opts);
       await this.handleDataResidencyImport(file, params.mode, written, opts);
+      await this.syncRenamedDocumentTitles(namesBefore, written, opts);
     }
 
     return result;
+  }
+
+  /**
+   * A renamed application: its description document's title follows (`APP-4 - New name - Overview`),
+   * as on a rename from the workspace.
+   */
+  private async syncRenamedDocumentTitles(namesBefore: Map<string, string>, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+    if (!this.integratedDocuments) return;
+    const renamed = [...written].filter((id) => namesBefore.has(id));
+    if (renamed.length === 0) return;
+    const rows: Array<{ id: string; tenant_id: string; name: string; sequential_id: string | null }> = await opts.manager.query(
+      `SELECT id::text AS id, tenant_id::text AS tenant_id, name, sequential_id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [opts.tenantId, renamed],
+    );
+    for (const row of rows) {
+      if (namesBefore.get(row.id) === row.name) continue;
+      await this.integratedDocuments.syncTitles('applications', {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        item_number: null,
+        name: row.name,
+        reference_label: String(row.sequential_id || '').trim() || row.id,
+      }, opts.userId ?? null, { manager: opts.manager });
+    }
   }
 
   /**
