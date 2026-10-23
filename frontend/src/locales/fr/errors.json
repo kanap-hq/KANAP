@@ -235,6 +235,9 @@
   "deployment_environment_taken": "Cette application a déjà un déploiement {{environment}}.",
   "deployment_lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Choisissez un cycle de vie de la liste.",
   "date_invalid": "{{field}} n’est pas une date valide.",
+  "deployment_environment_invalid": "Environnement inconnu : {{value}}. Choisissez un environnement de la liste.",
+  "body_required": "La requête est vide.",
+  "asset_required": "Choisissez un serveur.",
   "fields": {
     "rto_minutes": "L'objectif de temps de reprise (RTO)",
     "rpo_minutes": "L'objectif de point de reprise (RPO)",

@@ -12,8 +12,8 @@ import { Tenant } from '../../tenants/tenant.entity';
 
 // The Deployments tab of an application (recette C1b): the refusals of the deployments and of their
 // servers carry a code and params the interface translates, a "Since" date that is not a date is
-// refused instead of being dropped, the servers of every deployment come in one read, and a read
-// takes no lock on the tenant row. Each test runs under a throwaway tenant in a rolled-back transaction.
+// refused instead of being dropped, the servers of every deployment come in one read, a read takes
+// no lock on the tenant row, and a second tenant reads none of it. Each test runs under a throwaway tenant in a rolled-back transaction.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 const noAudit = { log: async () => undefined } as any;
@@ -87,12 +87,18 @@ async function testCodedRefusals() {
       409, 'deployment_environment_taken', { environment: 'prod' });
     await expectCoded(() => instances.create(app, { environment: 'qa', lifecycle: 'nope' }, null, { manager: m, tenantId: t }),
       400, 'deployment_lifecycle_invalid', { value: 'nope' });
+    await expectCoded(() => instances.create(app, { environment: 'moon' }, null, { manager: m, tenantId: t }),
+      400, 'deployment_environment_invalid', { value: 'moon' });
+    await expectCoded(() => instances.create(app, null, null, { manager: m, tenantId: t }), 400, 'body_required');
+    await expectCoded(() => instances.update(prod, null, null, { manager: m, tenantId: t }), 400, 'body_required');
     const qa = (await instances.create(app, { environment: 'qa' }, null, { manager: m, tenantId: t })).id;
     await expectCoded(() => instances.update(qa, { environment: 'prod' }, null, { manager: m, tenantId: t }),
       409, 'deployment_environment_taken', { environment: 'prod' });
 
     const server = await seedAsset(runner, t, 'srv-1');
     const cluster = await seedAsset(runner, t, 'cluster-1', true);
+    await expectCoded(() => assignments.create(prod, null, null, { manager: m, tenantId: t }), 400, 'body_required');
+    await expectCoded(() => assignments.create(prod, { role: 'app' }, null, { manager: m, tenantId: t }), 400, 'asset_required');
     await expectCoded(() => assignments.create(prod, { server_id: cluster, role: 'app' }, null, { manager: m, tenantId: t }),
       400, 'assignment_cluster');
     await expectCoded(() => assignments.create(prod, { server_id: server, role: 'nope' }, null, { manager: m, tenantId: t }),
@@ -106,6 +112,9 @@ async function testCodedRefusals() {
 
     const created = await assignments.create(prod, { server_id: server, role: 'app', since_date: '2026-01-15' }, null, { manager: m, tenantId: t });
     assert.equal(new Date(created.since_date as any).toISOString().slice(0, 10), '2026-01-15');
+    assert.equal(created.tenant_id, t, 'the assignment carries the request tenant');
+    assert.equal((await instances.list(app, { manager: m, tenantId: t }))[0].tenant_id, t, 'the deployment carries the request tenant');
+    await expectCoded(() => assignments.update(prod, created.id, { asset_id: '' }, null, { manager: m, tenantId: t }), 400, 'asset_required');
     await expectCoded(() => assignments.create(prod, { server_id: server, role: 'app' }, null, { manager: m, tenantId: t }),
       409, 'assignment_duplicate');
     await expectCoded(() => assignments.update(prod, created.id, { since_date: 'tomorrow' }, null, { manager: m, tenantId: t }),
@@ -147,12 +156,26 @@ async function testServersOfAllDeployments() {
     const single = await assignments.list(prod, { manager: m, tenantId: t });
     assert.equal(single.items.length, 2);
     assert.equal(calls.forWrite, 0, 'a read takes no lock on the tenant row');
+    const byApps = await assignments.listAssetsByApps([app], ['prod'], { manager: m, tenantId: t });
+    assert.deepEqual(byApps.items.map((row) => row.name), ['srv-a', 'srv-b'], 'the servers of the chosen deployments');
 
-    // Another tenant names nothing here, even with this tenant's ids.
+    // A real second tenant names nothing here, even with this tenant's ids, under its own context.
     const stranger = randomUUID();
+    await runner.query(
+      `INSERT INTO tenants (id, slug, name, status, metadata, branding, created_at, updated_at)
+       VALUES ($1, $2, 'Deployment servers (other)', 'active', '{}'::jsonb, '{"logo_version":0,"use_logo_in_dark":true}'::jsonb, now(), now())`,
+      [stranger, `dep-servers-other-${stranger.slice(0, 8)}`],
+    );
+    await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [stranger]);
+    const strangerApp = await one(runner, `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Stranger') RETURNING id`, [stranger]);
+    assert.equal((await instances.list(strangerApp, { manager: m, tenantId: stranger })).length, 0, 'the second tenant reads its own application');
     await assert.rejects(() => assignments.list(prod, { manager: m, tenantId: stranger }), /App instance not found/);
     await assert.rejects(() => assignments.listByApplication(app, { manager: m, tenantId: stranger }), /Application not found/);
     await assert.rejects(() => instances.delete(prod, null, { manager: m, tenantId: stranger }), /App instance not found/);
+    assert.deepEqual((await assignments.listAssetsByApps([app], ['prod'], { manager: m, tenantId: stranger })).items, [],
+      'the servers of another tenant\'s deployments are not listed');
+    // The tenant comes from the transaction when the caller names none.
+    assert.deepEqual((await assignments.listAssetsByApps([app], ['prod'], { manager: m })).items, []);
   });
 }
 

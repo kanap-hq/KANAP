@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AppAssetAssignment } from './app-asset-assignment.entity';
@@ -271,11 +271,11 @@ export class AppAssetAssignmentsService {
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
     const instance = await this.ensureInstance(instanceId, tenantId, mg);
     if (!payload || typeof payload !== 'object') {
-      throw new BadRequestException('Body is required');
+      throw applicationBadRequest('body_required', 'Body is required');
     }
     // Accept both asset_id and server_id for backwards compatibility
     const assetId = this.normalizeNullableId(payload.asset_id ?? payload.assetId ?? payload.server_id ?? payload.serverId);
-    if (!assetId) throw new BadRequestException('asset_id is required');
+    if (!assetId) throw applicationBadRequest('asset_required', 'asset_id is required');
     const asset = await this.ensureAsset(assetId, tenantId, mg);
     this.assertNotCluster(asset);
     const role = await this.normalizeRole(payload.role, instance.tenant_id, mg);
@@ -285,6 +285,7 @@ export class AppAssetAssignmentsService {
       throw this.duplicateRefusal();
     }
     const assignment = repo.create({
+      tenant_id: tenantId,
       app_instance_id: instanceId,
       asset_id: assetId,
       role,
@@ -319,7 +320,7 @@ export class AppAssetAssignmentsService {
     if (payload.asset_id !== undefined || payload.server_id !== undefined) {
       const assetId = this.normalizeNullableId(payload.asset_id ?? payload.server_id);
       if (!assetId) {
-        throw new BadRequestException('asset_id is required');
+        throw applicationBadRequest('asset_required', 'asset_id is required');
       }
       const asset = await this.ensureAsset(assetId, tenantId, mg);
       this.assertNotCluster(asset);
@@ -430,14 +431,15 @@ export class AppAssetAssignmentsService {
   async listAssetsByApps(
     applicationIds: string[],
     environments: string[],
-    opts?: { manager?: EntityManager; accessScope?: ParticipationAccessScope },
+    opts?: ServiceOpts & { accessScope?: ParticipationAccessScope },
   ) {
     if (!applicationIds || applicationIds.length === 0 || !environments || environments.length === 0) {
       return { items: [] };
     }
 
     const mg = opts?.manager ?? this.repo.manager;
-    const params: unknown[] = [applicationIds, environments];
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const params: unknown[] = [applicationIds, environments, tenantId];
     const accessScopeSql = opts?.accessScope
       ? (() => {
         params.push(opts.accessScope.userId);
@@ -462,10 +464,11 @@ export class AppAssetAssignmentsService {
         a.provider,
         a.is_cluster
       FROM assets a
-      INNER JOIN app_asset_assignments aaa ON aaa.asset_id = a.id
-      INNER JOIN app_instances ai ON ai.id = aaa.app_instance_id
+      INNER JOIN app_asset_assignments aaa ON aaa.asset_id = a.id AND aaa.tenant_id = a.tenant_id
+      INNER JOIN app_instances ai ON ai.id = aaa.app_instance_id AND ai.tenant_id = aaa.tenant_id
       INNER JOIN applications app_scope ON app_scope.id = ai.application_id AND app_scope.tenant_id = ai.tenant_id
-      WHERE ai.application_id = ANY($1)
+      WHERE a.tenant_id = $3
+        AND ai.application_id = ANY($1)
         AND ai.environment = ANY($2)
         AND a.status <> 'retired'
         ${accessScopeSql}
@@ -481,7 +484,7 @@ export class AppAssetAssignmentsService {
   async listServersByApps(
     applicationIds: string[],
     environments: string[],
-    opts?: { manager?: EntityManager },
+    opts?: ServiceOpts,
   ) {
     return this.listAssetsByApps(applicationIds, environments, opts);
   }

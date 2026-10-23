@@ -1,4 +1,4 @@
-import { BadRequestException, Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
+import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, Repository } from 'typeorm';
 import { AppInstance } from './app-instance.entity';
@@ -57,7 +57,7 @@ export class AppInstancesService {
   private normalizeEnvironment(value: unknown): EnvironmentValue {
     const normalized = String(value || '').trim().toLowerCase();
     if (!ENVIRONMENTS.includes(normalized as EnvironmentValue)) {
-      throw new BadRequestException(`Invalid environment "${value}"`);
+      throw applicationBadRequest('deployment_environment_invalid', `Invalid environment "${value}"`, { value: String(value ?? '') });
     }
     return normalized as EnvironmentValue;
   }
@@ -175,8 +175,8 @@ export class AppInstancesService {
     const repo = this.getRepo(mg);
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
     const app = await this.ensureApplication(applicationId, tenantId, mg);
-    if (!payload) {
-      throw new BadRequestException('Body is required');
+    if (!payload || typeof payload !== 'object') {
+      throw applicationBadRequest('body_required', 'Body is required');
     }
     const environment = this.normalizeEnvironment(payload.environment ?? payload.env ?? payload.environment_id);
     await this.assertEnvironmentAvailable(app.id, environment, tenantId, { manager: mg });
@@ -191,6 +191,7 @@ export class AppInstancesService {
     });
 
     const instance = repo.create({
+      tenant_id: tenantId,
       application_id: app.id,
       environment,
       lifecycle,
@@ -223,7 +224,7 @@ export class AppInstancesService {
   async update(instanceId: string, payload: any, userId: string | null, opts?: ServiceOpts) {
     const mg = opts?.manager ?? this.repo.manager;
     if (!payload || typeof payload !== 'object') {
-      throw new BadRequestException('Body is required');
+      throw applicationBadRequest('body_required', 'Body is required');
     }
     const repo = this.getRepo(mg);
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
