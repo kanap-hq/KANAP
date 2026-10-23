@@ -25,6 +25,7 @@ import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { getDotColor } from '../../utils/statusColors';
 import { SupplierNameTitle, SupplierNotes, SupplierTextRow } from './SupplierFields';
 import SupplierContactsTab, { useSupplierContacts } from './SupplierContactsTab';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import RecordUsagesSection, { scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH, type Supplier, type SupplierPatch, isDuplicateError } from './supplierModel';
 
@@ -73,6 +74,7 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const [searchParams] = useSearchParams();
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('suppliers', 'manager');
+  const canDelete = hasLevel('suppliers', 'admin');
   const withContext = useListContext();
 
   const nav = useSupplierNav({
@@ -84,9 +86,12 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   });
 
   const detailKey = React.useMemo(() => ['suppliers', id] as const, [id]);
+  // Set once the supplier is deleted: the page leaves without loading it again.
+  const [deleted, setDeleted] = React.useState(false);
   const { data, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Supplier>(`/suppliers/${id}`)).data,
+    enabled: !deleted,
   });
   const { data: contactLinks } = useSupplierContacts(id);
   const { data: usages } = useRecordUsages('suppliers', id);
@@ -310,6 +315,15 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
           <>
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
+            )}
+            {data && canDelete && (
+              <RecordDeleteButton
+                base="/suppliers"
+                id={data.id}
+                name={data.name}
+                deleteFailed="suppliers.messages.deleteFailed"
+                onDeleted={() => { setDeleted(true); navigate(withContext(SUPPLIERS_PATH)); }}
+              />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={close}>
               <CloseIcon />

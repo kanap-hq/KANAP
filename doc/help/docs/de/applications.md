@@ -556,7 +556,7 @@ Aus der Anwendungsliste:
 2. **Importeinstellungen wählen**:
    - **Modus**:
      - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Angegebene Felder werden aktualisiert; leere Klassifizierungszellen behalten den vorhandenen Wert, `__CLEAR__` löscht ihn ausdrücklich
+     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert, außer in den Klassifizierungsspalten (verwenden Sie dort `__CLEAR__`). Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Anwendungen erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Anwendungen ändern, neue überspringen
@@ -678,7 +678,7 @@ Das System normalisiert Werte automatisch beim Import, sodass `Line-of-business`
 
 Anwendungen werden nach **Name** abgeglichen, ohne Rücksicht auf Groß- und Kleinschreibung und auf Leerzeichen am Anfang und Ende. Wenn ein Treffer gefunden wird:
 - Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren die Anwendung
-- Mit `Ersetzen`-Modus: Angegebene Felder werden aktualisiert; leere Klassifizierungszellen behalten den vorhandenen Wert, `__CLEAR__` löscht ihn ausdrücklich
+- Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Eine leere Klassifizierungszelle behält ihren Wert, `__CLEAR__` löscht ihn. Name, `id`, Lebenszyklus und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Eine neue Anwendung erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück. Tragen zwei vorhandene Anwendungen den Namen einer Zeile, wird die Zeile abgelehnt: Fügen Sie die Spalte `id` hinzu, um eine auszuwählen.
 

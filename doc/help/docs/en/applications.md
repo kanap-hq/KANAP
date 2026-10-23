@@ -556,7 +556,7 @@ From the Applications list:
 2. **Choose import settings**:
    - **Mode**:
      - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Supplied fields are replaced; blank classification cells preserve their values and `__CLEAR__` explicitly clears them
+     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value, except in the classification columns (use `__CLEAR__` there). A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new applications or update existing ones
      - `Update only`: Only modify existing applications, skip new ones
@@ -678,7 +678,7 @@ The system automatically normalizes values during import, so `Line-of-business`,
 
 Applications are matched by **name**, ignoring upper and lower case and the spaces at the start and end. When a match is found:
 - With `Enrich` mode: Only non-empty CSV values update the application
-- With `Replace` mode: All supplied fields are updated; blank classification cells preserve existing classifications, and `__CLEAR__` explicitly clears them
+- With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. A blank classification cell keeps its value, and `__CLEAR__` clears it. The name, the `id`, the lifecycle and required fields cannot be cleared: **Preflight** reports an error on the row. A new application gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name. When two existing applications share the name of a row, the row is refused: add the `id` column to choose one.
 

@@ -547,7 +547,7 @@
     "overridePresetNote": "These settings override the workflow preset selection.",
     "emptyCellHandling": "Empty cell handling",
     "preserveExisting": "Preserve existing",
-    "setToNull": "Set to null",
+    "setToNull": "Clear the stored value",
     "operation": "Operation",
     "insertAndUpdate": "Insert & update",
     "updateOnly": "Update only",
@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Full replace",
-        "description": "Replace every value, empty cells included. An empty cell clears the stored value."
+        "description": "Replace the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: the check points them out."
       }
     },
     "exportRows": {

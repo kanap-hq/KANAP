@@ -44,10 +44,22 @@ function file(content: string): Express.Multer.File {
   return { buffer: Buffer.from(text, 'utf8'), originalname: 'export.csv', mimetype: 'text/csv', size: text.length } as Express.Multer.File;
 }
 
+/** The columns full replace reads: those of the stored rows, nullable, and the id. */
+function storedColumns(rows: any[] = []) {
+  const names = new Set<string>(['id', ...rows.flatMap((row) => Object.keys(row))]);
+  return [...names].map((name) => ({
+    column_name: name,
+    is_nullable: name === 'id' ? 'NO' : 'YES',
+    data_type: name === 'id' ? 'uuid' : 'text',
+    column_default: name === 'id' ? 'gen_random_uuid()' : null,
+  }));
+}
+
 /** Answers each query with the rows of the table it reads: the hooks filter by id themselves. */
 function manager(data: Record<string, any[]>) {
   return {
-    query: async (sql: string) => {
+    query: async (sql: string, params: any[] = []) => {
+      if (sql.includes('information_schema.columns')) return storedColumns(data[params[0]]);
       const table = sql.match(/FROM\s+(\w+)/i)?.[1] ?? '';
       return data[table] ?? [];
     },

@@ -418,6 +418,20 @@ export const incidentCsvConfig: CsvEntityConfig = {
   },
 
   /**
+   * Blank cells a full replace emptied, by the rules of beforeCommit: a blank boolean is false,
+   * a blank confidential flag keeps the stored one (a new row gets false there). Applied here
+   * too, so the preflight's check of emptied columns sees the same values as the load.
+   */
+  afterValidate: async (rows) => {
+    for (const row of rows) {
+      for (const column of ['personal_data_affected', 'authority_notification_required']) {
+        if (row.parsed[column] === null) row.parsed[column] = false;
+      }
+      if (row.parsed.confidential === null) delete row.parsed.confidential;
+    }
+  },
+
+  /**
    * The category is resolved to its code and the review compared with its document (a blank
    * review cell leaves it as it is); the other columns as stored.
    */

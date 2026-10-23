@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Heures sans fuseau lues en UTC : {{columns}}. Nommez le fuseau après la colonne, par exemple {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "Ce champ ne peut pas être vidé. Retirez la colonne du fichier pour garder la valeur enregistrée.",
   "CSV_NUMBER_INVALID": "« {{value}} » n'est pas un nombre.",
   "CSV_DATE_INVALID": "« {{value}} » n'est pas une date. Utilisez 2026-09-02 ou 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "« {{value}} » n'est pas valide. Utilisez oui ou non.",

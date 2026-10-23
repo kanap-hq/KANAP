@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Times without a time zone, read as UTC: {{columns}}. Name the zone after the column, for example {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "This field cannot be emptied. Leave the column out of the file to keep the stored value.",
   "CSV_NUMBER_INVALID": "\"{{value}}\" is not a number.",
   "CSV_DATE_INVALID": "\"{{value}}\" is not a date. Use 2026-09-02 or 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "\"{{value}}\" is not valid. Use yes or no.",

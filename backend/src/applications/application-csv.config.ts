@@ -670,12 +670,12 @@ export const applicationCsvConfig: CsvEntityConfig = {
     for (const row of rows) {
       // Persist this through the relation handler, never as an application column.
       delete row.parsed._data_residency_csv;
+      // Empty and absent classification cells preserve values in BOTH modes, rows in error included.
+      for (const field of CLASSIFICATION_INPUT_FIELDS) delete row.parsed[field];
       if (row.errors.length) continue;
       const input: Record<string, any> = {};
       for (const field of CLASSIFICATION_INPUT_FIELDS) {
         const raw = row.raw[field];
-        // Empty and absent classification cells preserve values in BOTH modes.
-        delete row.parsed[field];
         if (raw === undefined || raw === null || String(raw).trim() === '') continue;
         if (String(raw).trim() === '__CLEAR__') input[field] = null;
         else if (field.endsWith('_minutes')) input[field] = Number(raw);

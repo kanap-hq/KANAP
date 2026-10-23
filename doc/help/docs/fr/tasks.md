@@ -490,7 +490,7 @@ Trois modes d'export sont disponibles :
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
      - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les cellules vides effacent les valeurs existantes : remplacement complet de tous les champs
+     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée. Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles tâches ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les tâches existantes, ignorer les nouvelles
@@ -591,7 +591,7 @@ Le système normalise les valeurs automatiquement lors de l'import.
 
 Les tâches sont identifiées par **titre + related_object_id** (insensible à la casse). Lorsqu'une correspondance est trouvée :
   - En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour la tâche
-  - En mode `Remplacer` : Tous les champs sont mis à jour, les valeurs vides effacent les données existantes
+  - En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Le titre, l'`id`, le statut et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Une nouvelle tâche reçoit les valeurs par défaut.
 
 Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur titre + objet lié.
 
