@@ -236,7 +236,8 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "nameTaken": "Eine andere Abteilung dieses Unternehmens hat bereits diesen Namen.",
       "companyRequired": "Wählen Sie ein Unternehmen.",
-      "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr."
+      "headcountInvalid": "Geben Sie eine ganze Zahl ein, 0 oder mehr.",
+      "deleteFailed": "Die Abteilung konnte nicht gelöscht werden."
     },
     "delete": {
       "toDelete_one": "{{count}} Abteilung wird gelöscht:",
@@ -475,7 +476,8 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "nameTaken": "Ein anderer Lieferant hat bereits diesen Namen.",
       "saveFailed": "Der Lieferant konnte nicht gespeichert werden.",
-      "createFailed": "Der Lieferant konnte nicht erstellt werden."
+      "createFailed": "Der Lieferant konnte nicht erstellt werden.",
+      "deleteFailed": "Der Lieferant konnte nicht gelöscht werden."
     },
     "previous": "Vorheriger Lieferant",
     "next": "Nächster Lieferant",

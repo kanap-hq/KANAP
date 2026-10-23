@@ -236,7 +236,8 @@
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otro departamento de esta empresa ya tiene este nombre.",
       "companyRequired": "Elija una empresa.",
-      "headcountInvalid": "Introduzca un número entero, 0 o más."
+      "headcountInvalid": "Introduzca un número entero, 0 o más.",
+      "deleteFailed": "Error al eliminar el departamento."
     },
     "delete": {
       "toDelete_one": "Se eliminará {{count}} departamento:",
@@ -475,7 +476,8 @@
       "nameRequired": "Introduzca un nombre.",
       "nameTaken": "Otro proveedor ya tiene este nombre.",
       "saveFailed": "Error al guardar el proveedor.",
-      "createFailed": "Error al crear el proveedor."
+      "createFailed": "Error al crear el proveedor.",
+      "deleteFailed": "Error al eliminar el proveedor."
     },
     "previous": "Proveedor anterior",
     "next": "Proveedor siguiente",

@@ -6,9 +6,10 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../config/ThemeContext';
+import { KanapDialogProvider } from '../../components/design';
 
 const navigateMock = vi.hoisted(() => vi.fn());
-const auth = vi.hoisted(() => ({ canEdit: true }));
+const auth = vi.hoisted(() => ({ canEdit: true, canAdmin: true }));
 // A stable `t`: a new one on each render would loop the effects.
 const t = vi.hoisted(() => (key: string, options?: Record<string, unknown>) => (
   options?.role ? `${key}:${String(options.role)}` : key
@@ -23,7 +24,10 @@ vi.mock('react-router-dom', async (importOriginal) => ({
   useNavigate: () => navigateMock,
 }));
 vi.mock('../../auth/AuthContext', () => ({
-  useAuth: () => ({ hasLevel: () => auth.canEdit, profile: { id: 'user-1' } }),
+  useAuth: () => ({
+    hasLevel: (_resource: string, level: string) => (level === 'admin' ? auth.canAdmin : auth.canEdit),
+    profile: { id: 'user-1' },
+  }),
 }));
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn(), delete: vi.fn() } }));
 vi.mock('../../hooks/useSupplierNav', () => ({
@@ -93,13 +97,15 @@ function renderAt(path: string) {
   return render(
     <QueryClientProvider client={queryClient}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={[path]}>
-          <LocationProbe />
-          <Routes>
-            <Route path="/master-data/suppliers/:id" element={<SupplierWorkspacePage />} />
-            <Route path="/master-data/suppliers/:id/:tab" element={<SupplierWorkspacePage />} />
-          </Routes>
-        </MemoryRouter>
+        <KanapDialogProvider>
+          <MemoryRouter initialEntries={[path]}>
+            <LocationProbe />
+            <Routes>
+              <Route path="/master-data/suppliers/:id" element={<SupplierWorkspacePage />} />
+              <Route path="/master-data/suppliers/:id/:tab" element={<SupplierWorkspacePage />} />
+            </Routes>
+          </MemoryRouter>
+        </KanapDialogProvider>
       </ThemeProvider>
     </QueryClientProvider>,
   );
@@ -112,6 +118,7 @@ describe('SupplierWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canEdit = true;
+    auth.canAdmin = true;
     stored = { ...SUPPLIER };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/suppliers/s-1') return { data: stored };
@@ -344,6 +351,41 @@ describe('SupplierWorkspacePage', () => {
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3ADESC&q=ac&scope=all'));
   });
 
+  it('hides delete from someone who is not a suppliers admin', async () => {
+    auth.canAdmin = false;
+    renderAt('/master-data/suppliers/s-1/overview');
+    await screen.findByText('Acme Software');
+    expect(screen.queryByRole('button', { name: 'common:buttons.delete' })).toBeNull();
+  });
+
+  it('refuses to delete a supplier that is in use, and offers no confirmation', async () => {
+    mocked.post.mockResolvedValue({
+      data: { refused: [{ id: 's-1', name: 'Acme Software', code: 'SUPPLIER_IN_USE', usages: [{ type: 'contracts', total: 2 }] }] },
+    });
+    renderAt('/master-data/suppliers/s-1/overview');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(mocked.post).toHaveBeenCalledWith('/suppliers/delete-check', { ids: ['s-1'] });
+    expect(within(dialog).getByText('errors:SUPPLIER_IN_USE')).toBeInTheDocument();
+    expect(within(dialog).getAllByRole('button').map((button) => button.textContent).filter(Boolean)).toEqual(['buttons.close']);
+    fireEvent.click(within(dialog).getByRole('button', { name: 'buttons.close' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(mocked.delete).not.toHaveBeenCalled();
+  });
+
+  it('deletes a supplier nothing uses, then returns to the list', async () => {
+    mocked.post.mockResolvedValue({ data: { refused: [] } });
+    renderAt('/master-data/suppliers/s-1/overview?sort=name%3ADESC');
+    fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
+    const dialog = await screen.findByRole('dialog');
+    expect(within(dialog).getByText('common:delete.cannotUndo')).toBeInTheDocument();
+    const loadsBefore = mocked.get.mock.calls.filter(([url]) => url === '/suppliers/s-1').length;
+    fireEvent.click(within(dialog).getByRole('button', { name: 'common:buttons.delete' }));
+    await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/suppliers/s-1'));
+    expect(navigateMock).toHaveBeenCalledWith('/master-data/suppliers?sort=name%3ADESC');
+    expect(mocked.get.mock.calls.filter(([url]) => url === '/suppliers/s-1')).toHaveLength(loadsBefore);
+  });
+
   it('creates a supplier and opens it with the list parameters', async () => {
     mocked.post.mockResolvedValueOnce({ data: { ...SUPPLIER, id: 's-new' } });
     renderAt('/master-data/suppliers/new/overview?sort=name%3AASC');
@@ -416,6 +458,7 @@ describe('SupplierWorkspacePage: used by', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     auth.canEdit = true;
+    auth.canAdmin = true;
     stored = { ...SUPPLIER };
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/suppliers/s-1') return { data: stored };
