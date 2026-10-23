@@ -50,8 +50,10 @@ type CatalogState = {
  * table, view and foreign table of `public` the application role owns, USAGE and SELECT on every
  * sequence it owns: the relations of `data_access_grant_targets()`, the same list the sync grants
  * on (a relation of another owner is outside the rule "every KANAP table belongs to the application
- * role"). Policies: every expected policy exists, restrictive, on its command and targeting the
- * role (same test as `data_access_apply`).
+ * role"). EXECUTE on every function a policy of the role calls (its dependencies in `pg_depend`:
+ * the access functions, revoked from PUBLIC when SECURITY DEFINER); without it, every statement of
+ * a limited person on that table fails. Policies: every expected policy exists, restrictive, on
+ * its command and targeting the role (same test as `data_access_apply`).
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
   const [base] = await session.query(
@@ -85,6 +87,14 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
              AND has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'DELETE')
            )
          END
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM pg_policy p
+         JOIN pg_depend d
+           ON d.classid = 'pg_policy'::regclass AND d.objid = p.oid AND d.refclassid = 'pg_proc'::regclass
+         WHERE (SELECT oid FROM lim) = ANY (p.polroles)
+           AND NOT has_function_privilege((SELECT oid FROM lim), d.refobjid, 'EXECUTE')
        ) AS grants_missing,
        EXISTS (
          SELECT 1

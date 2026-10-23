@@ -428,8 +428,9 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  *    revoked from PUBLIC, granted to the application role and (by the sync) to the limited role.
  * 2. `data_access_expected_policies()` and `data_access_sync_policies()` replaced: the expected
  *    list and the policy bodies come from one list (dataAccessPolicyRows()); the sync grants as in
- *    lot 1, drops the stray policies, then drops and recreates each expected policy, and refuses a
- *    list that differs from data_access_expected_policies().
+ *    lot 1, drops the stray policies, then drops and recreates each expected policy, refuses a
+ *    list that differs from data_access_expected_policies(), and grants EXECUTE on every function
+ *    the policies call (data-access-availability.ts checks the same).
  * 3. The placement trigger of the lines (spec §6.4): BEFORE UPDATE OF paying_company_id,
  *    cost_center_id, SECURITY INVOKER; in mode limited, a new place outside
  *    data_access_placable_line() is refused with 42501.
@@ -852,6 +853,19 @@ ${ACCESS_DEFINER_SIGNATURES.map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig}
       IF v_created <> v_expected THEN
         RAISE EXCEPTION 'data access: % policies expected, % defined', v_expected, v_created;
       END IF;
+
+      -- EXECUTE on every function the policies of the role call (their dependencies), whatever
+      -- the list above: the availability check tests the same dependencies.
+      FOR r IN
+        SELECT DISTINCT d.refobjid::regprocedure AS fn
+        FROM pg_policy p
+        JOIN pg_depend d
+          ON d.classid = 'pg_policy'::regclass AND d.objid = p.oid AND d.refclassid = 'pg_proc'::regclass
+        WHERE v_role = ANY (p.polroles)
+          AND NOT has_function_privilege(v_role, d.refobjid, 'EXECUTE')
+      LOOP
+        EXECUTE format('GRANT EXECUTE ON FUNCTION %s TO ${LIMITED_ROLE}', r.fn);
+      END LOOP;
     END
     $fn$
   `);
