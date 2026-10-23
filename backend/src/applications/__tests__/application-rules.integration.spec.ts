@@ -261,6 +261,45 @@ async function testFrenchExportImportsBack() {
   });
 }
 
+async function testNewVersionCopies() {
+  await inTenant(async (ctx) => {
+    const [{ id: process }] = await ctx.runner.query(
+      `INSERT INTO business_processes (tenant_id, name) VALUES ($1, 'Order to cash') RETURNING id::text AS id`, [ctx.tenantId],
+    );
+    const source = await seedApp(ctx, 'Source', {
+      external_facing: true, etl_enabled: true, is_suite: true, users_mode: 'manual', users_override: 120,
+    });
+    await ctx.runner.query(`UPDATE applications SET access_methods = ARRAY['web','api'] WHERE id = $1 AND tenant_id = $2`, [source, ctx.tenantId]);
+    await ctx.runner.query(`INSERT INTO application_business_processes (tenant_id, application_id, business_process_id) VALUES ($1, $2, $3)`, [ctx.tenantId, source, process]);
+    const version = await ctx.lifecycle.createVersion(source, { name: 'Source 2' } as any, null, opts(ctx));
+    const [copy] = await ctx.runner.query(
+      `SELECT external_facing, etl_enabled, is_suite, access_methods, users_mode, users_override, predecessor_id::text AS predecessor_id
+       FROM applications WHERE id = $1 AND tenant_id = $2`, [version.id, ctx.tenantId],
+    );
+    assert.deepEqual(copy, {
+      external_facing: true, etl_enabled: true, is_suite: true, access_methods: ['web', 'api'], users_mode: 'manual', users_override: 120, predecessor_id: source,
+    });
+    const processes = await ctx.runner.query(
+      `SELECT business_process_id::text AS id FROM application_business_processes WHERE application_id = $1 AND tenant_id = $2`, [version.id, ctx.tenantId],
+    );
+    assert.deepEqual(processes, [{ id: process }], 'the business processes are copied');
+
+    // The description goes through the integrated documents service, with the new application as target.
+    const calls: Array<{ from: string; target: any }> = [];
+    const withDocuments = new ApplicationsLifecycleService(
+      ctx.runner.manager.getRepository(Application), new AuditService(ctx.runner.manager.getRepository(AuditLog)), null as any,
+      new ItOpsSettingsService(ctx.runner.manager.getRepository(Tenant), ctx.runner.manager.getRepository(Location), new AuditService(ctx.runner.manager.getRepository(AuditLog))),
+      { copyApplicationOverview: async (from: string, target: any) => { calls.push({ from, target }); return true; } } as any,
+    );
+    const second = await withDocuments.createVersion(source, { name: 'Source 3' } as any, null, opts(ctx));
+    assert.equal(calls.length, 1);
+    assert.equal(calls[0].from, source);
+    assert.equal(calls[0].target.id, second.id);
+    assert.equal(calls[0].target.tenant_id, ctx.tenantId);
+    assert.match(String(calls[0].target.reference_label), /^APP-\d+$/);
+  });
+}
+
 runSpecs('application-rules.integration.spec', [
   ['owners kept by empty cells', testOwnersKeptByEmptyCells],
   ['unknown catalog values', testUnknownCatalogValues],
@@ -268,6 +307,7 @@ runSpecs('application-rules.integration.spec', [
   ['dates', testDates],
   ['suite with children', testSuiteWithChildren],
   ['french export imports back', testFrenchExportImportsBack],
+  ['new version copies', testNewVersionCopies],
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

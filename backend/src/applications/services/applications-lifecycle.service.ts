@@ -1,6 +1,6 @@
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { copyClassification } from './application-classification';
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, Optional } from '@nestjs/common';
 import { assertApplicationDates, assertApplicationNameFree, lockApplicationNames, normalizeApplicationName } from '../application-rules';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
@@ -28,6 +28,7 @@ import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { InterfaceMappingsService } from '../../interfaces/services';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
+import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 
 /**
  * Service for managing application lifecycle transitions and version management.
@@ -39,6 +40,7 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     private readonly audit: AuditService,
     private readonly interfaceMappings: InterfaceMappingsService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    @Optional() private readonly integratedDocuments?: IntegratedDocumentsService,
   ) {
     super(appRepo);
   }
@@ -106,9 +108,10 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
       licensing: source.licensing,
       notes: source.notes,
       support_notes: source.support_notes,
+      access_methods: source.access_methods,
       users_mode: source.users_mode,
       users_year: nowYear,
-      users_override: null,
+      users_override: source.users_override,
       version: body.version ?? null,
       go_live_date: body.go_live_date ? new Date(body.go_live_date) : null,
       end_of_support_date: body.end_of_support_date ? new Date(body.end_of_support_date) : null,
@@ -133,7 +136,11 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
       copyBindings: body.copyBindings === true,
     };
 
+    // What a version always carries: the description (the source's integrated document, its
+    // images included) and the business processes. The owners come first: they own the new document.
     if (copyOpts.copyOwners) await this.copyOwnersInternal(sourceId, saved.id, mg);
+    await this.copyBusinessProcessesInternal(sourceId, saved.id, source.tenant_id, mg);
+    await this.copyOverviewInternal(sourceId, saved, userId, mg);
     if (copyOpts.copyCompanies) await this.copyCompaniesInternal(sourceId, saved.id, mg);
     if (copyOpts.copyDepartments) await this.copyDepartmentsInternal(sourceId, saved.id, mg);
     if (copyOpts.copyDataResidency) await this.copyDataResidencyInternal(sourceId, saved.id, mg);
@@ -303,6 +310,32 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     if (items.length) {
       await mg.getRepository(ApplicationOwner).save(items.map(o => ({ ...o, id: undefined, application_id: targetId })));
     }
+  }
+
+  private async copyBusinessProcessesInternal(sourceId: string, targetId: string, tenantId: string, mg: EntityManager) {
+    await mg.query(
+      `INSERT INTO application_business_processes (tenant_id, application_id, business_process_id)
+       SELECT tenant_id, $3, business_process_id
+       FROM application_business_processes
+       WHERE tenant_id = $1 AND application_id = $2
+       ON CONFLICT DO NOTHING`,
+      [tenantId, sourceId, targetId],
+    );
+  }
+
+  /** The source's integrated description, copied into the new application's own document (none, nothing to copy). */
+  private async copyOverviewInternal(sourceId: string, target: Application, userId: string | null, mg: EntityManager) {
+    if (!this.integratedDocuments) return;
+    const [{ sequential_id }] = await mg.query(
+      `SELECT sequential_id FROM applications WHERE id = $1 AND tenant_id = $2`,
+      [target.id, target.tenant_id],
+    );
+    await this.integratedDocuments.copyApplicationOverview(
+      sourceId,
+      { id: target.id, tenant_id: target.tenant_id, item_number: null, name: target.name, reference_label: String(sequential_id || '').trim() || target.id },
+      userId,
+      { manager: mg },
+    );
   }
 
   private async copyCompaniesInternal(sourceId: string, targetId: string, mg: EntityManager) {

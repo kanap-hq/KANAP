@@ -172,11 +172,36 @@ async function testMemberWritesTheDescriptionOfItsRecord() {
   });
 }
 
+// A new version of an application starts with the description of its source.
+async function testNewVersionCopiesTheDescription() {
+  await inFixture(async (runner, { member }) => {
+    const { integrated } = createServices(runner.manager, []);
+    const manager = runner.manager;
+    const seedApp = async (name: string) => {
+      const [{ id, tenant_id }] = await runner.query(`INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), $1) RETURNING id::text AS id, tenant_id::text AS tenant_id`, [name]);
+      return { id: id as string, tenant_id: tenant_id as string };
+    };
+    const source = await seedApp('Source');
+    const target = await seedApp('Target');
+    const descriptor = (app: { id: string; tenant_id: string }, name: string) => ({ ...app, item_number: null, name, reference_label: 'APP-1' });
+    assert.equal(await integrated.copyApplicationOverview(source.id, descriptor(target, 'Target'), member, { manager }), false, 'no source description, nothing copied');
+    await integrated.writeSourceSlotContent('applications', descriptor(source, 'Source'), 'overview', 'The **source** text.', member, { manager });
+    assert.equal(await integrated.copyApplicationOverview(source.id, descriptor(target, 'Target'), member, { manager }), true);
+    const copied: any = await integrated.getBySource('applications', target.id, 'overview', member, { manager });
+    assert.equal(copied.content_markdown, 'The **source** text.');
+    const original: any = await integrated.getBySource('applications', source.id, 'overview', member, { manager });
+    assert.notEqual(copied.id, original.id, 'the new application has its own document');
+    assert.match(String(copied.title), /^APP-1 - Target - /);
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   try {
     await testMemberWritesTheDescriptionOfItsRecord();
     console.log('  ok testMemberWritesTheDescriptionOfItsRecord');
+    await testNewVersionCopiesTheDescription();
+    console.log('  ok testNewVersionCopiesTheDescription');
   } finally {
     await dataSource.destroy();
     await closeMarkdownWorkers();
