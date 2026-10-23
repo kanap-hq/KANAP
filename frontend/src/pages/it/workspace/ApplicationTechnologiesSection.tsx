@@ -193,7 +193,7 @@ export default function ApplicationTechnologiesSection({
   const columns: Array<RelationsColumn<TechnologyRow>> = [
     { key: 'ref', header: t('workspace.application.relations.columns.ref'), width: 72, render: (row) => <RelationRef>{row.reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row) => <span title={row.name ?? undefined}>{row.name ?? dash}</span> },
-    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, hideOrder: 3, render: (row) => familyLabel(row.family) },
+    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 150, hideOrder: 3, render: (row) => familyLabel(row.family) },
     {
       key: 'version', header: t('workspace.application.relations.columns.version'), width: 72,
       render: (row) => {

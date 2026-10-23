@@ -33,7 +33,7 @@ async function openConfirm() {
   fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
   const dialog = await screen.findByRole('dialog');
   expect(within(dialog).getByText('Delete Billing hub?')).toBeInTheDocument();
-  expect(within(dialog).getByText(/permanently deletes Billing hub, with its 2 deployments and its links/)).toBeInTheDocument();
+  expect(within(dialog).getByText(/permanently deletes Billing hub, with 2 deployments and its links/)).toBeInTheDocument();
   return dialog;
 }
 
@@ -65,7 +65,7 @@ describe('ApplicationDeleteButton', () => {
     renderButton();
     fireEvent.click(screen.getByRole('button', { name: 'Delete' }));
     const dialog = await screen.findByRole('dialog');
-    expect(within(dialog).getByText(/permanently deletes Billing hub, with its 2 deployments and 1 document and its links/)).toBeInTheDocument();
+    expect(within(dialog).getByText(/permanently deletes Billing hub, with 2 deployments and 1 document and its links/)).toBeInTheDocument();
   });
 
   it('confirms without counts when the check fails, the delete still refusing what it must', async () => {

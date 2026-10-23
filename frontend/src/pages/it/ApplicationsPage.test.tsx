@@ -102,11 +102,30 @@ describe('ApplicationsPage', () => {
         <Cell value="Exchange Online" data={{ id: 'a-1', name: 'Exchange Online', suites_count: 1, first_suite_name: 'Microsoft 365' }} />
       </MemoryRouter>,
     );
-    const chip = screen.getByText(/pages\.applications\.includedIn/);
+    // One quiet line under the name (category, suite), cut with its full text on hover.
+    const chip = screen.getByText(/pages\.applications\.includedIn/).parentElement!;
     expect(chip).toHaveAttribute('title', 'pages.applications.includedIn Microsoft 365');
     const style = window.getComputedStyle(chip);
     expect(style.whiteSpace).toBe('nowrap');
     expect(style.textOverflow).toBe('ellipsis');
+  });
+
+  it('shows one dash for an empty value, and explains the derived users column', () => {
+    renderPage();
+    const columns = lastProps().columns as Array<{ field?: string; headerName?: string; headerTooltip?: string; cellRenderer?: React.ComponentType<any>; valueFormatter?: (p: any) => string }>;
+    const derived = columns.find((column) => column.field === 'derived_total_users')!;
+    expect(derived.headerName).toBe('pages.applications.columns.derivedUsers');
+    expect(derived.headerTooltip).toBe('pages.applications.columns.derivedUsersHelp');
+    for (const field of ['cyber_criticality', 'recovery_wave', 'classification_reviewed_at']) {
+      expect(columns.find((column) => column.field === field)!.valueFormatter!({ value: null }), field).toBe('');
+    }
+    const Cell = columns.find((column) => column.field === 'cyber_criticality')!.cellRenderer!;
+    render(
+      <MemoryRouter>
+        <Cell value={null} valueFormatted="" data={{ id: 'a-1', name: 'Payroll' }} colDef={{}} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('—')).toBeInTheDocument();
   });
 
   it('centres "No active environments" in the row like the environment pills', () => {

@@ -88,7 +88,7 @@
         "lifecycle": "Lifecycle",
         "criticality": "Criticality",
         "publisher": "Publisher",
-        "derivedUsers": "Derived users (Y)",
+        "derivedUsers": "Derived users {{year}}",
         "created": "Created",
         "supplier": "Supplier",
         "businessOwners": "Business owners",
@@ -104,13 +104,12 @@
         "components": "Components",
         "dataClass": "Data class",
         "containsPii": "Contains PII",
-        "dataResidency": "Data residency"
+        "dataResidency": "Data residency",
+        "derivedUsersHelp": "Users counted for the companies and departments of the audience in {{year}} (or the nearest year with data), unless a user count is entered by hand."
       },
       "delete": {
         "warning_one": "Its deployments and its links to other records are deleted with it. This cannot be undone.",
         "warning_other": "Their deployments and their links to other records are deleted with them. This cannot be undone.",
-        "warningCounted_one": "Its {{deployments}} and its links to other records are deleted with it. This cannot be undone.",
-        "warningCounted_other": "Their {{deployments}} and their links to other records are deleted with them. This cannot be undone.",
         "warningLinks_one": "Its links to other records are deleted with it. This cannot be undone.",
         "warningLinks_other": "Their links to other records are deleted with them. This cannot be undone.",
         "toDelete_one": "{{count}} application will be deleted:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} application cannot be deleted and is kept:",
         "kept_other": "{{count}} applications cannot be deleted and are kept:",
         "deleted_one": "{{count}} application deleted",
-        "deleted_other": "{{count}} applications deleted"
+        "deleted_other": "{{count}} applications deleted",
+        "warningCounted_one": "Deleted with it: {{removed}} and its links to other records. This cannot be undone.",
+        "warningCounted_other": "Deleted with them: {{removed}} and their links to other records. This cannot be undone.",
+        "title_one": "Delete {{count}} application",
+        "title_other": "Delete {{count}} applications",
+        "keptDone_one": "{{count}} application kept",
+        "keptDone_other": "{{count}} applications kept",
+        "keptReason_one": "{{name}} is kept: {{usages}} uses it.",
+        "keptReason_other": "{{name}} is kept: {{usages}} use it."
+      },
+      "exportScope_one": "{{count}} application, following the filters of the list.",
+      "exportScope_other": "{{count}} applications, following the filters of the list.",
+      "exportScopeAll": "All applications ({{count}}), retired ones excluded.",
+      "importNote": "To clear a classification value, write __CLEAR__ in the cell.",
+      "copySuffix": "(copy)",
+      "copyFailed": "The application could not be copied.",
+      "copyLinksFailed": "The copy was created, but its links could not all be copied.",
+      "environments": {
+        "prod": {
+          "name": "Production",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Pre-production",
+          "short": "Pre"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Development",
+          "short": "Dev"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1855,7 +1895,7 @@
         "goLive": "Go live"
       },
       "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with its {{deployments}} and its links to other records. This cannot be undone.",
+      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with {{deployments}} and its links to other records. This cannot be undone.",
       "convert": {
         "action": "Convert to technology",
         "title": "Convert {{name}} to a technology",

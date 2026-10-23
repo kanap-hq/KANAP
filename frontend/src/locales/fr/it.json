@@ -88,7 +88,7 @@
         "lifecycle": "Cycle de vie",
         "criticality": "Criticité",
         "publisher": "Éditeur",
-        "derivedUsers": "Utilisateurs dérivés (A)",
+        "derivedUsers": "Utilisateurs dérivés {{year}}",
         "created": "Créé",
         "supplier": "Fournisseur",
         "businessOwners": "Responsables métier",
@@ -104,13 +104,12 @@
         "components": "Composants",
         "dataClass": "Classification des données",
         "containsPii": "Contient des PII",
-        "dataResidency": "Résidence des données"
+        "dataResidency": "Résidence des données",
+        "derivedUsersHelp": "Utilisateurs comptés pour les entreprises et départements de l’audience en {{year}} (ou l’année la plus proche qui a des données), sauf si un nombre d’utilisateurs est saisi à la main."
       },
       "delete": {
         "warning_one": "Ses déploiements et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
         "warning_other": "Leurs déploiements et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
-        "warningCounted_one": "Ses {{deployments}} et ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
-        "warningCounted_other": "Leurs {{deployments}} et leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
         "warningLinks_one": "Ses liens vers d’autres éléments sont supprimés avec elle. Cette action est irréversible.",
         "warningLinks_other": "Leurs liens vers d’autres éléments sont supprimés avec elles. Cette action est irréversible.",
         "toDelete_one": "{{count}} application sera supprimée :",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} application ne peut pas être supprimée et est conservée :",
         "kept_other": "{{count}} applications ne peuvent pas être supprimées et sont conservées :",
         "deleted_one": "{{count}} application supprimée",
-        "deleted_other": "{{count}} applications supprimées"
+        "deleted_other": "{{count}} applications supprimées",
+        "warningCounted_one": "Sont supprimés avec elle : {{removed}} et ses liens vers d’autres éléments. Cette action est irréversible.",
+        "warningCounted_other": "Sont supprimés avec elles : {{removed}} et leurs liens vers d’autres éléments. Cette action est irréversible.",
+        "title_one": "Supprimer {{count}} application",
+        "title_other": "Supprimer {{count}} applications",
+        "keptDone_one": "{{count}} application conservée",
+        "keptDone_other": "{{count}} applications conservées",
+        "keptReason_one": "{{name}} est conservée : {{usages}} l’utilise.",
+        "keptReason_other": "{{name}} est conservée : {{usages}} l’utilisent."
+      },
+      "exportScope_one": "{{count}} application, selon les filtres de la liste.",
+      "exportScope_other": "{{count}} applications, selon les filtres de la liste.",
+      "exportScopeAll": "Toutes les applications ({{count}}), hors applications retirées.",
+      "importNote": "Pour vider une valeur de classification, écrivez __CLEAR__ dans la cellule.",
+      "copySuffix": "(copie)",
+      "copyFailed": "L’application n’a pas pu être copiée.",
+      "copyLinksFailed": "La copie est créée, mais ses liens n’ont pas tous pu être copiés.",
+      "environments": {
+        "prod": {
+          "name": "Production",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Préproduction",
+          "short": "Pré"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Développement",
+          "short": "Dév"
+        },
+        "sandbox": {
+          "name": "Bac à sable",
+          "short": "Bac"
+        }
       }
     },
     "assets": {
@@ -1855,7 +1895,7 @@
         "goLive": "Mise en service"
       },
       "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
-      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec ses {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible.",
+      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible.",
       "convert": {
         "action": "Convertir en technologie",
         "title": "Convertir {{name}} en technologie",

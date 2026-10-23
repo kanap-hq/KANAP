@@ -12,7 +12,7 @@ const post = vi.hoisted(() => vi.fn());
 
 vi.mock('react-i18next', () => {
   const t = (key: string, options?: Record<string, unknown>) =>
-    (options && 'count' in options ? `${key}:${options.count}${options.deployments ? `|${options.deployments}` : ''}` : key);
+    (options && 'count' in options ? `${key}:${options.count}${options.removed ? `|${options.removed}` : ''}` : key);
   return {
     initReactI18next: { type: '3rdParty', init: () => undefined },
     useTranslation: () => ({ t, i18n: { language: 'en', resolvedLanguage: 'en' } }),
@@ -57,6 +57,11 @@ describe('ApplicationsPage delete', () => {
     expect(props.itemLabels.kept(1)).toBe('pages.applications.delete.kept:1');
     expect(props.itemLabels.toDelete(2)).toBe('pages.applications.delete.toDelete:2');
     expect(props.itemLabels.deleted(2)).toBe('pages.applications.delete.deleted:2');
+    expect(props.itemLabels.title(2)).toBe('pages.applications.delete.title:2');
+    expect(props.itemLabels.keptDone(1)).toBe('pages.applications.delete.keptDone:1');
+    expect(props.itemLabels.titleCountsDeleted).toBe(true);
+    // Applications are named with their reference, to tell apart the ones that share a name.
+    expect(props.getItemName({ id: 'a', sequential_id: 'APP-7', name: 'ERP' })).toBe('APP-7 ERP');
   });
 
   it('words what goes in each language, and nothing about references', async () => {
@@ -66,7 +71,7 @@ describe('ApplicationsPage delete', () => {
       expect(errors.APPLICATION_HAS_INTERFACES_one, lang).toContain('{{usages}}');
       expect(errors.APPLICATION_HAS_INTERFACES_other, lang).toContain('{{usages}}');
       const words = it.pages.applications.delete;
-      for (const key of ['warningCounted_one', 'warningCounted_other']) expect(words[key], `${lang} ${key}`).toContain('{{deployments}}');
+      for (const key of ['warningCounted_one', 'warningCounted_other']) expect(words[key], `${lang} ${key}`).toContain('{{removed}}');
       expect(it.workspace.application.deleteMessageWithDeployments, lang).toContain('{{deployments}}');
       for (const text of [words.warning_one, words.warning_other, words.kept_one, words.kept_other, it.workspace.application.deleteMessage]) {
         expect(text, lang).toBeTruthy();

@@ -88,7 +88,7 @@
         "lifecycle": "Lebenszyklus",
         "criticality": "Kritikalität",
         "publisher": "Herausgeber",
-        "derivedUsers": "Abgeleitete Benutzer (J)",
+        "derivedUsers": "Abgeleitete Benutzer {{year}}",
         "created": "Erstellt",
         "supplier": "Lieferant",
         "businessOwners": "Fachverantwortliche",
@@ -104,13 +104,12 @@
         "components": "Komponenten",
         "dataClass": "Datenklasse",
         "containsPii": "Enthält PII",
-        "dataResidency": "Datenresidenz"
+        "dataResidency": "Datenresidenz",
+        "derivedUsersHelp": "Für die Unternehmen und Abteilungen der Zielgruppe gezählte Benutzer im Jahr {{year}} (oder im nächstliegenden Jahr mit Daten), sofern keine Benutzerzahl manuell erfasst ist."
       },
       "delete": {
         "warning_one": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warning_other": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "warningCounted_one": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "warningCounted_other": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warningLinks_one": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warningLinks_other": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "toDelete_one": "{{count}} Anwendung wird gelöscht:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} Anwendung kann nicht gelöscht werden und bleibt erhalten:",
         "kept_other": "{{count}} Anwendungen können nicht gelöscht werden und bleiben erhalten:",
         "deleted_one": "{{count}} Anwendung gelöscht",
-        "deleted_other": "{{count}} Anwendungen gelöscht"
+        "deleted_other": "{{count}} Anwendungen gelöscht",
+        "warningCounted_one": "Mit ihr werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_other": "Mit ihnen werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+        "title_one": "{{count}} Anwendung löschen",
+        "title_other": "{{count}} Anwendungen löschen",
+        "keptDone_one": "{{count}} Anwendung bleibt erhalten",
+        "keptDone_other": "{{count}} Anwendungen bleiben erhalten",
+        "keptReason_one": "{{name}} bleibt erhalten: {{usages}} nutzt sie.",
+        "keptReason_other": "{{name}} bleibt erhalten: {{usages}} nutzen sie."
+      },
+      "exportScope_one": "{{count}} Anwendung, entsprechend den Filtern der Liste.",
+      "exportScope_other": "{{count}} Anwendungen, entsprechend den Filtern der Liste.",
+      "exportScopeAll": "Alle Anwendungen ({{count}}), ohne außer Betrieb genommene.",
+      "importNote": "Um einen Einstufungswert zu leeren, schreiben Sie __CLEAR__ in die Zelle.",
+      "copySuffix": "(Kopie)",
+      "copyFailed": "Die Anwendung konnte nicht kopiert werden.",
+      "copyLinksFailed": "Die Kopie wurde erstellt, aber nicht alle ihre Verknüpfungen konnten kopiert werden.",
+      "environments": {
+        "prod": {
+          "name": "Produktion",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Vorproduktion",
+          "short": "Vor"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Entwicklung",
+          "short": "Entw"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1855,7 +1895,7 @@
         "goLive": "Inbetriebnahme"
       },
       "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht. Ebenfalls gelöscht werden: {{deployments}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
       "convert": {
         "action": "In Technologie umwandeln",
         "title": "{{name}} in eine Technologie umwandeln",

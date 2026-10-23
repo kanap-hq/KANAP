@@ -88,7 +88,7 @@
         "lifecycle": "Ciclo de vida",
         "criticality": "Criticidad",
         "publisher": "Editor",
-        "derivedUsers": "Usuarios derivados (A)",
+        "derivedUsers": "Usuarios derivados {{year}}",
         "created": "Creado",
         "supplier": "Proveedor",
         "businessOwners": "Responsables de negocio",
@@ -104,13 +104,12 @@
         "components": "Componentes",
         "dataClass": "Clasificación de datos",
         "containsPii": "Contiene PII",
-        "dataResidency": "Residencia de datos"
+        "dataResidency": "Residencia de datos",
+        "derivedUsersHelp": "Usuarios contados para las empresas y departamentos de la audiencia en {{year}} (o el año más cercano con datos), salvo que se indique un número de usuarios a mano."
       },
       "delete": {
         "warning_one": "Sus despliegues y sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
         "warning_other": "Sus despliegues y sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
-        "warningCounted_one": "Sus {{deployments}} y sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
-        "warningCounted_other": "Sus {{deployments}} y sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
         "warningLinks_one": "Sus vínculos con otros elementos se eliminan con ella. Esta acción no se puede deshacer.",
         "warningLinks_other": "Sus vínculos con otros elementos se eliminan con ellas. Esta acción no se puede deshacer.",
         "toDelete_one": "{{count}} aplicación se eliminará:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} aplicación no se puede eliminar y se conserva:",
         "kept_other": "{{count}} aplicaciones no se pueden eliminar y se conservan:",
         "deleted_one": "{{count}} aplicación eliminada",
-        "deleted_other": "{{count}} aplicaciones eliminadas"
+        "deleted_other": "{{count}} aplicaciones eliminadas",
+        "warningCounted_one": "Se eliminan con ella: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+        "warningCounted_other": "Se eliminan con ellas: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+        "title_one": "Eliminar {{count}} aplicación",
+        "title_other": "Eliminar {{count}} aplicaciones",
+        "keptDone_one": "{{count}} aplicación conservada",
+        "keptDone_other": "{{count}} aplicaciones conservadas",
+        "keptReason_one": "{{name}} se conserva: {{usages}} la usa.",
+        "keptReason_other": "{{name}} se conserva: {{usages}} la usan."
+      },
+      "exportScope_one": "{{count}} aplicación, según los filtros de la lista.",
+      "exportScope_other": "{{count}} aplicaciones, según los filtros de la lista.",
+      "exportScopeAll": "Todas las aplicaciones ({{count}}), sin las retiradas.",
+      "importNote": "Para vaciar un valor de clasificación, escriba __CLEAR__ en la celda.",
+      "copySuffix": "(copia)",
+      "copyFailed": "No se pudo copiar la aplicación.",
+      "copyLinksFailed": "La copia se creó, pero no se pudieron copiar todos sus vínculos.",
+      "environments": {
+        "prod": {
+          "name": "Producción",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Preproducción",
+          "short": "Pre"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Desarrollo",
+          "short": "Des"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1855,7 +1895,7 @@
         "goLive": "Puesta en marcha"
       },
       "deleteMessage": "Esto elimina definitivamente {{name}}, con sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con sus {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
       "convert": {
         "action": "Convertir en tecnología",
         "title": "Convertir {{name}} en tecnología",
