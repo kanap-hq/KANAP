@@ -13,7 +13,8 @@ import { seedApps, seedInterface, seedTenant, setCurrentTenant } from './interfa
 // The interfaces list compiles the grid's filter model column by column: a set filter
 // keeps every selected value (it used to keep the first one), an empty set matches
 // nothing, and the prev/next ids walk exactly the rows the list returns. Criticality
-// sorts by the tenant catalog's rank, as connections do, with unknown values last.
+// sorts by the tenant catalog's rank, as connections do, with unknown values last; the
+// application, process, data category and personal data columns sort too.
 
 // Ranks that disagree with the alphabetical order of the codes.
 const CATALOG = {
@@ -147,6 +148,34 @@ async function run() {
 
     // Other columns keep sorting on the stored value.
     assert.deepEqual(await sorted('name:DESC'), ['Unset', 'Rates', 'Payslips', 'Legacy', 'Invoices']);
+
+    // Source and target sort by application name, business process by process name, ignoring
+    // case; empty values last both ways. Ties keep the id order.
+    const [accounting] = await runner.query(`INSERT INTO applications (tenant_id, name) VALUES ($1, 'accounting') RETURNING id`, [tenantA]);
+    const [accountingInstance] = await runner.query(
+      `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, 'prod') RETURNING id`,
+      [tenantA, accounting.id],
+    );
+    await seedInterface(runner, tenantA, { ...apps, source: accounting.id, sourceInstance: accountingInstance.id }, { name: 'Zeta' });
+    assert.equal((await sorted('source_application_name:ASC'))[0], 'Zeta');
+    assert.equal((await sorted('source_application_name:DESC'))[5], 'Zeta');
+    await seedInterface(runner, tenantA, { ...apps, target: accounting.id, targetInstance: accountingInstance.id }, { name: 'Omega' });
+    const byTarget = async (sort: string) => (await svc.list({ sort, limit: 100 }, opts)).items.map((item: any) => item.name);
+    assert.equal((await byTarget('target_application_name:ASC'))[0], 'Omega');
+    assert.equal((await byTarget('target_application_name:DESC'))[6], 'Omega');
+    const byProcessAsc = await byTarget('business_process_id:ASC');
+    assert.deepEqual(byProcessAsc.slice(0, 2), ['Invoices', 'Payslips']);
+    assert.deepEqual((await byTarget('business_process_id:DESC')).slice(0, 2), ['Payslips', 'Invoices']);
+
+    // Personal data: without before with when ascending.
+    const byPii = await byTarget('contains_pii:ASC');
+    assert.deepEqual(byPii.slice(5).sort(), ['Invoices', 'Payslips']);
+    assert.deepEqual((await byTarget('contains_pii:DESC')).slice(0, 2).sort(), ['Invoices', 'Payslips']);
+
+    // Data category sorts on the stored code.
+    const byCategory = await byTarget('data_category:DESC');
+    assert.deepEqual(byCategory.slice(0, 2), ['Invoices', 'Rates']);
+    assert.equal((await byTarget('data_category:ASC'))[6], 'Invoices');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
