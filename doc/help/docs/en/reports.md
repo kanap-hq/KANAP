@@ -378,7 +378,7 @@ View budget data grouped by consolidation account, with chart type adapting to t
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (only available when a single year is selected)
-- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts. Offers every account used by the report's lines, by name and number, whether or not you can open the chart of accounts
+- **Exclude accounts**: Multi-select autocomplete to exclude specific accounts. Offers every account used by the report's lines, by name and number, whether or not you can open the chart of accounts. The list starts with "Unassigned": choosing it leaves out the lines without a consolidation account
 - **Cost center**, **Run or build**, **Lines** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 ### What you'll see
@@ -410,7 +410,7 @@ View budget data grouped by the values of one analytics dimension. The layout mi
 - **Start year** and **End year**: Previous, current, or next year
 - **Metric**: Any shown budget column. Starts on the default column
 - **Chart type**: Pie chart or horizontal bar chart (single-year only)
-- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected line type, plus the values the report's lines hold. Switching the line type or the dimension clears it
+- **Exclude values**: Multi-select autocomplete to exclude specific values of the chosen dimension. It offers the values used for the selected line type, plus the values the report's lines hold. The list starts with "Unassigned": choosing it leaves out the lines without a value on the dimension. Switching the line type or the dimension clears it
 - **Cost center**, **Run or build**, **Lines** and the analytics dimension filters: See [Cost center, run or build and analytics filters](#cost-center-run-or-build-and-analytics-filters)
 
 The subtitle, the chart title and the first column of the table name the chosen dimension, for example "OPEX by Nature".

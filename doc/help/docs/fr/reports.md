@@ -378,7 +378,7 @@ Consultez les données budgétaires regroupées par compte de consolidation, ave
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (disponible uniquement pour une seule année sélectionnée)
-- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques. Propose tous les comptes utilisés par les lignes du rapport, par nom et numéro, que vous puissiez ou non ouvrir le plan comptable
+- **Exclure des comptes** : Autocomplétion multi-sélection pour exclure des comptes spécifiques. Propose tous les comptes utilisés par les lignes du rapport, par nom et numéro, que vous puissiez ou non ouvrir le plan comptable. La liste commence par « Non affecté » : le choisir exclut les lignes sans compte de consolidation
 - **Centre de coûts**, **Run ou build**, **Lignes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 ### Ce que vous verrez
@@ -410,7 +410,7 @@ Consultez les données budgétaires regroupées par les valeurs d'une dimension 
 - **Année de début** et **Année de fin** : Année précédente, en cours ou suivante
 - **Métrique** : Toute colonne budgétaire affichée. Démarre sur la colonne par défaut
 - **Type de graphique** : Graphique en secteurs ou en barres horizontales (année unique uniquement)
-- **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Elle propose les valeurs utilisées pour le type de ligne choisi, plus celles que portent les lignes du rapport. Changer le type de ligne ou la dimension la vide
+- **Exclure des valeurs** : Autocomplétion multi-sélection pour exclure des valeurs précises de la dimension choisie. Elle propose les valeurs utilisées pour le type de ligne choisi, plus celles que portent les lignes du rapport. La liste commence par « Non affecté » : le choisir exclut les lignes sans valeur sur la dimension. Changer le type de ligne ou la dimension la vide
 - **Centre de coûts**, **Run ou build**, **Lignes** et les filtres de dimensions analytiques : Voir [Filtres par centre de coûts, run ou build et dimensions analytiques](#filtres-par-centre-de-couts-run-ou-build-et-dimensions-analytiques)
 
 Le sous-titre, le titre du graphique et la première colonne du tableau nomment la dimension choisie, par exemple « OPEX par Nature ».
