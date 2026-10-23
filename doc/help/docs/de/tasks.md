@@ -490,7 +490,7 @@ Drei Exportmodi sind verfügbar:
 2. **Importeinstellungen wählen**:
    - **Modus**:
      - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Leere Zellen löschen vorhandene Werte: vollständiger Ersatz aller Felder
+     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Aufgaben erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Aufgaben ändern, neue überspringen
@@ -591,7 +591,7 @@ Das System normalisiert Werte automatisch beim Import.
 
 Aufgaben werden nach **Titel + related_object_id** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird:
   - Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren die Aufgabe
-  - Mit `Ersetzen`-Modus: Alle Felder werden aktualisiert, leere Werte löschen vorhandene Daten
+  - Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Titel, `id`, Status und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Eine neue Aufgabe erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf Titel + verwandtes Objekt zurück.
 

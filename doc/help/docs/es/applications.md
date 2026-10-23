@@ -531,7 +531,7 @@ Desde la lista de Aplicaciones:
 2. **Elija la configuración de importación**:
    - **Modo**:
      - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Se actualizan los campos proporcionados; las celdas de clasificación vacías conservan el valor existente y `__CLEAR__` lo borra explícitamente
+     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado, salvo en las columnas de clasificación (use `__CLEAR__`). Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas aplicaciones o actualizar las existentes
      - `Solo actualizar`: Solo modificar aplicaciones existentes, omitir nuevas
@@ -637,7 +637,7 @@ El sistema normaliza automáticamente los valores durante la importación, por l
 
 Las aplicaciones se emparejan por **nombre** (sin distinguir mayúsculas). Cuando se encuentra una coincidencia:
 - Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan la aplicación
-- Con modo `Reemplazar`: se actualizan los campos proporcionados; las celdas de clasificación vacías conservan el valor existente y `__CLEAR__` lo borra explícitamente
+- Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. Una celda de clasificación vacía conserva su valor, y `__CLEAR__` la borra. El nombre, el `id`, el ciclo de vida y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. Una aplicación nueva recibe los valores predeterminados.
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo.
 

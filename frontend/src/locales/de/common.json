@@ -547,7 +547,7 @@
     "overridePresetNote": "Diese Einstellungen überschreiben die Workflow-Vorlagenauswahl.",
     "emptyCellHandling": "Behandlung leerer Zellen",
     "preserveExisting": "Vorhandene beibehalten",
-    "setToNull": "Auf null setzen",
+    "setToNull": "Gespeicherten Wert löschen",
     "operation": "Vorgang",
     "insertAndUpdate": "Einfügen und aktualisieren",
     "updateOnly": "Nur aktualisieren",
@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Vollständig ersetzen",
-        "description": "Ersetzt alle Werte, auch leere Zellen. Eine leere Zelle löscht den gespeicherten Wert."
+        "description": "Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: Die Prüfung zeigt sie an."
       }
     },
     "exportRows": {

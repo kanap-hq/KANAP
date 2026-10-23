@@ -547,7 +547,7 @@
     "overridePresetNote": "Estos ajustes anulan la selección de preconfiguración del flujo de trabajo.",
     "emptyCellHandling": "Tratamiento de celdas vacías",
     "preserveExisting": "Conservar existente",
-    "setToNull": "Establecer como nulo",
+    "setToNull": "Borrar el valor guardado",
     "operation": "Operación",
     "insertAndUpdate": "Insertar y actualizar",
     "updateOnly": "Solo actualizar",
@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Reemplazo completo",
-        "description": "Reemplaza todos los valores, incluidas las celdas vacías. Una celda vacía borra el valor guardado."
+        "description": "Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la verificación los señala."
       }
     },
     "exportRows": {
