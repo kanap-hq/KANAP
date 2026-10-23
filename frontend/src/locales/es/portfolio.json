@@ -986,7 +986,7 @@
   },
   "projects": {
     "title": "Proyectos del portafolio",
-    "entityName": "proyectos",
+    "backToList": "Volver a proyectos",
     "columns": {
       "projectName": "Nombre del proyecto",
       "priority": "Prioridad",
@@ -1015,7 +1015,7 @@
   },
   "requests": {
     "title": "Solicitudes del portafolio",
-    "entityName": "solicitudes",
+    "backToList": "Volver a solicitudes",
     "columns": {
       "requestName": "Nombre de la solicitud",
       "priority": "Prioridad",
