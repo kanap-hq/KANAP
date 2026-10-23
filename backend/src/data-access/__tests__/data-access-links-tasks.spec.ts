@@ -633,10 +633,25 @@ async function testRoleWithoutContext(s: Seed2): Promise<void> {
     }
     assert.equal(await write(`INSERT INTO tasks (tenant_id, title, item_number) VALUES (app_current_tenant(), 'x', $1)`, [taskNumber++]), '42501', 'no context: a standalone task refused');
     assert.equal(await write(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [s.application.b, s.lines.L1]), '42501', 'no context: a link refused');
+    // The SECURITY DEFINER access functions refuse like the policies: false, no id, NULL.
+    const values = (await q(`
+      SELECT data_access_contract_visible($1) AS contract_visible,
+             data_access_contract_modifiable($1) AS contract_modifiable,
+             data_access_task_visible($2) AS task_visible,
+             data_access_task_modifiable($2) AS task_modifiable,
+             (SELECT count(*)::int FROM data_access_visible_contract_ids()) AS contracts,
+             (SELECT count(*)::int FROM data_access_searchable_task_ids()) AS tasks,
+             data_access_hidden_count('application', $3) AS hidden,
+             data_access_hidden_count('contract', $1) AS hidden_contract,
+             data_access_reference('task', $2) AS reference`, [s.contracts.CE, s.tasks.tL1, s.application.a]))[0];
+    assert.deepEqual(values, {
+      contract_visible: false, contract_modifiable: false, task_visible: false, task_modifiable: false,
+      contracts: 0, tasks: 0, hidden: null, hidden_contract: null, reference: null,
+    }, 'no context: the access functions refuse');
   } finally {
     await client.query('ROLLBACK TO SAVEPOINT data_access_no_context');
   }
-  console.log('  role taken without context: nothing visible, nothing writable: OK');
+  console.log('  role taken without context: nothing visible, nothing writable, access functions refuse: OK');
 }
 
 async function run(): Promise<void> {

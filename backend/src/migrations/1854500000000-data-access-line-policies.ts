@@ -22,6 +22,13 @@ const setting = (name: string) => `NULLIF(current_setting('app.da_${name}', true
  * on a subquery is estimated at 99.5 %.
  */
 const MODE_LIMITED = `(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`;
+/**
+ * The limited role taken without data_access_apply() (mode not limited): the policies refuse
+ * everything through their guard, and the SECURITY DEFINER access functions refuse the same way.
+ * Inside such a function current_user is its owner, while the `role` setting still names the role
+ * the transaction took.
+ */
+const ROLE_TAKEN = `coalesce(current_setting('role', true), '') = '${LIMITED_ROLE}'`;
 const USER = `(SELECT ${setting('user')}::uuid)`;
 const READ_ALL = `coalesce((SELECT ${setting('read_all')}::boolean), false)`;
 const EDIT_ALL = `coalesce((SELECT ${setting('edit_all')}::boolean), false)`;
@@ -655,7 +662,8 @@ const HIDDEN_COUNT_LINKS: Array<{ type: string; object: string; link: string; ob
  * data-access policies (the tenant policies still apply); it applies the same predicates as the
  * policies, written by the same builders above, with the person's settings (a definer function
  * still sees the app.da_* settings of the transaction). Outside the limited mode they return true
- * (depth), 0 (hidden count) or the reference as usual.
+ * (depth), every id (sets), 0 (hidden count) or the reference as usual; under the limited role
+ * taken without context they refuse like the policies: false, no id, NULL.
  *
  * Disclosure functions, decided in run 2B: (p_type, p_id) is always the starting object. It must
  * be visible to the person; otherwise, and when it does not exist, the result is NULL, so the
@@ -673,7 +681,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     LANGUAGE sql
     ${definer}
     AS $fn$
-      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${readableContract('c.', 'definer')}
         FROM public.contracts c WHERE c.id = p_contract), false) END
     $fn$
@@ -687,7 +695,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     LANGUAGE sql
     ${definer}
     AS $fn$
-      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${modifiableContract('c.')}
         FROM public.contracts c WHERE c.id = p_contract), false) END
     $fn$
@@ -699,7 +707,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     LANGUAGE sql
     ${definer}
     AS $fn$
-      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${taskReadable('t.', 'definer')}
         FROM public.tasks t WHERE t.id = p_task), false) END
     $fn$
@@ -711,7 +719,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     LANGUAGE sql
     ${definer}
     AS $fn$
-      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN NOT (${ROLE_TAKEN}) ELSE coalesce((
         SELECT ${taskModifiable('t.', 'definer')}
         FROM public.tasks t WHERE t.id = p_task), false) END
     $fn$
@@ -729,7 +737,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     ${definer}
     AS $fn$
       SELECT c.id FROM public.contracts c
-      WHERE NOT (${MODE_LIMITED}) OR ${readableContract('c.', 'definer')}
+      WHERE CASE WHEN ${MODE_LIMITED} THEN ${readableContract('c.', 'definer')} ELSE NOT (${ROLE_TAKEN}) END
     $fn$
   `);
 
@@ -740,7 +748,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     ${definer}
     AS $fn$
       SELECT t.id FROM public.tasks t
-      WHERE NOT (${MODE_LIMITED}) OR ${taskReadable('t.', 'definer', 'set', false)}
+      WHERE CASE WHEN ${MODE_LIMITED} THEN ${taskReadable('t.', 'definer', 'set', false)} ELSE NOT (${ROLE_TAKEN}) END
     $fn$
   `);
 
@@ -771,7 +779,7 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
         RAISE EXCEPTION 'data_access_hidden_count: unknown type %', p_type USING ERRCODE = '22023';
       END IF;
       IF NOT (${MODE_LIMITED}) THEN
-        RETURN 0;
+        RETURN CASE WHEN ${ROLE_TAKEN} THEN NULL ELSE 0 END;
       END IF;${hiddenBranches}
       RETURN NULL;
     END
@@ -793,6 +801,9 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     BEGIN
       IF p_type IS DISTINCT FROM 'task' THEN
         RAISE EXCEPTION 'data_access_reference: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      IF NOT (${MODE_LIMITED}) AND ${ROLE_TAKEN} THEN
+        RETURN NULL;
       END IF;
       SELECT t.related_object_type, t.related_object_id INTO v_type, v_object
       FROM public.tasks t WHERE t.id = p_id AND t.tenant_id = app_current_tenant();
