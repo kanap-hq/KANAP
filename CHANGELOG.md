@@ -17,6 +17,46 @@ version brings, followed by three lists:
 To upgrade across several versions, read every entry between your version and the target: the
 actions add up. The release process is described in `doc/releasing.md`.
 
+## 26.10.5 (2026-10-23)
+
+A technology layer with its catalog and vulnerabilities, Relations tabs on one model for every record, and amounts in several currencies handled throughout the budget.
+
+### Changes
+- Technologies: a Technologies list and record in the IT section, created from a catalog of 192 products or by hand, with versions and their end of support dates, Servers, Applications, Operations, Compliance and Relations tabs, support contacts, hosting types from the IT settings, and a CSV export and import of the server and application links. An application recorded for a technical component can be converted into a technology. (#634, #637, #644, #647, #650, #656, #679, #682, #691)
+- The catalog follows endoflife.date and, for products it does not cover (Check Point, Cisco ASA and NX-OS, Junos, Arista, NetScaler, Dell storage, WebLogic and others), the vendors' official lifecycle pages, each version showing its source and the date it was checked. Adopted technologies receive new versions, end of support dates, identifiers and descriptions; values entered by hand are kept. A new "Network" family is added and "Network and security" is renamed "Security". (#655, #657, #686, #712)
+- A server's operating system is one of its technologies, shown first with its version and support dates. Operating systems from the former IT settings list become technologies automatically. (#662)
+- An End of support report in the IT operations section lists the technology versions, operating systems, applications and hardware whose support ends within a chosen horizon, with the servers and applications they touch. (#640)
+- Administration zones: a new administration view lists zones, directory services and domains with their forests, trusts and domain controllers. Servers and other assets can be placed in a zone, and the view flags gaps in the separation between zones. New tenants start with three zones, Tier 0 to Tier 2. (#651, #676)
+- Vulnerabilities: a new page lists the vulnerabilities of the technologies in use, one row per technology, version and CVE, read from the NVD and from the publishers' records on CVE.org, with the source and age of each row, filters, export and a change of state in bulk. Technologies are matched by version, operating systems by branch, SUSE Linux Enterprise Server by service pack. (#642, #654, #655, #688, #694, #696, #706)
+- Vulnerabilities show the exploitation signals of the CISA and European Union catalogs and the EPSS probability, are listed with the exploited ones first, and link to the European vulnerability database (EUVD). (#690)
+- Each technology and version can be included in or excluded from alerts; operating systems and online services start excluded. IT owners receive an email for new critical or high vulnerabilities and for vulnerabilities known to be exploited, with the severity shown on the Vulnerabilities page. (#654, #687, #690, #721)
+- Servers and applications show their vulnerabilities in their lists and records, with a severe badge, and a "Vulnerabilities in your estate" tile on the home page summarises what needs attention. On an application, a technology is added with its version and can be recorded on the application's servers. (#697, #708)
+- The assistant and MCP clients can read technologies, their versions, servers and applications, and the vulnerabilities, read only. (#680, #708)
+- Relations tabs of applications, technologies, assets, budget lines, contracts, projects, requests, incidents, interfaces and locations share one model: tables with the main facts of each related record, links added from a search and saved at once, suggestions (same supplier, technologies of the linked servers), and links and files in one section. An asset's Relations tab shows what is affected if it goes down. (#632, #638, #639, #641, #664, #698, #709, #711, #715, #716, #717, #718, #719, #720)
+- Currencies: an amount without an exchange rate for its year is left out of totals, reports, chargeback and the assistant's sums, marked on its line and named in a warning with a link to enter the rate. Budget administrators can enter a rate by hand, the rate fetch covers every currency in use, and changing the reporting currency fetches the rates of every year and asks for confirmation. (#672, #674, #675, #677, #683)
+- Company turnover is converted to the reporting currency in allocations and chargeback indicators. Allocation shares change for groups whose companies use different currencies. (#669, #683)
+- Companies: numbers and percentages in the user's language, turnover with its currency, decimal input in the user's language, delete from the company page, and a CSV import that checks city, repeated names and frozen years, with optional metric years. The freeze page says who froze a year and when. (#666, #667, #668)
+- Budget lines: the cost center list shows only the cost centers of the paying company. The budget file export adds the cost center path after its code and a "Current year" option; the budget file check warns when a row's company differs from its cost center's company. Change type is in the Properties panel. (#710, #713, #714, #716)
+- The IT menu is reordered from applications to infrastructure, with a Reference data section; Netbox moves to a tab of the IT settings. The Netbox import attaches virtual machines to their cluster. (#678, #684)
+- Grids offer a "Reset filters" button. Pages no longer flicker on the first visit. The dashboard's Log time button appears for project contributors and lists only the projects and tasks where the user can log time. (#633, #660, #671)
+- Record headers: "Share" replaces "Send link", "New version" replaces "Create new version", and Delete is a trash icon. (#708)
+- The user manual documents technologies, vulnerabilities, the administration view, the end of support report and the related changes. (#648, #658, #663, #665, #670, #681, #723)
+- Website: the blog in German and Spanish, a filter by topic and related articles on feature pages, the site in the browser's language, About and Offer pages, and articles on OPEX and CAPEX, contractors' FTE and daily rates, contract management and currencies. (#643, #645, #646, #652, #653, #659, #661, #673, #685)
+- Sample data: the Fromage & Co tenant has an incident register and more application deployments. (#689, #699)
+
+### Fixes
+- Images attached to assistant conversations are no longer removed by the weekly storage cleanup. (#635)
+- The older incident and location link routes require the right to read the linked assets or applications, like the Relations tab. (#722)
+- A budget line created without a start date is refused with a clear message. (#683)
+
+### On-premise
+- Action required: none. `.env` is unchanged and no variable became mandatory.
+- Migrations: run automatically at start (1854190000000-technologies, 1854200000000-technology-search-index, 1854260000000-vulnerabilities, 1854270000000-technology-support, 1854290000000-technology-admin-zone, 1854300000000-technology-catalog-cpe, 1854310000000-technology-hosting-type, 1854320000000-technology-catalog-sync, 1854330000000-operating-system-technology, 1854340000000-asset-admin-zone, 1854340000000-currency-rate-sources, 1854350000000-vulnerability-alerts, 1854360000000-vulnerability-signals, 1854370000000-vulnerability-cve-records).
+- 1854330000000-operating-system-technology turns each server's operating system into a technology, then drops the `assets.operating_system` column and the operating systems list of the IT settings. Its duration grows with the number of servers.
+- 1854370000000-vulnerability-cve-records runs `CREATE EXTENSION IF NOT EXISTS pg_trgm`. The extension already exists on every installation: 1853000000000-ai-search-index created it in June 2026, before the first published version, so the statement changes nothing.
+- Vulnerabilities and the daily catalog sync are off by default on-premise: `VULNERABILITY_FEED_ENABLED=true` and `TECHNOLOGY_CATALOG_SYNC_ENABLED=true` turn them on (see "Optional: vulnerabilities" and "Optional: technology catalog" in the configuration guide). Without the catalog sync, adopted technologies follow the catalog shipped with each new version. Mirrors can replace every outside source (`NVD_API_BASE_URL`, `CVE_LIST_EXPORT_URL`, `KEV_FEED_URL`, `EPSS_FEED_URL`, `EUVD_BASE_URL`). The first reading of the CVE.org list takes about 2 minutes and about 700 MB in the database.
+- Recommended: with `VULNERABILITY_FEED_ENABLED=true`, set `NVD_API_KEY` (free, see "Optional: vulnerabilities" in the configuration guide). Without it, the NVD allows one request every 6 seconds and the first reading takes longer.
+
 ## 26.10.4 (2026-10-16)
 
 A quality release: safer deletes, lists that filter, sort and export as shown, the interface in the user's language, and one common CSV format.
