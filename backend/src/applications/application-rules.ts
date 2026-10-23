@@ -64,6 +64,14 @@ export async function lockApplicationNames(manager: any, tenantId: string): Prom
   await manager.query(`SELECT pg_advisory_xact_lock(hashtext('applications:names:' || $1))`, [tenantId]);
 }
 
+/**
+ * Serializes the suite changes of a tenant until the end of the transaction, so two writers cannot
+ * each pass the cycle check (A into B, B into A) and together make a cycle.
+ */
+export async function lockApplicationSuites(manager: any, tenantId: string): Promise<void> {
+  await manager.query(`SELECT pg_advisory_xact_lock(hashtext('applications:suites:' || $1))`, [tenantId]);
+}
+
 /** 409 `name_taken` when another application of the tenant already has this name. */
 export async function assertApplicationNameFree(manager: any, tenantId: string, name: string, excludeId?: string | null): Promise<void> {
   const [holder] = await applicationsNamed(manager, tenantId, name, excludeId);

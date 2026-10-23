@@ -15,7 +15,8 @@ import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spe
 import { Application } from '../application.entity';
 import { ApplicationsCsvService } from '../applications-csv.service';
 import { csvOwnerKeys } from '../application-csv.config';
-import { APPLICATION_NAME_MAX, applicationNameKey } from '../application-rules';
+import { APPLICATION_NAME_MAX, applicationNameKey, lockApplicationSuites } from '../application-rules';
+import dataSource from '../../data-source';
 import { ApplicationsStructureService } from '../services/applications-structure.service';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { ApplicationsLifecycleService } from '../services/applications-lifecycle.service';
@@ -424,6 +425,23 @@ async function testSuiteCycles() {
     const structure = new ApplicationsStructureService(ctx.runner.manager.getRepository(Application), new AuditService(ctx.runner.manager.getRepository(AuditLog)));
     const [a, b, c] = [await seedApp(ctx, 'Alpha', { is_suite: true }), await seedApp(ctx, 'Beta', { is_suite: true }), await seedApp(ctx, 'Gamma', { is_suite: true })];
     const sOpts = opts(ctx);
+    // A concurrent suite change of the tenant holds the lock: this one waits for its end, so its
+    // cycle check sees what the other committed. (First: this transaction then holds the lock.)
+    const other = dataSource.createQueryRunner();
+    await other.connect();
+    try {
+      await other.startTransaction();
+      await lockApplicationSuites(other.manager, ctx.tenantId);
+      let done = false;
+      const waiting = structure.bulkReplaceSuites(a, [b], null, sOpts).finally(() => { done = true; });
+      await new Promise((resolve) => setTimeout(resolve, 300));
+      assert.equal(done, false, 'the change waits for the lock');
+      await other.commitTransaction();
+      await waiting;
+    } finally {
+      if (other.isTransactionActive) await other.rollbackTransaction();
+      await other.release();
+    }
     assert.deepEqual(await refusal(structure.bulkReplaceSuites(a, [a], null, sOpts), 409, 'suite_cycle'), { name: 'Alpha' }, 'not in its own suite');
     await structure.bulkReplaceSuites(a, [b], null, sOpts);
     assert.deepEqual(await refusal(structure.bulkReplaceSuites(b, [a], null, sOpts), 409, 'suite_cycle'), { name: 'Alpha' }, 'Beta contains Alpha already');
