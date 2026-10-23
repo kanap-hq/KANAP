@@ -12,7 +12,16 @@ const LIMITED_ROLE = 'kanap_data_limited';
  * every row: measured 3 080 ms against 28 ms over 300 000 rows with a 40-uuid list.
  */
 const setting = (name: string) => `NULLIF(current_setting('app.da_${name}', true), '')`;
-const MODE_LIMITED = `(SELECT ${setting('mode')}) IS NOT DISTINCT FROM 'limited'`;
+/*
+ * The guard of every policy, true in mode limited, never NULL. PostgreSQL never turns a Var-free
+ * policy qual into a one-time filter: it stays a filter of the scan, with its own selectivity
+ * estimate. The form `(SELECT mode) IS NOT DISTINCT FROM 'limited'` is estimated at 0.5 % of the
+ * rows (an equality without statistics), on every scoped table of a statement: the planner then
+ * expected about 50 lines instead of 10 000 and chose nested loops (list first page at 10 000
+ * lines, person reading everything: 2 300 ms, 52 ms with this form; lot 2, run 2C). `IS NOT NULL`
+ * on a subquery is estimated at 99.5 %.
+ */
+const MODE_LIMITED = `(SELECT 1 WHERE current_setting('app.da_mode', true) = 'limited') IS NOT NULL`;
 const USER = `(SELECT ${setting('user')}::uuid)`;
 const READ_ALL = `coalesce((SELECT ${setting('read_all')}::boolean), false)`;
 const EDIT_ALL = `coalesce((SELECT ${setting('edit_all')}::boolean), false)`;

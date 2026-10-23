@@ -292,6 +292,29 @@ async function testPlacement(s: Seed): Promise<void> {
   console.log('  placement: create, move (trigger, owner included), read only, out of access (§2.3, §2.5): OK');
 }
 
+/**
+ * The guard of the policies costs no row estimate (run 2C): PostgreSQL keeps a policy qual without
+ * columns as a filter of the scan, with its own selectivity. A guard estimated at 0.5 % of the rows
+ * made the planner expect a handful of lines and choose nested loops (list first page 40 times
+ * slower for a person reading everything). For a person reading everything, each table keeps at
+ * least a third of its unscoped estimate.
+ */
+async function testRowEstimates(s: Seed): Promise<void> {
+  const estimate = async (table: string) =>
+    Number((await q(`EXPLAIN (FORMAT JSON) SELECT * FROM ${table}`))[0]['QUERY PLAN'][0].Plan['Plan Rows']);
+  assert.equal(await apply(s.persons.admin), 'all');
+  // Statistics of the seeded rows (ANALYZE counts the rows this transaction inserted).
+  for (const table of TABLES_2A) await q(`ANALYZE ${table}`);
+  const unscoped = new Map<string, number>();
+  for (const table of TABLES_2A) unscoped.set(table, await estimate(table));
+  assert.equal(await apply(s.persons.rob), 'limited');
+  for (const table of TABLES_2A) {
+    const limited = await estimate(table);
+    assert.ok(limited >= unscoped.get(table)! / 3, `${table}: estimated ${limited} rows limited, ${unscoped.get(table)} unscoped`);
+  }
+  console.log('  row estimates of a person reading everything close to the unscoped ones: OK');
+}
+
 async function testAdministratorAndAll(s: Seed): Promise<void> {
   assert.equal(await apply(s.persons.admin), 'all', 'Administrator: everything');
   assert.equal((await q(`SELECT current_user AS u`))[0].u, appRoleName());
@@ -435,6 +458,7 @@ async function run(): Promise<void> {
       await testPlacement(s);
       await testRoleWithoutContext(s);
       await testDefinerTriggers(s);
+      await testRowEstimates(s);
       await testAdministratorAndAll(s);
     } finally {
       await client.query('ROLLBACK');
