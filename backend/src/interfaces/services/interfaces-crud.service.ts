@@ -291,6 +291,15 @@ export class InterfacesCrudService extends InterfacesBaseService {
     });
 
     const saved = await repo.save(entity);
+    // The `INT-n` reference is set by a database trigger, which the save does not read back: read it,
+    // so the specification document is titled with it (not with the id).
+    if (!saved.interface_reference) {
+      const [row] = await repo.manager.query(
+        `SELECT interface_reference FROM interfaces WHERE id = $1 AND tenant_id = $2`,
+        [saved.id, saved.tenant_id],
+      );
+      if (row?.interface_reference) saved.interface_reference = row.interface_reference;
+    }
     await this.syncMiddlewareApplications(saved, body.middleware_application_ids as string[] | undefined, opts?.manager);
     await this.createDefaultLegs(saved, tenantId, opts?.manager);
     await this.interfaceMappings.ensureDefaultSetForInterface(saved.id, saved.tenant_id, userId, {
