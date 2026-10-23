@@ -199,12 +199,11 @@ const lineModifiableById = (ref: string, reach: Reach) => reach === 'filtered'
   : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${readableLine('i.')} AND ${modifiableLine('i.')})`;
 
 /**
- * A contract, named by `ref`, modifiable. Contracts have no policy until lot 5, and their policy
- * will cite only contract_spend_items (no policy) and spend_items; a modifiable contract is
- * readable by lisible_contrat_direct, so the definer form needs no other test.
+ * A contract, named by `ref`, modifiable: through the depth function, like its visibility, so a
+ * policy of `tasks` never cites `contracts` (which gets its own policy in lot 5) nor depends on its
+ * columns.
  */
-const contractModifiableById = (ref: string) =>
-  `EXISTS (SELECT 1 FROM public.contracts c WHERE c.id = ${ref} AND ${modifiableContract('c.')})`;
+const contractModifiableById = (ref: string) => `data_access_contract_modifiable(${ref})`;
 
 /** Participant of the task `p` (spec §4.4): assignee, owner or observer. The creator is not one. */
 const taskParticipant = (p: string) => `(${p}assignee_user_id = ${USER}
@@ -414,7 +413,8 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  *    place)` (spec §6.4, the contract one used from lot 5), and the SECURITY DEFINER helpers
  *    `data_access_line_of_version(version)` and `data_access_line_of_round_input(round_input)`.
  *    Run 2B: the SECURITY DEFINER depth functions `data_access_contract_visible(contract)`,
- *    `data_access_task_visible(task)`, `data_access_task_modifiable(task)` and the disclosure
+ *    `data_access_contract_modifiable(contract)`, `data_access_task_visible(task)`,
+ *    `data_access_task_modifiable(task)` and the disclosure
  *    functions `data_access_hidden_count(type, id)`, `data_access_reference(type, id)`; EXECUTE
  *    revoked from PUBLIC, granted to the application role and (by the sync) to the limited role.
  * 2. `data_access_expected_policies()` and `data_access_sync_policies()` replaced: the expected
@@ -576,6 +576,7 @@ const readableContract = (p: string, reach: Reach) => `(${readableContractDirect
  */
 const ACCESS_DEFINER_SIGNATURES = [
   'data_access_contract_visible(uuid)',
+  'data_access_contract_modifiable(uuid)',
   'data_access_task_visible(uuid)',
   'data_access_task_modifiable(uuid)',
   'data_access_hidden_count(text, uuid)',
@@ -621,6 +622,20 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     AS $fn$
       SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
         SELECT ${readableContract('c.', 'definer')}
+        FROM public.contracts c WHERE c.id = p_contract), false) END
+    $fn$
+  `);
+
+  // modifiable_contrat; a modifiable contract is readable by lisible_contrat_direct, so the
+  // function needs no other test.
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_contract_modifiable(p_contract uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    ${definer}
+    AS $fn$
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+        SELECT ${modifiableContract('c.')}
         FROM public.contracts c WHERE c.id = p_contract), false) END
     $fn$
   `);

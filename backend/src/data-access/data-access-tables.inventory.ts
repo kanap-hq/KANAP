@@ -168,6 +168,7 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_line_of_version', cls: 'access', reason: 'SECURITY DEFINER: the line of a version, for the grandchild policies' },
   { name: 'data_access_line_of_round_input', cls: 'access', reason: 'SECURITY DEFINER: the line of a round input, for its lines\' policies' },
   { name: 'data_access_contract_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): lisible_contrat with the person\'s settings' },
+  { name: 'data_access_contract_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: modifiable_contrat with the person\'s settings, for the writes of contract tasks' },
   { name: 'data_access_task_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): a task visible (object readable or participant)' },
   { name: 'data_access_task_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: a task modifiable (object modifiable or responsible), for the writes of its elements' },
   { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read' },

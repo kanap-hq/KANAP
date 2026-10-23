@@ -382,12 +382,14 @@ async function checkDepthFunctions(s: Seed2, p: LimitedPerson): Promise<void> {
     assert.equal(row.m, taskModifiable(p, t), `${p}: data_access_task_modifiable(${t})`);
   }
   for (const c of CONTRACTS) {
-    const row = (await q(`SELECT data_access_contract_visible($1) AS v`, [s.contracts[c]]))[0];
+    const row = (await q(`SELECT data_access_contract_visible($1) AS v, data_access_contract_modifiable($1) AS m`, [s.contracts[c]]))[0];
     assert.equal(row.v, contractReadable(p, c), `${p}: data_access_contract_visible(${c})`);
+    assert.equal(row.m, contractModifiable(p, c), `${p}: data_access_contract_modifiable(${c})`);
   }
   const unknown = randomUUID();
-  const row = (await q(`SELECT data_access_task_visible($1) AS t, data_access_task_modifiable($1) AS m, data_access_contract_visible($1) AS c`, [unknown]))[0];
-  assert.deepEqual([row.t, row.m, row.c], [false, false, false], `${p}: an unknown id is not visible`);
+  const row = (await q(`SELECT data_access_task_visible($1) AS t, data_access_task_modifiable($1) AS m,
+                               data_access_contract_visible($1) AS c, data_access_contract_modifiable($1) AS cm`, [unknown]))[0];
+  assert.deepEqual([row.t, row.m, row.c, row.cm], [false, false, false, false], `${p}: an unknown id is not visible`);
 }
 
 /** Disclosure functions (§6.6): values, refusal (NULL) on an invisible or unknown starting object. */
@@ -473,7 +475,7 @@ async function testUnscoped(s: Seed2): Promise<void> {
     assert.equal((await q(`SELECT count(*)::int AS n FROM tasks`))[0].n, TASK_LABELS.length, `${name}: every task`);
     const values = (await q(`
       SELECT bool_and(data_access_task_visible(t.id) AND data_access_task_modifiable(t.id)) AS tasks,
-             (SELECT bool_and(data_access_contract_visible(c.id)) FROM contracts c) AS contracts,
+             (SELECT bool_and(data_access_contract_visible(c.id) AND data_access_contract_modifiable(c.id)) FROM contracts c) AS contracts,
              data_access_task_visible($2) AS unknown,
              data_access_hidden_count('application', $1) AS hidden,
              data_access_hidden_count('contract', $3) AS hidden_contract
