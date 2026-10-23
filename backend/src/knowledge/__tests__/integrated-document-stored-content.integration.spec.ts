@@ -285,12 +285,63 @@ async function testApplicationOverviewIsRecoveredFromAStoredDescription() {
   });
 }
 
+/**
+ * Recette C1a: a description created by a French user is titled in French, keeps that name of the
+ * slot when the application is renamed, and an English title stays valid.
+ */
+async function testOverviewTitleInTheCreatorsLanguage() {
+  await withFixture(async (runner, f) => {
+    const { integrated } = createServices(runner.manager);
+    const titleOf = async (appId: string) => (await runner.query(
+      `SELECT d.title FROM integrated_document_bindings b JOIN documents d ON d.id = b.document_id AND d.tenant_id = b.tenant_id
+        WHERE b.tenant_id = $1 AND b.source_entity_type = 'applications' AND b.source_entity_id = $2 AND b.slot_key = 'overview'`,
+      [f.tenantId, appId],
+    ))[0]?.title as string | undefined;
+    const rename = async (appId: string, name: string) => {
+      // An UPDATE answers [rows, count].
+      const [[row]] = await runner.query(
+        `UPDATE applications SET name = $3 WHERE id = $1 AND tenant_id = $2 RETURNING id::text AS id, tenant_id::text AS tenant_id, name, sequential_id`,
+        [appId, f.tenantId, name],
+      );
+      await integrated.syncTitles('applications', { id: row.id, tenant_id: row.tenant_id, item_number: null, name: row.name, reference_label: row.sequential_id }, f.userId, { manager: runner.manager });
+      return String(row.sequential_id);
+    };
+
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE id = $1 AND tenant_id = $2`, [f.userId, f.tenantId]);
+    const [french] = await runner.query(
+      `INSERT INTO applications (tenant_id, name, description) VALUES ($1, $2, 'Texte') RETURNING id::text AS id, sequential_id`,
+      [f.tenantId, `Paie ${f.tag}`],
+    );
+    await integrated.getBySource('applications', french.id, 'overview', f.userId, { manager: runner.manager });
+    assert.equal(await titleOf(french.id), `${french.sequential_id} - Paie ${f.tag} - Vue d'ensemble`, 'created in the user\'s language');
+    const ref = await rename(french.id, 'Nouveau nom');
+    assert.match(ref, /^APP-\d+$/);
+    assert.equal(await titleOf(french.id), `${ref} - Nouveau nom - Vue d'ensemble`, 'a rename keeps the French name of the slot');
+    await integrated.verifySourceEntity('applications', french.id, { manager: runner.manager });
+
+    // A description titled in English before (or by an English-speaking user) stays as it is.
+    await runner.query(`UPDATE users SET locale = 'en' WHERE id = $1 AND tenant_id = $2`, [f.userId, f.tenantId]);
+    const [english] = await runner.query(
+      `INSERT INTO applications (tenant_id, name, description) VALUES ($1, $2, 'Text') RETURNING id::text AS id, sequential_id`,
+      [f.tenantId, `Payroll ${f.tag}`],
+    );
+    await integrated.getBySource('applications', english.id, 'overview', f.userId, { manager: runner.manager });
+    assert.equal(await titleOf(english.id), `${english.sequential_id} - Payroll ${f.tag} - Overview`);
+    await integrated.verifySourceEntity('applications', english.id, { manager: runner.manager });
+    await runner.query(`UPDATE users SET locale = 'fr' WHERE id = $1 AND tenant_id = $2`, [f.userId, f.tenantId]);
+    await rename(english.id, 'Paie');
+    assert.equal(await titleOf(english.id), `${english.sequential_id} - Paie - Overview`, 'a French user renaming it keeps the English name of the slot');
+    await integrated.verifySourceEntity('applications', english.id, { manager: runner.manager });
+  });
+}
+
 async function run() {
   await dataSource.initialize();
   try {
     await testStoredPurposeIsReadableAndConvertible();
     await testTemplateOverTheLimitIsUsable();
     await testApplicationOverviewIsRecoveredFromAStoredDescription();
+    await testOverviewTitleInTheCreatorsLanguage();
   } finally {
     await dataSource.destroy();
     await closeMarkdownWorkers();

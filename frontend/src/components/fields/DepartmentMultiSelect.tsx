@@ -73,14 +73,18 @@ export default function DepartmentMultiSelect({
             key={option.id}
             label={picker.label(option, (o) => o.name ?? '')}
             size="small"
+            // A long department name wraps inside its chip: the drawer is narrow, and the full name
+            // stays readable without a hover.
             sx={(theme) => ({
-              height: 20,
+              height: 'auto',
+              minHeight: 20,
+              maxWidth: '100%',
               borderRadius: '3px',
               bgcolor: theme.palette.kanap.pill.bg,
               border: `1px solid ${theme.palette.kanap.pill.border}`,
               color: theme.palette.kanap.text.secondary,
               fontSize: 11,
-              '& .MuiChip-label': { px: '6px' },
+              '& .MuiChip-label': { px: '6px', py: '2px', whiteSpace: 'normal', overflowWrap: 'anywhere', lineHeight: 1.3 },
             })}
           />
         ))}

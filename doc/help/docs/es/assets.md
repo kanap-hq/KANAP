@@ -355,7 +355,7 @@ Desde la lista de Activos:
 2. **Elija la configuración de importación**:
    - **Modo**:
      - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Las celdas vacías borran los valores existentes (reemplazo completo de todos los campos)
+     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado. Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevos activos o actualizar existentes
      - `Solo actualizar`: Solo modificar activos existentes, omitir nuevos
@@ -417,7 +417,7 @@ El sistema normaliza automáticamente los valores durante la importación, por l
 
 Los activos se emparejan por **nombre** (sin distinguir mayúsculas). Cuando se encuentra una coincidencia:
 - Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan el activo
-- Con modo `Reemplazar`: Todos los campos se actualizan, los valores vacíos borran datos existentes
+- Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. El nombre, el `id`, el estado y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. En las columnas de direcciones IP, solo se aplican las subcolumnas presentes en el archivo. Un activo nuevo recibe los valores predeterminados.
 
 Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo.
 

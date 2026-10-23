@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Horas sin zona horaria, leídas en UTC: {{columns}}. Indique la zona después de la columna, por ejemplo {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Se requiere un valor.",
   "CSV_VALUE_ONE_REQUIRED": "Rellene al menos una columna {{column}}.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "Este campo no se puede vaciar. Quite la columna del archivo para conservar el valor guardado.",
   "CSV_NUMBER_INVALID": "«{{value}}» no es un número.",
   "CSV_DATE_INVALID": "«{{value}}» no es una fecha. Use 2026-09-02 o 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "«{{value}}» no es válido. Use sí o no.",
@@ -164,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} no está permitido. Los indicadores de las empresas de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "DATA_FROZEN_ACTION_departments": "{{action}} no está permitido. Los indicadores de los departamentos de {{year}} están congelados. Un administrador de presupuesto puede descongelarlos.",
   "DEPARTMENT_IN_USE": "Este departamento se usa en las asignaciones de {{usages}}. Desactívelo en lugar de eliminarlo.",
+  "BUSINESS_PROCESS_IN_USE": "Este proceso de negocio se usa en {{usages}}. Desactívelo en lugar de eliminarlo.",
   "BUILT_IN_RECORD": "Este elemento viene con KANAP y no se puede eliminar. Desactívelo en su lugar.",
   "RECORD_USED_BY": "Este elemento lo usan {{usages}}. Desactívelo en lugar de eliminarlo.",
   "TEAM_NOT_EMPTY_one": "Este equipo todavía tiene {{usages}}. Muévalo primero a otro equipo, o desactive el equipo.",
@@ -186,5 +188,25 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Esta carpeta todavía contiene {{usages}}. Muévala o elimínela primero.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Esta carpeta todavía contiene {{usages}}. Muévalas o elimínelas primero.",
   "currency_invalid": "Código de moneda desconocido: introduzca códigos ISO 4217 de tres letras, por ejemplo EUR, USD, CHF.",
-  "turnover_fx_missing_all": "Ninguna de las empresas seleccionadas tiene un tipo de cambio hacia la moneda de reporting. Su facturación no se puede comparar. Introduzca los tipos, o elija otro criterio de asignación."
+  "turnover_fx_missing_all": "Ninguna de las empresas seleccionadas tiene un tipo de cambio hacia la moneda de reporting. Su facturación no se puede comparar. Introduzca los tipos, o elija otro criterio de asignación.",
+  "name_required": "Introduzca un nombre.",
+  "name_taken": "Ya hay una aplicación con este nombre: {{ref}}.",
+  "name_ambiguous": "{{count}} aplicaciones se llaman {{name}}. Añada la columna id para indicar cuál.",
+  "name_too_long": "El nombre es demasiado largo: {{max}} caracteres como máximo.",
+  "lifecycle_invalid": "Ciclo de vida desconocido: {{value}}. Use un ciclo de vida de la lista, por su nombre o su código.",
+  "category_invalid": "Categoría desconocida: {{value}}. Use una categoría de la lista, por su nombre o su código.",
+  "classification_unknown": "Valor desconocido: {{value}}. Use un nivel de la configuración de clasificación, por su nombre o su código.",
+  "duration_invalid": "{{field}} debe ser un número entero de minutos.",
+  "owner_email_unknown": "Ningún usuario con el correo {{email}}.",
+  "dates_inconsistent": "El fin de soporte y la fecha de retiro no pueden ser anteriores a la puesta en producción.",
+  "suite_has_children_one": "Desvincule primero la aplicación asociada.",
+  "suite_has_children_other": "Desvincule primero las {{count}} aplicaciones asociadas.",
+  "suite_cycle": "Esta aplicación ya contiene {{name}}: no puede formar parte de ella.",
+  "forbidden": "No tiene permisos para esta acción.",
+  "NO_ACCESS": "Esta cuenta aún no tiene acceso. Solicítelo a un administrador.",
+  "fields": {
+    "rto_minutes": "El objetivo de tiempo de recuperación (RTO)",
+    "rpo_minutes": "El objetivo de punto de recuperación (RPO)",
+    "maxMtdMinutes": "El tiempo máximo de inactividad tolerable"
+  }
 }

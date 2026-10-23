@@ -104,6 +104,14 @@ export class BusinessProcessesController {
     return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  // What a delete of `ids` would refuse, asked before the confirmation.
+  @UseGuards(PermissionGuard)
+  @RequireLevel('business_processes', 'admin')
+  @Post('delete-check')
+  deleteCheck(@Body() body: { ids?: unknown }, @Req() req: any) {
+    return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
+  }
+
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @Delete('bulk')

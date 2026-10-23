@@ -94,7 +94,7 @@
     },
     "noResults": "No results",
     "noResultsFiltered": "No results match the search or the filters.",
-    "clearAll": "Clear search and filters",
+    "clearAll": "Reset filters",
     "resultCount_one": "{{count, count}} result",
     "resultCount_other": "{{count, count}} results"
   },
@@ -547,7 +547,7 @@
     "overridePresetNote": "These settings override the workflow preset selection.",
     "emptyCellHandling": "Empty cell handling",
     "preserveExisting": "Preserve existing",
-    "setToNull": "Set to null",
+    "setToNull": "Clear the stored value",
     "operation": "Operation",
     "insertAndUpdate": "Insert & update",
     "updateOnly": "Update only",
@@ -589,7 +589,7 @@
       },
       "fullReplace": {
         "label": "Full replace",
-        "description": "Replace every value, empty cells included. An empty cell clears the stored value."
+        "description": "Replace the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: the check points them out."
       }
     },
     "exportRows": {
@@ -644,6 +644,76 @@
       "analyticsValues": "No values to export",
       "businessProcesses": "No business processes to export",
       "accounts": "No accounts to export"
+    },
+    "groups": {
+      "classification": "Classification",
+      "identity": "Identity",
+      "overview": "Overview",
+      "version": "Version",
+      "other": "Other",
+      "technical": "Technical",
+      "compliance": "Compliance",
+      "users": "Users",
+      "status": "Status",
+      "owners": "Owners",
+      "timestamps": "Dates",
+      "vulnerabilities": "Vulnerabilities"
+    },
+    "presets": {
+      "applications": {
+        "enrichment": "Data enrichment"
+      }
+    },
+    "fields": {
+      "applications": {
+        "id": "ID",
+        "name": "Name",
+        "description": "Description",
+        "category": "Category",
+        "supplier_name": "Supplier",
+        "editor": "Publisher",
+        "criticality": "Business criticality",
+        "cyber_criticality": "Cyber criticality",
+        "recovery_wave": "Recovery wave",
+        "rto_minutes": "Recovery time objective (minutes)",
+        "rpo_minutes": "Recovery point objective (minutes)",
+        "classification_justification": "Classification justification",
+        "classification_revision": "Classification revision",
+        "classification_review_state": "Classification review",
+        "classification_reviewed_at": "Classification reviewed on",
+        "lifecycle": "Lifecycle",
+        "is_suite": "Can include other applications",
+        "version": "Version",
+        "go_live_date": "Go-live date",
+        "end_of_support_date": "End-of-support date",
+        "retired_date": "Retirement date",
+        "licensing": "Licensing",
+        "notes": "Notes",
+        "access_methods": "Access methods",
+        "external_facing": "External facing",
+        "etl_enabled": "Data integration / ETL",
+        "support_notes": "Support notes",
+        "data_class": "Data confidentiality",
+        "last_dr_test": "Last recovery test",
+        "contains_pii": "Contains personal data",
+        "data_residency": "Data residency (country codes)",
+        "users_mode": "Users mode",
+        "users_year": "Users year",
+        "users_override": "Users count (manual)",
+        "status": "Status",
+        "created_at": "Created on",
+        "updated_at": "Updated on",
+        "vulnerabilities_to_review": "Vulnerabilities to review",
+        "severe_vulnerabilities": "Severe vulnerabilities",
+        "business_owner_email_1": "Business owner 1 email",
+        "it_owner_email_1": "IT owner 1 email",
+        "business_owner_email_2": "Business owner 2 email",
+        "it_owner_email_2": "IT owner 2 email",
+        "business_owner_email_3": "Business owner 3 email",
+        "it_owner_email_3": "IT owner 3 email",
+        "business_owner_email_4": "Business owner 4 email",
+        "it_owner_email_4": "IT owner 4 email"
+      }
     }
   },
   "selects": {
@@ -705,7 +775,8 @@
     "lockExpired": "Editing lock expired. Re-enter edit mode to continue.",
     "failedToSave": "Failed to save document",
     "failedToLoad": "Failed to load the managed document",
-    "contentUnavailable": "Managed document content is unavailable until the load error is resolved.",
+    "notReachable": "This text cannot be opened right now. Reload the page, or ask an administrator if it happens again.",
+    "contentUnavailable": "The text will show once the error above is resolved.",
     "lockedBy": "This managed document is locked by {{name}}",
     "lockedByUntil": "This managed document is locked by {{name}} until {{expires}}. You can read it while the lock is active.",
     "lockedByReadOnly": "This managed document is locked by {{name}}. You can read it while the lock is active.",
@@ -747,7 +818,7 @@
     "newLinkedTitle": "New linked document"
   },
   "share": {
-    "sendLink": "Send link",
+    "sendLink": "Share",
     "share": "Share",
     "searchUsersOrEmail": "Search users or type an email…",
     "messageOptional": "Message (optional)",

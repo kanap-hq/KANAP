@@ -39,7 +39,7 @@ Verschiedene Teams können Kategorien verwenden, um sich auf ihren Verantwortung
 Navigieren Sie zu **IT-Landschaft > Anwendungen**, um Ihre Liste zu sehen. Klicken Sie auf **Neue App / Dienst**, um Ihren ersten Eintrag zu erstellen.
 
 **Pflichtfelder**:
-- **Name**: Ein wiedererkennbarer Name für die Anwendung oder den Dienst
+- **Name**: Ein wiedererkennbarer Name für die Anwendung oder den Dienst, höchstens 200 Zeichen. Siehe [Eindeutige Namen](#unique-names)
 - **Kategorie**: Der Hauptzweck dieser Anwendung (siehe Kategorien oben)
 - **Lebenszyklus**: Aktueller Status (Aktiv, Vorgeschlagen, Veraltet, Außer Betrieb oder ein in den Einstellungen definierter benutzerdefinierter Code)
 
@@ -59,7 +59,15 @@ Klassifizierungsfelder sind beim Anlegen optional. **Geschäftskritikalität**, 
 - **Notizen**: Freitext-interne Notizen
 - **Kann Unteranwendungen haben**: Aktivieren, um diese Anwendung als „Suite" zu verwenden, die andere Anwendungen gruppiert
 
+**Support-Ende** und **Außerbetriebnahmedatum** dürfen nicht vor dem **Go-Live** liegen.
+
 Nach dem Speichern schaltet der Arbeitsbereich alle Reiter für die detaillierte Dokumentation frei.
+
+### Eindeutige Namen { #unique-names }
+
+Zwei Anwendungen können nicht denselben Namen tragen. Der Vergleich ignoriert Groß- und Kleinschreibung sowie Leerzeichen am Anfang und Ende des Namens: `CRM` und ` crm ` sind derselbe Name. Ist der Name vergeben, nennt die Meldung die Anwendung, die ihn trägt, mit ihrer Referenz (`APP-12`). Die Regel gilt, wenn Sie eine Anwendung erstellen, umbenennen, kopieren oder importieren, und wenn Sie eine neue Version erstellen.
+
+Anwendungen, die schon vor dieser Regel denselben Namen trugen, bleiben bearbeitbar. Ihr Name wird erst geprüft, wenn er sich ändert.
 
 **Tipp**: Beginnen Sie mit der Dokumentation Ihrer kritischsten Anwendungen. Verwenden Sie den Reiter **Bereitstellungen**, um zu erfassen, welche Umgebungen existieren (Prod, QA, Dev) und welche Server sie betreiben, und verknüpfen Sie dann Schnittstellen, Verträge und Budgetzeilen nach und nach.
 
@@ -81,15 +89,17 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 - Ihre Auswahl wird sitzungsübergreifend gespeichert: bei Rückkehr zur Seite wird Ihre letzte Wahl wiederhergestellt.
 
 **Standardspalten**:
-- **Name**: Anwendungsname mit Kategorie-Beschriftung und einem Badge „Enthalten in: {Suite}" für Komponenten einer Suite
+- **Name**: Anwendungsname, darunter eine Zeile „Enthalten in: {Suite}" für eine Anwendung, die in einer Suite enthalten ist
 - **Zu prüfende Schwachstellen**: die noch zu prüfenden Schwachstellen der Technologien, die die Anwendung deklariert oder die ihre Bereitstellungsserver erfasst haben, dann in Orange die Zahl der kritischen oder hohen (`5 · 2`). Leer für eine deaktivierte Anwendung oder wenn keine mehr offen ist. Ein Klick öffnet die Seite [Schwachstellen](vulnerabilities.md), gefiltert auf die Anwendung. Vorhanden, wenn Schwachstellen verfolgt werden. Siehe [Was KANAP zählt](vulnerabilities.md#what-kanap-counts)
 - **Kategorie**: Der Hauptzweck der Anwendung
 - **Umgebungen**: Farbige Chips, die aktive Umgebungen zeigen (Prod, Pre-prod, QA, Test, Dev, Sandbox). Bewegen Sie den Mauszeiger darüber für Basis-URL und Lebenszyklus.
 - **Lebenszyklus**: Aktueller Status
 - **Geschäftskritikalität**: Stufe der geschäftlichen Bedeutung
 - **Herausgeber**: Software-Herausgeber
-- **Abgeleitete Benutzer (J)**: Berechnete Benutzeranzahl für das aktuelle Jahr (basierend auf der in der Eigenschaftsleiste festgelegten Zielgruppe)
+- **Abgeleitete Benutzer {Jahr}**: die Benutzer, die für die Unternehmen und Abteilungen der Zielgruppe im laufenden Jahr gezählt werden, oder im nächstliegenden Jahr mit Daten. Eine manuell erfasste Benutzerzahl ersetzt sie. Der Tooltip der Spaltenüberschrift erklärt das
 - **Erstellt**: Wann der Datensatz erstellt wurde
+
+Eine Zelle ohne Wert zeigt einen Strich.
 
 **Standardsortierung**: **Name** aufsteigend (A bis Z).
 
@@ -111,14 +121,14 @@ Das Anwendungsraster bietet eine umfassende Ansicht Ihres Anwendungsportfolios.
 **Filterung**:
 - Schnellsuche: gleicht Name und Editor/Herausgeber ab
 - Die Filter für Kritikalität, Cyberkritikalität, Datenklasse und Wiederanlaufwelle listen ihre Werte in Katalogreihenfolge (die kritischste zuerst, Wellen in Wiederherstellungsreihenfolge).
-- Die meisten Spalten verwenden Kontrollkästchen-Set-Filter, die nur Werte anzeigen, die im aktuellen Ergebnissatz vorhanden sind; der schwebende Filter zeigt `Alle`, `Keine` oder `N ausgewählt` mit einem **x** zum Löschen.
+- Die meisten Spalten verwenden Kontrollkästchen-Set-Filter, die nur Werte anzeigen, die im aktuellen Ergebnissatz vorhanden sind. **Alle** wählt alle Werte aus, **Keine** hebt die Auswahl aller Werte auf. Der schwebende Filter zeigt `Alle`, `Keine` oder `N ausgewählt` mit einem **x** zum Löschen.
 - Außer Betrieb genommene Anwendungen sind standardmäßig ausgeblendet; verwenden Sie den **Lebenszyklus**-Filter, um Außer Betrieb einzuschließen.
 - **Zu prüfende Schwachstellen** filtert nach **Mit schwerwiegenden Schwachstellen**, **Mit Schwachstellen** oder **Ohne** und sortiert nach den kritischen oder hohen Schwachstellen, dann nach der Gesamtzahl. Deaktivierte Anwendungen stehen zuletzt und fallen unter keinen Filterwert.
 
 **Aktionen**:
 - **Neue App / Dienst**: Einen neuen Eintrag erstellen (`applications:member`)
 - **CSV importieren**: Massenimport aus CSV-Datei (`applications:admin`)
-- **CSV exportieren**: Liste als CSV exportieren (`applications:admin`). Katalogbasierte Spalten (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) werden mit ihren Namen exportiert; der Import akzeptiert einen Namen oder den internen Code.
+- **CSV exportieren**: Die Anwendungen, die die Liste anzeigt, als CSV exportieren (`applications:admin`). Siehe [Exportoptionen](#export-options).
 - **Element kopieren**: Eine ausgewählte Anwendung mit allen Kernbeziehungen duplizieren (`applications:member`). Siehe [Anwendungen kopieren](#anwendungen-kopieren) für Details.
 - **Ausgewählte löschen**: Ausgewählte Anwendungen entfernen (`applications:admin`). Eine Anwendung, die Quelle oder Ziel einer Schnittstelle ist, kann nicht gelöscht werden: Deaktivieren Sie sie stattdessen, oder löschen Sie zuerst ihre Schnittstellen. Vor der Bestätigung führt das Fenster diese Anwendungen als behalten auf, mit der Anzahl ihrer Schnittstellen. Die anderen werden mit ihren Bereitstellungen und Verknüpfungen zu anderen Einträgen gelöscht; die Bestätigung zählt die Bereitstellungen
 
@@ -150,9 +160,11 @@ Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter ange
 
 **Identität**:
 - **Kategorie**, **Lieferant**, **Herausgeber**
+- **Enthalten in**: die Suiten, zu denen diese Anwendung gehört. Wählen Sie eine unter **Suite hinzufügen**: Die Liste bietet die Anwendungen an, bei denen **Kann untergeordnete Anwendungen haben** aktiviert ist. Jeder Name öffnet die Suite. Um eine zu entfernen, fahren Sie mit der Maus über ihren Namen und klicken Sie auf das Kreuz am Zeilenende. Eine Suite kann zu einer anderen Suite gehören, aber eine Verknüpfung, die eine Schleife bilden würde, wird abgelehnt (zum Beispiel eine Suite in einer ihrer eigenen Komponenten)
 
-**Lebenszyklus-Daten**:
-- **Go-Live**, **Support-Ende**, **Außerbetriebnahmedatum**
+**Version und Lebenszyklus-Daten**:
+- **Version**. Darunter öffnet **Vorherige Version** die Anwendung, aus der diese mit **Neue Version** erstellt wurde, und **Nächste Version** die Anwendungen, die aus ihr erstellt wurden. Diese Links erscheinen nur, wenn es solche Anwendungen gibt
+- **Go-Live**, **Support-Ende**, **Außerbetriebnahmedatum**. **Support-Ende** und **Außerbetriebnahmedatum** dürfen nicht vor dem **Go-Live** liegen
 
 **Geschäftsprozesse und Verantwortliche**:
 - **Geschäftsprozesse**: die Prozesse, die die Anwendung unterstützt. Jeder Name öffnet den Prozess. Tippen Sie in das Feld, um einen Prozess zu suchen und hinzuzufügen; fahren Sie mit der Maus über einen Namen und klicken Sie auf das Kreuz, um ihn zu entfernen. Jede Änderung wird sofort gespeichert. Der Prozess zeigt dieselbe Verknüpfung in seinem eigenen Abschnitt **Anwendungen**. Ein deaktivierter Prozess bleibt ausgegraut aufgeführt. Das Ändern der Liste erfordert zusätzlich `business_processes:member`; ohne Leserecht für Geschäftsprozesse ist das Feld ausgeblendet.
@@ -161,8 +173,11 @@ Die Leiste ist die Identitätskarte der Anwendung. Sie wird in jedem Reiter ange
 
 Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen und klicken Sie auf das Kreuz am Zeilenende.
 
+Wenn Sie einen Verantwortlichen, einen Geschäftsprozess, eine Suite oder einen Supportkontakt entfernen, erscheint eine Meldung mit **Rückgängig**, die ihn wiederherstellt.
+
 **Zielgruppe**:
 - Fügen Sie Zeilen für **Unternehmen / Abteilungen** hinzu, um aufzuzeichnen, wer diese Anwendung nutzt. Wählen Sie ein Unternehmen aus und schränken Sie optional auf bestimmte Abteilungen ein.
+- Eine Zeile unter der Zielgruppe sagt, was sie abdeckt. Ohne ausgewählte Abteilung ist die Zielgruppe das ganze Unternehmen. Mit ausgewählten Abteilungen sind es nur diese Abteilungen: Entfernen Sie sie, um wieder das ganze Unternehmen einzubeziehen.
 - Eine Live-Zählung der **Benutzer** wird angezeigt.
 - **Berechnungsmethode**: **Abgeleitet** (aus der Zielgruppe basierend auf Stammdaten-Metriken IT-Benutzer / Mitarbeiterzahl berechnet) oder **Manuell** (eine einzelne Überschreibungszahl, die Sie eingeben).
 
@@ -172,7 +187,7 @@ Um einen Verantwortlichen zu entfernen, fahren Sie mit der Maus über den Namen 
 
 Der Reiter Übersicht ist die Erzählung der Anwendung. Er enthält:
 
-**Beschreibung**: Eine Rich-Text-Beschreibung der Anwendung. Der Editor speichert automatisch beim Tippen.
+**Beschreibung**: Eine Rich-Text-Beschreibung der Anwendung. Der Editor speichert automatisch beim Tippen. Wer die Anwendung bearbeiten darf, darf auch ihre Beschreibung bearbeiten, ohne Berechtigung für die Wissensdatenbank. Die Beschreibung wird als verwaltetes Dokument in der Wissensdatenbank geführt. Ihr Titel enthält die Referenz und den Namen der Anwendung, in der Sprache der Person, die sie erstellt hat. Wird die Anwendung umbenannt, im Arbeitsbereich oder per CSV-Import, folgt dieser Titel.
 
 **Verbindungen**: Eine schreibgeschützte Zusammenfassung, die aus den Schnittstellen der Anwendung erstellt wird. Bei Nicht-Middleware-Apps zeigt sie zwei Zeilen: **Empfängt von** und **Sendet an**. Bei ETL/Middleware-Apps zeigt sie eine einzelne Zeile **Verbunden mit**. Jeder Eintrag ist eine anklickbare Pille, die die zugehörige Anwendung öffnet; „+ N weitere in Schnittstellen" springt zum Reiter Schnittstellen.
 
@@ -238,7 +253,7 @@ Der Reiter Betrieb enthält in dieser Reihenfolge, wie Benutzer auf die Anwendun
 - **Zugriffsmethoden** (Mehrfachauswahl): Wie Benutzer auf diese Anwendung zugreifen. Optionen sind in den [IT-Landschaft-Einstellungen](it-ops-settings.md) konfigurierbar. Standards umfassen Web, Lokal installierte Anwendung, Mobile Anwendung, Proprietäre HMI (industrielle Schnittstelle), Terminal / CLI, VDI / Remote Desktop, Kiosk.
 - **Extern erreichbar**: Ob die Anwendung aus dem Internet zugänglich ist
 - **Datenintegration / ETL**: Ob die Anwendung an Datenintegrations-Pipelines teilnimmt (versetzt diese App auch in den „Middleware"-Modus für die Schnittstellen- und Verbindungsansichten)
-- **Kann Unteranwendungen haben**: Diese Anwendung in eine Suite verwandeln, die andere Anwendungen gruppiert
+- **Kann Unteranwendungen haben**: Diese Anwendung in eine Suite verwandeln, die andere Anwendungen gruppiert. Solange Anwendungen in der Suite enthalten sind, können Sie das Kontrollkästchen nicht deaktivieren: Entfernen Sie sie zuerst aus der Suite
 
 **Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
 
@@ -396,7 +411,7 @@ Für größere Anwendungsupgrades, bei denen Sie alte und neue Versionen paralle
 
 Der Assistent hat drei Schritte:
 
-1. **Versionsdetails**: Neuen Anwendungsnamen, Versionsbezeichnung, **Go-Live**- und **Support-Ende**-Daten.
+1. **Versionsdetails**: Neuen Anwendungsnamen, Versionsbezeichnung, **Go-Live**- und **Support-Ende**-Daten. Der Name muss frei sein (siehe [Eindeutige Namen](#unique-names)), und das **Support-Ende** darf nicht vor dem **Go-Live** liegen.
 2. **Kopieroptionen**: wählen, was von der Quelle kopiert wird. Standardwerte unten gezeigt.
 3. **Schnittstellen**: wählen, welche Schnittstellen zur neuen Version migriert werden sollen.
 
@@ -405,6 +420,8 @@ Die neue Version wird als separate Anwendung erstellt mit:
 - Einem Link zu seinem Vorgänger (verwendet von der Versions-Zeitleiste)
 - Kopierten Daten basierend auf Ihren Auswahlen
 - Duplizierten Schnittstellen, die auf die neue Version verweisen
+
+Nach dem Erstellen nennt eine Meldung die Referenz der neuen Version. Die beiden Anwendungen sind dann in der Eigenschaftsleiste über **Vorherige Version** und **Nächste Version** miteinander verknüpft.
 
 Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginnt jedoch mit einem zurückgesetzten Review und ohne kopierten letzten Wiederherstellungstest.
 
@@ -423,7 +440,9 @@ Klassifizierungs- und Kontinuitätswerte werden kopiert, die neue Version beginn
 | Bereitstellungen | Aus |
 | Bereitstellungs-Bindungen | Aus (nur verfügbar, wenn Bereitstellungen ausgewählt ist) |
 
-**Nicht kopiert** (muss neu eingerichtet werden): Suite-Mitgliedschaft, Anhänge, Server-Zuweisungen.
+**Immer kopiert**: die Beschreibung, die Geschäftsprozesse, die Zugriffsmethoden, die Kontrollkästchen **Extern zugänglich**, **Datenintegration / ETL** und **Kann untergeordnete Anwendungen haben** sowie die manuell erfasste Benutzerzahl.
+
+**Nicht kopiert** (muss neu eingerichtet werden): Suite-Mitgliedschaft, Anhänge, die Daten der Quelle, der letzte Wiederherstellungstest, die Klassifizierungsprüfung und Server-Zuweisungen. Der Assistent listet sie auf.
 
 ### Schnittstellenmigration
 
@@ -447,7 +466,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 
 1. Wählen Sie eine Anwendung im Raster aus
 2. Klicken Sie auf **Element kopieren**
-3. Das System erstellt eine Kopie mit „ (Kopie)" angehängt an den Namen
+3. Das System erstellt eine Kopie mit dem Namen der Quelle und einem Suffix in der Sprache Ihres Bildschirms: „CRM (Kopie)", auf Englisch „CRM (copy)". Ist dieser Name vergeben, wird die Kopie nummeriert: „CRM (Kopie 2)", dann „CRM (Kopie 3)"
 4. Sie werden zur neuen Anwendung navigiert, um Änderungen vorzunehmen
 
 **Was kopiert wird**: Alle Kernfelder (außer dem Datum des letzten DR-Tests), einschließlich Klassifizierungs- und Kontinuitätswerten, Verantwortliche, Unternehmen, Abteilungen, Suites, OPEX/CAPEX-Zeilen, Verträge, Verknüpfungen, Datenhaltung und Supportkontakte. Das Review der Kopie wird zurückgesetzt.
@@ -462,7 +481,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 | **Benutzeroptionen** | Keine (automatisch) | 3-Schritt-Assistent |
 | **Verkettung** | Keine Vorgängerverknüpfung | Setzt Vorgänger |
 | **Lebenszyklus** | Erhalten | Auf Vorgeschlagen zurückgesetzt |
-| **Name** | „(Kopie)"-Suffix | Vom Benutzer angegeben |
+| **Name** | „(Kopie)"-Suffix, nummeriert, wenn der Name vergeben ist | Vom Benutzer angegeben, muss frei sein |
 
 **Verknüpfungen**:
 
@@ -474,6 +493,7 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 | Datenhaltung | Ja | Optional (Standard: ja) |
 | Verknüpfungen | Ja | Optional (Standard: ja) |
 | Supportkontakte | Ja | Optional (Standard: ja) |
+| Geschäftsprozesse | Nein | Ja |
 | Suites (Mitgliedschaft) | Ja | Nein |
 | OPEX-Zeilen | Ja | Optional (Standard: ja) |
 | CAPEX-Zeilen | Ja | Optional (Standard: ja) |
@@ -489,11 +509,12 @@ Verwenden Sie dies, wenn Sie ein unabhängiges Duplikat einer Anwendung erstelle
 | Feld | Element kopieren | Neue Version |
 |-------|-----------|--------------------|
 | Beschreibung | Ja | Ja |
+| Zugriffsmethoden | Ja | Ja |
 | ETL aktiviert | Ja | Ja |
 | Support-Notizen | Ja | Ja |
 | Letzter DR-Test | Nein | Nein |
 | Versionsfelder | Nein | Vom Benutzer angegeben |
-| Benutzer-Überschreibung | Ja | Auf null zurückgesetzt |
+| Benutzer-Überschreibung | Ja | Ja |
 | Benutzerjahr | Ja | Auf aktuelles Jahr zurückgesetzt |
 
 ---
@@ -511,7 +532,11 @@ Aus der Anwendungsliste:
 
 **Erforderliche Berechtigungen**: `applications:admin` für Import-/Export-Operationen.
 
-### Exportoptionen
+### Exportoptionen { #export-options }
+
+**Inhalt der Datei**: die Anwendungen, die die Liste anzeigt. Der Export folgt den Spaltenfiltern, der Schnellsuche und der Auswahl **Anzeigen** (**Meine Anwendungen**, **Anwendungen meines Teams** oder **Alle Anwendungen**). Der Dialog nennt die Zahl der Anwendungen, die die Datei enthalten wird. Ohne Filter auf **Lebenszyklus** fehlen außer Betrieb genommene Anwendungen, wie in der Liste.
+
+**Sprache der Werte**: Katalogwerte (Kategorie, Lebenszyklus, Kritikalität, Cyberkritikalität, Wiederherstellungswelle, Datenklasse, Zugriffsmethoden) und der Status werden so geschrieben, wie der Bildschirm sie zeigt, in der Sprache Ihres Bildschirms: `Active` auf Englisch, `Aktiv` auf Deutsch. Ein Name, den Ihre Organisation einem Wert unter **IT-Landschaft > Einstellungen** gegeben hat, bleibt unverändert.
 
 **Voreinstellungen**:
 
@@ -531,15 +556,30 @@ Aus der Anwendungsliste:
 2. **Importeinstellungen wählen**:
    - **Modus**:
      - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Angegebene Felder werden aktualisiert; leere Klassifizierungszellen behalten den vorhandenen Wert, `__CLEAR__` löscht ihn ausdrücklich
+     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert, außer in den Klassifizierungsspalten (verwenden Sie dort `__CLEAR__`). Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Anwendungen erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Anwendungen ändern, neue überspringen
      - `Nur einfügen`: Nur neue Anwendungen erstellen, vorhandene überspringen
 
+     Die Operation gilt auch für die Verantwortlichen und die Datenresidenz: Eine Zeile, die die Operation überspringt, lässt sie unverändert.
+
 3. **Zuerst validieren**: Klicken Sie auf **Preflight**, um Ihre Datei ohne Änderungen zu validieren. Überprüfen Sie Fehler und Warnungen.
 
 4. **Änderungen anwenden**: Wenn die Validierung erfolgreich ist, klicken Sie auf **Importieren**, um Änderungen zu übernehmen.
+
+### Zeilenprüfungen
+
+Der Preflight wendet dieselben Regeln an wie der Arbeitsbereich. Eine Zeile wird abgelehnt, wenn:
+
+- ihr Name länger als 200 Zeichen ist oder bereits eine andere Anwendung ihn trägt (siehe [Eindeutige Namen](#unique-names));
+- ihr Name zu zwei vorhandenen Anwendungen passt: Fügen Sie die Spalte `id` hinzu, um eine auszuwählen;
+- ihre Kategorie oder ihr Lebenszyklus zu keinem Code und keinem Namen des Katalogs passt;
+- eine Verantwortlichen-E-Mail zu keinem Benutzer passt;
+- ihr **Support-Ende** oder ihr **Außerbetriebnahmedatum** vor ihrem **Go-Live** liegt;
+- `is_suite` für eine Suite, die noch Anwendungen enthält, `no` ist.
+
+Eine Datei mit einer einzigen abgelehnten Zeile lädt nichts. Siehe [CSV-Dateien](csv-files.md).
 
 ### Feldreferenz
 
@@ -548,15 +588,14 @@ Aus der Anwendungsliste:
 | CSV-Spalte | Beschreibung | Erforderlich | Hinweise |
 |------------|-------------|----------|-------|
 | `id` | Anwendungs-UUID | Nein | Für Updates; bei neuen Anwendungen leer lassen |
-| `name` | Anwendungsname | Ja | Wird als eindeutige Kennung für den Abgleich verwendet |
+| `name` | Anwendungsname | Ja | Höchstens 200 Zeichen. Dient dem Abgleich mit vorhandenen Anwendungen |
 | `description` | Was die Anwendung tut | Nein | |
-| `category` | Hauptzweck | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
+| `category` | Hauptzweck | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen. Ein unbekannter Wert führt zur Ablehnung der Zeile |
 | `supplier_name` | Lieferantenname | Nein | Muss mit vorhandenem Lieferanten übereinstimmen |
 | `editor` | Software-Herausgeber | Nein | Freitext (z. B. Microsoft, SAP) |
 | `criticality` | Geschäftskritikalität | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen; `__CLEAR__` löscht den Wert |
-| `lifecycle` | Aktueller Status | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
+| `lifecycle` | Aktueller Status | Nein | Akzeptiert Code oder Bezeichnung aus den Einstellungen. Ein unbekannter Wert führt zur Ablehnung der Zeile |
 | `is_suite` | Kann Unteranwendungen haben | Nein | `ja` oder `nein` |
-| `status` | Aktiviert/deaktiviert | Nein | `enabled` oder `disabled` |
 
 **Versionsfelder**:
 
@@ -585,7 +624,7 @@ Aus der Anwendungsliste:
 | `data_class` | Datenklassifizierung | Akzeptiert Code oder Bezeichnung aus den Einstellungen |
 | `last_dr_test` | Datum des letzten DR-Tests | Datumsformat: YYYY-MM-DD |
 | `contains_pii` | Speichert personenbezogene Daten | `ja` oder `nein` |
-| `data_residency` | Datenspeicherländer | Nur Export (ISO-Codes) |
+| `data_residency` | Datenspeicherländer | ISO-Ländercodes, komma-getrennt (z. B. `FR,DE`). Im Modus `Anreichern` behält eine leere Zelle die Länder |
 
 **Klassifizierungsfelder**:
 
@@ -603,14 +642,16 @@ Eine leere Klassifizierungszelle behält im Modus Anreichern und Ersetzen den vo
 
 | CSV-Spalte | Beschreibung | Hinweise |
 |------------|-------------|-------|
-| `business_owner_email_1` bis `_4` | E-Mails der Business-Verantwortlichen | Müssen mit vorhandenen Benutzern per E-Mail übereinstimmen |
-| `it_owner_email_1` bis `_4` | E-Mails der IT-Verantwortlichen | Müssen mit vorhandenen Benutzern per E-Mail übereinstimmen |
+| `business_owner_email_1` bis `_4` | E-Mails der Business-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+| `it_owner_email_1` bis `_4` | E-Mails der IT-Verantwortlichen | Müssen der E-Mail eines vorhandenen Benutzers entsprechen. Eine unbekannte E-Mail führt zur Ablehnung der Zeile |
+
+Im Modus `Anreichern` behält die Anwendung ihre Verantwortlichen eines Typs, wenn alle Verantwortlichen-Zellen dieses Typs leer sind.
 
 **Nur-Export-Felder** (im Vollständigen Export enthalten, aber nicht importierbar):
 
 | CSV-Spalte | Beschreibung |
 |------------|-------------|
-| `data_residency` | Datenspeicherländer (ISO-Codes, komma-getrennt) |
+| `status` | Aktiviert oder deaktiviert, in der Sprache Ihres Bildschirms. Wird an der Anwendung selbst geändert |
 | `users_mode` | Benutzeranzahl-Methode (`manual`, `it_users`, `headcount`) |
 | `users_year` | Referenzjahr für Benutzerberechnungen |
 | `users_override` | Manuelle Benutzeranzahl-Überschreibung |
@@ -631,15 +672,17 @@ Für Felder, die in **IT-Landschaft > Einstellungen** konfiguriert sind, können
 | Lebenszyklus | `active`, `proposed`, `deprecated` | `Active`, `Proposed`, `Deprecated` |
 | Datenklasse | `public`, `internal`, `confidential` | `Public`, `Internal`, `Confidential` |
 
-Das System normalisiert Werte automatisch beim Import, sodass `Line-of-business`, `line-of-business` und `lob` alle zur gleichen Kategorie aufgelöst werden.
+Das System normalisiert Werte automatisch beim Import, sodass `Line-of-business`, `line-of-business` und `lob` alle zur gleichen Kategorie aufgelöst werden. Die Bezeichnungen, die der Bildschirm zeigt, werden auf Englisch, Französisch, Deutsch und Spanisch akzeptiert: `Active`, `Actif`, `Aktiv` und `Activo` bezeichnen denselben Lebenszyklus. Eine in einer Sprache exportierte Datei lässt sich daher in einer anderen importieren.
 
 ### Abgleich und Updates
 
-Anwendungen werden nach **Name** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird:
+Anwendungen werden nach **Name** abgeglichen, ohne Rücksicht auf Groß- und Kleinschreibung und auf Leerzeichen am Anfang und Ende. Wenn ein Treffer gefunden wird:
 - Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren die Anwendung
-- Mit `Ersetzen`-Modus: Angegebene Felder werden aktualisiert; leere Klassifizierungszellen behalten den vorhandenen Wert, `__CLEAR__` löscht ihn ausdrücklich
+- Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Eine leere Klassifizierungszelle behält ihren Wert, `__CLEAR__` löscht ihn. Name, `id`, Lebenszyklus und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Eine neue Anwendung erhält die Standardwerte.
 
-Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück.
+Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück. Tragen zwei vorhandene Anwendungen den Namen einer Zeile, wird die Zeile abgelehnt: Fügen Sie die Spalte `id` hinzu, um eine auszuwählen.
+
+Eine über ihre `id` gefundene Zeile mit einem anderen Namen benennt die Anwendung um. Der neue Name muss frei sein. Der Titel des Beschreibungsdokuments der Anwendung folgt dem neuen Namen.
 
 ### Einschränkungen
 
@@ -648,7 +691,7 @@ Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der A
 - **Schnittstellen ausgeschlossen**: Integrationsdefinitionen sind nicht Teil des CSV-Imports/-Exports
 - **Maximal 4 Verantwortliche pro Typ**: Bis zu 4 Business-Verantwortliche und 4 IT-Verantwortliche können importiert/exportiert werden
 - **Benutzermetriken nur Export**: Zielgruppen- und Benutzeranzahlfelder (`users_mode`, `users_year`, `users_override`) werden im Arbeitsbereich verwaltet
-- **Datenhaltung nur Export**: Länderauswahlen müssen im Reiter Compliance verwaltet werden
+- **Status nur Export**: Aktivieren oder deaktivieren Sie eine Anwendung in ihrem Arbeitsbereich
 
 ### Fehlerbehebung
 

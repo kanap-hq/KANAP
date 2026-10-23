@@ -236,7 +236,8 @@
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Un autre département de cette société porte déjà ce nom.",
       "companyRequired": "Choisissez une société.",
-      "headcountInvalid": "Saisissez un nombre entier, 0 ou plus."
+      "headcountInvalid": "Saisissez un nombre entier, 0 ou plus.",
+      "deleteFailed": "Échec de la suppression du département."
     },
     "delete": {
       "toDelete_one": "{{count}} département sera supprimé :",
@@ -475,7 +476,8 @@
       "nameRequired": "Saisissez un nom.",
       "nameTaken": "Un autre fournisseur porte déjà ce nom.",
       "saveFailed": "Échec de l'enregistrement du fournisseur.",
-      "createFailed": "Échec de la création du fournisseur."
+      "createFailed": "Échec de la création du fournisseur.",
+      "deleteFailed": "Échec de la suppression du fournisseur."
     },
     "previous": "Fournisseur précédent",
     "next": "Fournisseur suivant",
@@ -553,7 +555,8 @@
       "typeRequired": "Choisissez un type de contact pour ce fournisseur.",
       "saveFailed": "Échec de l'enregistrement du contact.",
       "createFailed": "Échec de la création du contact.",
-      "loadFailed": "Échec du chargement du contact."
+      "loadFailed": "Échec du chargement du contact.",
+      "deleteFailed": "Échec de la suppression du contact."
     },
     "delete": {
       "warning_one": "Il est retiré des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui le citent. Ces éléments restent. Cette action est irréversible.",
@@ -1007,7 +1010,7 @@
       "failedToCreate": "Échec de la création de la catégorie",
       "failedToUpdate": "Échec de la mise à jour de la catégorie"
     },
-    "deleteWarning_one": "Cette action est irréversible. Les interfaces et les demandes liées à ce processus sont conservées, sans ce lien.",
+    "deleteWarning_one": "Cette action est irréversible. Les demandes liées à ce processus sont conservées, sans ce lien.",
     "delete": {
       "toDelete_one": "{{count}} processus métier sera supprimé :",
       "toDelete_other": "{{count}} processus métier seront supprimés :",
@@ -1016,7 +1019,10 @@
       "title_one": "Supprimer le processus métier sélectionné",
       "title_other": "Supprimer les {{count}} processus métier sélectionnés"
     },
-    "deleteWarning_other": "Cette action est irréversible. Les interfaces et les demandes liées à ces processus sont conservées, sans ce lien."
+    "deleteWarning_other": "Cette action est irréversible. Les demandes liées à ces processus sont conservées, sans ce lien.",
+    "messages": {
+      "deleteFailed": "Échec de la suppression du processus métier."
+    }
   },
   "admin": {
     "copy": {

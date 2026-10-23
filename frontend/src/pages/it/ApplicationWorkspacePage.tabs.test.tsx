@@ -188,7 +188,10 @@ describe('Overview tab support', () => {
   it('saves support notes and contacts through the same calls', async () => {
     mocked.post.mockResolvedValue({ data: [] } as never);
     const { onPatch, onRefresh } = renderOverview();
-    fireEvent.change(screen.getByDisplayValue('Call the vendor'), { target: { value: 'Call the desk' } });
+    const notes = screen.getByDisplayValue('Call the vendor');
+    fireEvent.change(notes, { target: { value: 'Call the desk' } });
+    expect(onPatch).not.toHaveBeenCalled();
+    fireEvent.blur(notes);
     expect(onPatch).toHaveBeenCalledWith({ support_notes: 'Call the desk' });
     const row = screen.getByText('Ada Lovelace').closest('tr') as HTMLElement;
     fireEvent.click(within(row).getByRole('button', { name: /removeContact/ }));

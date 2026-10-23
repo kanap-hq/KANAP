@@ -12,6 +12,7 @@ import BusinessProcessCreateEditor, { BusinessProcessCreateEditorHandle } from '
 import BusinessProcessCategoryManagerDialog from './BusinessProcessCategoryManagerDialog';
 import BusinessProcessApplicationsSection from './BusinessProcessApplicationsSection';
 import { useKanapDialogs } from '../../components/design';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 
 type TabKey = 'overview';
 
@@ -42,13 +43,15 @@ export default function BusinessProcessWorkspacePage() {
     ? { total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }
     : nav;
 
+  // Set once the process is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error } = useQuery({
     queryKey: ['business-processes', id],
     queryFn: async () => {
       const res = await api.get(`/business-processes/${id}`);
       return res.data;
     },
-    enabled: !isCreate,
+    enabled: !isCreate && deletedId !== id,
   });
 
   const overviewRef = React.useRef<BusinessProcessOverviewEditorHandle>(null);
@@ -126,6 +129,7 @@ export default function BusinessProcessWorkspacePage() {
   };
 
   const canManage = hasLevel('business_processes', 'manager');
+  const canDelete = hasLevel('business_processes', 'admin');
   const saveDisabled = !dirty || !canManage;
 
   const listContextParams = React.useMemo(() => {
@@ -135,6 +139,10 @@ export default function BusinessProcessWorkspacePage() {
     if (filters) sp.set('filters', filters);
     return sp;
   }, [filters, q, sort]);
+  const closeToList = () => {
+    const qs = listContextParams.toString();
+    navigate(`/master-data/business-processes${qs ? `?${qs}` : ''}`);
+  };
 
   return (
     <Box sx={{ p: 2 }}>
@@ -160,13 +168,20 @@ export default function BusinessProcessWorkspacePage() {
           <Button onClick={handleNext} disabled={!hasNext}>
             {t('shared.labels.next')}
           </Button>
+          {!isCreate && data && canDelete && (
+            <RecordDeleteButton
+              base="/business-processes"
+              id={data.id}
+              name={data.name}
+              deleteFailed="businessProcesses.messages.deleteFailed"
+              confirmMessage={t('businessProcesses.deleteWarning', { count: 1 })}
+              onDeleted={() => { setDeletedId(data.id); closeToList(); }}
+            />
+          )}
           <IconButton
             aria-label={t('common:buttons.close')}
             title={t('common:buttons.close')}
-            onClick={() => {
-              const qs = listContextParams.toString();
-              navigate(`/master-data/business-processes${qs ? `?${qs}` : ''}`);
-            }}
+            onClick={closeToList}
           >
             <CloseIcon />
           </IconButton>

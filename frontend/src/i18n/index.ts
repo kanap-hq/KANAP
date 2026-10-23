@@ -184,6 +184,7 @@ z.setErrorMap((issue) => {
  * (`i18n.services.formatter.add(...)`). Runs after every `init`.
  */
 function registerPostInit(): void {
+  syncDocumentLanguage(i18n.language);
   // `{{count, count}}` in a text writes the number with the thousand separator of the language.
   i18n.services.formatter?.add('count', (value: unknown, lng: string | undefined) =>
     typeof value === 'number' ? formatCount(value, lng ?? 'en') : String(value ?? ''));
@@ -198,12 +199,19 @@ i18n
       mergeAbbreviationPeriods(value, options?.lng ?? translator?.language ?? 'en'),
   });
 
+/** `<html lang>` follows the interface language (screen readers, hyphenation, browser translation). */
+function syncDocumentLanguage(lng: string | undefined): void {
+  if (typeof document === 'undefined') return;
+  document.documentElement.lang = resolveSupportedLocale(lng);
+}
+
+
 // A component that calls `i18n.changeLanguage` directly still gets its texts: they load after the
 // switch, then the language is applied again so `resolvedLanguage` points at them.
 i18n.on('languageChanged', (lng) => {
   const locale = resolveSupportedLocale(lng);
   // Screen readers, spell checkers and the browser's translation prompt read the page language here.
-  document.documentElement.lang = locale;
+  syncDocumentLanguage(locale);
   if (i18n.hasResourceBundle(locale, 'common')) return;
   void loadLocale(locale).then(
     () => {

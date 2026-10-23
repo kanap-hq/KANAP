@@ -33,6 +33,7 @@ import {
 import { ContactNameTitle, ContactPhoneField, ContactRoleSelect, MetadataMenu, useContactRoleOptions } from './ContactFields';
 import RecordUsagesSection, { recordUsagesKey, scrollToUsages, useRecordUsages } from '../../components/usages/RecordUsagesSection';
 import { SUPPLIERS_PATH } from '../suppliers/supplierModel';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 
 const LIST_PATH = '/master-data/contacts';
 const DRAWER_KEY = 'kanap.contacts.drawerOpen';
@@ -84,13 +85,17 @@ function ContactEditor({ id }: { id: string }) {
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('contacts', 'manager');
+  const canDelete = hasLevel('contacts', 'admin');
   const withContext = useListContext();
   const roleOptions = useContactRoleOptions();
 
   const detailKey = React.useMemo(() => ['contacts', id] as const, [id]);
+  // Set once the contact is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Contact>(`/contacts/${id}`)).data,
+    enabled: deletedId !== id,
   });
   const { data: usages } = useRecordUsages('contacts', id);
 
@@ -413,6 +418,18 @@ function ContactEditor({ id }: { id: string }) {
           <>
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>{savingHint}</Typography>
+            )}
+            {data && canDelete && (
+              <RecordDeleteButton
+                base="/contacts"
+                id={data.id}
+                name={name ?? t('contacts.contactFallback')}
+                deleteFailed="contacts.messages.deleteFailed"
+                // Nothing refuses a contact's delete: the confirmation says which links go with it.
+                confirmMessage={t('contacts.delete.warning', { count: 1 })}
+                checkUsages={false}
+                onDeleted={() => { setDeletedId(data.id); navigate(withContext(LIST_PATH)); }}
+              />
             )}
             <IconButton aria-label={t('common:buttons.close')} title={t('common:buttons.close')} size="small" onClick={() => { void close(); }}>
               <CloseIcon />

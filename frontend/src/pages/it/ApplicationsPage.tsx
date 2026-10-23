@@ -1,8 +1,8 @@
 import { classificationText } from '../../utils/applicationClassification';
 import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react';
-import { Box, Button, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
+import { Alert, Box, Button, Snackbar, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
 import PageHeader from '../../components/PageHeader';
-import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
+import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
 import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
@@ -14,6 +14,8 @@ import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
 import { refusalCounts } from '../../utils/deleteRefusal';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
+import { APPLICATION_NAME_MAX } from './applicationLimits';
 import { applicationDeleteCheck } from './applicationDeleteCheck';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
@@ -35,14 +37,18 @@ import {
   vulnerabilityFilterFromSearch,
   vulnerabilityFilterOptions,
 } from '../../components/vulnerabilities/vulnerabilityListColumn';
+/** The environments of the pills, in display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
 const ENV_SUMMARY = [
-  { value: 'prod', labelKey: 'enums.environment.production', short: 'Prod' },
-  { value: 'pre_prod', labelKey: 'enums.environment.preProd', short: 'Pre' },
-  { value: 'qa', labelKey: 'enums.environment.qa', short: 'QA' },
-  { value: 'test', labelKey: 'enums.environment.test', short: 'Test' },
-  { value: 'dev', labelKey: 'enums.environment.dev', short: 'Dev' },
-  { value: 'sandbox', labelKey: 'enums.environment.sandbox', short: 'Sb' },
+  { value: 'prod' },
+  { value: 'pre_prod' },
+  { value: 'qa' },
+  { value: 'test' },
+  { value: 'dev' },
+  { value: 'sandbox' },
 ] as const;
+
+/** An empty value, in every column. */
+const EMPTY_CELL = '—';
 
 type AppInstanceSummary = {
   id: string;
@@ -240,6 +246,10 @@ export default function ApplicationsPage() {
   }, [urlFilterState.model, urlFilters, searchFilters, defaultFilterModel]);
   const [suitesColVisible, setSuitesColVisible] = useState<boolean>(false);
   const [exportOpen, setExportOpen] = useState(false);
+  // What the list asked last (filters, quick search, scope), and the export dialog's view of it taken when it opens.
+  const listRequestRef = useRef<ListRequest | null>(null);
+  const [exportScope, setExportScope] = useState<{ params: Record<string, unknown>; summary: string }>({ params: {}, summary: '' });
+  const [notice, setNotice] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
   const lastQueryRef = useRef<{ sort: string; q: string; filters: any } | null>(null);
   const buildWorkspaceSearch = useCallback(() => {
@@ -341,6 +351,7 @@ export default function ApplicationsPage() {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => (
       <LinkCellRenderer
         {...params}
+        emptyText={EMPTY_CELL}
         linkType="internal"
         getHref={(row) => buildAppHref(row, tab)}
         onNavigate={(href) => navigate(href)}
@@ -364,10 +375,10 @@ export default function ApplicationsPage() {
   const criticalityLabel = useCallback((v?: string) => {
     const configured = classificationCatalog?.businessCriticalityLevels.find((item) => item.code === v);
     if (configured) return configured.label;
-    return String(v || classificationText('Not set'));
-  }, [classificationCatalog?.businessCriticalityLevels, t]);
+    return String(v || '');
+  }, [classificationCatalog?.businessCriticalityLevels]);
   const catalogLabel = useCallback((axis: 'cyber' | 'wave', value?: string | null) => {
-    if (!value) return classificationText("Not set");
+    if (!value) return '';
     const options = axis === 'cyber' ? classificationCatalog?.cyberCriticalityLevels : classificationCatalog?.recoveryWaves;
     return options?.find((item) => item.code === value)?.label || value;
   }, [classificationCatalog]);
@@ -382,10 +393,10 @@ export default function ApplicationsPage() {
   }, []);
   const environmentLabel = useCallback((v?: string) => {
     const env = ENV_SUMMARY.find((item) => item.value === v);
-    return env ? t(env.labelKey) : String(v || '');
+    return env ? t(`pages.applications.environments.${env.value}.name`) : String(v || '');
   }, [t]);
   const dataClassLabel = useCallback((v?: string) => {
-    return classificationCatalog?.dataClasses.find((item) => item.code === v)?.label || v || classificationText('Not set');
+    return classificationCatalog?.dataClasses.find((item) => item.code === v)?.label || v || '';
   }, [classificationCatalog?.dataClasses]);
 
   const getAppFilterValues = useCallback((
@@ -463,7 +474,7 @@ export default function ApplicationsPage() {
           underline="none"
           color="inherit"
         >
-          {`${first}${extra}`}
+          {`${first}${extra}` || EMPTY_CELL}
         </Link>
       );
     };
@@ -483,7 +494,7 @@ export default function ApplicationsPage() {
           underline="none"
           color="inherit"
         >
-          {firstTwo.join(', ')}{extra}
+          {firstTwo.join(', ') + extra || EMPTY_CELL}
         </Link>
       );
     };
@@ -509,7 +520,7 @@ export default function ApplicationsPage() {
           underline="none"
           color="inherit"
         >
-          {(first || '') + (extra || '')}
+          {((first || '') + (extra || '')) || EMPTY_CELL}
         </Link>
       );
     };
@@ -532,71 +543,84 @@ export default function ApplicationsPage() {
           underline="none"
           color="inherit"
         >
-          {(first || '') + (extra || '')}
+          {((first || '') + (extra || '')) || EMPTY_CELL}
         </Link>
       );
     };
     return Cell;
   }, [buildAppHref, buildSuiteHref, handleInternalNavigate]);
 
+  // The name, and for an application included in a suite a quiet second line naming that suite, cut
+  // with an ellipsis in a narrow column (the full line is on hover). The category has its own column.
   const NameWithSuiteCell = useMemo(() => {
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
       const data = params.data as AppRow | undefined;
       const name = params.valueFormatted ?? params.value;
       const suitesCount = data?.suites_count || 0;
       const firstSuite = data?.first_suite_name || null;
+      const showSuite = !!firstSuite && suitesCount > 0 && !suitesColVisible;
       const extra = suitesCount > 1 ? ` +${suitesCount - 1}` : '';
-      const includedIn = `${t('pages.applications.includedIn')} ${firstSuite}${extra}`;
+      const includedIn = showSuite ? `${t('pages.applications.includedIn')} ${firstSuite}${extra}` : '';
       return (
-        <Stack component="span" direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
-          <Box component="span" sx={{ flexShrink: 0 }}>
-            <Link
-              href={buildAppHref(data as AppRow, 'overview')}
-              onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'overview'))}
-              sx={{ cursor: 'pointer', display: 'block', ...wholeCellLinkSx }}
-              underline="none"
-              color="inherit"
-            >
-              {name}
-            </Link>
-            <Typography variant="caption" color="text.secondary" component="span">
-              {categoryLabel(data?.category)}
-            </Typography>
-          </Box>
-          {(firstSuite && suitesCount > 0 && !suitesColVisible) && (
+        <Box
+          component="span"
+          sx={{ display: 'flex', flexDirection: 'column', justifyContent: 'center', height: '100%', minWidth: 0 }}
+        >
+          <Link
+            href={buildAppHref(data as AppRow, 'overview')}
+            onClick={(event) => handleInternalNavigate(event, buildAppHref(data as AppRow, 'overview'))}
+            sx={{
+              display: 'block',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              lineHeight: '18px',
+              cursor: 'pointer',
+              ...wholeCellLinkSx,
+            }}
+            underline="none"
+            color="inherit"
+          >
+            {name}
+          </Link>
+          {includedIn && (
             <Box
-              component="a"
-              href={buildSuiteHref(data)}
-              // One line, cut with an ellipsis in a narrow column: the full text is on hover.
+              component="span"
               title={includedIn}
               sx={{
-                px: 0.75,
-                py: 0.25,
-                borderRadius: 1,
-                bgcolor: 'action.hover',
-                color: 'text.secondary',
-                cursor: 'pointer',
-                fontSize: '0.75rem',
-                lineHeight: 1.5,
-                minWidth: 0,
-                whiteSpace: 'nowrap',
+                display: 'block',
                 overflow: 'hidden',
                 textOverflow: 'ellipsis',
-                ...aboveCellLinkSx,
-              }}
-              onClick={(e) => {
-                e.stopPropagation();
-                handleInternalNavigate(e, buildSuiteHref(data));
+                whiteSpace: 'nowrap',
+                fontSize: 11,
+                lineHeight: '14px',
+                color: 'kanap.text.tertiary',
               }}
             >
-              {includedIn}
+              <Box
+                component="a"
+                href={buildSuiteHref(data)}
+                sx={{
+                  color: 'inherit',
+                  textDecoration: 'none',
+                  cursor: 'pointer',
+                  '&:hover': { textDecoration: 'underline' },
+                  ...aboveCellLinkSx,
+                }}
+                onClick={(e: React.MouseEvent) => {
+                  e.stopPropagation();
+                  handleInternalNavigate(e, buildSuiteHref(data));
+                }}
+              >
+                {includedIn}
+              </Box>
             </Box>
           )}
-        </Stack>
+        </Box>
       );
     };
     return Cell;
-  }, [buildAppHref, buildSuiteHref, categoryLabel, handleInternalNavigate, suitesColVisible, t]);
+  }, [buildAppHref, buildSuiteHref, handleInternalNavigate, suitesColVisible, t]);
 
   const EnvironmentCell = useMemo(() => {
     const mode = theme.palette.mode;
@@ -629,7 +653,7 @@ export default function ApplicationsPage() {
         >
           {activeEnvs.map(({ env, match }) => {
             const lifecycleText = match.lifecycle ? ` · ${lifecycleLabel(match.lifecycle)}` : '';
-            const tooltip = `${t(env.labelKey)}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
+            const tooltip = `${t(`pages.applications.environments.${env.value}.name`)}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
             return (
               <Tooltip key={`${params.data?.id}-${env.value}`} title={tooltip}>
                 <Box
@@ -652,7 +676,7 @@ export default function ApplicationsPage() {
                   }}
                 >
                   <StatusDot color={getEnvDotColor(env.value, mode)} />
-                  {env.short}
+                  {t(`pages.applications.environments.${env.value}.short`)}
                 </Box>
               </Tooltip>
             );
@@ -667,6 +691,7 @@ export default function ApplicationsPage() {
   const ComponentsSummaryCell = useMemo(() => StructureSummaryCell('components'), [StructureSummaryCell]);
   const RelationsSummaryCell = useMemo(() => RelationSummaryCell('relations'), [RelationSummaryCell]);
 
+  const currentYear = new Date().getFullYear();
   const columns: EnhancedColDef<AppRow>[] = useMemo(() => [
     {
       headerName: t('common.name'), field: 'name', minWidth: 200,
@@ -744,13 +769,20 @@ export default function ApplicationsPage() {
       cellRenderer: ClickToCompliance,
     },
     { headerName: classificationText("Cyber criticality"), field: 'cyber_criticality', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('cyber_criticality', { labelFormatter: (v: any) => catalogLabel('cyber', v) }), sortComparator: catalogRankComparator(classificationCatalog?.cyberCriticalityLevels) }, width: 160, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('cyber', p.value), cellRenderer: ClickToCompliance },
-    { headerName: classificationText("Recovery wave"), field: 'recovery_wave', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('recovery_wave', { labelFormatter: (v: any) => catalogLabel('wave', v) }), sortComparator: catalogRankComparator(classificationCatalog?.recoveryWaves, 'order') }, width: 160, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('wave', p.value), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Recovery wave"), field: 'recovery_wave', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('recovery_wave', { labelFormatter: (v: any) => catalogLabel('wave', v) }), sortComparator: catalogRankComparator(classificationCatalog?.recoveryWaves, 'order') }, width: 240, defaultHidden: true, valueFormatter: (p: any) => catalogLabel('wave', p.value), cellRenderer: ClickToCompliance },
     { headerName: 'RTO', field: 'rto_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
     { headerName: 'RPO', field: 'rpo_minutes', width: 110, defaultHidden: true, filter: 'agNumberColumnFilter', valueFormatter: (p: any) => formatDuration(p.value, ''), cellRenderer: ClickToCompliance },
     { headerName: classificationText("Classification review"), field: 'classification_review_state', filter: CheckboxSetFilter, floatingFilterComponent: CheckboxSetFloatingFilter, filterParams: { getValues: getAppFilterValues('classification_review_state', { labelFormatter: (value: string) => ({ incomplete: classificationText('To complete'), stale: classificationText('Review needed'), reviewed: classificationText('Reviewed') }[value] || value) }) }, width: 170, defaultHidden: true, valueFormatter: (p: any) => ({ incomplete: classificationText("To complete"), stale: classificationText("Review needed"), reviewed: classificationText("Reviewed") }[String(p.value)] || classificationText("To complete")), cellRenderer: ClickToCompliance },
-    { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : classificationText('Not set'), cellRenderer: ClickToCompliance },
+    { headerName: classificationText("Classification reviewed"), field: 'classification_reviewed_at', filter: 'agDateColumnFilter', width: 180, defaultHidden: true, valueFormatter: (p: any) => p.value ? new Date(p.value).toLocaleDateString(locale) : '', cellRenderer: ClickToCompliance },
     { headerName: t('pages.applications.columns.publisher'), field: 'editor', width: 160, cellRenderer: ClickToOverview },
-    { headerName: t('pages.applications.columns.derivedUsers'), field: 'derived_total_users', width: 170, filter: 'agNumberColumnFilter', cellRenderer: ClickToOwnership },
+    {
+      headerName: t('pages.applications.columns.derivedUsers', { year: currentYear }),
+      headerTooltip: t('pages.applications.columns.derivedUsersHelp', { year: currentYear }),
+      field: 'derived_total_users',
+      width: 190,
+      filter: 'agNumberColumnFilter',
+      cellRenderer: ClickToOwnership,
+    },
     { headerName: t('pages.assets.columns.created'), field: 'created_at', width: 160, filter: 'agDateColumnFilter', valueFormatter: (p: any) => formatShortDateTime(p.value as string | null, locale), cellRenderer: ClickToOverview },
 
     // Additional chooser columns (hidden by default)
@@ -891,6 +923,7 @@ export default function ApplicationsPage() {
     catalogLabel,
     classificationCatalog,
     criticalityLabel,
+    currentYear,
     dataClassLabel,
     environmentLabel,
     formatYesNo,
@@ -946,7 +979,10 @@ export default function ApplicationsPage() {
         api.get(`/applications/${source.id}/support-contacts`).catch(() => ({ data: [] } as any)),
       ]);
       const a = res.data || {};
-      const created = await api.post(`/applications/${source.id}/copy`, { name: `${a.name || ''} (copy)` });
+      // The suffix follows the screen language; the server numbers a name that is already taken.
+      const tail = ` ${t('pages.applications.copySuffix')}`;
+      const head = String(a.name || '').slice(0, Math.max(0, APPLICATION_NAME_MAX - tail.length)).trimEnd();
+      const created = await api.post(`/applications/${source.id}/copy`, { name: `${head}${tail}` });
       const newId = created?.data?.id as string | undefined;
       if (newId) {
         // Prepare relation payloads
@@ -967,6 +1003,7 @@ export default function ApplicationsPage() {
           .map((c: any) => ({ contact_id: c.contact_id, role: c.role ?? null }));
 
         // Apply bulk relations
+        let linksError: unknown = null;
         try {
           await Promise.all([
             ownersPayload.length ? api.post(`/applications/${newId}/owners/bulk-replace`, { owners: ownersPayload }) : Promise.resolve(),
@@ -979,19 +1016,41 @@ export default function ApplicationsPage() {
             residency.length ? api.post(`/applications/${newId}/data-residency/bulk-replace`, { countries: residency }) : Promise.resolve(),
             supportContacts.length ? api.post(`/applications/${newId}/support-contacts/bulk-replace`, { contacts: supportContacts }) : Promise.resolve(),
           ]);
-        } catch {}
+        } catch (err) { linksError = err; }
         // Recreate URLs (no bulk endpoint)
         try {
           for (const l of links) { await api.post(`/applications/${newId}/links`, l); }
-        } catch {}
+        } catch (err) { linksError ??= err; }
+        if (linksError) {
+          // The copy exists: stay on the list, say what is missing.
+          setNotice(`${t('pages.applications.copyLinksFailed')} ${getApiErrorMessage(linksError, t, '')}`.trim());
+          setRefreshKey((k) => k + 1);
+          return;
+        }
 
         const sp = buildWorkspaceSearch();
         navigate(`/it/applications/${newId}/overview?${sp.toString()}`);
       }
     } catch (e) {
-      // Silently ignore; could add toast in future
+      setNotice(getApiErrorMessage(e, t, t('pages.applications.copyFailed')));
     }
-  }, [selectedRows, navigate, buildWorkspaceSearch]);
+  }, [selectedRows, navigate, buildWorkspaceSearch, t]);
+
+  // The export holds what the list shows: its filters, quick search and scope (not the columns it asked for).
+  const openExport = useCallback(() => {
+    const request = listRequestRef.current;
+    const { include: _include, ...params } = (request?.params ?? {}) as Record<string, unknown>;
+    let summary = '';
+    if (request) {
+      const filtered = !!params.q || !!params.ownerUserId || !!params.ownerTeamId
+        || (typeof params.filters === 'string' && params.filters !== '{}' && params.filters !== '');
+      summary = filtered
+        ? t('pages.applications.exportScope', { count: request.total })
+        : t('pages.applications.exportScopeAll', { count: request.total });
+    }
+    setExportScope({ params, summary });
+    setExportOpen(true);
+  }, [t]);
   const actions = (
     <Stack direction="row" spacing={1}>
       {canCreate && (
@@ -1006,7 +1065,7 @@ export default function ApplicationsPage() {
         </Button>
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('pages.assets.importCsv')}</Button>}
-      {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('pages.assets.exportCsv')}</Button>}
+      {canAdmin && <Button variant="action" onClick={openExport}>{t('pages.assets.exportCsv')}</Button>}
       {canCreate && (
         <Button variant="action" onClick={() => void handleCopy()} disabled={selectedRows.length !== 1}>{t('pages.applications.copyItem')}</Button>
       )}
@@ -1015,7 +1074,8 @@ export default function ApplicationsPage() {
           selectedRows={selectedRows}
           endpoint="/applications/bulk"
           getItemId={(row) => row.id}
-          getItemName={(row) => row.name}
+          // The reference tells apart applications with the same name.
+          getItemName={(row) => (row.sequential_id ? `${row.sequential_id} ${row.name}` : row.name)}
           // Asked on click: applications with interfaces are kept, the others go with their deployments (counted) and links.
           checkDelete={async (ids) => {
             const { refused, removes } = await applicationDeleteCheck(ids);
@@ -1023,7 +1083,7 @@ export default function ApplicationsPage() {
             return {
               refused,
               warning: removes.length > 0
-                ? t('pages.applications.delete.warningCounted', { count, deployments: refusalCounts({ usages: removes }, t, locale) })
+                ? t('pages.applications.delete.warningCounted', { count, removed: refusalCounts({ usages: removes }, t, locale) })
                 : t('pages.applications.delete.warningLinks', { count }),
             };
           }}
@@ -1033,6 +1093,11 @@ export default function ApplicationsPage() {
             toDelete: (count) => t('pages.applications.delete.toDelete', { count }),
             kept: (count) => t('pages.applications.delete.kept', { count }),
             deleted: (count) => t('pages.applications.delete.deleted', { count }),
+            title: (count) => t('pages.applications.delete.title', { count }),
+            titleCountsDeleted: true,
+            keptDone: (count) => t('pages.applications.delete.keptDone', { count }),
+            // The kept list already names the application: the reason does not repeat it.
+            keptReason: ({ usages, count }) => t('pages.applications.delete.keptReason', { usages, count }),
           }}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}
@@ -1075,6 +1140,7 @@ export default function ApplicationsPage() {
           enableSearch
           enableRowSelection={canCreate || canAdmin}
           onSelectionChanged={setSelectedRows}
+          onListRequestChange={(request) => { listRequestRef.current = request; }}
           onQueryStateChange={(state) => {
             lastQueryRef.current = { sort: state.sort, q: state.q || '', filters: state.filterModel || {} };
           }}
@@ -1099,6 +1165,8 @@ export default function ApplicationsPage() {
         onClose={() => setExportOpen(false)}
         endpoint="/applications"
         title={t('pages.applications.exportTitle')}
+        params={exportScope.params}
+        scopeSummary={exportScope.summary}
         presets={[{ name: 'enrichment', label: t('pages.assets.dataEnrichment') }]}
       />
       <CsvImportDialogV2
@@ -1106,8 +1174,17 @@ export default function ApplicationsPage() {
         onClose={() => setImportOpen(false)}
         endpoint="/applications"
         title={t('pages.applications.importTitle')}
+        note={t('pages.applications.importNote')}
         onImported={() => setRefreshKey((k) => k + 1)}
       />
+      <Snackbar
+        open={notice !== null}
+        autoHideDuration={8000}
+        onClose={() => setNotice(null)}
+        anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
+      >
+        <Alert onClose={() => setNotice(null)} severity="error" variant="filled">{notice}</Alert>
+      </Snackbar>
     </>
   );
 }

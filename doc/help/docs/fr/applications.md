@@ -39,7 +39,7 @@ Les différentes équipes peuvent utiliser les catégories pour se concentrer su
 Rendez-vous dans **Cartographie SI > Applications** pour voir votre liste. Cliquez sur **Nouvelle app / Service** pour créer votre première entrée.
 
 **Champs obligatoires** :
-- **Nom** : Un nom reconnaissable pour l'application ou le service
+- **Nom** : Un nom reconnaissable pour l'application ou le service, de 200 caractères au plus. Voir [Noms uniques](#unique-names)
 - **Catégorie** : L'objectif principal de cette application (voir les catégories ci-dessus)
 - **Cycle de vie** : Statut actuel (Actif, Proposé, Obsolète, Retiré, ou tout code personnalisé défini dans les Paramètres)
 
@@ -59,7 +59,15 @@ Les champs de classification sont facultatifs à la création. La **Criticité b
 - **Notes** : Notes internes libres
 - **Peut avoir des apps enfants** : Activez cette option pour utiliser cette application comme une « suite » regroupant d'autres applications
 
+La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**.
+
 Une fois enregistré, l'espace de travail déverrouille tous les onglets pour une documentation détaillée.
+
+### Noms uniques { #unique-names }
+
+Deux applications ne peuvent pas porter le même nom. La comparaison ignore les majuscules et les minuscules, ainsi que les espaces au début et à la fin du nom : `CRM` et ` crm ` sont le même nom. Quand le nom est déjà pris, le message nomme l'application qui le porte, avec sa référence (`APP-12`). La règle s'applique quand vous créez, renommez, copiez ou importez une application, et quand vous créez une nouvelle version.
+
+Les applications qui portaient déjà le même nom avant cette règle restent modifiables. Leur nom n'est vérifié que lorsqu'il change.
 
 **Conseil** : Commencez par documenter vos applications les plus critiques. Utilisez l'onglet **Déploiements** pour capturer les environnements existants (Prod, QA, Dev) et les serveurs qui les exécutent, puis liez les interfaces, contrats et lignes budgétaires au fur et à mesure.
 
@@ -81,15 +89,17 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 - Votre sélection est mémorisée entre les sessions : revenir sur la page restaure votre dernier choix.
 
 **Colonnes par défaut** :
-- **Nom** : Nom de l'application avec libellé de catégorie et badge « Inclus dans : {suite} » pour les composants d'une suite
+- **Nom** : Nom de l'application, avec en dessous une ligne « Incluse dans : {suite} » pour une application incluse dans une suite
 - **Vulnérabilités à traiter** : les vulnérabilités encore à traiter sur les technologies que l'application déclare ou que ses serveurs de déploiement ont renseignées, puis, en orange, le nombre de critiques ou élevées (`5 · 2`). Vide pour une application désactivée ou quand il n'en reste aucune. Cliquez pour ouvrir la page [Vulnérabilités](vulnerabilities.md) filtrée sur l'application. Présente quand les vulnérabilités sont suivies. Voir [Ce que KANAP compte](vulnerabilities.md#what-kanap-counts)
 - **Catégorie** : L'objectif principal de l'application
 - **Environnements** : Pastilles colorées montrant les environnements actifs (Prod, Pré-prod, QA, Test, Dev, Sandbox). Survolez pour voir l'URL de base et le cycle de vie.
 - **Cycle de vie** : Statut actuel
 - **Criticité business** : Niveau d'importance pour le métier
 - **Éditeur** : Éditeur du logiciel
-- **Utilisateurs dérivés (A)** : Nombre d'utilisateurs calculé pour l'année en cours (basé sur l'audience définie dans le tiroir des propriétés)
+- **Utilisateurs dérivés {année}** : les utilisateurs comptés pour les sociétés et départements de l'audience sur l'année en cours, ou sur l'année la plus proche qui a des données. Un nombre d'utilisateurs saisi à la main le remplace. L'infobulle de l'en-tête l'explique
 - **Créé** : Quand l'enregistrement a été créé
+
+Une cellule sans valeur affiche un tiret.
 
 **Tri par défaut** : **Nom** croissant (A à Z).
 
@@ -111,14 +121,14 @@ La grille Applications offre une vue complète de votre portefeuille applicatif.
 **Filtrage** :
 - Recherche rapide : correspond au nom et à l'éditeur
 - Les filtres de criticité, de criticité cyber, de classe de données et de vague de reprise listent leurs valeurs dans l'ordre du catalogue (la plus critique en premier, les vagues dans l'ordre de restauration).
-- La plupart des colonnes utilisent des filtres par jeu de cases à cocher affichant uniquement les valeurs présentes dans le jeu de résultats actuel ; le filtre flottant affiche `Tous`, `Aucun` ou `N sélectionnés` avec un **x** pour effacer.
+- La plupart des colonnes utilisent des filtres par jeu de cases à cocher affichant uniquement les valeurs présentes dans le jeu de résultats actuel. **Tous** coche toutes les valeurs et **Aucun** les décoche toutes. Le filtre flottant affiche `Tous`, `Aucun` ou `N sélectionnés` avec un **x** pour effacer.
 - Les applications retirées sont masquées par défaut ; utilisez le filtre **Cycle de vie** pour inclure les applications retirées.
 - **Vulnérabilités à traiter** filtre sur **Avec des vulnérabilités graves**, **Avec des vulnérabilités** ou **Sans**, et trie par les vulnérabilités critiques ou élevées, puis par le total. Les applications désactivées viennent en dernier et n'entrent dans aucune valeur du filtre.
 
 **Actions** :
 - **Nouvelle app / Service** : Créer une nouvelle entrée (`applications:member`)
 - **Import CSV** : Import en masse depuis un fichier CSV (`applications:admin`)
-- **Export CSV** : Exporter la liste en CSV (`applications:admin`). Les colonnes issues des catalogues (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification de données, méthodes d'accès) sont exportées avec leurs noms ; l'import accepte un nom ou le code interne.
+- **Export CSV** : Exporter en CSV les applications que la liste affiche (`applications:admin`). Voir [Options d'export](#export-options).
 - **Copier l'élément** : Dupliquer une application sélectionnée avec toutes ses relations principales (`applications:member`). Voir [Copier des applications](#copier-des-applications) pour ce qui est et n'est pas copié.
 - **Supprimer la sélection** : Supprimer les applications sélectionnées (`applications:admin`). Une application source ou cible d’une interface ne peut pas être supprimée : désactivez-la plutôt, ou supprimez d’abord ses interfaces. Avant la confirmation, la fenêtre liste ces applications comme conservées, avec leur nombre d’interfaces. Les autres sont supprimées avec leurs déploiements et leurs liens vers d’autres éléments ; la confirmation compte les déploiements
 
@@ -150,9 +160,11 @@ Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque 
 
 **Identité** :
 - **Catégorie**, **Fournisseur**, **Éditeur**
+- **Incluse dans** : les suites auxquelles appartient cette application. Choisissez-en une dans **Ajouter une suite** : la liste propose les applications où **Peut contenir des applications enfants** est coché. Chaque nom ouvre la suite. Pour en retirer une, survolez son nom et cliquez sur la croix en fin de ligne. Une suite peut appartenir à une autre suite, mais un lien qui créerait une boucle est refusé (une suite placée dans l'un de ses propres composants, par exemple)
 
-**Dates du cycle de vie** :
-- **Mise en production**, **Fin de support**, **Date de retrait**
+**Version et dates du cycle de vie** :
+- **Version**. En dessous, **Version précédente** ouvre l'application à partir de laquelle celle-ci a été créée avec **Nouvelle version**, et **Version suivante** ouvre les applications créées à partir d'elle. Ces liens n'apparaissent que si de telles applications existent
+- **Mise en production**, **Fin de support**, **Date de retrait**. La **Fin de support** et la **Date de retrait** ne peuvent pas précéder la **Mise en production**
 
 **Processus métier et responsables** :
 - **Processus métier** : les processus que l'application soutient. Chaque nom ouvre le processus. Tapez dans le champ pour rechercher et ajouter un processus ; survolez un nom et cliquez sur la croix pour le retirer. Chaque changement est enregistré aussitôt. Le processus affiche le même lien dans sa propre section **Applications**. Un processus désactivé reste affiché, grisé. Modifier la liste demande aussi `business_processes:member` ; sans droit de lecture des processus métier, le champ est masqué.
@@ -161,8 +173,11 @@ Le tiroir est la carte d'identité de l'application. Il est affiché sur chaque 
 
 Pour retirer un responsable, survolez son nom et cliquez sur la croix en fin de ligne.
 
+Le retrait d'un responsable, d'un processus métier, d'une suite ou d'un contact de support affiche un message avec **Annuler**, qui le rétablit.
+
 **Audience** :
 - Ajoutez des lignes **Société / Départements** pour enregistrer qui utilise cette application. Choisissez une société et limitez optionnellement à des départements spécifiques.
+- Une ligne sous l'audience indique ce qu'elle couvre. Sans département choisi, l'audience est toute la société. Avec des départements choisis, elle se limite à ces départements : retirez-les pour inclure de nouveau toute la société.
 - Un nombre d'**Utilisateurs** en direct est affiché.
 - **Méthode de calcul** : **Dérivé** (calculé à partir de l'audience basé sur les métriques Utilisateurs IT / Effectif des données de référence) ou **Manuel** (un seul nombre de remplacement que vous saisissez).
 
@@ -172,7 +187,7 @@ Pour retirer un responsable, survolez son nom et cliquez sur la croix en fin de 
 
 L'onglet Vue d'ensemble est le récit de l'application. Il contient :
 
-**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez.
+**Description** : Une description en texte enrichi de l'application. L'éditeur sauvegarde automatiquement au fur et à mesure que vous tapez. Toute personne qui peut modifier l'application peut modifier sa description, sans droit sur la base de connaissances. La description est conservée comme document managé dans la base de connaissances. Son titre reprend la référence et le nom de l'application, dans la langue de la personne qui l'a créée. Renommer l'application, dans l'espace de travail ou par import CSV, met ce titre à jour.
 
 **Connexions** : Un résumé en lecture seule construit à partir des interfaces de l'application. Pour les apps non-middleware, il affiche deux lignes : **Reçoit de** et **Envoie vers**. Pour les apps ETL/middleware, il affiche une seule ligne **Connecté à**. Chaque entrée est une pastille cliquable qui ouvre l'application liée ; « + N de plus dans Interfaces » saute à l'onglet Interfaces.
 
@@ -238,7 +253,7 @@ L'onglet Exploitation regroupe, dans cet ordre, la façon dont les utilisateurs 
 - **Méthodes d'accès** (multi-sélection) : comment les utilisateurs accèdent à cette application. Les options sont configurables dans les [Paramètres de la Cartographie SI](it-ops-settings.md). Les options par défaut incluent Web, Application installée localement, Application mobile, IHM propriétaire (interface industrielle), Terminal / CLI, VDI / Bureau distant, Borne.
 - **Exposition externe** : si l'application est accessible depuis Internet
 - **Intégration de données / ETL** : si l'application participe à des pipelines d'intégration de données (bascule également cette app en mode « middleware » pour les vues Interfaces et Connexions)
-- **Peut avoir des apps enfants** : transformer cette application en Suite qui regroupe d'autres applications
+- **Peut avoir des apps enfants** : transformer cette application en Suite qui regroupe d'autres applications. Vous ne pouvez pas décocher la case tant que des applications sont incluses dans la suite : retirez-les d'abord de la suite
 
 **Technologies** liste ce dont l'application dépend, selon deux sources indiquées dans la colonne **Lien**. Colonnes : référence (`TEC-4`), nom, famille, versions, lien, serveurs par lesquels elle arrive (**Via**), fin du support standard.
 
@@ -396,7 +411,7 @@ Pour les mises à niveau majeures d'applications où vous devez exécuter les an
 
 L'assistant comporte trois étapes :
 
-1. **Détails de la version** : nouveau nom d'application, libellé de version, dates de **Mise en production** et **Fin de support**.
+1. **Détails de la version** : nouveau nom d'application, libellé de version, dates de **Mise en production** et **Fin de support**. Le nom doit être libre (voir [Noms uniques](#unique-names)), et la **Fin de support** ne peut pas précéder la **Mise en production**.
 2. **Options de copie** : choisissez ce qui doit être copié depuis la source. Valeurs par défaut indiquées ci-dessous.
 3. **Interfaces** : sélectionnez les interfaces à migrer vers la nouvelle version.
 
@@ -405,6 +420,8 @@ La nouvelle version est créée comme une application séparée avec :
 - Un lien vers son prédécesseur (utilisé par la chronologie des versions)
 - Des données copiées selon vos sélections
 - Des interfaces dupliquées pointant vers la nouvelle version
+
+Une fois la version créée, un message donne sa référence. Les deux applications sont alors reliées par **Version précédente** et **Version suivante** dans le tiroir des propriétés.
 
 Les valeurs de classification et de continuité sont copiées, mais la nouvelle version démarre avec une revue réinitialisée et sans copie du dernier test de reprise.
 
@@ -423,7 +440,9 @@ Les valeurs de classification et de continuité sont copiées, mais la nouvelle 
 | Déploiements | Désactivé |
 | Liaisons de déploiement | Désactivé (disponible uniquement lorsque Déploiements est sélectionné) |
 
-**Non copié** (à configurer de zéro) : appartenance à une suite, pièces jointes, assignations d'actifs.
+**Toujours copiés** : la description, les processus métier, les méthodes d'accès, les cases **Exposition externe**, **Intégration de données / ETL** et **Peut contenir des applications enfants**, et le nombre d'utilisateurs saisi à la main.
+
+**Non copié** (à configurer de zéro) : appartenance à une suite, pièces jointes, dates de la source, dernier test de reprise, revue de classification et assignations d'actifs. L'assistant les liste.
 
 ### Migration d'interfaces
 
@@ -447,7 +466,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 
 1. Sélectionnez une application dans la grille
 2. Cliquez sur **Copier l'élément**
-3. Le système crée une copie avec « (copie) » ajouté au nom
+3. Le système crée une copie nommée d'après la source, avec un suffixe dans la langue de votre écran : « CRM (copie) », ou « CRM (copy) » en anglais. Si ce nom est déjà pris, la copie est numérotée : « CRM (copie 2) », puis « CRM (copie 3) »
 4. Vous êtes redirigé vers la nouvelle application pour effectuer des modifications
 
 **Ce qui est copié** : Tous les champs principaux (sauf la date du dernier test PRA), y compris les valeurs de classification et de continuité, responsables, sociétés, départements, suites, lignes OPEX/CAPEX, contrats, liens, résidence des données et contacts de support. La revue de la copie est réinitialisée.
@@ -462,7 +481,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 | **Options utilisateur** | Aucune (automatique) | Assistant en 3 étapes |
 | **Lignée** | Pas de lien prédécesseur | Définit le prédécesseur |
 | **Cycle de vie** | Préservé | Réinitialisé à Proposé |
-| **Nom** | Suffixe « (copie) » | Spécifié par l'utilisateur |
+| **Nom** | Suffixe « (copie) », numéroté si le nom est pris | Spécifié par l'utilisateur, doit être libre |
 
 **Relations** :
 
@@ -474,6 +493,7 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 | Résidence des données | Oui | Optionnel (par défaut : oui) |
 | Liens | Oui | Optionnel (par défaut : oui) |
 | Contacts de support | Oui | Optionnel (par défaut : oui) |
+| Processus métier | Non | Oui |
 | Suites (appartenance) | Oui | Non |
 | Lignes OPEX | Oui | Optionnel (par défaut : oui) |
 | Lignes CAPEX | Oui | Optionnel (par défaut : oui) |
@@ -489,11 +509,12 @@ Utilisez cela lorsque vous souhaitez créer un duplicata indépendant d'une appl
 | Champ | Copier l'élément | Nouvelle version |
 |-------|------------------|---------------------------|
 | Description | Oui | Oui |
+| Méthodes d'accès | Oui | Oui |
 | ETL activé | Oui | Oui |
 | Notes de support | Oui | Oui |
 | Dernier test PRA | Non | Non |
 | Champs de version | Non | Spécifié par l'utilisateur |
-| Saisie manuelle utilisateurs | Oui | Réinitialisé à null |
+| Saisie manuelle utilisateurs | Oui | Oui |
 | Année utilisateurs | Oui | Réinitialisé à l'année en cours |
 
 ---
@@ -511,7 +532,11 @@ Depuis la liste des Applications :
 
 **Autorisations requises** : `applications:admin` pour les opérations d'import/export.
 
-### Options d'export
+### Options d'export { #export-options }
+
+**Contenu du fichier** : les applications que la liste affiche. L'export suit les filtres de colonnes, la recherche rapide et le choix **Afficher** (**Mes applications**, **Applications de mon équipe** ou **Toutes les applications**). Le dialogue indique combien d'applications le fichier contiendra. Sans filtre **Cycle de vie**, les applications retirées sont exclues, comme dans la liste.
+
+**Langue des valeurs** : les valeurs de catalogue (catégorie, cycle de vie, criticité, criticité cyber, vague de reprise, classification des données, méthodes d'accès) et le statut sont écrits comme l'écran les affiche, dans la langue de votre écran : `Active` en anglais, `Actif` en français. Un nom que votre organisation a donné à une valeur dans **Cartographie SI > Paramètres** reste tel quel.
 
 **Préréglages** :
 
@@ -531,15 +556,30 @@ Depuis la liste des Applications :
 2. **Choisissez les paramètres d'import** :
    - **Mode** :
      - `Enrichir` (par défaut) : Les cellules vides conservent les valeurs existantes : ne mettez à jour que ce que vous spécifiez
-     - `Remplacer` : Les champs fournis sont mis à jour ; les cellules de classification vides conservent la valeur existante et `__CLEAR__` l'efface explicitement
+     - `Remplacer` : Remplace les valeurs des colonnes du fichier. Une cellule vide efface la valeur enregistrée, sauf dans les colonnes de classification (utilisez `__CLEAR__`). Une colonne absente du fichier garde ses valeurs. Certains champs ne peuvent pas être vidés : la **Vérification préalable** les signale.
    - **Opération** :
      - `Upsert` (par défaut) : Créer de nouvelles applications ou mettre à jour les existantes
      - `Mise à jour uniquement` : Ne modifier que les applications existantes, ignorer les nouvelles
      - `Insertion uniquement` : Ne créer que de nouvelles applications, ignorer les existantes
 
+     L'opération s'applique aussi aux responsables et à la résidence des données : une ligne que l'opération ignore les laisse tels quels.
+
 3. **Validez d'abord** : Cliquez sur **Vérification préalable** pour valider votre fichier sans apporter de modifications. Examinez les erreurs et avertissements.
 
 4. **Appliquez les modifications** : Si la validation réussit, cliquez sur **Importer** pour valider les changements.
+
+### Contrôles des lignes
+
+La vérification préalable applique les mêmes règles que l'espace de travail. Une ligne est refusée quand :
+
+- son nom dépasse 200 caractères, ou une autre application le porte déjà (voir [Noms uniques](#unique-names)) ;
+- son nom correspond à deux applications existantes : ajoutez la colonne `id` pour choisir laquelle ;
+- sa catégorie ou son cycle de vie ne correspond à aucun code ni à aucun nom du catalogue ;
+- un e-mail de responsable ne correspond à aucun utilisateur ;
+- sa **Fin de support** ou sa **Date de retrait** précède sa **Mise en production** ;
+- `is_suite` vaut `no` pour une suite qui contient encore des applications.
+
+Un fichier avec une seule ligne refusée ne charge rien. Voir [Fichiers CSV](csv-files.md).
 
 ### Référence des champs
 
@@ -548,15 +588,14 @@ Depuis la liste des Applications :
 | Colonne CSV | Description | Obligatoire | Notes |
 |-------------|-------------|-------------|-------|
 | `id` | UUID de l'application | Non | Pour les mises à jour ; laisser vide pour les nouvelles applications |
-| `name` | Nom de l'application | Oui | Utilisé comme identifiant unique pour la correspondance |
+| `name` | Nom de l'application | Oui | 200 caractères au plus. Sert à retrouver les applications existantes |
 | `description` | Ce que fait l'application | Non | |
-| `category` | Objectif principal | Non | Accepte un code ou un libellé depuis les Paramètres |
+| `category` | Objectif principal | Non | Accepte un code ou un libellé depuis les Paramètres. Une valeur inconnue fait refuser la ligne |
 | `supplier_name` | Nom du fournisseur | Non | Doit correspondre à un fournisseur existant |
 | `editor` | Éditeur du logiciel | Non | Texte libre (ex. : Microsoft, SAP) |
 | `criticality` | Criticité business | Non | Accepte un code ou un libellé depuis les Paramètres ; `__CLEAR__` l'efface |
-| `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres |
+| `lifecycle` | Statut actuel | Non | Accepte un code ou un libellé depuis les Paramètres. Une valeur inconnue fait refuser la ligne |
 | `is_suite` | Peut avoir des apps enfants | Non | `oui` ou `non` |
-| `status` | Activé/désactivé | Non | `enabled` ou `disabled` |
 
 **Champs de version** :
 
@@ -585,7 +624,7 @@ Depuis la liste des Applications :
 | `data_class` | Classification des données | Accepte un code ou un libellé depuis les Paramètres |
 | `last_dr_test` | Date du dernier test PRA | Format de date : YYYY-MM-DD |
 | `contains_pii` | Stocke des données personnelles | `oui` ou `non` |
-| `data_residency` | Pays de stockage des données | Export uniquement (codes ISO) |
+| `data_residency` | Pays de stockage des données | Codes pays ISO séparés par des virgules (ex. `FR,DE`). En mode `Enrichir`, une cellule vide conserve les pays |
 
 **Champs de classification** :
 
@@ -603,14 +642,16 @@ Une cellule de classification vide conserve la valeur existante dans les modes E
 
 | Colonne CSV | Description | Notes |
 |-------------|-------------|-------|
-| `business_owner_email_1` à `_4` | E-mails des responsables métier | Doivent correspondre à des utilisateurs existants par e-mail |
-| `it_owner_email_1` à `_4` | E-mails des responsables IT | Doivent correspondre à des utilisateurs existants par e-mail |
+| `business_owner_email_1` à `_4` | E-mails des responsables métier | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
+| `it_owner_email_1` à `_4` | E-mails des responsables IT | Doivent correspondre à l'e-mail d'un utilisateur existant. Un e-mail inconnu fait refuser la ligne |
+
+En mode `Enrichir`, quand toutes les cellules de responsables d'un type sont vides, l'application conserve ses responsables de ce type.
 
 **Champs en export uniquement** (inclus dans Export complet mais non importables) :
 
 | Colonne CSV | Description |
 |-------------|-------------|
-| `data_residency` | Pays de stockage des données (codes ISO, séparés par virgules) |
+| `status` | Activé ou désactivé, dans la langue de votre écran. Se modifie sur l'application elle-même |
 | `users_mode` | Méthode de comptage des utilisateurs (`manual`, `it_users`, `headcount`) |
 | `users_year` | Année de référence pour les calculs d'utilisateurs |
 | `users_override` | Saisie manuelle du nombre d'utilisateurs |
@@ -631,15 +672,17 @@ Pour les champs configurés dans **Cartographie SI > Paramètres**, vous pouvez 
 | Cycle de vie | `active`, `proposed`, `deprecated` | `Actif`, `Proposé`, `Obsolète` |
 | Classification données | `public`, `internal`, `confidential` | `Public`, `Interne`, `Confidentiel` |
 
-Le système normalise automatiquement les valeurs lors de l'import, donc `Métier`, `metier` et `lob` se résolvent tous vers la même catégorie.
+Le système normalise automatiquement les valeurs lors de l'import, donc `Métier`, `metier` et `lob` se résolvent tous vers la même catégorie. Les libellés affichés à l'écran sont acceptés en anglais, en français, en allemand et en espagnol : `Active`, `Actif`, `Aktiv` et `Activo` désignent le même cycle de vie. Un fichier exporté dans une langue s'importe donc dans une autre.
 
 ### Correspondance et mises à jour
 
-Les applications sont identifiées par **nom** (insensible à la casse). Lorsqu'une correspondance est trouvée :
+Les applications sont identifiées par **nom**, sans tenir compte des majuscules et des minuscules ni des espaces au début et à la fin. Lorsqu'une correspondance est trouvée :
 - En mode `Enrichir` : Seules les valeurs CSV non vides mettent à jour l'application
-- En mode `Remplacer` : les champs fournis sont mis à jour ; les cellules de classification vides conservent la valeur existante et `__CLEAR__` l'efface explicitement
+- En mode `Remplacer` : Les colonnes du fichier sont mises à jour, et une cellule vide efface la valeur enregistrée. Les colonnes absentes du fichier gardent leurs valeurs. Une cellule de classification vide garde sa valeur, et `__CLEAR__` l'efface. Le nom, l'`id`, le cycle de vie et les champs obligatoires ne peuvent pas être vidés : la **Vérification préalable** signale une erreur sur la ligne. Une nouvelle application reçoit les valeurs par défaut.
 
-Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom.
+Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d'abord l'ID, puis se rabat sur le nom. Quand deux applications existantes portent le nom d'une ligne, la ligne est refusée : ajoutez la colonne `id` pour choisir laquelle.
+
+Une ligne retrouvée par son `id` avec un autre nom renomme l'application. Le nouveau nom doit être libre. Le titre du document de description de l'application suit le nouveau nom.
 
 ### Limitations
 
@@ -648,7 +691,7 @@ Si vous incluez la colonne `id` avec un UUID valide, la correspondance utilise d
 - **Interfaces exclues** : Les définitions d'intégration ne font pas partie de l'import/export CSV
 - **Maximum 4 responsables par type** : Jusqu'à 4 responsables métier et 4 responsables IT peuvent être importés/exportés
 - **Métriques utilisateurs en export uniquement** : Les champs d'audience et de comptage d'utilisateurs (`users_mode`, `users_year`, `users_override`) sont gérés dans l'espace de travail
-- **Résidence des données en export uniquement** : Les sélections de pays doivent être gérées dans l'onglet Conformité
+- **Statut en export uniquement** : Activez ou désactivez une application dans son espace de travail
 
 ### Résolution de problèmes
 

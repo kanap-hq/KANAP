@@ -7,6 +7,7 @@ import { useNavigate } from 'react-router-dom';
 import CsvExportDialog from '../components/csv/CsvExportDialog';
 import CsvImportDialog from '../components/csv/CsvImportDialog';
 import DeleteSelectedButton from '../components/DeleteSelectedButton';
+import { recordsInUseCheck } from '../utils/deleteCheck';
 import { useAuth } from '../auth/AuthContext';
 import { LinkCellRenderer } from '../components/grid/renderers';
 import { useLocale } from '../i18n/useLocale';
@@ -158,7 +159,8 @@ export default function BusinessProcessesPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => row.name}
           gridApi={gridApiRef.current}
-          // Nothing refuses a process's delete: the warning says what keeps it.
+          // A process that applications or interfaces use is refused; the warning says what loses its link.
+          checkDelete={(ids) => recordsInUseCheck('/business-processes', ids)}
           warning={t('businessProcesses.deleteWarning', { count: selectedRows.length })}
           itemLabels={{
             toDelete: (count) => t('businessProcesses.delete.toDelete', { count }),

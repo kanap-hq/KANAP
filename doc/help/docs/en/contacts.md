@@ -75,6 +75,8 @@ Text fields save when you leave them or press Enter, lists save as soon as you c
 
 Press **Escape** or click the close button to go back to the list.
 
+**Delete**, a trash icon at the top right, is shown to contact administrators (`contacts:admin`). After a confirmation, the contact is deleted and removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name it; these records stay. You return to the list.
+
 ### Used by
 
 The **Used by** section, under the notes, lists everything the contact is linked to, one list per type, each with its count: suppliers, budget lines (OPEX and CAPEX, with their `BL-` reference), contracts, applications, assets, locations, projects (`PRJ-`) and requests (`REQ-`). Each row shows the contact's role there: the contact type for suppliers, budget lines and contracts, the role typed on the application, asset or location.

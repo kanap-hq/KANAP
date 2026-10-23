@@ -1,5 +1,5 @@
 import React from 'react';
-import { Alert, Box, IconButton, Link, Tooltip } from '@mui/material';
+import { Alert, Box, IconButton, Link, Tooltip, Typography } from '@mui/material';
 import DnsOutlinedIcon from '@mui/icons-material/DnsOutlined';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { Link as RouterLink } from 'react-router-dom';
@@ -12,6 +12,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type RelationsColumn } from '../../../components/workspace/RelationsTable';
 import RelationAddPicker, { type RelationOption } from '../../../components/workspace/RelationAddPicker';
 import { invalidateTechnologyLinks } from '../components/technologyLinkQueries';
+import { HelpTip } from '../components/HelpTip';
 import TechnologyVersionPicker, { type VersionChoice, type VersionOption } from '../components/TechnologyVersionPicker';
 import { applicationRelationsKey, type ApplicationRelationsData, type TechnologyRow } from './ApplicationRelationsTab';
 import TechnologyServersProposal from './TechnologyServersProposal';
@@ -193,7 +194,7 @@ export default function ApplicationTechnologiesSection({
   const columns: Array<RelationsColumn<TechnologyRow>> = [
     { key: 'ref', header: t('workspace.application.relations.columns.ref'), width: 72, render: (row) => <RelationRef>{row.reference ?? dash}</RelationRef> },
     { key: 'name', header: t('workspace.application.relations.columns.name'), render: (row) => <span title={row.name ?? undefined}>{row.name ?? dash}</span> },
-    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 110, hideOrder: 3, render: (row) => familyLabel(row.family) },
+    { key: 'family', header: t('workspace.application.relations.columns.family'), width: 150, hideOrder: 3, render: (row) => familyLabel(row.family) },
     {
       key: 'version', header: t('workspace.application.relations.columns.version'), width: 72,
       render: (row) => {
@@ -282,6 +283,12 @@ export default function ApplicationTechnologiesSection({
       {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
       <RelationsSection
         title={title}
+        heading={(
+          <Box sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>
+            <Typography component="h2" sx={{ m: 0, fontSize: 14, fontWeight: 500, lineHeight: 1.4, color: 'kanap.text.primary' }}>{title}</Typography>
+            <HelpTip label={title} help={t('workspace.application.relations.sections.technologiesHelp')} />
+          </Box>
+        )}
         count={data ? rows.length : undefined}
         onAdd={canEdit && data ? (anchor) => setFlow({ step: 'technology', anchor }) : undefined}
         adding={!!flow && !(flow.step === 'servers' && flow.mode === 'record')}

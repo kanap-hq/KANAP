@@ -75,6 +75,8 @@ Les champs de texte s'enregistrent quand vous les quittez ou appuyez sur Entrée
 
 Appuyez sur **Échap** ou cliquez sur le bouton de fermeture pour revenir à la liste.
 
+**Supprimer**, une icône corbeille en haut à droite, est proposé aux administrateurs des contacts (`contacts:admin`). Après une confirmation, le contact est supprimé et retiré des fournisseurs, lignes budgétaires, contrats, applications, actifs, sites, projets et demandes qui le citent ; ces éléments restent. Vous revenez à la liste.
+
 ### Lié à
 
 La section **Lié à**, sous les notes, liste tout ce à quoi le contact est lié, une liste par type, chacune avec son nombre : fournisseurs, lignes budgétaires (OPEX et CAPEX, avec leur référence `BL-`), contrats, applications, actifs, sites, projets (`PRJ-`) et demandes (`REQ-`). Chaque ligne indique le rôle du contact : le type de contact pour les fournisseurs, les lignes budgétaires et les contrats, le rôle saisi sur l'application, l'actif ou le site.

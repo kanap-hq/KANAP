@@ -102,7 +102,7 @@ describe('Application classification workspace surfaces', () => {
 
   it('warns when the RTO reaches the downtime of the chosen level, and only then', () => {
     const { unmount } = renderPanel({ app: { ...completeApp, rto_minutes: 1440 } });
-    expect(screen.getByRole('alert')).toHaveTextContent('maximum tolerable downtime of the High level (1 day)');
+    expect(screen.getByRole('alert')).toHaveTextContent('maximum tolerable downtime (MTD) of the High level (1 day)');
     unmount();
     const unbounded = renderPanel({ app: { ...completeApp, rto_minutes: 1440, criticality: 'low' } });
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();

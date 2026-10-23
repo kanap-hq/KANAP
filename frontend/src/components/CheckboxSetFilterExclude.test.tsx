@@ -8,7 +8,7 @@ import CheckboxSetFloatingFilter from './CheckboxSetFloatingFilter';
 
 // Exclude mode of the set filter (decision Q3, lot 2B PR B2): on a list whose endpoints honour it,
 // "All" then untick stores the unticked values (`mode: 'exclude'`), so values added later show;
-// "Clear" then tick stores the ticked values. A list without the opt-in never sends a mode.
+// "None" then tick stores the ticked values. A list without the opt-in never sends a mode.
 
 const COL = 'supplier_name';
 const OPTIONS = [{ value: 'Alpha' }, { value: 'Bravo' }, { value: 'Charlie' }, { value: null }];
@@ -99,9 +99,9 @@ describe('CheckboxSetFilter exclude mode', () => {
     expect(hint()).toBeNull();
   });
 
-  it('"Clear" then tick includes the ticked values, also when the tick comes before the delay', () => {
+  it('"None" then tick includes the ticked values, also when the tick comes before the delay', () => {
     const { applied } = renderFilter({ exclude: true });
-    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     click('Charlie');
     expect(hint()).toBe('Only the ticked value shows.');
     advance();
@@ -171,9 +171,9 @@ describe('CheckboxSetFilter exclude mode', () => {
     setValues([...values, { value: 'Supplier 99' }]);
     expect(applied()?.mode).toBe('exclude');
     expect([...(applied()?.values ?? [])].sort()).toEqual(['Supplier 20', 'Supplier 3']);
-    // "Clear" with a search unticks the values listed only; "All" ticks them back.
+    // "None" with a search unticks the values listed only; "All" ticks them back.
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'Supplier 1' } });
-    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     advance();
     expect(applied()?.mode).toBe('exclude');
     expect([...(applied()?.values ?? [])].sort()).toEqual(
@@ -189,9 +189,9 @@ describe('CheckboxSetFilter exclude mode', () => {
     expect(box('Supplier 99')).toBeChecked();
   });
 
-  it('after "Clear" (only the ticked values), a search keeps the ticked matching values as before', () => {
+  it('after "None" (only the ticked values), a search keeps the ticked matching values as before', () => {
     const { applied } = renderFilter({ exclude: true, values: Array.from({ length: 25 }, (_, i) => ({ value: `Supplier ${i}` })) });
-    fireEvent.click(screen.getByRole('button', { name: /^clear$/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     fireEvent.click(box('Supplier 2'));
     fireEvent.click(box('Supplier 5'));
     advance();

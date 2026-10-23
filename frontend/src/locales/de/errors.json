@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Uhrzeiten ohne Zeitzone, als UTC gelesen: {{columns}}. Geben Sie die Zeitzone nach der Spalte an, zum Beispiel {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Ein Wert ist erforderlich.",
   "CSV_VALUE_ONE_REQUIRED": "Füllen Sie mindestens eine Spalte {{column}} aus.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "Dieses Feld darf nicht geleert werden. Entfernen Sie die Spalte aus der Datei, um den gespeicherten Wert zu behalten.",
   "CSV_NUMBER_INVALID": "„{{value}}“ ist keine Zahl.",
   "CSV_DATE_INVALID": "„{{value}}“ ist kein Datum. Verwenden Sie 2026-09-02 oder 02.09.2026.",
   "CSV_BOOLEAN_INVALID": "„{{value}}“ ist ungültig. Verwenden Sie ja oder nein.",
@@ -164,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} ist nicht zulässig. Die Kennzahlen der Unternehmen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "DATA_FROZEN_ACTION_departments": "{{action}} ist nicht zulässig. Die Kennzahlen der Abteilungen für {{year}} sind eingefroren. Ein Budgetadministrator kann die Sperre aufheben.",
   "DEPARTMENT_IN_USE": "Diese Abteilung wird in den Zuordnungen von {{usages}} verwendet. Deaktivieren Sie sie, statt sie zu löschen.",
+  "BUSINESS_PROCESS_IN_USE": "Dieser Geschäftsprozess wird noch verwendet: {{usages}}. Deaktivieren Sie ihn, statt ihn zu löschen.",
   "BUILT_IN_RECORD": "Dieses Element ist in KANAP enthalten und kann nicht gelöscht werden. Deaktivieren Sie es stattdessen.",
   "RECORD_USED_BY": "Dieses Element wird von {{usages}} verwendet. Deaktivieren Sie es, statt es zu löschen.",
   "TEAM_NOT_EMPTY_one": "Dieses Team hat noch {{usages}}. Verschieben Sie es zuerst in ein anderes Team, oder deaktivieren Sie das Team.",
@@ -186,5 +188,25 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie ihn zuerst.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Dieser Ordner enthält noch {{usages}}. Verschieben oder löschen Sie sie zuerst.",
   "currency_invalid": "Unbekannter Währungscode: Geben Sie dreistellige ISO-4217-Codes ein, zum Beispiel EUR, USD, CHF.",
-  "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium."
+  "turnover_fx_missing_all": "Keines der ausgewählten Unternehmen hat einen Wechselkurs in die Reporting-Währung. Ihr Umsatz kann nicht verglichen werden. Geben Sie die Kurse ein, oder wählen Sie ein anderes Zuordnungskriterium.",
+  "name_required": "Geben Sie einen Namen ein.",
+  "name_taken": "Eine Anwendung trägt diesen Namen bereits: {{ref}}.",
+  "name_ambiguous": "{{count}} Anwendungen heißen {{name}}. Fügen Sie die Spalte id hinzu, um eine davon anzugeben.",
+  "name_too_long": "Der Name ist zu lang: höchstens {{max}} Zeichen.",
+  "lifecycle_invalid": "Unbekannter Lebenszyklus: {{value}}. Verwenden Sie einen Lebenszyklus aus der Liste, mit Namen oder Code.",
+  "category_invalid": "Unbekannte Kategorie: {{value}}. Verwenden Sie eine Kategorie aus der Liste, mit Namen oder Code.",
+  "classification_unknown": "Unbekannter Wert: {{value}}. Verwenden Sie eine Stufe aus den Klassifizierungseinstellungen, mit Namen oder Code.",
+  "duration_invalid": "{{field}} muss eine ganze Zahl von Minuten sein.",
+  "owner_email_unknown": "Kein Benutzer mit der E-Mail-Adresse {{email}}.",
+  "dates_inconsistent": "Supportende und Stilllegungsdatum dürfen nicht vor dem Go-live-Datum liegen.",
+  "suite_has_children_one": "Lösen Sie zuerst die zugeordnete Anwendung.",
+  "suite_has_children_other": "Lösen Sie zuerst die {{count}} zugeordneten Anwendungen.",
+  "suite_cycle": "Diese Anwendung enthält bereits {{name}}: Sie kann nicht dazugehören.",
+  "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
+  "NO_ACCESS": "Diesem Konto wurde noch kein Zugriff gewährt. Wenden Sie sich an einen Administrator.",
+  "fields": {
+    "rto_minutes": "Das Wiederanlaufzeitziel (RTO)",
+    "rpo_minutes": "Das Wiederherstellungspunktziel (RPO)",
+    "maxMtdMinutes": "Die maximal tolerierbare Ausfallzeit"
+  }
 }

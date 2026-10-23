@@ -5,7 +5,7 @@ import { useTranslation } from 'react-i18next';
 import DeleteConfirmDialog, { DeleteConfirmKept } from './DeleteConfirmDialog';
 import api from '../api';
 import { getApiErrorMessage } from '../utils/apiErrorMessage';
-import { deleteFailureReason, refusalCounts, type DeleteFailure } from '../utils/deleteRefusal';
+import { deleteFailureReason, refusalCounts, usageTotal, type DeleteFailure } from '../utils/deleteRefusal';
 import { joinNames } from '../pages/working-day-calendars/workingDayCalendarFields';
 import { KanapDialog } from './design';
 
@@ -74,6 +74,16 @@ export interface DeleteSelectedButtonProps<T> {
     title?: (count: number) => string;
     /** Once done: "1 company kept". */
     keptDone?: (count: number) => string;
+    /**
+     * Why an item that other records use is kept, as a sentence ("Acme is kept: 2 interfaces use it."):
+     * its name, what uses it counted ("2 interfaces") and how many records that is.
+     */
+    keptReason?: (kept: { name: string; usages: string; count: number }) => string;
+    /**
+     * The window's title counts the items that will really be deleted (the refused ones are left
+     * out), not the whole selection. The default counts the selection.
+     */
+    titleCountsDeleted?: boolean;
   };
 }
 
@@ -233,7 +243,10 @@ export default function DeleteSelectedButton<T>({
     .map((item) => {
       const refusal = refusedById.get(item.id)!;
       // What uses it, counted; a refusal without counts (a frozen column) in its own words.
-      return { ...item, reason: refusal.usages?.length ? refusalCounts(refusal, t, language) : deleteFailureReason(refusal, t, language) };
+      if (!refusal.usages?.length) return { ...item, reason: deleteFailureReason(refusal, t, language) };
+      const usages = refusalCounts(refusal, t, language);
+      const count = (usageTotal(refusal.usages) as { count?: number }).count ?? 0;
+      return { ...item, reason: itemLabels?.keptReason?.({ name: item.name, usages, count }) ?? usages };
     });
   // Kept items whose refusal the window's option lifts: checked, they are deleted too.
   const lifts = new Set(cascadeOption ? check?.cascadeLifts ?? [] : []);
@@ -247,6 +260,7 @@ export default function DeleteSelectedButton<T>({
   const selectionTitle = (named: Item[]) => (named.length === 1
     ? t('delete.recordTitle', { name: named[0].name })
     : itemLabels?.title?.(named.length) ?? t('delete.deleteSelectedTitle', { count: named.length }));
+  const titleCountsDeleted = itemLabels?.titleCountsDeleted === true;
   const onlyRefused = !!check && deletable.length === 0 && keptItems.length > 0 && liftable.length === 0;
 
   return (
@@ -273,7 +287,9 @@ export default function DeleteSelectedButton<T>({
           showCancel={false}
         >
           {keptItems.length === 1 ? (
-            <Alert severity="warning">{deleteFailureReason(refusedById.get(keptItems[0].id)!, t, language)}</Alert>
+            <Alert severity="warning">
+              {itemLabels?.keptReason && keptItems[0].reason ? keptItems[0].reason : deleteFailureReason(refusedById.get(keptItems[0].id)!, t, language)}
+            </Alert>
           ) : (
             <DeleteConfirmKept label={keptLabel(keptItems.length)} items={keptItems} />
           )}
@@ -284,7 +300,7 @@ export default function DeleteSelectedButton<T>({
           onClose={handleCloseConfirm}
           onConfirm={handleConfirmDelete}
           // The item named, or the selection counted: the lists below say what goes and what is kept.
-          title={selectionTitle(items)}
+          title={selectionTitle(titleCountsDeleted && toDelete.length > 0 ? toDelete : items)}
           // Once the check has answered, the refused items are listed as kept: no generic "referenced items are kept".
           warning={check ? (check.warning ?? warning ?? t('delete.cannotUndo')) : (forceOption?.message ?? warning)}
           confirmLabel={check ? check.confirmLabel : forceOption?.confirmLabel}

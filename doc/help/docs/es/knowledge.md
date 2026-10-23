@@ -101,7 +101,7 @@ Los documentos gestionados mantienen la experiencia de escritura dentro de la Ba
 
 Esto protege el vínculo entre el documento y el registro operativo que lo posee.
 
-El acceso también sigue al objeto de origen. El caso más claro es la carpeta **Incidentes**: una revisión del incidente solo puede abrirla quien tenga derecho a ver ese incidente, sean cuales sean sus permisos sobre la Base de conocimiento; pasa a ser de solo lectura en cuanto el incidente se cierra o se cancela, y desaparece de las listas, la búsqueda, las exportaciones y el asistente para cualquiera excluido de un incidente restringido. Consulte [Incidentes](incidents.md).
+El acceso también sigue al objeto de origen. Quien puede modificar una aplicación, una interfaz, un proyecto o una solicitud puede modificar sus documentos gestionados desde esa ficha, sin permiso sobre la base de conocimiento. El caso más claro es la carpeta **Incidentes**: una revisión del incidente solo puede abrirla quien tenga derecho a ver ese incidente, sean cuales sean sus permisos sobre la Base de conocimiento; pasa a ser de solo lectura en cuanto el incidente se cierra o se cancela, y desaparece de las listas, la búsqueda, las exportaciones y el asistente para cualquiera excluido de un incidente restringido. Consulte [Incidentes](incidents.md).
 
 ## Trabajar con la lista de la Base de conocimiento
 

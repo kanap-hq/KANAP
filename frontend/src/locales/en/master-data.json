@@ -236,7 +236,8 @@
       "nameRequired": "Enter a name.",
       "nameTaken": "Another department of this company already has this name.",
       "companyRequired": "Choose a company.",
-      "headcountInvalid": "Enter a whole number, 0 or more."
+      "headcountInvalid": "Enter a whole number, 0 or more.",
+      "deleteFailed": "Failed to delete the department."
     },
     "delete": {
       "toDelete_one": "{{count}} department will be deleted:",
@@ -475,7 +476,8 @@
       "nameRequired": "Enter a name.",
       "nameTaken": "Another supplier already has this name.",
       "saveFailed": "Failed to save the supplier.",
-      "createFailed": "Failed to create the supplier."
+      "createFailed": "Failed to create the supplier.",
+      "deleteFailed": "Failed to delete the supplier."
     },
     "previous": "Previous supplier",
     "next": "Next supplier",
@@ -553,7 +555,8 @@
       "typeRequired": "Choose a contact type for this supplier.",
       "saveFailed": "Failed to save the contact.",
       "createFailed": "Failed to create the contact.",
-      "loadFailed": "Failed to load the contact."
+      "loadFailed": "Failed to load the contact.",
+      "deleteFailed": "Failed to delete the contact."
     },
     "delete": {
       "warning_one": "It is removed from the suppliers, budget lines, contracts, applications, assets, locations, projects and requests that name it. These records stay. This cannot be undone.",
@@ -1007,7 +1010,7 @@
       "failedToCreate": "Failed to create category",
       "failedToUpdate": "Failed to update category"
     },
-    "deleteWarning_one": "This cannot be undone. Interfaces and requests linked to this process stay, without the link.",
+    "deleteWarning_one": "This cannot be undone. Requests linked to this process stay, without the link.",
     "delete": {
       "toDelete_one": "{{count}} business process will be deleted:",
       "toDelete_other": "{{count}} business processes will be deleted:",
@@ -1016,7 +1019,10 @@
       "title_one": "Delete the selected business process",
       "title_other": "Delete the {{count}} selected business processes"
     },
-    "deleteWarning_other": "This cannot be undone. Interfaces and requests linked to these processes stay, without the link."
+    "deleteWarning_other": "This cannot be undone. Requests linked to these processes stay, without the link.",
+    "messages": {
+      "deleteFailed": "Failed to delete the business process."
+    }
   },
   "admin": {
     "copy": {

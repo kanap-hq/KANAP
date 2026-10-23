@@ -2,14 +2,16 @@ import { writeCsvHeader, type CsvLanguage } from '../common/csv-sheet';
 import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
-import { BadRequestException, Injectable } from '@nestjs/common';
+import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
+import { lockApplicationNames } from './application-rules';
+import { BadRequestException, Injectable, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
 import { Application } from './application.entity';
 import { ApplicationOwner } from './application-owner.entity';
 import { ApplicationDataResidency } from './application-data-residency.entity';
 import { AuditService } from '../audit/audit.service';
+import { IntegratedDocumentsService } from '../knowledge/integrated-documents.service';
 import {
   CsvExportService,
   CsvImportService,
@@ -19,7 +21,7 @@ import {
   CsvFieldInfo,
   CsvResolverService,
 } from '../common/csv';
-import { applicationCsvConfig, csvOwnerKeys, sameKeys } from './application-csv.config';
+import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -35,6 +37,31 @@ import {
  * - Proper FK resolution
  * - Two-phase import with validation
  */
+
+type ExportLanguage = 'en' | 'fr' | 'de' | 'es';
+
+/** The screen's names of the fixed values (not tenant catalogs), per export language. Both columns are export-only. */
+const FIXED_EXPORT_LABELS: Record<string, Record<string, Record<ExportLanguage, string>>> = {
+  classification_review_state: {
+    incomplete: { en: 'To complete', fr: 'À compléter', de: 'Zu vervollständigen', es: 'Por completar' },
+    stale: { en: 'Review needed', fr: 'À revoir', de: 'Erneut prüfen', es: 'Por revisar' },
+    reviewed: { en: 'Reviewed', fr: 'Revu', de: 'Geprüft', es: 'Revisado' },
+  },
+  users_mode: {
+    manual: { en: 'Manual', fr: 'Manuel', de: 'Manuell', es: 'Manual' },
+    // The screen offers "Derived" and "Manual" only; both derived modes read as "Derived".
+    it_users: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
+    headcount: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
+  },
+};
+
+export function exportFixedLabelsIn(row: Record<string, any>, language: ExportLanguage): void {
+  for (const [field, labels] of Object.entries(FIXED_EXPORT_LABELS)) {
+    const label = labels[String(row[field])]?.[language];
+    if (label) row[field] = label;
+  }
+}
+
 @Injectable()
 export class ApplicationsCsvService {
   constructor(
@@ -47,6 +74,7 @@ export class ApplicationsCsvService {
     private readonly audit: AuditService,
     private readonly listService: ApplicationsListService,
     private readonly itOpsSettings: ItOpsSettingsService,
+    @Optional() private readonly integratedDocuments?: IntegratedDocumentsService,
   ) {}
 
   /**
@@ -107,10 +135,16 @@ export class ApplicationsCsvService {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
       Object.assign(app, classificationReadState(app));
-      exportCatalogLabels(app, {
-        category: settings.applicationCategories, lifecycle: settings.lifecycleStates, criticality: settings.businessCriticalityLevels,
-        cyber_criticality: settings.cyberCriticalityLevels, recovery_wave: settings.recoveryWaves, data_class: settings.dataClasses, access_methods: settings.accessMethods,
-      });
+      exportFixedLabelsIn(app, opts.language);
+      exportCatalogLabelsIn(app, {
+        category: { list: 'applicationCategories', options: settings.applicationCategories },
+        lifecycle: { list: 'lifecycleStates', options: settings.lifecycleStates },
+        criticality: { list: 'businessCriticalityLevels', options: settings.businessCriticalityLevels },
+        cyber_criticality: { list: 'cyberCriticalityLevels', options: settings.cyberCriticalityLevels },
+        recovery_wave: { list: 'recoveryWaves', options: settings.recoveryWaves },
+        data_class: { list: 'dataClasses', options: settings.dataClasses },
+        access_methods: { list: 'accessMethods', options: settings.accessMethods },
+      }, opts.language);
     }
 
     // Load related data for export
@@ -122,9 +156,9 @@ export class ApplicationsCsvService {
         SELECT o.application_id, o.user_id, o.owner_type, u.email
         FROM application_owners o
         JOIN users u ON u.id = o.user_id
-        WHERE o.application_id = ANY($1)
+        WHERE o.tenant_id = $2 AND o.application_id = ANY($1)
         ORDER BY o.created_at ASC
-      `, [appIds]);
+      `, [appIds, tenantId]);
 
       const ownersByApp = new Map<string, any[]>();
       for (const owner of ownersWithUsers) {
@@ -141,9 +175,9 @@ export class ApplicationsCsvService {
       const residencyRows = await manager.query(`
         SELECT application_id, country_iso
         FROM application_data_residency
-        WHERE application_id = ANY($1)
+        WHERE tenant_id = $2 AND application_id = ANY($1)
         ORDER BY created_at ASC
-      `, [appIds]);
+      `, [appIds, tenantId]);
 
       const residencyByApp = new Map<string, any[]>();
       for (const row of residencyRows) {
@@ -218,6 +252,7 @@ export class ApplicationsCsvService {
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
       await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [opts.tenantId]);
+      await lockApplicationNames(manager, opts.tenantId);
       const result = await this.importLocked(file, params, { ...opts, manager });
       if (!params.dryRun && !result.ok && result.errors.some((error) => error.row === 0)) throw new BadRequestException(result);
       return result;
@@ -227,21 +262,60 @@ export class ApplicationsCsvService {
   private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null }): Promise<CsvImportResult> {
     // The tenant row is locked FOR UPDATE by import(): the catalogs read here cannot change underneath.
     const itOpsSettings = await this.itOpsSettings.getSettings(opts.tenantId, { manager: opts.manager });
-    const result = await this.importSvc.import(applicationCsvConfig, file, params, { ...opts, itOpsSettings });
+    // The applications the load wrote: a row the operation skipped (an existing application in
+    // "add new only", a new one in "update only") or found unchanged keeps its owners and residency.
+    const written = new Set<string>();
+    const config = {
+      ...applicationCsvConfig,
+      afterCommit: async (entities: any[]) => {
+        for (const entity of entities) if (entity?.id) written.add(String(entity.id));
+      },
+    };
+    // The names before the load, to find the renamed applications afterwards.
+    const namesBefore = params.dryRun ? new Map<string, string>() : new Map<string, string>(
+      (await opts.manager.query(`SELECT id::text AS id, name FROM applications WHERE tenant_id = $1`, [opts.tenantId]))
+        .map((row: { id: string; name: string }) => [row.id, row.name] as const),
+    );
+    const result = await this.importSvc.import(config, file, params, { ...opts, itOpsSettings });
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(file, opts);
-      await this.handleDataResidencyImport(file, opts);
+      await this.handleOwnerImport(file, params.mode, written, opts);
+      await this.handleDataResidencyImport(file, params.mode, written, opts);
+      await this.syncRenamedDocumentTitles(namesBefore, written, opts);
     }
 
     return result;
   }
 
   /**
+   * A renamed application: its description document's title follows (`APP-4 - New name - Overview`),
+   * as on a rename from the workspace.
+   */
+  private async syncRenamedDocumentTitles(namesBefore: Map<string, string>, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+    if (!this.integratedDocuments) return;
+    const renamed = [...written].filter((id) => namesBefore.has(id));
+    if (renamed.length === 0) return;
+    const rows: Array<{ id: string; tenant_id: string; name: string; sequential_id: string | null }> = await opts.manager.query(
+      `SELECT id::text AS id, tenant_id::text AS tenant_id, name, sequential_id FROM applications WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+      [opts.tenantId, renamed],
+    );
+    for (const row of rows) {
+      if (namesBefore.get(row.id) === row.name) continue;
+      await this.integratedDocuments.syncTitles('applications', {
+        id: row.id,
+        tenant_id: row.tenant_id,
+        item_number: null,
+        name: row.name,
+        reference_label: String(row.sequential_id || '').trim() || row.id,
+      }, opts.userId ?? null, { manager: opts.manager });
+    }
+  }
+
+  /**
    * Handle owner import from CSV after main import.
    */
-  private async handleOwnerImport(file: Express.Multer.File, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleOwnerImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file to get owner columns
@@ -259,12 +333,7 @@ export class ApplicationsCsvService {
         .on('error', (err) => reject(err));
     });
 
-    // Load user lookup
-    const users = await manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [tenantId]);
-    const userByEmail = new Map<string, string>();
-    for (const u of users) {
-      userByEmail.set(String(u.email).toLowerCase(), u.id);
-    }
+    const userByEmail = await usersByEmail(manager, tenantId);
 
     // Process each row
     for (const row of rows) {
@@ -272,19 +341,15 @@ export class ApplicationsCsvService {
       if (!Object.keys(row).some((key) => /^(business|it)_owner_email_/.test(key))) continue;
       if (!appName) continue;
 
-      // Find application
-      const appRows = await manager.query(
-        `SELECT id FROM applications WHERE tenant_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
-        [tenantId, appName],
-      );
-      if (appRows.length === 0) continue;
-      const appId = appRows[0].id;
+      const appId = await this.importedApplicationId(manager, tenantId, row);
+      if (!appId || !written.has(String(appId))) continue;
 
       const ownerRepo = manager.getRepository(ApplicationOwner);
-      const beforeRows = await ownerRepo.find({ where: { application_id: appId } as any });
+      const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
-      // Owners named by the columns (deduped by owner type + user to avoid unique violations)
-      const ownerKeys = csvOwnerKeys(row, userByEmail);
+      // Owners named by the columns (deduped by owner type + user to avoid unique violations);
+      // empty cells keep the stored owners of their type, except in replace mode.
+      const ownerKeys = csvOwnerKeys(row, userByEmail, beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), mode);
       if (sameKeys(beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), ownerKeys)) continue;
       const newOwners = ownerKeys.map((key) => {
         const [owner_type, user_id] = key.split(':') as ['business' | 'it', string];
@@ -292,7 +357,7 @@ export class ApplicationsCsvService {
       });
 
       // Clear existing owners
-      await manager.query(`DELETE FROM application_owners WHERE application_id = $1`, [appId]);
+      await manager.query(`DELETE FROM application_owners WHERE application_id = $1 AND tenant_id = $2`, [appId, tenantId]);
 
       // Insert new owners
       let afterRows: ApplicationOwner[] = [];
@@ -325,9 +390,26 @@ export class ApplicationsCsvService {
   }
 
   /**
+   * The application a loaded row wrote: by its id column when it names one of the tenant's
+   * applications, else by its name (an ambiguous name was refused by the validation).
+   */
+  private async importedApplicationId(manager: EntityManager, tenantId: string, row: Record<string, string>): Promise<string | null> {
+    const id = (row['id'] || '').trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      const byId = await manager.query(`SELECT id FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
+      if (byId.length) return byId[0].id;
+    }
+    const byName = await manager.query(
+      `SELECT id FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) ORDER BY created_at ASC, id ASC LIMIT 1`,
+      [tenantId, (row['name'] || '').trim()],
+    );
+    return byName[0]?.id ?? null;
+  }
+
+  /**
    * Handle data residency import from CSV after main import.
    */
-  private async handleDataResidencyImport(file: Express.Multer.File, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleDataResidencyImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file
@@ -345,19 +427,15 @@ export class ApplicationsCsvService {
         .on('error', (err) => reject(err));
     });
 
-    // Process each row
+    // Process each row: a file without the column leaves residency alone.
     for (const row of rows) {
       const appName = (row['name'] || '').trim();
+      if (!Object.prototype.hasOwnProperty.call(row, 'data_residency')) continue;
       const residencyRaw = row['data_residency'] || '';
       if (!appName) continue;
 
-      // Find application
-      const appRows = await manager.query(
-        `SELECT id FROM applications WHERE tenant_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
-        [tenantId, appName],
-      );
-      if (appRows.length === 0) continue;
-      const appId = appRows[0].id;
+      const appId = await this.importedApplicationId(manager, tenantId, row);
+      if (!appId || !written.has(String(appId))) continue;
 
       // Parse residency codes
       const codes = residencyRaw
@@ -365,20 +443,21 @@ export class ApplicationsCsvService {
         .map((c) => c.trim().toUpperCase())
         .filter((c) => c.length === 2);
 
-      if (codes.length === 0) continue;
+      // An empty cell keeps the stored residency, except in replace mode, where it clears it.
+      if (codes.length === 0 && mode !== 'replace') continue;
 
       const residencyRepo = manager.getRepository(ApplicationDataResidency);
-      const beforeRows = await residencyRepo.find({ where: { application_id: appId } as any });
+      const beforeRows = await residencyRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
       const beforeState = [...new Set(beforeRows.map((row) => row.country_iso.trim().toUpperCase()))].sort();
       const requestedState = [...new Set(codes)].sort();
       if (JSON.stringify(beforeState) === JSON.stringify(requestedState)) continue;
 
       // Clear existing residency
-      await manager.query(`DELETE FROM application_data_residency WHERE application_id = $1`, [appId]);
+      await manager.query(`DELETE FROM application_data_residency WHERE application_id = $1 AND tenant_id = $2`, [appId, tenantId]);
 
       // Insert new residency
-      const afterRows = await residencyRepo.save(
+      const afterRows = requestedState.length === 0 ? [] : await residencyRepo.save(
         requestedState.map((iso) => residencyRepo.create({
           application_id: appId,
           tenant_id: tenantId,

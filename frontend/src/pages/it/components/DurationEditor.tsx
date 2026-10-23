@@ -47,7 +47,7 @@ type Props = {
 };
 
 export default function DurationEditor({ value, onCommit, onDraftStateChange, allowZero = false, disabled, placeholder, ariaLabel }: Props) {
-  useTranslation('it');
+  const { t } = useTranslation('it');
   const initialUnit = bestDurationUnit(value);
   const [unit, setUnit] = React.useState<DurationUnit>(initialUnit);
   const [draft, setDraft] = React.useState(value == null ? '' : String(value / FACTORS[initialUnit]));
@@ -70,6 +70,11 @@ export default function DurationEditor({ value, onCommit, onDraftStateChange, al
     onDraftStateChange?.(minutes == null || minutes !== value);
   };
 
+  // The unit named for the value typed: "1 hour", "2 hours".
+  const typedCount = Number(draft);
+  const unitLabel = (item: DurationUnit) => t(`classification.unit_${item}`, { count: item === unit && draft.trim() !== '' && Number.isFinite(typedCount) ? typedCount : 2 });
+  const renderUnit = (item: string) => unitLabel(item as DurationUnit);
+
   const commit = () => {
     if (draft.trim() === '') {
       setError(null);
@@ -79,7 +84,9 @@ export default function DurationEditor({ value, onCommit, onDraftStateChange, al
     }
     const minutes = durationToMinutes(draft, unit, allowZero);
     if (minutes == null) {
-      setError(allowZero ? classificationText("Enter zero or a positive whole number of minutes.") : classificationText("Enter a positive whole number of minutes."));
+      const raw = Number(draft) * FACTORS[unit];
+      const fraction = Number.isFinite(raw) && raw > 0 && !Number.isInteger(raw);
+      setError(fraction ? t('classification.duration_whole_minutes') : t(`classification.${allowZero ? 'duration_zero' : 'duration_positive'}_${unit}`));
       onDraftStateChange?.(true);
       return;
     }
@@ -116,10 +123,11 @@ export default function DurationEditor({ value, onCommit, onDraftStateChange, al
           }}
           disabled={disabled}
           variant="standard"
+          renderValue={renderUnit}
           inputProps={{ 'aria-label': `${ariaLabel || 'Duration'} unit` }}
           sx={drawerSelectSx}
         >
-          {(['minutes', 'hours', 'days', 'weeks'] as DurationUnit[]).map((item) => <MenuItem key={item} value={item} sx={drawerMenuItemSx}>{classificationText(item)}</MenuItem>)}
+          {(['minutes', 'hours', 'days', 'weeks'] as DurationUnit[]).map((item) => <MenuItem key={item} value={item} sx={drawerMenuItemSx}>{unitLabel(item)}</MenuItem>)}
         </Select>
       </Box>
       {error && <Typography role="alert" sx={(theme) => ({ mt: 0.5, fontSize: 11, color: theme.palette.kanap.danger })}>{error}</Typography>}

@@ -355,7 +355,7 @@ Aus der Asset-Liste:
 2. **Importeinstellungen wählen**:
    - **Modus**:
      - `Anreichern` (Standard): Leere Zellen erhalten vorhandene Werte: nur aktualisieren, was Sie angeben
-     - `Ersetzen`: Leere Zellen löschen vorhandene Werte: vollständiger Ersatz aller Felder
+     - `Ersetzen`: Ersetzt die Werte der Spalten in der Datei. Eine leere Zelle löscht den gespeicherten Wert. Eine Spalte, die in der Datei fehlt, behält ihre Werte. Manche Felder können nicht geleert werden: **Preflight** zeigt sie an.
    - **Operation**:
      - `Upsert` (Standard): Neue Assets erstellen oder vorhandene aktualisieren
      - `Nur aktualisieren`: Nur vorhandene Assets ändern, neue überspringen
@@ -417,7 +417,7 @@ Das System normalisiert Werte automatisch beim Import, sodass `Virtual Machine`,
 
 Assets werden nach **Name** (Groß-/Kleinschreibung ignorierend) abgeglichen. Wenn ein Treffer gefunden wird:
 - Mit `Anreichern`-Modus: Nur nicht-leere CSV-Werte aktualisieren das Asset
-- Mit `Ersetzen`-Modus: Alle Felder werden aktualisiert, leere Werte löschen vorhandene Daten
+- Mit `Ersetzen`-Modus: Die Spalten in der Datei werden aktualisiert, und eine leere Zelle löscht den gespeicherten Wert. Spalten, die in der Datei fehlen, behalten ihre Werte. Name, `id`, Status und Pflichtfelder können nicht geleert werden: **Preflight** meldet einen Fehler in der Zeile. Bei den IP-Adressspalten werden nur die Unterspalten in der Datei übernommen. Ein neues Asset erhält die Standardwerte.
 
 Wenn Sie die Spalte `id` mit einer gültigen UUID einschließen, verwendet der Abgleich zuerst die ID und greift dann auf den Namen zurück.
 

@@ -490,7 +490,7 @@ Three export modes are available:
 2. **Choose import settings**:
    - **Mode**:
      - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Empty cells clear existing values: full replacement of all fields
+     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new tasks or update existing ones
      - `Update only`: Only modify existing tasks, skip new ones
@@ -591,7 +591,7 @@ The system normalizes values automatically during import.
 
 Tasks are matched by **title + related_object_id** (case-insensitive). When a match is found:
   - With `Enrich` mode: Only non-empty CSV values update the task
-  - With `Replace` mode: All fields are updated, empty values clear existing data
+  - With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. The title, the `id`, the status and required fields cannot be cleared: **Preflight** reports an error on the row. A new task gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to title + related object.
 

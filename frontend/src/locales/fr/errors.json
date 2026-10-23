@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Heures sans fuseau lues en UTC : {{columns}}. Nommez le fuseau après la colonne, par exemple {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "Une valeur est obligatoire.",
   "CSV_VALUE_ONE_REQUIRED": "Renseignez au moins une colonne {{column}}.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "Ce champ ne peut pas être vidé. Retirez la colonne du fichier pour garder la valeur enregistrée.",
   "CSV_NUMBER_INVALID": "« {{value}} » n'est pas un nombre.",
   "CSV_DATE_INVALID": "« {{value}} » n'est pas une date. Utilisez 2026-09-02 ou 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "« {{value}} » n'est pas valide. Utilisez oui ou non.",
@@ -164,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} n'est pas autorisé. Les indicateurs des sociétés pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
   "DATA_FROZEN_ACTION_departments": "{{action}} n'est pas autorisé. Les indicateurs des départements pour {{year}} sont gelés. Un administrateur budgétaire peut les dégeler.",
   "DEPARTMENT_IN_USE": "Ce département est utilisé dans les ventilations de {{usages}}. Désactivez-le plutôt que de le supprimer.",
+  "BUSINESS_PROCESS_IN_USE": "Ce processus métier est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "BUILT_IN_RECORD": "Cet élément est fourni avec KANAP et ne peut pas être supprimé. Désactivez-le plutôt.",
   "RECORD_USED_BY": "Cet élément est utilisé par {{usages}}. Désactivez-le plutôt que de le supprimer.",
   "TEAM_NOT_EMPTY_one": "Cette équipe contient encore {{usages}}. Rattachez d’abord cet élément à une autre équipe, ou désactivez l’équipe.",
@@ -186,5 +188,25 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "Ce dossier contient encore {{usages}}. Déplacez-le ou supprimez-le d’abord.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "Ce dossier contient encore {{usages}}. Déplacez-les ou supprimez-les d’abord.",
   "currency_invalid": "Code de devise inconnu : saisissez des codes ISO 4217 à trois lettres, par exemple EUR, USD, CHF.",
-  "turnover_fx_missing_all": "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition."
+  "turnover_fx_missing_all": "Aucune des sociétés sélectionnées n'a de taux de change vers la devise de reporting. Leur chiffre d'affaires ne peut pas être comparé. Saisissez les taux, ou choisissez un autre critère de répartition.",
+  "name_required": "Saisissez un nom.",
+  "name_taken": "Une application porte déjà ce nom : {{ref}}.",
+  "name_ambiguous": "{{count}} applications s'appellent {{name}}. Ajoutez la colonne id pour indiquer laquelle.",
+  "name_too_long": "Le nom est trop long : {{max}} caractères au plus.",
+  "lifecycle_invalid": "Cycle de vie inconnu : {{value}}. Utilisez un cycle de vie de la liste, par son nom ou son code.",
+  "category_invalid": "Catégorie inconnue : {{value}}. Utilisez une catégorie de la liste, par son nom ou son code.",
+  "classification_unknown": "Valeur inconnue : {{value}}. Utilisez un niveau des paramètres de classification, par son nom ou son code.",
+  "duration_invalid": "{{field}} doit être un nombre entier de minutes.",
+  "owner_email_unknown": "Aucun utilisateur avec le courriel {{email}}.",
+  "dates_inconsistent": "La fin de support et la date de retrait ne peuvent pas précéder la mise en service.",
+  "suite_has_children_one": "Retirez d'abord l'application rattachée.",
+  "suite_has_children_other": "Retirez d'abord les {{count}} applications rattachées.",
+  "suite_cycle": "Cette application contient déjà {{name}} : elle ne peut pas en faire partie.",
+  "forbidden": "Vous n'avez pas les droits pour cette action.",
+  "NO_ACCESS": "Ce compte n'a pas encore reçu d'accès. Demandez-le à un administrateur.",
+  "fields": {
+    "rto_minutes": "L'objectif de temps de reprise (RTO)",
+    "rpo_minutes": "L'objectif de point de reprise (RPO)",
+    "maxMtdMinutes": "La durée maximale d'interruption admissible"
+  }
 }

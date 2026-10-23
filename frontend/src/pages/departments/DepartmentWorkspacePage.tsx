@@ -14,6 +14,7 @@ import StatusLifecycleField from '../../components/fields/StatusLifecycleField';
 import { STATUS_DISABLED, deriveStatusFromDisabledAt, normalizeStatus } from '../../constants/status';
 import { drawerFieldValueSx, longFormSurfaceFieldSx } from '../../theme/formSx';
 import { getApiErrorMessage, isDuplicateError } from '../../utils/apiErrorMessage';
+import RecordDeleteButton from '../../components/workspace/RecordDeleteButton';
 import DepartmentHeadcountTab from './DepartmentHeadcountTab';
 
 type TabKey = 'overview' | 'details';
@@ -54,6 +55,7 @@ export default function DepartmentWorkspacePage() {
   const rawTab = (params.tab as TabKey) || 'overview';
   const tab: TabKey = TAB_KEYS.includes(rawTab) && !(isCreate && rawTab !== 'overview') ? rawTab : 'overview';
   const canEdit = hasLevel('departments', 'member');
+  const canDelete = hasLevel('departments', 'admin');
 
   const year = React.useMemo(() => {
     const parsed = Number(searchParams.get('year'));
@@ -71,10 +73,12 @@ export default function DepartmentWorkspacePage() {
   });
 
   const detailKey = React.useMemo(() => ['departments', id] as const, [id]);
+  // Set once the department is deleted: the page leaves without loading it again.
+  const [deletedId, setDeletedId] = React.useState<string | null>(null);
   const { data, error: loadError } = useQuery({
     queryKey: detailKey,
     queryFn: async () => (await api.get<Department>(`/departments/${id}`)).data,
-    enabled: !isCreate && !!id,
+    enabled: !isCreate && !!id && deletedId !== id,
   });
 
   const [errors, setErrors] = React.useState<FieldErrors>({});
@@ -223,6 +227,15 @@ export default function DepartmentWorkspacePage() {
           previousLabel: t('departments.previous'),
           nextLabel: t('departments.next'),
         } : undefined}
+        actions={data && canDelete ? (
+          <RecordDeleteButton
+            base="/departments"
+            id={data.id}
+            name={data.name}
+            deleteFailed="departments.messages.deleteFailed"
+            onDeleted={() => { setDeletedId(data.id); handleClose(); }}
+          />
+        ) : undefined}
         properties={properties}
       >
         {data && tab === 'overview' && (

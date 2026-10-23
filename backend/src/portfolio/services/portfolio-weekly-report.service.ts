@@ -201,7 +201,10 @@ type ExportResult<TContent> = {
   content: TContent;
 };
 
-type SheetCellValue = string | number | null;
+/** A calendar day (`YYYY-MM-DD`): a date cell in the XLSX, a day the language's way in the CSV. */
+type DayCell = { kind: 'date'; iso: string };
+
+type SheetCellValue = string | number | DayCell | null;
 
 type XlsxSheetConfig = {
   name: string;
@@ -321,10 +324,12 @@ const taskTypeCell = (row: { taskTypeName: string | null; taskTypeCode: string |
 const exportDay = (value: string | null, language: CsvLanguage): string | null =>
   value && ISO_DAY.test(value) ? formatCsvDate(value, language) : value;
 
-const dateCells = (row: WeeklyRowCommon, shape: ExportShape, { language }: ExportWords): SheetCellValue[] => {
-  if (shape === 'created') return [exportDay(row.eventAt, language)];
-  if (shape === 'modified') return [exportDay(row.eventAt, language)];
-  return [exportDay(row.createdAt, language), exportDay(row.eventAt, language)];
+const dayCell = (value: string | null): SheetCellValue => (value && ISO_DAY.test(value) ? { kind: 'date', iso: value } : value);
+
+const dateCells = (row: WeeklyRowCommon, shape: ExportShape): SheetCellValue[] => {
+  if (shape === 'created') return [dayCell(row.eventAt)];
+  if (shape === 'modified') return [dayCell(row.eventAt)];
+  return [dayCell(row.createdAt), dayCell(row.eventAt)];
 };
 
 const changeHeaders = (shape: ExportShape, { labels }: ExportWords): string[] =>
@@ -347,12 +352,33 @@ const xmlEscape = (value: unknown): string =>
     .replace(/'/g, '&apos;');
 
 /** One cell of the CSV: a number with the language's decimal mark. Words and days come translated. */
+const isDayCell = (value: unknown): value is DayCell =>
+  typeof value === 'object' && value !== null && (value as DayCell).kind === 'date';
+
+/** Days since 1899-12-30: how a spreadsheet stores a date. */
+const daySerial = (iso: string): number => (Date.parse(`${iso}T00:00:00Z`) - Date.UTC(1899, 11, 30)) / 86_400_000;
+
+/**
+ * The XLSX date format of each language, the way the CSV writes days. The locale tag keeps
+ * the day first: without it, LibreOffice shows `dd/mm/yyyy` in its own locale's order.
+ */
+const XLSX_DATE_FORMAT: Record<CsvLanguage, string> = {
+  en: 'yyyy-mm-dd',
+  fr: '[$-40C]dd/mm/yyyy',
+  de: '[$-407]dd.mm.yyyy',
+  es: '[$-C0A]dd/mm/yyyy',
+};
+
+/** Style index of the date cells in `xl/styles.xml` (`cellXfs`). */
+const XLSX_DATE_STYLE = 1;
+
 const csvCell = (value: unknown, language: CsvLanguage): string => {
   if (value === null || value === undefined) return '';
   if (typeof value === 'number') {
     const text = String(value);
     return csvProfile(language).decimal === ',' ? text.replace('.', ',') : text;
   }
+  if (isDayCell(value)) return formatCsvDate(value.iso, language);
   return String(value);
 };
 
@@ -802,6 +828,7 @@ export class PortfolioWeeklyReportService {
     const content = this.buildXlsx(
       sheets.filter((sheet): sheet is XlsxSheetConfig => sheet !== null),
       appBaseUrl,
+      words.language,
     );
 
     return {
@@ -838,7 +865,7 @@ export class PortfolioWeeklyReportService {
       row.streamName,
       row.company,
       statusLabel('request', row.status, words),
-      ...dateCells(row, shape, words),
+      ...dateCells(row, shape),
       ...changeCells(row, shape, 'request', words),
     ];
   }
@@ -873,7 +900,7 @@ export class PortfolioWeeklyReportService {
       row.company,
       row.progress == null ? null : `${Math.round(row.progress)}%`,
       statusLabel('project', row.status, words),
-      ...dateCells(row, shape, words),
+      ...dateCells(row, shape),
       ...changeCells(row, shape, 'project', words),
     ];
   }
@@ -948,7 +975,7 @@ export class PortfolioWeeklyReportService {
       row.streamName,
       row.company,
       statusLabel('task', row.status, words),
-      ...dateCells(row, shape, words),
+      ...dateCells(row, shape),
       ...changeCells(row, shape, 'task', words),
     ];
   }
@@ -1752,7 +1779,7 @@ export class PortfolioWeeklyReportService {
     return `weekly-report-${query.startDate}_to_${query.endDate}.${ext}`;
   }
 
-  private buildXlsx(sheets: XlsxSheetConfig[], appBaseUrl: string | null): Buffer {
+  private buildXlsx(sheets: XlsxSheetConfig[], appBaseUrl: string | null, language: CsvLanguage): Buffer {
     const normalizedBase = String(appBaseUrl || '').trim().replace(/\/$/, '');
 
     const sheetXmlByIndex = new Map<number, string>();
@@ -1764,17 +1791,26 @@ export class PortfolioWeeklyReportService {
       const hyperlinks: string[] = [];
       const hyperlinkRels: string[] = [];
       let hyperlinkIndex = 0;
+      const dateColumns = new Set<number>();
 
       const buildInlineStringCell = (cellRef: string, value: string) =>
         `<c r="${cellRef}" t="inlineStr"><is><t xml:space="preserve">${xmlEscape(value)}</t></is></c>`;
 
       const buildNumberCell = (cellRef: string, value: number) => `<c r="${cellRef}"><v>${value}</v></c>`;
 
+      const buildDateCell = (cellRef: string, value: DayCell) =>
+        `<c r="${cellRef}" s="${XLSX_DATE_STYLE}"><v>${daySerial(value.iso)}</v></c>`;
+
       const addCell = (cells: string[], rowNumber: number, columnNumber: number, value: SheetCellValue) => {
         if (value === null || value === undefined || value === '') return;
         const cellRef = `${columnNumberToName(columnNumber)}${rowNumber}`;
         if (typeof value === 'number' && Number.isFinite(value)) {
           cells.push(buildNumberCell(cellRef, value));
+          return;
+        }
+        if (isDayCell(value)) {
+          cells.push(buildDateCell(cellRef, value));
+          dateColumns.add(columnNumber);
           return;
         }
         cells.push(buildInlineStringCell(cellRef, String(value)));
@@ -1810,8 +1846,18 @@ export class PortfolioWeeklyReportService {
         sheetRows.push(`<row r="${rowNumber}">${cells.join('')}</row>`);
       });
 
+      // Wide enough for a full date: a narrow column shows a date cell as ###.
+      const dateColumnsXml =
+        dateColumns.size > 0
+          ? `<cols>${[...dateColumns]
+              .sort((a, b) => a - b)
+              .map((column) => `<col min="${column}" max="${column}" width="12" customWidth="1"/>`)
+              .join('')}</cols>`
+          : '';
+
       const sheetXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships">
+  ${dateColumnsXml}
   <sheetData>
     ${sheetRows.join('\n    ')}
   </sheetData>
@@ -1842,6 +1888,7 @@ export class PortfolioWeeklyReportService {
   <Default Extension="xml" ContentType="application/xml"/>
   <Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/>
   ${sheetOverrides}
+  <Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>
 </Types>`;
 
     const rootRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
@@ -1873,13 +1920,27 @@ export class PortfolioWeeklyReportService {
     const workbookRelsXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   ${workbookRelationshipsXml}
+  <Relationship Id="rId${sheets.length + 1}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
 </Relationships>`;
+
+    // Style 0 is the default, style 1 (`XLSX_DATE_STYLE`) the date cells.
+    const stylesXml = `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<styleSheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main">
+  <numFmts count="1"><numFmt numFmtId="164" formatCode="${XLSX_DATE_FORMAT[language]}"/></numFmts>
+  <fonts count="1"><font><sz val="11"/><name val="Calibri"/></font></fonts>
+  <fills count="2"><fill><patternFill patternType="none"/></fill><fill><patternFill patternType="gray125"/></fill></fills>
+  <borders count="1"><border><left/><right/><top/><bottom/><diagonal/></border></borders>
+  <cellStyleXfs count="1"><xf numFmtId="0" fontId="0" fillId="0" borderId="0"/></cellStyleXfs>
+  <cellXfs count="2"><xf numFmtId="0" fontId="0" fillId="0" borderId="0" xfId="0"/><xf numFmtId="164" fontId="0" fillId="0" borderId="0" xfId="0" applyNumberFormat="1"/></cellXfs>
+  <cellStyles count="1"><cellStyle name="Normal" xfId="0" builtinId="0"/></cellStyles>
+</styleSheet>`;
 
     const zip = new AdmZip();
     zip.addFile('[Content_Types].xml', Buffer.from(contentTypesXml, 'utf8'));
     zip.addFile('_rels/.rels', Buffer.from(rootRelsXml, 'utf8'));
     zip.addFile('xl/workbook.xml', Buffer.from(workbookXml, 'utf8'));
     zip.addFile('xl/_rels/workbook.xml.rels', Buffer.from(workbookRelsXml, 'utf8'));
+    zip.addFile('xl/styles.xml', Buffer.from(stylesXml, 'utf8'));
 
     sheetXmlByIndex.forEach((sheetXml, sheetIndex) => {
       zip.addFile(`xl/worksheets/sheet${sheetIndex}.xml`, Buffer.from(sheetXml, 'utf8'));

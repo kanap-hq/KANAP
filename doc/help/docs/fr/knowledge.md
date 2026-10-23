@@ -101,7 +101,7 @@ Les documents managés conservent l'expérience d'écriture au sein de la base d
 
 Cela protège le lien entre le document et l'enregistrement opérationnel qui le possède.
 
-L'accès suit lui aussi l'objet source. Le cas le plus net est le dossier **Incidents** : une revue d'incident ne peut être ouverte que par une personne autorisée à voir cet incident, quelles que soient ses autorisations sur la base de connaissances ; elle passe en lecture seule dès que l'incident est clôturé ou annulé ; et elle disparaît des listes, de la recherche, des exports et de l'assistant pour toute personne écartée d'un incident restreint. Voir [Incidents](incidents.md).
+L'accès suit lui aussi l'objet source. Toute personne qui peut modifier une application, une interface, un projet ou une demande peut modifier ses documents managés depuis cette fiche, sans droit sur la base de connaissances. Le cas le plus net est le dossier **Incidents** : une revue d'incident ne peut être ouverte que par une personne autorisée à voir cet incident, quelles que soient ses autorisations sur la base de connaissances ; elle passe en lecture seule dès que l'incident est clôturé ou annulé ; et elle disparaît des listes, de la recherche, des exports et de l'assistant pour toute personne écartée d'un incident restreint. Voir [Incidents](incidents.md).
 
 ## Travailler avec la liste de la base de connaissances
 

@@ -76,7 +76,11 @@ export function catalogToMetadata(catalog: ClassificationCatalog): Record<string
 export function validateDuration(value: unknown, field: string, allowZero = false): number | null {
   if (value === null) return null;
   if (typeof value !== 'number' || !Number.isInteger(value) || value < (allowZero ? 0 : 1) || value > 2147483647) {
-    throw new BadRequestException(`${field} must be ${allowZero ? 'a non-negative' : 'a positive'} integer number of minutes, at most 2147483647, or null`);
+    throw new BadRequestException({
+      code: 'duration_invalid',
+      message: `${field} must be ${allowZero ? 'a non-negative' : 'a positive'} integer number of minutes, at most 2147483647, or null`,
+      params: { field, value: String(value) },
+    });
   }
   return value;
 }
@@ -119,7 +123,13 @@ export function resolveClassificationOption(value: unknown, options: Array<{ cod
   const text = value.trim().toLowerCase();
   // Code, name and translated names are aliases; an input matching several entries is refused.
   const matches = [...new Map(matchCatalogAliases(options, text).map((item) => [item.code, item])).values()];
-  if (matches.length !== 1) throw new BadRequestException(`Unknown or ambiguous classification "${value}"; consult the tenant classification catalog`);
+  if (matches.length !== 1) {
+    throw new BadRequestException({
+      code: 'classification_unknown',
+      message: `Unknown or ambiguous classification "${value}"; consult the tenant classification catalog`,
+      params: { value },
+    });
+  }
   if (matches[0].deprecated && matches[0].code !== existing) throw new BadRequestException(`Classification "${value}" is deprecated and cannot be newly assigned`);
   return matches[0].code;
 }

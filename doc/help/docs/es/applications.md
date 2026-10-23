@@ -39,7 +39,7 @@ Diferentes equipos pueden usar categorías para centrarse en su área de respons
 Navegue a **Panorama IT > Aplicaciones** para ver su lista. Haga clic en **Nueva App / Servicio** para crear su primera entrada.
 
 **Campos obligatorios**:
-- **Nombre**: Un nombre reconocible para la aplicación o servicio
+- **Nombre**: Un nombre reconocible para la aplicación o servicio, de 200 caracteres como máximo. Consulte [Nombres únicos](#unique-names)
 - **Categoría**: El propósito principal de esta aplicación (ver categorías arriba)
 - **Ciclo de vida**: Estado actual (Activo, Propuesto, Obsoleto, Retirado, o cualquier código personalizado definido en Configuración)
 
@@ -59,7 +59,15 @@ Los campos de clasificación son opcionales al crear una aplicación. La **Criti
 - **Notas**: Notas internas de texto libre
 - **Puede tener apps hijas**: Active esto para usar esta aplicación como una "suite" que agrupa otras aplicaciones
 
+El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**.
+
 Una vez que guarde, el espacio de trabajo desbloquea todas las pestañas para documentación detallada.
+
+### Nombres únicos { #unique-names }
+
+Dos aplicaciones no pueden tener el mismo nombre. La comparación no distingue mayúsculas de minúsculas e ignora los espacios al principio y al final del nombre: `CRM` y ` crm ` son el mismo nombre. Si el nombre ya está en uso, el mensaje nombra la aplicación que lo tiene, con su referencia (`APP-12`). La regla se aplica cuando crea, renombra, copia o importa una aplicación, y cuando crea una nueva versión.
+
+Las aplicaciones que ya compartían nombre antes de esta regla siguen siendo editables. Su nombre solo se comprueba cuando cambia.
 
 **Consejo**: Comience documentando sus aplicaciones más críticas. Utilice la pestaña **Despliegues** para capturar qué entornos existen (Prod, QA, Dev) y qué servidores los ejecutan, luego vincule interfaces, contratos y líneas presupuestarias a medida que avance.
 
@@ -81,15 +89,17 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 - Su selección se recuerda entre sesiones: al volver a la página se restaura su última elección.
 
 **Columnas predeterminadas**:
-- **Nombre**: Nombre de la aplicación con la categoría como subtítulo y una insignia "Incluido en: {suite}" para los componentes de una suite
+- **Nombre**: Nombre de la aplicación, con debajo una línea "Incluida en: {suite}" para una aplicación incluida en una suite
 - **Vulnerabilidades por revisar**: las vulnerabilidades aún por revisar en las tecnologías que la aplicación declara o que sus servidores de despliegue tienen registradas y, en naranja, cuántas son críticas o altas (`5 · 2`). Vacía para una aplicación desactivada o cuando no queda ninguna. Haga clic para abrir la página [Vulnerabilidades](vulnerabilities.md) filtrada por la aplicación. Presente cuando se siguen las vulnerabilidades. Consulte [Lo que KANAP cuenta](vulnerabilities.md#what-kanap-counts)
 - **Categoría**: El propósito principal de la aplicación
 - **Entornos**: Chips de colores que muestran entornos activos (Prod, Pre-prod, QA, Test, Dev, Sandbox). Pase el ratón para ver la URL base y el ciclo de vida.
 - **Ciclo de vida**: Estado actual
 - **Criticidad de negocio**: Nivel de importancia para el negocio
 - **Editor**: Editor del software
-- **Usuarios derivados (A)**: Conteo calculado de usuarios para el año actual (basado en la audiencia establecida en el panel de propiedades)
+- **Usuarios derivados {año}**: los usuarios contados para las empresas y departamentos de la audiencia en el año en curso, o en el año más cercano con datos. Un número de usuarios indicado a mano lo sustituye. La información emergente del encabezado lo explica
 - **Creado**: Cuándo se creó el registro
+
+Una celda sin valor muestra un guion.
 
 **Ordenación predeterminada**: **Nombre** ascendente (A a Z).
 
@@ -111,14 +121,14 @@ La cuadrícula de Aplicaciones proporciona una vista completa de su portafolio d
 **Filtrado**:
 - Búsqueda rápida: coincide con el nombre y editor
 - Los filtros de criticidad, criticidad cibernética, clase de datos y ola de recuperación listan sus valores en el orden del catálogo (la más crítica primero, las olas en orden de restauración).
-- La mayoría de columnas usan filtros de conjunto de casillas que solo muestran los valores presentes en el conjunto de resultados actual; el filtro flotante muestra `Todos`, `Ninguno` o `N seleccionados` con una **x** para limpiar.
+- La mayoría de columnas usan filtros de conjunto de casillas que solo muestran los valores presentes en el conjunto de resultados actual. **Todos** marca todos los valores y **Ninguno** los desmarca todos. El filtro flotante muestra `Todos`, `Ninguno` o `N seleccionados` con una **x** para limpiar.
 - Las aplicaciones retiradas están ocultas por defecto; use el filtro de **Ciclo de vida** para incluir Retiradas.
 - **Vulnerabilidades por revisar** filtra por **Con vulnerabilidades graves**, **Con vulnerabilidades** o **Sin**, y ordena por las vulnerabilidades críticas o altas y luego por el total. Las aplicaciones desactivadas van al final y no entran en ningún valor del filtro.
 
 **Acciones**:
 - **Nueva App / Servicio**: Crear una nueva entrada (`applications:member`)
 - **Importar CSV**: Importación masiva desde archivo CSV (`applications:admin`)
-- **Exportar CSV**: Exportar la lista a CSV (`applications:admin`). Las columnas respaldadas por catálogos (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) se exportan con sus nombres; la importación acepta un nombre o el código interno.
+- **Exportar CSV**: Exportar a CSV las aplicaciones que muestra la lista (`applications:admin`). Consulte [Opciones de exportación](#export-options).
 - **Copiar elemento**: Duplicar una aplicación seleccionada con todas sus relaciones principales (`applications:member`). Consulte [Copiar aplicaciones](#copiar-aplicaciones) para saber qué se copia y qué no.
 - **Eliminar seleccionadas**: Eliminar aplicaciones seleccionadas (`applications:admin`). Una aplicación que es origen o destino de una interfaz no se puede eliminar: desactívela en su lugar, o elimine primero sus interfaces. Antes de la confirmación, la ventana muestra esas aplicaciones como conservadas, con su número de interfaces. Las demás se eliminan con sus despliegues y sus vínculos con otros elementos; la confirmación cuenta los despliegues
 
@@ -150,9 +160,11 @@ El panel es la tarjeta de identidad de la aplicación. Se muestra en cada pesta�
 
 **Identidad**:
 - **Categoría**, **Proveedor**, **Editor**
+- **Incluida en**: las suites a las que pertenece esta aplicación. Elija una en **Añadir una suite**: la lista ofrece las aplicaciones que tienen marcada **Puede contener aplicaciones secundarias**. Cada nombre abre la suite. Para quitar una, pase el cursor sobre su nombre y haga clic en la cruz al final. Una suite puede pertenecer a otra suite, pero se rechaza un vínculo que crearía un bucle (por ejemplo, una suite dentro de uno de sus propios componentes)
 
-**Fechas del ciclo de vida**:
-- **Puesta en marcha**, **Fin de soporte**, **Fecha de retiro**
+**Versión y fechas del ciclo de vida**:
+- **Versión**. Debajo, **Versión anterior** abre la aplicación a partir de la cual se creó esta con **Nueva versión**, y **Versión siguiente** abre las aplicaciones creadas a partir de ella. Estos enlaces solo aparecen cuando existen tales aplicaciones
+- **Puesta en marcha**, **Fin de soporte**, **Fecha de retiro**. El **Fin de soporte** y la **Fecha de retiro** no pueden ser anteriores a la **Puesta en marcha**
 
 **Procesos de negocio y responsables**:
 - **Procesos de negocio**: los procesos que la aplicación respalda. Cada nombre abre el proceso. Escriba en el campo para buscar y añadir un proceso; pase el cursor sobre un nombre y haga clic en la cruz para quitarlo. Cada cambio se guarda al instante. El proceso muestra el mismo vínculo en su propia sección **Aplicaciones**. Un proceso desactivado sigue en la lista, atenuado. Cambiar la lista requiere también `business_processes:member`; sin permiso de lectura de los procesos de negocio, el campo no aparece.
@@ -161,8 +173,11 @@ El panel es la tarjeta de identidad de la aplicación. Se muestra en cada pesta�
 
 Para quitar un responsable, pase el cursor sobre su nombre y haga clic en la cruz al final.
 
+Al quitar un responsable, un proceso de negocio, una suite o un contacto de soporte aparece un mensaje con **Deshacer**, que lo restablece.
+
 **Audiencia**:
 - Añada filas de **Empresa / Departamentos** para registrar quién usa esta aplicación. Elija una empresa y opcionalmente restrinja a departamentos específicos.
+- Una línea bajo la audiencia indica lo que abarca. Sin ningún departamento elegido, la audiencia es toda la empresa. Con departamentos elegidos, se limita a esos departamentos: quítelos para volver a incluir toda la empresa.
 - Se muestra un conteo de **Usuarios** en vivo.
 - **Método de cálculo**: **Derivado** (calculado automáticamente a partir de la audiencia basándose en las métricas de Usuarios IT / Plantilla de los datos maestros) o **Manual** (un único número de sustitución que usted introduce).
 
@@ -172,7 +187,7 @@ Para quitar un responsable, pase el cursor sobre su nombre y haga clic en la cru
 
 La pestaña Visión general es la narrativa de la aplicación. Contiene:
 
-**Descripción**: Una descripción enriquecida de la aplicación. El editor guarda automáticamente mientras escribe.
+**Descripción**: Una descripción enriquecida de la aplicación. El editor guarda automáticamente mientras escribe. Quien puede modificar la aplicación puede modificar su descripción, sin permiso sobre la base de conocimiento. La descripción se guarda como documento gestionado en la base de conocimiento. Su título lleva la referencia y el nombre de la aplicación, en el idioma de la persona que lo creó. Al renombrar la aplicación, en el espacio de trabajo o por importación CSV, ese título se actualiza.
 
 **Conexiones**: Un resumen de solo lectura construido a partir de las interfaces de la aplicación. Para apps no middleware muestra dos filas: **Recibe de** y **Envía a**. Para apps ETL/middleware muestra una única fila **Conectado a**. Cada entrada es una píldora clicable que abre la aplicación relacionada; "+ N más en Interfaces" salta a la pestaña Interfaces.
 
@@ -238,7 +253,7 @@ La pestaña Operaciones reúne, en este orden, cómo acceden los usuarios a la a
 - **Métodos de acceso** (selección múltiple): cómo acceden los usuarios a esta aplicación. Las opciones son configurables en [Configuración del Panorama IT](it-ops-settings.md). Los valores predeterminados incluyen Web, Aplicación instalada localmente, Aplicación móvil, HMI propietario (interfaz industrial), Terminal / CLI, VDI / Escritorio remoto, Kiosk.
 - **Acceso externo**: si la aplicación es accesible desde internet
 - **Integración de datos / ETL**: si la aplicación participa en pipelines de integración de datos (también activa el modo "middleware" para esta app en las vistas de Interfaces y Conexiones)
-- **Puede tener apps hijas**: convertir esta aplicación en una Suite que agrupa otras aplicaciones
+- **Puede tener apps hijas**: convertir esta aplicación en una Suite que agrupa otras aplicaciones. No puede desmarcar la casilla mientras haya aplicaciones incluidas en la suite: quítelas primero de la suite
 
 **Tecnologías** lista aquello de lo que depende la aplicación, a partir de dos fuentes que indica la columna **Vínculo**. Columnas: referencia (`TEC-4`), nombre, familia, versiones, vínculo, servidores por los que llega (**Vía**), fin del soporte estándar.
 
@@ -396,7 +411,7 @@ Para actualizaciones mayores de aplicaciones donde necesita ejecutar las version
 
 El asistente tiene tres pasos:
 
-1. **Detalles de la versión**: nuevo nombre de la aplicación, etiqueta de versión, fechas de **Puesta en marcha** y **Fin de soporte**.
+1. **Detalles de la versión**: nuevo nombre de la aplicación, etiqueta de versión, fechas de **Puesta en marcha** y **Fin de soporte**. El nombre debe estar libre (consulte [Nombres únicos](#unique-names)), y el **Fin de soporte** no puede ser anterior a la **Puesta en marcha**.
 2. **Opciones de copia**: elija qué copiar del origen. Los valores predeterminados se muestran a continuación.
 3. **Interfaces**: seleccione qué interfaces migrar a la nueva versión.
 
@@ -405,6 +420,8 @@ La nueva versión se crea como una aplicación separada con:
 - Un enlace a su predecesor (usado por la línea de tiempo de versiones)
 - Datos copiados según sus selecciones
 - Interfaces duplicadas apuntando a la nueva versión
+
+Una vez creada, un mensaje indica la referencia de la nueva versión. Las dos aplicaciones quedan entonces enlazadas mediante **Versión anterior** y **Versión siguiente** en el panel de propiedades.
 
 Los valores de clasificación y continuidad se copian, pero la nueva versión empieza con la revisión restablecida y sin copiar la última prueba de recuperación.
 
@@ -423,7 +440,9 @@ Los valores de clasificación y continuidad se copian, pero la nueva versión em
 | Despliegues | Desactivado |
 | Enlaces de despliegue | Desactivado (solo disponible cuando se selecciona Despliegues) |
 
-**No se copia** (debe configurarse de nuevo): pertenencia a suite, adjuntos, asignaciones de servidores.
+**Siempre se copia**: la descripción, los procesos de negocio, los métodos de acceso, las casillas **Acceso externo**, **Integración de datos / ETL** y **Puede contener aplicaciones secundarias**, y el número de usuarios indicado a mano.
+
+**No se copia** (debe configurarse de nuevo): pertenencia a suite, adjuntos, las fechas de la aplicación de origen, la última prueba de recuperación, la revisión de la clasificación y las asignaciones de servidores. El asistente los enumera.
 
 ### Migración de interfaces
 
@@ -447,7 +466,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 
 1. Seleccione una aplicación en la cuadrícula
 2. Haga clic en **Copiar elemento**
-3. El sistema crea una copia con " (copia)" añadido al nombre
+3. El sistema crea una copia con el nombre de la aplicación de origen y un sufijo en el idioma de su pantalla: "CRM (copia)", o "CRM (copy)" en inglés. Si ese nombre ya está en uso, la copia se numera: "CRM (copia 2)", luego "CRM (copia 3)"
 4. Se le lleva a la nueva aplicación para hacer cambios
 
 **Qué se copia**: Todos los campos principales (excepto fecha de última prueba DR), incluidos los valores de clasificación y continuidad, responsables, empresas, departamentos, suites, líneas OPEX/CAPEX, contratos, enlaces, residencia de datos y contactos de soporte. La revisión de la copia se restablece.
@@ -462,7 +481,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 | **Opciones del usuario** | Ninguna (automático) | Asistente de 3 pasos |
 | **Linaje** | Sin enlace al predecesor | Establece predecesor |
 | **Ciclo de vida** | Preservado | Restablecido a Propuesto |
-| **Nombre** | Sufijo "(copia)" | Especificado por el usuario |
+| **Nombre** | Sufijo "(copia)", numerado si el nombre está en uso | Especificado por el usuario, debe estar libre |
 
 **Relaciones**:
 
@@ -474,6 +493,7 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 | Residencia de datos | Sí | Opcional (predeterminado: sí) |
 | Enlaces | Sí | Opcional (predeterminado: sí) |
 | Contactos de soporte | Sí | Opcional (predeterminado: sí) |
+| Procesos de negocio | No | Sí |
 | Suites (pertenencia) | Sí | No |
 | Líneas OPEX | Sí | Opcional (predeterminado: sí) |
 | Líneas CAPEX | Sí | Opcional (predeterminado: sí) |
@@ -489,11 +509,12 @@ Utilice esto cuando desee crear un duplicado independiente de una aplicación, t
 | Campo | Copiar elemento | Nueva versión |
 |-------|-----------------|---------------------|
 | Descripción | Sí | Sí |
+| Métodos de acceso | Sí | Sí |
 | ETL habilitado | Sí | Sí |
 | Notas de soporte | Sí | Sí |
 | Última prueba DR | No | No |
 | Campos de versión | No | Especificados por el usuario |
-| Sobrescritura de usuarios | Sí | Restablecido a nulo |
+| Sobrescritura de usuarios | Sí | Sí |
 | Año de usuarios | Sí | Restablecido al año actual |
 
 ---
@@ -511,7 +532,11 @@ Desde la lista de Aplicaciones:
 
 **Permisos requeridos**: `applications:admin` para operaciones de importación/exportación.
 
-### Opciones de exportación
+### Opciones de exportación { #export-options }
+
+**Contenido del archivo**: las aplicaciones que muestra la lista. La exportación sigue los filtros de columna, la búsqueda rápida y la opción **Mostrar** (**Mis aplicaciones**, **Aplicaciones de mi equipo** o **Todas las aplicaciones**). El diálogo indica cuántas aplicaciones contendrá el archivo. Sin filtro de **Ciclo de vida**, las aplicaciones retiradas quedan fuera, como en la lista.
+
+**Idioma de los valores**: los valores de catálogo (categoría, ciclo de vida, criticidad, criticidad cibernética, ola de recuperación, clase de datos, métodos de acceso) y el estado se escriben como los muestra la pantalla, en el idioma de su pantalla: `Active` en inglés, `Activo` en español. Un nombre que su organización dio a un valor en **Panorama IT > Configuración** se mantiene tal cual.
 
 **Presets**:
 
@@ -531,15 +556,30 @@ Desde la lista de Aplicaciones:
 2. **Elija la configuración de importación**:
    - **Modo**:
      - `Enriquecer` (predeterminado): Las celdas vacías preservan los valores existentes: solo actualiza lo que especifique
-     - `Reemplazar`: Se actualizan los campos proporcionados; las celdas de clasificación vacías conservan el valor existente y `__CLEAR__` lo borra explícitamente
+     - `Reemplazar`: Reemplaza los valores de las columnas del archivo. Una celda vacía borra el valor guardado, salvo en las columnas de clasificación (use `__CLEAR__`). Una columna que falta en el archivo conserva sus valores. Algunos campos no se pueden vaciar: la **Verificación previa** los señala.
    - **Operación**:
      - `Upsert` (predeterminado): Crear nuevas aplicaciones o actualizar las existentes
      - `Solo actualizar`: Solo modificar aplicaciones existentes, omitir nuevas
      - `Solo insertar`: Solo crear nuevas aplicaciones, omitir existentes
 
+     La operación se aplica también a los responsables y a la residencia de datos: una fila que la operación omite los deja como están.
+
 3. **Validar primero**: Haga clic en **Verificación previa** para validar su archivo sin hacer cambios. Revise errores y advertencias.
 
 4. **Aplicar cambios**: Si la validación es correcta, haga clic en **Importar** para confirmar los cambios.
+
+### Comprobaciones de las filas
+
+La verificación previa aplica las mismas reglas que el espacio de trabajo. Una fila se rechaza cuando:
+
+- su nombre supera los 200 caracteres, u otra aplicación ya lo tiene (consulte [Nombres únicos](#unique-names));
+- su nombre coincide con dos aplicaciones existentes: añada la columna `id` para elegir una;
+- su categoría o su ciclo de vida no coincide con ningún código ni ningún nombre del catálogo;
+- un correo de responsable no coincide con ningún usuario;
+- su **Fin de soporte** o su **Fecha de retiro** es anterior a su **Puesta en marcha**;
+- `is_suite` vale `no` para una suite que aún contiene aplicaciones.
+
+Un archivo con una sola fila rechazada no carga nada. Consulte [Archivos CSV](csv-files.md).
 
 ### Referencia de campos
 
@@ -548,15 +588,14 @@ Desde la lista de Aplicaciones:
 | Columna CSV | Descripción | Obligatorio | Notas |
 |-------------|-------------|-------------|-------|
 | `id` | UUID de la aplicación | No | Para actualizaciones; deje en blanco para nuevas aplicaciones |
-| `name` | Nombre de la aplicación | Sí | Se usa como identificador único para coincidencias |
+| `name` | Nombre de la aplicación | Sí | 200 caracteres como máximo. Sirve para encontrar las aplicaciones existentes |
 | `description` | Qué hace la aplicación | No | |
-| `category` | Propósito principal | No | Acepta código o etiqueta de Configuración |
+| `category` | Propósito principal | No | Acepta código o etiqueta de Configuración. Un valor desconocido hace rechazar la fila |
 | `supplier_name` | Nombre del proveedor | No | Debe coincidir con un proveedor existente |
 | `editor` | Editor del software | No | Texto libre (p. ej., Microsoft, SAP) |
 | `criticality` | Criticidad de negocio | No | Acepta código o etiqueta de Configuración; `__CLEAR__` lo borra |
-| `lifecycle` | Estado actual | No | Acepta código o etiqueta de Configuración |
+| `lifecycle` | Estado actual | No | Acepta código o etiqueta de Configuración. Un valor desconocido hace rechazar la fila |
 | `is_suite` | Puede tener apps hijas | No | `sí` o `no` |
-| `status` | Habilitado/deshabilitado | No | `enabled` o `disabled` |
 
 **Campos de versión**:
 
@@ -585,7 +624,7 @@ Desde la lista de Aplicaciones:
 | `data_class` | Clasificación de datos | Acepta código o etiqueta de Configuración |
 | `last_dr_test` | Fecha de última prueba DR | Formato de fecha: AAAA-MM-DD |
 | `contains_pii` | Almacena datos personales | `sí` o `no` |
-| `data_residency` | Países de almacenamiento de datos | Solo exportación (códigos ISO) |
+| `data_residency` | Países de almacenamiento de datos | Códigos de país ISO separados por comas (p. ej., `FR,DE`). En modo `Enriquecer`, una celda vacía conserva los países |
 
 **Campos de clasificación**:
 
@@ -603,14 +642,16 @@ Una celda de clasificación vacía conserva el valor existente en los modos Enri
 
 | Columna CSV | Descripción | Notas |
 |-------------|-------------|-------|
-| `business_owner_email_1` hasta `_4` | Correos de responsables de negocio | Deben coincidir con usuarios existentes por correo |
-| `it_owner_email_1` hasta `_4` | Correos de responsables IT | Deben coincidir con usuarios existentes por correo |
+| `business_owner_email_1` hasta `_4` | Correos de responsables de negocio | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
+| `it_owner_email_1` hasta `_4` | Correos de responsables de TI | Deben coincidir con el correo de un usuario existente. Un correo desconocido hace rechazar la fila |
+
+En modo `Enriquecer`, cuando todas las celdas de responsables de un tipo están vacías, la aplicación conserva sus responsables de ese tipo.
 
 **Campos solo de exportación** (incluidos en Exportación completa pero no importables):
 
 | Columna CSV | Descripción |
 |-------------|-------------|
-| `data_residency` | Países de almacenamiento de datos (códigos ISO, separados por comas) |
+| `status` | Activado o desactivado, en el idioma de su pantalla. Se cambia en la propia aplicación |
 | `users_mode` | Método de conteo de usuarios (`manual`, `it_users`, `headcount`) |
 | `users_year` | Año de referencia para cálculos de usuarios |
 | `users_override` | Sobrescritura manual del conteo de usuarios |
@@ -631,15 +672,17 @@ Para campos configurados en **Panorama IT > Configuración**, puede usar tanto e
 | Ciclo de vida | `active`, `proposed`, `deprecated` | `Active`, `Proposed`, `Deprecated` |
 | Clase de datos | `public`, `internal`, `confidential` | `Public`, `Internal`, `Confidential` |
 
-El sistema normaliza automáticamente los valores durante la importación, por lo que `Line-of-business`, `line-of-business` y `lob` se resuelven a la misma categoría.
+El sistema normaliza automáticamente los valores durante la importación, por lo que `Line-of-business`, `line-of-business` y `lob` se resuelven a la misma categoría. Las etiquetas que muestra la pantalla se aceptan en inglés, francés, alemán y español: `Active`, `Actif`, `Aktiv` y `Activo` designan el mismo ciclo de vida. Un archivo exportado en un idioma se importa por tanto en otro.
 
 ### Coincidencia y actualizaciones
 
-Las aplicaciones se emparejan por **nombre** (sin distinguir mayúsculas). Cuando se encuentra una coincidencia:
+Las aplicaciones se emparejan por **nombre**, sin distinguir mayúsculas de minúsculas e ignorando los espacios al principio y al final. Cuando se encuentra una coincidencia:
 - Con modo `Enriquecer`: Solo los valores CSV no vacíos actualizan la aplicación
-- Con modo `Reemplazar`: se actualizan los campos proporcionados; las celdas de clasificación vacías conservan el valor existente y `__CLEAR__` lo borra explícitamente
+- Con modo `Reemplazar`: Las columnas del archivo se actualizan, y una celda vacía borra el valor guardado. Las columnas que faltan en el archivo conservan sus valores. Una celda de clasificación vacía conserva su valor, y `__CLEAR__` la borra. El nombre, el `id`, el ciclo de vida y los campos obligatorios no se pueden vaciar: la **Verificación previa** señala un error en la fila. Una aplicación nueva recibe los valores predeterminados.
 
-Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo.
+Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el ID, luego el nombre como respaldo. Cuando dos aplicaciones existentes tienen el nombre de una fila, la fila se rechaza: añada la columna `id` para elegir una.
+
+Una fila encontrada por su `id` con otro nombre renombra la aplicación. El nuevo nombre debe estar libre. El título del documento de descripción de la aplicación sigue el nuevo nombre.
 
 ### Limitaciones
 
@@ -648,7 +691,7 @@ Si incluye la columna `id` con un UUID válido, la coincidencia usa primero el I
 - **Interfaces excluidas**: Las definiciones de integración no son parte de la importación/exportación CSV
 - **Máximo 4 responsables por tipo**: Se pueden importar/exportar hasta 4 responsables de negocio y 4 responsables IT
 - **Métricas de usuarios solo de exportación**: Los campos de audiencia y conteo de usuarios (`users_mode`, `users_year`, `users_override`) se gestionan en el espacio de trabajo
-- **Residencia de datos solo de exportación**: Las selecciones de países deben gestionarse en la pestaña Conformidad
+- **Estado solo de exportación**: Active o desactive una aplicación en su espacio de trabajo
 
 ### Solución de problemas
 

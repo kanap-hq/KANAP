@@ -355,7 +355,7 @@ From the Assets list:
 2. **Choose import settings**:
    - **Mode**:
      - `Enrich` (default): Empty cells preserve existing values: only update what you specify
-     - `Replace`: Empty cells clear existing values: full replacement of all fields
+     - `Replace`: Replaces the values of the columns in the file. An empty cell clears the stored value. A column left out of the file keeps its values. Some fields cannot be cleared: **Preflight** points them out.
    - **Operation**:
      - `Upsert` (default): Create new assets or update existing ones
      - `Update only`: Only modify existing assets, skip new ones
@@ -417,7 +417,7 @@ The system automatically normalizes values during import, so `Virtual Machine`, 
 
 Assets are matched by **name** (case-insensitive). When a match is found:
 - With `Enrich` mode: Only non-empty CSV values update the asset
-- With `Replace` mode: All fields are updated, empty values clear existing data
+- With `Replace` mode: The columns in the file are updated, and an empty cell clears the stored value. Columns left out of the file keep their values. The name, the `id`, the status and required fields cannot be cleared: **Preflight** reports an error on the row. For the IP address columns, only the sub-columns in the file are applied. A new asset gets the default values.
 
 If you include the `id` column with a valid UUID, matching uses ID first, then falls back to name.
 

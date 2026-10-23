@@ -6,6 +6,58 @@ import { getApiErrorMessage, getDocumentSaveErrorMessage } from './apiErrorMessa
 const t = i18n.getFixedT('en');
 
 describe('getApiErrorMessage', () => {
+  it('words a refusal without a code as a missing right, in each language', () => {
+    const forbidden = { response: { status: 403, data: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' } } };
+    expect(getApiErrorMessage(forbidden, t, 'fallback')).toBe('You do not have the rights for this action.');
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('de'), 'fallback')).toBe('Sie haben keine Berechtigung für diese Aktion.');
+    expect(getApiErrorMessage(forbidden, i18n.getFixedT('es'), 'fallback')).toBe('No tiene permisos para esta acción.');
+    const coded = { response: { status: 403, data: { code: 'administrator_required', message: 'Administrator required' } } };
+    expect(getApiErrorMessage(coded, t, 'fallback')).toBe('Only an administrator of this workspace can do this.');
+    const bare = { code: 'ERR_BAD_REQUEST', message: 'Request failed with status code 403', response: { status: 403, data: {} } };
+    expect(getApiErrorMessage(bare, i18n.getFixedT('fr'), 'fallback')).toBe("Vous n'avez pas les droits pour cette action.");
+  });
+
+  it('says why a refusal coded in its error field happened', () => {
+    const trial = { response: { status: 403, data: { error: 'TRIAL_EXPIRED', message: 'Trial expired' } } };
+    expect(getApiErrorMessage(trial, t, 'fallback')).toBe('Your trial has expired. Please choose a plan to continue.');
+    expect(getApiErrorMessage(trial, i18n.getFixedT('fr'), 'fallback')).toBe("Votre période d'essai a expiré. Veuillez choisir une offre pour continuer.");
+    const frozen = { response: { status: 403, data: { error: 'SUBSCRIPTION_FROZEN', message: 'Frozen' } } };
+    expect(getApiErrorMessage(frozen, i18n.getFixedT('de'), 'fallback')).toBe('Ihr Abonnement ist eingefroren.');
+    for (const language of ['en', 'fr', 'de', 'es']) {
+      const noAccess = { response: { status: 403, data: { error: 'NO_ACCESS', message: 'This account has not been granted access yet.' } } };
+      const text = getApiErrorMessage(noAccess, i18n.getFixedT(language), 'fallback');
+      expect(text, language).not.toBe('This account has not been granted access yet.');
+      expect(text).not.toBe(i18n.getFixedT(language)('errors:forbidden'));
+    }
+  });
+
+  it('translates the application refusals with their values', () => {
+    const fr = i18n.getFixedT('fr');
+    const taken = { response: { status: 409, data: { code: 'name_taken', message: 'Another application is already named "CRM"', params: { name: 'CRM', ref: 'APP-12' } } } };
+    expect(getApiErrorMessage(taken, fr, 'fallback')).toBe('Une application porte déjà ce nom : APP-12.');
+    const suite = { response: { status: 409, data: { code: 'suite_has_children', message: 'Detach', params: { count: 3 } } } };
+    expect(getApiErrorMessage(suite, fr, 'fallback')).toBe('Retirez d\'abord les 3 applications rattachées.');
+    const oneChild = { response: { status: 409, data: { code: 'suite_has_children', message: 'Detach', params: { count: 1 } } } };
+    expect(getApiErrorMessage(oneChild, fr, 'fallback')).toBe('Retirez d\'abord l\'application rattachée.');
+    expect(getApiErrorMessage(oneChild, t, 'fallback')).toBe('Detach the child application first.');
+    const cycle = { response: { status: 409, data: { code: 'suite_cycle', message: 'cycle', params: { name: 'ERP' } } } };
+    expect(getApiErrorMessage(cycle, fr, 'fallback')).toBe('Cette application contient déjà ERP : elle ne peut pas en faire partie.');
+    const duration = { response: { status: 400, data: { code: 'duration_invalid', message: 'rto_minutes must be', params: { field: 'rto_minutes', value: '1.5' } } } };
+    expect(getApiErrorMessage(duration, fr, 'fallback')).toBe("L'objectif de temps de reprise (RTO) doit être un nombre entier de minutes.");
+    expect(getApiErrorMessage({ response: { status: 400, data: { ...duration.response.data, params: { field: 'rpo_minutes' } } } }, t, 'fallback'))
+      .toBe('The recovery point objective (RPO) must be a whole number of minutes.');
+    const owner = { response: { status: 400, data: { code: 'owner_email_unknown', message: 'No user', params: { email: 'x@example.com' } } } };
+    expect(getApiErrorMessage(owner, fr, 'fallback')).toBe('Aucun utilisateur avec le courriel x@example.com.');
+    for (const code of ['name_required', 'name_ambiguous', 'name_too_long', 'lifecycle_invalid', 'category_invalid', 'classification_unknown', 'duration_invalid', 'dates_inconsistent', 'suite_has_children', 'suite_cycle']) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params: { value: 'v', name: 'n', count: 2, max: 200, field: 'rto_minutes' } } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|rto_minutes/);
+      }
+    }
+  });
+
   it('translates a turnover that cannot be compared because every selected company lacks a rate', () => {
     const missing = {
       response: {

@@ -45,7 +45,8 @@ async function outcomeOf(work: () => Promise<unknown>): Promise<string> {
 function applicationsService(existing: Record<string, unknown>) {
   const manager: any = {
     transaction: (fn: (m: unknown) => Promise<unknown>) => fn(manager),
-    query: async () => [{ id: applicationId, tenant_id: tenantId }],
+    // No other application holds the name (the name check reads `lower(btrim(name))`).
+    query: async (sql: string) => (sql.includes('lower(btrim(name))') ? [] : [{ id: applicationId, tenant_id: tenantId }]),
     getRepository: () => ({
       findOne: async () => ({ ...existing }),
       create: () => { throw new PastTheSizeCheck(); },

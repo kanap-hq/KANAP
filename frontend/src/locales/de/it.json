@@ -88,7 +88,7 @@
         "lifecycle": "Lebenszyklus",
         "criticality": "Kritikalität",
         "publisher": "Herausgeber",
-        "derivedUsers": "Abgeleitete Benutzer (J)",
+        "derivedUsers": "Abgeleitete Benutzer {{year}}",
         "created": "Erstellt",
         "supplier": "Lieferant",
         "businessOwners": "Fachverantwortliche",
@@ -104,13 +104,12 @@
         "components": "Komponenten",
         "dataClass": "Datenklasse",
         "containsPii": "Enthält PII",
-        "dataResidency": "Datenresidenz"
+        "dataResidency": "Datenresidenz",
+        "derivedUsersHelp": "Für die Unternehmen und Abteilungen der Zielgruppe gezählte Benutzer im Jahr {{year}} (oder im nächstliegenden Jahr mit Daten), sofern keine Benutzerzahl manuell erfasst ist."
       },
       "delete": {
         "warning_one": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warning_other": "Ihre Bereitstellungen und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "warningCounted_one": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
-        "warningCounted_other": "Ihre {{deployments}} und Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warningLinks_one": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihr gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "warningLinks_other": "Ihre Verknüpfungen zu anderen Einträgen werden mit ihnen gelöscht. Dies kann nicht rückgängig gemacht werden.",
         "toDelete_one": "{{count}} Anwendung wird gelöscht:",
@@ -118,7 +117,48 @@
         "kept_one": "{{count}} Anwendung kann nicht gelöscht werden und bleibt erhalten:",
         "kept_other": "{{count}} Anwendungen können nicht gelöscht werden und bleiben erhalten:",
         "deleted_one": "{{count}} Anwendung gelöscht",
-        "deleted_other": "{{count}} Anwendungen gelöscht"
+        "deleted_other": "{{count}} Anwendungen gelöscht",
+        "warningCounted_one": "Mit ihr werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_other": "Mit ihnen werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+        "title_one": "{{count}} Anwendung löschen",
+        "title_other": "{{count}} Anwendungen löschen",
+        "keptDone_one": "{{count}} Anwendung bleibt erhalten",
+        "keptDone_other": "{{count}} Anwendungen bleiben erhalten",
+        "keptReason_one": "Bleibt erhalten: {{usages}} nutzt sie.",
+        "keptReason_other": "Bleibt erhalten: {{usages}} nutzen sie."
+      },
+      "exportScope_one": "{{count}} Anwendung, entsprechend den Filtern der Liste.",
+      "exportScope_other": "{{count}} Anwendungen, entsprechend den Filtern der Liste.",
+      "exportScopeAll": "Alle Anwendungen ({{count}}), ohne außer Betrieb genommene.",
+      "importNote": "Um einen Einstufungswert zu leeren, schreiben Sie __CLEAR__ in die Zelle.",
+      "copySuffix": "(Kopie)",
+      "copyFailed": "Die Anwendung konnte nicht kopiert werden.",
+      "copyLinksFailed": "Die Kopie wurde erstellt, aber nicht alle ihre Verknüpfungen konnten kopiert werden.",
+      "environments": {
+        "prod": {
+          "name": "Produktion",
+          "short": "Prod"
+        },
+        "pre_prod": {
+          "name": "Vorproduktion",
+          "short": "Vor"
+        },
+        "qa": {
+          "name": "QA",
+          "short": "QA"
+        },
+        "test": {
+          "name": "Test",
+          "short": "Test"
+        },
+        "dev": {
+          "name": "Entwicklung",
+          "short": "Entw"
+        },
+        "sandbox": {
+          "name": "Sandbox",
+          "short": "Sb"
+        }
       }
     },
     "assets": {
@@ -1636,7 +1676,12 @@
         "receivesFrom": "Empfängt von",
         "sendsTo": "Sendet an",
         "moreInInterfaces_one": "+ {{count}} weitere unter Schnittstellen",
-        "moreInInterfaces_other": "+ {{count}} weitere unter Schnittstellen"
+        "moreInInterfaces_other": "+ {{count}} weitere unter Schnittstellen",
+        "includedIn": "Enthalten in",
+        "includedInPlaceholder": "Suite hinzufügen",
+        "previousVersion": "Vorherige Version",
+        "nextVersion": "Nächste Version",
+        "canHaveChildAppsHelp": "Für eine Suite aktivieren: Die enthaltenen Anwendungen können ihr dann zugeordnet werden."
       },
       "ownership": {
         "businessOwners": "Fachverantwortliche",
@@ -1659,8 +1704,11 @@
         "addAudience": "+ Zielgruppe hinzufügen",
         "removeAudienceRow": "Zielgruppenzeile entfernen",
         "usersValue": "Benutzer: {{value}}",
+        "usersNoDepartmentHeadcount": "Für diese Abteilungen ist keine Mitarbeiterzahl erfasst.",
         "businessProcesses": "Geschäftsprozesse",
-        "addBusinessProcess": "Geschäftsprozess hinzufügen…"
+        "addBusinessProcess": "Geschäftsprozess hinzufügen…",
+        "audienceWholeCompany": "Gesamte Gesellschaft. Wählen Sie Abteilungen, um die Zielgruppe einzugrenzen.",
+        "audienceDepartmentsOnly": "Nur die gewählten Abteilungen. Entfernen Sie sie, um die gesamte Gesellschaft einzuschließen."
       },
       "technical": {
         "title": "Technische Informationen",
@@ -1684,7 +1732,9 @@
         "unnamedContact": "Unbenannter Kontakt",
         "removeContact": "{{name}} entfernen",
         "supportNotesPlaceholder": "Support-Notizen hinzufügen…",
-        "newSupportContact": "Neuer Support-Kontakt"
+        "newSupportContact": "Neuer Support-Kontakt",
+        "externalFacingHelp": "Die Anwendung ist über das Internet erreichbar, für Kunden, Partner oder Mitarbeitende im Homeoffice.",
+        "dataIntegrationEtlHelp": "Die Anwendung überträgt Daten zwischen anderen Anwendungen. Sie erscheint dann als Middleware in Schnittstellen."
       },
       "interfaces": {
         "title": "Schnittstellen",
@@ -1746,6 +1796,7 @@
           "requests": "Anfragen",
           "tasks": "Aufgaben",
           "technologies": "Technologien",
+          "technologiesHelp": "Die Technologien, die die Anwendung nutzt, mit ihren Versionen: hier erfasst oder auf ihren Servern gefunden.",
           "applications": "Anwendungen",
           "assets": "Assets",
           "processes": "Geschäftsprozesse",
@@ -1860,11 +1911,11 @@
         "goLive": "Inbetriebnahme"
       },
       "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht, mit ihren {{deployments}} und Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht. Ebenfalls gelöscht werden: {{deployments}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
       "convert": {
         "action": "In Technologie umwandeln",
         "title": "{{name}} in eine Technologie umwandeln",
-        "test": "Wandeln Sie um, wenn eine andere Anwendung dadurch ausfallen oder verwundbar werden kann.",
+        "test": "Wandeln Sie um, wenn eine andere Anwendung wegen dieser Anwendung ausfallen oder verwundbar werden kann.",
         "loading": "Prüfen, was die Umwandlung ändert…",
         "family": "Familie",
         "familyPlaceholder": "Familie wählen",
@@ -1933,6 +1984,14 @@
           "managed_documents": "Verwaltete Dokumente, verschoben zu den nicht abgelegten Dokumenten"
         },
         "hiddenMoves": "Weitere Verknüpfungen, die Sie nicht sehen, gehen ebenfalls über."
+      },
+      "referenceCopied": "Kopiert",
+      "undo": {
+        "undo": "Rückgängig",
+        "contactRemoved": "Supportkontakt entfernt.",
+        "processRemoved": "Geschäftsprozess getrennt.",
+        "ownerRemoved": "Verantwortlicher entfernt.",
+        "suiteRemoved": "Zuordnung zur Suite entfernt."
       }
     },
     "asset": {
@@ -3077,7 +3136,7 @@
       "copyInstances": "Bereitstellungen",
       "copyBindings": "Bereitstellungsbindungen",
       "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen. Umgebungsspezifische Details werden gelöscht.",
-      "suitesNotCopied": "Hinweis: Suites und Anhänge werden nicht kopiert.",
+      "suitesNotCopied": "Nicht kopiert: Suiten, Anhänge, Datumsangaben, der letzte Wiederherstellungstest und die Klassifizierungsprüfung.",
       "selectInterfaces": "Wählen Sie Schnittstellen zur Migration in die neue Version. Ausgewählte Schnittstellen werden dupliziert und mit der neuen Version verknüpft.",
       "loadingInterfaces": "Schnittstellen werden geladen…",
       "noInterfaces": "Keine Schnittstellen für diese Anwendung gefunden.",
@@ -3097,7 +3156,8 @@
       "next": "Weiter",
       "createVersion": "Version erstellen",
       "nameRequired": "Anwendungsname ist erforderlich",
-      "defaultName": "{{name}} - neue Version"
+      "defaultName": "{{name}} - neue Version",
+      "alwaysCopied": "Immer kopiert: die Beschreibung, die Geschäftsprozesse, die Zugriffsmethoden, die Felder zu externer Erreichbarkeit, ETL und untergeordneten Anwendungen sowie die manuell erfasste Benutzerzahl."
     },
     "versionTimeline": {
       "title": "Versionsverlauf"
@@ -3249,7 +3309,13 @@
     "saveSupportInfoFailed": "Fehler beim Speichern der Support-Informationen",
     "saveClassificationFailed": "Die Klassifizierung konnte nicht gespeichert werden",
     "reviewFailed": "Überprüfung fehlgeschlagen",
-    "deleteApplicationFailed": "Fehler beim Löschen der Anwendung"
+    "deleteApplicationFailed": "Fehler beim Löschen der Anwendung",
+    "saveResidencyFailed": "Der Datenstandort konnte nicht gespeichert werden.",
+    "saveOwnersFailed": "Die Verantwortlichen konnten nicht gespeichert werden.",
+    "saveAudienceFailed": "Die Zielgruppe konnte nicht gespeichert werden.",
+    "copyReferenceFailed": "Kopieren nicht möglich: Der Browser hat es abgelehnt.",
+    "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden.",
+    "versionCreated": "Version erstellt: {{reference}}"
   },
   "validation": {
     "missingFormData": "Fehlende Formulardaten",
@@ -3340,6 +3406,7 @@
     "the_catalog_could_not_be_saved_reload_settings_and_try_again": "Die Kataloge konnten nicht gespeichert werden. Laden Sie die Einstellungen neu.",
     "incomplete_inheritance": "Unvollständige Ableitung",
     "data_residency": "Datenresidenz",
+    "data_residency_help": "Die Länder, in denen die Anwendung ihre Daten speichert.",
     "business_help": "Auswirkung einer Unterbrechung auf die Aktivität, die diese Anwendung unterstützt. Jede Stufe nennt die Unterbrechung, die die Aktivität tolerieren kann; wählen Sie die Stufe, deren Definition passt.",
     "cyber_help": "Wählen Sie die höchste Stufe, die durch plausible Folgen gerechtfertigt ist: Offenlegung, Veränderung oder Zerstörung, Unterbrechung, Ausbreitung oder Übernahme, physische Folgen. Verwechseln Sie Cyberkritikalität nicht mit dem Risikoniveau!",
     "confidentiality_help": "Erforderlicher Schutz vor Offenlegung. Unterstützt die Cyberbewertung, berechnet aber keine Cyberkritikalität.",
@@ -3367,7 +3434,7 @@
     "never_reviewed": "Nie geprüft",
     "changed_since_review": "Seit der Prüfung geändert",
     "reviewed_on": "Geprüft am {{date}}",
-    "rto_exceeds_level_downtime": "Der RTO erreicht oder überschreitet die MTD der Stufe {{level}} ({{duration}}).",
+    "rto_exceeds_level_downtime": "Der RTO erreicht oder überschreitet die maximal tolerierbare Ausfallzeit (MTD) der Stufe {{level}} ({{duration}}).",
     "recovery_dependency": "Austausch mit {{app}}, geplant in {{wave}}",
     "summary_reviewed_one": "{{count}} geprüft",
     "summary_reviewed_other": "{{count}} geprüft",
@@ -3381,7 +3448,25 @@
     "e_g_critical": "z. B. Kritisch",
     "e_g_high": "z. B. Hoch",
     "e_g_confidential": "z. B. Vertraulich",
-    "e_g_foundation": "z. B. Grundlage"
+    "e_g_foundation": "z. B. Grundlage",
+    "contains_personal_data_help": "Aktivieren, wenn die Anwendung Daten über identifizierbare Personen speichert oder verarbeitet.",
+    "duration_positive_minutes": "Geben Sie eine Anzahl Minuten größer als 0 ein.",
+    "duration_positive_hours": "Geben Sie eine Anzahl Stunden größer als 0 ein.",
+    "duration_positive_days": "Geben Sie eine Anzahl Tage größer als 0 ein.",
+    "duration_positive_weeks": "Geben Sie eine Anzahl Wochen größer als 0 ein.",
+    "duration_zero_minutes": "Geben Sie eine Anzahl Minuten ein, 0 oder mehr.",
+    "duration_zero_hours": "Geben Sie eine Anzahl Stunden ein, 0 oder mehr.",
+    "duration_zero_days": "Geben Sie eine Anzahl Tage ein, 0 oder mehr.",
+    "duration_zero_weeks": "Geben Sie eine Anzahl Wochen ein, 0 oder mehr.",
+    "unit_minutes_one": "Minute",
+    "unit_minutes_other": "Minuten",
+    "unit_hours_one": "Stunde",
+    "unit_hours_other": "Stunden",
+    "unit_days_one": "Tag",
+    "unit_days_other": "Tage",
+    "unit_weeks_one": "Woche",
+    "unit_weeks_other": "Wochen",
+    "duration_whole_minutes": "Diese Dauer ergibt keine ganze Zahl von Minuten."
   },
   "catalogDefaults": {
     "applicationCategories": {

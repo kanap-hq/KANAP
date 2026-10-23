@@ -76,6 +76,7 @@
   "CSV_HEADER_ZONELESS_DATE_TIMES": "Times without a time zone, read as UTC: {{columns}}. Name the zone after the column, for example {{example}} (Europe/Paris).",
   "CSV_VALUE_REQUIRED": "A value is required.",
   "CSV_VALUE_ONE_REQUIRED": "Fill in at least one {{column}} column.",
+  "CSV_VALUE_CANNOT_BE_EMPTIED": "This field cannot be emptied. Leave the column out of the file to keep the stored value.",
   "CSV_NUMBER_INVALID": "\"{{value}}\" is not a number.",
   "CSV_DATE_INVALID": "\"{{value}}\" is not a date. Use 2026-09-02 or 02/09/2026.",
   "CSV_BOOLEAN_INVALID": "\"{{value}}\" is not valid. Use yes or no.",
@@ -164,6 +165,7 @@
   "DATA_FROZEN_ACTION_companies": "{{action}} is not allowed. Company metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "DATA_FROZEN_ACTION_departments": "{{action}} is not allowed. Department metrics for {{year}} are frozen. A budget administrator can unfreeze them.",
   "DEPARTMENT_IN_USE": "This department is used in the allocations of {{usages}}. Disable it instead of deleting it.",
+  "BUSINESS_PROCESS_IN_USE": "This business process is used by {{usages}}. Disable it instead of deleting it.",
   "BUILT_IN_RECORD": "This item comes with KANAP and cannot be deleted. Disable it instead.",
   "RECORD_USED_BY": "This item is used by {{usages}}. Disable it instead of deleting it.",
   "TEAM_NOT_EMPTY_one": "This team still has {{usages}}. Move it to another team first, or disable the team.",
@@ -186,5 +188,25 @@
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_one": "This folder still has {{usages}}. Move or delete it first.",
   "KNOWLEDGE_FOLDER_HAS_SUBFOLDERS_other": "This folder still has {{usages}}. Move or delete them first.",
   "currency_invalid": "Unknown currency code: enter three-letter ISO 4217 codes, for example EUR, USD, CHF.",
-  "turnover_fx_missing_all": "None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver."
+  "turnover_fx_missing_all": "None of the selected companies has an exchange rate into the reporting currency. Their turnover cannot be compared. Enter the rates, or choose another allocation driver.",
+  "name_required": "Enter a name.",
+  "name_taken": "An application already has this name: {{ref}}.",
+  "name_ambiguous": "{{count}} applications are named {{name}}. Add the id column to say which one.",
+  "name_too_long": "The name is too long: {{max}} characters at most.",
+  "lifecycle_invalid": "Unknown lifecycle: {{value}}. Use a lifecycle from the list, by its name or its code.",
+  "category_invalid": "Unknown category: {{value}}. Use a category from the list, by its name or its code.",
+  "classification_unknown": "Unknown value: {{value}}. Use a level from the classification settings, by its name or its code.",
+  "duration_invalid": "{{field}} must be a whole number of minutes.",
+  "owner_email_unknown": "No user with the email {{email}}.",
+  "dates_inconsistent": "The end of support and the retirement date cannot come before the go-live date.",
+  "suite_has_children_one": "Detach the child application first.",
+  "suite_has_children_other": "Detach the {{count}} child applications first.",
+  "suite_cycle": "This application already contains {{name}}: it cannot belong to it.",
+  "forbidden": "You do not have the rights for this action.",
+  "NO_ACCESS": "This account has not been granted access yet. Ask an administrator.",
+  "fields": {
+    "rto_minutes": "The recovery time objective (RTO)",
+    "rpo_minutes": "The recovery point objective (RPO)",
+    "maxMtdMinutes": "The maximum tolerable downtime"
+  }
 }

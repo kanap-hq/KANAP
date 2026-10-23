@@ -47,7 +47,7 @@ La lista muestra todos los procesos de negocio de su espacio de trabajo.
 - **Gestionar categorías** (`business_processes:member`): abrir el diálogo de gestión de categorías.
 - **Importar CSV** (Admin): importación masiva de procesos desde un archivo CSV.
 - **Exportar CSV** (Admin): exportar los procesos que muestra la lista, o todos los procesos, a CSV.
-- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Las interfaces y solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
+- **Eliminar seleccionados** (Admin): eliminar una o más filas seleccionadas. Un proceso que usan aplicaciones o interfaces no se puede eliminar: desactívelo en su lugar. Antes de eliminar nada, la confirmación lista los procesos que se conservan, con el motivo. Las solicitudes vinculadas a un proceso eliminado se conservan, sin el vínculo.
 
 ---
 
@@ -60,6 +60,7 @@ El espacio de trabajo tiene una única pestaña **Visión general** a la izquier
 - **Anterior / Siguiente**: recorrer los procesos en el orden actual de la lista.
 - **Restablecer**: descartar cambios no guardados.
 - **Guardar**: persistir los cambios.
+- **Eliminar** (icono de papelera, Admin): eliminar el proceso y volver a la lista. Un proceso que usan aplicaciones o interfaces no se puede eliminar: el mensaje los cuenta. Desactívelo en su lugar.
 - **Cerrar** (icono X): volver a la lista, manteniendo sus filtros y ordenación intactos.
 
 Si navega fuera con cambios sin guardar, se le solicitará que guarde o descarte.
