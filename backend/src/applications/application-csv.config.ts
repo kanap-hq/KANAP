@@ -715,8 +715,10 @@ export const applicationCsvConfig: CsvEntityConfig = {
         const storedOwners = ownersById.get(stored.id) ?? [];
         if (!sameKeys(storedOwners, csvOwnerKeys(row.raw, userByEmail, storedOwners, context.params.mode))) return false;
       }
+      // An empty residency cell keeps the stored countries, except in replace mode, where it clears them.
       const codes = csvResidencyCodes(row.raw.data_residency);
-      if (codes.length > 0 && !sameKeys(residencyById.get(stored.id), codes)) return false;
+      const residencyWritten = codes.length > 0 || (row.raw.data_residency !== undefined && context.params.mode === 'replace');
+      if (residencyWritten && !sameKeys(residencyById.get(stored.id), codes)) return false;
 
       const next = { ...row.parsed };
       delete next._owners;

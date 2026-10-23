@@ -248,7 +248,7 @@ export class ApplicationsCsvService {
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
       await this.handleOwnerImport(file, params.mode, written, opts);
-      await this.handleDataResidencyImport(file, written, opts);
+      await this.handleDataResidencyImport(file, params.mode, written, opts);
     }
 
     return result;
@@ -351,7 +351,7 @@ export class ApplicationsCsvService {
   /**
    * Handle data residency import from CSV after main import.
    */
-  private async handleDataResidencyImport(file: Express.Multer.File, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleDataResidencyImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file
@@ -369,9 +369,10 @@ export class ApplicationsCsvService {
         .on('error', (err) => reject(err));
     });
 
-    // Process each row
+    // Process each row: a file without the column leaves residency alone.
     for (const row of rows) {
       const appName = (row['name'] || '').trim();
+      if (!Object.prototype.hasOwnProperty.call(row, 'data_residency')) continue;
       const residencyRaw = row['data_residency'] || '';
       if (!appName) continue;
 
@@ -384,20 +385,21 @@ export class ApplicationsCsvService {
         .map((c) => c.trim().toUpperCase())
         .filter((c) => c.length === 2);
 
-      if (codes.length === 0) continue;
+      // An empty cell keeps the stored residency, except in replace mode, where it clears it.
+      if (codes.length === 0 && mode !== 'replace') continue;
 
       const residencyRepo = manager.getRepository(ApplicationDataResidency);
-      const beforeRows = await residencyRepo.find({ where: { application_id: appId } as any });
+      const beforeRows = await residencyRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
       const beforeState = [...new Set(beforeRows.map((row) => row.country_iso.trim().toUpperCase()))].sort();
       const requestedState = [...new Set(codes)].sort();
       if (JSON.stringify(beforeState) === JSON.stringify(requestedState)) continue;
 
       // Clear existing residency
-      await manager.query(`DELETE FROM application_data_residency WHERE application_id = $1`, [appId]);
+      await manager.query(`DELETE FROM application_data_residency WHERE application_id = $1 AND tenant_id = $2`, [appId, tenantId]);
 
       // Insert new residency
-      const afterRows = await residencyRepo.save(
+      const afterRows = requestedState.length === 0 ? [] : await residencyRepo.save(
         requestedState.map((iso) => residencyRepo.create({
           application_id: appId,
           tenant_id: tenantId,

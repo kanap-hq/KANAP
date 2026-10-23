@@ -345,6 +345,34 @@ async function testOperationLimitsOwnersAndResidency() {
   });
 }
 
+async function testEmptyResidencyCell() {
+  await inTenant(async (ctx) => {
+    const atlas = await seedApp(ctx, 'Atlas');
+    await ctx.runner.query(`UPDATE applications SET access_methods = ARRAY['web'] WHERE id = $1 AND tenant_id = $2`, [atlas, ctx.tenantId]);
+    const residencyOf = async () => (await ctx.runner.query(
+      `SELECT country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = $2 ORDER BY 1`, [ctx.tenantId, atlas],
+    )).map((row: any) => row.country_iso);
+    let result = await importCsv(ctx, ['name;data_residency;description', 'Atlas;DE,FR;First']);
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(await residencyOf(), ['DE', 'FR']);
+    result = await importCsv(ctx, ['name;data_residency;description', 'Atlas;;Second']);
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'an empty cell keeps the residency in enrich mode');
+    // Replace mode reads a complete file: start from the export of the application (French: `;`).
+    const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language: 'fr', scope: 'data' });
+    const [header, line] = exported.content.replace(/^\uFEFF/, '').split(/\r?\n/).map((text) => text.split(';'));
+    const column = header.indexOf('data_residency');
+    assert.ok(column >= 0, 'the export has the residency');
+    const without = (cells: string[]) => cells.filter((_, index) => index !== column).join(';');
+    result = await importCsv(ctx, [without(header), without(line)], { mode: 'replace' });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(await residencyOf(), ['DE', 'FR'], 'a file without the column leaves it alone, even in replace mode');
+    result = await importCsv(ctx, [header.join(';'), line.map((cell, index) => (index === column ? '' : cell)).join(';')], { mode: 'replace' });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual(await residencyOf(), [], 'an empty cell clears it in replace mode');
+  });
+}
+
 async function testCopyOfALongName() {
   await inTenant(async (ctx) => {
     for (const length of [196, APPLICATION_NAME_MAX]) {
@@ -388,6 +416,7 @@ runSpecs('application-rules.integration.spec', [
   ['french export imports back', testFrenchExportImportsBack],
   ['new version copies', testNewVersionCopies],
   ['operation limits owners and residency', testOperationLimitsOwnersAndResidency],
+  ['empty residency cell', testEmptyResidencyCell],
   ['copy of a long name', testCopyOfALongName],
   ['suite cycles', testSuiteCycles],
 ]).catch((error) => {
