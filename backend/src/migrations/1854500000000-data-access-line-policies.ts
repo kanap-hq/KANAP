@@ -129,9 +129,186 @@ function followsLinePolicies(): PolicyRow[] {
   return rows;
 }
 
-/** The whole expected set. Run 2B appends its builders here. Not exported: TypeORM instantiates every export of a migration file. */
+/**
+ * Run 2B. Links from other objects to a line (data-access-tables.inventory.ts, class
+ * link_to_line), with the column naming the line: every command needs the line readable (spec
+ * §5.4, §6.4). The link belongs to the object that carries it, so a read-only line can be linked,
+ * and a bulk replacement (DELETE then INSERT) never reaches a link to an invisible line.
+ */
+const LINKS_TO_LINE: Array<{ table: string; column: string }> = [
+  { table: 'application_spend_items', column: 'spend_item_id' },
+  { table: 'asset_spend_items', column: 'spend_item_id' },
+  { table: 'technology_spend_items', column: 'spend_item_id' },
+  { table: 'portfolio_project_opex', column: 'opex_id' },
+  { table: 'portfolio_request_opex', column: 'opex_id' },
+];
+
+/** The same predicate for the four commands. */
+function samePredicatePolicies(table: string, predicate: string): PolicyRow[] {
+  return [
+    { table, command: 'SELECT', using: predicate, check: null },
+    { table, command: 'INSERT', using: null, check: predicate },
+    { table, command: 'UPDATE', using: predicate, check: predicate },
+    { table, command: 'DELETE', using: predicate, check: null },
+  ];
+}
+
+function linkToLinePolicies(): PolicyRow[] {
+  return LINKS_TO_LINE.flatMap(({ table, column }) =>
+    samePredicatePolicies(table, guarded(parentLineReadable(`${table}.${column}`))));
+}
+
+/*
+ * Tasks (spec §4.4, §6.4). Only the tasks whose object is a line (`spend_item`, `capex_item`: both
+ * name a row of spend_items) or a contract are scoped; every other task passes. The predicates
+ * below are written once and used in two places: inline in the policies of `tasks`, where
+ * spend_items is read under its own SELECT policy (`filtered`), and in the SECURITY DEFINER depth
+ * functions, which read without policies and so apply lisible_ligne themselves (`definer`).
+ */
+type Reach = 'filtered' | 'definer';
+
+const LINE_TASK_TYPES = `('spend_item', 'capex_item')`;
+const SCOPED_TASK_TYPES = `('spend_item', 'capex_item', 'contract')`;
+/** The person as text, for the jsonb arrays of user ids (`owner_ids ? ...`). */
+const USER_TEXT = `(SELECT ${setting('user')})`;
+
+/** lisible_contrat_direct (spec §6.4) on the contract `p`. */
+const readableContractDirect = (p: string) => `(${READ_ALL}
+      OR ${p}company_id = ANY (${READ_COMPANIES})
+      OR ${p}cost_center_id = ANY (${READ_NODES})
+      OR ${p}owner_user_id = ${USER})`;
+
+/**
+ * modifiable_contrat (spec §6.4): placable_contrat or owner. The cheap tests first, then
+ * data_access_placable_contract(), the single definition of placable_contrat, for an edit place.
+ */
+const modifiableContract = (p: string) => `(${EDIT_ALL}
+      OR ${p}company_id = ANY (${EDIT_COMPANIES})
+      OR ${p}owner_user_id = ${USER}
+      OR (${p}cost_center_id = ANY (${EDIT_NODES})
+          AND data_access_placable_contract(${p}company_id, ${p}cost_center_id)))`;
+
+/** A line, named by `ref`, readable. */
+const lineReadableById = (ref: string, reach: Reach) => reach === 'filtered'
+  ? `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref})`
+  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${readableLine('i.')})`;
+
+/** A line, named by `ref`, modifiable (and so readable). */
+const lineModifiableById = (ref: string, reach: Reach) => reach === 'filtered'
+  ? `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${modifiableLine('i.')})`
+  : `EXISTS (SELECT 1 FROM public.spend_items i WHERE i.id = ${ref} AND ${readableLine('i.')} AND ${modifiableLine('i.')})`;
+
+/**
+ * A contract, named by `ref`, modifiable. Contracts have no policy until lot 5, and their policy
+ * will cite only contract_spend_items (no policy) and spend_items; a modifiable contract is
+ * readable by lisible_contrat_direct, so the definer form needs no other test.
+ */
+const contractModifiableById = (ref: string) =>
+  `EXISTS (SELECT 1 FROM public.contracts c WHERE c.id = ${ref} AND ${modifiableContract('c.')})`;
+
+/** Participant of the task `p` (spec §4.4): assignee, owner or observer. The creator is not one. */
+const taskParticipant = (p: string) => `(${p}assignee_user_id = ${USER}
+      OR ${p}owner_ids ? ${USER_TEXT}
+      OR ${p}viewer_ids ? ${USER_TEXT})`;
+
+/** Responsible for the task `p` (spec §4.4): assignee or owner. */
+const taskResponsible = (p: string) => `(${p}assignee_user_id = ${USER}
+      OR ${p}owner_ids ? ${USER_TEXT})`;
+
+/** A task whose object is neither a line nor a contract: not scoped. */
+const taskNotScoped = (p: string) =>
+  `(${p}related_object_type IS NULL OR ${p}related_object_type NOT IN ${SCOPED_TASK_TYPES})`;
+
+/** Task visible: object readable, or participant. */
+const taskReadable = (p: string, reach: Reach) => `(${READ_ALL}
+      OR ${taskNotScoped(p)}
+      OR ${taskParticipant(p)}
+      OR (${p}related_object_type IN ${LINE_TASK_TYPES} AND ${lineReadableById(`${p}related_object_id`, reach)})
+      OR (${p}related_object_type = 'contract' AND data_access_contract_visible(${p}related_object_id)))`;
+
+/** The task's object modifiable (creation and deletion of a task). */
+const taskObjectModifiable = (p: string, reach: Reach) => `(${EDIT_ALL}
+      OR ${taskNotScoped(p)}
+      OR (${p}related_object_type IN ${LINE_TASK_TYPES} AND ${lineModifiableById(`${p}related_object_id`, reach)})
+      OR (${p}related_object_type = 'contract' AND ${contractModifiableById(`${p}related_object_id`)}))`;
+
+/** Task modifiable: object modifiable, or responsible (assignee or owner). */
+const taskModifiable = (p: string, reach: Reach) =>
+  `(${taskObjectModifiable(p, reach)} OR ${taskResponsible(p)})`;
+
+function taskPolicies(): PolicyRow[] {
+  const t = 'tasks';
+  const p = `${t}.`;
+  return [
+    { table: t, command: 'SELECT', using: guarded(taskReadable(p, 'filtered')), check: null },
+    { table: t, command: 'INSERT', using: null, check: guarded(taskObjectModifiable(p, 'filtered')) },
+    { table: t, command: 'UPDATE', using: guarded(taskModifiable(p, 'filtered')), check: guarded(taskModifiable(p, 'filtered')) },
+    // Today's deletion rule stays in the service (route permission); the database adds the object.
+    { table: t, command: 'DELETE', using: guarded(taskObjectModifiable(p, 'filtered')), check: null },
+  ];
+}
+
+/**
+ * Elements of a task (class task_element): the parent task visible to read, modifiable to write.
+ * Citing `tasks` here would reach spend_items through its policy, one level too deep (spec §6.4,
+ * "profondeur"): the depth functions read the task without policies instead.
+ */
+const TASK_ELEMENTS = ['task_attachments', 'task_time_entries', 'task_applications', 'task_assets'];
+
+/**
+ * Links from other objects to a task (class link_to_task): `document_tasks`, a relation of a
+ * knowledge document. Like the links to a line, the link belongs to the document: the task must be
+ * visible for every command, and the right on the document applies as today.
+ */
+const LINKS_TO_TASK = ['document_tasks'];
+
+function taskElementPolicies(): PolicyRow[] {
+  const rows: PolicyRow[] = [];
+  for (const table of TASK_ELEMENTS) {
+    const visible = guarded(`(${READ_ALL} OR data_access_task_visible(${table}.task_id))`);
+    const modifiable = guarded(`(${EDIT_ALL} OR data_access_task_modifiable(${table}.task_id))`);
+    rows.push(
+      { table, command: 'SELECT', using: visible, check: null },
+      { table, command: 'INSERT', using: null, check: modifiable },
+      { table, command: 'UPDATE', using: modifiable, check: modifiable },
+      { table, command: 'DELETE', using: modifiable, check: null },
+    );
+  }
+  for (const table of LINKS_TO_TASK) {
+    rows.push(...samePredicatePolicies(table, guarded(`(${READ_ALL} OR data_access_task_visible(${table}.task_id))`)));
+  }
+  return rows;
+}
+
+/**
+ * The search index (spec §6.4): the entries of lines (`spend_items`, `capex_items`, both rows of
+ * spend_items), of contracts and of tasks are visible when their object is; tasks and contracts go
+ * through the depth functions. Every other entry passes. Same predicate for every command: the
+ * application writes the index only through its SECURITY DEFINER triggers and the reindex job.
+ */
+const SEARCH_LINE_TYPES = `('spend_items', 'capex_items')`;
+const SEARCH_SCOPED_TYPES = `('spend_items', 'capex_items', 'contracts', 'tasks')`;
+
+function searchIndexPolicies(): PolicyRow[] {
+  const s = 'search_index.';
+  const predicate = guarded(`(${READ_ALL}
+      OR ${s}entity_type NOT IN ${SEARCH_SCOPED_TYPES}
+      OR (${s}entity_type IN ${SEARCH_LINE_TYPES} AND ${lineReadableById(`${s}entity_id`, 'filtered')})
+      OR (${s}entity_type = 'contracts' AND data_access_contract_visible(${s}entity_id))
+      OR (${s}entity_type = 'tasks' AND data_access_task_visible(${s}entity_id)))`);
+  return samePredicatePolicies('search_index', predicate);
+}
+
+/** The whole expected set. Not exported: TypeORM instantiates every export of a migration file. */
 function dataAccessPolicyRows(): PolicyRow[] {
-  return [...linePolicies(), ...followsLinePolicies()];
+  return [
+    ...linePolicies(),
+    ...followsLinePolicies(),
+    ...linkToLinePolicies(),
+    ...taskPolicies(),
+    ...taskElementPolicies(),
+    ...searchIndexPolicies(),
+  ];
 }
 
 function dataAccessPolicyName(row: Pick<PolicyRow, 'table' | 'command'>): string {
@@ -229,12 +406,17 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
 );
 
 /**
- * Data-scoped access, lot 2, run 2A (planning/data-scoped-access/spec.md §4.1, §6.4, §6.5, §9.1):
- * the database rules on the budget lines and the tables that follow them.
+ * Data-scoped access, lot 2, runs 2A and 2B (planning/data-scoped-access/spec.md §4.1, §4.4, §5.4,
+ * §6.4, §6.5, §6.6, §9.1): the database rules on the budget lines, the tables that follow them, the
+ * links to them, the tasks of lines and contracts with their elements, and the search index.
  *
  * 1. `data_access_placable_line(company, centre)` and `data_access_placable_contract(company,
  *    place)` (spec §6.4, the contract one used from lot 5), and the SECURITY DEFINER helpers
  *    `data_access_line_of_version(version)` and `data_access_line_of_round_input(round_input)`.
+ *    Run 2B: the SECURITY DEFINER depth functions `data_access_contract_visible(contract)`,
+ *    `data_access_task_visible(task)`, `data_access_task_modifiable(task)` and the disclosure
+ *    functions `data_access_hidden_count(type, id)`, `data_access_reference(type, id)`; EXECUTE
+ *    revoked from PUBLIC, granted to the application role and (by the sync) to the limited role.
  * 2. `data_access_expected_policies()` and `data_access_sync_policies()` replaced: the expected
  *    list and the policy bodies come from one list (dataAccessPolicyRows()); the sync grants as in
  *    lot 1, drops the stray policies, then drops and recreates each expected policy, and refuses a
@@ -255,6 +437,7 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await createPlacementFunctions(queryRunner);
+    await createAccessFunctions(queryRunner);
     await createPolicyFunctions(queryRunner);
     await createPlacementTrigger(queryRunner);
     const pinned = await makeDefiners(queryRunner);
@@ -280,6 +463,9 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
 
     await queryRunner.query(`DROP TRIGGER IF EXISTS spend_items_data_access_placement ON spend_items`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_spend_items_placement()`);
+    for (const signature of [...ACCESS_DEFINER_SIGNATURES].reverse()) {
+      await queryRunner.query(`DROP FUNCTION IF EXISTS ${signature}`);
+    }
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_of_round_input(uuid)`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_of_version(uuid)`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_placable_contract(uuid, uuid)`);
@@ -373,6 +559,171 @@ async function createPlacementFunctions(queryRunner: QueryRunner): Promise<void>
   `);
 }
 
+/**
+ * lisible_contrat (spec §6.4) on the contract `p`: direct, or through a readable line that names it
+ * (contract_spend_items, or the line's own contract_id). Used here in the definer form only; the
+ * contract policies of lot 5 take the filtered form.
+ */
+const readableContract = (p: string, reach: Reach) => `(${readableContractDirect(p)}
+      OR EXISTS (SELECT 1 FROM public.contract_spend_items l JOIN public.spend_items i ON i.id = l.spend_item_id
+                 WHERE l.contract_id = ${p}id${reach === 'definer' ? ` AND ${readableLine('i.')}` : ''})
+      OR EXISTS (SELECT 1 FROM public.spend_items i
+                 WHERE i.contract_id = ${p}id${reach === 'definer' ? ` AND ${readableLine('i.')}` : ''}))`;
+
+/**
+ * The SECURITY DEFINER access functions of run 2B, by signature: EXECUTE revoked from PUBLIC,
+ * granted to the application role here and to the limited role by data_access_sync_policies().
+ */
+const ACCESS_DEFINER_SIGNATURES = [
+  'data_access_contract_visible(uuid)',
+  'data_access_task_visible(uuid)',
+  'data_access_task_modifiable(uuid)',
+  'data_access_hidden_count(text, uuid)',
+  'data_access_reference(text, uuid)',
+];
+
+/**
+ * data_access_hidden_count (spec §6.6): per type of starting object, the object table and the link
+ * table to the lines, with the column naming each side.
+ */
+const HIDDEN_COUNT_LINKS: Array<{ type: string; object: string; link: string; objectColumn: string; lineColumn: string }> = [
+  { type: 'application', object: 'applications', link: 'application_spend_items', objectColumn: 'application_id', lineColumn: 'spend_item_id' },
+  { type: 'asset', object: 'assets', link: 'asset_spend_items', objectColumn: 'asset_id', lineColumn: 'spend_item_id' },
+  { type: 'technology', object: 'technologies', link: 'technology_spend_items', objectColumn: 'technology_id', lineColumn: 'spend_item_id' },
+  { type: 'project', object: 'portfolio_projects', link: 'portfolio_project_opex', objectColumn: 'project_id', lineColumn: 'opex_id' },
+  { type: 'request', object: 'portfolio_requests', link: 'portfolio_request_opex', objectColumn: 'request_id', lineColumn: 'opex_id' },
+  { type: 'contract', object: 'contracts', link: 'contract_spend_items', objectColumn: 'contract_id', lineColumn: 'spend_item_id' },
+];
+
+/**
+ * The depth functions (spec §6.4) and the disclosure functions of the lines (spec §6.6). Each is
+ * SECURITY DEFINER, owned by the application role (the migration's role), so it reads without the
+ * data-access policies (the tenant policies still apply); it applies the same predicates as the
+ * policies, written by the same builders above, with the person's settings (a definer function
+ * still sees the app.da_* settings of the transaction). Outside the limited mode they return true
+ * (depth), 0 (hidden count) or the reference as usual.
+ *
+ * Disclosure functions, decided in run 2B: (p_type, p_id) is always the starting object. It must
+ * be visible to the person; otherwise, and when it does not exist, the result is NULL, so the
+ * function tells nothing about an object out of access, not even that it exists. An unknown type
+ * raises 22023 (a caller's bug).
+ */
+async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
+  const definer = `STABLE
+    SECURITY DEFINER
+    SET search_path = public, pg_temp`;
+
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_contract_visible(p_contract uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    ${definer}
+    AS $fn$
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+        SELECT ${readableContract('c.', 'definer')}
+        FROM public.contracts c WHERE c.id = p_contract), false) END
+    $fn$
+  `);
+
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_task_visible(p_task uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    ${definer}
+    AS $fn$
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+        SELECT ${taskReadable('t.', 'definer')}
+        FROM public.tasks t WHERE t.id = p_task), false) END
+    $fn$
+  `);
+
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_task_modifiable(p_task uuid)
+    RETURNS boolean
+    LANGUAGE sql
+    ${definer}
+    AS $fn$
+      SELECT CASE WHEN NOT (${MODE_LIMITED}) THEN true ELSE coalesce((
+        SELECT ${taskModifiable('t.', 'definer')}
+        FROM public.tasks t WHERE t.id = p_task), false) END
+    $fn$
+  `);
+
+  const hiddenBranches = HIDDEN_COUNT_LINKS.map((h) => `
+      IF p_type = '${h.type}' THEN
+        IF NOT EXISTS (SELECT 1 FROM public.${h.object} o WHERE o.id = p_id AND o.tenant_id = app_current_tenant())
+           ${h.type === 'contract' ? 'OR NOT data_access_contract_visible(p_id)' : ''} THEN
+          RETURN NULL;
+        END IF;
+        SELECT count(*)::int INTO v_count
+        FROM public.${h.link} l
+        JOIN public.spend_items i ON i.id = l.${h.lineColumn}
+        WHERE l.${h.objectColumn} = p_id AND l.tenant_id = app_current_tenant()
+          AND NOT coalesce(${readableLine('i.')}, false);
+        RETURN v_count;
+      END IF;`).join('');
+  // The number of lines linked to a visible object that the person cannot read (spec §5.4).
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_hidden_count(p_type text, p_id uuid)
+    RETURNS integer
+    LANGUAGE plpgsql
+    ${definer}
+    AS $fn$
+    DECLARE
+      v_count integer;
+    BEGIN
+      IF p_type IS NULL OR p_type NOT IN (${HIDDEN_COUNT_LINKS.map((h) => `'${h.type}'`).join(', ')}) THEN
+        RAISE EXCEPTION 'data_access_hidden_count: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      IF NOT (${MODE_LIMITED}) THEN
+        RETURN 0;
+      END IF;${hiddenBranches}
+      RETURN NULL;
+    END
+    $fn$
+  `);
+
+  // The reference (OPX-12, CPX-3) of the line a visible task names (spec §5.4, "champ simple").
+  // Contracts have no item number: their reference comes with lot 5, if any.
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_reference(p_type text, p_id uuid)
+    RETURNS text
+    LANGUAGE plpgsql
+    ${definer}
+    AS $fn$
+    DECLARE
+      v_type text;
+      v_object uuid;
+      v_reference text;
+    BEGIN
+      IF p_type IS DISTINCT FROM 'task' THEN
+        RAISE EXCEPTION 'data_access_reference: unknown type %', p_type USING ERRCODE = '22023';
+      END IF;
+      SELECT t.related_object_type, t.related_object_id INTO v_type, v_object
+      FROM public.tasks t WHERE t.id = p_id AND t.tenant_id = app_current_tenant();
+      IF NOT FOUND THEN
+        RETURN NULL;
+      END IF;
+      IF (${MODE_LIMITED}) AND NOT data_access_task_visible(p_id) THEN
+        RETURN NULL;
+      END IF;
+      IF v_type IN ${LINE_TASK_TYPES} THEN
+        SELECT CASE WHEN i.nature = 'capex' THEN 'CPX' ELSE 'OPX' END || '-' || i.item_number
+        INTO v_reference
+        FROM public.spend_items i WHERE i.id = v_object;
+        RETURN v_reference;
+      END IF;
+      RETURN NULL;
+    END
+    $fn$
+  `);
+
+  for (const signature of ACCESS_DEFINER_SIGNATURES) {
+    await queryRunner.query(`REVOKE EXECUTE ON FUNCTION ${signature} FROM PUBLIC`);
+    await queryRunner.query(`GRANT EXECUTE ON FUNCTION ${signature} TO CURRENT_USER`);
+  }
+}
+
 async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
   const rows = dataAccessPolicyRows();
   const expectedValues = rows
@@ -431,6 +782,8 @@ async function createPolicyFunctions(queryRunner: QueryRunner): Promise<void> {
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${LIMITED_ROLE};
       ALTER DEFAULT PRIVILEGES IN SCHEMA public
         GRANT USAGE, SELECT ON SEQUENCES TO ${LIMITED_ROLE};
+      -- The SECURITY DEFINER access functions the policies call (EXECUTE revoked from PUBLIC).
+${ACCESS_DEFINER_SIGNATURES.map((sig) => `      GRANT EXECUTE ON FUNCTION ${sig} TO ${LIMITED_ROLE};`).join('\n')}
 
       -- Every policy that targets the role and is not expected goes.
       FOR r IN
