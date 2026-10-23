@@ -2,8 +2,8 @@
 # Dependabot proposes the new digest; `docker compose build --pull` fetches exactly this image.
 
 # Build stage
-# node:24-alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS builder
+# node:24-alpine, index digest pinned on 2026-10-23 (later digests: Dependabot)
+FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS builder
 WORKDIR /app
 COPY package.json package-lock.json* ./
 RUN apk add --no-cache libc6-compat && npm ci
@@ -18,8 +18,8 @@ ENV VITE_API_URL=$VITE_API_URL
 RUN npm run build
 
 # Runtime stage (static assets served by nginx)
-# nginx:alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
-FROM nginx:alpine@sha256:df221db836e1754089190208cee7eeda94f233197056426eda74a43ab1abeac2
+# nginx:alpine, index digest pinned on 2026-10-23 (later digests: Dependabot)
+FROM nginx:alpine@sha256:a3554c0d0b48177b1413c26e01f695334428020d9df01243fbae3e11cfd17417
 # Same build argument: the CSP connect-src allows the API origin when VITE_API_URL is an
 # absolute URL (http(s)://host[:port]/... or //host/...), and only the site itself otherwise.
 # When the host of an absolute URL cannot be read, the build goes on with a notice and
