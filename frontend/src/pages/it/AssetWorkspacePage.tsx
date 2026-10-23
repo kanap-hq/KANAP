@@ -900,6 +900,8 @@ export default function AssetWorkspacePage() {
     try {
       await api.delete(`/app-instances/${assignment.app_instance_id}/assets/${assignment.id}`);
       await refreshAssignments();
+      // The impact reads the applications the asset hosts.
+      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.removeServerFailed')));
     }
@@ -980,6 +982,8 @@ export default function AssetWorkspacePage() {
       setAssignMessage(t('workspace.asset.assignments.assignmentAdded'));
       setAssignDialogOpen(false);
       await refreshAssignments();
+      // The impact reads the applications the asset hosts.
+      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
     } catch (e: any) {
       setAssignError(getApiErrorMessage(e, t, t('messages.addAssignmentFailed')));
     } finally {
@@ -1546,6 +1550,7 @@ export default function AssetWorkspacePage() {
               variant="action"
               size="small"
               onClick={openMemberDialog}
+              disabled={!canManage}
             >
               {t('workspace.asset.technical.editMembers')}
             </Button>
@@ -1897,7 +1902,7 @@ export default function AssetWorkspacePage() {
                   <Box sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.support.title')}</SectionLabel>
                   </Box>
-                  <SupportInfoPanel assetId={id} />
+                  <SupportInfoPanel key={id} assetId={id} />
                 </Box>
               )}
               {!isCreate && (
@@ -1957,7 +1962,7 @@ export default function AssetWorkspacePage() {
                       {assignments.map((assignment) => (
                         <TableRow key={assignment.id}>
                           <TableCell>
-                            <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}>
+                            <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
                               {assignment.application.name}
                             </Button>
                           </TableCell>
@@ -1970,7 +1975,7 @@ export default function AssetWorkspacePage() {
                               <span>
                                 <IconButton
                                   size="small"
-                                  onClick={() => navigate(`/it/applications/${assignment.application.id}/assets`)}
+                                  onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}
                                 >
                                   <EditIcon fontSize="small" />
                                 </IconButton>
@@ -2322,6 +2327,7 @@ export default function AssetWorkspacePage() {
           )}
           {validTab === 'hardware' && isPhysicalAsset && !isCreate && (
             <HardwareInfoPanel
+              key={id}
               assetId={id}
               netboxManaged={netboxManaged}
               netboxOwns={netboxOwns}

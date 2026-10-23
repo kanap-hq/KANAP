@@ -286,7 +286,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
               setVendorId(v?.id || null);
             }}
             getOptionLabel={(o) => vendorPicker.label(o, (vendor) => vendor.name ?? '')}
-            disabled={readOnly}
+            disabled={readOnly || saving}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
               return <li key={key} {...optionProps}>{option.name}</li>;
@@ -323,7 +323,7 @@ export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
               setContractId(v?.id || null);
             }}
             getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
-            disabled={readOnly}
+            disabled={readOnly || saving}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
               return <li key={key} {...optionProps}>{option.name}</li>;

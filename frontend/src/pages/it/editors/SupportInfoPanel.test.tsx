@@ -52,6 +52,26 @@ describe('SupportInfoPanel', () => {
     expect(post.mock.calls.filter(([url]) => url === '/assets/asset-1/support-info')).toHaveLength(1);
   });
 
+  it('saves a pending change to the previous asset when the page moves to another asset', async () => {
+    // The page keys the panel by asset id, so moving to another asset remounts it.
+    const panel = (assetId: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <SupportInfoPanel key={assetId} assetId={assetId} />
+      </ThemeProvider>
+    );
+    const view = render(panel('asset-1'));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/support-contacts'));
+    const tier = screen.getByPlaceholderText('workspace.asset.support.supportTierPlaceholder');
+    await waitFor(() => expect(tier).toBeEnabled());
+    fireEvent.change(tier, { target: { value: 'Gold' } });
+    view.rerender(panel('asset-2'));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/support-info', expect.objectContaining({ support_tier: 'Gold' })));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/support-contacts'));
+    await wait(800);
+    expect(post.mock.calls.filter(([url]) => url === '/assets/asset-1/support-info')).toHaveLength(1);
+    expect(post.mock.calls.filter(([url]) => url === '/assets/asset-2/support-info')).toHaveLength(0);
+  });
+
   it('sends nothing on leaving when nothing changed', async () => {
     const view = renderPanel();
     await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/support-contacts'));

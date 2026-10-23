@@ -23,7 +23,8 @@ const DIRECTION_KEY: Record<AssetDirection, string> = {
  * sections (`clusterSection`), then the relations between assets in their four directions. It reads
  * and writes through the same query as the Relations tab (`GET /assets/:id/relations-tab`), so both
  * tabs and their badges share one set of data. An infrastructure member adds from a server search
- * and unlinks on hover, each saved at once; the impact is read again after each change.
+ * and unlinks on hover, each saved at once; the relations and the impact of every asset are read
+ * again after each change.
  */
 export default function AssetDependenciesTab({
   assetId,
@@ -47,14 +48,19 @@ export default function AssetDependenciesTab({
     readPath: `/assets/${assetId}/relations-tab`,
   });
 
-  // The service of the impact reads these relations: it is read again after each change.
+  // A relation links two assets, and the impact reads these relations: the relations and the
+  // impact of every asset are read again after each change, the other asset's included.
+  const refreshAssets = () => {
+    void queryClient.invalidateQueries({ queryKey: ['asset-relations-tab'] });
+    void queryClient.invalidateQueries({ queryKey: ['asset-impact'] });
+  };
   const onLink = async (kind: string, targetId: string) => {
     await link(kind, targetId);
-    void queryClient.invalidateQueries({ queryKey: ['asset-impact', assetId] });
+    refreshAssets();
   };
   const onUnlink = async (kind: string, targetId: string) => {
     await unlink(kind, targetId);
-    void queryClient.invalidateQueries({ queryKey: ['asset-impact', assetId] });
+    refreshAssets();
   };
 
   const sections = ASSET_DIRECTIONS.map((direction): SectionSpec<AssetRelationRow> => {

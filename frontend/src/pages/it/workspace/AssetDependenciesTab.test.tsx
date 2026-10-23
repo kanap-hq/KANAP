@@ -142,10 +142,10 @@ describe('AssetDependenciesTab', () => {
     ]);
   });
 
-  it('links in each direction without offering the asset itself or a row already linked, and reads the impact again', async () => {
+  it('links in each direction without offering the asset itself or a row already linked, and reads the relations and the impact of every asset again', async () => {
     const { invalidated } = renderTab();
     await screen.findByText('vm-app-01');
-    expect(invalidated(['asset-impact', 'as-1'])).toBe(false);
+    expect(invalidated(['asset-impact'])).toBe(false);
 
     fireEvent.click(within(screen.getByRole('region', { name: A('contains') })).getByText('workspace.application.relations.add'));
     expect(await screen.findByRole('option', { name: /edge-fw/ })).toBeTruthy();
@@ -153,7 +153,9 @@ describe('AssetDependenciesTab', () => {
     expect(screen.queryByRole('option', { name: /vm-app-01/ })).toBeNull();
     fireEvent.click(screen.getByRole('option', { name: /edge-fw/ }));
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/assets/as-1/relations/contains', { id: 'as-9' }));
-    await waitFor(() => expect(invalidated(['asset-impact', 'as-1'])).toBe(true));
+    await waitFor(() => expect(invalidated(['asset-impact'])).toBe(true));
+    // The other asset of the relation reads its relations again too.
+    expect(invalidated(['asset-relations-tab'])).toBe(true);
     expect(invalidated(assetRelationsKey('as-1'))).toBe(true);
 
     for (const [section, kind] of [[A('containedBy'), 'contained_by'], [A('dependsOn'), 'depends_on'], [A('dependedOnBy'), 'depended_on_by']] as const) {
@@ -164,7 +166,7 @@ describe('AssetDependenciesTab', () => {
     }
   });
 
-  it('unlinks at once, reads the shared query and the impact again, and restores the row when the server refuses', async () => {
+  it('unlinks at once, reads the relations and the impact of every asset again, and restores the row when the server refuses', async () => {
     const { invalidated } = renderTab();
     let reject: (error: unknown) => void = () => undefined;
     mocked.delete.mockReturnValue(new Promise((_, next) => { reject = next; }) as never);
@@ -182,7 +184,9 @@ describe('AssetDependenciesTab', () => {
     mocked.delete.mockResolvedValue({ data: { ok: true, changed: true } } as never);
     fireEvent.click(screen.getByRole('button', { name: 'workspace.application.relations.remove(name=backup-01)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/relations/depended_on_by/as-5'));
-    await waitFor(() => expect(invalidated(['asset-impact', 'as-1'])).toBe(true));
+    await waitFor(() => expect(invalidated(['asset-impact'])).toBe(true));
+    // The other asset of the relation reads its relations again too.
+    expect(invalidated(['asset-relations-tab'])).toBe(true);
     expect(invalidated(assetRelationsKey('as-1'))).toBe(true);
   });
 

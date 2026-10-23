@@ -47,6 +47,25 @@ describe('HardwareInfoPanel', () => {
     expect(post).toHaveBeenCalledTimes(1);
   });
 
+  it('saves a pending change to the previous asset when the page moves to another asset', async () => {
+    // The page keys the panel by asset id, so moving to another asset remounts it.
+    const panel = (assetId: string) => (
+      <ThemeProvider theme={createAppTheme('light')}>
+        <HardwareInfoPanel key={assetId} assetId={assetId} />
+      </ThemeProvider>
+    );
+    const view = render(panel('asset-1'));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/hardware-info'));
+    const serial = screen.getByPlaceholderText('workspace.asset.hardware.serialNumberPlaceholder');
+    await waitFor(() => expect(serial).toBeEnabled());
+    fireEvent.change(serial, { target: { value: 'SN-42' } });
+    view.rerender(panel('asset-2'));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/hardware-info', expect.objectContaining({ serial_number: 'SN-42' })));
+    await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-2/hardware-info'));
+    await wait(800);
+    expect(post).toHaveBeenCalledTimes(1);
+  });
+
   it('saves after the autosave delay while it stays on the page, and not again on leaving', async () => {
     const view = renderPanel();
     await waitFor(() => expect(get).toHaveBeenCalledWith('/assets/asset-1/hardware-info'));
