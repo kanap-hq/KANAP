@@ -510,25 +510,27 @@ async function testUnscoped(s: Seed2): Promise<void> {
 /**
  * The search index runs at every keystroke (spec §6.9): its policy reaches contracts and tasks
  * through the set functions, in an uncorrelated `IN (SELECT ...)`, so each set is read once per
- * statement (lot 2, run 2D). The plan of a limited person holds both set functions, each as the
- * Function Scan of a SubPlan, and no per-id depth function (one call per row: 202 to 233 ms at
- * 10 000 lines, run 2C).
+ * statement (lot 2, run 2D). The plan of a limited person reads each set function in a SubPlan
+ * of its own (hashed at scale; on a small seed the planner may scan the kept result instead), and
+ * calls no per-id depth function (one call per row: 202 to 233 ms at 10 000 lines, run 2C).
  */
 async function testSearchIndexSetForm(s: Seed2): Promise<void> {
   assert.equal(await apply(s.persons.paul), 'limited');
-  const plan = (await q(`EXPLAIN (ANALYZE, FORMAT JSON) SELECT entity_type, entity_id FROM search_index`))[0]['QUERY PLAN'][0].Plan;
-  const scans: any[] = [];
+  const plan = (await q(`EXPLAIN (ANALYZE, VERBOSE, FORMAT JSON) SELECT entity_type, entity_id FROM search_index`))[0]['QUERY PLAN'][0].Plan;
+  const subplans: Array<{ name: string; loops: number }> = [];
   const walk = (node: any) => {
-    if (node['Node Type'] === 'Function Scan' && /^data_access_visible_(contract|task)_ids$/.test(node['Function Name'] ?? '')) scans.push(node);
+    if (node['Parent Relationship'] === 'SubPlan') {
+      const text = JSON.stringify(node);
+      for (const name of ['data_access_visible_contract_ids', 'data_access_visible_task_ids']) {
+        if (text.includes(`${name}()`)) subplans.push({ name, loops: node['Actual Loops'] });
+      }
+    }
     for (const child of node.Plans ?? []) walk(child);
   };
   walk(plan);
+  assert.deepEqual(subplans.map((n) => n.name).sort(), ['data_access_visible_contract_ids', 'data_access_visible_task_ids'], 'search index: each set function read in one SubPlan');
+  assert.ok(subplans.some((n) => n.loops >= 1), 'search index: a set function was read');
   const text = JSON.stringify(plan);
-  assert.deepEqual(scans.map((n) => n['Function Name']).sort(), ['data_access_visible_contract_ids', 'data_access_visible_task_ids'], 'search index: both set functions in the plan');
-  for (const node of scans) {
-    assert.equal(node['Parent Relationship'], 'SubPlan', `${node['Function Name']}: read in a SubPlan`);
-  }
-  assert.ok(scans.some((n) => n['Actual Loops'] >= 1), 'search index: a set function was read');
   for (const perId of ['data_access_contract_visible', 'data_access_task_visible']) {
     assert.ok(!text.includes(perId), `search index: no per-row call of ${perId}`);
   }
