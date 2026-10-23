@@ -29,6 +29,7 @@ import { formatShortDate } from '../../../lib/dateFormat';
 import DashboardTile, { TileEmptyState } from './DashboardTile';
 import { useRelativeTime } from './useRelativeTime';
 import { useDropGoneRecentItems } from '../hooks/useDropGoneRecentItems';
+import { useKanapDialogs } from '../../../components/design';
 
 interface RecentlyViewedTileProps {
   config: Record<string, unknown>;
@@ -60,6 +61,7 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
   const { t } = useTranslation('common');
   const locale = useLocale();
   const relativeTime = useRelativeTime();
+  const dialogs = useKanapDialogs();
   const limit = Math.min((config.limit as number) || 5, MAX_TILE_ITEMS);
   // Entries whose record is gone (deleted with another one, or elsewhere) leave the list.
   useDropGoneRecentItems(items);
@@ -80,6 +82,16 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
     if (entityConfig) {
       navigate(entityConfig.route(id));
     }
+  };
+
+  const handleClear = async () => {
+    const confirmed = await dialogs.confirm({
+      title: t('dashboard.tiles.clearHistoryTitle'),
+      message: t('dashboard.tiles.clearHistoryMessage'),
+      confirmLabel: t('buttons.clear'),
+      intent: 'danger',
+    });
+    if (confirmed) clearRecent();
   };
 
   return (
@@ -137,7 +149,7 @@ export default function RecentlyViewedTile({ config }: RecentlyViewedTileProps) 
               component="button"
               type="button"
               variant="caption"
-              onClick={clearRecent}
+              onClick={handleClear}
               sx={{ border: 0, bgcolor: 'transparent', p: 0, cursor: 'pointer', color: 'kanap.text.tertiary', font: 'inherit', fontSize: 12, '&:hover': { textDecoration: 'underline' } }}
             >
               {t('dashboard.tiles.clearHistory')}
