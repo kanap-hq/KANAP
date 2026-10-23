@@ -45,6 +45,7 @@ async function testApplicationPassesReadWindows1252() {
   await svc.handleOwnerImport(
     windows1252File('name;business_owner_email_1\r\nRefonte CRM é;\r\n'),
     'enrich',
+    new Set<string>(),
     { manager: owners, tenantId: TENANT },
   );
   assert.ok(owners.params.some((values: unknown[]) => values.includes('Refonte CRM é')), JSON.stringify(owners.params));
@@ -52,6 +53,8 @@ async function testApplicationPassesReadWindows1252() {
   const residency = recordingManager();
   await svc.handleDataResidencyImport(
     windows1252File('name;data_residency\r\nRefonte CRM é;FR\r\n'),
+    'enrich',
+    new Set<string>(),
     { manager: residency, tenantId: TENANT },
   );
   assert.ok(residency.params.some((values: unknown[]) => values.includes('Refonte CRM é')), JSON.stringify(residency.params));
