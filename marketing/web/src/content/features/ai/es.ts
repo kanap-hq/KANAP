@@ -62,7 +62,7 @@ const content: FeatureContent = {
     title: 'Lo que puede preguntarle a Plaid',
     items: [
       { title: '«¿Cuál es el estado del Proyecto Atlas?»', body: 'Plaid recupera el proyecto, sus tareas, el cronograma y el equipo, y le entrega un briefing de estado conciso con bloqueos y próximos hitos.' },
-      { title: '«Lista las aplicaciones en AWS sin responsable»', body: 'Consulta estructurada sobre su paisaje de TI. Resultados filtrados y ordenados a partir de datos en vivo.' },
+      { title: '«Lista las aplicaciones en AWS sin responsable»', body: 'Consulta estructurada sobre su panorama IT. Resultados filtrados y ordenados a partir de datos en vivo.' },
       { title: '«Redacta una política de seguridad de acceso remoto»', body: 'Plaid crea un nuevo documento en su base de conocimiento, con metadatos correctos y contenido markdown.' },
       { title: '«¿Qué contratos expiran en 90 días?»', body: 'Respuesta instantánea con nombres de proveedores, importes y fechas de renovación. Sin navegar por paneles.' },
     ],
@@ -73,7 +73,7 @@ const content: FeatureContent = {
       { label: 'Agentes, para el trabajo que se ejecuta solo', href: '/features/agents' },
       { label: 'Seguridad', href: '/security' },
       { label: 'Gestión de presupuesto', href: '/features/budget' },
-      { label: 'Paisaje de TI', href: '/features/it-landscape' },
+      { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Gestión de portafolio', href: '/features/portfolio' },
       { label: 'Conocimiento', href: '/features/knowledge' },
     ],

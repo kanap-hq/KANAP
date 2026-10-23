@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Sus datos se quedan donde están',
-        body: 'Cifras de presupuesto, contratos de proveedores, paisaje de TI, todo. En sus servidores, en su red. Ningún encargado de tratamiento externo al que confiar sus datos de gobernanza, salvo los servicios que decida conectar, como un proveedor de modelos de IA o un relé de correo. El motor de los agentes y sus acciones también se ejecutan ahí, lo que importa cuando un auditor pregunta.',
+        body: 'Cifras de presupuesto, contratos de proveedores, panorama IT, todo. En sus servidores, en su red. Ningún encargado de tratamiento externo al que confiar sus datos de gobernanza, salvo los servicios que decida conectar, como un proveedor de modelos de IA o un relé de correo. El motor de los agentes y sus acciones también se ejecutan ahí, lo que importa cuando un auditor pregunta.',
       },
       {
         title: 'Listo para cumplimiento',

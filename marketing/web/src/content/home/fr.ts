@@ -78,14 +78,14 @@ const content: HomeContent = {
       },
       {
         slug: '/features/it-landscape',
-        title: 'Cartographie',
+        title: 'Cartographie IT',
         blurb:
-          "Pour les architectes, les responsables d'application et l'infrastructure. Applications, interfaces et serveurs documentés, et des cartes qui montrent le SI d'un coup d'œil.",
+          "Pour les architectes, les responsables d'application, l'infrastructure et la sécurité. Applications, technologies et serveurs documentés, vulnérabilités et fins de support suivies jusqu'à l'application métier.",
         bullets: [
-          'Applications et instances par environnement',
-          'Interfaces, flux et middleware',
-          'Serveurs et infrastructure, import depuis NetBox',
-          "Cartes d'interfaces et de connexions interactives",
+          'Applications, interfaces et flux',
+          'Technologies, versions et fins de support',
+          "Vulnérabilités jusqu'à l'application métier",
+          'Serveurs, import NetBox, cartes interactives',
         ],
         ctaLabel: 'Découvrir la cartographie',
       },

@@ -21,7 +21,7 @@ const content: FeaturesHubContent = {
       outcome: 'Arrivez à la revue de budget avec les réponses.',
       modules: [
         { slug: 'budget', label: 'Budget' },
-        { slug: 'it-landscape', label: 'Paysage IT' },
+        { slug: 'it-landscape', label: 'Cartographie IT' },
       ],
       shotAlt: 'Top 10 des lignes OPEX du budget 2026, en camembert',
     },
@@ -32,7 +32,7 @@ const content: FeaturesHubContent = {
         "Vous retirez le CRM historique. Avant d'engager des dates, il faut savoir ce qui en dépend : quelles interfaces, quelles applications en aval, quels projets l'utilisent déjà. La carte des interfaces montre le graphe de dépendances d'un coup d'œil. Votre plan de migration liste chaque propriétaire d'interface à contacter, chaque projet à mettre dans la boucle. La connaissance attache les décisions aux applications qu'elles décrivent. Votre successeur saura pourquoi.",
       outcome: 'Migrez les yeux ouverts plutôt que les doigts croisés.',
       modules: [
-        { slug: 'it-landscape', label: 'Paysage IT' },
+        { slug: 'it-landscape', label: 'Cartographie IT' },
         { slug: 'knowledge', label: 'Connaissance' },
         { slug: 'portfolio', label: 'Portefeuille' },
       ],
@@ -57,7 +57,7 @@ const content: FeaturesHubContent = {
         "La gestion de commandes en production est lente. Vous demandez à Plaid : « Quelles applications consomment l'API order-management ? » Cinq secondes plus tard, une liste. « Lesquelles ont été mises à jour cette semaine ? » Une seule. « Qui en est responsable ? » Email et Teams. Du symptôme au responsable sans ouvrir cinq outils. Les tickets de premier niveau qui reviennent chaque semaine partent maintenant à un agent, pour que votre équipe ne prenne en charge que ce qui exige une personne.",
       outcome: "Résolvez les incidents depuis un seul endroit, pendant qu'un agent traite les tickets répétitifs.",
       modules: [
-        { slug: 'it-landscape', label: 'Paysage IT' },
+        { slug: 'it-landscape', label: 'Cartographie IT' },
         { slug: 'knowledge', label: 'Connaissance' },
         { slug: 'ai', label: 'Plaid' },
         { slug: 'agents', label: 'Agents' },
@@ -71,7 +71,7 @@ const content: FeaturesHubContent = {
         "Combien de SaaS payons-nous ? Lesquels se chevauchent ? Qui est le propriétaire quand il faut renégocier ? Chaque application porte sa ligne OPEX, son contrat, sa date de renouvellement, sa classification de données. Triez par coût, par chevauchement, par usage. Discutez avec la finance, les faits sous les yeux.",
       outcome: "Arrêtez de renouveler ce que personne n'utilise.",
       modules: [
-        { slug: 'it-landscape', label: 'Paysage IT' },
+        { slug: 'it-landscape', label: 'Cartographie IT' },
         { slug: 'budget', label: 'Budget' },
         { slug: 'knowledge', label: 'Connaissance' },
       ],
@@ -85,7 +85,7 @@ const content: FeaturesHubContent = {
       outcome: "Votre équipe consacre son temps aux problèmes difficiles pendant que l'agent traite les tâches de routine.",
       modules: [
         { slug: 'agents', label: 'Agents' },
-        { slug: 'it-landscape', label: 'Paysage IT' },
+        { slug: 'it-landscape', label: 'Cartographie IT' },
         { slug: 'knowledge', label: 'Connaissance' },
       ],
       shotAlt: 'Un agent traitant une file de tickets de premier niveau',

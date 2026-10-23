@@ -75,7 +75,7 @@ const content: FeatureContent = {
   crossLinks: {
     label: 'Explorez la plateforme',
     links: [
-      { label: 'Cartographie', href: '/features/it-landscape' },
+      { label: 'Cartographie IT', href: '/features/it-landscape' },
       { label: 'Portefeuille de projets', href: '/features/portfolio' },
       { label: 'Documentation', href: '/features/knowledge' },
       { label: "Plaid, l'agent IA intégré", href: '/features/ai' },

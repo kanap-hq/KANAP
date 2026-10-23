@@ -2,14 +2,14 @@ import type { FeatureContent } from '../types';
 
 const content: FeatureContent = {
   meta: {
-    title: 'Paysage IT',
+    title: 'Cartographie IT',
     description:
-      'Documentez applications, interfaces et infrastructure. Cartes d\'architecture interactives, suivi du cycle de vie, middleware 3 segments. Open source.',
+      'Applications, technologies, interfaces et serveurs en un référentiel. Vulnérabilités et fins de support jusqu\'à l\'application métier. Open source.',
   },
   header: {
-    eyebrow: 'Paysage IT',
+    eyebrow: 'Cartographie IT',
     title: 'Documentez tout votre système d\'information.',
-    lead: 'Applications, interfaces et infrastructure en un seul lieu. Visualisez votre architecture via des cartes interactives et suivez les cycles de vie de la proposition au retrait.',
+    lead: 'Applications, technologies, interfaces et infrastructure en un seul lieu. Suivez les fins de support et les vulnérabilités jusqu\'à l\'application métier, et visualisez votre architecture sur des cartes interactives.',
   },
   sections: [
     {
@@ -44,13 +44,37 @@ const content: FeatureContent = {
         'Emplacements : datacenters, régions cloud, zones de disponibilité',
         'Connexions serveur-à-serveur et mesh multi-serveurs',
         'Support clusters avec groupement de membres',
-        'Suivi des OS avec dates de support',
+        'Si ce serveur tombe : applications, clusters et processus touchés',
       ],
       shotAlt: 'Registre de serveurs groupé par emplacement',
     },
     {
+      title: 'Technologies et fins de support',
+      body: 'Les technologies relient vos applications à vos serveurs : bases de données, middleware, systèmes d\'exploitation, annuaires, services cloud. Chacune porte ses versions et leurs dates de fin de support, tenues à jour par le catalogue.',
+      bullets: [
+        'Catalogue de 192 produits, une technologie créée en un clic',
+        'Dates de support suivies sur endoflife.date et chez les éditeurs, avec leur source',
+        'Le système d\'exploitation de chaque serveur, avec sa version',
+        'Rapport Fins de support : ce qui arrive à échéance et ce que cela touche',
+        'Liens avec les serveurs et les applications, importables en CSV',
+      ],
+      shotAlt: 'Fiche d\'une technologie avec ses versions et leurs dates de fin de support',
+    },
+    {
+      title: 'Vulnérabilités',
+      body: 'KANAP rapproche les vulnérabilités publiées de vos technologies, version par version, et montre les serveurs et les applications métier qu\'elles touchent. Les failles exploitées passent en tête.',
+      bullets: [
+        'Deux sources toutes les 6 heures : la NVD et les fiches des éditeurs sur CVE.org',
+        'Signaux d\'exploitation : catalogues de la CISA et de l\'Union européenne, score EPSS',
+        'Sur les listes et les fiches des serveurs et des applications, et au tableau de bord',
+        'À traiter, traitée, non concernée : avec une note et le journal d\'audit',
+        'E-mail aux responsables IT pour les failles graves ou exploitées',
+      ],
+      shotAlt: 'Page Vulnérabilités, les failles exploitées en tête',
+    },
+    {
       title: 'Cartes d\'architecture interactives',
-      body: "Deux visualisations D3 vous permettent de comprendre votre architecture d'un coup d'œil. Filtrez par environnement, cycle de vie ou nœuds racines. Export SVG ou PNG. Ce paysage est aussi la carte que lisent vos agents, pour savoir quelle application un problème touche, qui en est responsable et son degré de criticité.",
+      body: "Deux visualisations D3 vous permettent de comprendre votre architecture d'un coup d'œil. Filtrez par environnement, cycle de vie ou nœuds racines. Export SVG ou PNG. Cette cartographie est aussi ce que lisent vos agents, pour savoir quelle application un problème touche, qui en est responsable et son degré de criticité.",
       bullets: [
         'Carte des interfaces : applications comme nœuds, interfaces comme arêtes',
         'Carte des connexions : serveurs et connectivité réseau',
@@ -62,11 +86,11 @@ const content: FeatureContent = {
     },
   ],
   more: {
-    title: 'Plus dans Paysage IT',
+    title: 'Plus dans Cartographie IT',
     items: [
       { title: 'Dérivation des risques', body: 'Risque de connexion calculé depuis les interfaces liées. Criticité, classe de données, PII auto-dérivés.' },
-      { title: 'Contacts support', body: 'Utilisateurs internes et contacts externes par application avec rôles et notes.' },
-      { title: 'Liens coûts', body: 'Liez les applications aux items OPEX / CAPEX. Voyez le vrai coût du portefeuille.' },
+      { title: 'Zones d\'administration', body: 'Qui administre quoi, selon le modèle en tiers. Les écarts de cloisonnement entre zones sont signalés.' },
+      { title: 'Liens coûts', body: 'Liez applications, serveurs et technologies aux lignes budgétaires et aux contrats. Voyez le vrai coût du portefeuille.' },
       { title: 'Import / export CSV', body: 'Import en masse d\'applications et d\'actifs. Export de l\'inventaire pour analyse.' },
     ],
   },
