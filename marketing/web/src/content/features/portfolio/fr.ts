@@ -77,7 +77,7 @@ const content: FeatureContent = {
       { label: 'Agents', href: '/features/agents' },
       { label: 'Plaid, Assistant IA', href: '/features/ai' },
       { label: 'Gestion du budget', href: '/features/budget' },
-      { label: 'Paysage IT', href: '/features/it-landscape' },
+      { label: 'Cartographie IT', href: '/features/it-landscape' },
       { label: 'Connaissance', href: '/features/knowledge' },
     ],
   },

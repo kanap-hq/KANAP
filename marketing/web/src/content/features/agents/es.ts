@@ -99,7 +99,7 @@ const content: AgentsContent = {
   crossLinks: {
     label: 'Vea cómo encaja todo',
     links: [
-      { label: 'Paisaje de TI', href: '/features/it-landscape' },
+      { label: 'Panorama IT', href: '/features/it-landscape' },
       { label: 'Conocimiento', href: '/features/knowledge' },
       { label: 'Autoalojado', href: '/on-premise' },
       { label: 'Seguridad', href: '/security' },

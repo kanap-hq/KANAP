@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'IT-Landschaft',
     description:
-      'Dokumentieren Sie Anwendungen, Schnittstellen und Infrastruktur. Interaktive Architekturkarten, Lifecycle-Tracking, 3-Leg-Middleware. Open Source. Self-Hosting kostenlos oder Hosted Cloud.',
+      'Anwendungen, Technologien, Schnittstellen und Server in einem Repository. Schwachstellen und Supportende bis zur Fachanwendung. Open Source.',
   },
   header: {
     eyebrow: 'IT-Landschaft',
     title: 'Dokumentieren Sie Ihr gesamtes Informationssystem.',
-    lead: 'Anwendungen, Schnittstellen und Infrastruktur an einem Ort. Visualisieren Sie Ihre Architektur mit interaktiven Karten und verfolgen Sie den Lebenszyklus vom Vorschlag bis zur Abschaltung.',
+    lead: 'Anwendungen, Technologien, Schnittstellen und Infrastruktur an einem Ort. Verfolgen Sie Supportende und Schwachstellen bis zur Fachanwendung und visualisieren Sie Ihre Architektur auf interaktiven Karten.',
   },
   sections: [
     {
@@ -44,9 +44,33 @@ const content: FeatureContent = {
         'Standorte: Rechenzentren, Cloud-Regionen, Availability Zones',
         'Server-zu-Server- und Multi-Server-Mesh-Verbindungen',
         'Cluster-Unterstützung mit Mitglieder-Gruppierung',
-        'Betriebssystem-Tracking mit Supportfristen',
+        'Wenn dieser Server ausfällt: betroffene Anwendungen, Cluster und Prozesse',
       ],
       shotAlt: 'Server-Register nach Standort gruppiert',
+    },
+    {
+      title: 'Technologien und Supportende',
+      body: 'Technologien verbinden Ihre Anwendungen mit Ihren Servern: Datenbanken, Middleware, Betriebssysteme, Verzeichnisdienste, Cloud-Dienste. Jede trägt ihre Versionen und deren Supportende, vom Katalog aktuell gehalten.',
+      bullets: [
+        'Katalog mit 192 Produkten, eine Technologie mit einem Klick angelegt',
+        'Supportdaten von endoflife.date und den Herstellern, mit Quelle',
+        'Das Betriebssystem jedes Servers, mit seiner Version',
+        'Bericht Supportende: was ausläuft und was davon betroffen ist',
+        'Verknüpfungen mit Servern und Anwendungen, per CSV importierbar',
+      ],
+      shotAlt: 'Technologie-Datensatz mit Versionen und deren Supportende',
+    },
+    {
+      title: 'Schwachstellen',
+      body: 'KANAP gleicht veröffentlichte Schwachstellen mit Ihren Technologien ab, Version für Version, und zeigt die betroffenen Server und Fachanwendungen. Ausgenutzte Schwachstellen stehen oben.',
+      bullets: [
+        'Zwei Quellen alle 6 Stunden: die NVD und die Herstellereinträge auf CVE.org',
+        'Ausnutzungssignale: Kataloge von CISA und Europäischer Union, EPSS-Wert',
+        'In den Listen und Datensätzen der Server und Anwendungen und im Dashboard',
+        'Zu bearbeiten, behoben, nicht betroffen: mit Notiz und Audit-Log',
+        'E-Mail an die IT-Verantwortlichen bei schweren oder ausgenutzten Schwachstellen',
+      ],
+      shotAlt: 'Seite Schwachstellen, ausgenutzte Schwachstellen zuerst',
     },
     {
       title: 'Interaktive Architekturkarten',
@@ -65,8 +89,8 @@ const content: FeatureContent = {
     title: 'Mehr in IT-Landschaft',
     items: [
       { title: 'Risikoableitung', body: 'Verbindungsrisiko automatisch aus verknüpften Schnittstellen abgeleitet. Kritikalität, Datenklasse, PII werden mitgezogen.' },
-      { title: 'Support-Kontakte', body: 'Interne Nutzer und externe Kontakte pro Anwendung, mit Rollen und Notizen.' },
-      { title: 'Kostenverknüpfung', body: 'Anwendungen an OPEX- und CAPEX-Posten knüpfen. Sehen Sie die echten Portfoliokosten.' },
+      { title: 'Administrationszonen', body: 'Wer was administriert, nach dem Tier-Modell. Lücken in der Trennung zwischen Zonen werden gemeldet.' },
+      { title: 'Kostenverknüpfung', body: 'Anwendungen, Server und Technologien mit Budgetzeilen und Verträgen verknüpfen. Sehen Sie die echten Portfoliokosten.' },
       { title: 'CSV-Import/-Export', body: 'Anwendungen und Assets in Masse importieren. Inventar für Analysen exportieren.' },
     ],
   },

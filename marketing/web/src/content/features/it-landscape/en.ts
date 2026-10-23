@@ -4,12 +4,12 @@ const content: FeatureContent = {
   meta: {
     title: 'IT landscape',
     description:
-      'Document applications, interfaces, and infrastructure. Interactive architecture maps, lifecycle tracking, 3-leg middleware. Open source. Self-host free or choose hosted cloud.',
+      'Applications, technologies, interfaces and servers in one repository. Vulnerabilities and end of support traced to the business application. Open source.',
   },
   header: {
     eyebrow: 'IT landscape',
     title: 'Document your entire information system.',
-    lead: 'Applications, interfaces and infrastructure in one place. Visualise your architecture with interactive maps and track lifecycles from proposal to retirement.',
+    lead: 'Applications, technologies, interfaces and infrastructure in one place. Follow end of support and vulnerabilities down to the business application, and visualise your architecture on interactive maps.',
   },
   sections: [
     {
@@ -44,9 +44,33 @@ const content: FeatureContent = {
         'Locations: datacenters, cloud regions, availability zones',
         'Server-to-server and multi-server mesh connections',
         'Cluster support with member grouping',
-        'Operating system tracking with support dates',
+        'If this server goes down: affected applications, clusters and processes',
       ],
       shotAlt: 'Server registry grouped by location',
+    },
+    {
+      title: 'Technologies and end of support',
+      body: 'Technologies link your applications to your servers: databases, middleware, operating systems, directories, cloud services. Each one carries its versions and their end of support dates, kept up to date by the catalog.',
+      bullets: [
+        'A catalog of 192 products, a technology created in one click',
+        'Support dates followed on endoflife.date and at the vendors, with their source',
+        'Each server\'s operating system, with its version',
+        'End of support report: what is reaching its date and what it affects',
+        'Links to servers and applications, importable as CSV',
+      ],
+      shotAlt: 'A technology record with its versions and their end of support dates',
+    },
+    {
+      title: 'Vulnerabilities',
+      body: 'KANAP matches published vulnerabilities to your technologies, version by version, and shows the servers and business applications they affect. Exploited vulnerabilities come first.',
+      bullets: [
+        'Two sources every 6 hours: the NVD and the vendors\' records on CVE.org',
+        'Exploitation signals: the CISA and European Union catalogs, EPSS score',
+        'On server and application lists and records, and on the dashboard',
+        'To review, addressed, not affected: with a note and the audit log',
+        'Email to IT owners for severe or exploited vulnerabilities',
+      ],
+      shotAlt: 'The Vulnerabilities page, exploited vulnerabilities first',
     },
     {
       title: 'Interactive architecture maps',
@@ -65,8 +89,8 @@ const content: FeatureContent = {
     title: 'More in IT landscape',
     items: [
       { title: 'Risk derivation', body: 'Connection risk calculated from linked interfaces. Criticality, data class, PII auto-derived.' },
-      { title: 'Support contacts', body: 'Internal users and external contacts per application with roles and notes.' },
-      { title: 'Cost linking', body: 'Link applications to OPEX / CAPEX items. See the true cost of your portfolio.' },
+      { title: 'Administration zones', body: 'Who administers what, following the tiered model. Gaps in the separation between zones are flagged.' },
+      { title: 'Cost linking', body: 'Link applications, servers and technologies to budget lines and contracts. See the true cost of your portfolio.' },
       { title: 'CSV import / export', body: 'Bulk import applications and assets. Export your inventory for analysis.' },
     ],
   },

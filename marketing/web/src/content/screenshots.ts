@@ -26,6 +26,8 @@ export const FEATURE_SCREENSHOTS = {
     '/screenshots/it-applications.png',
     '/screenshots/it-interface-technical.png',
     '/screenshots/it-assets.png',
+    '/screenshots/release-26-10-6-technology.png',
+    '/screenshots/release-26-10-6-vulnerabilities.png',
     '/screenshots/it-interface-map.png',
   ],
   portfolio: [

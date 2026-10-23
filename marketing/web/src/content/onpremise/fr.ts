@@ -25,7 +25,7 @@ const content: OnPremContent = {
     pillars: [
       {
         title: 'Vos données restent à la maison',
-        body: "Budgets, contrats fournisseurs, paysage IT, tout. Sur vos serveurs, dans votre réseau. Aucun sous-traitant à qui confier vos données de gouvernance, hormis les services que vous choisissez de connecter, comme un fournisseur de modèle IA ou un relais email. Le moteur des agents et leurs actions s'y exécutent aussi, ce qui compte quand un auditeur pose la question.",
+        body: "Budgets, contrats fournisseurs, cartographie IT, tout. Sur vos serveurs, dans votre réseau. Aucun sous-traitant à qui confier vos données de gouvernance, hormis les services que vous choisissez de connecter, comme un fournisseur de modèle IA ou un relais email. Le moteur des agents et leurs actions s'y exécutent aussi, ce qui compte quand un auditeur pose la question.",
       },
       {
         title: 'Prêt pour la conformité',

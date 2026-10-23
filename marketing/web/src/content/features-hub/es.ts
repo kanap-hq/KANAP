@@ -21,7 +21,7 @@ const content: FeaturesHubContent = {
       outcome: 'Entre a la revisión presupuestaria con las respuestas.',
       modules: [
         { slug: 'budget', label: 'Presupuesto' },
-        { slug: 'it-landscape', label: 'Paisaje de TI' },
+        { slug: 'it-landscape', label: 'Panorama IT' },
       ],
       shotAlt: 'Las 10 mayores líneas OPEX del presupuesto 2026, en gráfico circular',
     },
@@ -32,7 +32,7 @@ const content: FeaturesHubContent = {
         'Va a retirar el CRM heredado. Antes de comprometer fechas, necesita saber qué depende de él: qué interfaces, qué aplicaciones aguas abajo, qué proyectos ya lo tocan. El mapa de interfaces muestra el grafo de dependencias de un vistazo. Su plan de migración enumera cada responsable de interfaz al que llamar, cada proyecto que debe estar al tanto. El conocimiento ata las decisiones a las aplicaciones que describen. Su yo futuro sabrá por qué.',
       outcome: 'Migre con los ojos abiertos en lugar de con los dedos cruzados.',
       modules: [
-        { slug: 'it-landscape', label: 'Paisaje de TI' },
+        { slug: 'it-landscape', label: 'Panorama IT' },
         { slug: 'knowledge', label: 'Conocimiento' },
         { slug: 'portfolio', label: 'Portafolio' },
       ],
@@ -57,7 +57,7 @@ const content: FeaturesHubContent = {
         'La gestión de pedidos en producción está lenta. Le pregunta a Plaid: «¿Qué aplicaciones consumen la API order-management?» Cinco segundos después, una lista. «¿Cuáles se han actualizado esta semana?» Una coincidencia. «¿Quién es el responsable?» Email y usuario de Teams. Del síntoma al responsable sin abrir cinco herramientas. Los tickets de primer nivel que se repiten cada semana van ahora a un agente, así su equipo solo se ocupa de lo que necesita a una persona.',
       outcome: 'Resuelva incidencias desde un solo lugar, mientras un agente despeja los tickets repetitivos.',
       modules: [
-        { slug: 'it-landscape', label: 'Paisaje de TI' },
+        { slug: 'it-landscape', label: 'Panorama IT' },
         { slug: 'knowledge', label: 'Conocimiento' },
         { slug: 'ai', label: 'Plaid' },
         { slug: 'agents', label: 'Agentes' },
@@ -71,7 +71,7 @@ const content: FeaturesHubContent = {
         '¿Cuántas aplicaciones SaaS estamos pagando? ¿Cuáles se solapan? ¿Quién es el responsable cuando toca renegociar? Cada aplicación lleva su línea OPEX, su contrato, su fecha de renovación y su clasificación de datos. Ordene por coste, por solapamiento, por uso. Tenga la conversación con finanzas con los hechos delante.',
       outcome: 'Deje de renovar lo que nadie usa.',
       modules: [
-        { slug: 'it-landscape', label: 'Paisaje de TI' },
+        { slug: 'it-landscape', label: 'Panorama IT' },
         { slug: 'budget', label: 'Presupuesto' },
         { slug: 'knowledge', label: 'Conocimiento' },
       ],
@@ -85,7 +85,7 @@ const content: FeaturesHubContent = {
       outcome: 'Su equipo dedica su tiempo a los problemas difíciles mientras el agente despeja los rutinarios.',
       modules: [
         { slug: 'agents', label: 'Agentes' },
-        { slug: 'it-landscape', label: 'Paisaje de TI' },
+        { slug: 'it-landscape', label: 'Panorama IT' },
         { slug: 'knowledge', label: 'Conocimiento' },
       ],
       shotAlt: 'Un agente trabajando una cola de tickets de primer nivel',

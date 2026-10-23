@@ -750,6 +750,40 @@ const PAGES = {
       await sleep(1500);
     },
   },
+  // Release 26.10.6 (2026-10-23): technology versions, vulnerabilities, application and server impact. Read-only.
+  'release-26-10-6-technology': {
+    path: '/it/technologies/TEC-18/overview', // Microsoft SQL Server: versions with end-of-support dates
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /End of extended support/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  'release-26-10-6-vulnerabilities': {
+    path: '/it/vulnerabilities', // default view: state "To review", severity first
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total: [\d,]+ rows/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  'release-26-10-6-application-vulnerabilities': {
+    path: '/it/applications/APP-36/operations', // CheeseTrack: severe badge and a Vulnerabilities section across Tomcat, vSphere and SQL Server
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Vulnerabilities\s*\d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  'release-26-10-6-server-down': {
+    path: '/it/assets/AST-50/relations', // PAR-SQL-01: "If this server goes down", four tables
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /If this server goes down/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
 };
 PAGES['chargeback-company-2026-10-13'] = PAGES['chargeback-company'];
 
