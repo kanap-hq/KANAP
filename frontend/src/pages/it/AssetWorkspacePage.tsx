@@ -1352,6 +1352,78 @@ export default function AssetWorkspacePage() {
             fullWidth
           />
         </PropertyRow>
+        <PropertyRow label={t('workspace.asset.meta.cluster')}>
+          <Switch
+            checked={isCluster}
+            onChange={(e) => {
+              const next = e.target.checked;
+              setIsCluster(next);
+              if (isCreate) {
+                setDirty(true);
+                return;
+              }
+              void (async () => {
+                try {
+                  await patchAsset({ is_cluster: next });
+                } catch {
+                  return;
+                }
+                // The impact reads the members of a cluster.
+                void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+                if (!(next && id && canEditNetboxField('operating_system'))) return;
+                try {
+                  await api.delete(`/assets/${id}/operating-system`);
+                  await invalidateTechnologyLinks(queryClient);
+                } catch (e) {
+                  setError(getApiErrorMessage(e, t, t('workspace.asset.technologies.saveFailed')));
+                }
+              })();
+            }}
+            disabled={!canManage || saving}
+            color="primary"
+            size="small"
+            inputProps={{ 'aria-label': t('workspace.asset.meta.cluster') }}
+          />
+        </PropertyRow>
+        <PropertyRow label={t('workspace.asset.technical.environment')}>
+          <Select
+            value={environment}
+            onChange={(e) => {
+              const next = e.target.value;
+              setEnvironment(next);
+              updateScalar('environment', next as AssetRecord['environment']);
+            }}
+            variant="standard"
+            disabled={!canManage || saving}
+            sx={drawerSelectSx}
+          >
+            {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
+          </Select>
+        </PropertyRow>
+        <PropertyRow label={t('workspace.asset.technical.adminZone')}>
+          <Select
+            value={adminZone}
+            onChange={(e) => {
+              const next = e.target.value;
+              setAdminZone(next);
+              updateScalar('admin_zone', (next || null) as AssetRecord['admin_zone']);
+            }}
+            variant="standard"
+            disabled={!canManage || saving}
+            displayEmpty
+            SelectDisplayProps={{ 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
+            sx={drawerSelectSx}
+            renderValue={(value) => (value
+              ? adminZoneOptions.find((opt) => opt.value === value)?.label ?? String(value)
+              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('common:labels.none')}</Box>)}
+          >
+            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
+            {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
+          </Select>
+        </PropertyRow>
+      </PropertyGroup>
+
+      <PropertyGroup>
         <PropertyRow label={t('workspace.asset.overview.location')} required>
           <Box sx={drawerFieldValueSx}>
             <LocationSelect
@@ -1415,42 +1487,6 @@ export default function AssetWorkspacePage() {
       </PropertyGroup>
 
       <PropertyGroup>
-        <PropertyRow label={t('workspace.asset.technical.environment')}>
-          <Select
-            value={environment}
-            onChange={(e) => {
-              const next = e.target.value;
-              setEnvironment(next);
-              updateScalar('environment', next as AssetRecord['environment']);
-            }}
-            variant="standard"
-            disabled={!canManage || saving}
-            sx={drawerSelectSx}
-          >
-            {ENV_OPTIONS.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
-          </Select>
-        </PropertyRow>
-        <PropertyRow label={t('workspace.asset.technical.adminZone')}>
-          <Select
-            value={adminZone}
-            onChange={(e) => {
-              const next = e.target.value;
-              setAdminZone(next);
-              updateScalar('admin_zone', (next || null) as AssetRecord['admin_zone']);
-            }}
-            variant="standard"
-            disabled={!canManage || saving}
-            displayEmpty
-            SelectDisplayProps={{ 'aria-label': t('workspace.asset.technical.adminZone') } as React.HTMLAttributes<HTMLDivElement>}
-            sx={drawerSelectSx}
-            renderValue={(value) => (value
-              ? adminZoneOptions.find((opt) => opt.value === value)?.label ?? String(value)
-              : <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary })}>{t('common:labels.none')}</Box>)}
-          >
-            <MenuItem value="" sx={drawerMenuItemSx}>{t('common:labels.none')}</MenuItem>
-            {adminZoneOptions.map((opt) => <MenuItem key={opt.value} value={opt.value} sx={drawerMenuItemSx}>{opt.label}</MenuItem>)}
-          </Select>
-        </PropertyRow>
         <PropertyRow label={t('workspace.asset.overview.lifecycle')}>
           <Select
             value={status}
@@ -1473,6 +1509,88 @@ export default function AssetWorkspacePage() {
           <DateEUField label="" valueYmd={endOfLifeDate} onChangeYmd={(val) => { setEndOfLifeDate(val); updateScalar('end_of_life_date', (val || null) as AssetRecord['end_of_life_date']); }} disabled={!canManage || saving} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
       </PropertyGroup>
+    </>
+  );
+
+  // The cluster sections of the Dependencies tab, which is off in creation.
+  const clusterSection = (
+    <>
+      {isCluster && (
+        <Alert severity="info">
+          {t('workspace.asset.overview.clusterInfo')}
+        </Alert>
+      )}
+      {isCluster && (
+        <Box>
+          <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
+            <SectionLabel>{t('workspace.asset.technical.members')}</SectionLabel>
+            <Button
+              variant="action"
+              size="small"
+              onClick={openMemberDialog}
+            >
+              {t('workspace.asset.technical.editMembers')}
+            </Button>
+          </Stack>
+          {clusterError && <Alert severity="error" sx={{ mb: 1 }}>{clusterError}</Alert>}
+          {!clusterLoading && clusterMembers.length === 0 && (
+            <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.noMembers')}</Typography>
+          )}
+          {!clusterLoading && clusterMembers.length > 0 && (
+            <Table size="small" sx={denseTableSx}>
+              <TableHead>
+                <TableRow>
+                  <TableCell>{t('workspace.asset.technical.clusterTableHeaders.name')}</TableCell>
+                  <TableCell>{t('workspace.asset.technical.clusterTableHeaders.environment')}</TableCell>
+                  <TableCell>{t('workspace.asset.technical.clusterTableHeaders.status')}</TableCell>
+                  <TableCell>{t('workspace.asset.technical.clusterTableHeaders.operatingSystem')}</TableCell>
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {clusterMembers.map((member) => (
+                  <TableRow key={member.id} hover>
+                    <TableCell>
+                      <Button size="small" onClick={() => navigate(`/it/assets/${member.id}/overview`)}>
+                        {member.name}
+                      </Button>
+                    </TableCell>
+                    <TableCell>{environmentLabel(member.environment)}</TableCell>
+                    <TableCell>{labelFor('lifecycleStatus', member.status) || member.status}</TableCell>
+                    <TableCell>{member.operating_system || '-'}</TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+            </Table>
+          )}
+        </Box>
+      )}
+      {!isCluster && (
+        <Box>
+          <Box sx={{ mb: 1 }}>
+            <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
+          </Box>
+          {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
+          {!clustersLoading && (
+            clustersForServer.length === 0 ? (
+              <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
+            ) : (
+              <Stack spacing={0.75} sx={{ mt: 0.5 }}>
+                {clustersForServer.map((c) => (
+                  <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
+                    <Box>
+                      <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
+                      <Typography variant="caption" color="text.secondary" display="block">
+                        {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
+                      </Typography>
+                    </Box>
+                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
+                  </Stack>
+                ))}
+              </Stack>
+            )
+          )}
+        </Box>
+      )}
     </>
   );
 
@@ -2013,140 +2131,6 @@ export default function AssetWorkspacePage() {
           )}
           {tab === 'technical' && (
             <Stack spacing={3.5} sx={{ maxWidth: 900 }}>
-              <Box>
-                <Box sx={{ mb: 1 }}>
-                  <SectionLabel>{t('workspace.asset.technical.clusterManagement')}</SectionLabel>
-                </Box>
-                <Stack spacing={1.25} sx={{ maxWidth: 560 }}>
-                  <Box
-                    component="label"
-                    sx={(muiTheme) => ({
-                      display: 'inline-flex',
-                      alignItems: 'center',
-                      gap: 1,
-                      width: 'fit-content',
-                      color: muiTheme.palette.kanap.text.tertiary,
-                      fontSize: 13,
-                      lineHeight: 1.4,
-                    })}
-                  >
-                    {t('workspace.asset.meta.cluster')}
-                    <Switch
-                      checked={isCluster}
-                      onChange={(e) => {
-                        const next = e.target.checked;
-                        setIsCluster(next);
-                        if (isCreate) {
-                          setDirty(true);
-                          return;
-                        }
-                        void (async () => {
-                          try {
-                            await patchAsset({ is_cluster: next });
-                          } catch {
-                            return;
-                          }
-                          // The impact reads the members of a cluster.
-                          void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
-                          if (!(next && id && canEditNetboxField('operating_system'))) return;
-                          try {
-                            await api.delete(`/assets/${id}/operating-system`);
-                            await invalidateTechnologyLinks(queryClient);
-                          } catch (e) {
-                            setError(getApiErrorMessage(e, t, t('workspace.asset.technologies.saveFailed')));
-                          }
-                        })();
-                      }}
-                      disabled={!canManage || saving}
-                      color="primary"
-                      size="small"
-                      inputProps={{ 'aria-label': t('workspace.asset.meta.cluster') }}
-                    />
-                  </Box>
-                  {isCluster && (
-                    <Alert severity="info">
-                      {t('workspace.asset.overview.clusterInfo')}
-                    </Alert>
-                  )}
-                </Stack>
-              </Box>
-              {/* CLUSTER SECTIONS */}
-              {isCluster && (
-                <Box>
-                  <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
-                    <SectionLabel>{t('workspace.asset.technical.members')}</SectionLabel>
-                    <Button
-                      variant="action"
-                      size="small"
-                      onClick={openMemberDialog}
-                      disabled={isCreate}
-                    >
-                      {t('workspace.asset.technical.editMembers')}
-                    </Button>
-                  </Stack>
-                  {isCreate && (
-                    <Alert severity="info">{t('workspace.asset.technical.saveClusterFirst')}</Alert>
-                  )}
-                  {!isCreate && clusterError && <Alert severity="error" sx={{ mb: 1 }}>{clusterError}</Alert>}
-                  {!isCreate && !clusterLoading && clusterMembers.length === 0 && (
-                    <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.noMembers')}</Typography>
-                  )}
-                  {!isCreate && !clusterLoading && clusterMembers.length > 0 && (
-                    <Table size="small" sx={denseTableSx}>
-                      <TableHead>
-                        <TableRow>
-                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.name')}</TableCell>
-                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.environment')}</TableCell>
-                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.status')}</TableCell>
-                          <TableCell>{t('workspace.asset.technical.clusterTableHeaders.operatingSystem')}</TableCell>
-                        </TableRow>
-                      </TableHead>
-                      <TableBody>
-                        {clusterMembers.map((member) => (
-                          <TableRow key={member.id} hover>
-                            <TableCell>
-                              <Button size="small" onClick={() => navigate(`/it/assets/${member.id}/overview`)}>
-                                {member.name}
-                              </Button>
-                            </TableCell>
-                            <TableCell>{environmentLabel(member.environment)}</TableCell>
-                            <TableCell>{labelFor('lifecycleStatus', member.status) || member.status}</TableCell>
-                            <TableCell>{member.operating_system || '-'}</TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  )}
-                </Box>
-              )}
-              {!isCluster && !isCreate && (
-                <Box>
-                  <Box sx={{ mb: 1 }}>
-                    <SectionLabel>{t('workspace.asset.technical.clusterMembership')}</SectionLabel>
-                  </Box>
-                  {clustersError && <Alert severity="error" sx={{ mb: 1 }}>{clustersError}</Alert>}
-                  {!clustersLoading && (
-                    clustersForServer.length === 0 ? (
-                      <Typography variant="body2" color="text.secondary">{t('workspace.asset.technical.notInCluster')}</Typography>
-                    ) : (
-                      <Stack spacing={0.75} sx={{ mt: 0.5 }}>
-                        {clustersForServer.map((c) => (
-                          <Stack key={c.id} direction="row" justifyContent="space-between" alignItems="center">
-                            <Box>
-                              <Button size="small" onClick={() => navigate(`/it/assets/${c.id}/overview`)}>{c.name}</Button>
-                              <Typography variant="caption" color="text.secondary" display="block">
-                                {environmentLabel(c.environment)} / {labelFor('lifecycleStatus', c.status) || c.status}
-                              </Typography>
-                            </Box>
-                            <Typography variant="body2" color="text.secondary">{t('workspace.asset.meta.cluster')}</Typography>
-                          </Stack>
-                        ))}
-                      </Stack>
-                    )
-                  )}
-                </Box>
-              )}
-
               {/* NETWORK INFORMATION SECTION */}
               <Box>
                 <Box sx={{ mb: 1.5 }}>
@@ -2322,7 +2306,7 @@ export default function AssetWorkspacePage() {
               assetId={id}
             />
           )}
-          {tab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} />}
+          {tab === 'dependencies' && !isCreate && !!id && <AssetDependenciesTab assetId={id} clusterSection={clusterSection} />}
           {tab === 'relations' && !isCreate && !!id && <AssetRelationsTab assetId={id} />}
       </PortfolioDetailWorkspaceShell>
       <KanapDialog
