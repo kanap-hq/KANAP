@@ -60,7 +60,7 @@ function renderSection(items: AssetTechnologyRow[] = ROWS, canManage = true) {
   render(
     <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
       <ThemeProvider theme={createAppTheme('light')}>
-        <MemoryRouter initialEntries={['/it/assets/AST-1/technical']}>
+        <MemoryRouter initialEntries={['/it/assets/AST-1/operations']}>
           <Routes>
             <Route path="*" element={<><AssetTechnologiesSection assetId="asset-1" canManage={canManage} /><Location /></>} />
           </Routes>

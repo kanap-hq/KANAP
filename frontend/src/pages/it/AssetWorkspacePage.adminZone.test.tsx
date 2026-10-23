@@ -93,7 +93,7 @@ function renderAsset(asset: typeof ASSET = ASSET) {
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/assets/asset-1/technical']}>
+          <MemoryRouter initialEntries={['/it/assets/asset-1/operations']}>
             <Routes>
               <Route path="/it/assets/:id/:tab" element={<AssetWorkspacePage />} />
             </Routes>

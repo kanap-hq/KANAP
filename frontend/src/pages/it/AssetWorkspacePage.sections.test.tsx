@@ -1,6 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
-import { MemoryRouter, Route, Routes } from 'react-router-dom';
+import { MemoryRouter, Route, Routes, useLocation } from 'react-router-dom';
 import { ThemeProvider } from '@mui/material/styles';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -28,33 +28,43 @@ vi.mock('../../api', () => ({ default: { get, patch, post, delete: del } }));
 vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => ({ hasLevel: (resource: string, level: string) => resource === 'infrastructure' && level === 'member' }),
 }));
-vi.mock('../../hooks/useItOpsEnumOptions', () => ({
-  default: () => ({
-    settings: { hostingTypes: [], serverKinds: [{ code: 'virtual_machine', label: 'Virtual machine', is_physical: false }], domains: [], subnets: [] },
-    byField: {
-      adminZone: [],
-      serverKind: [{ code: 'virtual_machine', label: 'Virtual machine' }],
-      lifecycleStatus: [{ code: 'active', label: 'Active' }],
-      serverRole: [],
-      serverProvider: [{ code: 'on_prem', label: 'On premises' }],
-      ipAddressType: [],
-    },
-    labelFor: (_field: string, code: string) => code,
-  }),
+// One object for every render, as the real hook memoises it: a fresh one would re-run the location effects forever.
+const enumOptions = vi.hoisted(() => ({
+  settings: {
+    hostingTypes: [],
+    serverKinds: [
+      { code: 'virtual_machine', label: 'Virtual machine', is_physical: false },
+      { code: 'physical_server', label: 'Physical server', is_physical: true },
+    ],
+    domains: [],
+    subnets: [],
+  },
+  byField: {
+    adminZone: [],
+    serverKind: [{ code: 'virtual_machine', label: 'Virtual machine' }, { code: 'physical_server', label: 'Physical server' }],
+    lifecycleStatus: [{ code: 'active', label: 'Active' }],
+    serverRole: [],
+    serverProvider: [{ code: 'on_prem', label: 'On premises' }],
+    ipAddressType: [],
+  },
+  labelFor: (_field: string, code: string) => code,
 }));
+vi.mock('../../hooks/useItOpsEnumOptions', () => ({ default: () => enumOptions }));
 vi.mock('../../hooks/useAssetNav', () => ({
   useAssetNav: () => ({ total: 0, index: 0, hasPrev: false, hasNext: false, prevId: null, nextId: null }),
 }));
 vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () => ({ addToRecent: () => undefined }) }));
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
-vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
+vi.mock('./editors/SupportInfoPanel', () => ({ default: () => <div>support-panel</div> }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
 vi.mock('./workspace/AssetDependenciesTab', () => ({
   default: ({ clusterSection }: { clusterSection?: React.ReactNode }) => <div>dependencies-tab{clusterSection}</div>,
 }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => <div>technologies-section</div> }));
-vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
-vi.mock('../../components/fields/LocationSelect', () => ({ default: () => <div /> }));
+vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => <div>knowledge-panel</div> }));
+vi.mock('../../components/fields/LocationSelect', () => ({
+  default: ({ onChange }: { onChange: (value: string | null) => void }) => <button type="button" onClick={() => onChange('loc-1')}>pick-location</button>,
+}));
 vi.mock('../../components/workspace/SendLinkButton', () => ({ default: () => null }));
 vi.mock('../../components/MarkdownEditor', () => ({ default: () => null }));
 
@@ -97,6 +107,8 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return typeof asset === 'function' ? asset() : { data: asset };
     if (url === VULNERABILITIES_URL) return typeof reach === 'function' ? reach() : { data: reach };
     if (url === '/locations') return { data: { items: [] } };
+    if (url === '/locations/loc-1') return { data: { id: 'loc-1', location_reference: 'LOC-1', name: 'Paris', hosting_type: 'on_prem' } };
+    if (url.endsWith('/sub-items')) return { data: [] };
     if (url.endsWith('/assignments')) return { data: [] };
     if (url === '/assets/asset-1/relations-tab') return { data: { counts: wire.counts } };
     if (url.endsWith('/members')) return { data: { items: wire.members } };
@@ -109,7 +121,7 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
         <KanapDialogProvider>
           <MemoryRouter initialEntries={[path]}>
             <Routes>
-              <Route path="/it/assets/:id/:tab" element={<AssetWorkspacePage />} />
+              <Route path="/it/assets/:id/:tab" element={<><AssetWorkspacePage /><LocationProbe /></>} />
             </Routes>
           </MemoryRouter>
         </KanapDialogProvider>
@@ -118,6 +130,12 @@ function renderAt(path: string, reach: unknown = REACH, asset: typeof ASSET | ((
   );
   return queryClient;
 }
+
+function LocationProbe() {
+  return <div data-testid="location">{useLocation().pathname}</div>;
+}
+
+const currentPath = () => screen.getByTestId('location').textContent;
 
 const vulnerabilityCalls = () => get.mock.calls.filter(([url]) => url === VULNERABILITIES_URL).length;
 
@@ -145,45 +163,87 @@ describe('Asset workspace: section placement', () => {
     }));
   });
 
-  it('shows identity in the overview, right after the description', async () => {
+  it('shows the description, then support, then the knowledge base in the overview', async () => {
     renderAt('/it/assets/asset-1/overview');
-    await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('dc1'));
-    const identity = await screen.findByText('workspace.asset.technical.identity');
+    const support = await screen.findByText('support-panel');
     const description = screen.getByText('workspace.asset.overview.description');
-    const assignments = screen.getByText('workspace.asset.assignments.title');
-    expect(follows(description, identity)).toBe(true);
-    expect(follows(identity, assignments)).toBe(true);
+    const knowledge = screen.getByText('knowledge-panel');
+    expect(follows(description, support)).toBe(true);
+    expect(follows(support, knowledge)).toBe(true);
+    expect(screen.getByText('workspace.asset.support.title')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.asset.technical.identity')).toBeNull();
+    expect(screen.queryByText('workspace.asset.operations.hostedApplications')).toBeNull();
+    expect(screen.queryByText('workspace.asset.connections.title')).toBeNull();
+  });
+
+  it('shows support in the overview of a virtual asset', async () => {
+    renderAt('/it/assets/asset-1/overview');
+    expect(await screen.findByText('support-panel')).toBeInTheDocument();
+    expect(screen.queryByRole('tab', { name: /workspace.asset.tabs.hardware/ })).toBeNull();
+  });
+
+  it('leaves support and the knowledge base out of the overview when creating an asset', async () => {
+    renderAt('/it/assets/new/overview');
+    await screen.findByText('workspace.asset.overview.basics');
+    expect(screen.queryByText('support-panel')).toBeNull();
+    expect(screen.queryByText('knowledge-panel')).toBeNull();
+  });
+
+  it('lists hosted applications, technologies, then vulnerabilities in the operations tab', async () => {
+    features.vulnerabilityFeed = true;
+    renderAt('/it/assets/asset-1/operations');
+    const vulnerabilities = await screen.findByText('pages.vulnerabilities.section.title');
+    const hosted = screen.getByText('workspace.asset.operations.hostedApplications');
+    const technologies = screen.getByText('technologies-section');
+    expect(follows(hosted, technologies)).toBe(true);
+    expect(follows(technologies, vulnerabilities)).toBe(true);
+    expect(screen.queryByText('workspace.asset.technical.ipAddresses')).toBeNull();
+    expect(screen.queryByText('workspace.asset.technical.identity')).toBeNull();
+  });
+
+  it('lists identity, IP addresses, then connections in the network tab', async () => {
+    renderAt('/it/assets/asset-1/network');
+    await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('dc1'));
+    const identity = screen.getByText('workspace.asset.technical.identity');
+    const ipAddresses = screen.getByText('workspace.asset.technical.ipAddresses');
+    const connections = screen.getByText('workspace.asset.connections.title');
+    expect(follows(identity, ipAddresses)).toBe(true);
+    expect(follows(ipAddresses, connections)).toBe(true);
+    expect(screen.queryByText('technologies-section')).toBeNull();
+    expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
+    expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
+  });
+
+  it('mentions Netbox once in the network tab of an asset Netbox feeds', async () => {
+    renderAt('/it/assets/asset-1/network', REACH, {
+      ...ASSET,
+      external_links: [{ source: 'netbox', state: 'linked', external_url: 'https://netbox.example/dcim/devices/1/', last_synced_at: null }],
+    } as unknown as typeof ASSET);
+    await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toBeDisabled());
+    expect(screen.getAllByText('pages.netbox.assetSource.managedFields')).toHaveLength(1);
+  });
+
+  it('mentions nothing about Netbox in the network tab of an asset it does not feed', async () => {
+    renderAt('/it/assets/asset-1/network');
+    await screen.findByText('workspace.asset.technical.ipAddresses');
+    expect(screen.queryByText('pages.netbox.assetSource.managedFields')).toBeNull();
   });
 
   it('leaves the FQDN out of the metadata bar: identity shows it', async () => {
-    renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, hostname: 'srv-fqdn', fqdn: 'srv-fqdn' });
+    renderAt('/it/assets/asset-1/network', REACH, { ...ASSET, hostname: 'srv-fqdn', fqdn: 'srv-fqdn' });
     await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('srv-fqdn'));
     expect(screen.getAllByDisplayValue('srv-fqdn').length).toBeGreaterThan(1);
     expect(screen.queryByText('srv-fqdn')).toBeNull();
   });
 
-  it('lists IP addresses before technologies in the technical tab, without identity', async () => {
-    renderAt('/it/assets/asset-1/technical');
-    const ipAddresses = await screen.findByText('workspace.asset.technical.ipAddresses');
-    const technologies = await screen.findByText('technologies-section');
-    expect(screen.queryByText('workspace.asset.technical.clusterManagement')).toBeNull();
-    expect(screen.queryByText('workspace.asset.technical.members')).toBeNull();
-    expect(screen.queryByText('workspace.asset.technical.clusterMembership')).toBeNull();
-    expect(follows(ipAddresses, technologies)).toBe(true);
-    expect(screen.queryByText('workspace.asset.technical.identity')).toBeNull();
-  });
-
-  it('keeps identity editable when creating an asset', async () => {
-    renderAt('/it/assets/new/overview');
+  it('keeps identity and IP addresses editable when creating an asset, without connections or technologies', async () => {
+    renderAt('/it/assets/new/network');
     await screen.findByText('workspace.asset.technical.identity');
     expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toBeEnabled();
-  });
-
-  it('keeps IP addresses, and no cluster section, in the technical tab when creating an asset', async () => {
-    renderAt('/it/assets/new/technical');
-    expect(await screen.findByText('workspace.asset.technical.ipAddresses')).toBeInTheDocument();
-    expect(screen.queryByText('workspace.asset.technical.clusterManagement')).toBeNull();
+    expect(screen.getByText('workspace.asset.technical.ipAddresses')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.asset.connections.title')).toBeNull();
     expect(screen.queryByText('technologies-section')).toBeNull();
+    expect(currentPath()).toBe('/it/assets/new/network');
   });
 
   it('shows no untitled title while the asset loads, and shows it for a loaded asset without a name', async () => {
@@ -214,13 +274,13 @@ describe('Asset workspace: section placement', () => {
     };
 
     it('lists Type, Cluster, Environment, Administration zone, then Location, then Lifecycle and dates', async () => {
-      renderAt('/it/assets/asset-1/technical');
+      renderAt('/it/assets/asset-1/network');
       await screen.findByText('workspace.asset.technical.ipAddresses');
       expectPanelOrder();
     });
 
     it('shows the same rows when creating an asset', async () => {
-      renderAt('/it/assets/new/technical');
+      renderAt('/it/assets/new/network');
       await screen.findByText('workspace.asset.technical.ipAddresses');
       expectPanelOrder();
     });
@@ -339,8 +399,118 @@ describe('Asset workspace: section placement', () => {
 
     it('does not render the Dependencies tab elsewhere', async () => {
       renderAt('/it/assets/asset-1/overview');
-      await screen.findByText('workspace.asset.technical.identity');
+      await screen.findByText('support-panel');
       expect(screen.queryByText('dependencies-tab')).toBeNull();
+    });
+  });
+
+  describe('tabs', () => {
+    const tabNames = () => screen.getAllByRole('tab').map((tab) => tab.textContent?.replace(/\d+$/, ''));
+    const tab = (name: string) => screen.getByRole('tab', { name: new RegExp(`workspace.asset.tabs.${name}`) });
+
+    it('lists Overview, Operations, Network, Dependencies and Relations for a virtual asset, all open', async () => {
+      renderAt('/it/assets/asset-1/overview');
+      await screen.findByText('support-panel');
+      expect(tabNames()).toEqual([
+        'workspace.asset.tabs.overview',
+        'workspace.asset.tabs.operations',
+        'workspace.asset.tabs.network',
+        'workspace.asset.tabs.dependencies',
+        'workspace.asset.tabs.relations',
+      ]);
+      screen.getAllByRole('tab').forEach((node) => expect(node).toBeEnabled());
+    });
+
+    it('puts Hardware after Network for a physical asset', async () => {
+      renderAt('/it/assets/asset-1/overview', REACH, { ...ASSET, kind: 'physical_server' });
+      await waitFor(() => expect(tabNames()).toEqual([
+        'workspace.asset.tabs.overview',
+        'workspace.asset.tabs.operations',
+        'workspace.asset.tabs.network',
+        'workspace.asset.tabs.hardware',
+        'workspace.asset.tabs.dependencies',
+        'workspace.asset.tabs.relations',
+      ]));
+    });
+
+    it('opens only Overview and Network when creating an asset', async () => {
+      renderAt('/it/assets/new/overview');
+      await screen.findByText('workspace.asset.overview.basics');
+      expect(tabNames()).toEqual([
+        'workspace.asset.tabs.overview',
+        'workspace.asset.tabs.operations',
+        'workspace.asset.tabs.network',
+        'workspace.asset.tabs.dependencies',
+        'workspace.asset.tabs.relations',
+      ]);
+      expect(tab('overview')).toBeEnabled();
+      expect(tab('network')).toBeEnabled();
+      expect(tab('operations')).toBeDisabled();
+      expect(tab('dependencies')).toBeDisabled();
+      expect(tab('relations')).toBeDisabled();
+    });
+  });
+
+  describe('former and unknown tab addresses', () => {
+    it.each([
+      ['technical', 'operations'],
+      ['support', 'overview'],
+      ['connections', 'network'],
+      ['knowledge', 'overview'],
+      ['assignments', 'operations'],
+      ['nonsense', 'overview'],
+      ['toString', 'overview'],
+    ])('sends /%s to /%s', async (from, to) => {
+      renderAt(`/it/assets/asset-1/${from}`);
+      await waitFor(() => expect(currentPath()).toMatch(new RegExp(`^/it/assets/(asset-1|AST-1)/${to}$`)));
+      expect(screen.getByRole('tab', { name: new RegExp(`workspace.asset.tabs.${to}`) })).toHaveAttribute('aria-selected', 'true');
+    });
+
+    it('sends the hardware tab of a virtual asset to the overview', async () => {
+      renderAt('/it/assets/asset-1/hardware');
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/AST-1/overview'));
+    });
+
+    it('sends a creation on a tab it cannot open to the overview', async () => {
+      renderAt('/it/assets/new/operations');
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/overview'));
+      expect(await screen.findByText('workspace.asset.overview.basics')).toBeInTheDocument();
+    });
+  });
+
+  describe('creating an asset', () => {
+    const startCreation = async () => {
+      renderAt('/it/assets/new/overview');
+      fireEvent.change(await screen.findByPlaceholderText('workspace.asset.overview.namePlaceholder'), { target: { value: 'web 1' } });
+      fireEvent.click(screen.getAllByText('pick-location')[0]);
+      await waitFor(() => expect(get).toHaveBeenCalledWith('/locations/loc-1'));
+      fireEvent.click(screen.getByRole('tab', { name: /workspace.asset.tabs.network/ }));
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
+      return screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder');
+    };
+    const create = async () => {
+      fireEvent.click(screen.getByRole('tab', { name: /workspace.asset.tabs.overview/ }));
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/overview'));
+      const button = screen.getByRole('button', { name: 'common:buttons.create' });
+      await waitFor(() => expect(button).toBeEnabled());
+      fireEvent.click(button);
+    };
+
+    it('keeps the host name typed in the network tab and sends it from the overview', async () => {
+      post.mockResolvedValue({ data: { id: 'asset-9', asset_reference: 'AST-9' } });
+      const hostname = await startCreation();
+      fireEvent.change(hostname, { target: { value: 'web-01' } });
+      await create();
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets', expect.objectContaining({ name: 'web 1', hostname: 'web-01' })));
+    });
+
+    it('opens the network tab when the host name is malformed', async () => {
+      const hostname = await startCreation();
+      fireEvent.change(hostname, { target: { value: 'web 01!' } });
+      await create();
+      await waitFor(() => expect(currentPath()).toBe('/it/assets/new/network'));
+      expect(screen.getAllByText('workspace.asset.technical.hostnameInvalid').length).toBeGreaterThan(0);
+      expect(post).not.toHaveBeenCalled();
     });
   });
 
@@ -349,8 +519,8 @@ describe('Asset workspace: section placement', () => {
       features.vulnerabilityFeed = true;
     });
 
-    it('shows the section last in the technical tab, after technologies', async () => {
-      renderAt('/it/assets/asset-1/technical');
+    it('shows the section last in the operations tab, after technologies', async () => {
+      renderAt('/it/assets/asset-1/operations');
       const section = await screen.findByText('pages.vulnerabilities.section.title');
       const technologies = screen.getByText('technologies-section');
       expect(follows(technologies, section)).toBe(true);
@@ -360,7 +530,7 @@ describe('Asset workspace: section placement', () => {
 
     it('asks nothing and shows nothing while the vulnerability feed is off', async () => {
       features.vulnerabilityFeed = false;
-      renderAt('/it/assets/asset-1/technical');
+      renderAt('/it/assets/asset-1/operations');
       await screen.findByText('technologies-section');
       expect(screen.queryByText('pages.vulnerabilities.section.title')).toBeNull();
       expect(screen.queryByTestId('vulnerability-severe-badge')).toBeNull();
@@ -368,14 +538,14 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('asks nothing when creating an asset', async () => {
-      renderAt('/it/assets/new/technical');
+      renderAt('/it/assets/new/network');
       await screen.findByText('workspace.asset.technical.ipAddresses');
       expect(screen.queryByText('pages.vulnerabilities.section.title')).toBeNull();
       expect(vulnerabilityCalls()).toBe(0);
     });
 
     it('shows neither section nor badge for a retired asset', async () => {
-      renderAt('/it/assets/asset-1/technical', { rows: [], indirect: [], totals: null });
+      renderAt('/it/assets/asset-1/operations', { rows: [], indirect: [], totals: null });
       await screen.findByText('technologies-section');
       await waitFor(() => expect(vulnerabilityCalls()).toBe(1));
       expect(screen.queryByText('pages.vulnerabilities.section.title')).toBeNull();
@@ -393,14 +563,14 @@ describe('Asset workspace: section placement', () => {
     });
 
     it('links the section count to the Vulnerabilities page filtered on the asset', async () => {
-      renderAt('/it/assets/asset-1/technical');
+      renderAt('/it/assets/asset-1/operations');
       const count = await screen.findByTestId('reach-vulnerabilities-count');
       expect(count.textContent).toBe('3');
       expect(count.getAttribute('href')).toBe('/it/vulnerabilities?asset=AST-1');
     });
 
     it('shows no badge without severe vulnerabilities', async () => {
-      renderAt('/it/assets/asset-1/technical', {
+      renderAt('/it/assets/asset-1/operations', {
         rows: [{ ...REACH.rows[0], open: { ...OPEN, critical: 0, high: 0, medium: 2 }, severe: 0, exploited_severe: 0 }],
         indirect: [],
         totals: { open: 2, severe: 0, exploited_severe: 0 },
@@ -411,7 +581,7 @@ describe('Asset workspace: section placement', () => {
 
     it('shows the metadata bar in one go, once the vulnerabilities have arrived', async () => {
       let answer: (value: unknown) => void = () => undefined;
-      renderAt('/it/assets/asset-1/overview', () => new Promise((resolve) => { answer = resolve; }));
+      renderAt('/it/assets/asset-1/network', () => new Promise((resolve) => { answer = resolve; }));
       await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('dc1'));
       await waitFor(() => expect(vulnerabilityCalls()).toBe(1));
       expect(screen.getByTestId('metadata-pending')).toHaveAttribute('aria-hidden', 'true');
@@ -430,14 +600,14 @@ describe('Asset workspace: section placement', () => {
 
     it('shows the metadata bar without waiting while the vulnerability feed is off', async () => {
       features.vulnerabilityFeed = false;
-      renderAt('/it/assets/asset-1/overview');
+      renderAt('/it/assets/asset-1/network');
       await waitFor(() => expect(screen.getByPlaceholderText('workspace.asset.technical.hostnamePlaceholder')).toHaveValue('dc1'));
       expect(screen.queryByTestId('metadata-pending')).toBeNull();
       expect(vulnerabilityCalls()).toBe(0);
     });
 
     it('reads the vulnerabilities again after a change of technology links', async () => {
-      const queryClient = renderAt('/it/assets/asset-1/technical');
+      const queryClient = renderAt('/it/assets/asset-1/operations');
       await screen.findByText('pages.vulnerabilities.section.title');
       expect(vulnerabilityCalls()).toBe(1);
       await invalidateTechnologyLinks(queryClient);
