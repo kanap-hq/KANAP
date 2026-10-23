@@ -157,7 +157,7 @@ describe('CheckboxSetFilter search applies to the grid', () => {
     const { applied } = renderFilter();
     typeSearch('B2B');
     advance();
-    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     expect(applied()).toEqual({ filterType: 'set', values: [] });
     typeSearch('');
     advance();
@@ -232,9 +232,9 @@ describe('CheckboxSetFilter clicks apply to the grid after a quiet delay', () =>
     expect(sorted(applied())).toEqual(['B2B-SALES']);
   });
 
-  it('Clear, then a tick on one value: one call, with that value', () => {
+  it('None, then a tick on one value: one call, with that value', () => {
     const { api, applied } = renderFilter();
-    fireEvent.click(screen.getByRole('button', { name: /clear/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^none$/i }));
     for (const { value } of OPTIONS) expect(screen.getByRole('checkbox', { name: value })).not.toBeChecked();
     expect(api.setFilterModel).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('checkbox', { name: 'HR' }));
