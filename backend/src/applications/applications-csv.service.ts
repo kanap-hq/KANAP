@@ -2,7 +2,8 @@ import { writeCsvHeader, type CsvLanguage } from '../common/csv-sheet';
 import { ApplicationsListService } from './services/applications-list.service';
 import { classificationReadState } from './services/application-classification';
 import { ItOpsSettingsService } from '../it-ops-settings/it-ops-settings.service';
-import { exportCatalogLabels } from '../it-ops-settings/catalog-resolve';
+import { exportCatalogLabelsIn } from '../it-ops-settings/catalog-resolve';
+import { lockApplicationNames } from './application-rules';
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager, In } from 'typeorm';
@@ -19,7 +20,7 @@ import {
   CsvFieldInfo,
   CsvResolverService,
 } from '../common/csv';
-import { applicationCsvConfig, csvOwnerKeys, sameKeys } from './application-csv.config';
+import { applicationCsvConfig, csvOwnerKeys, sameKeys, usersByEmail } from './application-csv.config';
 import { applicationVulnerabilityCounts } from '../vulnerabilities/vulnerability-reach-counts';
 import {
   csvConfigForVulnerabilityFeed,
@@ -107,10 +108,15 @@ export class ApplicationsCsvService {
     const settings = await this.itOpsSettings.getSettings(tenantId, { manager });
     for (const app of applications) {
       Object.assign(app, classificationReadState(app));
-      exportCatalogLabels(app, {
-        category: settings.applicationCategories, lifecycle: settings.lifecycleStates, criticality: settings.businessCriticalityLevels,
-        cyber_criticality: settings.cyberCriticalityLevels, recovery_wave: settings.recoveryWaves, data_class: settings.dataClasses, access_methods: settings.accessMethods,
-      });
+      exportCatalogLabelsIn(app, {
+        category: { list: 'applicationCategories', options: settings.applicationCategories },
+        lifecycle: { list: 'lifecycleStates', options: settings.lifecycleStates },
+        criticality: { list: 'businessCriticalityLevels', options: settings.businessCriticalityLevels },
+        cyber_criticality: { list: 'cyberCriticalityLevels', options: settings.cyberCriticalityLevels },
+        recovery_wave: { list: 'recoveryWaves', options: settings.recoveryWaves },
+        data_class: { list: 'dataClasses', options: settings.dataClasses },
+        access_methods: { list: 'accessMethods', options: settings.accessMethods },
+      }, opts.language);
     }
 
     // Load related data for export
@@ -218,6 +224,7 @@ export class ApplicationsCsvService {
   ): Promise<CsvImportResult> {
     return opts.manager.transaction(async (manager) => {
       await manager.query('SELECT id FROM tenants WHERE id = $1 FOR UPDATE', [opts.tenantId]);
+      await lockApplicationNames(manager, opts.tenantId);
       const result = await this.importLocked(file, params, { ...opts, manager });
       if (!params.dryRun && !result.ok && result.errors.some((error) => error.row === 0)) throw new BadRequestException(result);
       return result;
@@ -231,7 +238,7 @@ export class ApplicationsCsvService {
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(file, opts);
+      await this.handleOwnerImport(file, params.mode, opts);
       await this.handleDataResidencyImport(file, opts);
     }
 
@@ -241,7 +248,7 @@ export class ApplicationsCsvService {
   /**
    * Handle owner import from CSV after main import.
    */
-  private async handleOwnerImport(file: Express.Multer.File, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleOwnerImport(file: Express.Multer.File, mode: CsvImportParams['mode'], opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file to get owner columns
@@ -259,12 +266,7 @@ export class ApplicationsCsvService {
         .on('error', (err) => reject(err));
     });
 
-    // Load user lookup
-    const users = await manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [tenantId]);
-    const userByEmail = new Map<string, string>();
-    for (const u of users) {
-      userByEmail.set(String(u.email).toLowerCase(), u.id);
-    }
+    const userByEmail = await usersByEmail(manager, tenantId);
 
     // Process each row
     for (const row of rows) {
@@ -272,19 +274,15 @@ export class ApplicationsCsvService {
       if (!Object.keys(row).some((key) => /^(business|it)_owner_email_/.test(key))) continue;
       if (!appName) continue;
 
-      // Find application
-      const appRows = await manager.query(
-        `SELECT id FROM applications WHERE tenant_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
-        [tenantId, appName],
-      );
-      if (appRows.length === 0) continue;
-      const appId = appRows[0].id;
+      const appId = await this.importedApplicationId(manager, tenantId, row);
+      if (!appId) continue;
 
       const ownerRepo = manager.getRepository(ApplicationOwner);
-      const beforeRows = await ownerRepo.find({ where: { application_id: appId } as any });
+      const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
 
-      // Owners named by the columns (deduped by owner type + user to avoid unique violations)
-      const ownerKeys = csvOwnerKeys(row, userByEmail);
+      // Owners named by the columns (deduped by owner type + user to avoid unique violations);
+      // empty cells keep the stored owners of their type, except in replace mode.
+      const ownerKeys = csvOwnerKeys(row, userByEmail, beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), mode);
       if (sameKeys(beforeRows.map((r) => `${r.owner_type}:${r.user_id}`), ownerKeys)) continue;
       const newOwners = ownerKeys.map((key) => {
         const [owner_type, user_id] = key.split(':') as ['business' | 'it', string];
@@ -292,7 +290,7 @@ export class ApplicationsCsvService {
       });
 
       // Clear existing owners
-      await manager.query(`DELETE FROM application_owners WHERE application_id = $1`, [appId]);
+      await manager.query(`DELETE FROM application_owners WHERE application_id = $1 AND tenant_id = $2`, [appId, tenantId]);
 
       // Insert new owners
       let afterRows: ApplicationOwner[] = [];
@@ -325,6 +323,23 @@ export class ApplicationsCsvService {
   }
 
   /**
+   * The application a loaded row wrote: by its id column when it names one of the tenant's
+   * applications, else by its name (an ambiguous name was refused by the validation).
+   */
+  private async importedApplicationId(manager: EntityManager, tenantId: string, row: Record<string, string>): Promise<string | null> {
+    const id = (row['id'] || '').trim();
+    if (/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(id)) {
+      const byId = await manager.query(`SELECT id FROM applications WHERE tenant_id = $1 AND id = $2`, [tenantId, id]);
+      if (byId.length) return byId[0].id;
+    }
+    const byName = await manager.query(
+      `SELECT id FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) = lower(btrim($2)) ORDER BY created_at ASC, id ASC LIMIT 1`,
+      [tenantId, (row['name'] || '').trim()],
+    );
+    return byName[0]?.id ?? null;
+  }
+
+  /**
    * Handle data residency import from CSV after main import.
    */
   private async handleDataResidencyImport(file: Express.Multer.File, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
@@ -351,13 +366,8 @@ export class ApplicationsCsvService {
       const residencyRaw = row['data_residency'] || '';
       if (!appName) continue;
 
-      // Find application
-      const appRows = await manager.query(
-        `SELECT id FROM applications WHERE tenant_id = $1 AND LOWER(name) = LOWER($2) LIMIT 1`,
-        [tenantId, appName],
-      );
-      if (appRows.length === 0) continue;
-      const appId = appRows[0].id;
+      const appId = await this.importedApplicationId(manager, tenantId, row);
+      if (!appId) continue;
 
       // Parse residency codes
       const codes = residencyRaw

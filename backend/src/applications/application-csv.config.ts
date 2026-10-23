@@ -1,5 +1,6 @@
 import { catalogFromMetadata, catalogToMetadata } from '../it-ops-settings/classification-catalog';
-import { requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { findCatalogOption, requireImportCatalogs, resolveCatalogCode } from '../it-ops-settings/catalog-resolve';
+import { APPLICATION_NAME_MAX, applicationNameKey, assertApplicationDates, codedErrorOf } from './application-rules';
 import { CLASSIFICATION_INPUT_FIELDS, classificationPatch } from './services/application-classification';
 import {
   ArrayStrategy,
@@ -7,6 +8,7 @@ import {
   CsvFieldType,
   CsvExportContext,
   CsvImportContext,
+  CsvImportRow,
 } from '../common/csv';
 import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
 import { assertMarkdownSize } from '../common/markdown-limits';
@@ -21,16 +23,118 @@ function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings): void 
   if (Array.isArray(entity.access_methods)) entity.access_methods = entity.access_methods.map((item: string) => resolveCatalogCode(item, settings.accessMethods) ?? item);
 }
 
-/** The owners a row's columns name, as `owner_type:user_id`; unknown emails are left out. */
-export function csvOwnerKeys(raw: Record<string, string>, userByEmail: Map<string, string>): string[] {
+const OWNER_TYPES = ['business', 'it'] as const;
+
+/** The non-empty owner cells of a row, by owner type; a type whose columns are all absent is left out. */
+function ownerCells(raw: Record<string, string>): Map<'business' | 'it', string[]> {
+  const cells = new Map<'business' | 'it', string[]>();
+  for (const ownerType of OWNER_TYPES) {
+    const columns = [1, 2, 3, 4].map((i) => `${ownerType}_owner_email_${i}`).filter((column) => column in raw);
+    if (columns.length) cells.set(ownerType, columns.map((column) => (raw[column] || '').trim().toLowerCase()).filter(Boolean));
+  }
+  return cells;
+}
+
+/**
+ * The owners a row leaves on an application, as `owner_type:user_id`. Per owner type, the emails
+ * the columns name; when every cell of a type is empty, the stored owners of that type stay, except
+ * in replace mode where they go. Unknown emails are refused before (`owner_email_unknown`).
+ */
+export function csvOwnerKeys(
+  raw: Record<string, string>,
+  userByEmail: Map<string, string>,
+  stored: string[] = [],
+  mode: 'replace' | 'enrich' = 'enrich',
+): string[] {
+  const cells = ownerCells(raw);
   const keys: string[] = [];
-  for (const ownerType of ['business', 'it'] as const) {
-    for (let i = 1; i <= 4; i++) {
-      const userId = userByEmail.get((raw[`${ownerType}_owner_email_${i}`] || '').trim().toLowerCase());
+  for (const ownerType of OWNER_TYPES) {
+    const emails = cells.get(ownerType);
+    if (!emails || (emails.length === 0 && mode !== 'replace')) {
+      keys.push(...stored.filter((key) => key.startsWith(`${ownerType}:`)));
+      continue;
+    }
+    for (const email of emails) {
+      const userId = userByEmail.get(email);
       if (userId && !keys.includes(`${ownerType}:${userId}`)) keys.push(`${ownerType}:${userId}`);
     }
   }
   return keys;
+}
+
+/** The tenant's users by lower-case email. */
+export async function usersByEmail(manager: any, tenantId: string): Promise<Map<string, string>> {
+  const users = await manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [tenantId]);
+  return new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
+}
+
+/**
+ * The checks the API applies, run on every row in the dry run and the load alike: unknown owner
+ * emails, catalog values matching no code or name, names (too long, taken, ambiguous), dates out of
+ * order and a suite unchecked while it has children.
+ */
+async function validateApplicationRows(rows: CsvImportRow[], context: CsvImportContext, settings: ItOpsSettings): Promise<void> {
+  const fail = (row: CsvImportRow, code: string, message: string, params?: Record<string, string | number>, column?: string) =>
+    row.errors.push({ row: row.rowNumber, ...(column ? { column } : {}), message, code, ...(params ? { params } : {}) });
+  const userByEmail = await usersByEmail(context.manager, context.tenantId);
+  const keys = [...new Set(rows.map((row) => applicationNameKey(row.raw.name)).filter(Boolean))];
+  const holders: Array<{ id: string; name: string; sequential_id: string | null; key: string }> = keys.length === 0 ? [] : await context.manager.query(
+    `SELECT id::text AS id, name, sequential_id, lower(btrim(name)) AS key
+       FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) = ANY($2)
+      ORDER BY created_at ASC, id ASC`,
+    [context.tenantId, keys],
+  );
+  const holdersByKey = new Map<string, typeof holders>();
+  for (const holder of holders) holdersByKey.set(holder.key, [...(holdersByKey.get(holder.key) ?? []), holder]);
+  const unsuited = rows.filter((row) => row.existingEntity?.is_suite && row.parsed.is_suite === false).map((row) => row.existingEntity.id);
+  const children: Array<{ suite_id: string; count: number }> = unsuited.length === 0 ? [] : await context.manager.query(
+    `SELECT suite_id::text AS suite_id, count(*)::int AS count FROM application_suites WHERE tenant_id = $1 AND suite_id = ANY($2) GROUP BY suite_id`,
+    [context.tenantId, unsuited],
+  );
+  const childCount = new Map(children.map((row) => [row.suite_id, row.count]));
+
+  for (const row of rows) {
+    const name = String(row.raw.name ?? '').trim();
+    const existing = row.existingEntity;
+    const named = holdersByKey.get(applicationNameKey(name)) ?? [];
+    if (name.length > APPLICATION_NAME_MAX) {
+      fail(row, 'name_too_long', `name must be at most ${APPLICATION_NAME_MAX} characters`, { max: APPLICATION_NAME_MAX }, 'name');
+    } else if (name && !existing && named.length) {
+      fail(row, 'name_taken', `Another application is already named "${named[0].name}"`, { name: named[0].name, ref: named[0].sequential_id || named[0].name }, 'name');
+    } else if (name && existing) {
+      const matchedById = String(row.raw.id ?? '').trim() === String(existing.id);
+      const others = named.filter((holder) => holder.id !== String(existing.id));
+      if (!matchedById && named.length > 1) {
+        fail(row, 'name_ambiguous', `${named.length} applications are named "${name}"; add the id column to choose one`, { name, count: named.length }, 'name');
+      } else if (matchedById && others.length && applicationNameKey(name) !== applicationNameKey(existing.name)) {
+        fail(row, 'name_taken', `Another application is already named "${others[0].name}"`, { name: others[0].name, ref: others[0].sequential_id || others[0].name }, 'name');
+      }
+    }
+
+    for (const [column, options, code] of [['lifecycle', settings.lifecycleStates, 'lifecycle_invalid'], ['category', settings.applicationCategories, 'category_invalid']] as const) {
+      const value = String(row.raw[column] ?? '').trim();
+      if (!value) continue;
+      let found = null;
+      try { found = findCatalogOption(value, options as any[]); } catch { found = null; }
+      if (!found) fail(row, code, `Unknown ${column} "${value}"; use a code or a name of the catalog`, { value }, column);
+    }
+
+    for (const ownerType of OWNER_TYPES) {
+      for (const email of ownerCells(row.raw).get(ownerType) ?? []) {
+        if (!userByEmail.has(email)) fail(row, 'owner_email_unknown', `No user with the email ${email}`, { email });
+      }
+    }
+
+    const date = (field: string) => (field in row.parsed ? row.parsed[field] : existing?.[field]);
+    try {
+      assertApplicationDates({ go_live_date: date('go_live_date'), end_of_support_date: date('end_of_support_date'), retired_date: date('retired_date') });
+    } catch (error: any) {
+      fail(row, 'dates_inconsistent', error.message, codedErrorOf(error).params);
+    }
+
+    const count = existing ? childCount.get(String(existing.id)) ?? 0 : 0;
+    if (count > 0) fail(row, 'suite_has_children', `Detach the ${count} child applications first`, { count }, 'is_suite');
+  }
 }
 
 /** The ISO country codes of a `data_residency` cell. */
@@ -352,18 +456,6 @@ export const applicationCsvConfig: CsvEntityConfig = {
       group: 'Users',
     },
 
-    // === STATUS (internal field) ===
-    {
-      csvColumn: 'status',
-      entityProperty: 'status',
-      type: CsvFieldType.ENUM,
-      enumValues: ['enabled', 'disabled'],
-      required: false,
-      defaultExport: true,
-      label: 'Status',
-      group: 'Status',
-    },
-
     // === OWNERS ===
     // These fields use COMPUTED for export (reading from _owners) but are importable
     // Import is handled by handleOwnerImport in the service
@@ -535,7 +627,6 @@ export const applicationCsvConfig: CsvEntityConfig = {
         'licensing', 'notes',
         'access_methods', 'external_facing', 'etl_enabled', 'support_notes',
         'data_class', 'last_dr_test', 'contains_pii',
-        'status',
         'business_owner_email_1', 'business_owner_email_2', 'business_owner_email_3', 'business_owner_email_4',
         'it_owner_email_1', 'it_owner_email_2', 'it_owner_email_3', 'it_owner_email_4',
       ],
@@ -549,6 +640,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
   afterValidate: async (rows, context) => {
     const settings = await requireImportCatalogs(context);
     const catalog = catalogFromMetadata(catalogToMetadata(settings));
+    await validateApplicationRows(rows, context, settings);
     for (const row of rows) {
       // Persist this through the relation handler, never as an application column.
       delete row.parsed._data_residency_csv;
@@ -565,7 +657,7 @@ export const applicationCsvConfig: CsvEntityConfig = {
         else input[field] = raw;
       }
       try { Object.assign(row.parsed, classificationPatch(input, row.existingEntity ?? null, catalog)); }
-      catch (error: any) { row.errors.push({ row: row.rowNumber, message: error.message }); }
+      catch (error: any) { row.errors.push({ row: row.rowNumber, message: error.message, ...codedErrorOf(error) }); }
     }
   },
 
@@ -585,16 +677,17 @@ export const applicationCsvConfig: CsvEntityConfig = {
         `SELECT application_id, country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = ANY($2)`,
         [context.tenantId, ids],
       ),
-      context.manager.query(`SELECT id, email FROM users WHERE tenant_id = $1`, [context.tenantId]),
+      usersByEmail(context.manager, context.tenantId),
     ]);
-    const userByEmail = new Map<string, string>(users.map((u: any) => [String(u.email).toLowerCase(), u.id]));
+    const userByEmail = users as unknown as Map<string, string>;
     const ownersById = groupKeys(owners, (o: any) => o.application_id, (o: any) => `${o.owner_type}:${o.user_id}`);
     const residencyById = groupKeys(residency, (r: any) => r.application_id, (r: any) => String(r.country_iso).trim().toUpperCase());
 
     return rows.map((row) => {
       const stored = row.existingEntity;
       if (Object.keys(row.raw).some((key) => OWNER_COLUMN.test(key))) {
-        if (!sameKeys(ownersById.get(stored.id), csvOwnerKeys(row.raw, userByEmail))) return false;
+        const storedOwners = ownersById.get(stored.id) ?? [];
+        if (!sameKeys(storedOwners, csvOwnerKeys(row.raw, userByEmail, storedOwners, context.params.mode))) return false;
       }
       const codes = csvResidencyCodes(row.raw.data_residency);
       if (codes.length > 0 && !sameKeys(residencyById.get(stored.id), codes)) return false;

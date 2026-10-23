@@ -1,6 +1,7 @@
 import { ItOpsSettingsService } from '../../it-ops-settings/it-ops-settings.service';
 import { copyClassification } from './application-classification';
 import { Injectable, NotFoundException } from '@nestjs/common';
+import { assertApplicationDates, assertApplicationNameFree, lockApplicationNames, normalizeApplicationName } from '../application-rules';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, EntityManager } from 'typeorm';
 import { Application } from '../application.entity';
@@ -78,11 +79,15 @@ export class ApplicationsLifecycleService extends ApplicationsBaseService {
     const catalog = await this.itOpsSettings.lockClassificationCatalog(await this.getCurrentTenantId(mg), mg);
     const source = await repo.findOne({ where: { id: sourceId } });
     if (!source) throw new NotFoundException('Application not found');
+    const name = normalizeApplicationName(body.name);
+    await lockApplicationNames(mg, source.tenant_id);
+    await assertApplicationNameFree(mg, source.tenant_id, name);
+    assertApplicationDates({ go_live_date: body.go_live_date, end_of_support_date: body.end_of_support_date });
 
     const nowYear = new Date().getFullYear();
     const newApp = repo.create({
       tenant_id: source.tenant_id,
-      name: body.name,
+      name,
       supplier_id: source.supplier_id,
       category: source.category,
       description: source.description,

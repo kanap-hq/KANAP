@@ -1,6 +1,6 @@
 import { BadRequestException } from '@nestjs/common';
 import { matchCatalogAliases, normalizeAlias, type CatalogTranslations } from './catalog-codes';
-import { withShippedLabels } from './catalog-shipped-labels';
+import { shippedLabelIn, withShippedLabels } from './catalog-shipped-labels';
 
 export type CatalogOptionLike = { code: string; label?: string | null; deprecated?: boolean; translations?: CatalogTranslations; shippedLabels?: string[] };
 
@@ -44,6 +44,27 @@ export function exportCatalogLabels(row: Record<string, any>, fields: Record<str
     const value = row[field];
     if (value === null || value === undefined) continue;
     const labelOf = (code: unknown) => options.find((option) => option.code === String(code))?.label || String(code);
+    row[field] = Array.isArray(value) ? value.map(labelOf) : labelOf(value);
+  }
+}
+
+/**
+ * `exportCatalogLabels` in the language of the file: a value still carrying its shipped label is
+ * written as the screen shows it in `language` ("Actif", "Faible"); a name the tenant gave stays.
+ */
+export function exportCatalogLabelsIn(
+  row: Record<string, any>,
+  fields: Record<string, { list: string; options: CatalogOptionLike[] }>,
+  language: 'en' | 'fr' | 'de' | 'es',
+): void {
+  for (const [field, { list, options }] of Object.entries(fields)) {
+    const value = row[field];
+    if (value === null || value === undefined) continue;
+    const labelOf = (code: unknown) => {
+      const option = options.find((item) => item.code === String(code));
+      if (!option) return String(code);
+      return shippedLabelIn(list, option, language) ?? (option.label || String(code));
+    };
     row[field] = Array.isArray(value) ? value.map(labelOf) : labelOf(value);
   }
 }

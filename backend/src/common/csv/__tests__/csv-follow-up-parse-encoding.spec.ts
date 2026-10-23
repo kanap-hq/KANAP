@@ -44,6 +44,7 @@ async function testApplicationPassesReadWindows1252() {
   const owners = recordingManager();
   await svc.handleOwnerImport(
     windows1252File('name;business_owner_email_1\r\nRefonte CRM é;\r\n'),
+    'enrich',
     { manager: owners, tenantId: TENANT },
   );
   assert.ok(owners.params.some((values: unknown[]) => values.includes('Refonte CRM é')), JSON.stringify(owners.params));
