@@ -10,6 +10,7 @@ import {
   Req,
   UseGuards,
   BadRequestException,
+  ForbiddenException,
 } from '@nestjs/common';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
@@ -273,18 +274,26 @@ export class LocationsController {
     });
   }
 
+  /** The older relation routes answer 403 without a read of the module they list (`LOCATION_RELATION_READS`). */
+  private requireRead(ctx: TenantRequest, section: keyof typeof LOCATION_RELATION_READS): void {
+    const { access } = buildRelationsAccess(ctx, { read: LOCATION_RELATION_READS });
+    if (!access[section]) throw new ForbiddenException(`You cannot read ${section}.`);
+  }
+
   // Relations (endpoint kept as /servers for backwards compatibility)
   @UseGuards(PermissionGuard)
   @RequireLevel('locations', 'reader')
   @Get(':id/servers')
-  listServers(@Param('id') id: string, @Req() req: any) {
+  listServers(@Param('id') id: string, @Req() req: any, @Tenant() ctx: TenantRequest) {
+    this.requireRead(ctx, 'assets');
     return this.svc.listAssets(id, { manager: req?.queryRunner?.manager });
   }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('locations', 'reader')
   @Get(':id/applications')
-  listApplications(@Param('id') id: string, @Req() req: any) {
+  listApplications(@Param('id') id: string, @Req() req: any, @Tenant() ctx: TenantRequest) {
+    this.requireRead(ctx, 'applications');
     return this.svc.listApplications(id, { manager: req?.queryRunner?.manager });
   }
 

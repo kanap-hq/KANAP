@@ -288,6 +288,8 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get(':id/assets')
   async listAssets(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    // The assets are the infrastructure's: neither listed nor replaced without the right to read it.
+    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read assets.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listAssets(id, this.opts(ctx));
   }
@@ -300,6 +302,8 @@ export class IncidentsController {
     @Body() body: { asset_ids?: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    // A set the caller cannot read is never replaced (an empty list would remove every link).
+    if (!canReadResource(ctx, 'infrastructure')) throw new ForbiddenException('You cannot read assets.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceAssets(id, body?.asset_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
@@ -332,6 +336,7 @@ export class IncidentsController {
   @RequireLevel('incidents', 'reader')
   @Get(':id/applications')
   async listApplications(@Param('id') idOrRef: string, @Tenant() ctx: TenantRequest) {
+    if (!canReadResource(ctx, 'applications')) throw new ForbiddenException('You cannot read applications.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.listApplications(id, this.opts(ctx));
   }
@@ -344,6 +349,8 @@ export class IncidentsController {
     @Body() body: { application_ids?: string[] },
     @Tenant() ctx: TenantRequest,
   ) {
+    // A set the caller cannot read is never replaced (an empty list would remove every link).
+    if (!canReadResource(ctx, 'applications')) throw new ForbiddenException('You cannot read applications.');
     const id = await this.visibleId(idOrRef, ctx);
     return this.relations.bulkReplaceApplications(id, body?.application_ids ?? [], ctx.userId || null, this.opts(ctx));
   }
