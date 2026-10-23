@@ -126,6 +126,41 @@ async function testExpansion(): Promise<void> {
   console.log('  expansion, settings, jit, second call: OK');
 }
 
+/**
+ * A company node does not descend below its centres: K6 (centre, C3) under the centre K1 (C1), a
+ * shape the service refuses but no constraint forbids. Company C1 brings K1 and K4, not K6; the
+ * centre node K1 brings its subtree.
+ */
+async function testCompanyNoDescent(): Promise<void> {
+  await inTransaction(async () => {
+    const tree = await seedTree(client);
+    const { c1, c3 } = tree.companies;
+    const { k1, k4 } = tree.nodes;
+    const { rows } = await client.query(
+      `INSERT INTO cost_centers (tenant_id, code, kind, name, parent_id, company_id, status)
+       VALUES ($1, 'K6', 'cost_center', 'K6', $2, $3, 'enabled') RETURNING id`,
+      [tree.tenantId, k1, c3],
+    );
+    const k6 = rows[0].id as string;
+    const roleId = await seedRole(client, tree.tenantId, 'Reader');
+    const byCompany = await seedPerson(client, tree.tenantId, 'limited', roleId);
+    await seedNodes(client, tree.tenantId, byCompany, [{ type: 'company', id: c1, access: 'edit' }]);
+    const byCentre = await seedPerson(client, tree.tenantId, 'limited', roleId);
+    await seedNodes(client, tree.tenantId, byCentre, [{ type: 'cost_center', id: k1, access: 'read' }]);
+
+    assert.equal(await apply(byCompany), 'limited');
+    let s = await readSettings(client);
+    assert.deepEqual(parseUuidArray(s['app.da_read_nodes']), sorted([k1, k4]), 'company C1: its centres, not K6 below K1');
+    assert.deepEqual(parseUuidArray(s['app.da_edit_nodes']), sorted([k1, k4]));
+    assert.deepEqual(parseUuidArray(s['app.da_edit_node_companies']), [c1]);
+
+    assert.equal(await apply(byCentre), 'limited');
+    s = await readSettings(client);
+    assert.deepEqual(parseUuidArray(s['app.da_read_nodes']), sorted([k1, k6]), 'centre node K1: its subtree');
+  });
+  console.log('  company node: its centres and nothing below them: OK');
+}
+
 /** Limited, then an unscoped person or an Administrator in the same transaction: back to none. */
 async function testSecondCallAll(): Promise<void> {
   await inTransaction(async () => {
@@ -419,6 +454,7 @@ async function run(): Promise<void> {
       await client.query(`SELECT data_access_sync_policies()`);
       await testExpansion();
       await testSecondCallAll();
+      await testCompanyNoDescent();
       await testAllNodesAndEmptyList();
       await testEndOfTransaction();
       await testExpectedPolicies();

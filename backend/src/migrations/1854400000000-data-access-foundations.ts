@@ -413,29 +413,33 @@ async function createFunctions(queryRunner: QueryRunner): Promise<void> {
         RAISE EXCEPTION 'data access unavailable' USING ERRCODE = 'KDA01';
       END IF;
 
-      -- 5. The nodes, the tree unfolded. A company node brings the company and its centres; a
-      -- group brings itself, its subgroups and their centres, whatever their company; a centre
-      -- brings itself. Disabled nodes count (disabling a node does not change access). Every edit
-      -- node is also a read node.
+      -- 5. The nodes, the tree unfolded. A company node brings the company and the centres whose
+      -- company it is, and nothing below them; a group brings itself, its subgroups and their
+      -- centres, whatever their company; a centre brings itself. The descent starts from the
+      -- cost-centre nodes only. Disabled nodes count (disabling a node does not change access).
+      -- Every edit node is also a read node.
       WITH RECURSIVE seeds AS (
         SELECT n.node_type, n.company_id, n.cost_center_id, n.access
         FROM user_data_access_nodes n
         WHERE n.tenant_id = v_tenant AND n.user_id = p_user
       ),
-      tree (id, company_id, access) AS (
+      subtree (id, company_id, access) AS (
         SELECT c.id, c.company_id, s.access
         FROM seeds s
         JOIN cost_centers c ON c.tenant_id = v_tenant AND c.id = s.cost_center_id
         WHERE s.node_type = 'cost_center'
         UNION
+        SELECT ch.id, ch.company_id, t.access
+        FROM subtree t
+        JOIN cost_centers ch ON ch.tenant_id = v_tenant AND ch.parent_id = t.id
+      ),
+      tree (id, company_id, access) AS (
+        SELECT id, company_id, access FROM subtree
+        UNION
         SELECT c.id, c.company_id, s.access
         FROM seeds s
         JOIN cost_centers c ON c.tenant_id = v_tenant AND c.company_id = s.company_id
         WHERE s.node_type = 'company'
-        UNION
-        SELECT ch.id, ch.company_id, t.access
-        FROM tree t
-        JOIN cost_centers ch ON ch.tenant_id = v_tenant AND ch.parent_id = t.id
       )
       SELECT
         EXISTS (SELECT 1 FROM seeds WHERE node_type = 'all'),
