@@ -9,7 +9,8 @@ import { NodeSpec, PgClient, seedNodes, seedPerson, seedRole } from './data-acce
  * Companies Alpha France (FR) and Alpha Espagne (ES); group Infrastructure (INF) with INF-FR (FR)
  * and INF-ES (ES). Lines:
  *   L1 FR / INF-FR   L2 FR / INF-ES   L3 ES / INF-FR (paid by another company than its centre's)
- *   L4 ES / INF-ES   L5 ES / no centre   L6 no company, no centre, Nina owner
+ *   L4 ES / INF-ES   L5 ES / no centre   L6 no company, no centre, Nina IT owner
+ *   L7 no company, no centre, Nina business owner (its only named owner)
  * Persons (limited unless said): Marta (ES edit), Paul (INF read), Rita (INF-FR edit + INF read),
  * Claire (all, edit), Rob (all, read), Nina (no node), an Administrator (limited mode, role
  * Administrator: everything), Ulla (mode all).
@@ -27,8 +28,8 @@ export async function applyPerson(client: PgClient, userId: string): Promise<str
   return (await client.query(`SELECT data_access_apply($1) AS mode`, [userId])).rows[0].mode;
 }
 
-export type Label = 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6';
-export const LABELS: Label[] = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6'];
+export type Label = 'L1' | 'L2' | 'L3' | 'L4' | 'L5' | 'L6' | 'L7';
+export const LABELS: Label[] = ['L1', 'L2', 'L3', 'L4', 'L5', 'L6', 'L7'];
 
 export type Seed = {
   tenantId: string;
@@ -109,7 +110,7 @@ export async function seed(client: PgClient): Promise<Seed> {
   const axis2 = await axis('a2');
 
   const place: Record<Label, [string | null, string | null]> = {
-    L1: [fr, infFr], L2: [fr, infEs], L3: [es, infFr], L4: [es, infEs], L5: [es, null], L6: [null, null],
+    L1: [fr, infFr], L2: [fr, infEs], L3: [es, infFr], L4: [es, infEs], L5: [es, null], L6: [null, null], L7: [null, null],
   };
   const lines = {} as Record<Label, string>;
   const versions = {} as Record<Label, string>;
@@ -117,9 +118,9 @@ export async function seed(client: PgClient): Promise<Seed> {
   for (const label of LABELS) {
     const [companyId, centreId] = place[label];
     const line = (await q(
-      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id, owner_it_id)
-       VALUES ($1, $2, 'EUR', '2026-01-01', $3, $4, $5, $6) RETURNING id`,
-      [tenantId, `DA line ${label} ${tag}`, nextItemNumber(), companyId, centreId, label === 'L6' ? persons.nina : null],
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number, paying_company_id, cost_center_id, owner_it_id, owner_business_id)
+       VALUES ($1, $2, 'EUR', '2026-01-01', $3, $4, $5, $6, $7) RETURNING id`,
+      [tenantId, `DA line ${label} ${tag}`, nextItemNumber(), companyId, centreId, label === 'L6' ? persons.nina : null, label === 'L7' ? persons.nina : null],
     ))[0].id as string;
     lines[label] = line;
     const version = (await q(
@@ -169,6 +170,7 @@ export const EXPECTED: Record<LimitedPerson, Expectation> = {
   rita: { readable: ['L1', 'L2', 'L3', 'L4'], modifiable: ['L1'] },
   claire: { readable: ALL, modifiable: ALL },
   rob: { readable: ALL, modifiable: [] },
-  // No node: only the line it owns (responsible: read and edit), even without a company.
-  nina: { readable: ['L6'], modifiable: ['L6'] },
+  // No node: only the lines it owns, as IT owner (L6) or business owner (L7): responsible, read
+  // and edit, even without a company.
+  nina: { readable: ['L6', 'L7'], modifiable: ['L6', 'L7'] },
 };

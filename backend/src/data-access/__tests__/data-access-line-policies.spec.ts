@@ -18,7 +18,7 @@ import { EXPECTED, LABELS, Label, Seed, applyPerson, nextItemNumber, seed as see
  * taking the limited role through data_access_apply(). One transaction, rolled back; each write
  * under a savepoint.
  *
- * Reference example (lines L1-L6, persons): data-access-line-seed.ts.
+ * Reference example (lines L1-L7, persons): data-access-line-seed.ts.
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
@@ -261,6 +261,8 @@ async function testPlacement(s: Seed): Promise<void> {
     ['rita', 'L1', 'paying_company_id', s.es, '42501'],
     ['nina', 'L6', 'paying_company_id', s.fr, '42501'], // owner: the trigger refuses the move
     ['nina', 'L6', 'description', 'edited by its owner', 'ok'],
+    ['nina', 'L7', 'description', 'edited by its business owner', 'ok'],
+    ['nina', 'L7', 'paying_company_id', s.fr, '42501'], // business owner: the trigger refuses the move too
     ['claire', 'L6', 'paying_company_id', s.fr, 'ok'],
   ];
   for (const [person, label, column, value, expected] of moves) {

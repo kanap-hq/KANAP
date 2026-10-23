@@ -480,7 +480,7 @@ async function testBulkReplacement(s: Seed2): Promise<void> {
     }
     await apply(s.persons.ulla);
     const kept = ids(await q(`SELECT spend_item_id::text AS id FROM application_spend_items WHERE application_id = $1`, [s.application.a]));
-    assert.deepEqual(kept, pick(s.lines, ['L1', 'L2', 'L5', 'L6']), 'bulk replacement: the links to invisible lines stay');
+    assert.deepEqual(kept, pick(s.lines, ['L1', 'L2', 'L5', 'L6', 'L7']), 'bulk replacement: the links to invisible lines stay');
   } finally {
     await client.query('ROLLBACK TO SAVEPOINT data_access_bulk');
   }
