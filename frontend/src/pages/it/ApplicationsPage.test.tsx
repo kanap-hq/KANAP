@@ -163,6 +163,31 @@ describe('ApplicationsPage', () => {
     expect(style.height).toBe('100%');
   });
 
+  it('keeps an obsolete deployment in the environment pills, greyed, and hides a retired one', () => {
+    renderPage();
+    const Cell = lastProps().columns.find((column) => (column as { colId?: string }).colId === 'environments')!.cellRenderer!;
+    render(
+      <MemoryRouter>
+        <Cell
+          data={{
+            id: 'a-1',
+            name: 'Payroll',
+            instances: [
+              { environment: 'qa', lifecycle: 'deprecated' },
+              { environment: 'prod', lifecycle: 'active' },
+              { environment: 'dev', lifecycle: 'retired' },
+            ],
+          }}
+        />
+      </MemoryRouter>,
+    );
+    const pills = screen.getAllByText(/^pages\.applications\.environments\..*\.short$/).map((node) => node.textContent);
+    expect(pills).toEqual(['pages.applications.environments.prod.short', 'pages.applications.environments.qa.short']);
+    const qa = screen.getByText('pages.applications.environments.qa.short').closest('a')!;
+    expect(qa.getAttribute('aria-label')).toContain('pages.applications.environments.qa.name');
+    expect(window.getComputedStyle(qa).color).not.toBe(window.getComputedStyle(screen.getByText('pages.applications.environments.prod.short').closest('a')!).color);
+  });
+
   it('shows the vulnerabilities to review after the name while the feed is on, linked to the filtered page', async () => {
     features.vulnerabilityFeed = true;
     renderPage();

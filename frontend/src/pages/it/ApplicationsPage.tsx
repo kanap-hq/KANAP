@@ -7,6 +7,8 @@ import { ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
+import { getDotColor } from '../../utils/statusColors';
+import { APPLICATION_ENVIRONMENTS } from '../../utils/applicationEnvironments';
 import { StatusDot } from '../../components/design';
 import { useAuth } from '../../auth/AuthContext';
 import { useQuery } from '@tanstack/react-query';
@@ -37,15 +39,8 @@ import {
   vulnerabilityFilterFromSearch,
   vulnerabilityFilterOptions,
 } from '../../components/vulnerabilities/vulnerabilityListColumn';
-/** The environments of the pills, in display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
-const ENV_SUMMARY = [
-  { value: 'prod' },
-  { value: 'pre_prod' },
-  { value: 'qa' },
-  { value: 'test' },
-  { value: 'dev' },
-  { value: 'sandbox' },
-] as const;
+/** The environments of the pills, in the one display order; their abbreviation and full name come from `pages.applications.environments.<value>`. */
+const ENV_SUMMARY = APPLICATION_ENVIRONMENTS;
 
 /** An empty value, in every column. */
 const EMPTY_CELL = '—';
@@ -626,11 +621,13 @@ export default function ApplicationsPage() {
     const mode = theme.palette.mode;
     const Cell: React.FC<ICellRendererParams<AppRow, any>> = (params) => {
       const instances = (params.data?.instances || []) as AppInstanceSummary[];
+      // An obsolete deployment stays listed, greyed; a retired or not yet active one is left out.
       const activeEnvs = ENV_SUMMARY.map((env) => {
         const match = instances.find((inst) => inst.environment === env.value);
-        if (!isInstanceActive(match)) return null;
-        return { env, match: match as AppInstanceSummary };
-      }).filter(Boolean) as Array<{ env: typeof ENV_SUMMARY[number]; match: AppInstanceSummary }>;
+        const obsolete = match?.lifecycle === 'deprecated';
+        if (!isInstanceActive(match) && !obsolete) return null;
+        return { env, match: match as AppInstanceSummary, obsolete };
+      }).filter(Boolean) as Array<{ env: typeof ENV_SUMMARY[number]; match: AppInstanceSummary; obsolete: boolean }>;
       if (activeEnvs.length === 0) {
         return (
           <Box component="span" sx={{ display: 'flex', alignItems: 'center', height: '100%' }}>
@@ -651,7 +648,7 @@ export default function ApplicationsPage() {
             height: '100%',
           }}
         >
-          {activeEnvs.map(({ env, match }) => {
+          {activeEnvs.map(({ env, match, obsolete }) => {
             const lifecycleText = match.lifecycle ? ` · ${lifecycleLabel(match.lifecycle)}` : '';
             const tooltip = `${t(`pages.applications.environments.${env.value}.name`)}${match.base_url ? ` · ${match.base_url}` : ''}${lifecycleText}`;
             return (
@@ -668,14 +665,14 @@ export default function ApplicationsPage() {
                     gap: '5px',
                     fontSize: '0.75rem',
                     fontWeight: 500,
-                    color: 'text.primary',
+                    color: obsolete ? 'kanap.text.tertiary' : 'text.primary',
                     lineHeight: 1,
                     textDecoration: 'none',
                     cursor: 'pointer',
                     '&:hover': { textDecoration: 'none' },
                   }}
                 >
-                  <StatusDot color={getEnvDotColor(env.value, mode)} />
+                  <StatusDot color={obsolete ? getDotColor('default', mode) : getEnvDotColor(env.value, mode)} />
                   {t(`pages.applications.environments.${env.value}.short`)}
                 </Box>
               </Tooltip>
