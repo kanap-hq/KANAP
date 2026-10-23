@@ -49,8 +49,9 @@ const FIXED_EXPORT_LABELS: Record<string, Record<string, Record<ExportLanguage, 
   },
   users_mode: {
     manual: { en: 'Manual', fr: 'Manuel', de: 'Manuell', es: 'Manual' },
-    it_users: { en: 'IT users', fr: 'Utilisateurs IT', de: 'IT-Benutzer', es: 'Usuarios IT' },
-    headcount: { en: 'Headcount', fr: 'Effectif', de: 'Mitarbeiterzahl', es: 'Plantilla' },
+    // The screen offers "Derived" and "Manual" only; both derived modes read as "Derived".
+    it_users: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
+    headcount: { en: 'Derived', fr: 'Dérivé', de: 'Abgeleitet', es: 'Derivado' },
   },
 };
 
