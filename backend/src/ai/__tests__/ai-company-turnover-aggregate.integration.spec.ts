@@ -50,9 +50,9 @@ function executors(runner: QueryRunner) {
     runner.manager.getRepository(CurrencyRateSet),
     new CurrencySettingsService(runner.manager.getRepository(Tenant), {} as any),
   );
-  const aggregateArgs: any[] = Array.from({ length: 23 }, () => ({}));
+  const aggregateArgs: any[] = Array.from({ length: 24 }, () => ({}));
   aggregateArgs[7] = companies;
-  aggregateArgs[22] = fxRates;
+  aggregateArgs[23] = fxRates;
   const queryArgs: any[] = Array.from({ length: 24 }, () => ({}));
   queryArgs[7] = companies;
   return {
