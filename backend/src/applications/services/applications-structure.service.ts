@@ -6,6 +6,7 @@ import { ApplicationSuiteLink } from '../application-suite.entity';
 import { AuditService } from '../../audit/audit.service';
 import { ApplicationsBaseService, ServiceOpts } from './applications-base.service';
 import { applicationParticipantCondition } from '../../auth/business-contributor-scope';
+import { assertNoSuiteCycle } from '../application-rules';
 
 /**
  * Service for managing application hierarchy (suites and components).
@@ -46,12 +47,14 @@ export class ApplicationsStructureService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     const repo = mg.getRepository(ApplicationSuiteLink);
-    const unique = Array.from(new Set((suiteIds || []).filter((id) => !!id && id !== resolvedAppId)));
+    const unique = Array.from(new Set((suiteIds || []).filter((id) => !!id)));
     if (unique.length > 0) {
       const apps = await mg.getRepository(Application).find({ where: { id: In(unique) } as any });
       if (apps.length !== unique.length) {
         throw new BadRequestException('One or more selected suites do not exist.');
       }
+      // A suite may belong to another suite, never to itself nor to one of its own members.
+      await assertNoSuiteCycle(mg, await this.getCurrentTenantId(mg), resolvedAppId, unique);
       const invalid = apps.filter((a) => !a.is_suite).map((a) => a.name);
       if (invalid.length > 0) {
         throw new BadRequestException('Only applications marked as suites can be selected as parents.');

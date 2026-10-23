@@ -112,6 +112,11 @@ export interface CsvEntityConfig {
   displayName: string;
   /** Fields used for upsert matching (beyond id) */
   upsertKey: string[];
+  /**
+   * Match the upsert key without the spaces around the stored value as well, as
+   * `lower(btrim(column))` (the uniqueness rule of application names). Off: `lower(column)`.
+   */
+  upsertKeyIgnoresOuterSpaces?: boolean;
   /** Field definitions */
   fields: CsvFieldDefinition[];
   /** Export presets (e.g., 'basic', 'full') */

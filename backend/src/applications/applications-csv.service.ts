@@ -234,12 +234,21 @@ export class ApplicationsCsvService {
   private async importLocked(file: Express.Multer.File, params: CsvImportParams, opts: { manager: EntityManager; tenantId: string; userId?: string | null }): Promise<CsvImportResult> {
     // The tenant row is locked FOR UPDATE by import(): the catalogs read here cannot change underneath.
     const itOpsSettings = await this.itOpsSettings.getSettings(opts.tenantId, { manager: opts.manager });
-    const result = await this.importSvc.import(applicationCsvConfig, file, params, { ...opts, itOpsSettings });
+    // The applications the load wrote: a row the operation skipped (an existing application in
+    // "add new only", a new one in "update only") or found unchanged keeps its owners and residency.
+    const written = new Set<string>();
+    const config = {
+      ...applicationCsvConfig,
+      afterCommit: async (entities: any[]) => {
+        for (const entity of entities) if (entity?.id) written.add(String(entity.id));
+      },
+    };
+    const result = await this.importSvc.import(config, file, params, { ...opts, itOpsSettings });
 
     // If successful and not dry run, handle owners and data residency
     if (result.ok && !params.dryRun) {
-      await this.handleOwnerImport(file, params.mode, opts);
-      await this.handleDataResidencyImport(file, opts);
+      await this.handleOwnerImport(file, params.mode, written, opts);
+      await this.handleDataResidencyImport(file, written, opts);
     }
 
     return result;
@@ -248,7 +257,7 @@ export class ApplicationsCsvService {
   /**
    * Handle owner import from CSV after main import.
    */
-  private async handleOwnerImport(file: Express.Multer.File, mode: CsvImportParams['mode'], opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleOwnerImport(file: Express.Multer.File, mode: CsvImportParams['mode'], written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file to get owner columns
@@ -275,7 +284,7 @@ export class ApplicationsCsvService {
       if (!appName) continue;
 
       const appId = await this.importedApplicationId(manager, tenantId, row);
-      if (!appId) continue;
+      if (!appId || !written.has(String(appId))) continue;
 
       const ownerRepo = manager.getRepository(ApplicationOwner);
       const beforeRows = await ownerRepo.find({ where: { application_id: appId, tenant_id: tenantId } as any });
@@ -342,7 +351,7 @@ export class ApplicationsCsvService {
   /**
    * Handle data residency import from CSV after main import.
    */
-  private async handleDataResidencyImport(file: Express.Multer.File, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
+  private async handleDataResidencyImport(file: Express.Multer.File, written: Set<string>, opts: { manager: EntityManager; tenantId: string; userId?: string | null }) {
     const { manager, tenantId, userId } = opts;
 
     // Re-parse the file
@@ -367,7 +376,7 @@ export class ApplicationsCsvService {
       if (!appName) continue;
 
       const appId = await this.importedApplicationId(manager, tenantId, row);
-      if (!appId) continue;
+      if (!appId || !written.has(String(appId))) continue;
 
       // Parse residency codes
       const codes = residencyRaw

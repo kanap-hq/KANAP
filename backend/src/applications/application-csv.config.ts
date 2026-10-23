@@ -17,6 +17,14 @@ import { ItOpsSettings } from '../it-ops-settings/it-ops-settings.service';
 
 const OWNER_COLUMN = /^(business|it)_owner_email_/;
 
+/** The status as the screen names it, in the language of the file. */
+const APPLICATION_STATUS_LABELS: Record<CsvExportContext['language'], Record<string, string>> = {
+  en: { enabled: 'Enabled', disabled: 'Disabled' },
+  fr: { enabled: 'Activé', disabled: 'Désactivé' },
+  de: { enabled: 'Aktiviert', disabled: 'Deaktiviert' },
+  es: { enabled: 'Activado', disabled: 'Desactivado' },
+};
+
 function resolveApplicationCatalogs(entity: any, settings: ItOpsSettings): void {
   if (entity.category) entity.category = resolveCatalogCode(entity.category, settings.applicationCategories);
   if (entity.lifecycle) entity.lifecycle = resolveCatalogCode(entity.lifecycle, settings.lifecycleStates);
@@ -175,6 +183,8 @@ export const applicationCsvConfig: CsvEntityConfig = {
   tableName: 'applications',
   displayName: 'Applications',
   upsertKey: ['name'],
+  // Same rule as the unique names: `lower(btrim(name))`.
+  upsertKeyIgnoresOuterSpaces: true,
   fields: [
     ...['rto_minutes', 'rpo_minutes', 'cyber_criticality', 'recovery_wave', 'classification_justification'].map((field) => ({
       csvColumn: field, entityProperty: field, type: CsvFieldType.STRING, required: false, defaultExport: true,
@@ -585,6 +595,22 @@ export const applicationCsvConfig: CsvEntityConfig = {
         const owners = entity._owners || [];
         const it = owners.filter((o: any) => o.owner_type === 'it');
         return it[3]?.user?.email || '';
+      },
+    },
+
+    // === STATUS (export only: the status is changed on the page) ===
+    {
+      csvColumn: 'status',
+      entityProperty: 'status',
+      type: CsvFieldType.COMPUTED,
+      exportable: true,
+      importable: false,
+      defaultExport: true,
+      label: 'Status',
+      group: 'Overview',
+      exportFn: (entity: any, context: CsvExportContext) => {
+        const status = String(entity.status ?? '');
+        return APPLICATION_STATUS_LABELS[context.language]?.[status] ?? status;
       },
     },
 

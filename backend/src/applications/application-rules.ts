@@ -24,9 +24,12 @@ export function codedErrorOf(error: any): { code?: string; params?: Params } {
   return { code: response.code, ...(response.params && typeof response.params === 'object' ? { params: response.params } : {}) };
 }
 
-/** Names compare without case and without the spaces around them. */
+/**
+ * Names compare without case and without the spaces around them, as the database compares them
+ * (`lower(btrim(name))`): `btrim` removes the space character only, so the key does the same.
+ */
 export function applicationNameKey(name: unknown): string {
-  return String(name ?? '').trim().toLowerCase();
+  return String(name ?? '').replace(/^ +| +$/g, '').toLowerCase();
 }
 
 /** The trimmed name, or a refusal when it is empty or too long. */
@@ -70,17 +73,28 @@ export async function assertApplicationNameFree(manager: any, tenantId: string, 
 }
 
 /**
+ * `head` followed by `tail`, with `head` cut so the whole fits in the longest name the API
+ * accepts (a copy of a 200-character name, `CRM (copy 2)` of a long `CRM`).
+ */
+export function fitApplicationName(head: string, tail: string): string {
+  return `${head.slice(0, Math.max(0, APPLICATION_NAME_MAX - tail.length)).replace(/ +$/, '')}${tail}`;
+}
+
+/**
  * The name a copy gets: `requested` when no application has it, else the first free numbered
  * variant. A name ending with a parenthesis (`CRM (copy)`, `CRM (copie)`, whatever the language
- * of the suffix) is numbered inside it (`CRM (copy 2)`); another name gets ` (2)`.
+ * of the suffix) is numbered inside it (`CRM (copy 2)`); another name gets ` (2)`. A variant
+ * longer than the limit is cut before its suffix.
  */
 export async function freeApplicationName(manager: any, tenantId: string, requested: string): Promise<string> {
-  const inParens = /^(.*\([^()]*?)(?: \d+)?\)$/.exec(requested);
-  const stem = inParens ? inParens[1] : requested;
-  const variant = (n: number) => (inParens ? `${stem} ${n})` : `${stem} (${n})`);
+  const inParens = /^(.*?)( ?\([^()]*?)(?: \d+)?\)$/.exec(requested);
+  const head = inParens ? inParens[1] : requested;
+  const variant = (n: number) => (inParens ? fitApplicationName(head, `${inParens[2]} ${n})`) : fitApplicationName(head, ` (${n})`));
+  // Every variant starts with this much of the head, however much a long number cuts it.
+  const prefix = applicationNameKey(head.slice(0, Math.max(0, APPLICATION_NAME_MAX - 24)));
   const rows: Array<{ name: string }> = await manager.query(
     `SELECT name FROM applications WHERE tenant_id = $1 AND lower(btrim(name)) LIKE $2 ESCAPE '\\'`,
-    [tenantId, `${applicationNameKey(stem).replace(/[\\%_]/g, '\\$&')}%`],
+    [tenantId, `${prefix.replace(/[\\%_]/g, '\\$&')}%`],
   );
   const taken = new Set(rows.map((row) => applicationNameKey(row.name)));
   if (!taken.has(applicationNameKey(requested))) return requested;
@@ -89,18 +103,32 @@ export async function freeApplicationName(manager: any, tenantId: string, reques
   }
 }
 
-function dayOf(value: unknown): string | null {
+/**
+ * The day of a date, `YYYY-MM-DD`. The database driver reads a `date` column as a `Date` at
+ * midnight in the server's zone: its day is read from its local parts, never through
+ * `toISOString`, which moves it to the day before east of UTC. A `Date` at midnight UTC
+ * (`new Date('2026-05-01')`, what the API makes of a day it receives) is read in UTC.
+ */
+export function applicationDayOf(value: unknown): string | null {
   if (value === null || value === undefined || value === '') return null;
+  if (!(value instanceof Date)) {
+    const text = String(value);
+    if (/^\d{4}-\d{2}-\d{2}/.test(text)) return text.slice(0, 10);
+  }
   const date = value instanceof Date ? value : new Date(String(value));
-  return Number.isNaN(date.getTime()) ? null : date.toISOString().slice(0, 10);
+  if (Number.isNaN(date.getTime())) return null;
+  const pad = (n: number) => String(n).padStart(2, '0');
+  const utcMidnight = date.getUTCHours() === 0 && date.getUTCMinutes() === 0 && date.getUTCSeconds() === 0 && date.getUTCMilliseconds() === 0;
+  if (utcMidnight) return date.toISOString().slice(0, 10);
+  return `${String(date.getFullYear()).padStart(4, '0')}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
 }
 
 /** 400 `dates_inconsistent` when the end of support or the retirement comes before the go-live. */
 export function assertApplicationDates(dates: { go_live_date?: unknown; end_of_support_date?: unknown; retired_date?: unknown }): void {
-  const goLive = dayOf(dates.go_live_date);
+  const goLive = applicationDayOf(dates.go_live_date);
   if (!goLive) return;
   for (const field of ['end_of_support_date', 'retired_date'] as const) {
-    const day = dayOf(dates[field]);
+    const day = applicationDayOf(dates[field]);
     if (day && day < goLive) {
       throw applicationBadRequest('dates_inconsistent', `${field} (${day}) is before go_live_date (${goLive})`, { field, date: day, goLive });
     }
@@ -115,5 +143,27 @@ export async function assertSuiteHasNoChildren(manager: any, tenantId: string, a
   );
   if (count > 0) {
     throw applicationConflict('suite_has_children', `Detach the ${count} child applications first`, { count });
+  }
+}
+
+/**
+ * 409 `suite_cycle` when the application would belong to itself: one of `suiteIds` is the
+ * application, or already belongs to it, directly or through other suites.
+ */
+export async function assertNoSuiteCycle(manager: any, tenantId: string, appId: string, suiteIds: string[]): Promise<void> {
+  if (suiteIds.length === 0) return;
+  const [cycle]: Array<{ name: string }> = await manager.query(
+    `WITH RECURSIVE inside(id) AS (
+       SELECT $2::uuid
+       UNION
+       SELECT s.application_id FROM application_suites s JOIN inside ON s.suite_id = inside.id WHERE s.tenant_id = $1
+     )
+     SELECT a.name FROM applications a JOIN inside ON inside.id = a.id
+      WHERE a.tenant_id = $1 AND a.id = ANY($3::uuid[])
+      ORDER BY a.name ASC LIMIT 1`,
+    [tenantId, appId, suiteIds],
+  );
+  if (cycle) {
+    throw applicationConflict('suite_cycle', `This application already contains "${cycle.name}": it cannot belong to it`, { name: cycle.name });
   }
 }

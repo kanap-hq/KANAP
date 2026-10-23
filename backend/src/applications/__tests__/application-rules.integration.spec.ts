@@ -15,6 +15,8 @@ import { assert, inRolledBackTransaction, runSpecs, seedTenant } from '../../spe
 import { Application } from '../application.entity';
 import { ApplicationsCsvService } from '../applications-csv.service';
 import { csvOwnerKeys } from '../application-csv.config';
+import { APPLICATION_NAME_MAX, applicationNameKey } from '../application-rules';
+import { ApplicationsStructureService } from '../services/applications-structure.service';
 import { ApplicationsCrudService } from '../services/applications-crud.service';
 import { ApplicationsLifecycleService } from '../services/applications-lifecycle.service';
 import { ApplicationsListService } from '../services/applications-list.service';
@@ -200,11 +202,20 @@ async function testNames() {
     const version = await ctx.lifecycle.createVersion(nova, { name: 'Nova 2', copyOwners: false } as any, null, opts(ctx));
     assert.equal(version.name, 'Nova 2');
 
+    // The import finds an application by its name as the uniqueness rule compares it: an older
+    // name with spaces around it (` Spaced`) is updated by `Spaced`, by id or not.
     const [{ id: spaced }] = await ctx.runner.query(`INSERT INTO applications (tenant_id, name) VALUES ($1, ' Spaced') RETURNING id::text AS id`, [ctx.tenantId]);
     let result = await importCsv(ctx, ['id;name', ';Twin', ';spaced', `${nova};Atlas`, `;${'z'.repeat(201)}`], { dryRun: true });
-    assert.deepEqual(rowCodes(result), [[2, 'name_ambiguous'], [3, 'name_taken'], [4, 'name_taken'], [5, 'name_too_long']]);
-    result = await importCsv(ctx, ['id;name;description', `${twinB};twin ;updated`, `${spaced};Spaced;trimmed`]);
+    assert.deepEqual(rowCodes(result), [[2, 'name_ambiguous'], [4, 'name_taken'], [5, 'name_too_long']]);
+    result = await importCsv(ctx, ['id;name;description', `${twinB};twin ;updated`, ';Spaced;trimmed']);
     assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.equal(result.inserted, 0, 'no second Spaced');
+    const [stored] = await ctx.runner.query(`SELECT name, description FROM applications WHERE id = $1 AND tenant_id = $2`, [spaced, ctx.tenantId]);
+    assert.deepEqual(stored, { name: 'Spaced', description: 'trimmed' });
+
+    // The key removes the spaces `btrim` removes, and those only.
+    assert.equal(applicationNameKey('  Atlas '), 'atlas');
+    assert.equal(applicationNameKey('\tAtlas'), '\tatlas');
   });
 }
 
@@ -247,7 +258,11 @@ async function testFrenchExportImportsBack() {
     await seedApp(ctx, 'Nova', { lifecycle: 'retired' });
     const exported = await ctx.csv.export({ manager: ctx.runner.manager, tenantId: ctx.tenantId, language: 'fr', scope: 'data' });
     assert.match(exported.content, /;Actif;/, 'the lifecycle is written as the screen shows it in French');
-    assert.doesNotMatch(exported.content, /;Active;|;enabled;|;status;/, 'no English label nor status column');
+    assert.doesNotMatch(exported.content, /;Active;|;enabled;/, 'no English label nor status code');
+    const [header, atlasLine] = exported.content.replace(/^\uFEFF/, '').split(/\r?\n/);
+    const statusColumn = header.split(';').indexOf('status');
+    assert.ok(statusColumn >= 0, 'the export has the status');
+    assert.equal(atlasLine.split(';')[statusColumn], 'Activé', 'named as the screen names it in French');
     const result = await ctx.csv.import(
       { buffer: Buffer.from(exported.content), originalname: 'export.csv' } as Express.Multer.File,
       { dryRun: false, mode: 'enrich', operation: 'upsert' },
@@ -255,6 +270,8 @@ async function testFrenchExportImportsBack() {
     );
     assert.deepEqual(result.errors, [], 'the French export imports back without an error');
     assert.equal(result.inserted, 0);
+    const ignored = result.warnings.find((warning) => warning.code === 'CSV_HEADER_IGNORED_COLUMNS');
+    assert.ok(String(ignored?.params?.extra ?? '').split(', ').includes('status'), 'the status column is left out of the import, with a warning');
     assert.deepEqual(await ownersOf(ctx, atlas), [`it:${ctx.users.ana.id}`]);
     const [stored] = await ctx.runner.query(`SELECT lifecycle, criticality, data_class FROM applications WHERE id = $1`, [atlas]);
     assert.deepEqual(stored, { lifecycle: 'active', criticality: catalog.businessCriticalityLevels[0].code, data_class: catalog.dataClasses[0].code });
@@ -300,6 +317,68 @@ async function testNewVersionCopies() {
   });
 }
 
+async function testOperationLimitsOwnersAndResidency() {
+  await inTenant(async (ctx) => {
+    const atlas = await seedApp(ctx, 'Atlas');
+    await ctx.runner.query(
+      `INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`,
+      [ctx.tenantId, atlas, ctx.users.ana.id],
+    );
+    const header = 'name;business_owner_email_1;data_residency';
+    let result = await importCsv(ctx, [header, `Atlas;${ctx.users.ben.email};DE`, `Nova;${ctx.users.cleo.email};FR`], { operation: 'insert_only' });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual([result.inserted, result.skipped], [1, 1]);
+    assert.deepEqual(await ownersOf(ctx, atlas), [`business:${ctx.users.ana.id}`], 'a skipped row keeps its owners');
+    const residencyOf = async (id: string) => (await ctx.runner.query(
+      `SELECT country_iso FROM application_data_residency WHERE tenant_id = $1 AND application_id = $2`, [ctx.tenantId, id],
+    )).map((row: any) => row.country_iso);
+    assert.deepEqual(await residencyOf(atlas), [], 'and its residency');
+    const [{ id: nova }] = await ctx.runner.query(`SELECT id::text AS id FROM applications WHERE tenant_id = $1 AND name = 'Nova'`, [ctx.tenantId]);
+    assert.deepEqual(await ownersOf(ctx, nova), [`business:${ctx.users.cleo.id}`], 'an inserted row gets its owners');
+    assert.deepEqual(await residencyOf(nova), ['FR']);
+
+    result = await importCsv(ctx, [header, `Nova;${ctx.users.ana.email};`, `Vega;${ctx.users.ana.email};`], { operation: 'update_only' });
+    assert.equal(result.ok, true, JSON.stringify(result.errors));
+    assert.deepEqual([result.updated, result.skipped], [1, 1]);
+    assert.deepEqual(await ownersOf(ctx, nova), [`business:${ctx.users.ana.id}`], 'an updated row gets its owners');
+    assert.equal((await ctx.runner.query(`SELECT 1 FROM applications WHERE tenant_id = $1 AND name = 'Vega'`, [ctx.tenantId])).length, 0);
+  });
+}
+
+async function testCopyOfALongName() {
+  await inTenant(async (ctx) => {
+    for (const length of [196, APPLICATION_NAME_MAX]) {
+      const source = await seedApp(ctx, `${String(length)}${'n'.repeat(length - 3)}`);
+      const first = await ctx.crud.copyApplication(source, '', null, opts(ctx));
+      const second = await ctx.crud.copyApplication(source, '', null, opts(ctx));
+      assert.ok(first.name.length <= APPLICATION_NAME_MAX && first.name.endsWith(' (copy)'), first.name);
+      assert.ok(second.name.length <= APPLICATION_NAME_MAX && second.name.endsWith(' (copy 2)'), second.name);
+      assert.ok(first.name.startsWith(String(length)));
+    }
+    const plain = await seedApp(ctx, 'p'.repeat(APPLICATION_NAME_MAX));
+    const named = await ctx.crud.copyApplication(plain, 'p'.repeat(APPLICATION_NAME_MAX), null, opts(ctx));
+    assert.equal(named.name, `${'p'.repeat(APPLICATION_NAME_MAX - 4)} (2)`, 'a numbered name is cut before its number');
+  });
+}
+
+async function testSuiteCycles() {
+  await inTenant(async (ctx) => {
+    const structure = new ApplicationsStructureService(ctx.runner.manager.getRepository(Application), new AuditService(ctx.runner.manager.getRepository(AuditLog)));
+    const [a, b, c] = [await seedApp(ctx, 'Alpha', { is_suite: true }), await seedApp(ctx, 'Beta', { is_suite: true }), await seedApp(ctx, 'Gamma', { is_suite: true })];
+    const sOpts = opts(ctx);
+    assert.deepEqual(await refusal(structure.bulkReplaceSuites(a, [a], null, sOpts), 409, 'suite_cycle'), { name: 'Alpha' }, 'not in its own suite');
+    await structure.bulkReplaceSuites(a, [b], null, sOpts);
+    assert.deepEqual(await refusal(structure.bulkReplaceSuites(b, [a], null, sOpts), 409, 'suite_cycle'), { name: 'Alpha' }, 'Beta contains Alpha already');
+    await structure.bulkReplaceSuites(b, [c], null, sOpts);
+    assert.deepEqual(await refusal(structure.bulkReplaceSuites(c, [a], null, sOpts), 409, 'suite_cycle'), { name: 'Alpha' }, 'through another suite');
+    await structure.bulkReplaceSuites(a, [b, c], null, sOpts);
+    const links = await ctx.runner.query(
+      `SELECT application_id::text AS app, suite_id::text AS suite FROM application_suites WHERE tenant_id = $1 ORDER BY 1, 2`, [ctx.tenantId],
+    );
+    assert.equal(links.length, 3, 'a suite inside a suite is kept, without a cycle');
+  });
+}
+
 runSpecs('application-rules.integration.spec', [
   ['owners kept by empty cells', testOwnersKeptByEmptyCells],
   ['unknown catalog values', testUnknownCatalogValues],
@@ -308,6 +387,9 @@ runSpecs('application-rules.integration.spec', [
   ['suite with children', testSuiteWithChildren],
   ['french export imports back', testFrenchExportImportsBack],
   ['new version copies', testNewVersionCopies],
+  ['operation limits owners and residency', testOperationLimitsOwnersAndResidency],
+  ['copy of a long name', testCopyOfALongName],
+  ['suite cycles', testSuiteCycles],
 ]).catch((error) => {
   console.error(error);
   process.exit(1);

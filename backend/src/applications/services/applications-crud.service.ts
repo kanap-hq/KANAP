@@ -32,6 +32,7 @@ import {
   assertApplicationDates,
   assertApplicationNameFree,
   assertSuiteHasNoChildren,
+  fitApplicationName,
   freeApplicationName,
   lockApplicationNames,
   normalizeApplicationName,
@@ -513,7 +514,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       const { id: sourceId, sequential_id, created_at, updated_at, ...properties } = source;
       // A name already taken gets a numbered variant (`CRM (copy 2)`): copying twice never fails.
       await lockApplicationNames(manager, tenantId);
-      const requested = normalizeApplicationName(String(name ?? '').trim() || `${source.name} (copy)`);
+      const requested = normalizeApplicationName(String(name ?? '').trim() || fitApplicationName(source.name, ' (copy)'));
       const copyName = await freeApplicationName(manager, tenantId, requested);
       const entity = manager.getRepository(Application).create({ ...properties, ...copyClassification(source, catalog), name: copyName });
       const saved = await manager.getRepository(Application).save(entity);
