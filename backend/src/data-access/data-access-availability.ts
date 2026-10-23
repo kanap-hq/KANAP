@@ -47,10 +47,11 @@ type CatalogState = {
 
 /**
  * The catalog side of the check. Grants: USAGE on `public`; SELECT, INSERT, UPDATE, DELETE on every
- * table of `public` the application role owns (what `GRANT ... ON ALL TABLES` reaches; a table of
- * another owner is outside the rule "every KANAP table belongs to the application role"); USAGE and
- * SELECT on every sequence it owns. Policies: every expected policy exists, restrictive, on its
- * command and targeting the role (same test as `data_access_apply`).
+ * table, view and foreign table of `public` the application role owns, USAGE and SELECT on every
+ * sequence it owns: the relations of `data_access_grant_targets()`, the same list the sync grants
+ * on (a relation of another owner is outside the rule "every KANAP table belongs to the application
+ * role"). Policies: every expected policy exists, restrictive, on its command and targeting the
+ * role (same test as `data_access_apply`).
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
   const [base] = await session.query(
@@ -71,29 +72,19 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
        NOT has_schema_privilege((SELECT oid FROM lim), 'public', 'USAGE')
        OR EXISTS (
          SELECT 1
-         FROM pg_class c
-         JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public'
-           AND c.relkind IN ('r', 'p', 'v', 'm', 'f')
-           AND pg_get_userbyid(c.relowner) = current_user
-           AND NOT (
-             has_table_privilege((SELECT oid FROM lim), c.oid, 'SELECT')
-             AND has_table_privilege((SELECT oid FROM lim), c.oid, 'INSERT')
-             AND has_table_privilege((SELECT oid FROM lim), c.oid, 'UPDATE')
-             AND has_table_privilege((SELECT oid FROM lim), c.oid, 'DELETE')
+         FROM data_access_grant_targets() t
+         WHERE CASE
+           WHEN t.is_sequence THEN NOT (
+             has_sequence_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'USAGE')
+             AND has_sequence_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'SELECT')
            )
-       )
-       OR EXISTS (
-         SELECT 1
-         FROM pg_class c
-         JOIN pg_namespace n ON n.oid = c.relnamespace
-         WHERE n.nspname = 'public'
-           AND c.relkind = 'S'
-           AND pg_get_userbyid(c.relowner) = current_user
-           AND NOT (
-             has_sequence_privilege((SELECT oid FROM lim), c.oid, 'USAGE')
-             AND has_sequence_privilege((SELECT oid FROM lim), c.oid, 'SELECT')
+           ELSE NOT (
+             has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'SELECT')
+             AND has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'INSERT')
+             AND has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'UPDATE')
+             AND has_table_privilege((SELECT oid FROM lim), format('public.%I', t.relname), 'DELETE')
            )
+         END
        ) AS grants_missing,
        EXISTS (
          SELECT 1

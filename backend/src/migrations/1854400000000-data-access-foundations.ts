@@ -4,6 +4,18 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 const MARK = 'DataAccessFoundations1854400000000';
 const LOG_PREFIX = '[Migration] DataAccessFoundations:';
 const LIMITED_ROLE = 'kanap_data_limited';
+/**
+ * The relations of public the sync grants on and down() revokes from: those the current role owns
+ * (relname, is_sequence). The body of data_access_grant_targets(), inlined in down() so a rerun of
+ * down() after the functions are gone still works.
+ */
+const GRANT_TARGETS_SQL = `
+  SELECT c.relname::text AS relname, c.relkind = 'S' AS is_sequence
+  FROM pg_class c
+  WHERE c.relnamespace = 'public'::regnamespace
+    AND c.relkind IN ('r', 'p', 'v', 'm', 'f', 'S')
+    AND c.relowner = (SELECT oid FROM pg_roles WHERE rolname = current_user)
+  ORDER BY c.relname`;
 
 /**
  * Data-scoped access, lot 1: the foundations (planning/data-scoped-access/spec.md §3, §6.2, §6.3,
@@ -23,8 +35,9 @@ const LIMITED_ROLE = 'kanap_data_limited';
  *    tenant policy.
  * 4. `contracts.cost_center_id`, composite key to `cost_centers` ON DELETE RESTRICT, and its
  *    index. The entity and the API do not read it before lot 5.
- * 5. The functions `data_access_expected_policies()` (empty in lot 1), `data_access_sync_policies()`
- *    (grants of the limited role, stray policies dropped), `data_access_apply(uuid)` and
+ * 5. The functions `data_access_expected_policies()` (empty in lot 1), `data_access_grant_targets()`
+ *    (the relations the application role owns), `data_access_sync_policies()` (grants of the
+ *    limited role on those relations, stray policies dropped), `data_access_apply(uuid)` and
  *    `data_access_ctx()`, then one sync when the role exists (it is created per server by
  *    infra/scripts/data-access-role.sql).
  *
@@ -168,12 +181,17 @@ export class DataAccessFoundations1854400000000 implements MigrationInterface {
       DO $$
       DECLARE
         v_role oid := to_regrole('${LIMITED_ROLE}');
+        r record;
       BEGIN
         IF v_role IS NULL THEN
           RETURN;
         END IF;
-        REVOKE ALL ON ALL TABLES IN SCHEMA public FROM ${LIMITED_ROLE};
-        REVOKE ALL ON ALL SEQUENCES IN SCHEMA public FROM ${LIMITED_ROLE};
+        -- The relations the sync grants on (those the application role owns): a relation of
+        -- another owner may give the application role no right at all, and REVOKE would fail.
+        FOR r IN ${GRANT_TARGETS_SQL} LOOP
+          EXECUTE format('REVOKE ALL ON %s public.%I FROM ${LIMITED_ROLE}',
+                         CASE WHEN r.is_sequence THEN 'SEQUENCE' ELSE 'TABLE' END, r.relname);
+        END LOOP;
         ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON TABLES FROM ${LIMITED_ROLE};
         ALTER DEFAULT PRIVILEGES IN SCHEMA public REVOKE ALL ON SEQUENCES FROM ${LIMITED_ROLE};
         -- Only a direct grant: on PostgreSQL 15 the role reaches public through PUBLIC, which stays.
@@ -190,6 +208,7 @@ export class DataAccessFoundations1854400000000 implements MigrationInterface {
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_apply(uuid)`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_sync_policies()`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_expected_policies()`);
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_grant_targets()`);
 
     await queryRunner.query(`DROP INDEX IF EXISTS idx_contracts_tenant_cost_center`);
     await queryRunner.query(`ALTER TABLE contracts DROP CONSTRAINT IF EXISTS contracts_cost_center_fk`);
@@ -223,6 +242,19 @@ async function createFunctions(queryRunner: QueryRunner): Promise<void> {
     $fn$
   `);
 
+  // The relations of public the limited role is granted on: those the calling role (the
+  // application role) owns. Tables, partitioned tables, views, materialized views and foreign
+  // tables (what GRANT ... ON ALL TABLES reaches), and sequences. A relation of another owner is
+  // outside the rule "every table belongs to the application role" and is skipped.
+  await queryRunner.query(`
+    CREATE OR REPLACE FUNCTION data_access_grant_targets()
+    RETURNS TABLE (relname text, is_sequence boolean)
+    LANGUAGE sql
+    STABLE
+    SET search_path = public, pg_temp
+    AS $fn$ ${GRANT_TARGETS_SQL} $fn$
+  `);
+
   // Grants of the limited role in this database, then its policies. Called by the migrations that
   // change the expected list and by the API at start (lot 1 run B). Policy DDL takes an exclusive
   // lock: callers set lock_timeout, the function does not.
@@ -245,9 +277,16 @@ async function createFunctions(queryRunner: QueryRunner): Promise<void> {
       IF NOT has_schema_privilege(v_role, 'public', 'USAGE') THEN
         GRANT USAGE ON SCHEMA public TO ${LIMITED_ROLE};
       END IF;
-      -- No TRUNCATE, no UPDATE on sequences (no request path calls setval).
-      GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO ${LIMITED_ROLE};
-      GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO ${LIMITED_ROLE};
+      -- No TRUNCATE, no UPDATE on sequences (no request path calls setval). Relation by relation,
+      -- only those the application role owns (data_access_grant_targets(), the availability check
+      -- uses it too): a relation of another owner may give it no right, and GRANT would fail.
+      FOR r IN SELECT t.relname, t.is_sequence FROM data_access_grant_targets() t LOOP
+        IF r.is_sequence THEN
+          EXECUTE format('GRANT USAGE, SELECT ON SEQUENCE public.%I TO ${LIMITED_ROLE}', r.relname);
+        ELSE
+          EXECUTE format('GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE public.%I TO ${LIMITED_ROLE}', r.relname);
+        END IF;
+      END LOOP;
       ALTER DEFAULT PRIVILEGES IN SCHEMA public
         GRANT SELECT, INSERT, UPDATE, DELETE ON TABLES TO ${LIMITED_ROLE};
       ALTER DEFAULT PRIVILEGES IN SCHEMA public

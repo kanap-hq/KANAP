@@ -1,7 +1,8 @@
 // @exclusive-db-spec: renames the server-wide role kanap_data_limited and changes its membership inside rolled-back transactions
 import 'dotenv/config';
 import * as assert from 'node:assert/strict';
-import { DataSource } from 'typeorm';
+import { DataSource, QueryRunner } from 'typeorm';
+import { DataAccessFoundations1854400000000 } from '../../migrations/1854400000000-data-access-foundations';
 import {
   DataAccessSession,
   checkDataAccessAvailability,
@@ -26,7 +27,9 @@ import {
  * - role inherited by the application role: unavailable with `inheritance`;
  * - the synchronisation waits on a lock: after 5 s it gives up, logs one line, never throws, and the
  *   function stays unavailable;
- * - everything in place: available, nothing to synchronise.
+ * - everything in place: available, nothing to synchronise;
+ * - a table and a sequence of public owned by another role, with no right for the application
+ *   role: the sync, the availability check and the migration's down() then up() skip them.
  *
  * Each scenario runs on an admin connection inside a transaction that is always rolled back, as
  * the application role (`SET LOCAL ROLE`): the routine's own transactions become savepoints, so
@@ -154,6 +157,48 @@ async function testRoleInherited(admin: PgClient): Promise<void> {
 }
 
 /**
+ * Relations of public the application role does not own and has no right on (another
+ * application's, created by the admin): the sync, the check, down() and up() leave them alone.
+ */
+async function testForeignRelations(admin: PgClient): Promise<void> {
+  await inRolledBack(admin, async () => {
+    await admin.query(`CREATE TABLE data_access_spec_foreign (id int)`);
+    await admin.query(`REVOKE ALL ON data_access_spec_foreign FROM PUBLIC`);
+    await admin.query(`CREATE SEQUENCE data_access_spec_foreign_seq`);
+    await admin.query(`REVOKE ALL ON SEQUENCE data_access_spec_foreign_seq FROM PUBLIC`);
+    await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    await admin.query(`SELECT data_access_sync_policies()`);
+    assert.deepEqual(
+      await checkDataAccessAvailability(savepointSession(admin)),
+      { available: true, missing: [] },
+      'the sync covers what the application role owns, the check asks for nothing more',
+    );
+
+    const queryRunner = {
+      query: async (sql: string, params?: unknown[]) => (await admin.query(sql, params)).rows,
+    } as unknown as QueryRunner;
+    const migration = new DataAccessFoundations1854400000000();
+    await migration.down(queryRunner);
+    const { rows: down } = await admin.query(
+      `SELECT count(*)::int AS n FROM pg_class c, aclexplode(c.relacl) a
+       WHERE c.relnamespace = 'public'::regnamespace AND a.grantee = to_regrole($1)`,
+      [LIMITED_ROLE],
+    );
+    assert.equal(down[0].n, 0, 'down() revoked the grants of the limited role');
+    await migration.up(queryRunner);
+    assert.equal(await granted(admin, 'companies'), true, 'up() granted again');
+    assert.deepEqual(await checkDataAccessAvailability(savepointSession(admin)), { available: true, missing: [] });
+    const { rows } = await admin.query(
+      `SELECT has_table_privilege($1, 'data_access_spec_foreign', 'SELECT') AS t,
+              has_sequence_privilege($1, 'data_access_spec_foreign_seq', 'USAGE') AS s`,
+      [LIMITED_ROLE],
+    );
+    assert.deepEqual(rows[0], { t: false, s: false }, 'the relations of another owner are left alone');
+  });
+  console.log('  relations of another owner: sync, check, down() and up() skip them: OK');
+}
+
+/**
  * GRANT does not wait on a table lock: it waits on the catalog row of a table another transaction
  * changed. The holder takes the table in ACCESS EXCLUSIVE mode and changes its grants, as a
  * concurrent migration would, and keeps its transaction open.
@@ -223,6 +268,7 @@ async function main(): Promise<void> {
     await testGrantsRevoked(admin);
     await testRoleMissing(admin);
     await testRoleInherited(admin);
+    await testForeignRelations(admin);
     await testLockTimeout(admin, holder);
     await testStartupOnDataSource();
     assert.equal(await roleExists(admin), true, 'the role is still in place');
