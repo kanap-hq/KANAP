@@ -120,10 +120,10 @@ function MarkdownEditorLoadingFallback({ minRows }: { minRows: number }) {
   );
 }
 
-export const IntegratedDocumentEditor = React.forwardRef<
+const DocumentEditorForOneSlot = React.forwardRef<
   IntegratedDocumentEditorHandle,
   IntegratedDocumentEditorProps
->(function IntegratedDocumentEditor(
+>(function DocumentEditorForOneSlot(
   {
     entityType,
     entityId,
@@ -969,6 +969,19 @@ export const IntegratedDocumentEditor = React.forwardRef<
       )}
     </Box>
   );
+});
+
+/**
+ * Every piece of the editor's state belongs to one document: its edit mode, its lock, its draft and
+ * revision. A host that shows another record in the same place (previous / next in a record
+ * header) gets a fresh editor for it; the previous one releases its own lock as it unmounts.
+ */
+export const IntegratedDocumentEditor = React.forwardRef<
+  IntegratedDocumentEditorHandle,
+  IntegratedDocumentEditorProps
+>(function IntegratedDocumentEditor(props, ref) {
+  const { entityType, entityId, slotKey } = props;
+  return <DocumentEditorForOneSlot key={`${entityType}:${entityId || 'draft'}:${slotKey}`} ref={ref} {...props} />;
 });
 
 export default IntegratedDocumentEditor;
