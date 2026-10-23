@@ -1999,13 +1999,14 @@
       "newTitle": "New server",
       "tabs": {
         "overview": "Overview",
-        "technical": "Technical",
+        "operations": "Operations",
+        "network": "Network",
         "hardware": "Hardware",
-        "support": "Support",
-        "relations": "Relations",
-        "knowledge": "Knowledge",
-        "assignments": "Assignments",
-        "connections": "Connections"
+        "dependencies": "Dependencies",
+        "relations": "Relations"
+      },
+      "operations": {
+        "hostedApplications": "Hosted applications"
       },
       "overview": {
         "name": "Name",
@@ -2038,7 +2039,6 @@
         "environment": "Environment",
         "members": "Members",
         "editMembers": "Edit members",
-        "saveClusterFirst": "Save this cluster before managing members.",
         "loadingMembers": "Loading members…",
         "noMembers": "No members added yet.",
         "clusterMembership": "Cluster membership",
@@ -2070,7 +2070,6 @@
           "status": "Status",
           "operatingSystem": "Operating system"
         },
-        "clusterManagement": "Cluster management",
         "hostnamePlaceholder": "e.g., server1",
         "aliasesExamplePlaceholder": "e.g., server1, srv1",
         "ipAddressPlaceholder": "e.g., 10.12.34.56",
@@ -2098,7 +2097,6 @@
         }
       },
       "assignments": {
-        "title": "Assignments",
         "addAssignment": "Add assignment",
         "clusterCannotHost": "Cluster assets cannot host application assignments. Assign the member hosts.",
         "noAssignments": "No assignments yet.",
@@ -2219,6 +2217,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Vendor",
         "searchVendors": "Search vendors",
         "supportContract": "Support contract",

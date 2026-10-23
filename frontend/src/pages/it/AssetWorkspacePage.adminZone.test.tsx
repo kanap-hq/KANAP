@@ -52,6 +52,7 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
+vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => null }));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => <div /> }));
@@ -92,7 +93,7 @@ function renderAsset(asset: typeof ASSET = ASSET) {
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/assets/asset-1/technical']}>
+          <MemoryRouter initialEntries={['/it/assets/asset-1/operations']}>
             <Routes>
               <Route path="/it/assets/:id/:tab" element={<AssetWorkspacePage />} />
             </Routes>

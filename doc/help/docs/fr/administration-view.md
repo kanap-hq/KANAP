@@ -103,7 +103,7 @@ Si des actifs entrent dans le filtre entre le décompte et la confirmation, KANA
 - **Entrante** : l'autre domaine approuve celui-ci.
 - **Bidirectionnelle** : les deux.
 
-Les **Contrôleurs de domaine** ne se saisissent pas à la main. KANAP prend les serveurs du domaine (le champ **Domaine** de l'onglet Technique de l'actif) qui ne sont pas retirés et qui :
+Les **Contrôleurs de domaine** ne se saisissent pas à la main. KANAP prend les serveurs du domaine (le champ **Domaine** de l'onglet Réseau de l'actif) qui ne sont pas retirés et qui :
 
 - portent une technologie de la famille **Annuaire et identité** qui n'est pas retirée, comme Active Directory, ou
 - sont affectés avec le rôle de serveur **Contrôleur de domaine** à une application en service.

@@ -7,14 +7,14 @@ describe('invalidateTechnologyLinks', () => {
     const client = new QueryClient();
     const keys = [
       ['asset-technologies', 'a1'],
-      ['asset-impact', 'a1', 0],
+      ['asset-impact', 'a1'],
       ['application-relations', 'app-1'],
       ['application-workspace-relations-count', 'app-1'],
       ['technology-servers', 't1'],
       ['technology-workspace', 'TEC-3'],
       ['technologies', {}],
       ['vulnerabilities', 'application', 'app-1'],
-      ['asset-workspace-relations-count', 'a1'],
+      ['asset-relations-tab', 'a1'],
       ['contracts', {}],
     ];
     keys.forEach((key) => client.setQueryData(key, 1));

@@ -225,7 +225,7 @@ L'onglet Déploiements documente où l'application s'exécute réellement : un b
 
 Cliquez sur **Ajouter un serveur** dans l'en-tête du déploiement pour rattacher un actif. Les actifs cluster sont exclus : assignez plutôt les hôtes membres du cluster.
 
-**Conseil** : Documentez les serveurs dans **Cartographie SI > Actifs** d'abord, puis liez-les ici. L'onglet Vue d'ensemble de l'actif affichera les mêmes assignations dans le sens inverse.
+**Conseil** : Documentez les serveurs dans **Cartographie SI > Actifs** d'abord, puis liez-les ici. L'onglet Exploitation de l'actif affiche les mêmes affectations dans le sens inverse, sous **Applications hébergées**.
 
 ---
 

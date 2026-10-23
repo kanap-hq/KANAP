@@ -93,7 +93,7 @@ export type AssetRelationsCounts = {
   incidents: number;
   links: number;
   attachments: number;
-  /** The tab's badge: every row above, each section only when the caller can read it. */
+  /** The Relations badge: every row above except `assets` (the Dependencies tab), each section only when the caller can read it. */
   total: number;
 };
 
@@ -217,7 +217,8 @@ export class AssetRelationsTabService {
       links: Number(other?.links ?? 0),
       attachments: Number(other?.attachments ?? 0),
     };
-    const total = Object.values(counts).reduce((sum, n) => sum + n, 0);
+    const { assets: _assets, ...otherCounts } = counts;
+    const total = Object.values(otherCounts).reduce((sum, n) => sum + n, 0);
     return { year, budget_column, assets, budget_lines, contracts, projects, tasks, incidents, counts: { ...counts, total } };
   }
 

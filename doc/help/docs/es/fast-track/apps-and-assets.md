@@ -181,7 +181,7 @@ Complete los campos principales:
 | **Entorno** | A qué entorno sirve | `Prod` |
 | **Descripción** | Cualquier contexto adicional |  |
 
-El panel **Propiedades** a la derecha contiene el resto: **Sub-ubicación**, **Ciclo de vida**, **Puesta en producción** y **Fin de vida**. Una vez seleccionada una ubicación, varios **campos de solo lectura** se derivan automáticamente:
+El panel **Propiedades** a la derecha contiene el resto: el conmutador **Clúster**, **Zona de administración**, **Sub-ubicación**, **Ciclo de vida**, **Fecha de puesta en marcha** y **Fecha de fin de vida**. Una vez seleccionada una ubicación, varios **campos de solo lectura** se derivan automáticamente:
 
 - **Tipo de alojamiento** (on-premises, nube, colocation, etc.)
 - **Proveedor cloud / Empresa operadora** (p. ej., AWS, Azure o la empresa que opera la instalación)
@@ -191,21 +191,25 @@ El panel **Propiedades** a la derecha contiene el resto: **Sub-ubicación**, **C
 !!! info "La ubicación es la clave"
     La ubicación determina automáticamente muchos atributos de su activo. Las ubicaciones se gestionan en **Panorama IT > Ubicaciones**. Configúrelas una vez y cada activo asignado a ellas hereda el tipo de alojamiento, el proveedor, el país y la ciudad. No tiene que rellenarlos manualmente.
 
-Haga clic en **Crear** para desbloquear el espacio de trabajo completo. Para tipos de activos físicos, pestañas adicionales de **Hardware** y **Soporte** se hacen disponibles para hacer seguimiento de números de serie, detalles del fabricante y contratos de soporte del proveedor.
+### Pestaña Red
 
-### Pestaña Técnico
-
-Vaya a la pestaña **Técnico** para añadir:
+La pestaña **Red** está abierta mientras crea el activo. Complete:
 
 | Sección | Campos | Detalles |
 |---------|--------|---------|
-| **Gestión del clúster** | Interruptor Clúster | Actívelo si este activo es un clúster y luego añada sus servidores miembros |
 | **Identidad** | Nombre de host, Dominio, FQDN, Alias | El FQDN se calcula automáticamente a partir del nombre de host y el dominio |
-| **Tecnologías** | Sistema operativo y otras tecnologías, con sus versiones | Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor |
 | **Direcciones IP** | Tipo, Dirección IP, Subred | La zona de red y la VLAN se derivan de la subred |
 
 !!! info "Varias direcciones IP"
     Un servidor puede tener varias direcciones IP: añada tantas como necesite (p. ej., interfaz de gestión, VLAN de producción, red de copias de seguridad). Cada entrada puede tener su propio tipo y subred, y la zona de red y la VLAN se derivan automáticamente.
+
+Haga clic en **Crear** para desbloquear el espacio de trabajo completo. La pestaña **Vista general** gana entonces una sección **Soporte** para el contrato de soporte del proveedor y sus contactos. Para tipos de activos físicos, una pestaña **Hardware** hace seguimiento de los números de serie y los detalles del fabricante.
+
+### Pestaña Operación
+
+Vaya a la pestaña **Operación** para añadir las **Tecnologías** que lleva el servidor, con sus versiones. Añada Windows Server, Ubuntu u otra tecnología de la familia **Sistema operativo**: pasa a ser el sistema operativo del servidor.
+
+Si este activo es un clúster, active el conmutador **Clúster** en el panel **Propiedades** y luego añada sus servidores miembros con **Editar miembros** en la pestaña **Dependencias**.
 
 ---
 
@@ -226,8 +230,8 @@ Hay **dos formas** de crear esta asignación:
 ### Desde el lado del activo
 
 1. Abra su activo
-2. En la pestaña **Vista general**, localice la sección **Asignaciones**
-3. Haga clic en **Agregar asignación**
+2. En la pestaña **Operación**, localice la sección **Aplicaciones alojadas**
+3. Haga clic en **Añadir asignación**
 4. Complete los campos de la asignación:
 
 | Campo | Qué introducir | Ejemplo |
@@ -295,8 +299,8 @@ Luego utilice el [Mapa de interfaces](../interface-map.md) para visualizar el fl
 | Añadir información de conformidad | Abrir app > pestaña Conformidad |
 | Crear un servidor | Panorama IT > Activos > Añadir activo |
 | Vincular servidor a app (desde la app) | Abrir app > pestaña Despliegues > Agregar servidor |
-| Vincular servidor a app (desde el activo) | Abrir activo > pestaña Vista general > Asignaciones > Agregar asignación |
-| Ver conexiones del servidor | Abrir activo > pestaña Vista general > Conexiones |
+| Vincular servidor a app (desde el activo) | Abrir activo > pestaña Operación > Aplicaciones alojadas > Añadir asignación |
+| Ver conexiones del servidor | Abrir activo > pestaña Red > Conexiones |
 | Ver mapa de conexiones | Panorama IT > Mapa de conexiones |
 | Ver mapa de interfaces | Panorama IT > Mapa de interfaces |
 | Configurar desplegables | Panorama IT > Configuración |

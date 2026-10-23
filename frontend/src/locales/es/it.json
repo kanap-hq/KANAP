@@ -1999,13 +1999,14 @@
       "newTitle": "Nuevo servidor",
       "tabs": {
         "overview": "Vista general",
-        "technical": "Técnico",
+        "operations": "Operación",
+        "network": "Red",
         "hardware": "Hardware",
-        "support": "Soporte",
-        "relations": "Relaciones",
-        "knowledge": "Base de conocimiento",
-        "assignments": "Asignaciones",
-        "connections": "Conexiones"
+        "dependencies": "Dependencias",
+        "relations": "Relaciones"
+      },
+      "operations": {
+        "hostedApplications": "Aplicaciones alojadas"
       },
       "overview": {
         "name": "Nombre",
@@ -2038,7 +2039,6 @@
         "environment": "Entorno",
         "members": "Miembros",
         "editMembers": "Editar miembros",
-        "saveClusterFirst": "Guarde este clúster antes de gestionar los miembros.",
         "loadingMembers": "Cargando miembros…",
         "noMembers": "Aún no se han añadido miembros.",
         "clusterMembership": "Pertenencia al clúster",
@@ -2070,7 +2070,6 @@
           "status": "Estado",
           "operatingSystem": "Sistema operativo"
         },
-        "clusterManagement": "Gestión del clúster",
         "hostnamePlaceholder": "p. ej., server1",
         "aliasesExamplePlaceholder": "p. ej., server1, srv1",
         "ipAddressPlaceholder": "p. ej., 10.12.34.56",
@@ -2098,7 +2097,6 @@
         }
       },
       "assignments": {
-        "title": "Asignaciones",
         "addAssignment": "Añadir asignación",
         "clusterCannotHost": "Los activos de clúster no pueden alojar asignaciones de aplicaciones. Asigne los hosts miembros.",
         "noAssignments": "Aún no hay asignaciones.",
@@ -2219,6 +2217,7 @@
         }
       },
       "support": {
+        "title": "Soporte",
         "vendor": "Proveedor",
         "searchVendors": "Buscar proveedores",
         "supportContract": "Contrato de soporte",

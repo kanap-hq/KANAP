@@ -68,7 +68,7 @@ Los recuentos por servidor y por aplicación, en las listas, en las fichas, en e
 
 Una máquina virtual o un invitado no cuenta las vulnerabilidades de su host. Una vulnerabilidad de VMware ESXi solo cuenta en los hosts ESXi. Contar a través de los hosts pondría una sola vulnerabilidad de un hipervisor en casi todos los servidores y aplicaciones de un parque virtualizado.
 
-El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, en la parte **A través de otro activo** de su sección **Vulnerabilidades**. Consulte [Activos](assets.md#technical).
+El alcance a través de otro activo sigue visible, sin contarse: en el panel lateral de una vulnerabilidad, bajo **A través de otro activo**, y en la ficha de un activo, en la parte **A través de otro activo** de su sección **Vulnerabilidades**. Consulte [Activos](assets.md#operations).
 
 ## La lista
 
@@ -182,7 +182,7 @@ Los destinatarios son los responsables de TI de la tecnología cuya cuenta está
 - **Lista de tecnologías**: la columna **Vulnerabilidades por revisar**, en naranja cuando algunas son críticas o altas. Consulte [Tecnologías](technologies.md#trabajar-con-la-lista).
 - **Espacio de trabajo de la tecnología**: la sección **Vulnerabilidades** de la pestaña Cumplimiento. Consulte [Tecnologías](technologies.md#vulnerabilidades).
 - **Listas de activos y aplicaciones**: la columna **Vulnerabilidades por revisar**. Consulte [Activos](assets.md#working-with-the-list) y [Aplicaciones](applications.md#working-with-the-list).
-- **Fichas de activo y aplicación**: la sección **Vulnerabilidades** y la insignia de vulnerabilidades graves en el encabezado. Consulte [Activos](assets.md#technical) y [Aplicaciones](applications.md#operations).
+- **Fichas de activo y aplicación**: la sección **Vulnerabilidades** y la insignia de vulnerabilidades graves en el encabezado. Consulte [Activos](assets.md#operations) y [Aplicaciones](applications.md#operations).
 - **Panel de control**: el mosaico **Vulnerabilidades del parque**. Consulte [Mi panel de control](my-dashboard.md#vulnerabilities).
 - **Plaid**: el asistente responde a preguntas sobre vulnerabilidades. Consulte [Plaid](ai-assistant.md#tool-calls).
 

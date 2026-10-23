@@ -103,7 +103,7 @@ Kommen zwischen der Zählung und der Bestätigung Assets in den Filter hinzu, le
 - **Eingehend**: Die andere Domäne vertraut dieser.
 - **Bidirektional**: beides.
 
-**Domänencontroller** werden nicht von Hand erfasst. KANAP nimmt die Server der Domäne (das Feld **Domäne** im Reiter Technik des Assets), die nicht ausgemustert sind und die entweder:
+**Domänencontroller** werden nicht von Hand erfasst. KANAP nimmt die Server der Domäne (das Feld **Domäne** im Reiter Netzwerk des Assets), die nicht ausgemustert sind und die entweder:
 
 - eine nicht ausgemusterte Technologie der Familie **Verzeichnis und Identität** tragen, etwa Active Directory, oder
 - einer Anwendung in Betrieb mit der Serverrolle **Domänencontroller** zugeordnet sind.

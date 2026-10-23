@@ -51,6 +51,11 @@ assets.md	frontend/src/pages/it/AssetWorkspacePage.tsx
 assets.md	frontend/src/pages/it/editors/AssetRelationsPanel.tsx
 assets.md	frontend/src/pages/it/editors/AssetImpactSection.tsx
 assets.md	frontend/src/pages/it/components/AssetTechnologiesSection.tsx
+assets.md	frontend/src/pages/it/editors/SupportInfoPanel.tsx
+assets.md	frontend/src/pages/it/editors/HardwareInfoPanel.tsx
+assets.md	frontend/src/pages/it/workspace/AssetDependenciesTab.tsx
+assets.md	frontend/src/pages/it/workspace/AssetRelationsTab.tsx
+assets.md	frontend/src/pages/it/workspace/assetRelationsData.ts
 technologies.md	frontend/src/pages/it/TechnologiesPage.tsx
 technologies.md	frontend/src/pages/it/TechnologyWorkspacePage.tsx
 technologies.md	frontend/src/pages/it/workspace/TechnologyOverviewTab.tsx

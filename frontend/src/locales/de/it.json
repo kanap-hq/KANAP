@@ -1999,13 +1999,14 @@
       "newTitle": "Neuer Server",
       "tabs": {
         "overview": "Übersicht",
-        "technical": "Technik",
+        "operations": "Betrieb",
+        "network": "Netzwerk",
         "hardware": "Hardware",
-        "support": "Support",
-        "relations": "Beziehungen",
-        "knowledge": "Wissensdatenbank",
-        "assignments": "Zuordnungen",
-        "connections": "Verbindungen"
+        "dependencies": "Abhängigkeiten",
+        "relations": "Beziehungen"
+      },
+      "operations": {
+        "hostedApplications": "Gehostete Anwendungen"
       },
       "overview": {
         "name": "Name",
@@ -2038,7 +2039,6 @@
         "environment": "Umgebung",
         "members": "Mitglieder",
         "editMembers": "Mitglieder bearbeiten",
-        "saveClusterFirst": "Speichern Sie diesen Cluster, bevor Sie die Mitglieder verwalten.",
         "loadingMembers": "Mitglieder werden geladen…",
         "noMembers": "Noch keine Mitglieder hinzugefügt.",
         "clusterMembership": "Cluster-Mitgliedschaft",
@@ -2070,7 +2070,6 @@
           "status": "Status",
           "operatingSystem": "Betriebssystem"
         },
-        "clusterManagement": "Cluster-Verwaltung",
         "hostnamePlaceholder": "z. B. server1",
         "aliasesExamplePlaceholder": "z. B. server1, srv1",
         "ipAddressPlaceholder": "z. B. 10.12.34.56",
@@ -2098,7 +2097,6 @@
         }
       },
       "assignments": {
-        "title": "Zuordnungen",
         "addAssignment": "Zuordnung hinzufügen",
         "clusterCannotHost": "Cluster-Assets können keine Anwendungszuordnungen hosten. Weisen Sie die Mitglieds-Hosts zu.",
         "noAssignments": "Noch keine Zuordnungen.",
@@ -2219,6 +2217,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Lieferant",
         "searchVendors": "Lieferanten suchen",
         "supportContract": "Support-Vertrag",

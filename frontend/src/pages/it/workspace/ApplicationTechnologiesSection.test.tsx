@@ -126,7 +126,7 @@ describe('ApplicationTechnologiesSection', () => {
 
     // A hosted row changes on the server's page.
     fireEvent.click(sql.getByRole('link', { name: 'srv-etl-1' }));
-    expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/technical');
+    expect(screen.getByTestId('location').textContent).toBe('/it/assets/srv-1/operations');
   });
 
   it('leaves the free width to the technology name', async () => {

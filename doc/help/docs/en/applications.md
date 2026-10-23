@@ -225,7 +225,7 @@ The Deployments tab documents where the application actually runs: one block per
 
 Click **Add server** on the deployment header to attach an asset. Cluster assets are excluded. Assign cluster member hosts instead.
 
-**Tip**: Document servers in **IT Landscape > Assets** first, then link them here. The asset's Overview tab will show the same assignments in reverse.
+**Tip**: Document servers in **IT Landscape > Assets** first, then link them here. The asset's Operations tab shows the same assignments in reverse, under **Hosted applications**.
 
 ---
 

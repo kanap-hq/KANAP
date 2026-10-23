@@ -181,7 +181,7 @@ Fill in the core fields:
 | **Environment** | Which environment it serves | `Prod` |
 | **Description** | Any additional context | |
 
-The **Properties** panel on the right holds the rest: **Sub-location**, **Lifecycle**, **Go live**, and **End of life**. Once a Location is selected, several **read-only fields** are automatically derived:
+The **Properties** panel on the right holds the rest: the **Cluster** switch, **Administration zone**, **Sub-location**, **Lifecycle**, **Go-live date** and **End-of-life date**. Once a Location is selected, several **read-only fields** are automatically derived:
 
 - **Hosting type** (on-premises, cloud, colocation, etc.)
 - **Cloud provider / Operating company** (e.g., AWS, Azure, or the company running the facility)
@@ -191,21 +191,25 @@ The **Properties** panel on the right holds the rest: **Sub-location**, **Lifecy
 !!! info "Location is the key"
     The Location drives many attributes of your asset automatically. Locations are managed in **IT Landscape → Locations**. Set them up once and every asset assigned to them inherits hosting type, provider, country, and city. You don't need to fill these in manually.
 
-Click **Create** to unlock the full workspace. For physical asset types, additional **Hardware** and **Support** tabs become available to track serial numbers, manufacturer details, and vendor support contracts.
+### Network tab
 
-### Technical tab
-
-Go to the **Technical** tab to add:
+The **Network** tab is open while you create the asset. Fill in:
 
 | Section | Fields | Details |
 |---------|--------|---------|
-| **Cluster management** | Cluster switch | Turn it on if this asset is a cluster, then add its member servers |
 | **Identity** | Hostname, Domain, FQDN, Aliases | FQDN is auto-computed from Hostname + Domain |
-| **Technologies** | Operating system and other technologies, with their versions | Add Windows Server, Ubuntu or another technology of the **Operating system** family: it becomes the server's operating system |
 | **IP addresses** | Type, IP address, Subnet | Network zone and VLAN are derived from Subnet |
 
 !!! info "Multiple IP addresses"
     A server can have several IP addresses. Add as many as needed (e.g., management interface, production VLAN, backup network). Each entry can have its own type and subnet, and the Network zone and VLAN are derived automatically.
+
+Click **Create** to unlock the full workspace. The **Overview** tab then gains a **Support** section for the vendor support contract and contacts. For physical asset types, a **Hardware** tab tracks serial numbers and manufacturer details.
+
+### Operations tab
+
+Go to the **Operations** tab to add the **Technologies** the server carries, with their versions. Add Windows Server, Ubuntu or another technology of the **Operating system** family: it becomes the server's operating system.
+
+If this asset is a cluster, turn on the **Cluster** switch in the **Properties** panel, then add its member servers with **Edit members** on the **Dependencies** tab.
 
 ---
 
@@ -226,7 +230,7 @@ There are **two ways** to create this assignment:
 ### From the Asset side
 
 1. Open your asset
-2. On the **Overview** tab, find the **Assignments** section
+2. On the **Operations** tab, find the **Hosted applications** section
 3. Click **Add assignment**
 4. Fill in the assignment fields:
 
@@ -295,8 +299,8 @@ Then use the [Interface Map](../interface-map.md) to visualize the full applicat
 | Add compliance info | Open app → Compliance tab |
 | Create a server | IT Landscape → Assets → Add asset |
 | Link server to app (from app) | Open app → Deployments tab → Add server |
-| Link server to app (from asset) | Open asset → Overview tab → Assignments → Add assignment |
-| View server connections | Open asset → Overview tab → Connections |
+| Link server to app (from asset) | Open asset → Operations tab → Hosted applications → Add assignment |
+| View server connections | Open asset → Network tab → Connections |
 | View connection map | IT Landscape → Connection Map |
 | View interface map | IT Landscape → Interface Map |
 | Configure dropdowns | IT Landscape → Settings |

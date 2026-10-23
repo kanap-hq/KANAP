@@ -1999,13 +1999,14 @@
       "newTitle": "Nouveau serveur",
       "tabs": {
         "overview": "Vue d'ensemble",
-        "technical": "Technique",
+        "operations": "Exploitation",
+        "network": "Réseau",
         "hardware": "Matériel",
-        "support": "Support",
-        "relations": "Relations",
-        "knowledge": "Base de connaissances",
-        "assignments": "Affectations",
-        "connections": "Connexions"
+        "dependencies": "Dépendances",
+        "relations": "Relations"
+      },
+      "operations": {
+        "hostedApplications": "Applications hébergées"
       },
       "overview": {
         "name": "Nom",
@@ -2038,7 +2039,6 @@
         "environment": "Environnement",
         "members": "Membres",
         "editMembers": "Modifier les membres",
-        "saveClusterFirst": "Enregistrez ce cluster avant de gérer les membres.",
         "loadingMembers": "Chargement des membres…",
         "noMembers": "Aucun membre ajouté pour le moment.",
         "clusterMembership": "Appartenance au cluster",
@@ -2070,7 +2070,6 @@
           "status": "Statut",
           "operatingSystem": "Système d'exploitation"
         },
-        "clusterManagement": "Gestion du cluster",
         "hostnamePlaceholder": "ex. : server1",
         "aliasesExamplePlaceholder": "ex. : server1, srv1",
         "ipAddressPlaceholder": "ex. : 10.12.34.56",
@@ -2098,7 +2097,6 @@
         }
       },
       "assignments": {
-        "title": "Affectations",
         "addAssignment": "Ajouter une affectation",
         "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
@@ -2219,6 +2217,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Fournisseur",
         "searchVendors": "Rechercher un fournisseur",
         "supportContract": "Contrat de support",

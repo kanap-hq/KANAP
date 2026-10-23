@@ -8,12 +8,6 @@ function itemCount(payload: any): number {
   return 0;
 }
 
-/** The Relations badge of an asset: `counts.total` of the tab's read, in one request. */
-export async function fetchAssetRelationsCount(assetId: string): Promise<number> {
-  const res = await api.get<{ counts?: { total?: number } }>(`/assets/${assetId}/relations-tab`);
-  return Number(res.data?.counts?.total) || 0;
-}
-
 export async function fetchApplicationIncidentsCount(applicationId: string): Promise<number> {
   const res = await api.get('/incidents', { params: { application_id: applicationId, limit: 1 } });
   return itemCount(res.data);

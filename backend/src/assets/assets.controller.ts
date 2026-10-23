@@ -358,7 +358,8 @@ export class AssetsController {
   /**
    * The Relations tab in one round trip (`asset-relations-tab.service.ts`): the relations between
    * assets in four directions, budget lines, contracts, projects, tasks and incidents (each null
-   * without the read of its module), and the badge counts. `:id` is a uuid or `AST-n`.
+   * without the read of its module), and the badge counts (`counts.total` leaves out `counts.assets`,
+   * which feeds the Dependencies badge). `:id` is a uuid or `AST-n`.
    * `GET :id/relations` keeps its shape for its other callers.
    */
   @UseGuards(PermissionGuard)

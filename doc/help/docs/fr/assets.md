@@ -90,15 +90,17 @@ Les actifs peuvent être organisés en clusters :
 - **Actif standard** : Une instance d'infrastructure individuelle
 - **Cluster** : Un groupe d'actifs agissant comme une seule unité logique
 
-Lors de la modification d'un actif, basculez **Cluster** dans l'onglet Technique pour le marquer comme cluster. Les actifs cluster peuvent être des points de terminaison dans les connexions, mais les assignations d'applications doivent être faites sur les hôtes membres, pas sur le cluster lui-même.
+Pour marquer un actif comme cluster, activez l'interrupteur **Cluster** dans son tiroir des propriétés. Les actifs cluster peuvent être des points de terminaison dans les connexions. Les applications s'affectent aux hôtes membres.
 
-Les membres du cluster sont gérés depuis l'onglet **Technique** de l'espace de travail du cluster via **Modifier les membres**.
+Les membres du cluster sont gérés depuis l'onglet **Dépendances** de l'espace de travail du cluster via **Modifier les membres**. Voir [Dépendances](#dependencies).
 
 ---
 
 ## L'espace de travail des Actifs
 
 Cliquez sur n'importe quelle ligne pour ouvrir l'espace de travail. L'espace de travail comporte un **en-tête** avec des métadonnées rapides, un **tiroir des propriétés** sur la droite (la carte d'identité de l'actif, toujours visible) et une **zone de contenu** au centre qui change selon l'onglet.
+
+Les onglets sont **Vue d'ensemble**, **Exploitation**, **Réseau**, **Matériel** (types d'actifs physiques uniquement), **Dépendances** et **Relations**. À la création d'un actif, **Vue d'ensemble** et **Réseau** sont ouverts. Les autres onglets s'ouvrent dès que vous cliquez sur **Créer**.
 
 ### En-tête
 
@@ -113,20 +115,23 @@ L'en-tête affiche :
 
 ### Tiroir des propriétés (panneau de droite)
 
-Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement.
+Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modifications sont enregistrées automatiquement. Les champs forment trois groupes.
 
-**Identification et site** :
+**Type et zone** :
 - **Type d'actif** (obligatoire)
-- **Site** (obligatoire)
-- **Sous-site** (lorsque le site a des sous-sites définis)
-- **Type d'hébergement**, **Fournisseur cloud / Société exploitante**, **Pays**, **Ville** : en lecture seule, dérivés du site
-
-**Statut** :
+- **Cluster** : activez-le pour marquer l'actif comme cluster. Le changement s'enregistre aussitôt. Un cluster n'a pas de système d'exploitation propre : activer l'interrupteur retire donc le système d'exploitation de l'actif. Voir [Clusters](#clusters)
 - **Environnement** : Prod, Pré-prod, QA, Test, Dev, Sandbox
 - **Zone d'administration** : La zone de votre modèle d'administration à laquelle appartient l'actif, par exemple le Tier 0 pour un contrôleur de domaine et l'hyperviseur qui le fait tourner. Choisissez parmi les zones configurées dans **Cartographie SI > Paramètres**. L'actif apparaît alors dans cette zone sur la page [Zones d'administration](administration-view.md)
+
+**Site** :
+- **Site** (obligatoire)
+- **Sous-site** (lorsque le site a des sous-sites définis)
+- **Type d'hébergement**, **Société exploitante** ou **Fournisseur cloud**, **Pays**, **Ville** : en lecture seule, dérivés du site
+
+**Cycle de vie** :
 - **Cycle de vie** : Actif, Obsolète, Retiré, etc. (configurable dans les Paramètres)
-- **Mise en production** : Quand l'actif est entré en production
-- **Fin de vie** : Date de retrait planifiée ou effective
+- **Date de mise en service** : Quand l'actif est entré en production
+- **Date de fin de vie** : Date de retrait planifiée ou effective
 
 ---
 
@@ -134,55 +139,43 @@ Le tiroir affiche la carte d'identité de l'actif sur chaque onglet. Les modific
 
 L'onglet Vue d'ensemble est la page d'accueil de l'actif.
 
+**Netbox** : sur un actif lié à Netbox, une ligne en haut indique la date de la dernière synchronisation, avec **Ouvrir dans Netbox**. Elle signale aussi quand l'objet n'est plus dans Netbox, quand son statut Netbox demande votre attention et quand l'actif est **Géré par Netbox**. Voir [Synchronisation Netbox](netbox.md).
+
+**Informations de base** (à la création d'un actif) : **Nom**, **Type d'actif**, **Site** et **Environnement**.
+
 **Description** : Une description en texte enrichi de l'actif. Sauvegarde automatiquement au fur et à mesure que vous éditez.
 
-**Identité** :
-- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
-- **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
-- **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
-- **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
+**Support** : le support fournisseur de l'actif, pour tous les types d'actifs. La section apparaît une fois l'actif créé et s'enregistre d'elle-même pendant la saisie.
 
-**Assignations** (non affichées pour les actifs cluster) : Liste les applications s'exécutant sur cet actif. Chaque ligne affiche :
+- **Fournisseur** : Sélectionner depuis l'annuaire des fournisseurs
+- **Contrat de support** : Lien vers un enregistrement de contrat
+- **Niveau de support** : Texte libre (ex. : Or, Argent, 24x7)
+- **Expiration du support** : Date d'expiration
+- **Notes**
 
-| Colonne | Ce qu'elle affiche |
-|---------|--------------------|
-| **Application** | Nom de l'application (cliquable : saute aux Déploiements de l'application) |
-| **Environnement** | L'environnement de déploiement auquel l'assignation appartient |
-| **Rôle** | Rôle serveur (Web, Base de données, Application, etc.) |
-| **Depuis** | Date à laquelle le serveur a été assigné |
-| **Notes** | Notes en texte libre |
+**Contacts de support** : Un tableau où vous pouvez ajouter des contacts depuis l'annuaire de contacts, chacun avec un libellé de rôle en texte libre. Le tableau affiche automatiquement l'e-mail, le téléphone et le mobile de chaque contact.
 
-Cliquez sur **Ajouter une assignation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Utilisez les icônes de ligne pour modifier ou supprimer.
-
-Si cet actif est un cluster, une notification en ligne remplace le tableau d'assignations et vous demande d'assigner les hôtes membres à la place.
-
-**Connexions** : Une vue en lecture seule de toutes les connexions impliquant cet actif. Chaque ligne affiche l'ID et le nom de la connexion (cliquable : ouvre l'espace de travail de la Connexion), la topologie (Serveur à serveur ou Multi-serveur), les protocoles, les libellés des points de terminaison source et destination, et le statut de cycle de vie. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
-
-**Connaissances** : Articles de connaissances liés pour cet actif. Avec `knowledge:member`, vous pouvez créer de nouveaux articles directement depuis cette section.
+**Connaissances** : Articles de connaissances liés pour cet actif. Avec `knowledge:member`, vous pouvez créer de nouveaux articles directement depuis cette section. La section apparaît une fois l'actif créé.
 
 ---
 
-### Technique { #technical }
+### Exploitation { #operations }
 
-L'onglet Technique regroupe, dans cet ordre, le cluster, les adresses IP, les technologies que porte le serveur et leurs vulnérabilités.
+L'onglet Exploitation montre ce qui tourne sur l'actif : les applications qu'il héberge, les technologies qu'il porte et leurs vulnérabilités. Il s'ouvre une fois l'actif créé.
 
-**Gestion du cluster** :
-- Bascule **Cluster** : marquer cet actif comme cluster.
-- Si l'actif **est un cluster** : une section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur **Modifier les membres** pour ajouter ou supprimer des membres via une boîte de dialogue de recherche.
-- Si l'actif **n'est pas un cluster** : une section **Appartenance à un cluster** affiche les clusters auxquels cet actif appartient (le cas échéant).
+**Applications hébergées** : les applications qui s'exécutent sur cet actif. Chaque ligne affiche :
 
-**Adresses IP** :
+| Colonne | Ce qu'elle affiche |
+|---------|--------------------|
+| **Application** | Nom de l'application. Cliquez dessus pour ouvrir l'application sur son onglet **Déploiements** |
+| **Environnement** | L'environnement de déploiement auquel l'affectation appartient |
+| **Rôle** | Rôle serveur (Web, Base de données, Application, etc.) |
+| **Depuis** | Date à laquelle le serveur a été affecté |
+| **Notes** | Notes en texte libre |
 
-Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre configuration réseau :
+Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation.
 
-- Cliquez sur **Ajouter une adresse IP** pour ajouter une nouvelle entrée.
-- **Type** : L'objectif de l'adresse IP (Hôte, IPMI, Management, iSCSI, ou types personnalisés depuis les Paramètres)
-- **Adresse IP** : L'adresse elle-même
-- **Sous-réseau** : Sous-réseau depuis la liste configurée (filtré au site de l'actif)
-- **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
-- **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
-
-Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
+Sur un cluster, un message au-dessus du tableau vous demande d'affecter plutôt les hôtes membres, et **Ajouter une affectation** est indisponible. Le bouton est aussi indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**.
 
 **Technologies** : ce que porte le serveur, par exemple Windows Server, SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
 
@@ -202,7 +195,7 @@ Un serveur a un système d'exploitation : une technologie de la famille **Systè
 - **Ajoutez-le** comme n'importe quelle technologie. Quand le serveur n'a pas encore de système d'exploitation, la première technologie de cette famille que vous ajoutez le devient.
 - **Retirez-le** avec sa croix. Si une autre technologie de la famille reste sur le serveur, c'est elle qui devient le système d'exploitation.
 - **Changez la version** en cliquant dessus, comme pour toute technologie.
-- Un **cluster** n'a pas de système d'exploitation propre : chaque membre a le sien.
+- Un **cluster** n'a pas de système d'exploitation propre : chaque membre a le sien. Activer l'interrupteur **Cluster** d'un actif retire son système d'exploitation.
 
 Pour que VMware ESXi ou FortiOS soit le système d'exploitation d'un hôte, placez cette technologie dans la famille **Système d'exploitation** (son champ **Famille**, sur la technologie).
 
@@ -224,9 +217,38 @@ Quand les vulnérabilités sont suivies, la dernière section de l'onglet liste 
 
 ---
 
+### Réseau { #network }
+
+L'onglet Réseau regroupe l'identité réseau de l'actif, ses adresses IP et ses connexions. Il est ouvert à la création d'un actif. Si le nom d'hôte est mal formé quand vous cliquez sur **Créer**, l'onglet s'ouvre sur l'erreur.
+
+Sur un actif géré par Netbox, une ligne en haut indique que Netbox remplit les champs qu'il fournit et que les autres sont à compléter par vous.
+
+**Identité** :
+- **Nom d'hôte** : Le nom d'hôte réseau de l'actif. Pré-rempli automatiquement à partir du nom de l'actif lors de la création ; vous pouvez le remplacer à tout moment. Obligatoire lorsqu'un domaine est sélectionné. Il accepte les lettres, les chiffres, les traits d'union et les points, chaque partie entre deux points étant limitée à 63 caractères : un nom comme `DL3.ROBOT-15MS.IE2000` est donc valide tel quel.
+- **Domaine** : Le domaine Active Directory ou DNS auquel l'actif appartient. Choisissez parmi les domaines configurés dans **Cartographie SI > Paramètres**. Les options système incluent « Workgroup » (autonome) et « N/A » (non applicable).
+- **FQDN** : Fully Qualified Domain Name, calculé automatiquement à partir du nom d'hôte et du suffixe DNS du domaine. Lecture seule.
+- **Alias** : Noms DNS ou alias supplémentaires pour cet actif. Tapez et appuyez sur Entrée pour ajouter.
+
+**Adresses IP** :
+
+Les actifs prennent en charge plusieurs adresses IP, chacune avec sa propre configuration réseau :
+
+- Cliquez sur **Ajouter une adresse IP** pour ajouter une nouvelle entrée.
+- **Type** : L'objectif de l'adresse IP (Hôte, IPMI, Management, iSCSI, ou types personnalisés depuis les Paramètres)
+- **Adresse IP** : L'adresse elle-même
+- **Sous-réseau** : Sous-réseau depuis la liste configurée (filtré au site de l'actif)
+- **Zone réseau** : Dérivée automatiquement du sous-réseau sélectionné (lecture seule)
+- **VLAN** : Dérivé automatiquement du sous-réseau sélectionné (lecture seule)
+
+Cela vous permet de documenter plusieurs interfaces réseau par actif, par exemple un serveur physique avec à la fois une IP hôte et une adresse de management IPMI sur des sous-réseaux différents.
+
+**Connexions** : Une vue en lecture seule de toutes les connexions impliquant cet actif, une fois celui-ci créé. Chaque ligne affiche l'ID et le nom de la connexion (cliquable : ouvre l'espace de travail de la Connexion), la topologie (Serveur à serveur ou Multi-serveur), les protocoles, les libellés des points de terminaison source et destination, et le statut de cycle de vie. Pour créer ou modifier une connexion, rendez-vous dans **Cartographie SI > Connexions**.
+
+---
+
 ### Matériel
 
-*Visible uniquement pour les types d'actifs physiques.*
+*Visible uniquement pour les types d'actifs physiques. L'onglet s'ouvre une fois l'actif créé.*
 
 Suit les détails du matériel physique. Sauvegarde automatique au fur et à mesure que vous tapez.
 
@@ -240,25 +262,9 @@ Suit les détails du matériel physique. Sauvegarde automatique au fur et à mes
 
 ---
 
-### Support
+### Dépendances { #dependencies }
 
-*Visible uniquement pour les types d'actifs physiques.*
-
-Suit les informations de support et de contact fournisseur.
-
-- **Fournisseur** : Sélectionner depuis l'annuaire des fournisseurs
-- **Contrat de support** : Lien vers un enregistrement de contrat
-- **Niveau de support** : Texte libre (ex. : Or, Argent, 24x7)
-- **Expiration du support** : Date d'expiration
-- **Notes**
-
-**Contacts de support** : Un tableau où vous pouvez ajouter des contacts depuis l'annuaire de contacts, chacun avec un libellé de rôle en texte libre. Le tableau affiche automatiquement l'e-mail, le téléphone et le mobile de chaque contact.
-
----
-
-### Relations
-
-L'onglet Relations montre ce qui s'arrête avec cet actif, puis ce à quoi il est lié : autres actifs, lignes budgétaires, contrats, projets, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les technologies de l'actif sont dans l'onglet [Technique](#technical). Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les enregistrements liés que vous pouvez voir, ainsi que les liens et fichiers.
+L'onglet Dépendances montre la place de l'actif parmi les autres actifs : ce qui s'arrête avec lui, son cluster et ses relations avec d'autres actifs. Il s'ouvre une fois l'actif créé. Le badge de l'onglet compte les relations entre actifs, ainsi que les membres d'un cluster ou les clusters auxquels l'actif appartient.
 
 **Si ce serveur tombe** : l'onglet s'ouvre sur ce qui s'arrête avec cet actif. Une ligne de synthèse compte les applications, actifs, clusters et processus métier touchés, puis un tableau par type :
 
@@ -267,7 +273,12 @@ L'onglet Relations montre ce qui s'arrête avec cet actif, puis ce à quoi il es
 - **Clusters** : les clusters dont un membre tombe. **Tombé** quand plus aucun membre ne tient, sinon **Dégradé** avec le nombre de membres tombés. Les applications d'un cluster tombé tombent avec lui.
 - **Processus métier** : les processus des applications touchées.
 
-Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour dès que vous ajoutez ou retirez une relation entre actifs plus bas.
+Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque tableau montre ses 50 premières lignes et compte le reste. Les applications et les processus demandent le droit de les lire. La section se met à jour dès que vous ajoutez ou retirez une relation entre actifs, changez les membres d'un cluster ou activez ou désactivez l'interrupteur **Cluster**.
+
+**Cluster** :
+
+- Sur un **cluster**, une note rappelle qu'un cluster peut être un point de terminaison dans les connexions et que les applications s'affectent à ses hôtes membres. La section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. Cliquez sur **Modifier les membres** pour ajouter ou supprimer des membres via une boîte de dialogue de recherche.
+- Sur **tout autre actif**, la section **Appartenance au cluster** affiche les clusters auxquels cet actif appartient, avec leur environnement et leur statut. Cliquez sur un nom pour ouvrir le cluster.
 
 **Relations entre actifs**, un tableau par sens :
 
@@ -278,7 +289,15 @@ Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque 
 | **Dépend de** | Les actifs dont celui-ci a besoin pour fonctionner, par exemple un serveur de base de données |
 | **Requis par** | Les actifs qui ont besoin de celui-ci |
 
-Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environnement et le statut. Un actif retiré ou désactivé reste affiché, son nom grisé.
+Chaque tableau affiche la référence (`AST-12`), le nom, le type, l'environnement et le statut. Un actif retiré ou désactivé reste affiché, son nom grisé. Cliquez sur une ligne pour ouvrir l'actif.
+
+Avec `infrastructure:member`, **Ajouter**, à droite d'une section, ouvre une recherche d'actif. Choisissez un résultat : la relation est enregistrée aussitôt. Pour retirer une relation, survolez la ligne et cliquez sur la croix en fin de ligne. Les lecteurs voient les tableaux en lecture seule.
+
+---
+
+### Relations
+
+L'onglet Relations montre ce à quoi l'actif est lié : lignes budgétaires, contrats, projets, tâches et incidents, chacun dans son propre tableau, puis ses liens et fichiers. Les relations entre actifs sont dans l'onglet [Dépendances](#dependencies), et les technologies de l'actif dans l'onglet [Exploitation](#operations). L'onglet s'ouvre une fois l'actif créé. Cliquez sur une ligne pour ouvrir l'enregistrement. Le badge de l'onglet compte les enregistrements liés que vous pouvez voir, ainsi que les liens et fichiers.
 
 **Enregistrements liés**, un tableau chacun :
 
@@ -440,7 +459,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 - **Utilisez les clusters** : Regroupez les actifs liés (ex. : cluster web, cluster base de données) pour simplifier la gestion. Assignez les applications aux hôtes membres, pas au cluster lui-même.
 - **Suivez le cycle de vie** : Marquez les actifs obsolètes et retirés pour garder les comptes d'inventaire précis.
 - **Liez aux sites** : Assignez les actifs aux sites pour que le type d'hébergement, le pays et la ville soient renseignés automatiquement.
-- **Assignez aux applications** : Utilisez l'onglet Vue d'ensemble pour lier les actifs aux déploiements d'applications. Les mêmes assignations apparaissent sous l'onglet Déploiements de l'application.
+- **Affectez aux applications** : Utilisez la section **Applications hébergées** de l'onglet Exploitation pour lier les actifs aux déploiements d'applications. Les mêmes affectations apparaissent sous l'onglet Déploiements de l'application.
 - **Utilisez l'onglet Relations** : Connectez les actifs aux lignes budgétaires, contrats et projets pour la visibilité financière.
 - **Liez les tâches ici** : Ajoutez une tâche sous Relations > Tâches. Le lien apparaît aussi dans l'activité de la tâche.
 - **Attachez la documentation** : Téléversez les fichiers de configuration, diagrammes d'architecture ou documents fournisseurs directement dans l'onglet Relations.

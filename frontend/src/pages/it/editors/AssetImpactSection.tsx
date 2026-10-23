@@ -33,8 +33,6 @@ export const IMPACT_ROWS_SHOWN = 50;
 
 type Props = {
   assetId: string;
-  /** Bumped by the panel after it saved the asset's relations: the impact is read again. */
-  version?: number;
 };
 
 const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.toUpperCase());
@@ -43,16 +41,16 @@ const camel = (value: string) => value.replace(/_([a-z])/g, (_, c: string) => c.
  * "If this server goes down" (lot T5): what falls with the asset, in dense read-only tables. Empty
  * tables are left out; when nothing else falls, one tertiary line says so.
  */
-export default function AssetImpactSection({ assetId, version = 0 }: Props) {
+export default function AssetImpactSection({ assetId }: Props) {
   const { t } = useTranslation('it');
   const theme = useTheme();
   const { labelFor } = useItOpsEnumOptions();
   const { data: classification } = useApplicationClassificationCatalog();
   const { data, isError, isSuccess } = useQuery({
-    queryKey: ['asset-impact', assetId, version],
+    queryKey: ['asset-impact', assetId],
     queryFn: async () => (await api.get<AssetImpact>(`/assets/${assetId}/impact`)).data,
     enabled: !!assetId,
-    // Keep the section on screen while it is read again after a save.
+    // Keep the section on screen while it is read again after a save (the callers invalidate the key).
     placeholderData: keepPreviousData,
   });
 

@@ -68,7 +68,7 @@ Die Zählungen pro Server und pro Anwendung, in den Listen, auf den Datensätzen
 
 Eine virtuelle Maschine oder ein Gast zählt die Schwachstellen seines Hosts nicht. Eine Schwachstelle von VMware ESXi zählt nur auf den ESXi-Hosts. Über die Hosts zu zählen, würde eine einzige Schwachstelle eines Hypervisors auf fast alle Server und Anwendungen eines virtualisierten Bestands legen.
 
-Die Reichweite über ein anderes Asset bleibt sichtbar, ohne gezählt zu werden: im Seitenbereich einer Schwachstelle, unter **Über ein anderes Asset**, und auf dem Datensatz eines Assets, im Teil **Über ein anderes Asset** seines Abschnitts **Schwachstellen**. Siehe [Assets](assets.md#technical).
+Die Reichweite über ein anderes Asset bleibt sichtbar, ohne gezählt zu werden: im Seitenbereich einer Schwachstelle, unter **Über ein anderes Asset**, und auf dem Datensatz eines Assets, im Teil **Über ein anderes Asset** seines Abschnitts **Schwachstellen**. Siehe [Assets](assets.md#operations).
 
 ## Die Liste
 
@@ -182,7 +182,7 @@ Empfänger sind die IT-Verantwortlichen der Technologie, deren Konto aktiv ist u
 - **Technologieliste**: die Spalte **Zu prüfende Schwachstellen**, orange, wenn kritische oder hohe darunter sind. Siehe [Technologien](technologies.md#mit-der-liste-arbeiten).
 - **Technologie-Arbeitsbereich**: der Abschnitt **Schwachstellen** im Reiter Compliance. Siehe [Technologien](technologies.md#schwachstellen).
 - **Listen der Assets und Anwendungen**: die Spalte **Zu prüfende Schwachstellen**. Siehe [Assets](assets.md#working-with-the-list) und [Anwendungen](applications.md#working-with-the-list).
-- **Datensätze von Assets und Anwendungen**: der Abschnitt **Schwachstellen** und das Badge der schwerwiegenden Schwachstellen in der Kopfzeile. Siehe [Assets](assets.md#technical) und [Anwendungen](applications.md#operations).
+- **Datensätze von Assets und Anwendungen**: der Abschnitt **Schwachstellen** und das Badge der schwerwiegenden Schwachstellen in der Kopfzeile. Siehe [Assets](assets.md#operations) und [Anwendungen](applications.md#operations).
 - **Dashboard**: die Kachel **Schwachstellen im Bestand**. Siehe [Mein Dashboard](my-dashboard.md#vulnerabilities).
 - **Plaid**: Der Assistent beantwortet Fragen zu Schwachstellen. Siehe [Plaid](ai-assistant.md#tool-calls).
 

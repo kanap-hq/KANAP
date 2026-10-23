@@ -2,7 +2,7 @@
   "files": {
     "admin.md": "b291845378a7559bfcfffeadf7bfd116",
 
-    "administration-view.md": "bf427e11e1f20a6e48c6b7bfd94eea38",
+    "administration-view.md": "d3d1eab1848f5fefa58625fc2fa5e87c",
 
     "agents-activity.md": "21ee59e63955c7e47568f162a1ec4b51",
 
@@ -24,9 +24,9 @@
 
     "analytics.md": "972ae6fb0adee3e00fccb6aeb415fae8",
 
-    "applications.md": "a7ec55c16e4a17b3b109d8f231f0ddf6",
+    "applications.md": "613ceb2d8ec812fb4373331b29f3361a",
 
-    "assets.md": "3ab0172ba71d27916ab4ab723b16183c",
+    "assets.md": "0a5deca8d99101ab3c1083758cf343d0",
 
     "branding.md": "89014110f2460e59fca29b2bc2064272",
 
@@ -64,7 +64,7 @@
 
     "end-of-support.md": "5d467fb9d37b620c53afc018579ad280",
 
-    "fast-track/apps-and-assets.md": "6a549ebc8872b722b02dce8f4311a547",
+    "fast-track/apps-and-assets.md": "1605e1ef4e6e100f5b755cb2d78474b0",
 
     "fast-track/getting-started.md": "f68d22f1bb51bc85a1f54a995498ef5e",
 
@@ -82,7 +82,7 @@
 
     "interfaces.md": "2f6b831a1fa904fb063cef8c054574c5",
 
-    "it-ops-settings.md": "07de1123671e43480a1189c2500acc56",
+    "it-ops-settings.md": "4805806980f69bfe92f5625200d6be29",
 
     "knowledge.md": "11f40eb8f2e601eac2c37882189d9ad7",
 
@@ -132,9 +132,9 @@
 
     "tasks.md": "622309c5338e9cd0b34168b41bbde3a3",
 
-    "technologies.md": "34748865db75156946cb91a47da51c25",
+    "technologies.md": "ec9069ea66c38ecd7bfec395002a5a53",
 
-    "vulnerabilities.md": "526cde005623e64e49e375dd26a0e00c",
+    "vulnerabilities.md": "2070e1d772d2524f7197df08d2136c00",
 
     "working-day-calendars.md": "3ca1354e4be9858d7cf4cf105b10ebe4"
   },

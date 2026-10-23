@@ -1,4 +1,4 @@
-import React, { forwardRef, useImperativeHandle } from 'react';
+import React from 'react';
 import {
   Alert,
   Autocomplete,
@@ -27,11 +27,6 @@ import { drawerAutocompleteListboxSx, drawerFieldValueSx, longFormSurfaceFieldSx
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-export type SupportInfoPanelHandle = {
-  save: () => Promise<void>;
-  reset: () => void;
-  isDirty: () => boolean;
-};
 
 type VendorOption = { id: string; name: string };
 type ContractOption = { id: string; name: string };
@@ -67,7 +62,7 @@ function normalizeContacts(rows: SupportContactRow[]) {
   return rows.map((r) => ({ contact_id: r.contact_id, role: (r.role || '').trim() }));
 }
 
-export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPanel({ assetId, onDirtyChange }, ref) {
+export default function SupportInfoPanel({ assetId, onDirtyChange }: Props) {
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const readOnly = !hasLevel('infrastructure', 'member');
@@ -84,6 +79,10 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
 
   const [baseline, setBaseline] = React.useState<SupportInfo>({});
   const failedSaveSignatureRef = React.useRef<string | null>(null);
+  // Set from the start of a save to its end, before the re-render that shows it.
+  const savingRef = React.useRef(false);
+  // What the unmount sends when a change is still waiting for its autosave.
+  const pendingFlushRef = React.useRef<(() => void) | null>(null);
 
   // Support contacts
   const [supportContacts, setSupportContacts] = React.useState<SupportContactRow[]>([]);
@@ -214,8 +213,14 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
     contacts: normalizeContacts(supportContacts),
   }), [supportInfoPayload, supportContacts]);
 
+  const contactsPayload = React.useMemo(
+    () => normalizeContacts(supportContacts).filter((r) => r.contact_id),
+    [supportContacts],
+  );
+
   const save = React.useCallback(async () => {
     if (readOnly) return;
+    savingRef.current = true;
     setSaving(true);
     setError(null);
     try {
@@ -224,8 +229,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       setBaseline(supportInfoPayload);
 
       // Save support contacts
-      const payload = normalizeContacts(supportContacts).filter((r) => r.contact_id);
-      await api.post(`/assets/${assetId}/support-contacts/bulk-replace`, { contacts: payload });
+      await api.post(`/assets/${assetId}/support-contacts/bulk-replace`, { contacts: contactsPayload });
       failedSaveSignatureRef.current = null;
       setContactsBaseline(supportContacts);
     } catch (e: any) {
@@ -233,9 +237,10 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       setError(getApiErrorMessage(e, t, t('messages.saveSupportInfoFailed')));
       throw e;
     } finally {
+      savingRef.current = false;
       setSaving(false);
     }
-  }, [assetId, readOnly, saveSignature, supportContacts, supportInfoPayload, t]);
+  }, [assetId, contactsPayload, readOnly, saveSignature, supportContacts, supportInfoPayload, t]);
 
   React.useEffect(() => {
     if (!dirty || loading || saving || readOnly) return undefined;
@@ -246,20 +251,22 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
     return () => window.clearTimeout(timer);
   }, [dirty, loading, readOnly, save, saveSignature, saving]);
 
-  const reset = () => {
-    setVendorId(baseline.vendor_id || null);
-    setContractId(baseline.support_contract_id || null);
-    setSupportTier(baseline.support_tier || '');
-    setSupportExpiry(baseline.support_expiry || '');
-    setNotes(baseline.notes || '');
-    setSupportContacts(contactsBaseline.length > 0 ? contactsBaseline : []);
-  };
+  // Leaving the tab before the autosave fires still saves the change, once, without touching state.
+  React.useEffect(() => {
+    const pending = dirty && !loading && !saving && !readOnly && failedSaveSignatureRef.current !== saveSignature;
+    pendingFlushRef.current = pending
+      ? () => {
+          void (async () => {
+            await api.post(`/assets/${assetId}/support-info`, supportInfoPayload);
+            await api.post(`/assets/${assetId}/support-contacts/bulk-replace`, { contacts: contactsPayload });
+          })().catch(() => undefined);
+        }
+      : null;
+  });
 
-  useImperativeHandle(ref, () => ({
-    save,
-    reset,
-    isDirty: () => dirty,
-  }), [save, dirty, baseline, contactsBaseline]);
+  React.useEffect(() => () => {
+    if (!savingRef.current) pendingFlushRef.current?.();
+  }, []);
 
   const selectedVendor = vendorId ? vendorPicker.selected[0] ?? null : null;
   const selectedContract = contractId ? contractPicker.selected[0] ?? null : null;
@@ -279,7 +286,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
               setVendorId(v?.id || null);
             }}
             getOptionLabel={(o) => vendorPicker.label(o, (vendor) => vendor.name ?? '')}
-            disabled={readOnly}
+            disabled={readOnly || saving}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
               return <li key={key} {...optionProps}>{option.name}</li>;
@@ -316,7 +323,7 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
               setContractId(v?.id || null);
             }}
             getOptionLabel={(o) => contractPicker.label(o, (contract) => contract.name ?? '')}
-            disabled={readOnly}
+            disabled={readOnly || saving}
             renderOption={(props, option) => {
               const { key, ...optionProps } = props;
               return <li key={key} {...optionProps}>{option.name}</li>;
@@ -455,4 +462,4 @@ export default forwardRef<SupportInfoPanelHandle, Props>(function SupportInfoPan
       </Box>
     </Stack>
   );
-});
+}
