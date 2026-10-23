@@ -38,6 +38,14 @@ describe('PortfolioDetailWorkspaceShell', () => {
     expect(screen.getByText('content')).toBeInTheDocument();
   });
 
+  it('says the record is read only when the person cannot change it', () => {
+    const { unmount } = renderShell({ readOnly: true });
+    expect(screen.getByText('common:labels.readOnly')).toBeTruthy();
+    unmount();
+    renderShell();
+    expect(screen.queryByText('common:labels.readOnly')).toBeNull();
+  });
+
   it('draws neither the tab nor the drawer without properties', () => {
     renderShell({ isCreate: true });
     expect(screen.queryByRole('button', { name: /workspace\.(open|close)Properties/ })).toBeNull();

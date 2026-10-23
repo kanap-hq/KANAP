@@ -12,6 +12,7 @@ import { useTheme } from '@mui/material/styles';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ChevronLeftIcon from '@mui/icons-material/ChevronLeft';
 import ChevronRightIcon from '@mui/icons-material/ChevronRight';
+import LockOutlinedIcon from '@mui/icons-material/LockOutlined';
 import { useTranslation } from 'react-i18next';
 import { MONO_FONT_FAMILY } from '../../../config/ThemeContext';
 import { taskDetailTokens, taskDetailTypography } from '../../tasks/theme/taskDetailTokens';
@@ -47,6 +48,8 @@ type PortfolioDetailWorkspaceShellProps = {
   metadata?: React.ReactNode;
   nav?: PortfolioDetailWorkspaceNav;
   onBack: () => void;
+  /** The person may read the record but not change it: a discreet "Read only" mention next to the title. */
+  readOnly?: boolean;
   onCopyReference?: () => void;
   onSaveShortcut?: () => void;
   onTabChange: (nextTab: string) => void;
@@ -291,6 +294,7 @@ export default function PortfolioDetailWorkspaceShell({
   metadata,
   nav,
   onBack,
+  readOnly = false,
   onCopyReference,
   onSaveShortcut,
   onTabChange,
@@ -519,6 +523,15 @@ export default function PortfolioDetailWorkspaceShell({
                     </>
                   )}
                 </Box>
+                {readOnly && (
+                  <Box
+                    component="span"
+                    sx={(theme) => ({ display: 'inline-flex', alignItems: 'center', gap: 0.5, flexShrink: 0, fontSize: 12, color: theme.palette.kanap.text.tertiary })}
+                  >
+                    <LockOutlinedIcon sx={{ fontSize: 13 }} />
+                    {t('common:labels.readOnly')}
+                  </Box>
+                )}
               </Box>
 
               {metadata && (

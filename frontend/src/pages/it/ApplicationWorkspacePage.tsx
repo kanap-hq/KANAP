@@ -1592,6 +1592,7 @@ export default function ApplicationWorkspacePage() {
         title={isCreate ? '' : app?.name || ''}
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
         canEditTitle={!isCreate && canManage}
+        readOnly={!isCreate && !canManage}
         onTitleSave={(value) => { void patchApplication({ name: value }); }}
         titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
