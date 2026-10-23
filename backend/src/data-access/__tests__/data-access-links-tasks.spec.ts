@@ -21,8 +21,8 @@ import {
  * under a savepoint.
  *
  * Added here: contracts CF (FR, centre INF-FR), CE (ES, no centre, lines L1 and L5 through
- * contract_spend_items), CN (FR, Nina owner), C6 (FR, named by L6.contract_id); L5 is a CAPEX
- * line. Tasks: one per line (L5 as `capex_item`) and per contract, a project task, a standalone
+ * contract_spend_items, L5 and L7 through their contract_id), CN (FR, Nina owner), C6 (FR, named
+ * by L6.contract_id); L5 is a CAPEX line. Tasks: one per line (L5 as `capex_item`) and per contract, a project task, a standalone
  * task, and four tasks of L5 (invisible to Paul) where Paul is assignee, owner, observer or only
  * the creator. Every line is linked to an application, an asset, a technology, a project and a
  * request.
@@ -43,8 +43,8 @@ const CONTRACT_EXPECTED: Record<LimitedPerson, { readable: ContractLabel[]; modi
   rita: { readable: ['CF', 'CE'], modifiable: ['CF'] },
   claire: { readable: CONTRACTS, modifiable: CONTRACTS },
   rob: { readable: CONTRACTS, modifiable: [] },
-  // Owner of CN; C6 through the line it owns (L6.contract_id).
-  nina: { readable: ['CN', 'C6'], modifiable: ['CN'] },
+  // Owner of CN; C6 and CE through the lines it owns (L6.contract_id, L7.contract_id).
+  nina: { readable: ['CN', 'C6', 'CE'], modifiable: ['CN'] },
 };
 
 type TaskLabel =
@@ -145,6 +145,8 @@ async function seed(): Promise<Seed2> {
     await q(`INSERT INTO contract_spend_items (tenant_id, contract_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [contracts.CE, line]);
   }
   await q(`UPDATE spend_items SET contract_id = $2 WHERE id = $1`, [s.lines.L6, contracts.C6]);
+  // CE names L5 both ways (counted once), and L7 through its contract_id only.
+  await q(`UPDATE spend_items SET contract_id = $2 WHERE id = ANY ($1::uuid[])`, [[s.lines.L5, s.lines.L7], contracts.CE]);
 
   let n = 0;
   const pair = async (insert: string, extra: unknown[] = []): Promise<Objects> => ({
@@ -417,7 +419,8 @@ async function checkDisclosures(s: Seed2, p: LimitedPerson, references: Record<T
   }
   for (const c of CONTRACTS) {
     const value = (await q(`SELECT data_access_hidden_count('contract', $1) AS n`, [s.contracts[c]]))[0].n;
-    const lines: Label[] = c === 'CE' ? ['L1', 'L5'] : [];
+    // Lines of the contract by contract_spend_items and by spend_items.contract_id, each once.
+    const lines: Label[] = c === 'CE' ? ['L1', 'L5', 'L7'] : c === 'C6' ? ['L6'] : [];
     const expected = contractReadable(p, c) ? lines.filter((l) => !lineReadable(p, l)).length : null;
     assert.equal(value, expected, `${p}: hidden lines of contract ${c}`);
   }

@@ -663,7 +663,9 @@ const ACCESS_DEFINER_SIGNATURES = [
 
 /**
  * data_access_hidden_count (spec §6.6): per type of starting object, the object table and the link
- * table to the lines, with the column naming each side.
+ * table to the lines, with the column naming each side. The lines are counted once each; a
+ * contract also counts the lines that name it in spend_items.contract_id (the two forms
+ * lisible_contrat follows).
  */
 const HIDDEN_COUNT_LINKS: Array<{ type: string; object: string; link: string; objectColumn: string; lineColumn: string }> = [
   { type: 'application', object: 'applications', link: 'application_spend_items', objectColumn: 'application_id', lineColumn: 'spend_item_id' },
@@ -779,13 +781,16 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
           RETURN NULL;
         END IF;
         SELECT count(*)::int INTO v_count
-        FROM public.${h.link} l
-        JOIN public.spend_items i ON i.id = l.${h.lineColumn} AND ${IN_TENANT('i.')}
-        WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')}
+        FROM public.spend_items i
+        WHERE ${IN_TENANT('i.')}
+          AND i.id IN (
+            SELECT l.${h.lineColumn} FROM public.${h.link} l WHERE l.${h.objectColumn} = p_id AND ${IN_TENANT('l.')}${h.type === 'contract' ? `
+            UNION
+            SELECT s.id FROM public.spend_items s WHERE s.contract_id = p_id AND ${IN_TENANT('s.')}` : ''})
           AND NOT coalesce(${readableLine('i.')}, false);
         RETURN v_count;
       END IF;`).join('');
-  // The number of lines linked to a visible object that the person cannot read (spec §5.4).
+  // The number of distinct lines linked to a visible object that the person cannot read (spec §5.4).
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_hidden_count(p_type text, p_id uuid)
     RETURNS integer
