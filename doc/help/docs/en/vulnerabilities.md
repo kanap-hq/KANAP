@@ -68,7 +68,7 @@ The counts per server and per application, in the lists, on the records, on the 
 
 A virtual machine or a guest does not count the vulnerabilities of its host. A vulnerability of VMware ESXi counts on the ESXi hosts only. Counting through the hosts would put one vulnerability of a hypervisor on almost every server and application of a virtualised estate.
 
-The reach through another asset stays visible, without being counted: in the side panel of a vulnerability, under **Through another asset**, and on the record of an asset, in the **Through another asset** part of its **Vulnerabilities** section. See [Assets](assets.md#technical).
+The reach through another asset stays visible, without being counted: in the side panel of a vulnerability, under **Through another asset**, and on the record of an asset, in the **Through another asset** part of its **Vulnerabilities** section. See [Assets](assets.md#operations).
 
 ## The list
 
@@ -182,7 +182,7 @@ The recipients are the IT owners of the technology whose account is enabled and 
 - **Technologies list**: the **Vulnerabilities to review** column, in orange when some are critical or high. See [Technologies](technologies.md#working-with-the-list).
 - **Technology workspace**: the **Vulnerabilities** section of the Compliance tab. See [Technologies](technologies.md#vulnerabilities).
 - **Assets and applications lists**: the **Vulnerabilities to review** column. See [Assets](assets.md#working-with-the-list) and [Applications](applications.md#working-with-the-list).
-- **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#technical) and [Applications](applications.md#operations).
+- **Asset and application records**: the **Vulnerabilities** section and the badge of severe vulnerabilities in the header. See [Assets](assets.md#operations) and [Applications](applications.md#operations).
 - **Dashboard**: the **Vulnerabilities in your estate** tile. See [My dashboard](my-dashboard.md#vulnerabilities).
 - **Plaid**: the assistant answers questions about vulnerabilities. See [Plaid](ai-assistant.md#tool-calls).
 

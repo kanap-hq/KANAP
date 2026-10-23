@@ -103,7 +103,7 @@ If assets enter the filter between the count and the confirmation, KANAP refuses
 - **Incoming**: the other domain trusts this one.
 - **Two-way**: both.
 
-**Domain controllers** are not entered by hand. KANAP takes the servers of the domain (the **Domain** field of the asset's Technical tab) that are not retired and that either:
+**Domain controllers** are not entered by hand. KANAP takes the servers of the domain (the **Domain** field of the asset's Network tab) that are not retired and that either:
 
 - carry a technology of the **Directory and identity** family that is not retired, such as Active Directory, or
 - are assigned with the **Domain controller** server role to an application in service.

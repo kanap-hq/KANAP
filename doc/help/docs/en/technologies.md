@@ -304,7 +304,7 @@ A section appears only if you can read its module. **Add** (`infrastructure:memb
 You can record that a server carries a technology from either side:
 
 - From the technology: **Servers** tab, **Add**, then choose the server and the version.
-- From the server: **Technical** tab of the asset, **Technologies** section, **Add**, then choose the technology and the version. See [Assets](assets.md#technical).
+- From the server: **Operations** tab of the asset, **Technologies** section, **Add**, then choose the technology and the version. See [Assets](assets.md#operations).
 
 Record the technology on the server where it is installed: the host for a hypervisor, each domain controller for Active Directory, the database server for SQL Server. The servers that run inside it, or the members of its cluster, then show it without further work. A cloud technology, such as Entra ID, runs on none of your servers: declare it on the applications instead.
 
@@ -363,7 +363,7 @@ A large file takes some time to load, and holds the links of its technologies un
 ## Where technologies appear
 
 - **Applications**: the **Technologies** section at the top of the Operations tab lists what an application depends on. See [Applications](applications.md#operations).
-- **Assets**: the **Technologies** section of an asset's Technical tab lists what the server carries, its operating system first. See [Assets](assets.md#technical).
+- **Assets**: the **Technologies** section of an asset's Operations tab lists what the server carries, its operating system first. See [Assets](assets.md#operations).
 - **Contracts**, **budget lines** and **incidents**: a **Technologies** field in their Relations tab, for users who can read the infrastructure.
 - **End of support** report: the versions that reach their end of support, operating systems included, and what they touch. See [End of support](end-of-support.md).
 - **Vulnerabilities**: the known vulnerabilities of the versions in use, and the servers and applications they reach. See [Vulnerabilities](vulnerabilities.md).

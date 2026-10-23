@@ -77,7 +77,7 @@ Cloud providers used by servers and locations (e.g., AWS, Azure, GCP).
 **Columns**: Name, No longer offered
 
 **Where used**:
-- Assets workspace → Overview tab → **Provider** field
+- Assets workspace → properties drawer → **Cloud provider** (read-only, derived from the location)
 - Locations workspace → Overview tab → **Cloud provider** (when hosting type is cloud)
 
 ### Hosting types
@@ -162,8 +162,8 @@ Hover the **Forest**, **Number of accounts** and **Number of computers** headers
 - **Trusts**: the button shows how many trusts the domain has. Click it to list the other domains it has a trust with, as shown in Active Directory Domains and Trusts. **Add a trusted domain** adds one; choose its **Direction**: **outgoing** (this domain trusts the other one, whose accounts can reach its resources), **incoming** (the other domain trusts this one) or **two-way** (both). The dialog also shows, read only, the trusts declared on other domains toward this one. The button appears once the domain is saved, and needs at least one other domain in the list.
 
 **Where used**:
-- Assets workspace → Technical tab → **Domain** selector
-- Assets workspace → Technical tab → **FQDN** (auto-computed from hostname + DNS suffix)
+- Assets workspace → Network tab → **Domain** selector
+- Assets workspace → Network tab → **FQDN** (auto-computed from hostname + DNS suffix)
 - **IT Landscape > Administration zones**: domains grouped by forest, with their trusts, counts and domain controllers. See [Administration zones](administration-view.md#directory-services-and-domains).
 
 **System entries** (cannot be modified or deleted):
@@ -203,7 +203,7 @@ Types of IP addresses for assets. Useful for distinguishing between different ne
 **Default values**: Host, IPMI, Management, iSCSI
 
 **Where used**:
-- Assets workspace → Technical tab → **IP Addresses** section → **Type** dropdown
+- Assets workspace → Network tab → **IP Addresses** section → **Type** dropdown
 
 Assets can have multiple IP addresses, each with its own type. For example, a physical server might have:
 - A **Host** IP for application traffic
@@ -218,7 +218,7 @@ Network zones used to categorize subnets and describe connectivity (e.g., LAN, D
 
 **Where used**:
 - Subnets list → **Network Zone** selector
-- Assets workspace → Technical tab → **Network Zone** (auto-populated when subnet is selected)
+- Assets workspace → Network tab → **Network Zone** (auto-populated when subnet is selected)
 
 ### Subnets
 
@@ -227,7 +227,7 @@ Define network subnets with CIDR notation and optional VLAN assignments. Each su
 **Columns**: Location, CIDR, VLAN (1-4094), Network zone, Description, No longer offered
 
 **Where used**:
-- Assets workspace → Technical tab → **Subnet** selector
+- Assets workspace → Network tab → **Subnet** selector
 
 **Validation rules**:
 - CIDR must be valid IPv4 notation (e.g., `192.168.1.0/24`)
@@ -258,7 +258,7 @@ Logical types for servers and infrastructure assets (e.g., Physical server, Virt
 **Columns**: Name, Physical, No longer offered
 
 **Where used**:
-- Assets workspace → Overview tab → **Type** field
+- Assets workspace → properties drawer → **Asset type** field
 
 ---
 
@@ -419,7 +419,7 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Administration zones** | Assets (properties drawer → Administration zone), Technologies of the Directory and identity family (properties drawer → Administration zone), Administration zones page |
 | **Cloud providers** | Assets (Provider), Locations (Cloud provider) |
 | **Connection types** | Connections (Connection Type) |
-| **Domains** | Assets (Technical tab → Domain, FQDN), Administration zones page |
+| **Domains** | Assets (Network tab → Domain, FQDN), Administration zones page |
 | **Entities** | Connections (Source/Target Entity), Connection Map (graph tier placement) |
 | **Hosting types** | Locations (Overview), Technologies (Hosting type) |
 | **Integration patterns** | Interface legs (Pattern) |
@@ -429,12 +429,12 @@ This approach lets you evolve your taxonomy over time without breaking existing 
 | **Interface protocols** | Interface bindings (Protocol) |
 | **Interface trigger types** | Interface legs (Trigger) |
 | **Incident categories** | Incidents (Category) |
-| **IP address types** | Assets (Technical tab → IP Addresses → Type) |
+| **IP address types** | Assets (Network tab → IP Addresses → Type) |
 | **Lifecycle statuses** | Applications, App Instances, Interfaces, Bindings, Assets |
 | **Network zones** | Subnets (Network Zone), Assets (auto-populated from subnet) |
-| **Subnets** | Assets (Technical tab → IP Addresses → Subnet selector) |
+| **Subnets** | Assets (Network tab → IP Addresses → Subnet selector) |
 | **Server roles** | Applications → Servers tab (role when linking asset to app), Connection Map (graph tier placement) |
-| **Asset types** | Assets (Overview → Type) |
+| **Asset types** | Assets (properties drawer → Asset type) |
 | **Technology families** | Technologies (Family), Administration zones page (directory services) |
 
 ---
