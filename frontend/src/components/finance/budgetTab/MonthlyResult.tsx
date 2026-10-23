@@ -71,12 +71,12 @@ export function differenceText(locale: string, total: number, reference: number)
  */
 export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: BudgetTabState; i18nPrefix: string; currency?: string }) {
   const {
-    t, locale, year, loading, loaded, shown, months, totals, activeCol, activeMode, isFrozen, waitingSet, cellWaits,
+    t, locale, year, loading, loaded, shown, months, totals, activeCol, activeMode, isFrozen, readOnly, waitingSet, cellWaits,
     modeSwitch, stableMonthChange, registerCell, onCellClick, labelFor, gridOpen, gridForced, toggleGrid, allEmpty, diffCol, setDiffCol,
   } = tab;
   const compared = shown.length > 1;
   // The active column is typed in the table while it is built month by month (and not about to change).
-  const editableCol = loaded && activeMode === 'monthly' && !isFrozen(activeCol) && !modeSwitch ? activeCol : null;
+  const editableCol = loaded && !readOnly && activeMode === 'monthly' && !isFrozen(activeCol) && !modeSwitch ? activeCol : null;
   const headCellSx = { textAlign: 'right', fontSize: 11, fontWeight: 500, color: 'kanap.text.secondary', px: 1, py: 0.75, whiteSpace: 'nowrap' } as const;
   const numCellSx = { textAlign: 'right', fontVariantNumeric: 'tabular-nums', fontSize: 13, color: 'kanap.text.primary', px: 1, py: 0.5, whiteSpace: 'nowrap' } as const;
   const monthLabel = (mi: number) => new Date(year, mi, 1).toLocaleString(locale, { month: 'short' });
@@ -177,7 +177,7 @@ export default function MonthlyResult({ tab, i18nPrefix, currency }: { tab: Budg
                           />
                         );
                       }
-                      const clickable = loaded && !loading && !isFrozen(col);
+                      const clickable = loaded && !loading && !readOnly && !isFrozen(col);
                       return (
                         <Box
                           component="td"

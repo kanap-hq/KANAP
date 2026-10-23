@@ -98,7 +98,7 @@ export default forwardRef<BudgetTabHandle, BudgetTabProps>(function BudgetTab(pr
           {savingHint && (
             <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', pointerEvents: 'none', whiteSpace: 'nowrap' }}>{savingHint}</Typography>
           )}
-          {tab.changedColumns.length > 0 && tab.openingAt !== null && (
+          {!tab.readOnly && tab.changedColumns.length > 0 && tab.openingAt !== null && (
             <>
               <Typography data-testid="opening-changes" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
                 {t('budgetTab.restore.changes', { count: tab.changedColumns.length, time: formatTime(new Date(tab.openingAt), tab.locale) })}

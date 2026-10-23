@@ -1796,6 +1796,7 @@
       "title": "La columna {{column}} {{year}} está congelada",
       "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos."
     },
+    "readOnlyHint": "Solo lectura. Su rol da acceso de lectura al presupuesto.",
     "atADate": "En una fecha",
     "date": "Fecha",
     "atDate": "El {{date}}",

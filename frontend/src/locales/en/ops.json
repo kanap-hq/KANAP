@@ -1796,6 +1796,7 @@
       "title": "The {{column}} {{year}} column is frozen",
       "hint": "Read only. An administrator can unfreeze it in Administration › Freeze / unfreeze data."
     },
+    "readOnlyHint": "Read only. Your role gives read access to the budget.",
     "atADate": "At a date",
     "date": "Date",
     "atDate": "On {{date}}",

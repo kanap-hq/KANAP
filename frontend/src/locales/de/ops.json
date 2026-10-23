@@ -1796,6 +1796,7 @@
       "title": "Die Spalte {{column}} {{year}} ist eingefroren",
       "hint": "Schreibgeschützt. Ein Administrator hebt das Einfrieren unter Administration › Daten einfrieren / auftauen auf."
     },
+    "readOnlyHint": "Schreibgeschützt. Ihre Rolle gewährt Lesezugriff auf das Budget.",
     "atADate": "An einem Datum",
     "date": "Datum",
     "atDate": "Am {{date}}",
