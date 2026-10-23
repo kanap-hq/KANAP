@@ -233,10 +233,25 @@ async function run() {
   const workbook = zip.readAsText('xl/workbook.xml');
   assert.ok(workbook.includes('name="Tâches"') && workbook.includes('name="Demandes"'), 'French sheet names');
   const sheets = zip.getEntries().filter((entry) => /^xl\/worksheets\/sheet\d+\.xml$/.test(entry.entryName)).map((entry) => entry.getData().toString('utf8')).join('');
-  for (const text of ['Équipe', 'Personne', 'Créations', 'Non affectées', '15/09/2026', 'Événement']) {
+  for (const text of ['Équipe', 'Personne', 'Créations', 'Non affectées', 'Événement']) {
     assert.ok(sheets.includes(text), `French XLSX writes ${text}`);
   }
-  assert.ok(!sheets.includes('2026-09-15'), 'French XLSX: no ISO day');
+  assert.ok(!sheets.includes('2026-09-15') && !sheets.includes('15/09/2026'), 'French XLSX: no day written as text');
+
+  // Days are date cells: the serial (days since 1899-12-30) with the date style, in the language's format.
+  assert.match(sheets, /<c r="[A-Z]+\d+" s="1"><v>46280<\/v><\/c>/, 'French XLSX: 2026-09-15 is a date cell');
+  assert.ok(!/t="inlineStr"><is><t xml:space="preserve">\d{2}\/\d{2}\/\d{4}</.test(sheets), 'French XLSX: no text date');
+  assert.match(sheets, /<cols><col min="\d+" max="\d+" width="12" customWidth="1"\/>/, 'French XLSX: date columns wide enough');
+  const styles = zip.readAsText('xl/styles.xml');
+  assert.ok(styles.includes('<numFmt numFmtId="164" formatCode="[$-40C]dd/mm/yyyy"/>'), 'French XLSX: the date format');
+  assert.ok(/<cellXfs count="2">.*<xf numFmtId="164"[^>]*applyNumberFormat="1"\/><\/cellXfs>/.test(styles), 'French XLSX: style 1 is the date');
+  assert.ok(zip.readAsText('xl/_rels/workbook.xml.rels').includes('Target="styles.xml"'), 'French XLSX: styles relationship');
+  assert.ok(
+    zip.readAsText('[Content_Types].xml').includes('<Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>'),
+    'French XLSX: styles content type',
+  );
+  const englishXlsx = await svc.exportXlsx(baseQuery, null, { manager: stub(rows, hours, people).manager, language: 'en' });
+  assert.ok(new AdmZip(englishXlsx.content).readAsText('xl/styles.xml').includes('formatCode="yyyy-mm-dd"'), 'English XLSX: ISO date format');
 
   const typeExport = stub(rows, hours, people);
   const typeCsv = await svc.exportCsv({ ...baseQuery, groupBy: 'type' }, { manager: typeExport.manager });
