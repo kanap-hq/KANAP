@@ -1622,7 +1622,12 @@
         "receivesFrom": "Empfängt von",
         "sendsTo": "Sendet an",
         "moreInInterfaces_one": "+ {{count}} weitere unter Schnittstellen",
-        "moreInInterfaces_other": "+ {{count}} weitere unter Schnittstellen"
+        "moreInInterfaces_other": "+ {{count}} weitere unter Schnittstellen",
+        "includedIn": "Enthalten in",
+        "includedInPlaceholder": "Suite hinzufügen",
+        "previousVersion": "Vorherige Version",
+        "nextVersion": "Nächste Version",
+        "canHaveChildAppsHelp": "Für eine Suite aktivieren: Die enthaltenen Anwendungen können ihr dann zugeordnet werden."
       },
       "ownership": {
         "businessOwners": "Fachverantwortliche",
@@ -1646,7 +1651,9 @@
         "removeAudienceRow": "Zielgruppenzeile entfernen",
         "usersValue": "Benutzer: {{value}}",
         "businessProcesses": "Geschäftsprozesse",
-        "addBusinessProcess": "Geschäftsprozess hinzufügen…"
+        "addBusinessProcess": "Geschäftsprozess hinzufügen…",
+        "audienceWholeCompany": "Gesamte Gesellschaft. Wählen Sie Abteilungen, um die Zielgruppe einzugrenzen.",
+        "audienceDepartmentsOnly": "Nur die gewählten Abteilungen. Entfernen Sie sie, um die gesamte Gesellschaft einzuschließen."
       },
       "technical": {
         "title": "Technische Informationen",
@@ -1670,7 +1677,9 @@
         "unnamedContact": "Unbenannter Kontakt",
         "removeContact": "{{name}} entfernen",
         "supportNotesPlaceholder": "Support-Notizen hinzufügen…",
-        "newSupportContact": "Neuer Support-Kontakt"
+        "newSupportContact": "Neuer Support-Kontakt",
+        "externalFacingHelp": "Die Anwendung ist über das Internet erreichbar, für Kunden, Partner oder Mitarbeitende im Homeoffice.",
+        "dataIntegrationEtlHelp": "Die Anwendung überträgt Daten zwischen anderen Anwendungen. Sie erscheint dann als Middleware in Schnittstellen."
       },
       "interfaces": {
         "title": "Schnittstellen",
@@ -1850,7 +1859,7 @@
       "convert": {
         "action": "In Technologie umwandeln",
         "title": "{{name}} in eine Technologie umwandeln",
-        "test": "Wandeln Sie um, wenn eine andere Anwendung dadurch ausfallen oder verwundbar werden kann.",
+        "test": "Wandeln Sie um, wenn eine andere Anwendung wegen dieser Anwendung ausfallen oder verwundbar werden kann.",
         "loading": "Prüfen, was die Umwandlung ändert…",
         "family": "Familie",
         "familyPlaceholder": "Familie wählen",
@@ -1919,6 +1928,14 @@
           "managed_documents": "Verwaltete Dokumente, verschoben zu den nicht abgelegten Dokumenten"
         },
         "hiddenMoves": "Weitere Verknüpfungen, die Sie nicht sehen, gehen ebenfalls über."
+      },
+      "referenceCopied": "Kopiert",
+      "undo": {
+        "undo": "Rückgängig",
+        "contactRemoved": "Supportkontakt entfernt.",
+        "processRemoved": "Geschäftsprozess getrennt.",
+        "ownerRemoved": "Verantwortlicher entfernt.",
+        "suiteRemoved": "Zuordnung zur Suite entfernt."
       }
     },
     "asset": {
@@ -3064,7 +3081,7 @@
       "copyInstances": "Bereitstellungen",
       "copyBindings": "Bereitstellungsbindungen",
       "bindingsHint": "Bindungen verbinden Schnittstellenabschnitte mit Bereitstellungen. Umgebungsspezifische Details werden gelöscht.",
-      "suitesNotCopied": "Hinweis: Suites und Anhänge werden nicht kopiert.",
+      "suitesNotCopied": "Nicht kopiert: Suiten, Anhänge, Datumsangaben, der letzte Wiederherstellungstest und die Klassifizierungsprüfung.",
       "selectInterfaces": "Wählen Sie Schnittstellen zur Migration in die neue Version. Ausgewählte Schnittstellen werden dupliziert und mit der neuen Version verknüpft.",
       "loadingInterfaces": "Schnittstellen werden geladen…",
       "noInterfaces": "Keine Schnittstellen für diese Anwendung gefunden.",
@@ -3084,7 +3101,8 @@
       "next": "Weiter",
       "createVersion": "Version erstellen",
       "nameRequired": "Anwendungsname ist erforderlich",
-      "defaultName": "{{name}} - neue Version"
+      "defaultName": "{{name}} - neue Version",
+      "alwaysCopied": "Immer kopiert: die Beschreibung, die Geschäftsprozesse, die Zugriffsmethoden, die Felder zu externer Erreichbarkeit, ETL und untergeordneten Anwendungen sowie die manuell erfasste Benutzerzahl."
     },
     "versionTimeline": {
       "title": "Versionsverlauf"
@@ -3236,7 +3254,13 @@
     "saveSupportInfoFailed": "Fehler beim Speichern der Support-Informationen",
     "saveClassificationFailed": "Die Klassifizierung konnte nicht gespeichert werden",
     "reviewFailed": "Überprüfung fehlgeschlagen",
-    "deleteApplicationFailed": "Fehler beim Löschen der Anwendung"
+    "deleteApplicationFailed": "Fehler beim Löschen der Anwendung",
+    "saveResidencyFailed": "Der Datenstandort konnte nicht gespeichert werden.",
+    "saveOwnersFailed": "Die Verantwortlichen konnten nicht gespeichert werden.",
+    "saveAudienceFailed": "Die Zielgruppe konnte nicht gespeichert werden.",
+    "copyReferenceFailed": "Die Referenz konnte nicht kopiert werden.",
+    "restoreFailed": "Die Verknüpfung konnte nicht wiederhergestellt werden.",
+    "versionCreated": "Version erstellt: {{reference}}"
   },
   "validation": {
     "missingFormData": "Fehlende Formulardaten",
@@ -3354,7 +3378,7 @@
     "never_reviewed": "Nie geprüft",
     "changed_since_review": "Seit der Prüfung geändert",
     "reviewed_on": "Geprüft am {{date}}",
-    "rto_exceeds_level_downtime": "Der RTO erreicht oder überschreitet die MTD der Stufe {{level}} ({{duration}}).",
+    "rto_exceeds_level_downtime": "Der RTO erreicht oder überschreitet die maximal tolerierbare Ausfallzeit (MTD) der Stufe {{level}} ({{duration}}).",
     "recovery_dependency": "Austausch mit {{app}}, geplant in {{wave}}",
     "summary_reviewed_one": "{{count}} geprüft",
     "summary_reviewed_other": "{{count}} geprüft",
@@ -3368,7 +3392,25 @@
     "e_g_critical": "z. B. Kritisch",
     "e_g_high": "z. B. Hoch",
     "e_g_confidential": "z. B. Vertraulich",
-    "e_g_foundation": "z. B. Grundlage"
+    "e_g_foundation": "z. B. Grundlage",
+    "contains_personal_data_help": "Aktivieren, wenn die Anwendung Daten über identifizierbare Personen speichert oder verarbeitet.",
+    "duration_positive_minutes": "Geben Sie eine Anzahl Minuten größer als 0 ein.",
+    "duration_positive_hours": "Geben Sie eine Anzahl Stunden größer als 0 ein.",
+    "duration_positive_days": "Geben Sie eine Anzahl Tage größer als 0 ein.",
+    "duration_positive_weeks": "Geben Sie eine Anzahl Wochen größer als 0 ein.",
+    "duration_zero_minutes": "Geben Sie eine Anzahl Minuten ein, 0 oder mehr.",
+    "duration_zero_hours": "Geben Sie eine Anzahl Stunden ein, 0 oder mehr.",
+    "duration_zero_days": "Geben Sie eine Anzahl Tage ein, 0 oder mehr.",
+    "duration_zero_weeks": "Geben Sie eine Anzahl Wochen ein, 0 oder mehr.",
+    "unit_minutes_one": "Minute",
+    "unit_minutes_other": "Minuten",
+    "unit_hours_one": "Stunde",
+    "unit_hours_other": "Stunden",
+    "unit_days_one": "Tag",
+    "unit_days_other": "Tage",
+    "unit_weeks_one": "Woche",
+    "unit_weeks_other": "Wochen",
+    "duration_whole_minutes": "Diese Dauer ergibt keine ganze Zahl von Minuten."
   },
   "catalogDefaults": {
     "applicationCategories": {

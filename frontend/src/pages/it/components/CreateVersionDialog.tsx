@@ -331,6 +331,9 @@ export default function CreateVersionDialog({ open, onClose, sourceApp, onSucces
               </Typography>
             )}
             <Typography sx={(theme) => ({ mt: 1, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
+              {t('components.createVersion.alwaysCopied')}
+            </Typography>
+            <Typography sx={(theme) => ({ fontSize: 12, color: theme.palette.kanap.text.secondary })}>
               {t('components.createVersion.suitesNotCopied')}
             </Typography>
           </Stack>

@@ -1622,7 +1622,12 @@
         "receivesFrom": "Receives from",
         "sendsTo": "Sends to",
         "moreInInterfaces_one": "+ {{count}} more in Interfaces",
-        "moreInInterfaces_other": "+ {{count}} more in Interfaces"
+        "moreInInterfaces_other": "+ {{count}} more in Interfaces",
+        "includedIn": "Included in",
+        "includedInPlaceholder": "Add a suite",
+        "previousVersion": "Previous version",
+        "nextVersion": "Next version",
+        "canHaveChildAppsHelp": "Check it for a suite: the applications it contains can then be linked to it."
       },
       "ownership": {
         "businessOwners": "Business owners",
@@ -1646,7 +1651,9 @@
         "removeAudienceRow": "Remove audience row",
         "usersValue": "Users: {{value}}",
         "businessProcesses": "Business processes",
-        "addBusinessProcess": "Add a business process…"
+        "addBusinessProcess": "Add a business process…",
+        "audienceWholeCompany": "Whole company. Choose departments to narrow the audience.",
+        "audienceDepartmentsOnly": "Only the selected departments. Clear them to include the whole company."
       },
       "technical": {
         "title": "Technical information",
@@ -1670,7 +1677,9 @@
         "unnamedContact": "Unnamed contact",
         "removeContact": "Remove {{name}}",
         "supportNotesPlaceholder": "Add support notes…",
-        "newSupportContact": "New support contact"
+        "newSupportContact": "New support contact",
+        "externalFacingHelp": "The application can be reached from the internet, by customers, partners or remote staff.",
+        "dataIntegrationEtlHelp": "The application moves data between other applications. It then appears as middleware on interfaces."
       },
       "interfaces": {
         "title": "Interfaces",
@@ -1850,7 +1859,7 @@
       "convert": {
         "action": "Convert to technology",
         "title": "Convert {{name}} to a technology",
-        "test": "Convert when another application can fail or become vulnerable because of it.",
+        "test": "Convert when another application can fail or become vulnerable because of this one.",
         "loading": "Checking what the conversion changes…",
         "family": "Family",
         "familyPlaceholder": "Choose a family",
@@ -1919,6 +1928,14 @@
           "managed_documents": "Managed documents, moved to the unfiled documents"
         },
         "hiddenMoves": "Other links you cannot see also move."
+      },
+      "referenceCopied": "Copied",
+      "undo": {
+        "undo": "Undo",
+        "contactRemoved": "Support contact removed.",
+        "processRemoved": "Business process unlinked.",
+        "ownerRemoved": "Owner removed.",
+        "suiteRemoved": "Suite link removed."
       }
     },
     "asset": {
@@ -3064,7 +3081,7 @@
       "copyInstances": "Deployments",
       "copyBindings": "Deployment bindings",
       "bindingsHint": "Bindings connect interface legs to deployments. Environment-specific details will be cleared.",
-      "suitesNotCopied": "Note: Suites and attachments are not copied.",
+      "suitesNotCopied": "Not copied: suites, attachments, dates, the last recovery test and the classification review.",
       "selectInterfaces": "Select interfaces to migrate to the new version. Selected interfaces will be duplicated and linked to the new version.",
       "loadingInterfaces": "Loading interfaces…",
       "noInterfaces": "No interfaces found for this application.",
@@ -3084,7 +3101,8 @@
       "next": "Next",
       "createVersion": "Create version",
       "nameRequired": "Application name is required",
-      "defaultName": "{{name}} - new version"
+      "defaultName": "{{name}} - new version",
+      "alwaysCopied": "Always copied: the description, the business processes, the access methods, the external exposure, ETL and child application boxes, and the manual number of users."
     },
     "versionTimeline": {
       "title": "Version history"
@@ -3236,7 +3254,13 @@
     "saveSupportInfoFailed": "Failed to save support info",
     "saveClassificationFailed": "Classification could not be saved",
     "reviewFailed": "Review failed",
-    "deleteApplicationFailed": "Failed to delete application"
+    "deleteApplicationFailed": "Failed to delete application",
+    "saveResidencyFailed": "The data residency could not be saved.",
+    "saveOwnersFailed": "The owners could not be saved.",
+    "saveAudienceFailed": "The audience could not be saved.",
+    "copyReferenceFailed": "The reference could not be copied.",
+    "restoreFailed": "The link could not be restored.",
+    "versionCreated": "Version created: {{reference}}"
   },
   "validation": {
     "missingFormData": "Missing form data",
@@ -3354,7 +3378,7 @@
     "never_reviewed": "Never reviewed",
     "changed_since_review": "Changed since review",
     "reviewed_on": "Reviewed on {{date}}",
-    "rto_exceeds_level_downtime": "The RTO reaches or exceeds the maximum tolerable downtime of the {{level}} level ({{duration}}).",
+    "rto_exceeds_level_downtime": "The RTO reaches or exceeds the maximum tolerable downtime (MTD) of the {{level}} level ({{duration}}).",
     "recovery_dependency": "Exchanges with {{app}}, planned in {{wave}}",
     "summary_reviewed_one": "{{count}} reviewed",
     "summary_reviewed_other": "{{count}} reviewed",
@@ -3368,7 +3392,25 @@
     "e_g_critical": "e.g., Critical",
     "e_g_high": "e.g., High",
     "e_g_confidential": "e.g., Confidential",
-    "e_g_foundation": "e.g., Foundation"
+    "e_g_foundation": "e.g., Foundation",
+    "contains_personal_data_help": "Check it when the application stores or processes data about identifiable people.",
+    "duration_positive_minutes": "Enter a number of minutes greater than 0.",
+    "duration_positive_hours": "Enter a number of hours greater than 0.",
+    "duration_positive_days": "Enter a number of days greater than 0.",
+    "duration_positive_weeks": "Enter a number of weeks greater than 0.",
+    "duration_zero_minutes": "Enter a number of minutes, 0 or more.",
+    "duration_zero_hours": "Enter a number of hours, 0 or more.",
+    "duration_zero_days": "Enter a number of days, 0 or more.",
+    "duration_zero_weeks": "Enter a number of weeks, 0 or more.",
+    "unit_minutes_one": "minute",
+    "unit_minutes_other": "minutes",
+    "unit_hours_one": "hour",
+    "unit_hours_other": "hours",
+    "unit_days_one": "day",
+    "unit_days_other": "days",
+    "unit_weeks_one": "week",
+    "unit_weeks_other": "weeks",
+    "duration_whole_minutes": "This duration does not make a whole number of minutes."
   },
   "catalogDefaults": {
     "applicationCategories": {

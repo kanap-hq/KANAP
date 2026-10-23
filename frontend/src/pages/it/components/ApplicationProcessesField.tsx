@@ -10,6 +10,7 @@ import PickedNameRow from '../../../components/fields/PickedNameRow';
 import { useLookupPicker } from '../../../hooks/useLookupPicker';
 import { drawerAutocompleteListboxSx } from '../../../theme/formSx';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
+import { useApplicationFeedback } from '../applicationFeedback';
 import { applicationRelationsKey, fetchApplicationRelations, type ApplicationRelationsData } from '../workspace/ApplicationRelationsTab';
 
 type ProcessOption = { id: string; name: string; status?: string | null };
@@ -35,6 +36,7 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
   const { t } = useTranslation(['it', 'common']);
   const { hasLevel } = useAuth();
   const queryClient = useQueryClient();
+  const feedback = useApplicationFeedback();
   const canRead = hasLevel('business_processes', 'reader');
   const editable = canManage && hasLevel('business_processes', 'manager');
   const key = applicationRelationsKey(applicationId);
@@ -79,6 +81,16 @@ export default function ApplicationProcessesField({ applicationId, canManage, te
     }
     await queryClient.invalidateQueries({ queryKey: key });
     onChange?.();
+    feedback.undo(t('workspace.application.undo.processRemoved'), async () => {
+      try {
+        await api.post(`/applications/${applicationId}/relations/processes`, { id: processId });
+      } catch (e) {
+        feedback.error(getApiErrorMessage(e, t, t('messages.restoreFailed')));
+        return;
+      }
+      await queryClient.invalidateQueries({ queryKey: key });
+      onChange?.();
+    });
   };
 
   // No read of business processes (or the server says so): no row at all.

@@ -1622,7 +1622,12 @@
         "receivesFrom": "Reçoit de",
         "sendsTo": "Envoie vers",
         "moreInInterfaces_one": "+ {{count}} autre dans Interfaces",
-        "moreInInterfaces_other": "+ {{count}} autres dans Interfaces"
+        "moreInInterfaces_other": "+ {{count}} autres dans Interfaces",
+        "includedIn": "Incluse dans",
+        "includedInPlaceholder": "Ajouter une suite",
+        "previousVersion": "Version précédente",
+        "nextVersion": "Version suivante",
+        "canHaveChildAppsHelp": "Cochez pour une suite : les applications qu'elle contient peuvent alors lui être rattachées."
       },
       "ownership": {
         "businessOwners": "Responsables métier",
@@ -1646,7 +1651,9 @@
         "removeAudienceRow": "Retirer cette ligne d'audience",
         "usersValue": "Utilisateurs : {{value}}",
         "businessProcesses": "Processus métier",
-        "addBusinessProcess": "Ajouter un processus métier…"
+        "addBusinessProcess": "Ajouter un processus métier…",
+        "audienceWholeCompany": "Toute la société. Choisissez des départements pour restreindre l'audience.",
+        "audienceDepartmentsOnly": "Seulement les départements choisis. Retirez-les pour inclure toute la société."
       },
       "technical": {
         "title": "Informations techniques",
@@ -1670,7 +1677,9 @@
         "unnamedContact": "Contact sans nom",
         "removeContact": "Retirer {{name}}",
         "supportNotesPlaceholder": "Ajoutez des notes de support…",
-        "newSupportContact": "Nouveau contact de support"
+        "newSupportContact": "Nouveau contact de support",
+        "externalFacingHelp": "L'application est accessible depuis Internet, par des clients, des partenaires ou du personnel à distance.",
+        "dataIntegrationEtlHelp": "L'application transfère des données entre d'autres applications. Elle apparaît alors comme intergiciel sur les interfaces."
       },
       "interfaces": {
         "title": "Interfaces",
@@ -1850,7 +1859,7 @@
       "convert": {
         "action": "Convertir en technologie",
         "title": "Convertir {{name}} en technologie",
-        "test": "Convertissez quand une autre application peut tomber ou devenir vulnérable à cause de lui.",
+        "test": "Convertissez quand une autre application peut tomber ou devenir vulnérable à cause de cette application.",
         "loading": "Vérification de ce que la conversion change…",
         "family": "Famille",
         "familyPlaceholder": "Choisir une famille",
@@ -1919,6 +1928,14 @@
           "managed_documents": "Documents gérés, déplacés vers les documents non classés"
         },
         "hiddenMoves": "D’autres liens que vous ne voyez pas partent aussi."
+      },
+      "referenceCopied": "Copié",
+      "undo": {
+        "undo": "Annuler",
+        "contactRemoved": "Contact de support retiré.",
+        "processRemoved": "Processus métier délié.",
+        "ownerRemoved": "Responsable retiré.",
+        "suiteRemoved": "Rattachement à la suite retiré."
       }
     },
     "asset": {
@@ -3064,7 +3081,7 @@
       "copyInstances": "Déploiements",
       "copyBindings": "Liaisons de déploiement",
       "bindingsHint": "Les liaisons connectent les segments d'interface aux déploiements. Les détails propres à chaque environnement seront effacés.",
-      "suitesNotCopied": "Remarque : les suites et les pièces jointes ne sont pas copiées.",
+      "suitesNotCopied": "Non copiés : les suites, les pièces jointes, les dates, le dernier test de reprise et la revue de classification.",
       "selectInterfaces": "Sélectionnez les interfaces à migrer vers la nouvelle version. Les interfaces sélectionnées seront dupliquées et liées à la nouvelle version.",
       "loadingInterfaces": "Chargement des interfaces…",
       "noInterfaces": "Aucune interface trouvée pour cette application.",
@@ -3084,7 +3101,8 @@
       "next": "Suivant",
       "createVersion": "Créer la version",
       "nameRequired": "Le nom de l'application est requis",
-      "defaultName": "{{name}} - nouvelle version"
+      "defaultName": "{{name}} - nouvelle version",
+      "alwaysCopied": "Toujours copiés : la description, les processus métier, les méthodes d'accès, les cases Exposition externe, ETL et Peut contenir des applications enfants, et le nombre d'utilisateurs saisi à la main."
     },
     "versionTimeline": {
       "title": "Historique des versions"
@@ -3236,7 +3254,13 @@
     "saveSupportInfoFailed": "Échec de l'enregistrement des informations de support",
     "saveClassificationFailed": "La classification n'a pas pu être enregistrée",
     "reviewFailed": "Échec de la revue",
-    "deleteApplicationFailed": "Échec de la suppression de l'application"
+    "deleteApplicationFailed": "Échec de la suppression de l'application",
+    "saveResidencyFailed": "La résidence des données n'a pas pu être enregistrée.",
+    "saveOwnersFailed": "Les responsables n'ont pas pu être enregistrés.",
+    "saveAudienceFailed": "L'audience n'a pas pu être enregistrée.",
+    "copyReferenceFailed": "La référence n'a pas pu être copiée.",
+    "restoreFailed": "Le lien n'a pas pu être rétabli.",
+    "versionCreated": "Version créée : {{reference}}"
   },
   "validation": {
     "missingFormData": "Données de formulaire manquantes",
@@ -3354,7 +3378,7 @@
     "never_reviewed": "Jamais revue",
     "changed_since_review": "Modifiée depuis la revue",
     "reviewed_on": "Revue le {{date}}",
-    "rto_exceeds_level_downtime": "Le RTO atteint ou dépasse la DMIA du niveau {{level}} ({{duration}}).",
+    "rto_exceeds_level_downtime": "Le RTO atteint ou dépasse la durée maximale d'interruption admissible (DMIA) du niveau {{level}} ({{duration}}).",
     "recovery_dependency": "Échange avec {{app}}, prévue en {{wave}}",
     "summary_reviewed_one": "{{count}} revue",
     "summary_reviewed_other": "{{count}} revues",
@@ -3368,7 +3392,25 @@
     "e_g_critical": "ex. : Critique",
     "e_g_high": "ex. : Élevée",
     "e_g_confidential": "ex. : Confidentiel",
-    "e_g_foundation": "ex. : Socle"
+    "e_g_foundation": "ex. : Socle",
+    "contains_personal_data_help": "Cochez si l'application stocke ou traite des données sur des personnes identifiables.",
+    "duration_positive_minutes": "Saisissez un nombre de minutes supérieur à 0.",
+    "duration_positive_hours": "Saisissez un nombre d'heures supérieur à 0.",
+    "duration_positive_days": "Saisissez un nombre de jours supérieur à 0.",
+    "duration_positive_weeks": "Saisissez un nombre de semaines supérieur à 0.",
+    "duration_zero_minutes": "Saisissez un nombre de minutes, 0 ou plus.",
+    "duration_zero_hours": "Saisissez un nombre d'heures, 0 ou plus.",
+    "duration_zero_days": "Saisissez un nombre de jours, 0 ou plus.",
+    "duration_zero_weeks": "Saisissez un nombre de semaines, 0 ou plus.",
+    "unit_minutes_one": "minute",
+    "unit_minutes_other": "minutes",
+    "unit_hours_one": "heure",
+    "unit_hours_other": "heures",
+    "unit_days_one": "jour",
+    "unit_days_other": "jours",
+    "unit_weeks_one": "semaine",
+    "unit_weeks_other": "semaines",
+    "duration_whole_minutes": "Cette durée ne donne pas un nombre entier de minutes."
   },
   "catalogDefaults": {
     "applicationCategories": {

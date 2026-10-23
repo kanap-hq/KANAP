@@ -37,6 +37,11 @@ import CompanySelect from '../../components/fields/CompanySelect';
 import DepartmentMultiSelect from '../../components/fields/DepartmentMultiSelect';
 import TeamMemberMultiSelect from '../../components/fields/TeamMemberMultiSelect';
 import ApplicationProcessesField from './components/ApplicationProcessesField';
+import ApplicationSuitesField from './components/ApplicationSuitesField';
+import ApplicationVersionLinks from './components/ApplicationVersionLinks';
+import DeferredTextField from './components/DeferredTextField';
+import ForbiddenPage from '../ForbiddenPage';
+import { ApplicationFeedbackProvider, useApplicationFeedback } from './applicationFeedback';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useApplicationNav } from '../../hooks/useApplicationNav';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -62,7 +67,7 @@ import ApplicationDeleteButton from './components/ApplicationDeleteButton';
 import { formatShortDate } from '../../lib/dateFormat';
 import { fetchApplicationIncidentsCount } from '../../utils/workspaceTabCounts';
 import { useLocale } from '../../i18n/useLocale';
-import ApplicationClassificationPanel, { type RecoveryDependency } from './components/ApplicationClassificationPanel';
+import ApplicationClassificationPanel, { HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
@@ -291,11 +296,12 @@ function ApplicationProperties({
 }: {
   app: ApplicationDetail;
   canManage: boolean;
-  onPatch: (patch: Partial<ApplicationDetail>) => void;
+  onPatch: (patch: Partial<ApplicationDetail>) => Promise<void>;
   onLocalUpdate: (updater: (prev: ApplicationDetail) => ApplicationDetail) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
   const locale = useLocale();
+  const feedback = useApplicationFeedback();
   const { byField } = useItOpsEnumOptions();
   const categoryOptions = byField.applicationCategory || [];
   const categorySelectOptions = React.useMemo(() => {
@@ -307,7 +313,6 @@ function ApplicationProperties({
       ...categoryOptions,
     ];
   }, [app.category, categoryOptions, t]);
-  const [savingOwners, setSavingOwners] = React.useState(false);
   const [savingAudience, setSavingAudience] = React.useState(false);
   const [audienceRows, setAudienceRows] = React.useState<Array<{ key: string; company_id: string | null; department_ids: string[] }>>([]);
 
@@ -351,28 +356,47 @@ function ApplicationProperties({
     setAudienceRows(nextRows.length ? nextRows : []);
   }, [app.companies, app.departments, departmentDetailsQuery.data]);
 
+  const savingOwnersRef = React.useRef(false);
   const replaceOwners = React.useCallback(async (owners: ApplicationDetail['owners']) => {
-    setSavingOwners(true);
+    // One save at a time; the field stays enabled so the focus stays on it.
+    if (savingOwnersRef.current) return false;
+    savingOwnersRef.current = true;
     try {
       const res = await api.post<ApplicationDetail['owners']>(`/applications/${app.id}/owners/bulk-replace`, {
         owners: owners.map((owner) => ({ user_id: owner.user_id, owner_type: owner.owner_type })),
       });
       onLocalUpdate((prev) => ({ ...prev, owners: res.data || [] }));
+      return true;
+    } catch (err) {
+      // The list shows the saved owners: nothing to put back, the person is told.
+      feedback.error(getApiErrorMessage(err, t, t('messages.saveOwnersFailed')));
+      return false;
     } finally {
-      setSavingOwners(false);
+      savingOwnersRef.current = false;
     }
-  }, [app.id, onLocalUpdate]);
+  }, [app.id, feedback, onLocalUpdate, t]);
 
   const replaceOwnersByType = React.useCallback(async (ownerType: 'business' | 'it', userIds: string[]) => {
-    const keep = (app.owners || []).filter((owner) => owner.owner_type !== ownerType);
+    const previous = app.owners || [];
+    const keep = previous.filter((owner) => owner.owner_type !== ownerType);
     const next = [
       ...keep,
       ...Array.from(new Set(userIds)).map((user_id) => ({ user_id, owner_type: ownerType })),
     ];
-    await replaceOwners(next as ApplicationDetail['owners']);
-  }, [app.owners, replaceOwners]);
+    const removed = previous.filter((owner) => owner.owner_type === ownerType && !userIds.includes(owner.user_id));
+    const done = await replaceOwners(next as ApplicationDetail['owners']);
+    if (done && removed.length > 0 && userIds.length < previous.filter((owner) => owner.owner_type === ownerType).length) {
+      feedback.undo(t('workspace.application.undo.ownerRemoved'), async () => {
+        if (!(await replaceOwners(previous))) throw new Error('restore');
+      });
+    }
+  }, [app.owners, feedback, replaceOwners, t]);
 
-  const saveAudienceRows = React.useCallback(async (rows: Array<{ company_id: string | null; department_ids: string[] }>) => {
+  const savingAudienceRef = React.useRef(false);
+  const saveAudienceRows = React.useCallback(async (rows: Array<{ company_id: string | null; department_ids: string[] }>, previousRows: typeof audienceRows) => {
+    // One save at a time; the fields stay enabled so the focus stays on them.
+    if (savingAudienceRef.current) return;
+    savingAudienceRef.current = true;
     setSavingAudience(true);
     try {
       const companyIds = Array.from(new Set(rows
@@ -393,10 +417,14 @@ function ApplicationProperties({
       }));
       const refreshed = await api.get<ApplicationDetail>(`/applications/${app.id}`, { params: { include: 'deployments,support' } });
       onLocalUpdate(() => refreshed.data);
+    } catch (err) {
+      setAudienceRows(previousRows);
+      feedback.error(getApiErrorMessage(err, t, t('messages.saveAudienceFailed')));
     } finally {
+      savingAudienceRef.current = false;
       setSavingAudience(false);
     }
-  }, [app.id, onLocalUpdate]);
+  }, [app.id, feedback, onLocalUpdate, t]);
 
   return (
     <>
@@ -404,7 +432,7 @@ function ApplicationProperties({
         <PropertyRow label={t('workspace.application.overview.category')}>
           <Select
             value={app.category || ''}
-            onChange={(event) => onPatch({ category: event.target.value })}
+            onChange={(event) => { void onPatch({ category: event.target.value }); }}
             variant="standard"
             disabled={!canManage}
             sx={drawerSelectSx}
@@ -424,7 +452,7 @@ function ApplicationProperties({
         <PropertyRow label={t('workspace.application.overview.supplier')}>
           <SupplierSelect
             value={app.supplier_id || null}
-            onChange={(value) => onPatch({ supplier_id: value })}
+            onChange={(value) => { void onPatch({ supplier_id: value }); }}
             disabled={!canManage}
             hideLabel
             label={t('workspace.application.overview.supplier')}
@@ -432,9 +460,10 @@ function ApplicationProperties({
           />
         </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.publisher')}>
-          <TextField
+          <DeferredTextField
             value={app.editor || ''}
-            onChange={(event) => onPatch({ editor: event.target.value })}
+            resetKey={app.id}
+            onSave={(value) => onPatch({ editor: value })}
             variant="standard"
             size="small"
             fullWidth
@@ -442,13 +471,15 @@ function ApplicationProperties({
             sx={drawerFieldValueSx}
           />
         </PropertyRow>
+        <ApplicationSuitesField applicationId={app.id} canManage={canManage} textFieldSx={drawerFieldValueSx} />
       </PropertyGroup>
 
       <PropertyGroup>
         <PropertyRow label={t('workspace.application.overview.version')}>
-          <TextField
+          <DeferredTextField
             value={app.version || ''}
-            onChange={(event) => onPatch({ version: event.target.value || null })}
+            resetKey={app.id}
+            onSave={(value) => onPatch({ version: value || null })}
             variant="standard"
             size="small"
             fullWidth
@@ -456,14 +487,15 @@ function ApplicationProperties({
             sx={drawerFieldValueSx}
           />
         </PropertyRow>
+        <ApplicationVersionLinks applicationId={app.id} />
         <PropertyRow label={t('workspace.application.overview.goLiveDate')}>
-          <DateEUField label="" valueYmd={app.go_live_date || ''} onChangeYmd={(value) => onPatch({ go_live_date: value || null })} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
+          <DateEUField label="" valueYmd={app.go_live_date || ''} onChangeYmd={(value) => { void onPatch({ go_live_date: value || null }); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.endOfSupport')}>
-          <DateEUField label="" valueYmd={app.end_of_support_date || ''} onChangeYmd={(value) => onPatch({ end_of_support_date: value || null })} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
+          <DateEUField label="" valueYmd={app.end_of_support_date || ''} onChangeYmd={(value) => { void onPatch({ end_of_support_date: value || null }); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
         <PropertyRow label={t('workspace.application.overview.retiredDate')}>
-          <DateEUField label="" valueYmd={app.retired_date || ''} onChangeYmd={(value) => onPatch({ retired_date: value || null })} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
+          <DateEUField label="" valueYmd={app.retired_date || ''} onChangeYmd={(value) => { void onPatch({ retired_date: value || null }); }} disabled={!canManage} size="small" hideLabel textFieldSx={drawerFieldValueSx} />
         </PropertyRow>
       </PropertyGroup>
 
@@ -478,7 +510,7 @@ function ApplicationProperties({
               user_email: owner.email || undefined,
             }))}
             onChange={(userIds) => replaceOwnersByType('business', userIds)}
-            disabled={!canManage || savingOwners}
+            disabled={!canManage}
             hideLabel
             textFieldSx={drawerFieldValueSx}
           />
@@ -492,7 +524,7 @@ function ApplicationProperties({
               user_email: owner.email || undefined,
             }))}
             onChange={(userIds) => replaceOwnersByType('it', userIds)}
-            disabled={!canManage || savingOwners}
+            disabled={!canManage}
             hideLabel
             textFieldSx={drawerFieldValueSx}
           />
@@ -525,9 +557,9 @@ function ApplicationProperties({
                     itemIndex === index ? { ...item, company_id: value, department_ids: [] } : item
                   ));
                   setAudienceRows(nextRows);
-                  void saveAudienceRows(nextRows);
+                  void saveAudienceRows(nextRows, audienceRows);
                 }}
-                disabled={!canManage || savingAudience}
+                disabled={!canManage}
                 size="small"
                 label={t('workspace.application.ownership.company')}
                 hideLabel
@@ -542,14 +574,21 @@ function ApplicationProperties({
                       itemIndex === index ? { ...item, department_ids: value } : item
                     ));
                     setAudienceRows(nextRows);
-                    if (row.company_id) void saveAudienceRows(nextRows);
+                    if (row.company_id) void saveAudienceRows(nextRows, audienceRows);
                   }}
-                  disabled={!canManage || savingAudience || !row.company_id}
+                  disabled={!canManage || !row.company_id}
                   size="small"
                   label={t('workspace.application.ownership.departments')}
                   hideLabel
                   textFieldSx={drawerFieldValueSx}
                 />
+                {row.company_id && (
+                  <Typography sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary, mt: 0.25 })}>
+                    {row.department_ids.length > 0
+                      ? t('workspace.application.ownership.audienceDepartmentsOnly')
+                      : t('workspace.application.ownership.audienceWholeCompany')}
+                  </Typography>
+                )}
               </Box>
               {canManage && (
                 <IconButton
@@ -559,7 +598,7 @@ function ApplicationProperties({
                   onClick={() => {
                     const nextRows = audienceRows.filter((_, itemIndex) => itemIndex !== index);
                     setAudienceRows(nextRows);
-                    void saveAudienceRows(nextRows);
+                    void saveAudienceRows(nextRows, audienceRows);
                   }}
                   sx={{ position: 'absolute', top: 2, right: 0, width: 22, height: 22 }}
                 >
@@ -594,7 +633,7 @@ function ApplicationProperties({
         <PropertyRow label={t('workspace.application.ownership.calculationMethod')}>
           <Select
             value={app.users_mode === 'manual' ? 'manual' : 'it_users'}
-            onChange={(event) => onPatch({ users_mode: event.target.value })}
+            onChange={(event) => { void onPatch({ users_mode: event.target.value }); }}
             variant="standard"
             disabled={!canManage}
             sx={drawerSelectSx}
@@ -605,9 +644,10 @@ function ApplicationProperties({
         </PropertyRow>
         {app.users_mode === 'manual' && (
           <PropertyRow label={t('workspace.application.ownership.manualUsers')}>
-            <TextField
-              value={app.users_override ?? ''}
-              onChange={(event) => onPatch({ users_override: event.target.value === '' ? null : Number(event.target.value) })}
+            <DeferredTextField
+              value={app.users_override == null ? '' : String(app.users_override)}
+              resetKey={app.id}
+              onSave={(value) => onPatch({ users_override: value === '' ? null : Number(value) })}
               type="number"
               variant="standard"
               size="small"
@@ -635,6 +675,7 @@ function ApplicationSupportSection({
 }) {
   const { t } = useTranslation(['it', 'common']);
   const unnamedContact = t('workspace.application.technical.unnamedContact');
+  const feedback = useApplicationFeedback();
   const [contactDialogOpen, setContactDialogOpen] = React.useState(false);
   const [contactDraft, setContactDraft] = React.useState<{ contact_id: string | null; role: string }>({ contact_id: null, role: '' });
   const [savingContact, setSavingContact] = React.useState(false);
@@ -656,14 +697,30 @@ function ApplicationSupportSection({
       await replaceContacts([...contacts, { contact_id: contactDraft.contact_id, role: contactDraft.role || null }]);
       setContactDialogOpen(false);
       setContactDraft({ contact_id: null, role: '' });
+    } catch (err) {
+      // The dialog stays open with what was typed; the list is unchanged.
+      feedback.error(getApiErrorMessage(err, t, t('messages.saveSupportContactsFailed')));
     } finally {
       setSavingContact(false);
     }
-  }, [contactDraft, contacts, replaceContacts]);
+  }, [contactDraft, contacts, feedback, replaceContacts, t]);
 
   const removeContact = React.useCallback(async (row: SupportContactRow) => {
-    await replaceContacts(contacts.filter((item) => item !== row));
-  }, [contacts, replaceContacts]);
+    const before = contacts;
+    try {
+      await replaceContacts(contacts.filter((item) => item !== row));
+    } catch (err) {
+      feedback.error(getApiErrorMessage(err, t, t('messages.saveSupportContactsFailed')));
+      return;
+    }
+    feedback.undo(t('workspace.application.undo.contactRemoved'), async () => {
+      try {
+        await replaceContacts(before);
+      } catch (err) {
+        feedback.error(getApiErrorMessage(err, t, t('messages.restoreFailed')));
+      }
+    });
+  }, [contacts, feedback, replaceContacts, t]);
 
   return (
     <>
@@ -723,15 +780,17 @@ function ApplicationSupportSection({
 
         <Box sx={{ mt: 2.25 }}>
           <SectionLabel>{t('workspace.application.technical.supportNotes')}</SectionLabel>
-          <TextField
+          <DeferredTextField
             value={app.support_notes || ''}
-            onChange={(event) => { void onPatch({ support_notes: event.target.value || null }); }}
+            resetKey={app.id}
+            onSave={(value) => onPatch({ support_notes: value || null })}
             variant="standard"
             fullWidth
             multiline
             minRows={5}
             disabled={!canManage}
-            placeholder={t('workspace.application.technical.supportNotesPlaceholder')}
+            placeholder={canManage ? t('workspace.application.technical.supportNotesPlaceholder') : undefined}
+            inputProps={{ 'aria-label': t('workspace.application.technical.supportNotes') }}
             sx={(theme) => ({
               ...drawerFieldValueSx,
               mt: 1,
@@ -1144,19 +1203,22 @@ export function OperationsTab({
 
           <Stack spacing={0.9} sx={{ pt: 0.5 }}>
             {[
-              ['external_facing', t('workspace.application.technical.externalFacing')],
-              ['etl_enabled', t('workspace.application.technical.dataIntegrationEtl')],
-              ['is_suite', t('workspace.application.overview.canHaveChildApps')],
-            ].map(([field, label]) => (
-              <Box component="label" key={field} sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', fontSize: 13, color: theme.palette.kanap.text.primary })}>
+              ['external_facing', t('workspace.application.technical.externalFacing'), t('workspace.application.technical.externalFacingHelp')],
+              ['etl_enabled', t('workspace.application.technical.dataIntegrationEtl'), t('workspace.application.technical.dataIntegrationEtlHelp')],
+              ['is_suite', t('workspace.application.overview.canHaveChildApps'), t('workspace.application.overview.canHaveChildAppsHelp')],
+            ].map(([field, label, help]) => (
+              <Box key={field} sx={(theme) => ({ display: 'flex', gap: '8px', alignItems: 'center', fontSize: 13, color: theme.palette.kanap.text.primary })}>
                 <input
+                  id={`application-${field}`}
                   type="checkbox"
+                  aria-label={label}
                   checked={!!(app as any)[field]}
                   disabled={!canManage}
                   onChange={(event) => { void onPatch({ [field]: event.target.checked } as Partial<ApplicationDetail>); }}
                   style={{ accentColor: 'var(--kanap-teal)' }}
                 />
-                {label}
+                <Box component="label" htmlFor={`application-${field}`} sx={{ cursor: canManage ? 'pointer' : 'default' }}>{label}</Box>
+                <HelpTip label={label} help={help} />
               </Box>
             ))}
           </Stack>
@@ -1202,6 +1264,7 @@ function ComplianceTab({
   error: string | null;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  const feedback = useApplicationFeedback();
   const countryOptions = useCountryOptions();
   const { byField } = useItOpsEnumOptions();
   // Interfaces to applications restored later: the key carries the wave so a change refetches; a 403 (restricted reader) shows nothing.
@@ -1235,8 +1298,13 @@ function ComplianceTab({
             value={selectedCountries}
             onChange={(_, value) => {
               void (async () => {
-                await api.post(`/applications/${app.id}/data-residency/bulk-replace`, { countries: value.map((item) => item.code) });
-                await onRefresh();
+                try {
+                  await api.post(`/applications/${app.id}/data-residency/bulk-replace`, { countries: value.map((item) => item.code) });
+                  await onRefresh();
+                } catch (err) {
+                  // The selection shows the saved countries, so nothing to put back.
+                  feedback.error(getApiErrorMessage(err, t, t('messages.saveResidencyFailed')));
+                }
               })();
             }}
             getOptionLabel={(option) => `${option.code} · ${option.name}`}
@@ -1291,6 +1359,7 @@ export default function ApplicationWorkspacePage() {
   const [savingCreate, setSavingCreate] = React.useState(false);
   const [createDirty, setCreateDirty] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  const feedbackRef = React.useRef<ReturnType<typeof useApplicationFeedback>>({ error: () => undefined, undo: () => undefined, info: () => undefined });
 
   const listContextParams = React.useMemo(() => new URLSearchParams(searchParams), [searchParams]);
   const sort = searchParams.get('sort') || 'name:ASC';
@@ -1429,6 +1498,15 @@ export default function ApplicationWorkspacePage() {
     }
   }, [navigate, searchParams, t]);
 
+  const copyReference = React.useCallback(async (reference: string) => {
+    try {
+      await navigator.clipboard.writeText(reference);
+      feedbackRef.current.info(t('workspace.application.referenceCopied'));
+    } catch (err) {
+      setError(getApiErrorMessage(err, t, t('messages.copyReferenceFailed')));
+    }
+  }, [t]);
+
   const lifecycleOptions = React.useMemo(() => {
     const list = byField.lifecycleStatus || [];
     return list.map((option) => ({
@@ -1437,6 +1515,9 @@ export default function ApplicationWorkspacePage() {
       color: getDotColor(LIFECYCLE_COLORS[option.code] || 'default', theme.palette.mode),
     }));
   }, [byField.lifecycleStatus, theme.palette.mode]);
+
+  // Creating an application takes the member level, as the server does.
+  if (isCreate && !canManage) return <ForbiddenPage />;
 
   if (!isCreate && appQuery.isLoading && !app) {
     return (
@@ -1480,6 +1561,7 @@ export default function ApplicationWorkspacePage() {
   ];
 
   return (
+    <ApplicationFeedbackProvider onError={setError} capture={feedbackRef}>
     <Box sx={{ height: '100%', minHeight: 0, display: 'flex', flexDirection: 'column' }}>
       {!!error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{error}</Alert>}
       {!!appQuery.error && <Alert severity="error" sx={{ mx: 2, mt: 1 }}>{t('messages.loadApplicationFailed')}</Alert>}
@@ -1492,11 +1574,12 @@ export default function ApplicationWorkspacePage() {
         backLabel={t('pages.applications.title')}
         onBack={closeWorkspace}
         itemReference={appReference}
-        onCopyReference={appReference ? () => { void navigator.clipboard?.writeText(appReference); } : undefined}
+        onCopyReference={appReference ? () => { void copyReference(appReference); } : undefined}
         title={isCreate ? '' : app?.name || ''}
         titleFallback={isCreate ? t('workspace.application.newTitle') : t('workspace.application.untitled')}
-        canEditTitle={isCreate || canManage}
+        canEditTitle={!isCreate && canManage}
         onTitleSave={(value) => { void patchApplication({ name: value }); }}
+        titleRequiredMessage={t('messages.nameRequired')}
         titleMaxLength={APPLICATION_NAME_MAX}
         nav={!isCreate && nav.total > 0 ? {
           currentIndex: nav.index + 1,
@@ -1511,22 +1594,29 @@ export default function ApplicationWorkspacePage() {
         onSaveShortcut={() => { void overviewEditorRef.current?.save(); }}
         metadata={!isCreate && app ? (
           <PendingMetadata pending={metadataPending}>
-            <PortfolioStatusMetadata
-              value={app.lifecycle || 'active'}
-              label={lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
-              color={getDotColor(LIFECYCLE_COLORS[app.lifecycle] || 'default', theme.palette.mode)}
-              options={lifecycleOptions}
-              onChange={(value) => { void patchApplication({ lifecycle: value }); }}
-              disabled={!canManage}
-            />
+            {canManage ? (
+              <PortfolioStatusMetadata
+                value={app.lifecycle || 'active'}
+                label={lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
+                color={getDotColor(LIFECYCLE_COLORS[app.lifecycle] || 'default', theme.palette.mode)}
+                options={lifecycleOptions}
+                onChange={(value) => { void patchApplication({ lifecycle: value }); }}
+              />
+            ) : (
+              // Read only: the status is text, not a button that opens nothing.
+              <PortfolioMetadataItem>
+                <StatusDot color={getDotColor(LIFECYCLE_COLORS[app.lifecycle] || 'default', theme.palette.mode)} size={8} />
+                {' '}{lifecycleOptions.find((option) => option.value === app.lifecycle)?.label || humanize(app.lifecycle, t('common:selects.notSet'))}
+              </PortfolioMetadataItem>
+            )}
             <ApplicationCriticalityMetadata criticality={app.criticality} disabled={!canManage} onCommit={(value) => patchApplication({ criticality: value })} />
             {app.version && (
-              <PortfolioMetadataItem mono onClick={() => { void navigator.clipboard?.writeText(app.version || ''); }}>
+              <PortfolioMetadataItem mono onClick={canManage ? () => { void copyReference(app.version || ''); } : undefined}>
                 v{app.version}
               </PortfolioMetadataItem>
             )}
             <PortfolioMetadataItem label={t('workspace.application.meta.goLive')}>
-              {formatShortDate(app.go_live_date, locale, { empty: t('common:selects.notSet') })}
+              {formatShortDate(app.go_live_date, locale, { empty: t('common:selects.notSet'), year: 'always' })}
             </PortfolioMetadataItem>
             {vulnerabilities?.totals && (
               <VulnerabilitySevereBadge
@@ -1548,7 +1638,7 @@ export default function ApplicationWorkspacePage() {
                 itemName={app.name || t('workspace.application.untitled')}
               />
             )}
-            {!isCreate && (
+            {!isCreate && canManage && (
               <Button variant="action" onClick={() => setVersionDialogOpen(true)} size="small">
                 {t('workspace.application.createNewVersion')}
               </Button>
@@ -1582,7 +1672,7 @@ export default function ApplicationWorkspacePage() {
           <ApplicationProperties
             app={app}
             canManage={canManage}
-            onPatch={(patch) => { void patchApplication(patch); }}
+            onPatch={patchApplication}
             onLocalUpdate={updateApplicationCache}
           />
         ) : <Box />}
@@ -1665,17 +1755,19 @@ export default function ApplicationWorkspacePage() {
         )}
       </PortfolioDetailWorkspaceShell>
 
-      {app && (
+      {app && canManage && (
         <CreateVersionDialog
           open={versionDialogOpen}
           onClose={() => setVersionDialogOpen(false)}
           sourceApp={{ id: app.id, name: app.name, version: app.version }}
           onSuccess={(newApp) => {
             setVersionDialogOpen(false);
+            feedbackRef.current.info(t('messages.versionCreated', { reference: newApp.sequential_id || newApp.name }));
             navigate(`/it/applications/${newApp.id}/overview`);
           }}
         />
       )}
     </Box>
+    </ApplicationFeedbackProvider>
   );
 }
