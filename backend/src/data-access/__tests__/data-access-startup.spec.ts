@@ -90,6 +90,10 @@ async function granted(admin: PgClient, table: string): Promise<boolean> {
 async function testEverythingInPlace(admin: PgClient): Promise<void> {
   await inRolledBack(admin, async () => {
     await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    // The role may have been installed after the migrations (the role script spec installs it on
+    // a server without it): a first start brings the grants in place.
+    const first = await synchroniseDataAccess(savepointSession(admin), captureLogger().logger);
+    assert.ok(first.sync === 'done' || first.sync === 'not_needed', `first start: ${first.sync}`);
     const { lines, logger } = captureLogger();
     const outcome = await synchroniseDataAccess(savepointSession(admin), logger);
     assert.equal(outcome.sync, 'not_needed', 'nothing missing: no synchronisation');
@@ -179,15 +183,20 @@ async function testLockTimeout(admin: PgClient, holder: PgClient): Promise<void>
   console.log('  lock timeout: logged, unavailable, no throw: OK');
 }
 
-/** The production path: a dedicated connection of the application's pool, then the kept value. */
+/**
+ * The production path: a dedicated connection of the application's pool, then the kept value.
+ * This one commits: at most the grants a start would add (the role exists, checked above).
+ */
 async function testStartupOnDataSource(): Promise<void> {
   const dataSource = new DataSource({ type: 'postgres', url: APP_URL });
   await dataSource.initialize();
   try {
     const { lines, logger } = captureLogger();
+    // As a start would, it commits the grants when the role came after the migrations.
     const availability = await runDataAccessStartup(dataSource, logger);
     assert.deepEqual(availability, { available: true, missing: [] });
-    assert.deepEqual(lines, ['[DATA-ACCESS] data-scoped access available']);
+    assert.equal(lines[lines.length - 1], '[DATA-ACCESS] data-scoped access available');
+    assert.ok(lines.length === 1 || /synchronised$/.test(lines[0]), lines.join(' | '));
     assert.equal(await dataAccessAvailability(dataSource), availability, 'kept in memory');
   } finally {
     await dataSource.destroy();
