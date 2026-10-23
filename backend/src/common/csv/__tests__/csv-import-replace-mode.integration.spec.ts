@@ -13,6 +13,7 @@ import { assetCsvConfig } from '../../../assets/asset-csv.config';
 import { taskCsvConfig } from '../../../tasks/task-csv.config';
 import { portfolioRequestCsvConfig } from '../../../portfolio/portfolio-request-csv.config';
 import { portfolioProjectCsvConfig } from '../../../portfolio/portfolio-project-csv.config';
+import { incidentCsvConfig } from '../../../incidents/incident-csv.config';
 import { DEFAULT_CLASSIFICATION_CATALOG } from '../../../it-ops-settings/classification-catalog';
 import { inRolledBackTransaction, seedTenant } from '../../../spend/__tests__/round-inputs.fixtures';
 
@@ -318,6 +319,29 @@ async function testPortfolio() {
   });
 }
 
+async function testIncidents() {
+  await inRolledBackTransaction(async (runner) => {
+    const tenantId = await seedTenant(runner, 'csv-replace-incidents');
+    const id = randomUUID();
+    await runner.query(
+      `INSERT INTO incidents (id, tenant_id, item_number, title, severity, status, confidential, personal_data_affected, authority_notification_required)
+       VALUES ($1, $2, 7, 'Outage', 'major', 'open', true, true, true)`,
+      [id, tenantId],
+    );
+    // The hook rules win: a blank boolean is false, a blank confidential flag keeps the stored one.
+    const result = await preflightThenLoad(
+      runner, tenantId, incidentCsvConfig,
+      'ref;title;severity;personal_data_affected;authority_notification_required;confidential\nINC-7;Outage;major;;;',
+    );
+    assert.deepEqual([result.ok, result.updated], [true, 1], JSON.stringify(result.errors));
+    const after = await stored(runner, 'incidents', id);
+    assert.deepEqual(
+      [after.personal_data_affected, after.authority_notification_required, after.confidential],
+      [false, false, true],
+    );
+  });
+}
+
 async function main() {
   await dataSource.initialize();
   let failed = false;
@@ -326,6 +350,7 @@ async function main() {
     await testAssets();
     await testTasks();
     await testPortfolio();
+    await testIncidents();
   } catch (err) {
     failed = true;
     console.error(err);

@@ -931,7 +931,9 @@ export class CsvImportService {
   /**
    * Full replace, once the hooks ran, for the properties a blank cell emptied and no hook changed:
    * a new row takes the column's default; a NOT NULL column with no empty value is a row error.
-   * Rows an insert-only import skips are not checked.
+   * Rows an insert-only import skips are not checked. It runs after afterValidate, at the
+   * preflight as at the load; beforeCommit never runs at the preflight (it locks rows and
+   * allocates references), so a rule that gives a blank cell its value belongs in afterValidate.
    */
   private checkEmptiedColumns(rows: CsvImportRow[], replace: ReplaceRules, operation: CsvImportParams['operation']): void {
     for (const row of rows) {
