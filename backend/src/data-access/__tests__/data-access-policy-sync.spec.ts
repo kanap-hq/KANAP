@@ -198,8 +198,19 @@ async function testExecuteMissing(admin: PgClient): Promise<void> {
     assert.equal(again.sync, 'done');
     assert.deepEqual(again.availability, { available: true, missing: [] });
     assert.equal(await hasExecute(admin, invoker), true, 'EXECUTE granted to the role');
+
+    // A disclosure function the application calls directly, outside any policy.
+    for (const direct of ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)']) {
+      await admin.query(`REVOKE EXECUTE ON FUNCTION ${direct} FROM ${LIMITED_ROLE}`);
+      assert.equal(await hasExecute(admin, direct), false, `the scenario revokes EXECUTE on ${direct}`);
+      assert.deepEqual(await checkDataAccessAvailability(session), { available: false, missing: ['grants'] }, `${direct}: grants missing`);
+      const restored = await synchroniseDataAccess(session, silent);
+      assert.equal(restored.sync, 'done');
+      assert.deepEqual(restored.availability, { available: true, missing: [] });
+      assert.equal(await hasExecute(admin, direct), true, `EXECUTE on ${direct} granted again`);
+    }
   });
-  console.log('  EXECUTE missing on a function the policies call: statement refused, granted again at start: OK');
+  console.log('  EXECUTE missing on a function the policies or the application call: statement refused, granted again at start: OK');
 }
 
 async function main(): Promise<void> {

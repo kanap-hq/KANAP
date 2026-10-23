@@ -37,6 +37,13 @@ const LOG_PREFIX = '[DATA-ACCESS]';
 const AVAILABILITY_TTL_MS = 60_000;
 const SYNC_LOCK_TIMEOUT = '5s';
 
+/**
+ * The SECURITY DEFINER functions the application calls as the limited role outside any policy
+ * (disclosure, spec §6.6): EXECUTE is revoked from PUBLIC and granted by the sync, so the check
+ * tests them by name. A function not created yet is not a missing grant.
+ */
+const DIRECT_CALL_FUNCTIONS = ['data_access_hidden_count(text, uuid)', 'data_access_reference(text, uuid)'];
+
 type CatalogState = {
   roleExists: boolean;
   inherits: boolean;
@@ -52,7 +59,8 @@ type CatalogState = {
  * on (a relation of another owner is outside the rule "every KANAP table belongs to the application
  * role"). EXECUTE on every function a policy of the role calls (its dependencies in `pg_depend`:
  * the access functions, revoked from PUBLIC when SECURITY DEFINER); without it, every statement of
- * a limited person on that table fails. Policies: every expected policy exists, restrictive, on
+ * a limited person on that table fails. EXECUTE also on the disclosure functions the application
+ * calls directly (DIRECT_CALL_FUNCTIONS). Policies: every expected policy exists, restrictive, on
  * its command and targeting the role (same test as `data_access_apply`).
  */
 async function readCatalogState(session: DataAccessSession): Promise<CatalogState> {
@@ -95,6 +103,12 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
            ON d.classid = 'pg_policy'::regclass AND d.objid = p.oid AND d.refclassid = 'pg_proc'::regclass
          WHERE (SELECT oid FROM lim) = ANY (p.polroles)
            AND NOT has_function_privilege((SELECT oid FROM lim), d.refobjid, 'EXECUTE')
+       )
+       OR EXISTS (
+         SELECT 1
+         FROM unnest($2::text[]) f(signature)
+         WHERE to_regprocedure(f.signature) IS NOT NULL
+           AND NOT has_function_privilege((SELECT oid FROM lim), to_regprocedure(f.signature)::oid, 'EXECUTE')
        ) AS grants_missing,
        EXISTS (
          SELECT 1
@@ -114,7 +128,7 @@ async function readCatalogState(session: DataAccessSession): Promise<CatalogStat
                WHEN 'DELETE' THEN 'd' WHEN 'ALL' THEN '*' END
          )
        ) AS policies_missing`,
-    [DATA_ACCESS_LIMITED_ROLE],
+    [DATA_ACCESS_LIMITED_ROLE, DIRECT_CALL_FUNCTIONS],
   );
   return {
     roleExists,
