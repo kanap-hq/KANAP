@@ -29,7 +29,12 @@ export function codedErrorOf(error: any): { code?: string; params?: Params } {
  * (`lower(btrim(name))`): `btrim` removes the space character only, so the key does the same.
  */
 export function applicationNameKey(name: unknown): string {
-  return String(name ?? '').replace(/^ +| +$/g, '').toLowerCase();
+  const text = String(name ?? '');
+  let start = 0;
+  let end = text.length;
+  while (start < end && text[start] === ' ') start += 1;
+  while (end > start && text[end - 1] === ' ') end -= 1;
+  return text.slice(start, end).toLowerCase();
 }
 
 /** The trimmed name, or a refusal when it is empty or too long. */
