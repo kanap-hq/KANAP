@@ -424,11 +424,12 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/integrated-documents/:slotKey/locks')
-  acquireIntegratedDocumentLock(
+  async acquireIntegratedDocumentLock(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.acquireLockBySource('applications', id, slotKey, ctx.userId || null, {
       manager: ctx.manager,
     });
@@ -437,12 +438,13 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/integrated-documents/:slotKey/locks/heartbeat')
-  heartbeatIntegratedDocumentLock(
+  async heartbeatIntegratedDocumentLock(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Req() req: any,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.heartbeatLockBySource(
       'applications',
       id,
@@ -456,12 +458,13 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Delete(':id/integrated-documents/:slotKey/locks')
-  releaseIntegratedDocumentLock(
+  async releaseIntegratedDocumentLock(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Req() req: any,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.releaseLockBySource(
       'applications',
       id,
@@ -475,13 +478,14 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Patch(':id/integrated-documents/:slotKey')
-  updateIntegratedDocument(
+  async updateIntegratedDocument(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Body() body: any,
     @Req() req: any,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.updateBySource(
       'applications',
       id,
@@ -497,12 +501,13 @@ export class ApplicationsController {
   @RequireLevel('applications', 'member')
   @Post(':id/integrated-documents/:slotKey/attachments/inline')
   @UseInterceptors(FileInterceptor('file', inlineImageMulterOptions))
-  uploadIntegratedDocumentInlineAttachment(
+  async uploadIntegratedDocumentInlineAttachment(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @UploadedFile() file: Express.Multer.File,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.uploadInlineAttachmentBySource(
       'applications',
       id,
@@ -516,12 +521,13 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/integrated-documents/:slotKey/attachments/inline/import')
-  importIntegratedDocumentInlineAttachment(
+  async importIntegratedDocumentInlineAttachment(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Body() body: { source_url?: string },
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.importInlineAttachmentBySourceUrl(
       'applications',
       id,
@@ -538,13 +544,14 @@ export class ApplicationsController {
   @Throttle({ default: RATE_LIMITS.documentImport })
   @Post(':id/integrated-documents/:slotKey/import')
   @UseInterceptors(FileInterceptor('file', documentImportMulterOptions))
-  importIntegratedDocument(
+  async importIntegratedDocument(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @UploadedFile() file: Express.Multer.File,
     @Req() req: any,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.importDocumentBySource(
       'applications',
       id,
@@ -576,13 +583,14 @@ export class ApplicationsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'member')
   @Post(':id/integrated-documents/:slotKey/revert/:versionNumber')
-  revertIntegratedDocument(
+  async revertIntegratedDocument(
     @Param('id') id: string,
     @Param('slotKey') slotKey: string,
     @Param('versionNumber') versionNumber: string,
     @Req() req: any,
     @Tenant() ctx: TenantRequest,
   ) {
+    await this.svc.assertVisible(id, await this.readApplicationOpts(ctx));
     return this.integratedDocuments.revertBySource(
       'applications',
       id,
