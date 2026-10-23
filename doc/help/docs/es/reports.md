@@ -378,7 +378,7 @@ Vea datos presupuestarios agrupados por cuenta de consolidación, con el tipo de
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo disponible cuando se selecciona un solo año)
-- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas. Ofrece todas las cuentas usadas por las líneas del informe, por nombre y número, pueda o no abrir el plan de cuentas
+- **Excluir cuentas**: Autocompletado de selección múltiple para excluir cuentas específicas. Ofrece todas las cuentas usadas por las líneas del informe, por nombre y número, pueda o no abrir el plan de cuentas. La lista empieza por "Sin asignar": al elegirlo se excluyen las líneas sin cuenta de consolidación
 - **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 ### Qué verá
@@ -410,7 +410,7 @@ Vea datos presupuestarios agrupados por los valores de una dimensión analítica
 - **Año de inicio** y **Año de fin**: Año anterior, actual o siguiente
 - **Métrica**: Cualquier columna presupuestaria visible. Empieza en la columna por defecto
 - **Tipo de gráfico**: Gráfico circular o de barras horizontales (solo un año)
-- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas del informe. Cambiar el tipo de línea o la dimensión borra esta selección
+- **Excluir valores**: Autocompletado de selección múltiple para excluir valores concretos de la dimensión elegida. Ofrece los valores que se usan para el tipo de línea elegido, además de los que tienen las líneas del informe. La lista empieza por "Sin asignar": al elegirlo se excluyen las líneas sin valor en la dimensión. Cambiar el tipo de línea o la dimensión borra esta selección
 - **Centro de coste**, **Run o build**, **Líneas** y los filtros de dimensiones analíticas: Consulte [Filtros de centro de coste, de Run o build y de dimensiones analíticas](#filtros-de-centro-de-coste-de-run-o-build-y-de-dimensiones-analiticas)
 
 El subtítulo, el título del gráfico y la primera columna de la tabla indican la dimensión elegida, por ejemplo "OPEX por Nature".
