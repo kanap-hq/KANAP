@@ -265,7 +265,13 @@
         "warning_one": "This technology and its links to servers and applications will be deleted.",
         "warning_other": "These {{count}} technologies and their links to servers and applications will be deleted.",
         "warningCounted_one": "This technology will be deleted with {{usages}}.",
-        "warningCounted_other": "These {{count}} technologies will be deleted with {{usages}}."
+        "warningCounted_other": "These {{count}} technologies will be deleted with {{usages}}.",
+        "toDelete_one": "{{count}} technology will be deleted:",
+        "toDelete_other": "{{count}} technologies will be deleted:",
+        "deleted_one": "{{count}} technology deleted",
+        "deleted_other": "{{count}} technologies deleted",
+        "title_one": "Delete the selected technology",
+        "title_other": "Delete the {{count}} selected technologies"
       },
       "create": {
         "title": "New technology",
@@ -305,6 +311,14 @@
       },
       "deleteWarning_one": "This cannot be undone. Its servers, interfaces and documents stay; only their links to this connection go.",
       "deleteWarning_other": "This cannot be undone. Their servers, interfaces and documents stay; only their links to these connections go.",
+      "delete": {
+        "toDelete_one": "{{count}} connection will be deleted:",
+        "toDelete_other": "{{count}} connections will be deleted:",
+        "deleted_one": "{{count}} connection deleted",
+        "deleted_other": "{{count}} connections deleted",
+        "title_one": "Delete the selected connection",
+        "title_other": "Delete the {{count}} selected connections"
+      },
       "serverCount_one": "{{count}} server",
       "serverCount_other": "{{count}} servers"
     },

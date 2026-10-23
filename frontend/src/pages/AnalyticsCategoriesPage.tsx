@@ -244,6 +244,13 @@ function AnalyticsValuesList() {
           onDeleteSuccess={refresh}
           // Asked on click: the values lines use go too once confirmed, the lines lose them.
           checkDelete={(ids) => valuesDeleteCheck(t, ids)}
+          itemLabels={{
+            toDelete: (count) => t('analytics.delete.toDelete', { count }),
+            kept: (count) => t('analytics.delete.kept', { count }),
+            deleted: (count) => t('analytics.delete.deleted', { count }),
+            title: (count) => t('analytics.delete.title', { count }),
+            keptDone: (count) => t('analytics.delete.keptDone', { count }),
+          }}
           // Without an answer from the check: the counts the list rows carry.
           forceOption={forceDeleteMessage ? {
             message: forceDeleteMessage,

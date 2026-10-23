@@ -10,8 +10,15 @@ vi.mock('react-i18next', () => {
 vi.mock('../../i18n', () => ({ default: { t: (key: string) => key, language: 'en' } }));
 vi.mock('../../i18n/useLocale', () => ({ useLocale: () => 'en' }));
 vi.mock('../../auth/AuthContext', () => ({ useAuth: () => ({ hasLevel: () => true }) }));
-vi.mock('../../components/PageHeader', () => ({ default: () => null }));
-vi.mock('../../components/DeleteSelectedButton', () => ({ default: () => null }));
+// The header renders its actions: the delete button is one of them.
+vi.mock('../../components/PageHeader', () => ({ default: ({ actions }: { actions?: React.ReactNode }) => <>{actions}</> }));
+const deleteButton = vi.hoisted(() => ({ props: null as null | Record<string, any> }));
+vi.mock('../../components/DeleteSelectedButton', () => ({
+  default: (props: Record<string, any>) => {
+    deleteButton.props = props;
+    return null;
+  },
+}));
 vi.mock('../../hooks/useApplicationClassificationCatalog', () => ({
   default: () => ({
     data: {
@@ -78,5 +85,22 @@ describe('ConnectionsPage filters', () => {
       { value: 'true', label: 'enums.yesNo.yes' },
       { value: 'false', label: 'enums.yesNo.no' },
     ]);
+  });
+});
+
+describe('ConnectionsPage delete', () => {
+  it('names connections in the dialog and the message once done, in the four languages', async () => {
+    render(<MemoryRouter><ConnectionsPage /></MemoryRouter>);
+    const labels = deleteButton.props?.itemLabels;
+    expect(labels.toDelete(2)).toBe('pages.connections.delete.toDelete');
+    expect(labels.deleted(2)).toBe('pages.connections.delete.deleted');
+    expect(labels.title(2)).toBe('pages.connections.delete.title');
+    for (const lang of ['en', 'fr', 'de', 'es']) {
+      const it = (await import(`../../locales/${lang}/it.json`)).default as any;
+      for (const key of ['toDelete', 'deleted', 'title']) {
+        expect(it.pages.connections.delete[`${key}_one`], `${lang} ${key}`).toBeTruthy();
+        expect(it.pages.connections.delete[`${key}_other`], `${lang} ${key}`).toBeTruthy();
+      }
+    }
   });
 });

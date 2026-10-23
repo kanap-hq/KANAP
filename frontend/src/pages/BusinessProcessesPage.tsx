@@ -160,6 +160,11 @@ export default function BusinessProcessesPage() {
           gridApi={gridApiRef.current}
           // Nothing refuses a process's delete: the warning says what keeps it.
           warning={t('businessProcesses.deleteWarning', { count: selectedRows.length })}
+          itemLabels={{
+            toDelete: (count) => t('businessProcesses.delete.toDelete', { count }),
+            deleted: (count) => t('businessProcesses.delete.deleted', { count }),
+            title: (count) => t('businessProcesses.delete.title', { count }),
+          }}
           onDeleteSuccess={() => {
             setRefreshKey((k) => k + 1);
           }}

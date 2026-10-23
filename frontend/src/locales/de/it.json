@@ -265,7 +265,13 @@
         "warning_one": "Diese Technologie und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
         "warning_other": "Diese {{count}} Technologien und ihre Verknüpfungen mit Servern und Anwendungen werden gelöscht.",
         "warningCounted_one": "Diese Technologie wird mit {{usages}} gelöscht.",
-        "warningCounted_other": "Diese {{count}} Technologien werden mit {{usages}} gelöscht."
+        "warningCounted_other": "Diese {{count}} Technologien werden mit {{usages}} gelöscht.",
+        "toDelete_one": "{{count}} Technologie wird gelöscht:",
+        "toDelete_other": "{{count}} Technologien werden gelöscht:",
+        "deleted_one": "{{count}} Technologie gelöscht",
+        "deleted_other": "{{count}} Technologien gelöscht",
+        "title_one": "Ausgewählte Technologie löschen",
+        "title_other": "{{count}} ausgewählte Technologien löschen"
       },
       "create": {
         "title": "Neue Technologie",
@@ -305,6 +311,14 @@
       },
       "deleteWarning_one": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit dieser Verbindung werden entfernt.",
       "deleteWarning_other": "Dies kann nicht rückgängig gemacht werden. Ihre Server, Schnittstellen und Dokumente bleiben erhalten; nur ihre Verknüpfungen mit diesen Verbindungen werden entfernt.",
+      "delete": {
+        "toDelete_one": "{{count}} Verbindung wird gelöscht:",
+        "toDelete_other": "{{count}} Verbindungen werden gelöscht:",
+        "deleted_one": "{{count}} Verbindung gelöscht",
+        "deleted_other": "{{count}} Verbindungen gelöscht",
+        "title_one": "Ausgewählte Verbindung löschen",
+        "title_other": "{{count}} ausgewählte Verbindungen löschen"
+      },
       "serverCount_one": "{{count}} Server",
       "serverCount_other": "{{count}} Server"
     },

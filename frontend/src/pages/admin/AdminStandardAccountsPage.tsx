@@ -162,6 +162,11 @@ export default function AdminStandardAccountsPage() {
         gridApi={gridApiRef.current}
         // Nothing refuses it: the accounts leave the template, the charts already loaded from it keep theirs.
         warning={t('standardAccounts.deleteWarning', { count: selectedRows.length })}
+        itemLabels={{
+          toDelete: (count) => t('standardAccounts.delete.toDelete', { count }),
+          deleted: (count) => t('standardAccounts.delete.deleted', { count }),
+          title: (count) => t('standardAccounts.delete.title', { count }),
+        }}
         onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         disabled={!selectedTemplateId}
       />

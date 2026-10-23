@@ -866,7 +866,7 @@ export default function ProjectWorkspacePage() {
         }))}
         onTabChange={(nextTab) => onTabChange(null as any, nextTab as TabKey)}
         drawerStorageKey="kanap.project.drawerOpen"
-        backLabel={t('portfolio:projects.entityName')}
+        backLabel={t('portfolio:projects.backToList')}
         onBack={() => { void closeWorkspace(); }}
         itemReference={projectReference}
         onCopyReference={projectReference ? () => { void navigator.clipboard?.writeText(projectReference); } : undefined}

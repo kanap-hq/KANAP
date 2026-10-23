@@ -166,6 +166,11 @@ export default function ContactsPage() {
           getItemId={(row) => row.id}
           getItemName={(row) => (row.first_name || row.last_name) ? `${row.first_name || ''} ${row.last_name || ''}`.trim() : row.email}
           gridApi={gridApiRef.current}
+          itemLabels={{
+            toDelete: (count) => t('contacts.delete.toDelete', { count }),
+            deleted: (count) => t('contacts.delete.deleted', { count }),
+            title: (count) => t('contacts.delete.title', { count }),
+          }}
           onDeleteSuccess={() => setRefreshKey((k) => k + 1)}
         />
       )}
