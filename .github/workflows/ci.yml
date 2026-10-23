@@ -101,6 +101,8 @@ jobs:
           - 5432:5432
     env:
       DATABASE_URL: postgres://app:app@127.0.0.1:5432/appdb
+      # Superuser connection of the data-access specs that change the limited role or run its script.
+      DATA_ACCESS_ADMIN_DATABASE_URL: postgres://postgres:postgres@127.0.0.1:5432/postgres
       # Database lanes of the runner: each runs its specs on its own copy of appdb.
       DB_LANES: 4
     defaults:
@@ -133,6 +135,13 @@ jobs:
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS pgcrypto;"
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "CREATE EXTENSION IF NOT EXISTS \"uuid-ossp\";"
           psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -c "GRANT ALL ON SCHEMA public TO app;"
+      # Data-scoped access: the limited role, before the migrations (they give it its rights in
+      # appdb). The lane copies made from appdb keep them.
+      - name: Install the data-access role
+        if: ${{ needs.changes.outputs.backend != 'docs' }}
+        env:
+          PGPASSWORD: postgres
+        run: psql -h 127.0.0.1 -U postgres -d appdb -v ON_ERROR_STOP=1 -v app_role=app -v mode=install -f ../infra/scripts/data-access-role.sql
       - name: Prepare backend database
         if: ${{ needs.changes.outputs.backend != 'docs' }}
         run: npx typeorm migration:run -d ci-dist/backend/src/data-source.js
