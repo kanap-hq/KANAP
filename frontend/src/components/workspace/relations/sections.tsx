@@ -120,13 +120,14 @@ export function budgetLinesSection({
       }));
     },
     // A disabled line stays listed, muted, and is left out of the total, which says so below it.
+    // No total when no line has an amount, counted or left out: a "0" would add nothing.
     totals: (lines) => {
+      if (!lines.some((row) => row.amount != null)) return [];
       const disabled = lines.filter((row) => row.status === 'disabled').length;
       const amounts = lines
         .filter((row) => row.status !== 'disabled')
         .map((row) => row.amount)
         .filter((amount): amount is number => amount != null);
-      if (amounts.length === 0 && disabled === 0) return [];
       const total = {
         key: 'total',
         label: t('workspace.application.relations.total'),

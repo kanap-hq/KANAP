@@ -37,6 +37,16 @@ describe('budget lines total', () => {
     expect(screen.getByText('workspace.application.relations.disabledNotCounted(count=2)')).toBeInTheDocument();
   });
 
+  it('shows no total when no line has an amount, even with a disabled line', () => {
+    expect(totalsOf([line('a', null), line('b', null), line('c', null, 'disabled')])).toEqual([]);
+  });
+
+  it('shows a zero total when the only amount is on a disabled line it leaves out', () => {
+    const totals = totalsOf([line('a', null), line('b', 40, 'disabled')]);
+    expect(totals.map((row) => row.key)).toEqual(['total', 'disabled']);
+    expect(totals[0].cells.amount).toBe(formatAmount(0));
+  });
+
   it('adds no note without a disabled line', () => {
     const totals = totalsOf([line('a', 100), line('b', null)]);
     expect(totals.map((row) => row.key)).toEqual(['total']);
