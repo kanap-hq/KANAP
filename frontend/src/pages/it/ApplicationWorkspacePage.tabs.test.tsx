@@ -274,6 +274,7 @@ describe('Application workspace vulnerabilities', () => {
     path: string,
     vulnerabilities: ReachVulnerabilities | (() => Promise<unknown>) = reach,
     application: (() => Promise<unknown>) | null = null,
+    interfaces: unknown[] = [],
   ) {
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/applications/app-1/vulnerabilities') {
@@ -281,7 +282,7 @@ describe('Application workspace vulnerabilities', () => {
       }
       if (url === '/applications/app-1/relations') return { data: relationsData() } as never;
       if (url === '/applications/app-1/relations-count') return { data: { total: 0 } } as never;
-      if (url === '/interfaces/by-application/app-1') return { data: { items: [] } } as never;
+      if (url === '/interfaces/by-application/app-1') return { data: { items: interfaces } } as never;
       if (url === '/incidents') return { data: { items: [], total: 0 } } as never;
       if (/^\/applications\/[^/]+$/.test(url)) return (application ? application() : { data: APP }) as never;
       throw new Error(`unexpected GET ${url}`);
@@ -311,6 +312,25 @@ describe('Application workspace vulnerabilities', () => {
       removeItem: (key: string) => { store.delete(key); },
       clear: () => store.clear(),
     });
+  });
+
+  it('counts distinct interfaces and lists the unbound ones last, without environment', async () => {
+    const row = (id: string, name: string, environment: string | null) => ({
+      id, name, environment, interface_reference: id.toUpperCase(), via_middleware: false,
+      source_application_id: 'app-1', source_application_name: 'Billing', target_application_id: 'app-2', target_application_name: 'ERP',
+    });
+    renderPage('/it/applications/app-1/interfaces', reach, null, [
+      row('int-1', 'Orders', 'prod'), row('int-1', 'Orders', 'test'), row('int-2', 'Invoices', null),
+    ]);
+    const unbound = await screen.findByText('workspace.application.interfaces.unbound');
+    expect(screen.getByText('workspace.application.interfaces.unboundHint')).toBeInTheDocument();
+    const test = screen.getByText('TEST');
+    expect(screen.getByText('PROD').compareDocumentPosition(test) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(test.compareDocumentPosition(unbound) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByText('Orders')).toHaveLength(2);
+    expect(screen.getAllByText('Invoices')).toHaveLength(1);
+    const tab = screen.getByRole('tab', { name: /workspace\.application\.tabs\.interfaces/ });
+    expect(tab.textContent).toMatch(/2$/);
   });
 
   it('links the severe badge to the Vulnerabilities page filtered on the application', async () => {

@@ -1751,7 +1751,9 @@
         "inbound": "Eingehend ({{count}})",
         "outbound": "Ausgehend ({{count}})",
         "routed": "Weitergeleitet ({{count}})",
-        "viaNames": "über {{names}}"
+        "viaNames": "über {{names}}",
+        "unbound": "Ohne Umgebung",
+        "unboundHint": "Noch in keiner Umgebung verbunden. Fügen Sie auf der Seite der Schnittstelle eine Bindung hinzu."
       },
       "deployments": {
         "addDeployment": "Bereitstellung hinzufügen",

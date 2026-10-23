@@ -1751,7 +1751,9 @@
         "inbound": "Inbound ({{count}})",
         "outbound": "Outbound ({{count}})",
         "routed": "Routed ({{count}})",
-        "viaNames": "via {{names}}"
+        "viaNames": "via {{names}}",
+        "unbound": "Without environment",
+        "unboundHint": "Not bound in any environment yet. Add a binding on the interface's page."
       },
       "deployments": {
         "addDeployment": "Add deployment",

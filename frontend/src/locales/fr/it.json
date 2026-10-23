@@ -1751,7 +1751,9 @@
         "inbound": "Entrantes ({{count}})",
         "outbound": "Sortantes ({{count}})",
         "routed": "Relayées ({{count}})",
-        "viaNames": "via {{names}}"
+        "viaNames": "via {{names}}",
+        "unbound": "Sans environnement",
+        "unboundHint": "Liée à aucun environnement pour l’instant. Ajoutez une liaison dans la fiche de l’interface."
       },
       "deployments": {
         "addDeployment": "Ajouter un déploiement",

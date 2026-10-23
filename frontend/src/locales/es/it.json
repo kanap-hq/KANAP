@@ -1751,7 +1751,9 @@
         "inbound": "Entrantes ({{count}})",
         "outbound": "Salientes ({{count}})",
         "routed": "Enrutadas ({{count}})",
-        "viaNames": "vía {{names}}"
+        "viaNames": "vía {{names}}",
+        "unbound": "Sin entorno",
+        "unboundHint": "Aún no tiene enlace en ningún entorno. Añada un enlace en la ficha de la interfaz."
       },
       "deployments": {
         "addDeployment": "Añadir despliegue",

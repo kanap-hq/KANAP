@@ -151,7 +151,8 @@ type InterfaceMiniRow = {
   interface_reference?: string | null;
   interface_id?: string | null;
   name: string;
-  environment: string;
+  /** Null for an interface with no binding yet (listed for its source and target). */
+  environment: string | null;
   source_application_id?: string | null;
   source_application_name?: string | null;
   target_application_id?: string | null;
@@ -1093,6 +1094,14 @@ function InterfaceRowsTable({
   );
 }
 
+/** The block of the interfaces that have no binding in any environment. */
+const UNBOUND_ENVIRONMENT = '__unbound__';
+
+/** Interfaces, not rows: the tab lists an interface once per environment it is bound in. */
+function distinctInterfaceCount(rows: Array<{ id: string }> | undefined): number {
+  return new Set((rows || []).map((row) => row.id)).size;
+}
+
 function InterfacesTab({
   app,
   rows,
@@ -1107,17 +1116,21 @@ function InterfacesTab({
   onOpenApplication: (id: string) => void;
 }) {
   const { t } = useTranslation(['it', 'common']);
+  // One block per environment, then the interfaces without any binding in a last block.
   const grouped = React.useMemo(() => {
     const map = new Map<string, { inbound: InterfaceMiniRow[]; outbound: InterfaceMiniRow[]; routed: InterfaceMiniRow[] }>();
     rows.forEach((row) => {
-      const env = row.environment || 'unknown';
+      const env = row.environment || UNBOUND_ENVIRONMENT;
       const bucket = map.get(env) || { inbound: [], outbound: [], routed: [] };
       if (row.target_application_id === app.id) bucket.inbound.push(row);
       else if (row.source_application_id === app.id) bucket.outbound.push(row);
       else bucket.routed.push(row);
       map.set(env, bucket);
     });
-    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+    return Array.from(map.entries()).sort(([a], [b]) => {
+      if (a === UNBOUND_ENVIRONMENT || b === UNBOUND_ENVIRONMENT) return a === UNBOUND_ENVIRONMENT ? 1 : -1;
+      return a.localeCompare(b);
+    });
   }, [app.id, rows]);
 
   if (loading) return null;
@@ -1133,11 +1146,20 @@ function InterfacesTab({
     <Stack spacing={3}>
       {grouped.map(([environment, groups]) => (
         <Box key={environment}>
-          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
-            <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500 }}>
-              {environment.toUpperCase()}
+          {environment === UNBOUND_ENVIRONMENT ? (
+            <Box sx={{ mb: 1.25 }}>
+              <SectionLabel>{t('workspace.application.interfaces.unbound')}</SectionLabel>
+              <Typography sx={(theme) => ({ mt: 0.25, fontSize: 12, color: theme.palette.kanap.text.tertiary })}>
+                {t('workspace.application.interfaces.unboundHint')}
+              </Typography>
             </Box>
-          </Box>
+          ) : (
+            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
+              <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500 }}>
+                {environment.toUpperCase()}
+              </Box>
+            </Box>
+          )}
           <Stack spacing={2}>
             {groups.inbound.length > 0 && (
               <Box>
@@ -1553,7 +1575,7 @@ export default function ApplicationWorkspacePage() {
   const appReference = app?.sequential_id || null;
   const deployments = app?.deployments || app?.instances || [];
   const deploymentCount = deployments.length;
-  const interfaceCount = interfacesQuery.data?.length || 0;
+  const interfaceCount = distinctInterfaceCount(interfacesQuery.data);
   const relationCount = (relationsCountQuery.data?.total ?? ((app?.links?.length || 0) + (app?.attachments?.length || 0)))
     + (incidentsCountQuery.data || 0);
   // The knowledge documents live in the Overview tab: open it and bring the section into view.
