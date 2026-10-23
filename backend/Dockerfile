@@ -7,8 +7,8 @@
 # The base image is pinned to the digest of its multi-architecture index (date in the comment).
 # Dependabot proposes the new digest; `docker compose build --pull` fetches exactly this image.
 
-# node:24-alpine, index digest pinned on 2026-10-09 (later digests: Dependabot)
-FROM node:24-alpine@sha256:ebfe2f90462722a7a4de65e91990e97fe0d401c70e0e762c5b53302f905ec1c1 AS base
+# node:24-alpine, index digest pinned on 2026-10-23 (later digests: Dependabot)
+FROM node:24-alpine@sha256:06d7adf3e0ef61a13f1d28682726366f97a15aa1888c934d3ecec86c33918b53 AS base
 # Document converters (pandoc, typst, inkscape) and fonts, all from the repositories of the
 # Alpine release of the image. The font folders get a whole-second time before fc-cache: image
 # layers keep whole seconds only, and fontconfig ignores a cache whose recorded folder time
