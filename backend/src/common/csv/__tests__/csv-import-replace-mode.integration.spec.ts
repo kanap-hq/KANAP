@@ -168,13 +168,17 @@ async function testApplications() {
     result = await run(runner, tenantId, applicationCsvConfig, 'name;contains_pii\nLedger;');
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     assert.equal((await stored(runner, 'applications', ledger)).contains_pii, true);
+    // A row already in error reports its own cell only, not the blank classification cell.
+    result = await run(runner, tenantId, applicationCsvConfig, 'name;go_live_date;contains_pii\nLedger;not-a-date;', { dryRun: true });
+    assert.deepEqual(result.errors.map((e) => [e.column, e.code]), [['go_live_date', 'CSV_DATE_INVALID']]);
 
     // Merge mode is unchanged: blank cells keep the stored values.
+    await runner.query(`UPDATE applications SET access_methods = ARRAY['web'] WHERE id = $1`, [ledger]);
     result = await run(runner, tenantId, applicationCsvConfig, 'name;notes;access_methods\nLedger;;', { mode: 'enrich' });
     assert.equal(result.ok, true, JSON.stringify(result.errors));
     after = await stored(runner, 'applications', ledger);
     assert.equal(after.notes, 'Back');
-    assert.deepEqual(after.access_methods, []);
+    assert.deepEqual(after.access_methods, ['web']);
   });
 }
 
