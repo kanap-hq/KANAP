@@ -78,12 +78,18 @@ export class TenantInterceptor implements NestInterceptor {
         rememberRequestDbTimeouts(req, timeouts);
         (req as any).queryRunner = runner;
       }
-      // The person's data access for this transaction (spec §6.3), on the runner opened here or
-      // taken over from TenantInitGuard. Kept on the request for a reconnection
+      // The person's data access for this transaction (spec §6.3), on the runner opened here,
+      // taken over from TenantInitGuard, or opened by someone else in a transaction: a person is
+      // never served without it. Kept on the request for a reconnection
       // (createRequestReleaseConnection). A refusal (503 / 401) is a handler error: rolled back
       // and released below.
       const userId = req?.user?.sub;
-      if ((!existing || ownedByGuard) && typeof userId === 'string' && userId) {
+      if (typeof userId === 'string' && userId) {
+        if (!runner.isTransactionActive) {
+          throw new Error(
+            '[TenantInterceptor] the request runner has no transaction: the data access of the person cannot be applied',
+          );
+        }
         await applyDataAccess(runner, userId);
         req.dataAccessUserId = userId;
       }

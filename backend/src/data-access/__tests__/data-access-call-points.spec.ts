@@ -88,6 +88,11 @@ class ProbeController {
     return who(req.queryRunner);
   }
 
+  @Get('who-foreign')
+  async whoForeign(@Req() req: any) {
+    return { seen: await who(req.queryRunner), dataAccessUserId: req.dataAccessUserId ?? null };
+  }
+
   @Post('fail')
   async fail(@Req() req: any) {
     const seen = await who(req.queryRunner);
@@ -120,10 +125,44 @@ class BreakAccessGuard implements CanActivate {
   }
 }
 
+/** Runners a ForeignRunnerGuard opened: the spec finishes them (the interceptor does not own them). */
+const foreignRunners: QueryRunner[] = [];
+
+/**
+ * Puts on the request a runner the interceptor does not own (no _tenantRunnerOwner), as
+ * import-connection.ts could: `x-da-foreign: tx` opens it in a tenant transaction, `none` without.
+ */
+@Injectable()
+class ForeignRunnerGuard implements CanActivate {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
+    const req: any = context.switchToHttp().getRequest();
+    const mode = req.headers['x-da-foreign'];
+    if (mode === 'tx' || mode === 'none') {
+      const runner = dataSource.createQueryRunner();
+      await runner.connect();
+      foreignRunners.push(runner);
+      if (mode === 'tx') {
+        await runner.startTransaction();
+        await runner.query(`SELECT set_config('app.current_tenant', $1, true)`, [req.tenant.id]);
+      }
+      req.queryRunner = runner;
+    }
+    return true;
+  }
+}
+
+async function finishForeignRunners(): Promise<void> {
+  for (const runner of foreignRunners.splice(0)) {
+    if (runner.isReleased) continue;
+    if (runner.isTransactionActive) await runner.rollbackTransaction();
+    await runner.release();
+  }
+}
+
 @Module({ controllers: [ProbeController] })
 class ProbeModule {}
 
-async function createApp(withGuard: boolean): Promise<INestApplication> {
+async function createApp(withGuard: boolean, foreignRunner = false): Promise<INestApplication> {
   const app = await NestFactory.create(ProbeModule, { logger: false });
   const reflector = app.get(Reflector);
   app.use((req: any, _res: any, next: () => void) => {
@@ -133,6 +172,7 @@ async function createApp(withGuard: boolean): Promise<INestApplication> {
     next();
   });
   if (withGuard) app.useGlobalGuards(new TenantInitGuard(dataSource, reflector), new BreakAccessGuard());
+  if (foreignRunner) app.useGlobalGuards(new ForeignRunnerGuard());
   app.useGlobalInterceptors(new TenantInterceptor(dataSource, reflector));
   const { httpAdapter } = app.get(HttpAdapterHost);
   app.useGlobalFilters(new ReleaseTenantRunnerFilter(httpAdapter));
@@ -215,6 +255,38 @@ async function testRefusals(app: INestApplication) {
   assert.equal(again.status, 200, again.text);
   await assertPoolClean(again.body.pid, 'after a refusal');
   console.log('  refusals: KDA02 → 401 INVALID_TOKEN, KDA01 → 503 DATA_ACCESS_UNAVAILABLE (rolled back): OK');
+}
+
+/**
+ * A runner the interceptor does not own: applied when it is in a transaction, refused (500)
+ * otherwise; a person is never served without the access.
+ */
+async function testForeignRunner(app: INestApplication) {
+  try {
+    const unscoped = await call(app, 'GET', 'who-foreign', { 'x-da-user': seed.unscoped, 'x-da-foreign': 'tx' });
+    assert.equal(unscoped.status, 200, unscoped.text);
+    assertUnscoped(unscoped.body.seen, 'foreign runner unscoped');
+    assert.equal(unscoped.body.dataAccessUserId, seed.unscoped, 'kept on the request for a reconnection');
+    await finishForeignRunners();
+
+    const noTx = await call(app, 'GET', 'who-foreign', { 'x-da-user': seed.unscoped, 'x-da-foreign': 'none' });
+    assert.equal(noTx.status, 500, `foreign runner without a transaction: ${noTx.text}`);
+    await finishForeignRunners();
+
+    const noPerson = await call(app, 'GET', 'who-foreign', { 'x-da-foreign': 'none' });
+    assert.equal(noPerson.status, 200, `no person, nothing to apply: ${noPerson.text}`);
+    await finishForeignRunners();
+
+    if (!hasRole) return;
+    const limited = await call(app, 'GET', 'who-foreign', { 'x-da-user': seed.limited, 'x-da-foreign': 'tx' });
+    assert.equal(limited.status, 200, limited.text);
+    assertLimited(limited.body.seen, 'foreign runner limited');
+    await finishForeignRunners();
+    await assertPoolClean(limited.body.seen.pid, 'foreign runner');
+    console.log('  interceptor, runner it does not own: applied in a transaction, 500 without: OK');
+  } finally {
+    await finishForeignRunners();
+  }
 }
 
 async function testReconnection(app: INestApplication) {
@@ -383,6 +455,9 @@ async function run() {
     const own = await createApp(false);
     apps.push(own);
     await testInterceptor(own, 'interceptor, own runner');
+    const foreign = await createApp(false, true);
+    apps.push(foreign);
+    await testForeignRunner(foreign);
     await testRefusals(guarded);
     await testReconnection(guarded);
     await testRunWithContext();
