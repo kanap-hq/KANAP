@@ -4,11 +4,14 @@ import { randomUUID } from 'node:crypto';
 import { QueryRunner } from 'typeorm';
 import dataSource from '../../data-source';
 import { InterfacesListService } from '../services/interfaces-list.service';
+import { InterfacesController } from '../interfaces.controller';
 
 // The Interfaces tab of an application (recette C1b, decision D8): one row per interface and
 // environment it is bound in, plus one row without environment for an interface the application is
 // the source or target of that has no binding yet. The middleware of an unbound interface does not
-// list it. Runs under a throwaway tenant in a rolled-back transaction.
+// list it; the middleware and the integration tool of a bound interface do, for the environments
+// they take part in. A Business Contributor gets nothing. Runs under a throwaway tenant in a
+// rolled-back transaction.
 // @database-spec: opens the data-source, so run-ci-tests.js runs this file on a database lane.
 
 async function one(runner: QueryRunner, sql: string, params: unknown[]): Promise<string> {
@@ -32,6 +35,8 @@ async function run() {
     const crm = await app('CRM');
     const erp = await app('ERP');
     const esb = await app('ESB');
+    const broker = await app('Broker');
+    const ipaas = await app('iPaaS');
     const instance = (application: string, environment: string) => one(runner,
       `INSERT INTO app_instances (tenant_id, application_id, environment) VALUES ($1, $2, $3) RETURNING id`, [t, application, environment]);
     const crmProd = await instance(crm, 'prod');
@@ -49,10 +54,13 @@ async function run() {
     const leg = await one(runner,
       `INSERT INTO interface_legs (tenant_id, interface_id, leg_type, from_role, to_role, trigger_type, integration_pattern, data_format, order_index)
        VALUES ($1, $2, 'direct', 'source', 'target', 'event', 'api', 'json', 0) RETURNING id`, [t, bound]);
-    for (const [environment, from, to] of [['prod', crmProd, erpProd], ['test', crmTest, erpTest]]) {
+    await runner.query(
+      `INSERT INTO interface_middleware_applications (tenant_id, interface_id, application_id) VALUES ($1, $2, $3)`, [t, bound, broker]);
+    for (const [environment, from, to, tool] of [['prod', crmProd, erpProd, ipaas], ['test', crmTest, erpTest, null]]) {
       await runner.query(
-        `INSERT INTO interface_bindings (tenant_id, interface_id, interface_leg_id, environment, source_instance_id, target_instance_id)
-         VALUES ($1, $2, $3, $4, $5, $6)`, [t, bound, leg, environment, from, to]);
+        `INSERT INTO interface_bindings (tenant_id, interface_id, interface_leg_id, environment, source_instance_id, target_instance_id,
+           integration_tool_application_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7)`, [t, bound, leg, environment, from, to, tool]);
     }
 
     const svc = new InterfacesListService(null as any, null as any, null as any, null as any, null as any, null as any);
@@ -71,7 +79,31 @@ async function run() {
     assert.deepEqual(forTarget.map((row) => `${row.name}:${row.environment}`).sort(), ['Invoices:null', 'Orders:prod', 'Orders:test']);
     const forMiddleware = (await svc.listByApplication(esb, t, { manager: runner.manager })).items;
     assert.deepEqual(forMiddleware, [], 'the middleware of an unbound interface does not list it');
+    const forBoundMiddleware = (await svc.listByApplication(broker, t, { manager: runner.manager })).items;
+    assert.deepEqual(forBoundMiddleware.map((row) => `${row.name}:${row.environment}`).sort(), ['Orders:prod', 'Orders:test'],
+      'the middleware of a bound interface lists it in every environment');
+    assert.ok(forBoundMiddleware.every((row) => row.via_middleware && row.middleware_application_names.includes('Broker')));
+    const forTool = (await svc.listByApplication(ipaas, t, { manager: runner.manager })).items;
+    assert.deepEqual(forTool.map((row) => `${row.name}:${row.environment}`), ['Orders:prod'],
+      'the integration tool lists the interface in the environment it carries');
+    assert.ok(forTool[0].via_middleware);
     console.log('  ok listByApplication');
+
+    // A Business Contributor (here no participant of CRM) gets nothing from the route.
+    const role = await one(runner, `INSERT INTO roles (tenant_id, role_name, role_description, is_system, is_built_in, created_at, updated_at)
+      VALUES ($1, 'Business Contributor', '', false, false, now(), now()) RETURNING id`, [t]);
+    await runner.query(`INSERT INTO role_permissions (tenant_id, role_id, resource, level) VALUES ($1, $2, 'applications', 'reader')`, [t, role]);
+    const contributor = await one(runner, `INSERT INTO users (tenant_id, first_name, last_name, email, role_id, mfa_enabled, status, created_at, updated_at)
+      VALUES ($1, 'Bea', 'Contributor', $2, $3, false, 'enabled', now(), now()) RETURNING id`, [t, `bea-${t.slice(0, 8)}@example.com`, role]);
+    const controller = Object.create(InterfacesController.prototype) as InterfacesController;
+    let served = false;
+    Object.assign(controller, { svc: { listByApplication: async () => { served = true; return { items: rows }; } } });
+    await assert.rejects(
+      () => controller.listByApplication(crm, { tenantId: t, userId: contributor, manager: runner.manager } as any),
+      (err: any) => err?.getStatus?.() === 403,
+    );
+    assert.equal(served, false, 'the list is never read for a Business Contributor');
+    console.log('  ok Business Contributor');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();
