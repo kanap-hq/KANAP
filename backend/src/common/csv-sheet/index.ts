@@ -27,6 +27,7 @@ export {
   rowError,
   rowProblemErrors,
   rowProblems,
+  textCellError,
 } from './master-data';
 export { csvSeparatorOf, readCsv } from './read';
 export { languageOf, parseDateOrder, parseDecimalMark, timeZoneOf } from './request-options';

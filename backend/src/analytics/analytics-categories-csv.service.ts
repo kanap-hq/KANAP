@@ -14,10 +14,11 @@ import {
   readMasterDataFile,
   rowError,
   rowProblemErrors,
+  textCellError,
   writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
-import { AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
+import { ANALYTICS_NAME_MAX, AnalyticsContext, normalizeAnalyticsDescription, normalizeAnalyticsName } from './analytics-context';
 import {
   ANALYTICS_VALUE_ORDER_SQL,
   analyticsAxisSubject,
@@ -53,7 +54,7 @@ export interface AnalyticsValueImportResult {
   inserted: number;
   updated: number;
   unchanged: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportReportError[];
   /** Rows that import, with a note: a name matched a stored value written in another case. */
   warnings?: ImportReportError[];
   /** The unknown headers the file carried, and what the shared layer noticed. */
@@ -174,14 +175,6 @@ export class AnalyticsCategoriesCsvService {
       // The physical line Excel shows, blank lines included.
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
-      const attempt = <T>(fn: () => T): T | undefined => {
-        try {
-          return fn();
-        } catch (err) {
-          rowErrors.push({ row: line, message: (err as Error).message });
-          return undefined;
-        }
-      };
 
       const code = has('axis_code') ? cellOf(raw, 'axis_code') : '';
       let axisId: string | null = null;
@@ -205,7 +198,12 @@ export class AnalyticsCategoriesCsvService {
         axisAppliesTo = defaultAxisId ? axisById.get(defaultAxisId)?.applies_to ?? null : null;
       }
 
-      const name = attempt(() => normalizeAnalyticsName(cellOf(raw, 'name')));
+      let name: string | undefined;
+      try {
+        name = normalizeAnalyticsName(cellOf(raw, 'name'));
+      } catch (err) {
+        rowErrors.push(textCellError(line, 'name', cellOf(raw, 'name'), ANALYTICS_NAME_MAX, (err as Error).message));
+      }
       const key = axisId !== null && name ? `${axisId}|${name.toLowerCase()}` : null;
       if (name && (axisId !== null || !code)) {
         const fileKey = `${axisId ?? '(default)'}|${name.toLowerCase()}`;
@@ -238,7 +236,7 @@ export class AnalyticsCategoriesCsvService {
         rowErrors.push(rowError(line, 'applies_to', 'CSV_ENUM_INVALID', `Invalid applies_to '${appliesToRaw}'. Use 'opex', 'capex' or leave it empty.`, { value: appliesToRaw, allowed: 'opex, capex' }));
       } else {
         const conflict = valueAppliesToConflict({ name: axisName, applies_to: axisAppliesTo }, appliesTo);
-        if (conflict) rowErrors.push({ row: line, message: conflict });
+        if (conflict) rowErrors.push(dimensionError(line, 'applies_to', 'APPLIES_TO', conflict, { name: axisName }, { nature: axisAppliesTo!.toUpperCase() }));
       }
 
       if (rowErrors.length > 0 || !name) {
@@ -265,7 +263,7 @@ export class AnalyticsCategoriesCsvService {
       };
       // In a disabled dimension only a row that changes nothing is accepted: no new value, no edit.
       if (disabledAxis && !(existing && categoryValuesEqual(existing, values))) {
-        errors.push({ row: line, message: `${analyticsAxisSubject(disabledAxis)} is disabled. Enable it or leave it out.` });
+        errors.push(dimensionError(line, 'axis_code', 'DISABLED', `${analyticsAxisSubject(disabledAxis)} is disabled. Enable it or leave it out.`, disabledAxis));
         return;
       }
       const matched = existing && name ? nameMatchedWarning(line, 'name', name, existing.name) : null;
@@ -323,4 +321,22 @@ export class AnalyticsCategoriesCsvService {
       decimalMark,
     });
   }
+}
+
+/**
+ * A row error about the dimension itself: `CSV_DIMENSION_<suffix>` names it, the default
+ * dimension without a name takes `CSV_DEFAULT_DIMENSION_<suffix>` (its label is the interface's).
+ */
+function dimensionError(
+  line: number,
+  column: string,
+  suffix: 'APPLIES_TO' | 'DISABLED',
+  message: string,
+  axis: { name: string | null },
+  params: Record<string, string> = {},
+): ImportReportError {
+  const name = axis.name?.trim();
+  return name
+    ? rowError(line, column, `CSV_DIMENSION_${suffix}`, message, { ...params, name })
+    : rowError(line, column, `CSV_DEFAULT_DIMENSION_${suffix}`, message, params);
 }

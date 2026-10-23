@@ -15,16 +15,22 @@ import {
   ImportReportError,
   rowError,
   rowProblemErrors,
+  textCellError,
   writeCsv,
 } from '../common/csv-sheet';
-import { mergeDaysByYear } from './working-day-profiles.util';
+import {
+  CALENDAR_YEAR_MAX,
+  CALENDAR_YEAR_MIN,
+  daysInMonth,
+  mergeDaysByYear,
+  normalizeDaysByYear,
+} from './working-day-profiles.util';
 import {
   CalendarSource,
   calendarValuesEqual,
   effectiveStatus,
   isSameCalendarSource,
   normalizeCalendarCode,
-  normalizeCalendarDays,
   normalizeCalendarDescription,
   normalizeCalendarName,
   normalizeCalendarSource,
@@ -32,6 +38,8 @@ import {
   sortDays,
   SOURCE_CHANGE_REFUSAL,
   StoredWorkingDayProfile,
+  WORKING_DAY_PROFILE_CODE_MAX,
+  WORKING_DAY_PROFILE_NAME_MAX,
   WorkingDayProfileContext,
   WorkingDayProfilesService,
   WorkingDayProfileValues,
@@ -56,7 +64,7 @@ export interface WorkingDayProfileImportResult {
   inserted: number;
   updated: number;
   unchanged: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportReportError[];
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -193,13 +201,14 @@ export class WorkingDayProfilesCsvService {
       }
       const disagreement = disagreeOn(group.first, row);
       if (disagreement) {
-        errors.push({ row: line, message: `Rows of ${group.first.code} disagree on the ${disagreement}.` });
+        const column = disagreement === 'end of validity' ? 'disabled_at' : disagreement;
+        errors.push(rowError(line, column, 'CSV_CALENDAR_ROWS_DISAGREE', `Rows of ${group.first.code} disagree on the ${disagreement}.`, { code: group.first.code, column }));
         return;
       }
       if (row.year) {
         const firstLine = group.years.get(row.year);
         if (firstLine) {
-          errors.push({ row: line, message: `${group.first.code} has ${row.year} twice (rows ${firstLine} and ${line}).` });
+          errors.push(rowError(line, 'year', 'CSV_CALENDAR_YEAR_TWICE', `${group.first.code} has ${row.year} twice (rows ${firstLine} and ${line}).`, { code: group.first.code, year: row.year, firstRow: firstLine, row: line }));
           return;
         }
         group.years.set(row.year, line);
@@ -215,14 +224,15 @@ export class WorkingDayProfilesCsvService {
       if (existing) {
         // A blank cell keeps the stored value; a filled one must be it.
         if (!isSameCalendarSource(existing, first.country ?? undefined, first.region ?? undefined)) {
-          errors.push({ row: first.line, message: SOURCE_CHANGE_REFUSAL });
+          const column = isSameCalendarSource(existing, first.country ?? undefined, undefined) ? 'region' : 'country';
+          errors.push(rowError(first.line, column, 'CSV_CALENDAR_COUNTRY_CHANGED', SOURCE_CHANGE_REFUSAL));
         }
         continue;
       }
       try {
         sources.set(key, normalizeCalendarSource(first.country, first.region));
       } catch (err) {
-        errors.push({ row: first.line, message: refusalMessage(err) });
+        errors.push(sourceError(first, err));
       }
     }
 
@@ -259,7 +269,7 @@ export class WorkingDayProfilesCsvService {
       const name = result.values.name.toLowerCase();
       const owner = nameOwner.get(name);
       if (owner && owner !== key) {
-        errors.push({ row: calendars.get(key)!.first.line, message: `A calendar named ${result.values.name} already exists.` });
+        errors.push(rowError(calendars.get(key)!.first.line, 'name', 'CSV_CALENDAR_NAME_TAKEN', `A calendar named ${result.values.name} already exists.`, { name: result.values.name }));
       } else nameOwner.set(name, key);
     }
     if (errors.length > 0) return failed(errors, rows.length);
@@ -321,16 +331,22 @@ export class WorkingDayProfilesCsvService {
     errors: WorkingDayProfileImportResult['errors'],
   ): ParsedRow | null {
     const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
-    const attempt = <T>(fn: () => T): T | undefined => {
+    const attempt = <T>(fn: () => T, coded: (message: string, err: unknown) => ImportReportError): T | undefined => {
       try {
         return fn();
       } catch (err) {
-        rowErrors.push({ row: line, message: refusalMessage(err) });
+        rowErrors.push(coded(refusalMessage(err), err));
         return undefined;
       }
     };
-    const code = attempt(() => normalizeCalendarCode(cellOf(raw, 'code')));
-    const name = attempt(() => normalizeCalendarName(cellOf(raw, 'name')));
+    const code = attempt(
+      () => normalizeCalendarCode(cellOf(raw, 'code')),
+      (message) => textCellError(line, 'code', cellOf(raw, 'code'), WORKING_DAY_PROFILE_CODE_MAX, message),
+    );
+    const name = attempt(
+      () => normalizeCalendarName(cellOf(raw, 'name')),
+      (message) => textCellError(line, 'name', cellOf(raw, 'name'), WORKING_DAY_PROFILE_NAME_MAX, message),
+    );
 
     const statusRaw = cellOf(raw, 'status').toLowerCase();
     if (statusRaw && statusRaw !== StatusState.ENABLED && statusRaw !== StatusState.DISABLED) {
@@ -350,9 +366,9 @@ export class WorkingDayProfilesCsvService {
     let normalizedYear: string | null = null;
     let days: string[] | null = null;
     if (!year) {
-      if (months.some((value) => value !== '')) rowErrors.push({ row: line, message: 'Give the year of these working days.' });
+      if (months.some((value) => value !== '')) rowErrors.push(rowError(line, 'year', 'CSV_CALENDAR_YEAR_REQUIRED', 'Give the year of these working days.'));
     } else {
-      const normalized = attempt(() => normalizeCalendarDays({ [year]: months }, false));
+      const normalized = attempt(() => normalizeDaysByYear({ [year]: months }), (message, err) => daysError(line, year, months, message, err));
       const [entry] = Object.entries(normalized ?? {});
       if (entry?.[1]) [normalizedYear, days] = entry as [string, string[]];
     }
@@ -410,4 +426,33 @@ function disagreeOn(first: ParsedRow, row: ParsedRow): string | null {
 
 function sameYear(a: string[], b: string[]): boolean {
   return a.length === b.length && a.every((value, index) => value === b[index]);
+}
+
+/** The body of a refusal (its `field`, `month`), empty for any other error. */
+function refusalBody(err: unknown): { field?: string; month?: number } {
+  const response = err instanceof BadRequestException ? err.getResponse() : null;
+  return response && typeof response === 'object' ? response : {};
+}
+
+/** A refused year or month cell as a coded row error; the util names the month it refused. */
+function daysError(line: number, year: string, months: string[], message: string, err: unknown): ImportReportError {
+  const { month } = refusalBody(err);
+  if (!month) return rowError(line, 'year', 'CSV_CALENDAR_YEAR_INVALID', message, { value: year, min: CALENDAR_YEAR_MIN, max: CALENDAR_YEAR_MAX });
+  const column = CALENDAR_MONTH_HEADERS[month - 1];
+  const value = months[month - 1];
+  if (!value.trim()) return rowError(line, column, 'CSV_VALUE_REQUIRED', message);
+  return rowError(line, column, 'CSV_CALENDAR_DAYS_INVALID', message, { value, max: daysInMonth(Number(year), month) });
+}
+
+/** A refused country or region of a new calendar as a coded row error. */
+function sourceError(row: ParsedRow, err: unknown): ImportReportError {
+  const message = refusalMessage(err);
+  const country = row.country ?? '';
+  const region = row.region ?? '';
+  if (refusalBody(err).field === 'region_code') {
+    return rowError(row.line, 'region', 'CSV_CALENDAR_REGION_UNKNOWN', message, { region, country: country.toUpperCase() });
+  }
+  return country
+    ? rowError(row.line, 'country', 'CSV_CALENDAR_COUNTRY_UNKNOWN', message, { value: country })
+    : rowError(row.line, 'country', 'CSV_CALENDAR_REGION_WITHOUT_COUNTRY', message, { region });
 }

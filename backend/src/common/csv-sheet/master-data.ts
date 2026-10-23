@@ -169,6 +169,18 @@ export function rowError(
 }
 
 /**
+ * The coded row error for a refused name or code cell: empty, longer than `max`, or holding
+ * control or invisible characters (the only three refusals of the field normalizers). `message`
+ * is the normalizer's English sentence, kept for API clients.
+ */
+export function textCellError(row: number, column: string, value: string, max: number, message: string): ImportReportError {
+  const text = value.trim();
+  if (!text) return rowError(row, column, 'CSV_VALUE_REQUIRED', message);
+  if ([...text].length > max) return rowError(row, column, 'CSV_VALUE_TOO_LONG', message, { max });
+  return rowError(row, column, 'CSV_VALUE_INVISIBLE_CHARACTERS', message);
+}
+
+/**
  * An end-of-validity cell as this column stores it: a bare day at noon UTC, a
  * full timestamp kept as given, an empty cell meaning no end. `-` and
  * anything the shared layer could not read are refused, as they were before.

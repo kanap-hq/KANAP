@@ -112,6 +112,15 @@ async function testRowErrors() {
       { row: 10, message: "Type must be 'group' or 'cost_center'." },
       { row: 10, message: "Invalid status 'maybe'. Use 'enabled' or 'disabled'." },
     ]);
+    // Each error carries the code the import dialog words in the interface language.
+    assert.deepEqual(result.errors.map(({ code, params }) => [code, params]), [
+      ['CSV_REFERENCE_NOT_FOUND', { value: 'Nowhere Inc' }],
+      ['CSV_REFERENCE_NOT_FOUND', { value: 'ZZZ' }],
+      ['CSV_USER_NOT_ACTIVE', { value: disabledEmail }],
+      ['CSV_DUPLICATE_KEY', { columns: 'code', firstRow: 2 }],
+      ['CSV_ENUM_INVALID', { value: 'folder', allowed: 'group, cost_center' }],
+      ['CSV_ENUM_INVALID', { value: 'maybe', allowed: 'enabled, disabled' }],
+    ]);
     assert.deepEqual(await codes(runner, tenantId), [], 'nothing is written when a row fails');
 
     // Once every row parses, the tree rules run on the whole file.
@@ -129,6 +138,11 @@ async function testRowErrors() {
       { row: 2, message: 'A group has no company.' },
       { row: 3, message: 'A cost center needs a company.' },
       { row: 5, message: 'Only a group can be a parent. F is a cost center.' },
+    ]);
+    assert.deepEqual(tree.errors.map(({ code, column, params }) => [code, column, params]), [
+      ['CSV_COST_CENTER_GROUP_COMPANY', 'company_name', undefined],
+      ['CSV_COST_CENTER_COMPANY_REQUIRED', 'company_name', undefined],
+      ['CSV_COST_CENTER_PARENT_NOT_GROUP', 'parent_code', { code: 'F' }],
     ]);
     assert.deepEqual(await codes(runner, tenantId), []);
 
