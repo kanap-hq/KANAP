@@ -124,8 +124,8 @@
         "title_other": "Delete {{count}} applications",
         "keptDone_one": "{{count}} application kept",
         "keptDone_other": "{{count}} applications kept",
-        "keptReason_one": "{{name}} is kept: {{usages}} uses it.",
-        "keptReason_other": "{{name}} is kept: {{usages}} use it."
+        "keptReason_one": "Kept: {{usages}} uses it.",
+        "keptReason_other": "Kept: {{usages}} use it."
       },
       "exportScope_one": "{{count}} application, following the filters of the list.",
       "exportScope_other": "{{count}} applications, following the filters of the list.",

@@ -1102,7 +1102,8 @@ export default function ApplicationsPage() {
             title: (count) => t('pages.applications.delete.title', { count }),
             titleCountsDeleted: true,
             keptDone: (count) => t('pages.applications.delete.keptDone', { count }),
-            keptReason: ({ name, usages, count }) => t('pages.applications.delete.keptReason', { name, usages, count }),
+            // The kept list already names the application: the reason does not repeat it.
+            keptReason: ({ usages, count }) => t('pages.applications.delete.keptReason', { usages, count }),
           }}
           gridApi={gridApiRef.current}
           onDeleteSuccess={() => { setRefreshKey((k) => k + 1); }}

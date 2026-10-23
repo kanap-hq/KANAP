@@ -124,8 +124,8 @@
         "title_other": "{{count}} Anwendungen löschen",
         "keptDone_one": "{{count}} Anwendung bleibt erhalten",
         "keptDone_other": "{{count}} Anwendungen bleiben erhalten",
-        "keptReason_one": "{{name}} bleibt erhalten: {{usages}} nutzt sie.",
-        "keptReason_other": "{{name}} bleibt erhalten: {{usages}} nutzen sie."
+        "keptReason_one": "Bleibt erhalten: {{usages}} nutzt sie.",
+        "keptReason_other": "Bleibt erhalten: {{usages}} nutzen sie."
       },
       "exportScope_one": "{{count}} Anwendung, entsprechend den Filtern der Liste.",
       "exportScope_other": "{{count}} Anwendungen, entsprechend den Filtern der Liste.",

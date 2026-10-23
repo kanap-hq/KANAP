@@ -124,8 +124,8 @@
         "title_other": "Supprimer {{count}} applications",
         "keptDone_one": "{{count}} application conservée",
         "keptDone_other": "{{count}} applications conservées",
-        "keptReason_one": "{{name}} est conservée : {{usages}} l’utilise.",
-        "keptReason_other": "{{name}} est conservée : {{usages}} l’utilisent."
+        "keptReason_one": "Conservée : {{usages}} l’utilise.",
+        "keptReason_other": "Conservée : {{usages}} l’utilisent."
       },
       "exportScope_one": "{{count}} application, selon les filtres de la liste.",
       "exportScope_other": "{{count}} applications, selon les filtres de la liste.",
