@@ -238,10 +238,13 @@ const contractVisible = (ref: string, form: ContractForm) => form === 'set'
   ? `${ref} IN (SELECT data_access_visible_contract_ids())`
   : `data_access_contract_visible(${ref})`;
 
-/** Task visible: object readable, or participant. */
-const taskReadable = (p: string, reach: Reach, form: ContractForm = 'id') => `(${READ_ALL}
-      OR ${taskNotScoped(p)}
-      OR ${taskParticipant(p)}
+/**
+ * Task visible: object readable, or participant. Without `participants`, the object alone: the
+ * tasks the search index shows (see searchIndexPolicies).
+ */
+const taskReadable = (p: string, reach: Reach, form: ContractForm = 'id', participants = true) => `(${READ_ALL}
+      OR ${taskNotScoped(p)}${participants ? `
+      OR ${taskParticipant(p)}` : ''}
       OR (${p}related_object_type IN ${LINE_TASK_TYPES} AND ${lineReadableById(`${p}related_object_id`, reach)})
       OR (${p}related_object_type = 'contract' AND ${contractVisible(`${p}related_object_id`, form)}))`;
 
@@ -301,12 +304,15 @@ function taskElementPolicies(): PolicyRow[] {
 
 /**
  * The search index (spec §6.4): the entries of lines (`spend_items`, `capex_items`, both rows of
- * spend_items), of contracts and of tasks are visible when their object is. Every other entry
- * passes. Same predicate for every command: the application writes the index only through its
+ * spend_items), of contracts and of tasks are visible when their object is. A task entry also
+ * needs the task's own object readable when it is a line or a contract: its search vector carries
+ * the name of that line or contract (search_index_refresh_tasks), so a participant who sees the
+ * task on the tasks page never finds it in global search while its line or contract is hidden
+ * (spec §5.4: neither mention nor reference). Every other entry passes. Same predicate for every command: the application writes the index only through its
  * SECURITY DEFINER triggers and the reindex job.
  *
  * Contracts and tasks go through the set functions `data_access_visible_contract_ids()` and
- * `data_access_visible_task_ids()`, in an uncorrelated `IN (SELECT ...)`: PostgreSQL builds its
+ * `data_access_searchable_task_ids()`, in an uncorrelated `IN (SELECT ...)`: PostgreSQL builds its
  * hash table once per statement (a hashed SubPlan), and the depth rule holds (the functions read
  * without policies). The per-id functions, called on every entry of the type, read the settings
  * and parsed the arrays again on each call: 68 us for a contract, 120 us for a task; global search
@@ -322,7 +328,7 @@ function searchIndexPolicies(): PolicyRow[] {
       OR ${s}entity_type NOT IN ${SEARCH_SCOPED_TYPES}
       OR (${s}entity_type IN ${SEARCH_LINE_TYPES} AND ${lineReadableById(`${s}entity_id`, 'filtered')})
       OR (${s}entity_type = 'contracts' AND ${contractVisible(`${s}entity_id`, 'set')})
-      OR (${s}entity_type = 'tasks' AND ${s}entity_id IN (SELECT data_access_visible_task_ids())))`);
+      OR (${s}entity_type = 'tasks' AND ${s}entity_id IN (SELECT data_access_searchable_task_ids())))`);
   return samePredicatePolicies('search_index', predicate);
 }
 
@@ -443,7 +449,7 @@ const DEFINER_PATH_ADDED = DEFINER_FUNCTIONS.filter((name) =>
  *    Run 2B: the SECURITY DEFINER depth functions `data_access_contract_visible(contract)`,
  *    `data_access_contract_modifiable(contract)`, `data_access_task_visible(task)`,
  *    `data_access_task_modifiable(task)`, the set functions of the search index
- *    `data_access_visible_contract_ids()` and `data_access_visible_task_ids()` (run 2D), and the disclosure
+ *    `data_access_visible_contract_ids()` and `data_access_searchable_task_ids()` (run 2D), and the disclosure
  *    functions `data_access_hidden_count(type, id)`, `data_access_reference(type, id)`; EXECUTE
  *    revoked from PUBLIC, granted to the application role and (by the sync) to the limited role.
  * 2. `data_access_expected_policies()` and `data_access_sync_policies()` replaced: the expected
@@ -509,6 +515,8 @@ export class DataAccessLinePolicies1854500000000 implements MigrationInterface {
     for (const signature of [...ACCESS_DEFINER_SIGNATURES].reverse()) {
       await queryRunner.query(`DROP FUNCTION IF EXISTS ${signature}`);
     }
+    // Its name in an earlier draft of this migration (development databases only).
+    await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_visible_task_ids()`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_of_round_input(uuid)`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_line_of_version(uuid)`);
     await queryRunner.query(`DROP FUNCTION IF EXISTS data_access_placable_contract(uuid, uuid)`);
@@ -623,7 +631,7 @@ const ACCESS_DEFINER_SIGNATURES = [
   'data_access_task_visible(uuid)',
   'data_access_task_modifiable(uuid)',
   'data_access_visible_contract_ids()',
-  'data_access_visible_task_ids()',
+  'data_access_searchable_task_ids()',
   'data_access_hidden_count(text, uuid)',
   'data_access_reference(text, uuid)',
 ];
@@ -709,9 +717,11 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
     $fn$
   `);
 
-  // The set forms, for the search index (see searchIndexPolicies): every visible id of the
-  // tenant, read once per statement; outside the limited mode, every id (as the per-id functions
-  // answer true). The tasks' set tests their contracts against the contracts' set, also once.
+  // The set forms, for the search index (see searchIndexPolicies): every visible contract of the
+  // tenant, and every task whose object is readable (the participants' tasks out of access are
+  // left out: their vector names the hidden line or contract), read once per statement; outside
+  // the limited mode, every id (as the per-id functions answer true). The tasks' set tests their
+  // contracts against the contracts' set, also once.
   await queryRunner.query(`
     CREATE OR REPLACE FUNCTION data_access_visible_contract_ids()
     RETURNS SETOF uuid
@@ -724,13 +734,13 @@ async function createAccessFunctions(queryRunner: QueryRunner): Promise<void> {
   `);
 
   await queryRunner.query(`
-    CREATE OR REPLACE FUNCTION data_access_visible_task_ids()
+    CREATE OR REPLACE FUNCTION data_access_searchable_task_ids()
     RETURNS SETOF uuid
     LANGUAGE sql
     ${definer}
     AS $fn$
       SELECT t.id FROM public.tasks t
-      WHERE NOT (${MODE_LIMITED}) OR ${taskReadable('t.', 'definer', 'set')}
+      WHERE NOT (${MODE_LIMITED}) OR ${taskReadable('t.', 'definer', 'set', false)}
     $fn$
   `);
 

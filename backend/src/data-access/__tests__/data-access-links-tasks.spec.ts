@@ -126,7 +126,8 @@ async function apply(userId: string): Promise<string> {
 async function seed(): Promise<Seed2> {
   const s = await seedLines(client);
   const tag = s.tenantId.slice(0, 8);
-  await q(`UPDATE spend_items SET nature = 'capex' WHERE id = $1`, [s.lines.L5]);
+  // A word of L5's name only (the review's probe): the search vectors of its tasks carry it.
+  await q(`UPDATE spend_items SET nature = 'capex', product_name = product_name || ' Zorglub' WHERE id = $1`, [s.lines.L5]);
 
   const supplier = (await q(`INSERT INTO suppliers (tenant_id, name) VALUES (app_current_tenant(), $1) RETURNING id`, [`Supplier ${tag}`]))[0].id;
   const contract = async (name: string, company: string, centre: string | null, owner: string | null) => (await q(
@@ -228,6 +229,14 @@ function taskVisible(p: LimitedPerson, t: TaskLabel): boolean {
   const spec = TASKS[t];
   const participant = p === 'paul' && ['assignee', 'owner', 'viewer'].includes(spec.paul ?? '');
   return participant || objectReadable(p, spec.object);
+}
+
+/**
+ * In the search index: the object readable (§5.4). A participant's task whose line or contract is
+ * hidden stays visible on the tasks page, never in search: its vector names that object.
+ */
+function taskSearchable(p: LimitedPerson, t: TaskLabel): boolean {
+  return objectReadable(p, TASKS[t].object);
 }
 
 /** Modifiable: object modifiable, or responsible (assignee, owner). */
@@ -347,22 +356,28 @@ async function checkTaskElements(s: Seed2, p: LimitedPerson): Promise<void> {
   }
 }
 
-/** Search index: no entry of an invisible line, contract or task; every other entry. */
-async function checkSearch(s: Seed2, p: LimitedPerson, entries: Array<{ type: string; id: string }>): Promise<void> {
+const ZORGLUB = `SELECT entity_type || ':' || entity_id AS k FROM search_index WHERE search_vector @@ plainto_tsquery('simple', 'Zorglub')`;
+
+/** Search index: no entry of an invisible line, contract or task, nor of a task whose object is hidden; every other entry. */
+async function checkSearch(s: Seed2, p: LimitedPerson, entries: Array<{ type: string; id: string }>, zorglub: string[]): Promise<void> {
   const lineLabel = new Map(LABELS.map((l) => [s.lines[l], l]));
   const contractLabel = new Map(CONTRACTS.map((c) => [s.contracts[c], c]));
   const taskLabel = new Map(TASK_LABELS.map((t) => [s.tasks[t], t]));
   const expected = entries.filter((e) => {
     if (e.type === 'spend_items' || e.type === 'capex_items') return lineReadable(p, lineLabel.get(e.id)!);
     if (e.type === 'contracts') return contractReadable(p, contractLabel.get(e.id)!);
-    if (e.type === 'tasks') return taskVisible(p, taskLabel.get(e.id)!);
+    if (e.type === 'tasks') return taskSearchable(p, taskLabel.get(e.id)!);
     return true;
   }).map((e) => `${e.type}:${e.id}`).sort();
   const seen = (await q(`SELECT entity_type || ':' || entity_id AS k FROM search_index`)).map((r) => r.k).sort();
   assert.deepEqual(seen, expected, `${p}: search entries`);
+  // A word of a hidden line's name finds nothing, not even a task the person takes part in.
+  const found = (await q(ZORGLUB)).map((r) => r.k).sort();
+  assert.deepEqual(found, zorglub.filter((k) => expected.includes(k)), `${p}: a search for a word of L5's name`);
+  if (!lineReadable(p, 'L5')) assert.deepEqual(found, [], `${p}: L5 hidden, its name finds nothing`);
 
-  const found = ids(await q(`SELECT entity_id::text AS id FROM search_index WHERE label ILIKE 'DA line %'`));
-  assert.deepEqual(found, pick(s.lines, LABELS.filter((l) => lineReadable(p, l))), `${p}: a search returns the readable lines only`);
+  const lines = ids(await q(`SELECT entity_id::text AS id FROM search_index WHERE label ILIKE 'DA line %'`));
+  assert.deepEqual(lines, pick(s.lines, LABELS.filter((l) => lineReadable(p, l))), `${p}: a search returns the readable lines only`);
   assert.equal(await affected(`UPDATE search_index SET label = label`), expected.length, `${p}: search entries updated`);
   assert.equal(await affected(`DELETE FROM search_index`), expected.length, `${p}: search entries deleted`);
   const insert = (type: string) => write(
@@ -423,13 +438,17 @@ async function testPersons(s: Seed2): Promise<void> {
     assert.ok(indexed.has(id), 'every line, contract and task has its search entry (definer triggers)');
   }
   const references = await unscopedReferences(s);
+  const zorglub = (await q(ZORGLUB)).map((r) => r.k).sort();
+  for (const t of ['tL5', 'tAssignee', 'tOwner', 'tViewer'] as TaskLabel[]) {
+    assert.ok(zorglub.includes(`tasks:${s.tasks[t]}`), `the vector of ${t} carries the name of L5 (unscoped)`);
+  }
 
   for (const p of PERSONS) {
     assert.equal(await apply(s.persons[p]), 'limited', `${p}: limited`);
     await checkLinks(s, p);
     await checkTasks(s, p);
     await checkTaskElements(s, p);
-    await checkSearch(s, p, entries);
+    await checkSearch(s, p, entries, zorglub);
     await checkDepthFunctions(s, p);
     await checkDisclosures(s, p, references);
     assert.equal(await apply(s.persons.ulla), 'all', 'back to the application role');
@@ -521,14 +540,14 @@ async function testSearchIndexSetForm(s: Seed2): Promise<void> {
   const walk = (node: any) => {
     if (node['Parent Relationship'] === 'SubPlan') {
       const text = JSON.stringify(node);
-      for (const name of ['data_access_visible_contract_ids', 'data_access_visible_task_ids']) {
+      for (const name of ['data_access_visible_contract_ids', 'data_access_searchable_task_ids']) {
         if (text.includes(`${name}()`)) subplans.push({ name, loops: node['Actual Loops'] });
       }
     }
     for (const child of node.Plans ?? []) walk(child);
   };
   walk(plan);
-  assert.deepEqual(subplans.map((n) => n.name).sort(), ['data_access_visible_contract_ids', 'data_access_visible_task_ids'], 'search index: each set function read in one SubPlan');
+  assert.deepEqual(subplans.map((n) => n.name).sort(), ['data_access_searchable_task_ids', 'data_access_visible_contract_ids'], 'search index: each set function read in one SubPlan');
   assert.ok(subplans.some((n) => n.loops >= 1), 'search index: a set function was read');
   const text = JSON.stringify(plan);
   for (const perId of ['data_access_contract_visible', 'data_access_task_visible']) {
