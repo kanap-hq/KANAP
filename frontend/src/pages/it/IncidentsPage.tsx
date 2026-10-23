@@ -2,7 +2,7 @@ import React, { useMemo, useRef, useState, useCallback } from 'react';
 import { Button, Link, Stack, useTheme } from '@mui/material';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
-import { ICellRendererParams } from 'ag-grid-community';
+import { ICellRendererParams, ValueGetterParams } from 'ag-grid-community';
 import PageHeader from '../../components/PageHeader';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
@@ -31,6 +31,12 @@ const refCellStyle = {
   color: 'var(--kanap-text-secondary)',
   fontVariantNumeric: 'tabular-nums',
 };
+
+/** The reference column shows `INC-n`; the pinned total row keeps its own label. */
+export function incidentRefValueGetter(p: Pick<ValueGetterParams<IncidentRow>, 'node' | 'data'>) {
+  if (p.node?.rowPinned) return p.data?.item_number ?? '';
+  return p.data?.item_number != null ? formatItemRef('incident', p.data.item_number) : '';
+}
 
 export default function IncidentsPage() {
   const { t } = useTranslation(['it', 'common']);
@@ -205,7 +211,7 @@ export default function IncidentsPage() {
       headerName: t('pages.incidents.columns.reference'),
       width: 96,
       filter: false,
-      valueGetter: (p) => (p.data?.item_number != null ? formatItemRef('incident', p.data.item_number) : ''),
+      valueGetter: incidentRefValueGetter,
       cellStyle: refCellStyle,
       cellRenderer: ClickToWorkspace,
     },
