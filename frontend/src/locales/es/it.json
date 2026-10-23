@@ -1940,14 +1940,14 @@
       "newTitle": "Nuevo servidor",
       "tabs": {
         "overview": "Vista general",
-        "technical": "Técnico",
+        "operations": "Operación",
+        "network": "Red",
         "hardware": "Hardware",
-        "support": "Soporte",
         "dependencies": "Dependencias",
-        "relations": "Relaciones",
-        "knowledge": "Base de conocimiento",
-        "assignments": "Asignaciones",
-        "connections": "Conexiones"
+        "relations": "Relaciones"
+      },
+      "operations": {
+        "hostedApplications": "Aplicaciones alojadas"
       },
       "overview": {
         "name": "Nombre",
@@ -2038,7 +2038,6 @@
         }
       },
       "assignments": {
-        "title": "Asignaciones",
         "addAssignment": "Añadir asignación",
         "clusterCannotHost": "Los activos de clúster no pueden alojar asignaciones de aplicaciones. Asigne los hosts miembros.",
         "noAssignments": "Aún no hay asignaciones.",
@@ -2159,6 +2158,7 @@
         }
       },
       "support": {
+        "title": "Soporte",
         "vendor": "Proveedor",
         "searchVendors": "Buscar proveedores",
         "supportContract": "Contrato de soporte",

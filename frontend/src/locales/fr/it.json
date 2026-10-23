@@ -1940,14 +1940,14 @@
       "newTitle": "Nouveau serveur",
       "tabs": {
         "overview": "Vue d'ensemble",
-        "technical": "Technique",
+        "operations": "Exploitation",
+        "network": "Réseau",
         "hardware": "Matériel",
-        "support": "Support",
         "dependencies": "Dépendances",
-        "relations": "Relations",
-        "knowledge": "Base de connaissances",
-        "assignments": "Affectations",
-        "connections": "Connexions"
+        "relations": "Relations"
+      },
+      "operations": {
+        "hostedApplications": "Applications hébergées"
       },
       "overview": {
         "name": "Nom",
@@ -2038,7 +2038,6 @@
         }
       },
       "assignments": {
-        "title": "Affectations",
         "addAssignment": "Ajouter une affectation",
         "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
@@ -2159,6 +2158,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Fournisseur",
         "searchVendors": "Rechercher un fournisseur",
         "supportContract": "Contrat de support",

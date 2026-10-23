@@ -1940,14 +1940,14 @@
       "newTitle": "New server",
       "tabs": {
         "overview": "Overview",
-        "technical": "Technical",
+        "operations": "Operations",
+        "network": "Network",
         "hardware": "Hardware",
-        "support": "Support",
         "dependencies": "Dependencies",
-        "relations": "Relations",
-        "knowledge": "Knowledge",
-        "assignments": "Assignments",
-        "connections": "Connections"
+        "relations": "Relations"
+      },
+      "operations": {
+        "hostedApplications": "Hosted applications"
       },
       "overview": {
         "name": "Name",
@@ -2038,7 +2038,6 @@
         }
       },
       "assignments": {
-        "title": "Assignments",
         "addAssignment": "Add assignment",
         "clusterCannotHost": "Cluster assets cannot host application assignments. Assign the member hosts.",
         "noAssignments": "No assignments yet.",
@@ -2159,6 +2158,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Vendor",
         "searchVendors": "Search vendors",
         "supportContract": "Support contract",

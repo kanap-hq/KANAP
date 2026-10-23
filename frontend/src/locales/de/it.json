@@ -1940,14 +1940,14 @@
       "newTitle": "Neuer Server",
       "tabs": {
         "overview": "Übersicht",
-        "technical": "Technik",
+        "operations": "Betrieb",
+        "network": "Netzwerk",
         "hardware": "Hardware",
-        "support": "Support",
         "dependencies": "Abhängigkeiten",
-        "relations": "Beziehungen",
-        "knowledge": "Wissensdatenbank",
-        "assignments": "Zuordnungen",
-        "connections": "Verbindungen"
+        "relations": "Beziehungen"
+      },
+      "operations": {
+        "hostedApplications": "Gehostete Anwendungen"
       },
       "overview": {
         "name": "Name",
@@ -2038,7 +2038,6 @@
         }
       },
       "assignments": {
-        "title": "Zuordnungen",
         "addAssignment": "Zuordnung hinzufügen",
         "clusterCannotHost": "Cluster-Assets können keine Anwendungszuordnungen hosten. Weisen Sie die Mitglieds-Hosts zu.",
         "noAssignments": "Noch keine Zuordnungen.",
@@ -2159,6 +2158,7 @@
         }
       },
       "support": {
+        "title": "Support",
         "vendor": "Lieferant",
         "searchVendors": "Lieferanten suchen",
         "supportContract": "Support-Vertrag",
