@@ -35,7 +35,6 @@ import { AdminOpsModule } from './admin/ops/admin-ops.module';
 import { AdminBrandingModule } from './admin/branding/admin-branding.module';
 import { StorageModule } from './common/storage/storage.module';
 import { DocumentExportModule } from './common/document-export.module';
-import { TenancyModule } from './common/tenancy';
 import { ApplicationsModule } from './applications/applications.module';
 import { AppInstancesModule } from './app-instances/app-instances.module';
 import { AssetsModule } from './assets/assets.module';
@@ -83,7 +82,6 @@ import { readPoolMax } from './common/db-pool-budget';
       }),
     }),
     ScheduleModule.forRoot(),
-    TenancyModule,
     TypeOrmModule.forRootAsync({
       useFactory: () => {
         const url = process.env.DATABASE_URL;

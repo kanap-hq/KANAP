@@ -242,6 +242,8 @@ export const TENANT_PURGE_TABLES = [
   'analytics_categories',
   // After the values (a value references its dimension ON DELETE RESTRICT)
   'analytics_axes',
+  // Data-access nodes: before cost centres, users and companies (a node references them)
+  'user_data_access_nodes',
   // After both item tables (lines reference a node), before companies and users (a node references them)
   'cost_centers',
   'freeze_states',

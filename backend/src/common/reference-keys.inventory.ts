@@ -62,6 +62,7 @@ export const UNKEYED_REFERENCE_COLUMNS: Readonly<Record<string, string>> = {
   'platform_ai_config.updated_by': 'Platform administrator who changed a platform setting: platform scope, outside any tenant.',
   'tenants.frozen_by': 'Who froze the tenant, kept on the tenant row as a record (often a platform administrator, outside the tenant).',
   'tenants.deletion_requested_by': 'Who asked for the tenant deletion, kept on the tenant row as a record.',
+  'users.data_access_updated_by': 'Who last changed the person\'s data access: kept on the user row as a record, like the audit trail.',
 
   // Polymorphic references and lists, cleaned by the delete services.
   'tasks.related_object_id':

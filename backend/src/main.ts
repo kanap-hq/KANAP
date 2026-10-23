@@ -25,6 +25,7 @@ import { STARTUP_PROVISIONING_LOCK, withStartupLock } from './common/cluster/sta
 import { checkPoolBudget, poolMaxFloorWarning, readPoolMax } from './common/db-pool-budget';
 import { DemoDataService } from './demo-data/demo-data.service';
 import { applyHttpMiddleware, applyTenancyAndPipeline } from './http-app';
+import { runDataAccessStartup } from './data-access/data-access-availability';
 
 /**
  * Environment checks (common/env.ts): throws where the API always refused to start, prints the
@@ -173,6 +174,12 @@ async function bootstrap() {
   });
   // eslint-disable-next-line no-console
   if (isLeadProcess()) securityWarnings.forEach((warning) => console.warn(warning));
+
+  // Data-scoped access (data-access/data-access-availability.ts): once per start, after the
+  // migrations, the lead process restores the limited role's missing grants and policies (5 s lock
+  // timeout, retried at the next start on failure) and logs the availability. Never throws. The
+  // other processes check the availability when they first need it.
+  if (isLeadProcess()) await runDataAccessStartup(ds);
 
   // Tenant resolution from the Host header, the request pipeline and the finalizer (http-app.ts).
   applyTenancyAndPipeline(app, ds);
