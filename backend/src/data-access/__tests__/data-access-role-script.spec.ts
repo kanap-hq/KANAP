@@ -13,7 +13,11 @@ import { APP_URL, LIMITED_ROLE, adminUrlForAppDatabase, appRoleName, connect } f
  * - in a fresh database created for the test (owned by the application role, from template1),
  *   after the script, the application role still creates a table and a function there (the
  *   PostgreSQL 15 trap: NOINHERIT cuts the implicit pg_database_owner membership). The database
- *   is dropped at the end.
+ *   is dropped at the end;
+ * - PostgreSQL 15: by default the script neither requires nor grants the direct grant on public of
+ *   template1; with -v include_template1=on it grants it there, and a database created afterwards
+ *   from template1 lets the application role create before the script runs in it. The template1
+ *   grant is put back as it was.
  *
  * Needs DATA_ACCESS_ADMIN_DATABASE_URL (a superuser; CI sets it) and psql on the PATH; skips
  * without the variable. Locally, against a throwaway server only, never the shared dev server
@@ -21,8 +25,8 @@ import { APP_URL, LIMITED_ROLE, adminUrlForAppDatabase, appRoleName, connect } f
  *   DATABASE_URL=postgres://app:app@127.0.0.1:55415/appdb \
  *   DATA_ACCESS_ADMIN_DATABASE_URL=postgres://postgres:postgres@127.0.0.1:55415/postgres \
  *   npx ts-node src/data-access/__tests__/data-access-role-script.spec.ts
- * On PostgreSQL 15 the script refuses NOINHERIT until every database the application role owns,
- * and template1, hold the direct grant on public: run it on each first (see its header).
+ * On PostgreSQL 15 the script refuses NOINHERIT until every database the application role owns
+ * holds the direct grant on public: run it on each first (see its header).
  */
 
 const SCRIPT = backendPath('..', 'infra', 'scripts', 'data-access-role.sql');
@@ -35,10 +39,10 @@ function withDatabase(url: string, database: string): string {
   return out.toString();
 }
 
-function runScript(adminUrl: string): string {
+function runScript(adminUrl: string, extra: string[] = []): string {
   const result = spawnSync(
     'psql',
-    ['-X', '-v', 'ON_ERROR_STOP=1', '-v', `app_role=${APP_ROLE}`, '-v', 'mode=install', '-f', SCRIPT, '-d', adminUrl],
+    ['-X', '-v', 'ON_ERROR_STOP=1', '-v', `app_role=${APP_ROLE}`, '-v', 'mode=install', ...extra, '-f', SCRIPT, '-d', adminUrl],
     { encoding: 'utf8' },
   );
   assert.equal(result.status, 0, `the script succeeds\n${result.stdout}\n${result.stderr}`);
@@ -118,6 +122,61 @@ async function testFreshDatabase(adminUrl: string): Promise<void> {
   console.log('  fresh database after the script: the application role creates a table and a function: OK');
 }
 
+/** One statement on template1, on a connection closed right after (CREATE DATABASE copies template1 only when nobody is connected to it). */
+async function onTemplate1(adminUrl: string, sql: string): Promise<any[]> {
+  const template1 = await connect(withDatabase(adminUrl, 'template1'));
+  try {
+    return (await template1.query(sql)).rows;
+  } finally {
+    await template1.end();
+  }
+}
+
+async function template1Granted(adminUrl: string): Promise<boolean> {
+  const rows = await onTemplate1(adminUrl, `SELECT EXISTS (SELECT 1 FROM pg_namespace n, aclexplode(n.nspacl) a
+                    WHERE n.nspname = 'public' AND a.grantee = '"${APP_ROLE}"'::regrole) AS granted`);
+  return rows[0].granted === true;
+}
+
+async function testTemplate1Option(adminUrl: string): Promise<void> {
+  const server = await connect(withDatabase(adminUrl, 'postgres'));
+  try {
+    const { rows } = await server.query(`SELECT current_setting('server_version_num')::int < 160000 AS pg15`);
+    if (!rows[0].pg15) {
+      console.log('  include_template1: PostgreSQL 15 only, skipped');
+      return;
+    }
+    const before = await template1Granted(adminUrl);
+    try {
+      await onTemplate1(adminUrl, `REVOKE USAGE, CREATE ON SCHEMA public FROM "${APP_ROLE}"`);
+      runScript(adminUrl);
+      assert.equal(await template1Granted(adminUrl), false, 'by default template1 is neither required nor granted');
+
+      runScript(adminUrl, ['-v', 'include_template1=on']);
+      assert.equal(await template1Granted(adminUrl), true, 'include_template1=on grants on template1');
+      await server.query(`DROP DATABASE IF EXISTS ${FRESH_DB}`);
+      await server.query(`CREATE DATABASE ${FRESH_DB} OWNER "${APP_ROLE}"`);
+      try {
+        const app = await connect(withDatabase(APP_URL, FRESH_DB));
+        try {
+          await app.query(`CREATE TABLE data_access_role_spec_probe (id int)`);
+        } finally {
+          await app.end();
+        }
+      } finally {
+        await server.query(`DROP DATABASE IF EXISTS ${FRESH_DB}`);
+      }
+    } finally {
+      await onTemplate1(adminUrl, before
+        ? `GRANT USAGE, CREATE ON SCHEMA public TO "${APP_ROLE}"`
+        : `REVOKE USAGE, CREATE ON SCHEMA public FROM "${APP_ROLE}"`);
+    }
+  } finally {
+    await server.end();
+  }
+  console.log('  include_template1: off by default, on grants template1 for databases created later: OK');
+}
+
 async function run(): Promise<void> {
   const adminUrl = adminUrlForAppDatabase();
   if (!adminUrl) {
@@ -127,6 +186,7 @@ async function run(): Promise<void> {
   console.log('data access role script');
   await testTwice(adminUrl);
   await testFreshDatabase(adminUrl);
+  await testTemplate1Option(adminUrl);
   console.log('data access role script: all scenarios passed');
 }
 

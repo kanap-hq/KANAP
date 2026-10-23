@@ -516,9 +516,13 @@ policies that target one role only, so nothing changes for anyone else.
   `NOINHERIT` and gets `USAGE, CREATE` on `public` directly in each database it owns.
 - **The role script.** `infra/scripts/data-access-role.sql` (`mode=install` or `mode=uninstall`)
   is the only step that needs a superuser or a `CREATEROLE` role. It is idempotent and runs before
-  or after the migrations. Dev (PostgreSQL 15): run it on every database the application role owns
-  and on `template1`, then once more to apply `NOINHERIT` (loop in the script header); new dev
-  volumes get it from `infra/db-init/`. CI: one step before the migrations. QA and prod: the
+  or after the migrations. Dev (PostgreSQL 15): run it with `-v include_template1=on` on every
+  database the application role owns, then once more to apply `NOINHERIT` (loop in the script
+  header); new dev volumes get it from `infra/db-init/`. The option also grants on `template1`, so
+  the databases created later (lane copies, test databases) let the application role create in
+  `public`. By default the script requires and grants only the databases the application role owns:
+  on a PostgreSQL 15 server shared with other applications, a grant on `template1` would reach their
+  future databases too. CI: one step before the migrations. QA and prod: the
   operator runs it once per server after the deploy, then restarts the API. On-premise: optional;
   without it, nobody can be limited.
 - **Grants and policies.** The application sets them itself, in each database:

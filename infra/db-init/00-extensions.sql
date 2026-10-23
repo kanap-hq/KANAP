@@ -29,7 +29,8 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 -- existing server. app is a superuser here; migration 1844600000000 makes it NOSUPERUSER
 -- NOBYPASSRLS and leaves its inheritance as set below. On PostgreSQL 15 NOINHERIT cuts the
 -- implicit pg_database_owner membership through which app creates in public: app gets a direct
--- grant in appdb and in template1 (databases created later inherit it).
+-- grant in appdb and in template1 (databases created later inherit it), as the role script does
+-- with -v include_template1=on. Dev only: the script leaves template1 alone by default.
 \c template1
 GRANT USAGE, CREATE ON SCHEMA public TO app;
 \c appdb

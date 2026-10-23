@@ -9,7 +9,8 @@
 --        -f infra/scripts/data-access-role.sql -d <database>
 --
 -- mode=install (the default) or mode=uninstall. Idempotent: a second run leaves the same state.
--- It may run before or after the migrations.
+-- It may run before or after the migrations. PostgreSQL 15 only: -v include_template1=on (default
+-- off) also grants on template1, see below.
 --
 -- PostgreSQL 16 and later (QA, prod, CI): run it once, on any database.
 --   GRANT kanap_data_limited TO <app> WITH INHERIT FALSE, SET TRUE.
@@ -19,19 +20,27 @@
 -- belongs to pg_database_owner, and the application role creates there only through that implicit
 -- membership, which NOINHERIT cuts. So the script first grants USAGE, CREATE on public directly to
 -- the application role in the database it runs on. That grant is per database: run the script on
--- each database the application role owns (dev: appdb, appdb_ci, the lane copies, ...) and on
--- template1, so that a database created later (CREATE DATABASE x OWNER app) inherits the grant. A
--- copy made from a template keeps it.
+-- each database the application role owns (dev: appdb, appdb_ci, the lane copies, ...). A copy
+-- made from a template keeps it.
 --   The script refuses NOINHERIT while one of those databases lacks the direct grant, and prints
 -- the command to run for each. It reads that from pg_shdepend, a shared catalog: a privilege the
 -- application role holds on the schema public (fixed oid 2200) of another database. It cannot see
 -- which privileges from there (only that the role is in the ACL); in the database it runs on it
 -- checks USAGE and CREATE exactly. Databases the application role does not own are not affected:
 -- there it never created through pg_database_owner.
+--   A database created afterwards (CREATE DATABASE x OWNER app) from template1 has no direct
+-- grant: the application role cannot create in its public until the script runs there. With
+-- -v include_template1=on the script also grants on template1 (it connects there, then back), and
+-- from then on requires that grant like the others: every database created later from template1
+-- has the grant from the start. Dev wants it (the CI lane copies and test databases are created
+-- that way). On a server shared with other applications, leave it off: the grant on template1
+-- reaches every future database of the server, including other applications' ones, where the
+-- application role could then create objects in public (what PostgreSQL 15 removed by default).
 --   Loop, as the server's superuser (dev):
---     for db in template1 $(psql -At -d postgres -c "SELECT datname FROM pg_database
+--     for db in $(psql -At -d postgres -c "SELECT datname FROM pg_database
 --         WHERE datdba = 'app'::regrole ORDER BY 1"); do
---       psql -v ON_ERROR_STOP=1 -v app_role=app -v mode=install -f infra/scripts/data-access-role.sql -d "$db"
+--       psql -v ON_ERROR_STOP=1 -v app_role=app -v mode=install -v include_template1=on \
+--            -f infra/scripts/data-access-role.sql -d "$db"
 --     done
 --   Every run but the last stops on the databases still missing; the last applies NOINHERIT.
 --   The script also stops if the application role inherits from any other role: NOINHERIT
@@ -63,9 +72,14 @@ SET client_min_messages = notice;
 \else
   \set mode install
 \endif
+\if :{?include_template1}
+\else
+  \set include_template1 off
+\endif
 
 SELECT set_config('kanap.da_app_role', :'app_role', false) AS da_app_role_set,
-       set_config('kanap.da_mode', :'mode', false) AS da_mode_set
+       set_config('kanap.da_mode', :'mode', false) AS da_mode_set,
+       set_config('kanap.da_include_template1', :'include_template1', false) AS da_include_template1_set
 \gset
 
 DO $check$
@@ -75,6 +89,10 @@ DECLARE
 BEGIN
   IF v_mode NOT IN ('install', 'uninstall') THEN
     RAISE EXCEPTION 'data-access-role: mode must be install or uninstall, not "%"', v_mode;
+  END IF;
+  IF current_setting('kanap.da_include_template1') NOT IN ('on', 'off') THEN
+    RAISE EXCEPTION 'data-access-role: include_template1 must be on or off, not "%"',
+      current_setting('kanap.da_include_template1');
   END IF;
   IF to_regrole(v_app) IS NULL THEN
     RAISE EXCEPTION 'data-access-role: the application role "%" does not exist', v_app;
@@ -89,7 +107,9 @@ END
 $check$;
 
 SELECT current_setting('server_version_num')::int < 160000 AS is_pg15,
-       :'mode' = 'install' AS is_install
+       :'mode' = 'install' AS is_install,
+       :'include_template1' = 'on' AS with_template1,
+       current_database() AS da_database
 \gset
 
 \if :is_install
@@ -112,8 +132,8 @@ $role$;
 \if :is_pg15
 
 -- 2. PostgreSQL 15: the direct grant on public here (its own statement, so it stays when the
--- next one stops), then NOINHERIT once every database the application role owns, and template1,
--- has it; then the membership.
+-- next one stops), then NOINHERIT once every database the application role owns (and template1
+-- with include_template1=on) has it; then the membership.
 DO $pg15_others$
 DECLARE
   v_app text := current_setting('kanap.da_app_role');
@@ -136,6 +156,21 @@ BEGIN
 END
 $pg15_grant$;
 
+-- include_template1=on: the same grant on template1, then back to this database (the session
+-- settings are set again there).
+\if :with_template1
+\connect template1
+SET lock_timeout = '5s';
+GRANT USAGE, CREATE ON SCHEMA public TO :"app_role";
+\connect :da_database
+SET lock_timeout = '5s';
+SET client_min_messages = notice;
+SELECT set_config('kanap.da_app_role', :'app_role', false) AS da_app_role_set,
+       set_config('kanap.da_mode', :'mode', false) AS da_mode_set,
+       set_config('kanap.da_include_template1', :'include_template1', false) AS da_include_template1_set
+\gset
+\endif
+
 DO $pg15$
 DECLARE
   v_app text := current_setting('kanap.da_app_role');
@@ -149,7 +184,8 @@ BEGIN
            E'\n' ORDER BY d.datname)
     INTO v_missing
   FROM pg_database d
-  WHERE (d.datdba = v_app_oid OR d.datname = 'template1')
+  WHERE (d.datdba = v_app_oid
+         OR (d.datname = 'template1' AND current_setting('kanap.da_include_template1') = 'on'))
     AND d.datallowconn
     AND CASE
       WHEN d.datname = current_database() THEN NOT (
