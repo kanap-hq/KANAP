@@ -507,6 +507,35 @@ async function testUnscoped(s: Seed2): Promise<void> {
   console.log('  unscoped and Administrator: everything, depth functions true, hidden count 0, references as usual: OK');
 }
 
+/**
+ * The search index runs at every keystroke (spec §6.9): its policy reaches contracts and tasks
+ * through the set functions, in an uncorrelated `IN (SELECT ...)`, so each set is read once per
+ * statement (lot 2, run 2D). The plan of a limited person holds both set functions, each as the
+ * Function Scan of a SubPlan, and no per-id depth function (one call per row: 202 to 233 ms at
+ * 10 000 lines, run 2C).
+ */
+async function testSearchIndexSetForm(s: Seed2): Promise<void> {
+  assert.equal(await apply(s.persons.paul), 'limited');
+  const plan = (await q(`EXPLAIN (ANALYZE, FORMAT JSON) SELECT entity_type, entity_id FROM search_index`))[0]['QUERY PLAN'][0].Plan;
+  const scans: any[] = [];
+  const walk = (node: any) => {
+    if (node['Node Type'] === 'Function Scan' && /^data_access_visible_(contract|task)_ids$/.test(node['Function Name'] ?? '')) scans.push(node);
+    for (const child of node.Plans ?? []) walk(child);
+  };
+  walk(plan);
+  const text = JSON.stringify(plan);
+  assert.deepEqual(scans.map((n) => n['Function Name']).sort(), ['data_access_visible_contract_ids', 'data_access_visible_task_ids'], 'search index: both set functions in the plan');
+  for (const node of scans) {
+    assert.equal(node['Parent Relationship'], 'SubPlan', `${node['Function Name']}: read in a SubPlan`);
+  }
+  assert.ok(scans.some((n) => n['Actual Loops'] >= 1), 'search index: a set function was read');
+  for (const perId of ['data_access_contract_visible', 'data_access_task_visible']) {
+    assert.ok(!text.includes(perId), `search index: no per-row call of ${perId}`);
+  }
+  await apply(s.persons.ulla);
+  console.log('  search index: contracts and tasks through the set functions, read once per statement: OK');
+}
+
 async function sqlStateOf(sql: string, params: unknown[]): Promise<string> {
   const state = await write(sql, params);
   assert.notEqual(state, 'ok', `expected an error: ${sql}`);
@@ -544,6 +573,7 @@ async function run(): Promise<void> {
       await testUnscoped(s);
       await testPersons(s);
       await testBulkReplacement(s);
+      await testSearchIndexSetForm(s);
       await testRoleWithoutContext(s);
     } finally {
       await client.query('ROLLBACK');
