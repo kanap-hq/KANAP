@@ -15,8 +15,9 @@
  *   external test targets), never a KANAP object: not a pair.
  * The roots `spend_items`, `contracts` and `tasks` are listed too.
  *
- * `policies` says which run or lot gives the table its data-access policies: `lot2a` (this run),
- * `lot2b` (link tables to lines, tasks and their elements, search index), `lot5` (contracts),
+ * `policies` says which run or lot gives the table its data-access policies: `lot2a` (lines and
+ * the tables that follow them), `lot2b` (link tables to lines, tasks, their elements and links,
+ * search index), `lot5` (contracts),
  * `null` for an excluded table. The spec checks that the tables of `data_access_expected_policies()`
  * are exactly those whose run is done (DONE_POLICY_RUNS).
  */
@@ -30,6 +31,7 @@ export type DataAccessTableClass =
   | 'link_to_contract'
   | 'task'
   | 'task_element'
+  | 'link_to_task'
   | 'search_index'
   | 'excluded';
 
@@ -42,8 +44,8 @@ export type DataAccessTableEntry = {
   reason: string;
 };
 
-/** The runs whose policies the migrations create today. Run 2B adds 'lot2b', lot 5 'lot5'. */
-export const DONE_POLICY_RUNS: DataAccessPolicyRun[] = ['lot2a'];
+/** The runs whose policies the migrations create today. Lot 5 adds 'lot5'. */
+export const DONE_POLICY_RUNS: DataAccessPolicyRun[] = ['lot2a', 'lot2b'];
 
 export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   // Roots.
@@ -88,7 +90,9 @@ export const DATA_ACCESS_TABLES: DataAccessTableEntry[] = [
   { table: 'task_assets', cls: 'task_element', policies: 'lot2b', reason: 'assets of a task' },
   { table: 'task_attachments', cls: 'task_element', policies: 'lot2b', reason: 'attachments of a task' },
   { table: 'task_time_entries', cls: 'task_element', policies: 'lot2b', reason: 'time entries of a task' },
-  { table: 'document_tasks', cls: 'task_element', policies: 'lot2b', reason: 'knowledge document to task link; not in the spec list (§6.4), run 2B confirms' },
+
+  // Links from other objects to a task.
+  { table: 'document_tasks', cls: 'link_to_task', policies: 'lot2b', reason: 'relation of a knowledge document to a task: the link belongs to the document, so the task must be visible for every command, like the links to a line (spec §5.4)' },
 
   // Search index.
   { table: 'search_index', cls: 'search_index', policies: 'lot2b', reason: 'polymorphic (entity_type, entity_id); entries of lines, contracts and their tasks are scoped' },
@@ -163,6 +167,11 @@ export const DATA_ACCESS_FUNCTIONS: Array<{ name: string; cls: DataAccessFunctio
   { name: 'data_access_sync_policies', cls: 'access', reason: 'creates the policies (names the scoped tables)' },
   { name: 'data_access_line_of_version', cls: 'access', reason: 'SECURITY DEFINER: the line of a version, for the grandchild policies' },
   { name: 'data_access_line_of_round_input', cls: 'access', reason: 'SECURITY DEFINER: the line of a round input, for its lines\' policies' },
+  { name: 'data_access_contract_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): lisible_contrat with the person\'s settings' },
+  { name: 'data_access_task_visible', cls: 'access', reason: 'SECURITY DEFINER depth function (spec §6.4): a task visible (object readable or participant)' },
+  { name: 'data_access_task_modifiable', cls: 'access', reason: 'SECURITY DEFINER depth function: a task modifiable (object modifiable or responsible), for the writes of its elements' },
+  { name: 'data_access_hidden_count', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): lines linked to a visible object that the person cannot read' },
+  { name: 'data_access_reference', cls: 'access', reason: 'SECURITY DEFINER disclosure (spec §6.6): the reference of the line a visible task names' },
 
   // Stays SECURITY INVOKER.
   { name: 'search_index_line_analytics', cls: 'excluded', reason: 'returns the axis values of a line: called by the definer refresh functions (it then runs as their owner); a direct call keeps the caller\'s policies; must stay inlinable (1853960000000)' },
