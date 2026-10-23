@@ -3,7 +3,8 @@ import { render, screen } from '@testing-library/react';
 import type { TFunction } from 'i18next';
 import { describe, expect, it, vi } from 'vitest';
 import { formatAmount } from '../../../i18n/formatters';
-import { budgetLinesSection } from './sections';
+import api from '../../../api';
+import { budgetLinesSection, searchRelationItems } from './sections';
 import type { BudgetLineRow } from './types';
 
 vi.mock('../../../api', () => ({ default: { get: vi.fn() } }));
@@ -40,5 +41,20 @@ describe('budget lines total', () => {
     const totals = totalsOf([line('a', 100), line('b', null)]);
     expect(totals.map((row) => row.key)).toEqual(['total']);
     expect(totals[0].cells.amount).toBe(formatAmount(100));
+  });
+});
+
+describe('relation picker search', () => {
+  it('lists the page by business reference, whatever order the server answers in', async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { items: [
+        { id: 'p-14', item_number: 14, name: 'Fourteen' },
+        { id: 'p-3', item_number: 3, name: 'Three' },
+        { id: 'p-9', item_number: 9, name: 'Nine' },
+        { id: 'p-x', item_number: null, name: 'No reference' },
+      ] },
+    } as never);
+    const options = await searchRelationItems('/portfolio/projects', 'project', (row) => row.name ?? '')('');
+    expect(options.map((option) => option.ref)).toEqual(['PRJ-3', 'PRJ-9', 'PRJ-14', null]);
   });
 });

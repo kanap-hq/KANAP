@@ -7,6 +7,7 @@ import {
   Autocomplete,
   Box,
   Button,
+  CircularProgress,
   IconButton,
   LinearProgress,
   MenuItem,
@@ -24,7 +25,7 @@ import {
 import CloseIcon from '@mui/icons-material/Close';
 import DeleteIcon from '@mui/icons-material/Delete';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
-import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
+import { Link as RouterLink, useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
 import { KanapDialog, PropertyGroup, PropertyRow, StatusDot } from '../../components/design';
@@ -42,6 +43,7 @@ import ApplicationVersionLinks from './components/ApplicationVersionLinks';
 import DeferredTextField from './components/DeferredTextField';
 import ForbiddenPage from '../ForbiddenPage';
 import { ApplicationFeedbackProvider, useApplicationFeedback } from './applicationFeedback';
+import { compareEnvironments, environmentLabelKey } from '../../utils/applicationEnvironments';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import { useApplicationNav } from '../../hooks/useApplicationNav';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
@@ -985,28 +987,44 @@ export function OverviewTab({
   );
 }
 
-function viaMiddlewareLabel(row: InterfaceMiniRow, t: TFunction) {
+/** The middleware of an interface row, without the open application itself (it does not route through itself). */
+function viaMiddlewareLabel(row: InterfaceMiniRow, appId: string, t: TFunction) {
   if (!row.via_middleware) return '—';
-  const names = (row.middleware_application_names || []).filter(Boolean);
-  return names.length > 0
-    ? t('workspace.application.interfaces.viaNames', { names: names.join(', ') })
-    : t('components.createVersion.viaMiddleware');
+  const ids = row.middleware_application_ids || [];
+  const all = (row.middleware_application_names || []).filter(Boolean);
+  const others = (row.middleware_application_names || [])
+    .map((name, index) => ({ name, id: ids[index] }))
+    .filter((item) => item.name && item.id !== appId)
+    .map((item) => item.name);
+  if (others.length > 0) return t('workspace.application.interfaces.viaNames', { names: others.join(', ') });
+  return all.length > 0 ? '—' : t('components.createVersion.viaMiddleware');
 }
+
+const interfaceLinkSx = {
+  display: 'flex',
+  alignItems: 'center',
+  gap: 1,
+  minWidth: 0,
+  color: 'inherit',
+  textDecoration: 'none',
+  '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' },
+} as const;
 
 function InterfaceRowsTable({
   app,
   rows,
   direction,
-  onOpenInterface,
-  onOpenApplication,
+  interfaceHref,
+  applicationHref,
 }: {
   app: ApplicationDetail;
   rows: InterfaceMiniRow[];
   direction: 'inbound' | 'outbound' | 'routed';
-  onOpenInterface: (id: string) => void;
-  onOpenApplication: (id: string) => void;
+  interfaceHref: (id: string) => string;
+  applicationHref: (id: string) => string;
 }) {
   const theme = useTheme();
+  const navigate = useNavigate();
   const { t } = useTranslation(['it', 'common']);
   const counterpartHeader = direction === 'inbound'
     ? t('workspace.application.interfaces.source')
@@ -1057,32 +1075,42 @@ function InterfaceRowsTable({
             : direction === 'outbound'
               ? row.target_application_name
               : `${row.source_application_name || '—'} → ${row.target_application_name || '—'}`;
+          const via = viaMiddlewareLabel(row, app.id, t);
           return (
-            <TableRow key={`${direction}:${row.id}:${row.environment}`} onClick={() => onOpenInterface(row.interface_reference || row.id)}>
+            <TableRow
+              key={`${direction}:${row.id}:${row.environment}`}
+              onClick={(event) => {
+                // The links inside the row open their own page.
+                if ((event.target as HTMLElement).closest('a')) return;
+                navigate(interfaceHref(row.interface_reference || row.id));
+              }}
+            >
               <TableCell>
-                <Stack direction="row" spacing={1} alignItems="center" sx={{ minWidth: 0 }}>
+                <Box component={RouterLink} to={interfaceHref(row.interface_reference || row.id)} sx={interfaceLinkSx}>
                   {row.interface_reference && (
                     <Typography component="span" sx={(theme) => ({ fontFamily: MONO_FONT_FAMILY, fontSize: 12, color: theme.palette.kanap.text.secondary })}>
                       {row.interface_reference}
                     </Typography>
                   )}
                   <Typography component="span" sx={{ fontSize: 13 }} noWrap>{row.name}</Typography>
-                </Stack>
-              </TableCell>
-              <TableCell
-                onClick={(event) => {
-                  if (!counterpartId || counterpartId === app.id) return;
-                  event.stopPropagation();
-                  onOpenApplication(counterpartId);
-                }}
-              >
-                {counterpartName || '—'}
+                </Box>
               </TableCell>
               <TableCell>
-                {row.via_middleware ? (
+                {counterpartId && counterpartId !== app.id && counterpartName ? (
+                  <Box
+                    component={RouterLink}
+                    to={applicationHref(counterpartId)}
+                    sx={{ ...interfaceLinkSx, display: 'inline-flex', '&:hover': { textDecoration: 'underline' } }}
+                  >
+                    {counterpartName}
+                  </Box>
+                ) : (counterpartName || '—')}
+              </TableCell>
+              <TableCell>
+                {via !== '—' ? (
                   <Box sx={(theme) => ({ display: 'inline-flex', alignItems: 'center', gap: '6px', color: theme.palette.kanap.text.primary })}>
                     <StatusDot color={theme.palette.kanap.text.secondary} />
-                    {viaMiddlewareLabel(row, t)}
+                    {via}
                   </Box>
                 ) : '—'}
               </TableCell>
@@ -1106,14 +1134,19 @@ function InterfacesTab({
   app,
   rows,
   loading,
-  onOpenInterface,
-  onOpenApplication,
+  failed = false,
+  onRetry,
+  interfaceHref,
+  applicationHref,
 }: {
   app: ApplicationDetail;
   rows: InterfaceMiniRow[];
   loading: boolean;
-  onOpenInterface: (id: string) => void;
-  onOpenApplication: (id: string) => void;
+  /** The read failed: say so, with a way to try again, instead of an empty tab. */
+  failed?: boolean;
+  onRetry?: () => void;
+  interfaceHref: (id: string) => string;
+  applicationHref: (id: string) => string;
 }) {
   const { t } = useTranslation(['it', 'common']);
   // One block per environment, then the interfaces without any binding in a last block.
@@ -1129,11 +1162,27 @@ function InterfacesTab({
     });
     return Array.from(map.entries()).sort(([a], [b]) => {
       if (a === UNBOUND_ENVIRONMENT || b === UNBOUND_ENVIRONMENT) return a === UNBOUND_ENVIRONMENT ? 1 : -1;
-      return a.localeCompare(b);
+      return compareEnvironments(a, b);
     });
   }, [app.id, rows]);
 
-  if (loading) return null;
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', py: 2 }}>
+        <CircularProgress size={20} aria-label={t('common:selects.loadingEllipsis')} />
+      </Box>
+    );
+  }
+  if (failed && rows.length === 0) {
+    return (
+      <Alert
+        severity="error"
+        action={onRetry ? <Button color="inherit" size="small" onClick={onRetry}>{t('common:buttons.retry')}</Button> : undefined}
+      >
+        {t('workspace.application.interfaces.loadFailed')}
+      </Alert>
+    );
+  }
   if (rows.length === 0) {
     return (
       <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.tertiary })}>
@@ -1156,7 +1205,7 @@ function InterfacesTab({
           ) : (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1.25 }}>
               <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500 }}>
-                {environment.toUpperCase()}
+                {environmentLabelKey(environment) ? t(environmentLabelKey(environment)!) : environment}
               </Box>
             </Box>
           )}
@@ -1166,7 +1215,7 @@ function InterfacesTab({
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.inbound', { count: groups.inbound.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.inbound} direction="inbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.inbound} direction="inbound" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
             {groups.outbound.length > 0 && (
@@ -1174,7 +1223,7 @@ function InterfacesTab({
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.outbound', { count: groups.outbound.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.outbound} direction="outbound" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.outbound} direction="outbound" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
             {groups.routed.length > 0 && (
@@ -1182,7 +1231,7 @@ function InterfacesTab({
                 <Box sx={{ mb: 0.75 }}>
                   <SectionLabel>{t('workspace.application.interfaces.routed', { count: groups.routed.length })}</SectionLabel>
                 </Box>
-                <InterfaceRowsTable app={app} rows={groups.routed} direction="routed" onOpenInterface={onOpenInterface} onOpenApplication={onOpenApplication} />
+                <InterfaceRowsTable app={app} rows={groups.routed} direction="routed" interfaceHref={interfaceHref} applicationHref={applicationHref} />
               </Box>
             )}
           </Stack>
@@ -1742,8 +1791,10 @@ export default function ApplicationWorkspacePage() {
             app={app}
             rows={interfacesQuery.data || []}
             loading={interfacesQuery.isLoading}
-            onOpenInterface={(id) => navigate(`/it/interfaces/${id}/overview`)}
-            onOpenApplication={(id) => navigate(canonicalPathFor(id, 'overview'))}
+            failed={interfacesQuery.isError}
+            onRetry={() => { void interfacesQuery.refetch(); }}
+            interfaceHref={(id) => `/it/interfaces/${id}/overview`}
+            applicationHref={(id) => canonicalPathFor(id, 'overview')}
           />
         )}
 

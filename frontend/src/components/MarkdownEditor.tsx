@@ -958,7 +958,9 @@ const MarkdownEditor = React.memo(function MarkdownEditor({
           '&:not(:focus-within) .kanap-mdx-root.kanap-mdx-hide-toolbar.kanap-mdx-surface .kanap-mdx-content': {
             p: 0,
           },
-          '&:not(:focus-within) .kanap-mdx-root.kanap-mdx-hide-toolbar .kanap-mdx-content > :first-child': {
+          // Not `:first-child`: Emotion warns it is unsafe for server rendering. `:not(* ~ *)` selects the same
+          // element, the one with no sibling before it.
+          '&:not(:focus-within) .kanap-mdx-root.kanap-mdx-hide-toolbar .kanap-mdx-content > :not(* ~ *)': {
             mt: 0,
           },
           '&:not(:focus-within) .kanap-mdx-root.kanap-mdx-hide-toolbar .kanap-mdx-content > :last-child': {

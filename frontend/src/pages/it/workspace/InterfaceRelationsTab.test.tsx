@@ -225,7 +225,7 @@ describe('InterfaceRelationsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Runbook)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/interfaces/if-1/links/l-1'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=mapping.xlsx)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=mapping.xlsx)' }));
     expect(mocked.patch).not.toHaveBeenCalledWith('/interfaces/attachments/a-1/delete', {});
     expect(await screen.findByText('ops:confirmations.deleteAttachment(name=mapping.xlsx)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));

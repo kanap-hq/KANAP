@@ -41,7 +41,9 @@ export function searchRelationItems(
       params: { page: 1, limit: PAGE, sort: 'updated_at:DESC', ...(q ? { q } : {}) },
       signal,
     });
-    return (res.data?.items || []).map((row) => ({
+    // The page holds the most recently updated; it reads by reference, whatever the server's order.
+    const items = [...(res.data?.items || [])].sort((a, b) => (a.item_number ?? Infinity) - (b.item_number ?? Infinity));
+    return items.map((row) => ({
       id: row.id,
       label: labelOf(row),
       ref: refOf(type, row.item_number ?? null),

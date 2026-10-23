@@ -274,7 +274,7 @@ describe('Application workspace vulnerabilities', () => {
     path: string,
     vulnerabilities: ReachVulnerabilities | (() => Promise<unknown>) = reach,
     application: (() => Promise<unknown>) | null = null,
-    interfaces: unknown[] = [],
+    interfaces: unknown[] | (() => Promise<unknown>) = [],
   ) {
     mocked.get.mockImplementation(async (url: string) => {
       if (url === '/applications/app-1/vulnerabilities') {
@@ -282,7 +282,7 @@ describe('Application workspace vulnerabilities', () => {
       }
       if (url === '/applications/app-1/relations') return { data: relationsData() } as never;
       if (url === '/applications/app-1/relations-count') return { data: { total: 0 } } as never;
-      if (url === '/interfaces/by-application/app-1') return { data: { items: interfaces } } as never;
+      if (url === '/interfaces/by-application/app-1') return (typeof interfaces === 'function' ? interfaces() : { data: { items: interfaces } }) as never;
       if (url === '/incidents') return { data: { items: [], total: 0 } } as never;
       if (/^\/applications\/[^/]+$/.test(url)) return (application ? application() : { data: APP }) as never;
       throw new Error(`unexpected GET ${url}`);
@@ -314,6 +314,37 @@ describe('Application workspace vulnerabilities', () => {
     });
   });
 
+  it('opens an interface and its counterpart through real links, and does not name the open application as its middleware', async () => {
+    const base = {
+      environment: 'prod', source_application_id: 'app-1', source_application_name: 'Billing',
+      target_application_id: 'app-2', target_application_name: 'ERP', via_middleware: true,
+    };
+    renderPage('/it/applications/app-1/interfaces', reach, null, [
+      { ...base, id: 'int-1', name: 'Orders', interface_reference: 'INT-1', middleware_application_ids: ['app-1'], middleware_application_names: ['Billing'] },
+      { ...base, id: 'int-2', name: 'Invoices', interface_reference: 'INT-2', middleware_application_ids: ['app-1', 'mw-1'], middleware_application_names: ['Billing', 'Hub'] },
+    ]);
+    const orders = await screen.findByRole('link', { name: /Orders/ });
+    expect(orders.getAttribute('href')).toBe('/it/interfaces/INT-1/overview');
+    expect(screen.getAllByRole('link', { name: 'ERP' })[0].getAttribute('href')).toBe('/it/applications/app-2/overview');
+    expect(screen.getByText('workspace.application.interfaces.viaNames(names=Hub)')).toBeInTheDocument();
+    expect(screen.queryByText(/names=Billing/)).toBeNull();
+    expect(screen.getByText('enums.environment.prod')).toBeInTheDocument();
+  });
+
+  it('says the interfaces could not be loaded and reads them again on retry', async () => {
+    let calls = 0;
+    renderPage('/it/applications/app-1/interfaces', reach, null, async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('boom');
+      return { data: { items: [] } };
+    });
+    expect(await screen.findByText('workspace.application.interfaces.loadFailed')).toBeInTheDocument();
+    expect(screen.queryByText('workspace.application.interfaces.noInterfaces')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.retry' }));
+    expect(await screen.findByText('workspace.application.interfaces.noInterfaces')).toBeInTheDocument();
+    expect(calls).toBe(2);
+  });
+
   it('counts distinct interfaces and lists the unbound ones last, without environment', async () => {
     const row = (id: string, name: string, environment: string | null) => ({
       id, name, environment, interface_reference: id.toUpperCase(), via_middleware: false,
@@ -324,8 +355,8 @@ describe('Application workspace vulnerabilities', () => {
     ]);
     const unbound = await screen.findByText('workspace.application.interfaces.unbound');
     expect(screen.getByText('workspace.application.interfaces.unboundHint')).toBeInTheDocument();
-    const test = screen.getByText('TEST');
-    expect(screen.getByText('PROD').compareDocumentPosition(test) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    const test = screen.getByText('enums.environment.test');
+    expect(screen.getByText('enums.environment.prod').compareDocumentPosition(test) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(test.compareDocumentPosition(unbound) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     expect(screen.getAllByText('Orders')).toHaveLength(2);
     expect(screen.getAllByText('Invoices')).toHaveLength(1);

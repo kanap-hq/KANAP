@@ -2,7 +2,8 @@ import useApplicationClassificationCatalog from '../../../hooks/useApplicationCl
 import useItOpsEnumOptions from '../../../hooks/useItOpsEnumOptions';
 import { classificationText } from '../../../utils/applicationClassification';
 import React from 'react';
-import { Alert, Stack, Typography, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper } from '@mui/material';
+import { Alert, Box, Stack, Typography, Table, TableBody, TableCell, TableHead, TableRow, TableContainer, Paper } from '@mui/material';
+import { Link as RouterLink, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import api from '../../../api';
 import { useAuth } from '../../../auth/AuthContext';
@@ -12,6 +13,7 @@ import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
 import { useKanapDialogs } from '../../../components/design';
 import LinksAndFilesSection, { type LinkDraft, type LinksAndFilesFile, type LinksAndFilesLink } from '../../../components/workspace/LinksAndFilesSection';
 import ApplicationRelationsTab from '../workspace/ApplicationRelationsTab';
+import { useApplicationFeedback } from '../applicationFeedback';
 
 type Props = { id: string; isSuite?: boolean; onRelationsChange?: () => void; onOpenKnowledge?: () => void };
 
@@ -49,6 +51,8 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const { hasLevel } = useAuth();
   const canEdit = hasLevel('applications', 'manager');
   const queryClient = useQueryClient();
+  const navigate = useNavigate();
+  const feedback = useApplicationFeedback();
   const [error, setError] = React.useState<string | null>(null);
   const [uploading, setUploading] = React.useState(0);
 
@@ -86,6 +90,7 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
       failed(e);
       throw e;
     }
+    feedback.info(t(link ? 'workspace.application.relations.feedback.linkUpdated' : 'workspace.application.relations.feedback.linkAdded'));
     await refresh(linksKey);
   };
 
@@ -100,6 +105,7 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
       failed(e);
       return;
     }
+    feedback.info(t('workspace.application.relations.feedback.linkRemoved'));
     await refresh(linksKey);
   };
 
@@ -172,8 +178,21 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
                 </TableHead>
                 <TableBody>
                   {components.map((c) => (
-                    <TableRow key={c.id} hover sx={{ cursor: 'pointer' }} onClick={() => window.open(`/it/applications/${c.id}/overview`, '_self')}>
-                      <TableCell>{c.name}</TableCell>
+                    <TableRow
+                      key={c.id}
+                      hover
+                      sx={{ cursor: 'pointer' }}
+                      onClick={(event) => { if (!(event.target as HTMLElement).closest('a')) navigate(`/it/applications/${c.id}/overview`); }}
+                    >
+                      <TableCell>
+                        <Box
+                          component={RouterLink}
+                          to={`/it/applications/${c.id}/overview`}
+                          sx={{ color: 'inherit', textDecoration: 'none', '&:focus-visible': { outline: '2px solid', outlineColor: 'primary.main', outlineOffset: 2, borderRadius: '2px' } }}
+                        >
+                          {c.name}
+                        </Box>
+                      </TableCell>
                       <TableCell>{labelFor('lifecycleStatus', c.lifecycle)}</TableCell>
                       <TableCell>{businessLabel(c.criticality)}</TableCell>
                     </TableRow>

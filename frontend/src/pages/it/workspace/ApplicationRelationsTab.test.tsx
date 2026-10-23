@@ -7,6 +7,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { createAppTheme } from '../../../config/ThemeContext';
 import api from '../../../api';
 import ApplicationRelationsTab, { type ApplicationRelationsData } from './ApplicationRelationsTab';
+import { ApplicationFeedbackProvider } from '../applicationFeedback';
 
 const translation = {
   t: (key: string, opts?: Record<string, unknown>) => {
@@ -69,9 +70,9 @@ function Location() {
   return <div data-testid="location">{location.pathname}</div>;
 }
 
-function renderTab(data: ApplicationRelationsData) {
+function renderTab(data: ApplicationRelationsData | (() => Promise<unknown>)) {
   mocked.get.mockImplementation(async (url: string) => {
-    if (url === '/applications/app-1/relations') return { data } as never;
+    if (url === '/applications/app-1/relations') return (typeof data === 'function' ? data() : { data }) as never;
     if (url === '/technologies/lookup') {
       return { data: { items: [{ id: 'tec-4', name: 'Java', reference: 'TEC-4', editor: 'Oracle' }, { id: 'tec-1', name: 'SQL Server', reference: 'TEC-1', editor: 'Microsoft' }] } } as never;
     }
@@ -92,7 +93,7 @@ function renderTab(data: ApplicationRelationsData) {
       <ThemeProvider theme={createAppTheme('light')}>
         <MemoryRouter initialEntries={['/it/applications/app-1/relations']}>
           <Routes>
-            <Route path="*" element={<><ApplicationRelationsTab id="app-1" onRelationsChange={onRelationsChange} /><Location /></>} />
+            <Route path="*" element={<ApplicationFeedbackProvider onError={() => undefined}><ApplicationRelationsTab id="app-1" onRelationsChange={onRelationsChange} /><Location /></ApplicationFeedbackProvider>} />
           </Routes>
         </MemoryRouter>
       </ThemeProvider>
@@ -183,6 +184,50 @@ describe('ApplicationRelationsTab', () => {
     reject({ response: { status: 500, data: { message: 'Server down' } } });
     expect(await screen.findByText('Mettre à jour le connecteur')).toBeTruthy();
     expect(screen.getByRole('alert')).toBeTruthy();
+  });
+
+  it('opens a row through a real link on its name', async () => {
+    renderTab(relations());
+    const link = await screen.findByRole('link', { name: 'Migration Talend Cloud' });
+    expect(link.getAttribute('href')).toBe('/portfolio/projects/PRJ-7');
+    fireEvent.click(link);
+    expect(screen.getByTestId('location').textContent).toBe('/portfolio/projects/PRJ-7');
+  });
+
+  it('shows a spinner while the tab loads, then says when it could not be loaded and reads it again on retry', async () => {
+    let calls = 0;
+    renderTab(async () => {
+      calls += 1;
+      if (calls === 1) throw new Error('boom');
+      return { data: relations() };
+    });
+    expect(screen.getByRole('progressbar')).toBeTruthy();
+    expect(await screen.findByText('workspace.application.relations.loadFailed')).toBeTruthy();
+    expect(screen.queryByRole('region', { name: 'workspace.application.relations.sections.projects' })).toBeNull();
+    expect(screen.queryByText('workspace.application.relations.empty.projects')).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: 'common:buttons.retry' }));
+    expect(await screen.findByText('Migration Talend Cloud')).toBeTruthy();
+    expect(calls).toBe(2);
+  });
+
+  it('unlinks at once and offers to undo it, which links the object again', async () => {
+    mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderTab(relations());
+    fireEvent.click(await screen.findByRole('button', { name: 'workspace.application.relations.remove(name=Mettre à jour le connecteur)' }));
+    expect(await screen.findByText('workspace.application.relations.feedback.unlinked(name=Mettre à jour le connecteur)')).toBeTruthy();
+    fireEvent.click(screen.getByRole('button', { name: 'workspace.application.undo.undo' }));
+    await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/relations/tasks', { id: 't-118' }));
+  });
+
+  it('says what was linked when an object is added', async () => {
+    mocked.post.mockResolvedValue({ data: { ok: true, changed: true } } as never);
+    renderTab(relations());
+    await screen.findByText('Migration Talend Cloud');
+    const section = screen.getByRole('region', { name: 'workspace.application.relations.sections.projects' });
+    fireEvent.click(within(section).getByText('workspace.application.relations.add'));
+    fireEvent.click(await screen.findByRole('option', { name: /Refonte du datalake/ }));
+    expect(await screen.findByText('workspace.application.relations.feedback.linked(name=Refonte du datalake)')).toBeTruthy();
   });
 
   it('links a suggestion to its section', async () => {

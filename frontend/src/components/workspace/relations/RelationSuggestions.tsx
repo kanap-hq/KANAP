@@ -68,6 +68,7 @@ export default function RelationSuggestions<T extends RelationSuggestion>({
         rows={suggestions}
         rowKey={(row) => `${row.type}:${row.id}`}
         rowHref={href}
+        linkRows
         action={canEdit ? {
           width: 56,
           render: (row) => (

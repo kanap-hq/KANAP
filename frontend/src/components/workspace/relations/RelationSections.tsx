@@ -14,7 +14,8 @@ type Props = {
   canEdit: boolean;
   /** Picker cache key prefix (`application`, `technology`), kept per object. */
   searchKeyPrefix: string;
-  onLink: (kind: string, targetId: string) => void;
+  /** `label` is the name the picker showed, for the message that follows. */
+  onLink: (kind: string, targetId: string, label?: string) => void;
   onUnlink: (kind: string, targetId: string) => void;
 };
 
@@ -49,7 +50,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
                 excludeIds={linkedIds}
                 placeholder={section.searchPlaceholder}
                 ariaLabel={section.searchPlaceholder}
-                onPick={(option) => { setAdding(null); onLink(section.kind, option.id); }}
+                onPick={(option) => { setAdding(null); onLink(section.kind, option.id, option.label); }}
                 onClose={() => setAdding(null)}
               />
             )}
@@ -62,6 +63,7 @@ export default function RelationSections({ sections, loaded, canEdit, searchKeyP
                 rows={rows}
                 rowKey={(row) => row.id}
                 rowHref={section.href}
+                linkRows
                 rowMuted={section.muted}
                 onRemove={editable ? (row) => { onUnlink(section.kind, row.id); } : undefined}
                 removeLabel={(row) => t('workspace.application.relations.remove', { name: section.label(row) })}
