@@ -174,6 +174,19 @@ async function testRowErrors() {
       { row: 11, message: "Invalid status 'paused'. Use 'enabled' or 'disabled'." },
       { row: 12, message: '1999 is not a year between 2000 and 2100.' },
     ]);
+    // Each error carries the code the import dialog words in the interface language.
+    assert.deepEqual(result.errors.map(({ code, column, params }) => [code, column, params]), [
+      ['CSV_CALENDAR_ROWS_DISAGREE', 'name', { code: 'FR218', column: 'name' }],
+      ['CSV_CALENDAR_YEAR_TWICE', 'year', { code: 'FR218', year: '2026', firstRow: 2, row: 4 }],
+      ['CSV_CALENDAR_ROWS_DISAGREE', 'description', { code: 'FR218', column: 'description' }],
+      ['CSV_VALUE_REQUIRED', 'dec', undefined],
+      ['CSV_CALENDAR_DAYS_INVALID', 'feb', { value: '29', max: 28 }],
+      ['CSV_CALENDAR_YEAR_REQUIRED', 'year', undefined],
+      ['CSV_CALENDAR_NAME_TAKEN', 'name', { name: 'Germany Office' }],
+      ['CSV_VALUE_REQUIRED', 'code', undefined],
+      ['CSV_ENUM_INVALID', 'status', { value: 'paused', allowed: 'enabled, disabled' }],
+      ['CSV_CALENDAR_YEAR_INVALID', 'year', { value: '1999', min: 2000, max: 2100 }],
+    ]);
     assert.deepEqual([...(await calendars(runner, tenantId)).keys()], ['DE-OFF'], 'nothing is written when a row fails');
 
     // Two calendars of the file cannot share a name either.
@@ -354,6 +367,15 @@ async function testStandardCalendars() {
       { row: 6, message: 'The country of a calendar cannot be changed. Create another calendar.' },
       { row: 7, message: 'The country of a calendar cannot be changed. Create another calendar.' },
       { row: 9, message: 'Rows of NEW disagree on the country.' },
+    ]);
+    assert.deepEqual(refused.errors.map(({ code, column }) => [code, column]), [
+      ['CSV_CALENDAR_COUNTRY_UNKNOWN', 'country'],
+      ['CSV_CALENDAR_REGION_UNKNOWN', 'region'],
+      ['CSV_CALENDAR_REGION_WITHOUT_COUNTRY', 'country'],
+      ['CSV_CALENDAR_COUNTRY_CHANGED', 'country'],
+      ['CSV_CALENDAR_COUNTRY_CHANGED', 'country'],
+      ['CSV_CALENDAR_COUNTRY_CHANGED', 'region'],
+      ['CSV_CALENDAR_ROWS_DISAGREE', 'country'],
     ]);
     const [{ n }] = await runner.query(`SELECT count(*)::int AS n FROM working_day_profiles WHERE tenant_id = $1`, [tenantId]);
     assert.equal(n, 4, 'nothing is written when a row fails');

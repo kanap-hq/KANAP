@@ -68,6 +68,13 @@ async function testImportRules() {
       { row: 7, message: 'services is already on row 6.' },
       { row: 8, message: 'Name is required.' },
     ]);
+    assert.deepEqual(refused.errors.map(({ code, params }) => [code, params]), [
+      ['CSV_REFERENCE_NOT_FOUND', { value: 'unknown' }],
+      ['CSV_DIMENSION_DISABLED', { name: 'Retired' }],
+      ['CSV_ENUM_INVALID', { value: 'maybe', allowed: 'enabled, disabled' }],
+      ['CSV_DUPLICATE_KEY', { columns: 'axis_code, name', firstRow: 6 }],
+      ['CSV_VALUE_REQUIRED', undefined],
+    ]);
     assert.deepEqual(await count(tenantId, runner), before, 'a refused file writes nothing');
 
     // Dry run of a clean file: counts, no write.
@@ -325,6 +332,8 @@ async function testAppliesToColumn() {
       { row: 2, message: "Invalid applies_to 'both'. Use 'opex', 'capex' or leave it empty." },
       { row: 3, message: 'The Nature dimension is for OPEX lines only.' },
     ]);
+    assert.deepEqual(refused.errors[1].code, 'CSV_DIMENSION_APPLIES_TO');
+    assert.deepEqual(refused.errors[1].params, { nature: 'OPEX', name: 'Nature' });
     assert.equal((await stored()).get(licences.id), null, 'a refused file writes nothing');
 
     // A blank cell clears it; a value is read in any case; a redundant restriction is accepted.

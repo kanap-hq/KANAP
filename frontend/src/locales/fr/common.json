@@ -442,6 +442,8 @@
       "complianceRestrictedLowCyber_other": "{{count}} applications aux données les plus confidentielles avec la criticité cyber la plus faible",
       "loadError": "Impossible de charger cette tuile.",
       "clearHistory": "Effacer l'historique",
+      "clearHistoryTitle": "Effacer l'historique ?",
+      "clearHistoryMessage": "La liste des éléments consultés récemment sera vidée. Les fiches elles-mêmes ne sont pas modifiées.",
       "scope": {
         "my": "Les miennes",
         "team": "Mon équipe",

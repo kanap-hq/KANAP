@@ -442,6 +442,8 @@
       "complianceRestrictedLowCyber_other": "{{count}} applications with the most confidential data and the lowest cyber criticality",
       "loadError": "This tile could not be loaded.",
       "clearHistory": "Clear history",
+      "clearHistoryTitle": "Clear history?",
+      "clearHistoryMessage": "The recently viewed list will be emptied. The records themselves are not affected.",
       "scope": {
         "my": "Mine",
         "team": "My team",

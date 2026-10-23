@@ -14,13 +14,17 @@ import {
   ImportReportError,
   rowError,
   rowProblemErrors,
+  textCellError,
   writeCsv,
 } from '../common/csv-sheet';
 import { csvItemLifecycle, csvLifecycleConflict } from '../spend/item-write.util';
 import { CostCenterKind } from './cost-center.entity';
 import { loadCostCenterTree } from './cost-center-tree.util';
 import {
+  COST_CENTER_CODE_MAX,
+  COST_CENTER_NAME_MAX,
   CostCenterContext,
+  CostCenterGraphIssue,
   CostCenterGraphNode,
   CostCentersService,
   CostCenterValues,
@@ -46,7 +50,7 @@ export interface CostCenterImportResult {
   inserted: number;
   updated: number;
   unchanged: number;
-  errors: Array<{ row: number; message: string }>;
+  errors: ImportReportError[];
   /** The unknown headers the file carried, and what the shared layer noticed. */
   ignoredColumns: string[];
   notices: { dates: string | null; amounts: string | null };
@@ -172,17 +176,20 @@ export class CostCentersCsvService {
       const line = raw.line;
       const rowErrors: ImportReportError[] = rowProblemErrors(raw, ['disabled_at']);
       parentCodes.push({ line, parentCode: cellOf(raw, 'parent_code') });
-      const attempt = <T>(fn: () => T): T | undefined => {
+      const attempt = <T>(column: string, fn: (cell: string) => T, coded: (cell: string, message: string) => ImportReportError): T | undefined => {
+        const cell = cellOf(raw, column);
         try {
-          return fn();
+          return fn(cell);
         } catch (err) {
-          rowErrors.push({ row: line, message: (err as Error).message });
+          rowErrors.push(coded(cell, (err as Error).message));
           return undefined;
         }
       };
-      const code = attempt(() => normalizeCostCenterCode(cellOf(raw, 'code')));
-      const kind = attempt(() => normalizeCostCenterKind(cellOf(raw, 'kind')));
-      const name = attempt(() => normalizeCostCenterName(cellOf(raw, 'name')));
+      const code = attempt('code', normalizeCostCenterCode, (cell, message) => textCellError(line, 'code', cell, COST_CENTER_CODE_MAX, message));
+      const kind = attempt('kind', normalizeCostCenterKind, (cell, message) => cell.trim()
+        ? rowError(line, 'kind', 'CSV_ENUM_INVALID', message, { value: cell, allowed: 'group, cost_center' })
+        : rowError(line, 'kind', 'CSV_VALUE_REQUIRED', message));
+      const name = attempt('name', normalizeCostCenterName, (cell, message) => textCellError(line, 'name', cell, COST_CENTER_NAME_MAX, message));
       const existing = code ? storedByCode.get(code.toLowerCase()) ?? null : null;
       if (code) {
         const firstLine = lineByCode.get(code.toLowerCase());
@@ -197,10 +204,10 @@ export class CostCentersCsvService {
         const company = matches.find((entry) => entry.name.trim() === companyName) ?? (matches.length === 1 ? matches[0] : undefined);
         if (!company) {
           rowErrors.push(matches.length > 1
-            ? { row: line, message: `Company name '${companyName}' matches several companies.` }
+            ? rowError(line, 'company_name', 'CSV_NAME_AMBIGUOUS', `Company name '${companyName}' matches several companies.`, { value: companyName })
             : rowError(line, 'company_name', 'CSV_REFERENCE_NOT_FOUND', `Unknown company '${companyName}'.`, { value: companyName }));
         } else if (company.id !== existing?.company_id && !isActiveAt(company.disabled_at)) {
-          rowErrors.push({ row: line, message: `Company '${companyName}' is disabled.` });
+          rowErrors.push(rowError(line, 'company_name', 'CSV_REFERENCE_DISABLED', `Company '${companyName}' is disabled.`, { value: companyName }));
         } else {
           companyId = company.id;
         }
@@ -212,7 +219,7 @@ export class CostCentersCsvService {
         const user = usersByEmail.get(ownerEmail.toLowerCase());
         if (!user) rowErrors.push(rowError(line, 'owner_email', 'CSV_REFERENCE_NOT_FOUND', `Unknown budget holder email '${ownerEmail}'.`, { value: ownerEmail }));
         else if (user.id !== existing?.owner_user_id && user.status !== 'enabled') {
-          rowErrors.push({ row: line, message: `Budget holder '${ownerEmail}' is not an active user.` });
+          rowErrors.push(rowError(line, 'owner_email', 'CSV_USER_NOT_ACTIVE', `Budget holder '${ownerEmail}' is not an active user.`, { value: ownerEmail }));
         } else ownerId = user.id;
       }
 
@@ -268,7 +275,7 @@ export class CostCentersCsvService {
     for (const { line, parentCode } of parentCodes) {
       const key = parentCode.toLowerCase();
       if (parentCode && !lineByCode.has(key) && !storedByCode.has(key)) {
-        errors.push({ row: line, message: `Unknown parent code '${parentCode}'.` });
+        errors.push(rowError(line, 'parent_code', 'CSV_REFERENCE_NOT_FOUND', `Unknown parent code '${parentCode}'.`, { value: parentCode }));
       }
     }
     if (errors.length > 0) return result(sortErrors(errors), rows.length);
@@ -289,7 +296,7 @@ export class CostCentersCsvService {
     const usage = await this.costCenters.countUsage(ctx, turningIntoGroups);
     const lineById = new Map(parsedRows.map((row) => [row.id, row.line]));
     for (const issue of validateCostCenterGraph({ before, after, usage })) {
-      errors.push({ row: lineById.get(issue.id) ?? 0, message: issue.message });
+      errors.push(graphIssueError(lineById.get(issue.id) ?? 0, issue, after));
     }
     if (errors.length > 0) return result(sortErrors(errors), rows.length);
 
@@ -359,4 +366,32 @@ function depthIn(graph: Map<string, CostCenterGraphNode>): Map<string, number> {
 
 function sortErrors(errors: CostCenterImportResult['errors']) {
   return [...errors].sort((a, b) => a.row - b.row);
+}
+
+/**
+ * A tree rule refusal as a coded row error. The shared check words it in English only; the
+ * code follows from its field and the nodes it names, the branch `validateCostCenterGraph` took.
+ */
+function graphIssueError(
+  line: number,
+  issue: CostCenterGraphIssue,
+  after: Map<string, CostCenterGraphNode>,
+): ImportReportError {
+  const node = after.get(issue.id);
+  if (node && issue.field === 'company_id') {
+    return rowError(line, 'company_name', node.kind === 'group' ? 'CSV_COST_CENTER_GROUP_COMPANY' : 'CSV_COST_CENTER_COMPANY_REQUIRED', issue.message);
+  }
+  if (node && issue.field === 'kind') {
+    return node.kind === 'group'
+      ? rowError(line, 'kind', 'CSV_COST_CENTER_USED_BY_LINES', issue.message, { code: node.code })
+      : rowError(line, 'kind', 'CSV_COST_CENTER_GROUP_NOT_EMPTY', issue.message, { name: node.name });
+  }
+  if (node?.parent_id && issue.field === 'parent_id') {
+    const parent = after.get(node.parent_id);
+    if (node.parent_id === issue.id) return rowError(line, 'parent_code', 'CSV_COST_CENTER_OWN_PARENT', issue.message);
+    if (parent && parent.kind !== 'group') return rowError(line, 'parent_code', 'CSV_COST_CENTER_PARENT_NOT_GROUP', issue.message, { code: parent.code });
+    if (parent) return rowError(line, 'parent_code', 'CSV_COST_CENTER_PARENT_INSIDE', issue.message, { name: node.name, parent: parent.name });
+  }
+  // A removal or a parent missing from the tree: the import removes no node and checks parent codes first.
+  return { row: line, message: issue.message };
 }
