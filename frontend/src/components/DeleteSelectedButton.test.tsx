@@ -228,7 +228,7 @@ describe('DeleteSelectedButton', () => {
     const REFUSAL = { id: 'b', name: 'Frozen', code: 'CONTRACT_HAS_COMPLIANCE_RECORDS', usages: [{ type: 'compliance_requirements', total: 1 }] };
     const itemLabels = { toDelete: (count: number) => `to delete:${count}`, kept: (count: number) => `kept:${count}` };
 
-    function renderChecked(selected: Row[], check: () => Promise<any>) {
+    function renderChecked(selected: Row[], check: () => Promise<any>, labels: Record<string, unknown> = itemLabels) {
       const checkDelete = vi.fn(check);
       render(
         <ThemeProvider theme={createAppTheme('light')}>
@@ -239,13 +239,27 @@ describe('DeleteSelectedButton', () => {
             getItemName={(row) => row.name}
             onDeleteSuccess={vi.fn()}
             checkDelete={checkDelete}
-            itemLabels={itemLabels}
+            itemLabels={labels as typeof itemLabels}
           />
         </ThemeProvider>,
       );
       fireEvent.click(screen.getByRole('button', { name: /buttons.deleteSelected/ }));
       return checkDelete;
     }
+
+    it('titles the window by the items really deleted, and gives the reason of a kept one as a sentence, when the list asks', async () => {
+      renderChecked(rows, async () => ({ refused: [REFUSAL] }), {
+        ...itemLabels,
+        title: (count: number) => `Delete ${count} things`,
+        titleCountsDeleted: true,
+        keptReason: ({ name, usages, count }: { name: string; usages: string; count: number }) => `${name} is kept: ${usages} (${count}).`,
+      });
+      const dialog = await screen.findByRole('dialog');
+      // One of the two selected rows is kept: the title names the one that goes.
+      expect(dialog).toHaveTextContent('delete.recordTitle {"name":"First"}');
+      expect(dialog).toHaveTextContent('Frozen is kept: common:delete.usages.compliance_requirements');
+      expect(dialog).toHaveTextContent('(1).');
+    });
 
     it('shows a single refused item as the record does: the reason and Close only', async () => {
       const checkDelete = renderChecked([rows[1]], async () => ({ refused: [REFUSAL] }));

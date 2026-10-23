@@ -33,6 +33,8 @@ interface CsvImportDialogV2Props {
   title?: string;
   onImported?: () => void;
   params?: Record<string, string | number | boolean | null | undefined>;
+  /** A short remark about this list's file, under the description (for example how to clear a value). */
+  note?: string;
 }
 
 export default function CsvImportDialogV2({
@@ -42,6 +44,7 @@ export default function CsvImportDialogV2({
   title: titleProp,
   onImported,
   params,
+  note,
 }: CsvImportDialogV2Props) {
   const { t, i18n } = useTranslation('common');
   const {
@@ -160,6 +163,11 @@ export default function CsvImportDialogV2({
             <Typography variant="body2" sx={{ mb: 2 }}>
               {t('csv.uploadDescriptionFlexible')}
             </Typography>
+            {note && (
+              <Typography variant="body2" sx={{ mb: 2 }}>
+                {note}
+              </Typography>
+            )}
 
             <Button
               variant="text"
@@ -189,7 +197,7 @@ export default function CsvImportDialogV2({
               }}
               onClick={onPick}
             >
-              <Typography>{file ? file.name : t('csv.dragDropOrClick')}</Typography>
+              <Typography sx={{ textTransform: 'none', overflowWrap: 'anywhere' }}>{file ? file.name : t('csv.dragDropOrClick')}</Typography>
               <input type="file" ref={inputRef} onChange={onFileChange} hidden accept=".csv,text/csv" />
             </Box>
 
