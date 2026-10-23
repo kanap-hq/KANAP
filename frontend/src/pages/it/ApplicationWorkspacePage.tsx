@@ -67,7 +67,7 @@ import ApplicationDeleteButton from './components/ApplicationDeleteButton';
 import { formatShortDate } from '../../lib/dateFormat';
 import { fetchApplicationIncidentsCount } from '../../utils/workspaceTabCounts';
 import { useLocale } from '../../i18n/useLocale';
-import ApplicationClassificationPanel, { HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
+import ApplicationClassificationPanel, { HelpLabel, HelpTip, type RecoveryDependency } from './components/ApplicationClassificationPanel';
 import ApplicationCriticalityMetadata from './components/ApplicationCriticalityMetadata';
 import { useRecentlyViewed } from '../workspace/hooks/useRecentlyViewed';
 
@@ -636,6 +636,12 @@ function ApplicationProperties({
         </Stack>
         <Box sx={(theme) => ({ mt: 1, fontSize: 12, color: theme.palette.kanap.text.secondary, lineHeight: 1.5 })}>
           {t('workspace.application.ownership.usersValue', { value: app.users_mode === 'manual' ? Number(app.users_override || 0).toLocaleString(locale) : Number(app.derived_total_users || 0).toLocaleString(locale) })}
+          {/* Departments count by their headcount (any year when the reference one has none): 0 means none is recorded. */}
+          {app.users_mode !== 'manual' && !app.derived_total_users && (app.companies || []).length === 0 && (app.departments || []).length > 0 && (
+            <Box sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary })}>
+              {t('workspace.application.ownership.usersNoDepartmentHeadcount')}
+            </Box>
+          )}
         </Box>
         <PropertyRow label={t('workspace.application.ownership.calculationMethod')}>
           <Select
@@ -1298,7 +1304,7 @@ function ComplianceTab({
       saving={saving}
       error={error}
     >
-        <PropertyRow label={classificationText("Data residency")} sx={horizontalRowSx} labelSx={horizontalLabelSx} valueSx={compactValueSx}>
+        <PropertyRow label={<HelpLabel text="Data residency" help="Data residency help" />} sx={horizontalRowSx} labelSx={horizontalLabelSx} valueSx={compactValueSx}>
           <Autocomplete
             multiple
             options={countryOptions}

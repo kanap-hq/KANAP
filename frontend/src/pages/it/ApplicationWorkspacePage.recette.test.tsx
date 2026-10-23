@@ -190,6 +190,11 @@ describe('Application workspace, recette C1a', () => {
     expect(departmentField.mounts).toBe(mountsBefore);
   });
 
+  it('says why the users are 0 when the audience is departments without a headcount', async () => {
+    renderPage(undefined, () => ({ ...application, departments: [{ department_id: 'd-1' }], derived_total_users: 0 }));
+    expect(await screen.findByText('workspace.application.ownership.usersNoDepartmentHeadcount')).toBeTruthy();
+  });
+
   it('keeps an empty title open with the message', async () => {
     renderPage();
     fireEvent.click(await screen.findByText('Atlas'));

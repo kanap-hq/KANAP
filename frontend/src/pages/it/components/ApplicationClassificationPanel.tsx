@@ -3,6 +3,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { Link } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { classificationText } from '../../../utils/applicationClassification';
+import { HelpTip } from './HelpTip';
 import React from 'react';
 import { Alert, Box, Button, IconButton, Tooltip, MenuItem, Select, Stack, TextField, Typography } from '@mui/material';
 import { PropertyRow } from '../../../components/design';
@@ -72,9 +73,7 @@ const valueSx = { maxWidth: 520 } as const;
 const sectionTitleSx = (theme: any) => ({ fontSize: 16, fontWeight: 500, color: theme.palette.kanap.text.primary, mb: 1.25 });
 
 /** The help button of a field: a short sentence in a tooltip, as the criticality fields have. */
-export function HelpTip({ label, help }: { label: string; help: string }) {
-  return <Tooltip title={help} enterTouchDelay={0}><IconButton size="small" aria-label={label} sx={{ p: 0.25 }}><HelpOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip>;
-}
+export { HelpTip };
 
 export function HelpLabel({ text, help }: { text: string; help: string }) {
   return <Box component="span" sx={{ display: 'inline-flex', alignItems: 'center', gap: 0.5 }}>{classificationText(text)}<Tooltip title={classificationText(help)} enterTouchDelay={0}><IconButton size="small" aria-label={classificationText(text)} sx={{ p: 0.25 }}><HelpOutlineIcon sx={{ fontSize: 15 }} /></IconButton></Tooltip></Box>;
