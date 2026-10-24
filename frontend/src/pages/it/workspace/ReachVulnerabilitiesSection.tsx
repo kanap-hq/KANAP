@@ -23,8 +23,10 @@ export type ReachVulnerabilityRow = {
   servers?: Array<{ id: string; name: string }>;
   /** Application: it declares this technology and version. */
   declared?: boolean;
-  /** Asset, indirect lines only: the asset that carries the technology. */
+  /** Asset, indirect lines only: the asset that carries the technology (the first of `via_assets`). */
   via?: { id: string; name: string; reference: string | null };
+  /** Asset, indirect lines only: every asset that carries the technology and version (a host, a cluster's members), by name. */
+  via_assets?: Array<{ id: string; name: string; reference: string | null }>;
 };
 
 /** The answer of the vulnerabilities route of an asset or an application. */
@@ -35,6 +37,8 @@ export type ReachVulnerabilities = {
   indirect?: ReachVulnerabilityRow[];
   /** Distinct CVE over the direct lines; null when the asset or application is out of service. */
   totals: { open: number; severe: number; exploited_severe: number } | null;
+  /** A cluster only: distinct CVE over the direct links of its members in service; null when retired. */
+  member_totals?: { open: number; severe: number; exploited_severe: number } | null;
 };
 
 /** The anchor of the section. */
