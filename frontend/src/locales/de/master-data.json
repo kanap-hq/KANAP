@@ -920,7 +920,8 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
-      "dimensionRequired": "Wählen Sie eine Dimension."
+      "dimensionRequired": "Wählen Sie eine Dimension.",
+      "valueAddFailed": "Der Wert konnte nicht hinzugefügt werden."
     },
     "recommended": {
       "action": "Empfohlene Dimensionen",
@@ -950,7 +951,8 @@
       "nothingCreated": "Nichts hinzugefügt: Diese Dimensionen sind bereits vorhanden.",
       "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
       "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
-    }
+    },
+    "addValue": "„{{value}}“ hinzufügen"
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",

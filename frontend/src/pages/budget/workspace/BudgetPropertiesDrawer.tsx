@@ -35,6 +35,8 @@ type Props = {
   onNatureChange?: (next: LineType) => void;
   onChangeType?: () => void;
   mode?: 'create' | 'edit';
+  /** The line shown (edit): a value added to an open dimension's picker goes on it. */
+  lineId?: string | null;
   supplierId: string;
   payingCompanyId: string;
   /** The paying company was brought by the cost center and still follows it: the cost center list is not narrowed to it. */
@@ -85,6 +87,7 @@ export default function BudgetPropertiesDrawer({
   onNatureChange,
   onChangeType,
   mode = 'edit',
+  lineId = null,
   supplierId,
   payingCompanyId,
   companyFollowsCostCenter = false,
@@ -150,6 +153,10 @@ export default function BudgetPropertiesDrawer({
   const analyticsAxes = useAnalyticsAxes({ scope: nature });
   // A limited data access offers only the companies and cost centers the line may be placed on.
   const placement = useLinePlacementFilter(payingCompanyId || null);
+  // An open dimension's picker adds a typed value for this line, or for the place of the line being created.
+  const newValueFor = mode === 'create'
+    ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }
+    : lineId ? { lineId } : null;
 
   return (
     <>
@@ -243,6 +250,7 @@ export default function BudgetPropertiesDrawer({
                 // A held value on a required dimension can be replaced, not removed. A line without one stays editable.
                 disableClearable={mode === 'edit' && axisRequiredFor(axis, nature) && !!analyticsValues[axis.id]}
                 selectedOption={matching(analyticsOptions?.[axis.id], analyticsValues[axis.id])}
+                newValueFor={newValueFor}
               />
             </Box>
           </PropertyRow>

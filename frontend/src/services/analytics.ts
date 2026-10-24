@@ -182,6 +182,23 @@ export async function createAnalyticsValue(body: AnalyticsValueWrite): Promise<A
   return res.data;
 }
 
+/**
+ * `POST /analytics-categories/from-line`: the value of `name` in an open dimension, found regardless
+ * of case or created, for the line it goes on (`line_id`) or the place of a line being created.
+ */
+export type AnalyticsValueFromLine = {
+  axis_id: string;
+  name: string;
+  line_id?: string;
+  paying_company_id?: string;
+  cost_center_id?: string;
+};
+
+export async function createAnalyticsValueFromLine(body: AnalyticsValueFromLine): Promise<AnalyticsValueDetail & { created: boolean }> {
+  const res = await api.post<AnalyticsValueDetail & { created: boolean }>(`${ANALYTICS_VALUES_ENDPOINT}/from-line`, body);
+  return res.data;
+}
+
 export async function updateAnalyticsValue(id: string, patch: AnalyticsValuePatch): Promise<AnalyticsValueDetail> {
   const res = await api.patch<AnalyticsValueDetail>(`${ANALYTICS_VALUES_ENDPOINT}/${id}`, patch);
   return res.data;

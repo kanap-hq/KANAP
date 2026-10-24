@@ -1170,6 +1170,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             nature={nature}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
             mode="edit"
+            lineId={data?.id ?? null}
             disabled={!canEdit}
             references={references}
             analyticsOptions={analyticsOptions}
