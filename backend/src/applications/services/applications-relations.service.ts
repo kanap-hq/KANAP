@@ -438,10 +438,12 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
          WHERE ai.tenant_id = $1 AND ai.application_id = $2`,
         [tenantId, appId],
     );
-    // Interfaces are closed to a Business Contributor (`InterfacesController`).
+    // Interfaces are closed to a Business Contributor (`InterfacesController`). The tab lists an
+    // interface once per environment: the count is of distinct interfaces.
     const interfaces = ctx.scopes.application
       ? 0
-      : await this.interfaces.listByApplication(appId, tenantId, { manager: mg }).then((res: any) => (Array.isArray(res?.items) ? res.items.length : 0));
+      : await this.interfaces.listByApplication(appId, tenantId, { manager: mg })
+        .then((res: any) => new Set((Array.isArray(res?.items) ? res.items : []).map((item: { id: string }) => item.id)).size);
     const documents = await this.knowledge.listDocumentsForEntity('applications', appId, { manager: mg, userId: ctx.userId })
       .then((res) => Number(res?.total || 0));
     return { assets: Number(assetRows[0]?.n || 0), interfaces, documents };

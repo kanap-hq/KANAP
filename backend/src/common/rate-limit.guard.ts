@@ -18,7 +18,8 @@ export class RateLimitGuard extends ThrottlerGuard {
 
 /**
  * Same limits, counted per client address and tenant: callers that many tenants share, such as
- * the servers of a hosted MCP client calling the OAuth token route, get one budget per tenant.
+ * the servers of a hosted MCP client calling the OAuth token route, or the people of two
+ * organisations behind one NAT or VPN renewing their sessions, get one budget per tenant.
  */
 @Injectable()
 export class TenantRateLimitGuard extends RateLimitGuard {

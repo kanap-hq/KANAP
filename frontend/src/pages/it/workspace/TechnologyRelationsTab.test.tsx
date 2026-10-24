@@ -220,7 +220,7 @@ describe('TechnologyRelationsTab', () => {
   it('deletes a document after a confirmation', async () => {
     mocked.delete.mockResolvedValue({ data: { ok: true } } as never);
     renderTab(relations());
-    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeNamed(name=runbook.pdf)' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'linksAndFiles.removeFileNamed(name=runbook.pdf)' }));
     expect(mocked.delete).not.toHaveBeenCalled();
     fireEvent.click(await screen.findByRole('button', { name: 'common:buttons.delete' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/technologies/attachments/doc-1'));

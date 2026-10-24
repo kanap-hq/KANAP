@@ -31,7 +31,22 @@ export const RATE_LIMITS = {
    * one outbound address, so this budget is a wide one.
    */
   ssoSignIn: { limit: 60, ttl: 60_000 },
-  authRefresh: { limit: 20, ttl: 60_000 },
+  /**
+   * Session renewal (`POST /auth/refresh`), per client address. A renewal comes far more often
+   * than a sign-in: about one every 14 minutes per open tab, plus one at each page load, so after
+   * a deployment the hundred people of one organisation behind one outbound address renew within
+   * the same minute. The refresh token is a high-entropy secret: this limit only contains the load.
+   */
+  authRefresh: { limit: 120, ttl: 60_000 },
+  /**
+   * Session renewals per refresh token (auth/refresh-session-limit.ts), checked before the
+   * address limit. Every open tab renews with the same cookie, since the access token lives in
+   * memory, so opening many records within a minute renews one token many times. A renewal
+   * refused here does not count against the address: a client that loops does not take the
+   * budget of its neighbours behind the same outbound address. The token is then refused for the
+   * next 60 seconds.
+   */
+  authRefreshSession: { limit: 30, ttl: 60_000 },
   /**
    * MCP OAuth (ai/oauth): the authorization routes, opened in the user's browser, and the token
    * and revocation routes, called by the MCP client's servers. Claude's servers share a small range

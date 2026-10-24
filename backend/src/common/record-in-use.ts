@@ -25,6 +25,7 @@ export type RefusalKind =
   | 'server_assignments'
   | 'business_processes'
   | 'documents'
+  | 'descriptions'
   | 'sub_folders'
   | 'app_instances'
   | 'incidents'
@@ -65,6 +66,7 @@ const ENGLISH: Record<RefusalKind, [string, string]> = {
   server_assignments: ['server assignment', 'server assignments'],
   business_processes: ['business process', 'business processes'],
   documents: ['document', 'documents'],
+  descriptions: ['description', 'descriptions'],
   technologies: ['technology', 'technologies'],
   sub_folders: ['subfolder', 'subfolders'],
   app_instances: ['deployment', 'deployments'],

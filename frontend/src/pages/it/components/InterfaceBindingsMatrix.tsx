@@ -2109,7 +2109,8 @@ export default function InterfaceBindingsMatrix({
       >
         <PropertyRow label={t('it:common.environment')} required>
           <Select
-            value={envDraft}
+            // Once added, the environment leaves the options while the dialog closes: keep the value among them.
+            value={selectableEnvs.includes(envDraft) ? envDraft : ''}
             onChange={(event) => setEnvDraft(event.target.value)}
             variant="standard"
             sx={drawerSelectSx}

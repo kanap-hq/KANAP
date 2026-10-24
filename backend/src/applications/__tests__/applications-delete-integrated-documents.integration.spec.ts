@@ -168,7 +168,21 @@ async function testDeletedApplicationTakesItsManagedDocuments() {
       integrated,
     );
     const check = await service.deleteCheck([goneId], { manager: runner.manager });
-    assert.deepEqual(check.removes, [{ type: 'documents', total: 1 }], 'the check before the delete counts the managed document that goes');
+    assert.deepEqual(check.removes, [{ type: 'descriptions', total: 1 }], 'the check names the written description, not as a document');
+    // A description left empty (its document created at the first opening) is not named at all.
+    const [{ id: blankId }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name) VALUES ($1, 'Blank application') RETURNING id::text AS id`,
+      [tenantId],
+    );
+    await integrated.getBySource('applications', blankId, 'overview', writerId, { manager: runner.manager });
+    assert.equal((await bindings(runner, blankId)).length, 1);
+    assert.deepEqual((await service.deleteCheck([blankId], { manager: runner.manager })).removes, [], 'an empty description is not counted');
+    // A description still in the column, its document not created yet, goes too.
+    const [{ id: unopenedId }] = await runner.query(
+      `INSERT INTO applications (tenant_id, name, description) VALUES ($1, 'Unopened application', 'Notes.') RETURNING id::text AS id`,
+      [tenantId],
+    );
+    assert.deepEqual((await service.deleteCheck([unopenedId], { manager: runner.manager })).removes, [{ type: 'descriptions', total: 1 }]);
     await service.delete(goneId, { manager: runner.manager, userId: deleterId });
 
     assert.deepEqual(await bindings(runner, goneId), [], 'no binding names the deleted application');

@@ -41,7 +41,9 @@ export function searchRelationItems(
       params: { page: 1, limit: PAGE, sort: 'updated_at:DESC', ...(q ? { q } : {}) },
       signal,
     });
-    return (res.data?.items || []).map((row) => ({
+    // The page holds the most recently updated; it reads by reference, whatever the server's order.
+    const items = [...(res.data?.items || [])].sort((a, b) => (a.item_number ?? Infinity) - (b.item_number ?? Infinity));
+    return items.map((row) => ({
       id: row.id,
       label: labelOf(row),
       ref: refOf(type, row.item_number ?? null),
@@ -117,13 +119,29 @@ export function budgetLinesSection({
         hint: t(`ops:budget.${row.nature}`),
       }));
     },
+    // A disabled line stays listed, muted, and is left out of the total, which says so below it.
+    // No total when no line has an amount, counted or left out: a "0" would add nothing.
     totals: (lines) => {
-      const amounts = lines.map((row) => row.amount).filter((amount): amount is number => amount != null);
-      if (amounts.length === 0) return [];
-      return [{
+      if (!lines.some((row) => row.amount != null)) return [];
+      const disabled = lines.filter((row) => row.status === 'disabled').length;
+      const amounts = lines
+        .filter((row) => row.status !== 'disabled')
+        .map((row) => row.amount)
+        .filter((amount): amount is number => amount != null);
+      const total = {
         key: 'total',
         label: t('workspace.application.relations.total'),
         cells: { amount: formatAmount(amounts.reduce((sum, value) => sum + value, 0)) },
+      };
+      if (disabled === 0) return [total];
+      return [total, {
+        key: 'disabled',
+        label: (
+          <Box component="span" sx={{ fontSize: 12, color: 'kanap.text.tertiary' }}>
+            {t('workspace.application.relations.disabledNotCounted', { count: disabled })}
+          </Box>
+        ),
+        cells: {},
       }];
     },
     notice: (lines) => <FxMissingNotice items={fxMissingOfLines(lines, year)} sx={{ mt: 0.75 }} />,

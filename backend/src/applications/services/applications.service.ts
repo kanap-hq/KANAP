@@ -27,6 +27,14 @@ export interface ServiceOpts {
   projectAccessScope?: ParticipationAccessScope;
   /** The requests the caller may count (Relations badge): none without the read right on requests. */
   requestsAccess?: { scope?: ParticipationAccessScope } | null;
+  /**
+   * The Relations badge counts budget lines and contracts only for a caller who reads them, as the
+   * Relations tab shows them. `false` leaves them out; left unset (internal callers), they count.
+   * Projects follow the same rule.
+   */
+  readsBudget?: boolean;
+  readsContracts?: boolean;
+  readsProjects?: boolean;
 }
 
 /**

@@ -345,7 +345,11 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
     const mg = this.getManager(opts);
     const resolvedAppId = await this.resolveApplicationIdentifier(appId, mg);
     await this.assertVisible(resolvedAppId, opts?.accessScope, mg);
-    const projectCountSql = opts?.projectAccessScope
+    // Projects count only for a caller who reads them, within a Business Contributor's scope.
+    const readsProjects = opts?.readsProjects !== false;
+    const projectCountSql = !readsProjects
+      ? 'SELECT 0'
+      : opts?.projectAccessScope
       ? `SELECT COUNT(*)
          FROM application_projects l
          JOIN portfolio_projects p ON p.id = l.project_id AND p.tenant_id = l.tenant_id
@@ -353,7 +357,7 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
            AND l.tenant_id = app_current_tenant()
            AND ${projectParticipantCondition('p', '$2')}`
       : `SELECT COUNT(*) FROM application_projects l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
-    const params: unknown[] = opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
+    const params: unknown[] = readsProjects && opts?.projectAccessScope ? [resolvedAppId, opts.projectAccessScope.userId] : [resolvedAppId];
     // Requests count only for a caller who reads them, within a Business Contributor's scope.
     const requestScope = opts?.requestsAccess?.scope;
     if (requestScope) params.push(requestScope.userId);
@@ -367,6 +371,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
              AND l.tenant_id = app_current_tenant()
              AND ${requestParticipantCondition('r', `$${params.length}`)}`
         : `SELECT COUNT(*) FROM portfolio_request_applications l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()`;
+    // Budget lines and contracts count only for a caller who reads them (the Relations tab hides them otherwise).
+    const readsBudget = opts?.readsBudget !== false;
+    const readsContracts = opts?.readsContracts !== false;
     const rows: Array<{
       opex_count: string | number;
       capex_count: string | number;
@@ -379,9 +386,9 @@ export class ApplicationsCrudService extends ApplicationsBaseService {
       attachments_count: string | number;
     }> = await mg.query(
       `SELECT
-         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')}) AS opex_count,
-         (SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}) AS capex_count,
-         (SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS contracts_count,
+         (${readsBudget ? `SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'opex')}` : 'SELECT 0'}) AS opex_count,
+         (${readsBudget ? `SELECT COUNT(*) FROM application_spend_items l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()${linkedLineOf('l.tenant_id', 'l.spend_item_id', 'capex')}` : 'SELECT 0'}) AS capex_count,
+         (${readsContracts ? 'SELECT COUNT(*) FROM application_contracts l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()' : 'SELECT 0'}) AS contracts_count,
          (${projectCountSql}) AS projects_count,
          (${requestCountSql}) AS requests_count,
          (SELECT COUNT(DISTINCT l.technology_id) FROM application_technologies l WHERE l.application_id = $1 AND l.tenant_id = app_current_tenant()) AS technologies_count,

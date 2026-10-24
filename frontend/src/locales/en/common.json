@@ -237,12 +237,14 @@
       "contributors_other": "{{count}} contributors",
       "interface_bindings_one": "{{count}} interface binding",
       "interface_bindings_other": "{{count}} interface bindings",
-      "server_assignments_one": "{{count}} server assignment",
-      "server_assignments_other": "{{count}} server assignments",
+      "server_assignments_one": "{{count}} server",
+      "server_assignments_other": "{{count}} servers",
       "business_processes_one": "{{count}} business process",
       "business_processes_other": "{{count}} business processes",
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
+      "descriptions_one": "its description",
+      "descriptions_other": "{{count}} descriptions",
       "sub_folders_one": "{{count}} subfolder",
       "sub_folders_other": "{{count}} subfolders",
       "app_instances_one": "{{count}} deployment",
@@ -767,7 +769,8 @@
     "departments": "Departments",
     "allDepartments": "All departments",
     "newCategoryName": "New category name",
-    "removeNamed": "Remove {{name}}"
+    "removeNamed": "Remove {{name}}",
+    "chooseServer": "Choose a server"
   },
   "documentEditor": {
     "expandDocument": "Expand document",
@@ -1292,12 +1295,13 @@
     "newLink": "New link",
     "editLink": "Edit link",
     "editLinkNamed": "Edit {{name}}",
-    "removeNamed": "Remove {{name}}",
+    "removeNamed": "Delete {{name}}",
     "placeholders": {
       "name": "e.g., Vendor portal",
       "url": "e.g., https://status.example.com"
     },
     "linksTitle": "Web links",
-    "linksEmpty": "No web link."
+    "linksEmpty": "No web link.",
+    "removeFileNamed": "Delete file {{name}}"
   }
 }

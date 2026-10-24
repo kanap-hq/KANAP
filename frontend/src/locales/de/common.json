@@ -237,12 +237,14 @@
       "contributors_other": "{{count}} Mitwirkende",
       "interface_bindings_one": "{{count}} Schnittstellenbindung",
       "interface_bindings_other": "{{count}} Schnittstellenbindungen",
-      "server_assignments_one": "{{count}} Serverzuordnung",
-      "server_assignments_other": "{{count}} Serverzuordnungen",
+      "server_assignments_one": "{{count}} Server",
+      "server_assignments_other": "{{count}} Server",
       "business_processes_one": "{{count}} Geschäftsprozess",
       "business_processes_other": "{{count}} Geschäftsprozesse",
       "documents_one": "{{count}} Dokument",
       "documents_other": "{{count}} Dokumente",
+      "descriptions_one": "ihre Beschreibung",
+      "descriptions_other": "{{count}} Beschreibungen",
       "sub_folders_one": "{{count}} Unterordner",
       "sub_folders_other": "{{count}} Unterordner",
       "app_instances_one": "{{count}} Bereitstellung",
@@ -767,7 +769,8 @@
     "departments": "Abteilungen",
     "allDepartments": "Alle Abteilungen",
     "newCategoryName": "Name der neuen Kategorie",
-    "removeNamed": "{{name}} entfernen"
+    "removeNamed": "{{name}} entfernen",
+    "chooseServer": "Server auswählen"
   },
   "documentEditor": {
     "expandDocument": "Dokument erweitern",
@@ -1292,12 +1295,13 @@
     "newLink": "Neuer Link",
     "editLink": "Link bearbeiten",
     "editLinkNamed": "{{name}} bearbeiten",
-    "removeNamed": "{{name}} entfernen",
+    "removeNamed": "{{name}} löschen",
     "placeholders": {
       "name": "z. B. Herstellerportal",
       "url": "z. B. https://status.example.com"
     },
     "linksTitle": "Weblinks",
-    "linksEmpty": "Kein Weblink."
+    "linksEmpty": "Kein Weblink.",
+    "removeFileNamed": "Datei {{name}} löschen"
   }
 }

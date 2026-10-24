@@ -14,10 +14,13 @@ export type DeleteFailure = {
 };
 
 /** "2 contracts and 1 application", in the interface language. */
-function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, language: string): string {
-  const parts = usages.map(({ type, total }) =>
+function usageLabels(usages: NonNullable<DeleteFailure['usages']>, t: TFunction): string[] {
+  return usages.map(({ type, total }) =>
     t(`common:delete.usages.${type}`, { count: total, defaultValue: `${total} ${type}` }) as string);
-  return joinNames(parts, language);
+}
+
+function usageList(usages: NonNullable<DeleteFailure['usages']>, t: TFunction, language: string): string {
+  return joinNames(usageLabels(usages, t), language);
 }
 
 /**
@@ -32,6 +35,11 @@ export function usageTotal(usages: DeleteFailure['usages'] | null | undefined): 
 /** What makes the delete of an item refused, counted: "2 contracts and 1 application". */
 export function refusalCounts(failure: DeleteFailure, t: TFunction, language: string): string {
   return usageList(failure.usages ?? [], t, language);
+}
+
+/** What a delete removes, then its links, in one list: "its description, 2 deployments and its links". */
+export function removedWithLinks(usages: NonNullable<DeleteFailure['usages']>, links: string, t: TFunction, language: string): string {
+  return joinNames([...usageLabels(usages, t), links], language);
 }
 
 /** Why an item was not deleted, in the interface language when the server gave a code. */

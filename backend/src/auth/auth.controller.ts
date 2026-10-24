@@ -23,21 +23,21 @@ import { getProvisioningSecret } from './token-secret.util';
 import { PROVISIONING_TOKEN_ALGORITHMS } from './jwt-algorithms';
 import { TenantsService } from '../tenants/tenants.service';
 import { UserRole } from '../users/user-role.entity';
-import { RateLimitGuard } from '../common/rate-limit.guard';
+import { RateLimitGuard, TenantRateLimitGuard } from '../common/rate-limit.guard';
 import { RATE_LIMITS } from '../common/rate-limit';
 import { SecurityEventsService } from '../audit/security-events.service';
 import { AuthEvent, AuthEventReason } from '../audit/security-events';
 import { NeverRejects } from '../common/never-rejects';
 import { authRefusalOf } from './auth-refused.exception';
 import { LoginAttemptLimit } from './login-attempt-limit';
+import { RefreshSessionRateLimitGuard } from './refresh-session-limit';
 import { Response } from 'express';
 import { dataAccessAvailability } from '../data-access/data-access-availability';
 import { readDataAccessProfile } from '../data-access/data-access-profile';
 import {
-  REFRESH_TOKEN_COOKIE_NAME,
   clearRefreshTokenCookie,
   isSecureRequest,
-  parseCookieValue,
+  refreshTokenOf,
   setRefreshTokenCookie,
 } from './auth-cookie.util';
 
@@ -413,7 +413,10 @@ export class AuthController {
   }
 
   @Post('refresh')
-  @UseGuards(RateLimitGuard)
+  // Per refresh token first (auth/refresh-session-limit.ts): a renewal it refuses does not count
+  // against the address, so a client that loops does not block its neighbours. Then per client
+  // address and tenant (two organisations behind one NAT or VPN do not share a budget).
+  @UseGuards(RefreshSessionRateLimitGuard, TenantRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authRefresh })
   async refreshToken(@Body() body: RefreshTokenDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     // Same origin rule as CORS, before the cookie is read (common/cors-policy.ts).
@@ -446,11 +449,7 @@ export class AuthController {
   }
 
   private resolveRefreshToken(req: any, body?: { refresh_token?: string }): string | undefined {
-    const cookieToken = parseCookieValue(req?.headers?.cookie as string | undefined, REFRESH_TOKEN_COOKIE_NAME);
-    const bodyToken = body?.refresh_token?.trim();
-    if (cookieToken && cookieToken.trim() !== '') return cookieToken;
-    if (bodyToken && bodyToken !== '') return bodyToken;
-    return undefined;
+    return refreshTokenOf(req, body);
   }
 
   private toTokenResponse(tokens: TokenResponse & { refresh_token?: string }): TokenResponse {

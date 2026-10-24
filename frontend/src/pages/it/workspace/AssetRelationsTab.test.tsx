@@ -284,7 +284,7 @@ describe('AssetRelationsTab', () => {
     fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=Console)' }));
     await waitFor(() => expect(mocked.delete).toHaveBeenCalledWith('/assets/as-1/links/l-1'));
 
-    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeNamed(name=rack.pdf)' }));
+    fireEvent.click(screen.getByRole('button', { name: 'linksAndFiles.removeFileNamed(name=rack.pdf)' }));
     expect(mocked.patch).not.toHaveBeenCalledWith('/assets/attachments/a-1/delete', {});
     expect(await screen.findByText('workspace.asset.relations.deleteAttachmentConfirm(name=rack.pdf)')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'common:buttons.delete' }));

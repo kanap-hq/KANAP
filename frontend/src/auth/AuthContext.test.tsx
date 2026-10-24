@@ -83,6 +83,14 @@ function httpError(status: number) {
   return Object.assign(new Error(`Request failed with status code ${status}`), { response: { status } });
 }
 
+function tooManyAttempts(retryAfter?: string) {
+  return Object.assign(new Error('Request failed with status code 429'), {
+    response: { status: 429, headers: retryAfter ? { 'retry-after': retryAfter } : {} },
+  });
+}
+
+const rateLimitedLine = 'Too many attempts. Try again in a moment.';
+
 function unauthorized(url: string) {
   return { response: { status: 401 }, config: { url, headers: {} } };
 }
@@ -278,6 +286,73 @@ describe('AuthProvider and ProtectedRoute', () => {
       expect(http.refreshPost.mock.calls[0][1]).toEqual({ refresh_token: 'legacy-refresh-token' });
       expect(getAccessToken()).toBe('fresh-access-token');
       expect(screen.getByText('Home Page')).toBeInTheDocument();
+    });
+  });
+
+  describe('refresh rate limited at load', () => {
+    it('says nothing about one short 429 when the next attempt goes through', async () => {
+      storeSession();
+      http.refreshPost.mockRejectedValueOnce(tooManyAttempts()).mockResolvedValueOnce(freshTokens);
+
+      renderApp();
+      await advance();
+      expect(http.refreshPost).toHaveBeenCalledTimes(1);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+      expect(screen.getByRole('progressbar')).toBeInTheDocument();
+
+      await advance(1_000);
+      await advance();
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+    });
+
+    it('says so after two 429 in a row, and gives way to the server line when the server goes down', async () => {
+      storeSession();
+      http.refreshPost
+        .mockRejectedValueOnce(tooManyAttempts())
+        .mockRejectedValueOnce(tooManyAttempts())
+        .mockRejectedValueOnce(httpError(503))
+        .mockRejectedValueOnce(networkError());
+
+      renderApp();
+      await advance();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+
+      // The second 429, one second later: the line and its button.
+      await advance(1_000);
+      expect(http.refreshPost).toHaveBeenCalledTimes(2);
+      expect(screen.getByRole('status')).toHaveTextContent(rateLimitedLine);
+      expect(screen.getByRole('button', { name: 'Try again' })).toBeInTheDocument();
+
+      // A 503 next: no longer "too many attempts".
+      await advance(3_000);
+      expect(http.refreshPost).toHaveBeenCalledTimes(3);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+
+      // The round ends on a network error: the server line, never the rate limit.
+      await advance(8_100);
+      expect(http.refreshPost).toHaveBeenCalledTimes(4);
+      expect(screen.getByRole('status')).toHaveTextContent(serverUnavailableLine);
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
+    });
+
+    it('says so at once for a long wait, and Retry tries again in the page without reloading it', async () => {
+      const reload = vi.fn();
+      vi.stubGlobal('location', { ...window.location, pathname: '/', reload });
+      storeSession();
+      http.refreshPost.mockRejectedValueOnce(tooManyAttempts('30')).mockResolvedValueOnce(freshTokens);
+
+      renderApp();
+      await advance();
+      expect(screen.getByRole('status')).toHaveTextContent(rateLimitedLine);
+
+      fireEvent.click(screen.getByRole('button', { name: 'Try again' }));
+      await advance();
+      await advance();
+      expect(http.refreshPost).toHaveBeenCalledTimes(2);
+      expect(reload).not.toHaveBeenCalled();
+      expect(screen.getByText('Home Page')).toBeInTheDocument();
+      expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
     });
   });
 

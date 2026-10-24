@@ -37,7 +37,8 @@ export function relationsService(opts: { audit?: AuditEntry[]; taskCalls?: TaskR
     resolveRates: async () => ({ map: new Map(), settings: { reportingCurrency: 'EUR' } }),
     convertValue: (amount: number, rate: number) => amount * rate,
   };
-  const interfaces = { listByApplication: async () => ({ items: [{}, {}] }) };
+  // An interface bound in two environments is listed twice and counted once.
+  const interfaces = { listByApplication: async () => ({ items: [{ id: 'if-1' }, { id: 'if-1' }, { id: 'if-2' }] }) };
   const knowledge = { listDocumentsForEntity: async () => ({ access: 'granted', total: 3, items: [] }) };
   const tasks = {
     bulkReplaceTasksForApplication: async (applicationId: string, taskIds: string[], o: any) => {
