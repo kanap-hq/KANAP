@@ -7,7 +7,7 @@ import { readRelationsBudgetColumn } from '../common/relations/relations-budget-
 import {
   binder,
   dateText,
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedContracts,
   listRelatedIncidents,
   listRelatedProjects,
@@ -102,6 +102,8 @@ export type AssetRelationsTab = {
   budget_column: { key: string; label: string };
   assets: Record<AssetDirection, RelatedAsset[]>;
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
   projects: RelatedProject[] | null;
   tasks: AssetRelatedTask[] | null;
@@ -193,9 +195,9 @@ export class AssetRelationsTabService {
     const tenantId = asset.tenant_id;
     const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
     const assets = await this.listAssetRelations(mg, asset);
-    const budget_lines = ctx.access.budget_lines
-      ? await listRelatedBudgetLines(mg, this.fxRates, LINES, tenantId, asset.id, year, measure)
-      : null;
+    const { budget_lines, budget_lines_hidden } = await readRelatedBudgetLines(
+      mg, this.fxRates, LINES, 'asset', tenantId, asset.id, year, measure, ctx.access.budget_lines,
+    );
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACTS, tenantId, asset.id) : null;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECTS, tenantId, asset.id, ctx.scopes.project) : null;
     const tasks = ctx.access.tasks ? await this.listTasks(mg, tenantId, asset.id, ctx.scopes.task) : null;
@@ -219,7 +221,7 @@ export class AssetRelationsTabService {
     };
     const { assets: _assets, ...otherCounts } = counts;
     const total = Object.values(otherCounts).reduce((sum, n) => sum + n, 0);
-    return { year, budget_column, assets, budget_lines, contracts, projects, tasks, incidents, counts: { ...counts, total } };
+    return { year, budget_column, assets, budget_lines, budget_lines_hidden, contracts, projects, tasks, incidents, counts: { ...counts, total } };
   }
 
   /**

@@ -173,7 +173,11 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/spend-items')
-  listLinked(@Param('id') id: string, @Req() req: any) { return this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager }); }
+  async listLinked(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedSpendItems(id, { manager: req?.queryRunner?.manager });
+    // The names of the lines go to the readers of the budget only (spec §5.4).
+    return canReadContractBudget(req) ? linked : { items: [] };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
@@ -186,7 +190,10 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/capex-items')
-  listLinkedCapex(@Param('id') id: string, @Req() req: any) { return this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager }); }
+  async listLinkedCapex(@Param('id') id: string, @Req() req: any) {
+    const linked = await this.svc.listLinkedCapexItems(id, { manager: req?.queryRunner?.manager });
+    return canReadContractBudget(req) ? linked : { items: [] };
+  }
 
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'member')
@@ -206,7 +213,10 @@ export class ContractsController {
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'reader')
   @Get(':id/budget-lines')
-  listBudgetLines(@Param('id') id: string, @Req() req: any) { return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager }); }
+  listBudgetLines(@Param('id') id: string, @Req() req: any) {
+    // Without the right to read the budget: the number of lines only, never their names (spec §5.4).
+    return this.svc.listBudgetLines(id, { manager: req?.queryRunner?.manager, budgetAccess: canReadContractBudget(req) });
+  }
 
   // The Budget tab's figures for a year and column; also needs the right to read the budget.
   @UseGuards(PermissionGuard)

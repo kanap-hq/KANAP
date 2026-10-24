@@ -1422,9 +1422,9 @@ export class ContractsService {
 
   // Relations from the contract's side (`contract-relations.ts`): budget lines of both natures,
   // applications, assets, and the counts of the page's tabs.
-  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager }) {
+  async listBudgetLines(contractId: string, opts?: { manager?: EntityManager; budgetAccess?: boolean }) {
     const mg = opts?.manager ?? this.repo.manager;
-    return listContractBudgetLines(mg, await this.findContract(contractId, mg));
+    return listContractBudgetLines(mg, await this.findContract(contractId, mg), opts?.budgetAccess !== false);
   }
 
   /**

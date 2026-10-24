@@ -8,6 +8,7 @@ import { BaseDeleteService } from '../common/base-delete.service';
 import { BulkDeleteResult } from '../common/delete.types';
 import { withSavepoint } from '../common/savepoint.util';
 import { checkIds, RecordInUseException, refusalDetails, refusalsFrom, type DeleteRefusal, type UsageCount } from '../common/record-in-use';
+import { assertNoHiddenLines, hiddenLinesRefusals } from '../data-access/hidden-links';
 
 @Injectable()
 export class AssetsDeleteService extends BaseDeleteService<Asset> {
@@ -109,7 +110,10 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
     return new RecordInUseException('ASSET_IN_USE', 'asset', asset.name, usages, this.buildConflictMessage(asset.name, assignments, connections));
   }
 
-  /** The check before a delete (`POST /assets/delete-check`): which of `ids` would be refused, and why. */
+  /**
+   * The check before a delete (`POST /assets/delete-check`): which of `ids` would be refused, and
+   * why; for a limited person, also those linked to lines outside their access (spec §5.4).
+   */
   async deleteCheck(ids: string[], tenantId: string, opts?: { manager?: EntityManager }): Promise<{ refused: DeleteRefusal[] }> {
     const manager = opts?.manager ?? this.repository.manager;
     const wanted = checkIds(ids);
@@ -118,7 +122,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
       `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, wanted],
     );
-    return refusalsFrom(wanted, rows, (row) => row.name, (row) => this.refusalOf(row, tenantId, manager));
+    const hidden = await hiddenLinesRefusals(manager, 'asset', rows.map((row) => row.id));
+    return refusalsFrom(wanted, rows, (row) => row.name, async (row) => (await this.refusalOf(row, tenantId, manager)) ?? hidden.get(row.id) ?? null);
   }
 
   /**
@@ -130,6 +135,8 @@ export class AssetsDeleteService extends BaseDeleteService<Asset> {
 
     const refusal = await this.refusalOf(asset, tenantId, manager);
     if (refusal) throw refusal;
+    // Its cascade would drop links to lines the person cannot read (spec §5.4).
+    await assertNoHiddenLines(manager, 'asset', asset.id);
 
     // Its technology links go with it: those technologies are matched again after the commit.
     await this.cpeEvents?.emitForSubjects(manager, tenantId, 'asset', [id]);

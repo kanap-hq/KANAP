@@ -5,6 +5,8 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { setOwnedLink, type OwnedLinkAudit } from '../common/relations/owned-link';
 import { binder } from '../common/relations/related-objects';
 import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
+import { auditedLinkSet } from '../data-access/hidden-links';
 
 /**
  * What a contract is linked to, from the contract's side: its budget lines of both natures
@@ -74,7 +76,26 @@ export type ContractBudgetLine = {
   company_name: string | null;
 };
 
-export async function listContractBudgetLines(manager: EntityManager, contract: RelationsContract): Promise<{ items: ContractBudgetLine[] }> {
+/**
+ * The contract's budget lines (Budget tab), spec §5.4. `items` lists the lines the caller reads,
+ * none without the right to read the budget; `hidden` counts the linked lines the list leaves out:
+ * those outside a limited person's data access ("and 3 lines outside your access"), or every
+ * linked line without the budget right ("3 budget lines"), never named. `contract_spend_items` has
+ * no data-access policy, so its links count directly: those whose line the policies hide (spec §6.6).
+ */
+export async function listContractBudgetLines(
+  manager: EntityManager,
+  contract: RelationsContract,
+  readsBudget = true,
+): Promise<{ items: ContractBudgetLine[]; hidden: number }> {
+  if (!readsBudget) {
+    const [row]: Array<{ n: number }> = await manager.query(
+      `SELECT count(*)::int AS n FROM contract_spend_items l WHERE l.tenant_id = $1 AND l.contract_id = $2`,
+      [contract.tenant_id, contract.id],
+    );
+    return { items: [], hidden: Number(row?.n ?? 0) };
+  }
+  const hidden = await hiddenContractLineCount(manager, contract);
   const rows: Array<ContractBudgetLine & { item_number: number | string | null }> = await manager.query(
     `SELECT i.id, i.nature, i.item_number, i.product_name, i.paying_company_id AS company_id, comp.name AS company_name
        FROM contract_spend_items l
@@ -84,7 +105,19 @@ export async function listContractBudgetLines(manager: EntityManager, contract: 
       ORDER BY i.item_number ASC NULLS LAST, i.id ASC`,
     [contract.tenant_id, contract.id],
   );
-  return { items: rows.map((row) => ({ ...row, item_number: row.item_number == null ? null : Number(row.item_number) })) };
+  return { items: rows.map((row) => ({ ...row, item_number: row.item_number == null ? null : Number(row.item_number) })), hidden };
+}
+
+/** The contract's links to lines a limited person cannot read; 0 for an unscoped person, without a query. */
+export async function hiddenContractLineCount(manager: EntityManager, contract: RelationsContract): Promise<number> {
+  if (!(await isLimitedTransaction(manager))) return 0;
+  const [row]: Array<{ n: number }> = await manager.query(
+    `SELECT count(*)::int AS n FROM contract_spend_items l
+      WHERE l.tenant_id = $1 AND l.contract_id = $2
+        AND NOT EXISTS (SELECT 1 FROM spend_items i WHERE i.tenant_id = l.tenant_id AND i.id = l.spend_item_id)`,
+    [contract.tenant_id, contract.id],
+  );
+  return Number(row?.n ?? 0);
 }
 
 export async function listContractApplications(manager: EntityManager, contract: RelationsContract): Promise<{ items: Array<{ id: string; name: string }> }> {
@@ -177,8 +210,17 @@ export async function replaceContractRelations(
     );
   }
   if (removed.length || added.length) {
+    // The lines a limited person cannot read stayed linked: the audit row says how many (spec §6.6).
+    const hidden = set === 'budget_lines' ? await hiddenContractLineCount(manager, contract) : 0;
     await deps.audit.log(
-      { table: t.links, recordId: contract.id, action: 'update', before: { ids: beforeIds }, after: { ids: nextIds }, userId },
+      {
+        table: t.links,
+        recordId: contract.id,
+        action: 'update',
+        before: auditedLinkSet({ ids: beforeIds }, hidden),
+        after: auditedLinkSet({ ids: nextIds }, hidden),
+        userId,
+      },
       { manager },
     );
   }

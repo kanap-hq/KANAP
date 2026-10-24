@@ -6,7 +6,7 @@ import { readRelationsBudgetColumn } from '../common/relations/relations-budget-
 import { setOwnedLink } from '../common/relations/owned-link';
 import { parseTargetId } from '../common/relations/relation-target';
 import {
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedContracts,
   listRelatedIncidents,
   listRelatedProjects,
@@ -47,6 +47,8 @@ export type TechnologyRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
   projects: RelatedProject[] | null;
   incidents: RelatedIncident[] | null;
@@ -89,7 +91,7 @@ export class TechnologiesRelationsService {
     const tenantId = tech.tenant_id;
     const { year, measure, budget_column } = await readRelationsBudgetColumn(mg, tenantId);
     // One after the other: the request's single connection runs its queries in turn anyway.
-    const budgetLines = ctx.access.budget_lines ? await listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, tech.id, year, measure) : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, 'technology', tenantId, tech.id, year, measure, ctx.access.budget_lines);
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, tech.id) : null;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, tech.id, ctx.projectScope) : null;
     const incidents = ctx.access.incidents
@@ -107,7 +109,7 @@ export class TechnologiesRelationsService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       contracts,
       projects,
       incidents,

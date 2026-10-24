@@ -110,6 +110,10 @@ export class ApplicationsController {
     };
   }
 
+  private readsBudget(ctx: TenantRequest): boolean {
+    return buildRelationsAccess(ctx, { read: RELATIONS_READ }).access.budget_lines;
+  }
+
   private async readProjectScope(ctx: TenantRequest) {
     return this.participationScope(ctx, 'portfolio_projects');
   }
@@ -946,7 +950,9 @@ export class ApplicationsController {
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ items: Array<{ id: string; product_name: string }> }> {
-    return this.svc.listLinkedSpendItems(id, await this.readApplicationOpts(ctx));
+    const linked = await this.svc.listLinkedSpendItems(id, await this.readApplicationOpts(ctx));
+    // The names of the lines go to the readers of the budget only (spec §5.4).
+    return this.readsBudget(ctx) ? linked : { items: [] };
   }
 
   @UseGuards(PermissionGuard)
@@ -968,7 +974,8 @@ export class ApplicationsController {
     @Param('id') id: string,
     @Tenant() ctx: TenantRequest,
   ): Promise<{ items: Array<{ id: string; description: string }> }> {
-    return this.svc.listLinkedCapexItems(id, await this.readApplicationOpts(ctx));
+    const linked = await this.svc.listLinkedCapexItems(id, await this.readApplicationOpts(ctx));
+    return this.readsBudget(ctx) ? linked : { items: [] };
   }
 
   @UseGuards(PermissionGuard)

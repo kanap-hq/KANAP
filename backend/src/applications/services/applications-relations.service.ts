@@ -18,7 +18,7 @@ import { parseTargetId, UUID_RE } from '../../common/relations/relation-target';
 import {
   binder,
   dateText,
-  listRelatedBudgetLines,
+  readRelatedBudgetLines,
   listRelatedContracts,
   listRelatedIncidents,
   listRelatedProjects,
@@ -117,6 +117,8 @@ export type ApplicationRelations = {
   year: number;
   budget_column: { key: string; label: string };
   budget_lines: RelatedBudgetLine[] | null;
+  /** The linked lines `budget_lines` leaves out, counted (`readRelatedBudgetLines`). */
+  budget_lines_hidden: number;
   contracts: RelatedContract[] | null;
   projects: RelatedProject[] | null;
   requests: RelatedRequest[] | null;
@@ -201,7 +203,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
 
     // One after the other: the request's single connection runs its queries in turn anyway, and
     // pg refuses a query sent while another one runs (deprecated since pg 8, an error in pg 9).
-    const budgetLines = ctx.access.budget_lines ? await listRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, tenantId, app.id, year, measure) : null;
+    const budget = await readRelatedBudgetLines(mg, this.fxRates, LINE_LINKS, 'application', tenantId, app.id, year, measure, ctx.access.budget_lines);
     const contracts = ctx.access.contracts ? await listRelatedContracts(mg, CONTRACT_LINKS, tenantId, app.id) : null;
     const projects = ctx.access.projects ? await listRelatedProjects(mg, PROJECT_LINKS, tenantId, app.id, ctx.scopes.project) : null;
     const requests = ctx.access.requests ? await this.listRequests(mg, tenantId, app.id, ctx.scopes.request) : null;
@@ -222,7 +224,7 @@ export class ApplicationsRelationsService extends ApplicationsBaseService {
     return {
       year,
       budget_column,
-      budget_lines: budgetLines,
+      ...budget,
       contracts,
       projects,
       requests,

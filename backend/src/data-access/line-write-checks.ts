@@ -25,10 +25,10 @@ export const DATA_ACCESS_LEAVES_ACCESS_MESSAGE =
 /** A contract a limited person cannot read answers as a missing one: the key is no existence oracle. */
 export const DATA_ACCESS_CONTRACT_NOT_FOUND_MESSAGE = 'This contract does not exist.';
 
-/** 403 `DATA_ACCESS_LIMITED` with a message that says what is out of access. */
+/** 403 `DATA_ACCESS_LIMITED` with a message that says what is out of access (and `extra` fields of the body, if any). */
 export class DataAccessLimitedException extends ForbiddenException {
-  constructor(message: string) {
-    super({ statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'DATA_ACCESS_LIMITED', message });
+  constructor(message: string, extra?: Record<string, unknown>) {
+    super({ ...extra, statusCode: HttpStatus.FORBIDDEN, error: 'Forbidden', code: 'DATA_ACCESS_LIMITED', message });
   }
 }
 

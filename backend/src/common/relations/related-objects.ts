@@ -12,6 +12,7 @@ import { renewalDecisionSql } from '../../contracts/contract-renewal';
 import { readDecisionWindowDays } from '../../contracts/contract-settings.service';
 import type { FxRateService } from '../../currency/fx-rate.service';
 import { incidentRelatedTitleSql, incidentVisibilitySql, type IncidentViewer } from '../../incidents/incident-visibility';
+import { hiddenLineCount, type HiddenLineOwner } from '../../data-access/hidden-links';
 
 /**
  * The linked objects a Relations tab lists (lot R1, `applications-relations.service.ts`), shared by
@@ -172,6 +173,44 @@ export async function listRelatedBudgetLines(
       ...(fxMissing ? { fx_missing: fxMissing } : {}),
     };
   });
+}
+
+/**
+ * The budget lines section of a Relations tab (spec §5.4). `budget_lines` lists the linked lines
+ * the caller reads, or is null without the right to read the budget. `budget_lines_hidden` counts
+ * the linked lines the list leaves out: those outside a limited person's data access
+ * (`data_access_hidden_count`, "and 3 lines outside your access"), or, without the budget right,
+ * every linked line ("3 budget lines"), never named.
+ */
+export type RelatedBudgetLinesSection = {
+  budget_lines: RelatedBudgetLine[] | null;
+  budget_lines_hidden: number;
+};
+
+export async function readRelatedBudgetLines(
+  mg: EntityManager,
+  fxRates: Pick<FxRateService, 'resolveRates' | 'convertValue'>,
+  t: RelationLinkTable,
+  owner: HiddenLineOwner,
+  tenantId: string,
+  ownerId: string,
+  year: number,
+  measure: string,
+  readsBudget: boolean,
+): Promise<RelatedBudgetLinesSection> {
+  const hidden = await hiddenLineCount(mg, owner, ownerId);
+  if (readsBudget) {
+    return { budget_lines: await listRelatedBudgetLines(mg, fxRates, t, tenantId, ownerId, year, measure), budget_lines_hidden: hidden };
+  }
+  const line = t.target ?? 'spend_item_id';
+  const [row]: Array<{ n: number }> = await mg.query(
+    `SELECT count(DISTINCT i.id)::int AS n
+     FROM ${t.links} l
+     JOIN spend_items i ON i.id = l.${line} AND i.tenant_id = l.tenant_id${naturesAnd('i', BUDGET_NATURES)}
+     WHERE l.tenant_id = $1 AND l.${t.owner} = $2`,
+    [tenantId, ownerId],
+  );
+  return { budget_lines: null, budget_lines_hidden: Number(row?.n ?? 0) + hidden };
 }
 
 /** The contracts linked through `t.links` (column `contract_id`), with their current end and renewal window. */

@@ -18,6 +18,7 @@ import { PortfolioRequestUrl } from './portfolio-request-url.entity';
 import { PortfolioRequestAttachment } from './portfolio-request-attachment.entity';
 import { PortfolioRequestOpex } from './portfolio-request-opex.entity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, OPEX_ITEMS_NOT_FOUND } from './project-budget-links.util';
+import { assertNoHiddenLines } from '../data-access/hidden-links';
 import { PortfolioRequestBusinessProcess } from './portfolio-request-business-process.entity';
 import { PortfolioRequestDependency } from './portfolio-request-dependency.entity';
 import { PortfolioProjectDependency } from './portfolio-project-dependency.entity';
@@ -2768,6 +2769,8 @@ export class PortfolioRequestsService {
       throw new RecordInUseException('REQUEST_CONVERTED', 'request', request.name, [],
         'Converted requests cannot be deleted: the project keeps them as its origin.');
     }
+    // Its cascade would drop links to lines the person cannot read (spec §5.4).
+    await assertNoHiddenLines(mg, 'request', request.id);
 
     await this.integratedDocuments.deleteForEntity('requests', id, userId, { manager: mg });
 
