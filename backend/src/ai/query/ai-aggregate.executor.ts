@@ -1405,7 +1405,9 @@ export class AiAggregateExecutor {
       scope?: AiQueryScope;
     },
   ): Promise<AiAggregateResult> {
-    const registry = await resolveAiEntityRegistry(context, input.entity_type);
+    // The policy decides which linked counts the caller may group, filter and aggregate.
+    const registry = await resolveAiEntityRegistry(context, input.entity_type, async (entityType) =>
+      !!(await this.policy?.canReadEntityType(context, entityType, context.manager)));
     const field = registry.fields[input.group_by];
     if (!field || field.groupable !== true) {
       throw new BadRequestException('Unsupported group_by field.');

@@ -2776,6 +2776,27 @@ export class AiEntityService {
     return output;
   }
 
+  /**
+   * The groups whose records the caller reads, each on its family's read right, as on the
+   * record's page: reading an application or an asset does not open its projects or requests.
+   */
+  private async readableGroups(
+    context: AiExecutionContextWithManager,
+    groups: AiEntityRelationshipGroupDto[],
+  ): Promise<AiEntityRelationshipGroupDto[]> {
+    const reads = new Map<string, Promise<boolean>>();
+    const canRead = (entityType: AiEntitySummaryDto['type']) => {
+      if (!reads.has(entityType)) reads.set(entityType, this.policy.canReadEntityType(context, entityType, context.manager));
+      return reads.get(entityType)!;
+    };
+    const kept: AiEntityRelationshipGroupDto[] = [];
+    for (const group of groups) {
+      const types = Array.from(new Set(group.items.map((item) => item.type)));
+      if ((await Promise.all(types.map(canRead))).every(Boolean)) kept.push(group);
+    }
+    return kept;
+  }
+
   private async buildApplicationContext(context: AiExecutionContextWithManager, applicationId: string, manager: AiExecutionContextWithManager['manager']): Promise<AiEntityContextPayloadDto> {
     const requestSummarySql = buildRequestSummarySql('r');
     const projectSummarySql = buildProjectSummarySql('p');
@@ -2889,13 +2910,13 @@ export class AiEntityService {
           it_owners: itOwners,
         },
       },
-      related: [
+      related: await this.readableGroups(context, [
         { relation: 'linked_requests', label: 'Linked Requests', items: requestRows.map((row) => toSummary('requests', row)) },
         { relation: 'linked_projects', label: 'Linked Projects', items: projectRows.map((row) => toSummary('projects', row)) },
         { relation: 'related_applications', label: 'Related Applications', items: this.dedupe(relatedApplicationRows.map((row) => toSummary('applications', row))) },
         { relation: 'linked_assets', label: 'Linked Assets', items: this.dedupe(assetRows.map((row) => toSummary('assets', row))) },
         ...await this.applicationTechnologyGroups(context, applicationId),
-      ].filter((group) => group.items.length > 0),
+      ].filter((group) => group.items.length > 0)),
       knowledge: await this.getKnowledgeContext(context, 'applications', applicationId, manager),
     };
   }
@@ -2994,13 +3015,13 @@ export class AiEntityService {
           zone: asset.zone,
         },
       },
-      related: [
+      related: await this.readableGroups(context, [
         { relation: 'linked_requests', label: 'Linked Requests', items: requestRows.map((row) => toSummary('requests', row)) },
         { relation: 'linked_projects', label: 'Linked Projects', items: projectRows.map((row) => toSummary('projects', row)) },
         { relation: 'related_assets', label: 'Related Assets', items: this.dedupe(relatedAssetRows.map((row) => toSummary('assets', row))) },
         { relation: 'linked_applications', label: 'Linked Applications', items: this.dedupe(applicationRows.map((row) => toSummary('applications', row))) },
         ...await this.assetTechnologyGroups(context, assetId),
-      ].filter((group) => group.items.length > 0),
+      ].filter((group) => group.items.length > 0)),
       knowledge: await this.getKnowledgeContext(context, 'assets', assetId, manager),
     };
   }
