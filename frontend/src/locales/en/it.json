@@ -2160,7 +2160,13 @@
         "narrowSearch": "Narrow your search",
         "removeOsTitle": "Remove the operating system?",
         "removeOsMessage": "A cluster with members has no operating system: {{os}} will be removed.",
-        "removeOsConfirm": "Remove and save"
+        "removeOsConfirm": "Remove and save",
+        "removeMembersTitle": "Remove members?",
+        "removeMemberLine": "{{member}} will no longer host {{applications}}.",
+        "removeAnyway": "Remove anyway",
+        "andOthers_one": "{{count}} other",
+        "andOthers_other": "{{count}} others",
+        "differentEnvironment": "Different environment from the cluster"
       },
       "newAsset": "New asset",
       "untitled": "Untitled asset",

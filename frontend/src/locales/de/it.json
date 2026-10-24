@@ -2160,7 +2160,13 @@
         "narrowSearch": "Suche eingrenzen",
         "removeOsTitle": "Betriebssystem entfernen?",
         "removeOsMessage": "Ein Cluster mit Mitgliedern hat kein Betriebssystem: {{os}} wird entfernt.",
-        "removeOsConfirm": "Entfernen und speichern"
+        "removeOsConfirm": "Entfernen und speichern",
+        "removeMembersTitle": "Mitglieder entfernen?",
+        "removeMemberLine": "{{member}} hostet {{applications}} nicht mehr.",
+        "removeAnyway": "Trotzdem entfernen",
+        "andOthers_one": "{{count}} weitere",
+        "andOthers_other": "{{count}} weitere",
+        "differentEnvironment": "Andere Umgebung als das Cluster"
       },
       "newAsset": "Neues Asset",
       "untitled": "Unbenanntes Asset",

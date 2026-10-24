@@ -2160,7 +2160,13 @@
         "narrowSearch": "Afine la búsqueda",
         "removeOsTitle": "¿Quitar el sistema operativo?",
         "removeOsMessage": "Un clúster con miembros no tiene sistema operativo: se quitará {{os}}.",
-        "removeOsConfirm": "Quitar y guardar"
+        "removeOsConfirm": "Quitar y guardar",
+        "removeMembersTitle": "¿Quitar miembros?",
+        "removeMemberLine": "{{member}} ya no alojará {{applications}}.",
+        "removeAnyway": "Quitar de todos modos",
+        "andOthers_one": "{{count}} más",
+        "andOthers_other": "{{count}} más",
+        "differentEnvironment": "Entorno distinto al del clúster"
       },
       "newAsset": "Nuevo activo",
       "untitled": "Activo sin nombre",

@@ -41,7 +41,9 @@ vi.mock('../workspace/hooks/useRecentlyViewed', () => ({ useRecentlyViewed: () =
 vi.mock('./editors/HardwareInfoPanel', () => ({ default: () => null }));
 vi.mock('./editors/SupportInfoPanel', () => ({ default: () => null }));
 vi.mock('./workspace/AssetRelationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/AssetDependenciesTab', () => ({ default: () => null }));
+vi.mock('./workspace/AssetDependenciesTab', () => ({
+  default: ({ clusterSection }: { clusterSection?: React.ReactNode }) => <div>{clusterSection}</div>,
+}));
 vi.mock('./components/AssetTechnologiesSection', async (importOriginal) => ({ ...(await importOriginal<any>()), default: () => null }));
 vi.mock('../../components/EntityKnowledgePanel', () => ({ default: () => null }));
 vi.mock('../../components/fields/LocationSelect', () => ({ default: () => null }));
@@ -90,7 +92,7 @@ const inherited = {
   application: { id: 'app-1', name: 'CheeseTrack' }, environment: 'prod', inherited: true, via_clusters: [{ id: 'cl-1', name: 'PAR-SQL-CL01' }], groupable: null,
 };
 
-function renderOperations() {
+function renderOperations(tab = 'operations') {
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return { data: wire.asset };
     if (url === '/assets/asset-1/assignments') return { data: wire.assignments };
@@ -108,7 +110,7 @@ function renderOperations() {
     <ThemeProvider theme={createAppTheme('light')}>
       <QueryClientProvider client={new QueryClient({ defaultOptions: { queries: { retry: false } } })}>
         <KanapDialogProvider>
-          <MemoryRouter initialEntries={['/it/assets/asset-1/operations']}>
+          <MemoryRouter initialEntries={[`/it/assets/asset-1/${tab}`]}>
             <Routes>
               <Route path="/it/assets/:id/:tab" element={<AssetWorkspacePage />} />
             </Routes>
@@ -234,5 +236,80 @@ describe('Asset workspace: assignments and clusters', () => {
     const buttons = screen.getAllByRole('button', { name: 'Assign to the cluster' });
     fireEvent.click(buttons[buttons.length - 1]);
     await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/dep-1/assets', { server_id: 'asset-1', role: 'db' }));
+  });
+
+  describe('members of a cluster', () => {
+    const member = (id: string, name: string, environment = 'prod') => ({ id, name, environment, status: 'active', kind: 'virtual_machine', provider: 'on_prem' });
+    const row = (id: string, app: string) => ({ ...direct, id, app_instance_id: `dep-${id}`, application: { id: `app-${id}`, name: app } });
+
+    async function openMembers(clusterOs: string | null = null) {
+      wire.asset = { ...ASSET, is_cluster: true, operating_system: clusterOs } as never;
+      wire.members = [member('sql-1', 'PAR-SQL-01'), member('sql-2', 'PAR-SQL-02', 'qa')];
+      renderOperations('dependencies');
+      fireEvent.click(await screen.findByRole('button', { name: 'Edit members' }));
+      return screen.findByRole('dialog');
+    }
+    const removeSecond = (dialog: HTMLElement) => fireEvent.click(within(dialog).getAllByTestId('CancelIcon')[1]);
+    const save = (dialog: HTMLElement) => fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+
+    it('says what a removed member stops hosting, and removes it on "Remove anyway"', async () => {
+      wire.assignments = { items: [row('b', 'Sage X3'), row('a', 'CheeseTrack')], groupable: [] };
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      expect(await screen.findByText('PAR-SQL-02 will no longer host CheeseTrack and Sage X3.')).toBeTruthy();
+      expect(post).not.toHaveBeenCalled();
+      fireEvent.click(screen.getByRole('button', { name: 'Remove anyway' }));
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1'] }));
+    });
+
+    it('names three applications and counts the others', async () => {
+      wire.assignments = { items: [row('a', 'Alpha'), row('b', 'Bravo'), row('c', 'Charlie'), row('d', 'Delta'), row('e', 'Echo')], groupable: [] };
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      expect(await screen.findByText('PAR-SQL-02 will no longer host Alpha, Bravo, Charlie, and 2 others.')).toBeTruthy();
+    });
+
+    it('writes nothing when the question is cancelled', async () => {
+      wire.assignments = { items: [row('a', 'CheeseTrack')], groupable: [] };
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      const ask = (await screen.findByText('Remove members?')).closest('[role="dialog"]') as HTMLElement;
+      fireEvent.click(within(ask).getByRole('button', { name: 'Cancel' }));
+      await waitFor(() => expect(screen.queryByText('Remove members?')).toBeNull());
+      expect(post).not.toHaveBeenCalled();
+    });
+
+    it('asks nothing when the cluster carries no assignment', async () => {
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1'] }));
+      expect(screen.queryByText('Remove members?')).toBeNull();
+    });
+
+    it('asks once for the removed members and the operating system', async () => {
+      wire.assignments = { items: [row('a', 'CheeseTrack')], groupable: [] };
+      const dialog = await openMembers('Windows Server 2022');
+      removeSecond(dialog);
+      save(dialog);
+      const ask = (await screen.findByText('Remove members?')).closest('[role="dialog"]') as HTMLElement;
+      expect(within(ask).getByText('PAR-SQL-02 will no longer host CheeseTrack.')).toBeTruthy();
+      expect(within(ask).getByText('A cluster with members has no operating system: Windows Server 2022 will be removed.')).toBeTruthy();
+      fireEvent.click(within(ask).getByRole('button', { name: 'Remove anyway' }));
+      await waitFor(() => expect(post).toHaveBeenCalledTimes(1));
+      expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1'], remove_operating_system: true });
+    });
+
+    it('flags a member of another environment than the cluster on its chip, and refuses nothing', async () => {
+      const dialog = await openMembers();
+      const flagged = within(dialog).getAllByLabelText('Different environment from the cluster');
+      expect(flagged.length).toBe(1);
+      expect(within(dialog).getByText('PAR-SQL-02').closest('.MuiChip-root')?.contains(flagged[0])).toBe(true);
+      save(dialog);
+      await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1', 'sql-2'] }));
+    });
   });
 });

@@ -26,6 +26,7 @@ import {
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useNavigate, useParams, useSearchParams } from 'react-router-dom';
 import CloseIcon from '@mui/icons-material/Close';
+import WarningAmberOutlinedIcon from '@mui/icons-material/WarningAmberOutlined';
 import api from '../../api';
 import useItOpsEnumOptions from '../../hooks/useItOpsEnumOptions';
 import EditIcon from '@mui/icons-material/Edit';
@@ -57,6 +58,7 @@ import EntityKnowledgePanel from '../../components/EntityKnowledgePanel';
 import { useAuth } from '../../auth/AuthContext';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useLocale } from '../../i18n/useLocale';
+import { joinNames } from '../working-day-calendars/workingDayCalendarFields';
 
 import { useTranslation } from 'react-i18next';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
@@ -1116,14 +1118,60 @@ export default function AssetWorkspacePage() {
     confirmLabel: t('workspace.asset.editMembersDialog.removeOsConfirm'),
   });
 
+  /** A8: the applications a cluster carries on its own rows (what its members inherit), by name. */
+  const clusterApplicationNames = async (): Promise<string[]> => {
+    let rows = assignments;
+    try {
+      rows = (await api.get<{ items: AssignmentRow[] }>(`/assets/${id}/assignments`)).data?.items ?? assignments;
+    } catch {
+      // The rows read with the page stand in.
+    }
+    return Array.from(new Set(rows.filter((row) => !row.inherited).map((row) => row.application.name)))
+      .sort((a, b) => a.localeCompare(b));
+  };
+
+  /** "CheeseTrack, Sage X3 and 2 others": the first three, then a count. */
+  const applicationList = (names: string[]) => joinNames(
+    names.length > 3
+      ? [...names.slice(0, 3), t('workspace.asset.editMembersDialog.andOthers', { count: names.length - 3 })]
+      : names,
+    locale,
+  );
+
+  /**
+   * One question for what a save takes away: the applications each removed member stops hosting (A8)
+   * and, with the first members, the operating system of the cluster. One sentence per fact.
+   */
+  const confirmMemberChanges = (lines: string[], os: string | null) => {
+    if (lines.length === 0) return confirmOperatingSystemRemoval(os ?? '');
+    return dialogs.confirm({
+      title: t('workspace.asset.editMembersDialog.removeMembersTitle'),
+      message: (
+        <Box sx={{ display: 'grid', gap: 0.75 }}>
+          {[...lines, ...(os ? [t('workspace.asset.editMembersDialog.removeOsMessage', { os })] : [])].map((line) => (
+            <Typography key={line} sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>{line}</Typography>
+          ))}
+        </Box>
+      ),
+      confirmLabel: t('workspace.asset.editMembersDialog.removeAnyway'),
+    });
+  };
+
   const handleSaveMembers = async () => {
     if (isCreate || !id) return;
     const ids = memberSelection.map((m) => m.id);
     let removeOperatingSystem = false;
+    // A8: the members taken out stop hosting what the cluster carries.
+    const removed = clusterMembers.filter((m) => !ids.includes(m.id));
+    const applications = removed.length > 0 ? await clusterApplicationNames() : [];
+    const lines = applications.length > 0
+      ? removed.map((m) => t('workspace.asset.editMembersDialog.removeMemberLine', { member: m.name, applications: applicationList(applications) }))
+      : [];
     // The first members of a cluster that carries an operating system take it away.
-    if (ids.length > 0 && data?.operating_system) {
-      if (!(await confirmOperatingSystemRemoval(data.operating_system))) return;
-      removeOperatingSystem = true;
+    const os = ids.length > 0 && data?.operating_system ? data.operating_system : null;
+    if (lines.length > 0 || os) {
+      if (!(await confirmMemberChanges(lines, os))) return;
+      removeOperatingSystem = !!os;
     }
     setMemberSaveError(null);
     for (;;) {
@@ -2553,6 +2601,28 @@ export default function AssetWorkspacePage() {
               isOptionEqualToValue={(opt, val) => opt.id === val.id}
               getOptionDisabled={(opt) => opt.id === MORE_MEMBERS_ROW.id || opt.id === id || !!opt.is_cluster}
               getOptionLabel={(opt) => opt.name}
+              renderTags={(chosen, getTagProps) => chosen.map((option, index) => {
+                const { key, ...tagProps } = getTagProps({ index });
+                // A8: another environment than the cluster's is allowed, and flagged on the chip.
+                const differs = !!option.environment && !!data?.environment && option.environment !== data.environment;
+                return (
+                  <Chip
+                    key={key}
+                    label={option.name}
+                    icon={differs ? (
+                      <Tooltip title={t('workspace.asset.editMembersDialog.differentEnvironment')}>
+                        <WarningAmberOutlinedIcon
+                          role="img"
+                          aria-hidden={false}
+                          aria-label={t('workspace.asset.editMembersDialog.differentEnvironment')}
+                          sx={{ color: `${getDotColor('warning', theme.palette.mode)} !important` }}
+                        />
+                      </Tooltip>
+                    ) : undefined}
+                    {...tagProps}
+                  />
+                );
+              })}
               renderOption={(props, option) => (
                 option.id === MORE_MEMBERS_ROW.id ? (
                   <li {...props} key={option.id}>

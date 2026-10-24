@@ -2160,7 +2160,13 @@
         "narrowSearch": "Affinez la recherche",
         "removeOsTitle": "Retirer le système d'exploitation ?",
         "removeOsMessage": "Un cluster avec des membres n'a pas de système d'exploitation : {{os}} sera retiré.",
-        "removeOsConfirm": "Retirer et enregistrer"
+        "removeOsConfirm": "Retirer et enregistrer",
+        "removeMembersTitle": "Retirer des membres ?",
+        "removeMemberLine": "{{member}} n'hébergera plus {{applications}}.",
+        "removeAnyway": "Retirer quand même",
+        "andOthers_one": "{{count}} autre",
+        "andOthers_other": "{{count}} autres",
+        "differentEnvironment": "Environnement différent du cluster"
       },
       "newAsset": "Nouvel actif",
       "untitled": "Actif sans nom",
