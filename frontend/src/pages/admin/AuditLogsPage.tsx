@@ -8,10 +8,12 @@ import {
   Dialog,
   DialogContent,
   DialogTitle,
+  IconButton,
   Stack,
   Typography,
 } from '@mui/material';
 import { useTranslation } from 'react-i18next';
+import CloseIcon from '@mui/icons-material/Close';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef } from '../../components/ServerDataGrid';
 import ForbiddenPage from '../ForbiddenPage';
@@ -306,7 +308,12 @@ export default function AuditLogsPage() {
       />
 
       <Dialog open={open} onClose={() => setOpen(false)} fullWidth maxWidth="xl">
-        <DialogTitle>{t('auditLogs.details.title')}</DialogTitle>
+        <DialogTitle sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+          <Box component="span" sx={{ flex: 1, minWidth: 0 }}>{t('auditLogs.details.title')}</Box>
+          <IconButton aria-label={t('common:labels.closeDialog')} onClick={() => setOpen(false)} size="small">
+            <CloseIcon sx={{ fontSize: 18 }} />
+          </IconButton>
+        </DialogTitle>
         <DialogContent dividers>
           {detailQuery.isLoading && (
             <Box sx={{ py: 4, display: 'flex', justifyContent: 'center' }}>
