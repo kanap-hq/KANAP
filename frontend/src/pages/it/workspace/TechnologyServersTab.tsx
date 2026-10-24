@@ -202,7 +202,7 @@ export default function TechnologyServersTab({ technologyId, versions, canManage
       ) : muted(row, versionText(row))),
     },
     {
-      key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140, hideOrder: 2,
+      key: 'via', header: <span title={t('workspace.technology.servers.columns.viaHint')}>{t('workspace.technology.servers.columns.via')}</span>, width: 140, wrap: true, hideOrder: 2,
       render: (row) => {
         // Every asset that carries the line (a cluster's members), not only the first.
         const via = (row.via_assets ?? []).map((asset) => ({ id: asset.id, name: asset.name ?? dash, reference: asset.reference }));

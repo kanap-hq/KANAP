@@ -142,7 +142,7 @@ export default function ReachVulnerabilitiesSection({ data, kind, subjectReferen
     key: 'via',
     header: t('pages.vulnerabilities.reach.via'),
     width: 150,
-    minWidth: 64,
+    wrap: true,
     render: (row) => <ViaAssetNames assets={viaOf(row)} />,
   };
 

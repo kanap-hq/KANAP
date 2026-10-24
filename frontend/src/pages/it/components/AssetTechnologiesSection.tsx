@@ -195,7 +195,7 @@ export default function AssetTechnologiesSection({ assetId, canManage, heading }
       },
     },
     {
-      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140, hideOrder: 1,
+      key: 'via', header: <span title={t('workspace.asset.technologies.columns.viaHint')}>{t('workspace.asset.technologies.columns.via')}</span>, width: 140, wrap: true, hideOrder: 1,
       render: (row) => {
         if (row.via_assets && row.via_assets.length > 0) return <ViaAssetNames assets={row.via_assets} />;
         return row.via_asset_name ? <span title={row.via_asset_name}>{row.via_asset_name}</span> : null;
