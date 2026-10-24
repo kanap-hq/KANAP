@@ -10,7 +10,7 @@ import { RelationRef, RelationsEmpty, RelationsSection, RelationsTable, type Rel
 import { ASSET_IMPACT_CLUSTER_COLORS, getDotColor } from '../../../utils/statusColors';
 
 type Ref = { id: string; name: string };
-type ImpactAsset = { id: string; reference: string | null; name: string; kind: string; depth: number; relation: 'contains' | 'depends_on' | null; via: Ref[] };
+type ImpactAsset = { id: string; reference: string | null; name: string; kind: string; depth: number; relation: 'contains' | 'depends_on' | 'member' | null; via: Ref[] };
 type ImpactCluster = { id: string; reference: string | null; name: string; state: 'degraded' | 'down'; members: number; fallen_members: number; via: Ref[]; via_total: number };
 type ImpactApplication = { id: string; reference: string | null; name: string; criticality: string | null; environments: string[]; via: Ref[]; via_total: number };
 type ImpactTechnology = { id: string; reference: string; name: string; versions: string[]; via: Ref[]; via_total: number };
