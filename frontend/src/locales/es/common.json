@@ -1293,7 +1293,7 @@
     "newLink": "Nuevo enlace",
     "editLink": "Editar enlace",
     "editLinkNamed": "Editar {{name}}",
-    "removeNamed": "Quitar {{name}}",
+    "removeNamed": "Eliminar {{name}}",
     "placeholders": {
       "name": "p. ej., Portal del proveedor",
       "url": "p. ej., https://status.example.com"

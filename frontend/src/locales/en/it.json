@@ -1913,7 +1913,10 @@
           "unlinked": "{{name}} unlinked.",
           "linkAdded": "Link added.",
           "linkUpdated": "Link updated.",
-          "linkRemoved": "Link removed."
+          "linkRemoved": "Link deleted.",
+          "fileAttached_one": "File attached.",
+          "fileAttached_other": "{{count}} files attached.",
+          "fileDeleted": "File deleted."
         }
       },
       "untitled": "Untitled application",

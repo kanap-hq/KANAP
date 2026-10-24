@@ -1293,7 +1293,7 @@
     "newLink": "Neuer Link",
     "editLink": "Link bearbeiten",
     "editLinkNamed": "{{name}} bearbeiten",
-    "removeNamed": "{{name}} entfernen",
+    "removeNamed": "{{name}} löschen",
     "placeholders": {
       "name": "z. B. Herstellerportal",
       "url": "z. B. https://status.example.com"

@@ -1293,7 +1293,7 @@
     "newLink": "New link",
     "editLink": "Edit link",
     "editLinkNamed": "Edit {{name}}",
-    "removeNamed": "Remove {{name}}",
+    "removeNamed": "Delete {{name}}",
     "placeholders": {
       "name": "e.g., Vendor portal",
       "url": "e.g., https://status.example.com"

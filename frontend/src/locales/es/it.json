@@ -1913,7 +1913,10 @@
           "unlinked": "{{name}} desvinculado.",
           "linkAdded": "Enlace añadido.",
           "linkUpdated": "Enlace actualizado.",
-          "linkRemoved": "Enlace retirado."
+          "linkRemoved": "Enlace eliminado.",
+          "fileAttached_one": "Archivo adjuntado.",
+          "fileAttached_other": "{{count}} archivos adjuntados.",
+          "fileDeleted": "Archivo eliminado."
         }
       },
       "untitled": "Aplicación sin nombre",

@@ -1913,7 +1913,10 @@
           "unlinked": "{{name}} délié.",
           "linkAdded": "Lien ajouté.",
           "linkUpdated": "Lien modifié.",
-          "linkRemoved": "Lien retiré."
+          "linkRemoved": "Lien supprimé.",
+          "fileAttached_one": "Fichier joint.",
+          "fileAttached_other": "{{count}} fichiers joints.",
+          "fileDeleted": "Fichier supprimé."
         }
       },
       "untitled": "Application sans nom",

@@ -69,4 +69,23 @@ describe('ApplicationRelationsPanel', () => {
     await waitFor(() => expect(mocked.post).toHaveBeenCalledWith('/applications/app-1/links', { description: null, url: 'https://docs.example.com' }));
     expect(await screen.findByText('Link added.')).toBeTruthy();
   });
+
+  it('says when a file is attached and when it is deleted', async () => {
+    renderPanel();
+    let stored = false;
+    mocked.get.mockImplementation(async (url: string) => {
+      if (url === '/applications/app-1/attachments') return { data: stored ? [{ id: 'f-1', original_filename: 'Architecture.pdf', size: 1, uploaded_at: '2026-10-24T00:00:00Z' }] : [] } as never;
+      if (url === '/applications/app-1/links') return { data: [] } as never;
+      return { data: { items: [] } } as never;
+    });
+    mocked.post.mockImplementation(async () => { stored = true; return { data: {} } as never; });
+    mocked.patch.mockResolvedValue({ data: {} } as never);
+    fireEvent.change(await screen.findByLabelText('Attach file'), { target: { files: [new File(['x'], 'Architecture.pdf', { type: 'application/pdf' })] } });
+    expect(await screen.findByText('File attached.')).toBeTruthy();
+
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete file Architecture.pdf' }));
+    fireEvent.click(await screen.findByRole('button', { name: 'Delete' }));
+    await waitFor(() => expect(mocked.patch).toHaveBeenCalledWith('/applications/attachments/f-1/delete', {}));
+    expect(await screen.findByText('File deleted.')).toBeTruthy();
+  });
 });

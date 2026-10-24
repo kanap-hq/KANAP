@@ -1913,7 +1913,10 @@
           "unlinked": "{{name}} getrennt.",
           "linkAdded": "Link hinzugefügt.",
           "linkUpdated": "Link aktualisiert.",
-          "linkRemoved": "Link entfernt."
+          "linkRemoved": "Link gelöscht.",
+          "fileAttached_one": "Datei angehängt.",
+          "fileAttached_other": "{{count}} Dateien angehängt.",
+          "fileDeleted": "Datei gelöscht."
         }
       },
       "untitled": "Unbenannte Anwendung",

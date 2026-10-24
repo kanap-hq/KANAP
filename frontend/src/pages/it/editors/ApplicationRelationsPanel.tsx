@@ -112,12 +112,15 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
   const uploadFiles = async (chosen: File[]) => {
     setError(null);
     setUploading(chosen.length);
+    let attached = 0;
     try {
       for (const file of chosen) {
         const form = new FormData();
         form.append('file', file);
         await api.post(`/applications/${id}/attachments`, form);
+        attached += 1;
       }
+      feedback.info(t('workspace.application.relations.feedback.fileAttached', { count: attached }));
     } catch (e) {
       failed(e);
     } finally {
@@ -151,6 +154,7 @@ export default function ApplicationRelationsPanel({ id, isSuite = false, onRelat
     setError(null);
     try {
       await api.patch(`/applications/attachments/${file.id}/delete`, {});
+      feedback.info(t('workspace.application.relations.feedback.fileDeleted'));
     } catch (e) {
       failed(e);
     }

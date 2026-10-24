@@ -1293,7 +1293,7 @@
     "newLink": "Nouveau lien",
     "editLink": "Modifier le lien",
     "editLinkNamed": "Modifier {{name}}",
-    "removeNamed": "Retirer {{name}}",
+    "removeNamed": "Supprimer {{name}}",
     "placeholders": {
       "name": "ex. : Portail de l’éditeur",
       "url": "ex. : https://status.example.com"
