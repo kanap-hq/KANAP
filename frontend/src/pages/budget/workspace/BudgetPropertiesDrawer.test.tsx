@@ -29,7 +29,11 @@ vi.mock('../../../components/fields/CompanySelect', () => ({
 }));
 // The placements a limited data access allows (null: unscoped, no filter).
 const placement = vi.hoisted(() => ({
-  filter: null as null | { companyIds: ReadonlySet<string>; isCostCenterAllowed: (node: { id: string; company_id: string | null }) => boolean },
+  filter: null as null | {
+    companyIds: ReadonlySet<string>;
+    isCostCenterAllowed: (node: { id: string; company_id: string | null }) => boolean;
+    costCenterRequired: boolean;
+  },
   companies: [] as Array<string | null>,
 }));
 vi.mock('../../../hooks/usePlacementOptions', () => ({
@@ -72,10 +76,14 @@ vi.mock('../../../components/fields/CostCenterSelect', () => ({
     companyId?: string | null;
     selectedOption?: { code: string } | null;
     isAllowed?: ((node: { id: string; company_id: string | null }) => boolean) | null;
+    required?: boolean;
+    disableClearable?: boolean;
     onChange: (v: string | null, node: unknown) => void;
   }) => (
     <div
       data-testid="cost-center-select"
+      data-required={String(!!p.required)}
+      data-clearable={String(!p.disableClearable)}
       data-selectable={p.selectable}
       data-company={p.companyId ?? ''}
       data-known={p.selectedOption?.code ?? ''}
@@ -470,10 +478,34 @@ describe('BudgetPropertiesDrawer limited data access', () => {
     placement.filter = {
       companyIds: new Set(['company-2']),
       isCostCenterAllowed: (node) => node.id === 'cc-2',
+      costCenterRequired: false,
     };
     renderDrawer({ payingCompanyId: 'company-2', mode: 'create' });
     expect(screen.getByTestId('company-select')).toHaveAttribute('data-allowed', 'company-2');
     expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-allowed', 'cc-2');
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-required', 'false');
     expect(placement.companies).toContain('company-2');
+  });
+
+  it('requires a cost center when the paying company is allowed only through one', () => {
+    placement.filter = {
+      companyIds: new Set(['company-2']),
+      isCostCenterAllowed: (node) => node.id === 'cc-2',
+      costCenterRequired: true,
+    };
+    renderDrawer({ payingCompanyId: 'company-2', costCenterId: 'cc-2', mode: 'edit' });
+    const picker = screen.getByTestId('cost-center-select');
+    expect(picker).toHaveAttribute('data-required', 'true');
+    expect(picker).toHaveAttribute('data-clearable', 'false');
+  });
+
+  it('asks the filter for no paying company while the company follows the cost center', () => {
+    placement.filter = {
+      companyIds: new Set(['company-2']),
+      isCostCenterAllowed: () => true,
+      costCenterRequired: false,
+    };
+    renderDrawer({ payingCompanyId: 'company-2', costCenterId: 'cc-2', mode: 'create', companyFollowsCostCenter: true });
+    expect(placement.companies).toEqual([null]);
   });
 });

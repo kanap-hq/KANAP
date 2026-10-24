@@ -151,8 +151,10 @@ export default function BudgetPropertiesDrawer({
   // dimension, or one for the other nature only, shows no select; its value stays on the line. When the
   // dimensions cannot be loaded, one line says so.
   const analyticsAxes = useAnalyticsAxes({ scope: nature });
-  // A limited data access offers only the companies and cost centers the line may be placed on.
-  const placement = useLinePlacementFilter(payingCompanyId || null);
+  // A limited data access offers only the companies and cost centers the line may be placed on. A
+  // paying company that follows the cost center is not a choice yet: every placeable cost center.
+  const placement = useLinePlacementFilter(companyFollowsCostCenter ? null : payingCompanyId || null);
+  const costCenterRequired = placement?.costCenterRequired === true;
   // An open dimension's picker adds a typed value for this line, or for the place of the line being created.
   const newValueFor = mode === 'create'
     ? { payingCompanyId: payingCompanyId || null, costCenterId: costCenterId || null }
@@ -191,7 +193,7 @@ export default function BudgetPropertiesDrawer({
             <SupplierSelect hideLabel label={t('opex.fields.supplier')} value={supplierId} onChange={(v) => onSupplierChange(v ?? '')} disabled={disabled} selectedOption={matching(references?.supplier, supplierId)} />
           </Box>
         </PropertyRow>
-        <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint}>
+        <PropertyRow label={t('opex.fields.costCenter')} helperText={costCenterHint} required={costCenterRequired}>
           <Box sx={hideInnerLabelSx}>
             <CostCenterSelect
               hideLabel
@@ -202,6 +204,8 @@ export default function BudgetPropertiesDrawer({
               selectedOption={matching(references?.cost_center, costCenterId)}
               onChange={(v, node) => onCostCenterChange(v ?? '', node)}
               isAllowed={placement?.isCostCenterAllowed}
+              required={costCenterRequired}
+              disableClearable={costCenterRequired}
               disabled={disabled}
             />
           </Box>

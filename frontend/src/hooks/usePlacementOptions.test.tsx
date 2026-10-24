@@ -40,13 +40,24 @@ describe('useLinePlacementFilter', () => {
     await waitFor(() => expect(result.current).not.toBeNull());
     expect(state.get).toHaveBeenCalledWith('/data-access/placement-options');
     expect([...result.current!.companyIds].sort()).toEqual(['es', 'fr']);
-    // On FR (reached through its cost center only): that cost center, and those of ES.
+    // On FR (reached through its cost center only): that cost center alone, and one is required.
     expect(result.current!.isCostCenterAllowed(node('inf-fr', 'fr'))).toBe(true);
     expect(result.current!.isCostCenterAllowed(node('fin-fr', 'fr'))).toBe(false);
-    expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(true);
-    // On ES (a company of the access): any cost center.
+    expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(false);
+    expect(result.current!.costCenterRequired).toBe(true);
+    // On ES (a company of the access): its own cost centers, or none.
     rerender({ company: 'es' });
-    expect(result.current!.isCostCenterAllowed(node('fin-fr', 'fr'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('fin-es', 'es'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('inf-fr', 'fr'))).toBe(false);
+    expect(result.current!.isCostCenterAllowed(node('fin-fr', 'fr'))).toBe(false);
+    expect(result.current!.costCenterRequired).toBe(false);
+    // No paying company yet (it follows the cost center): every cost center the access places.
+    rerender({ company: null });
+    expect(result.current!.isCostCenterAllowed(node('inf-fr', 'fr'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('inf-es', 'es'))).toBe(true);
+    expect(result.current!.isCostCenterAllowed(node('fin-fr', 'fr'))).toBe(false);
+    expect(result.current!.costCenterRequired).toBe(false);
   });
 
   it('filters nothing for Edit on everything', async () => {

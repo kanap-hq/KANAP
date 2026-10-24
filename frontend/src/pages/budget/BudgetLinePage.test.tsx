@@ -16,6 +16,13 @@ vi.mock('react-i18next', async () => {
   return { useTranslation: () => translation, Trans };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+// A limited data access that allows company-1 only through a cost center (null: unscoped, no filter).
+const placement = vi.hoisted(() => ({ centreOnly: false }));
+vi.mock('../../hooks/usePlacementOptions', () => ({
+  useLinePlacementFilter: (companyId: string | null) => (placement.centreOnly && companyId === 'company-1'
+    ? { companyIds: new Set(['company-1']), isCostCenterAllowed: () => true, costCenterRequired: true }
+    : null),
+}));
 // The page asks before leaving with changes it could not save.
 const dialogs = vi.hoisted(() => ({ confirm: vi.fn(async () => true), alert: vi.fn(async () => undefined), prompt: vi.fn(async () => null) }));
 vi.mock('../../components/design', async (importOriginal) => ({
@@ -450,6 +457,26 @@ describe('BudgetLinePage create', () => {
     expect(await screen.findByText('opex.editor.productNameRequired')).toBeInTheDocument();
     expect(screen.queryByText('capex.editor.descriptionRequired')).not.toBeInTheDocument();
     expect(mocked.post).not.toHaveBeenCalled();
+  });
+
+  it('refuses to create a line without a cost center when the access allows its company only through one', async () => {
+    placement.centreOnly = true;
+    try {
+      renderAt(`/ops/budget/new/overview`);
+      fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+      fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+      fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      expect(await screen.findByText('opex.editor.dimensionRequired')).toBeInTheDocument();
+      expect(mocked.post).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+      expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-2' });
+    } finally {
+      placement.centreOnly = false;
+    }
   });
 
   it('refuses to create a line without an account', async () => {

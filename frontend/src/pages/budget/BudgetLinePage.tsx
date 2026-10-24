@@ -21,6 +21,7 @@ import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import { useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
+import { useLinePlacementFilter } from '../../hooks/usePlacementOptions';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
 import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
@@ -315,6 +316,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const [createForm, setCreateForm] = React.useState<BudgetLineForm>(() => createEmptyBudgetLineForm());
   const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
   const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
+  // A limited data access that allows the paying company only through cost centers: one is required.
+  const createPlacement = useLinePlacementFilter(isCreate ? createForm.paying_company_id || null : null);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -874,6 +877,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       setSaveError(t('opex.editor.accountRequired'));
       return;
     }
+    if (createPlacement?.costCenterRequired && !createForm.cost_center_id) {
+      setSaveError(t('opex.editor.dimensionRequired', { name: t('opex.fields.costCenter') }));
+      return;
+    }
     if (!createForm.effective_start) {
       setSaveError(t('opex.editor.effectiveStartRequired'));
       return;
@@ -923,7 +930,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } finally {
       setCreateSubmitting(false);
     }
-  }, [analyticsAxes, buildListContextParams, createForm, createSubmitting, navigate, queryClient, t, nature, config]);
+  }, [analyticsAxes, buildListContextParams, createForm, createPlacement, createSubmitting, navigate, queryClient, t, nature, config]);
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {
