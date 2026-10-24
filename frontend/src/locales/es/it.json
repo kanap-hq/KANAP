@@ -2264,6 +2264,8 @@
       "loading": "Cargando la tecnología…",
       "notFound": "Tecnología no encontrada.",
       "untitled": "Tecnología sin nombre",
+      "previous": "Tecnología anterior",
+      "next": "Tecnología siguiente",
       "deleteMessage": "{{name}} se eliminará. Esta acción no se puede deshacer.",
       "deleteMessageWithUsages": "{{name}} se eliminará con {{usages}}. Esta acción no se puede deshacer.",
       "deleteAnyway": "Eliminar de todos modos",

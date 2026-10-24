@@ -5,6 +5,7 @@ import MenuIcon from '@mui/icons-material/Menu';
 import { useTranslation } from 'react-i18next';
 import { Link as RouterLink } from 'react-router-dom';
 import PageHeader from '../../components/PageHeader';
+import { useKanapDialogs } from '../../components/design';
 import { useFeatures } from '../../config/FeaturesContext';
 import { useChat, MAX_PENDING_ATTACHMENTS } from '../../ai/useChat';
 import { useStickToBottom } from '../../ai/useStickToBottom';
@@ -107,6 +108,7 @@ export default function AiWorkspacePage() {
   const { config } = useFeatures();
   const queryClient = useQueryClient();
   const { t } = useTranslation(['ai']);
+  const dialogs = useKanapDialogs();
   const aiCapabilities = useAiCapabilities();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const chat = useChat();
@@ -243,6 +245,13 @@ export default function AiWorkspacePage() {
 
   const handleArchive = useCallback(
     async (id: string) => {
+      const confirmed = await dialogs.confirm({
+        title: t('conversationList.archiveConfirmTitle'),
+        message: t('conversationList.archiveConfirmMessage'),
+        confirmLabel: t('conversationList.archive'),
+        intent: 'danger',
+      });
+      if (!confirmed) return;
       if (id === chat.conversationId) {
         chat.newConversation();
       }
@@ -256,7 +265,7 @@ export default function AiWorkspacePage() {
         queryClient.invalidateQueries({ queryKey: ['ai-conversations'] });
       }
     },
-    [chat.conversationId, chat.newConversation, queryClient],
+    [chat.conversationId, chat.newConversation, dialogs, queryClient, t],
   );
 
   const handleEditMessage = useCallback((messageId: string) => {

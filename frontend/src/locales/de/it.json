@@ -2264,6 +2264,8 @@
       "loading": "Technologie wird geladen…",
       "notFound": "Technologie nicht gefunden.",
       "untitled": "Technologie ohne Namen",
+      "previous": "Vorherige Technologie",
+      "next": "Nächste Technologie",
       "deleteMessage": "{{name}} wird gelöscht. Dies kann nicht rückgängig gemacht werden.",
       "deleteMessageWithUsages": "{{name}} wird mit {{usages}} gelöscht. Dies kann nicht rückgängig gemacht werden.",
       "deleteAnyway": "Trotzdem löschen",

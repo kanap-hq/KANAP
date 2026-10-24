@@ -339,6 +339,12 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!cancelled) setIsAuthenticating(false);
         return;
       }
+      // Every sign-in writes the activity markers: without them (or a legacy token) this browser
+      // holds no session, and a refresh would only fail.
+      if (!hasStoredSession() && !legacyRefreshToken) {
+        if (!cancelled) setIsAuthenticating(false);
+        return;
+      }
       let status = await refreshAccessTokenInternal(legacyRefreshToken);
       // Server unreachable (api restarting during a reload) while this browser holds a session:
       // keep trying instead of showing a login form that could not sign in either.

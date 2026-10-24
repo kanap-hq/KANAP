@@ -2264,6 +2264,8 @@
       "loading": "Chargement de la technologie…",
       "notFound": "Technologie introuvable.",
       "untitled": "Technologie sans nom",
+      "previous": "Technologie précédente",
+      "next": "Technologie suivante",
       "deleteMessage": "{{name}} sera supprimée. Cette action est définitive.",
       "deleteMessageWithUsages": "{{name}} sera supprimée avec {{usages}}. Cette action est définitive.",
       "deleteAnyway": "Supprimer quand même",
