@@ -133,6 +133,9 @@ const FULL_DATA_ACCESS_CALLS: Record<string, number> = {
   'spend/chargeback-report.service.ts': 1,
 };
 
+/** A reference to the full-data-access module, whatever the binding it makes. */
+const FULL_DATA_ACCESS_IMPORT = /(?:\bfrom|\brequire\s*\(|\bimport\s*\()\s*['"`][^'"`]*\/full-data-access(?:\.[jt]s)?['"`]/;
+
 function testRoleChanges(): void {
   const root = backendPath();
   const files = [
@@ -153,7 +156,15 @@ function testRoleChanges(): void {
     if (n) calls[rel] = n;
   }
   assert.deepEqual(calls, FULL_DATA_ACCESS_CALLS, 'withFullDataAccess is called from the chargeback report only');
-  console.log('  role changes, withFullDataAccess called from the chargeback report only: OK');
+
+  // An import under another name, or a re-export, would escape the count above: the module itself
+  // is imported by the chargeback report only (any form: import, export from, require, import()).
+  const importers = sourceFiles().filter((rel) => {
+    if (rel === 'data-access/full-data-access.ts' || rel.startsWith('migrations/')) return false;
+    return FULL_DATA_ACCESS_IMPORT.test(codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8')));
+  });
+  assert.deepEqual(importers, Object.keys(FULL_DATA_ACCESS_CALLS), 'full-data-access is imported by the chargeback report only');
+  console.log('  role changes, withFullDataAccess called and imported from the chargeback report only: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
