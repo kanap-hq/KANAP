@@ -63,6 +63,7 @@ if (!EMAIL || !PASSWORD) {
   process.exit(2);
 }
 
+const WHY_CVE = process.env.WHY_CVE || 'CVE-2026-34486'; // CVE opened by the vulnerabilities-why-this-row shot (short, clean "Why this row")
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 
 // Dashboard widgets load independently; wait until the last skeleton is gone.
@@ -781,6 +782,63 @@ const PAGES = {
     waitFor: 'main',
     async prepare(page) {
       await page.waitForFunction(() => /If this server goes down/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): "Why this row" in the side panel of a Tomcat CVE found by both sources. Read-only.
+  'vulnerabilities-why-this-row-2026-10-24': {
+    path: '/it/vulnerabilities',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await sleep(1000);
+      const cell = (await page.$$(`xpath/.//div[@col-id="cve_id" and normalize-space(.)="${WHY_CVE}"]`))[0];
+      if (cell) await cell.click(); else console.warn(`${WHY_CVE} not found`);
+      await page.waitForFunction(() => document.body.innerText.includes('Why this row'), { timeout: 30000 });
+      await sleep(1000);
+      await clickText(page, 'button', 'Why this row');
+      await page.waitForSelector('ul[id^="why-"]', { timeout: 10000 }).catch(() => console.warn('why list not open'));
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): "Exploited only" shortcut on the list. Read-only.
+  'vulnerabilities-exploited-only-2026-10-24': {
+    path: '/it/vulnerabilities?exploited=1',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForSelector('.ag-center-cols-container .ag-row', { timeout: 60000 });
+      await page.waitForFunction(() => /Total: [\d,]+ rows/.test(document.querySelector('.ag-floating-bottom')?.textContent || ''), { timeout: 30000 }).catch(() => {});
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): critical application (CheeseTrack), severe badge and Vulnerabilities section. Read-only.
+  'vulnerabilities-application-2026-10-24': {
+    path: '/it/applications/APP-36/operations',
+    waitFor: 'main',
+    async prepare(page) {
+      await page.waitForFunction(() => /Vulnerabilities\s*\d+/.test(document.querySelector('main')?.innerText || ''), { timeout: 30000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const h = [...document.querySelectorAll('main h1,main h2,main h3,main h4,main h5,main h6,main p,main span,main div')]
+          .find((n) => !n.children.length && /^Vulnerabilities\s*\d+$/.test(n.textContent?.trim() || '')) ||
+          [...document.querySelectorAll('main *')].find((n) => /^Vulnerabilities\s*\d+$/.test(n.textContent?.trim() || ''));
+        h?.scrollIntoView({ block: 'center' });
+      });
+      await sleep(1000);
+    },
+  },
+  // Vulnerabilities article (2026-10-24): dashboard tile "Vulnerabilities in your estate". Read-only.
+  'vulnerabilities-dashboard-tile-2026-10-24': {
+    path: '/',
+    waitFor: 'main',
+    async prepare(page) {
+      await waitForWidgets(page);
+      await page.waitForFunction(() => /Vulnerabilities in your estate/.test(document.body.innerText), { timeout: 30000 });
+      await sleep(1000);
+      await page.evaluate(() => {
+        const t = [...document.querySelectorAll('*')].find((n) => !n.children.length && n.textContent?.trim() === 'Vulnerabilities in your estate');
+        t?.scrollIntoView({ block: 'center' });
+      });
       await sleep(1000);
     },
   },
