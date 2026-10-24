@@ -1,7 +1,7 @@
 import React from 'react';
 import { TextField, InputAdornment, IconButton, SxProps, Theme, Box } from '@mui/material';
 import EventIcon from '@mui/icons-material/Event';
-import { dateInputSeparator, euToYmd, ymdToEu, formatEuPartial } from '../../lib/date-eu';
+import { dateInputSeparator, euToYmd, ymdToEu, formatEuPartialAt } from '../../lib/date-eu';
 import { formatShortDate } from '../../lib/dateFormat';
 import { useTranslation } from 'react-i18next';
 import { useLocale } from '../../i18n/useLocale';
@@ -44,6 +44,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   const mouseDownRef = React.useRef(false);
   const selectOnMouseUpRef = React.useRef(false);
   const justFocusedRef = React.useRef(false);
+  const pendingCaretRef = React.useRef<number | null>(null);
   const [calendarAnchor, setCalendarAnchor] = React.useState<HTMLElement | null>(null);
   const locale = useLocale();
   // Typed dates follow the language: 15/10/2026, or 15.10.2026 in German.
@@ -63,13 +64,15 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onTextChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const raw = e.target.value;
-    const formatted = formatEuPartial(raw, sep);
+    const { text: formatted, caret } = formatEuPartialAt(raw, e.target.selectionStart ?? raw.length, sep);
     setText(formatted);
+    pendingCaretRef.current = caret;
     const ymd = euToYmd(formatted);
     if (ymd) onChangeYmd(ymd);
   };
 
   const onFocus = () => {
+    pendingCaretRef.current = null;
     setText(ymdToEu(normalizedYmd, sep));
     setFocused(true);
     justFocusedRef.current = true;
@@ -81,6 +84,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
 
   const onBlur = () => {
     setFocused(false);
+    pendingCaretRef.current = null;
     selectOnMouseUpRef.current = false;
     mouseDownRef.current = false;
     const ymd = euToYmd(text);
@@ -100,6 +104,18 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
     inputRef.current?.select();
   }, [focused]);
 
+  // Put the caret back where the edited digit now sits, once the formatted text is rendered.
+  React.useLayoutEffect(() => {
+    if (!focused) return;
+    const caret = pendingCaretRef.current;
+    if (caret == null) return;
+    pendingCaretRef.current = null;
+    const input = inputRef.current;
+    if (!input) return;
+    const next = Math.max(0, Math.min(caret, input.value.length));
+    input.setSelectionRange(next, next);
+  }, [text, focused]);
+
   const onInputMouseUp = (event: React.MouseEvent<HTMLInputElement>) => {
     if (!selectOnMouseUpRef.current) return;
     selectOnMouseUpRef.current = false;
@@ -114,6 +130,7 @@ export default function DateEUField({ label, valueYmd = '', onChangeYmd, disable
   };
 
   const onCalendarSelect = (ymd: string) => {
+    pendingCaretRef.current = null;
     onChangeYmd(ymd);
     setText(ymdToEu(ymd, sep));
   };

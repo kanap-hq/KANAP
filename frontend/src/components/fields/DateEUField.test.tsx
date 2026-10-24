@@ -91,6 +91,29 @@ describe('DateEUField replaces the saved date on the first keystroke', () => {
   });
 });
 
+describe('DateEUField keeps the rest of the date while editing the middle', () => {
+  it('retypes the selected day without shifting the month and year', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(0, 2);
+    await user.keyboard('21');
+    expect(input.value).toBe('21/03/2022');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2022-03-21');
+  });
+
+  it('keeps an extra digit visible instead of swallowing it', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    input.setSelectionRange(input.value.length, input.value.length);
+    fireEvent.change(input, { target: { value: '15/03/20221' } });
+    expect(input.value).toBe('15/03/20221');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+});
+
 describe('DateEUField typing follows the language', () => {
   afterEach(async () => {
     await i18n.changeLanguage('en');

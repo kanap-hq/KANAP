@@ -81,13 +81,160 @@ export function ymdToEu(value?: string | null, sep: DateInputSeparator = '/'): s
   return `${dd2}${sep}${mm2}${sep}${yyyy}`;
 }
 
-/** Best-effort partial formatter that inserts the separator (slashes by default) as digits are typed. */
-export function formatEuPartial(raw: string, sep: DateInputSeparator = '/'): string {
-  const digits = String(raw).replace(/[^0-9]/g, '').slice(0, 8);
+function isAsciiDigit(char: string): boolean {
+  return char >= '0' && char <= '9';
+}
+
+function countDigits(value: string): number {
+  let count = 0;
+  for (const char of value) if (isAsciiDigit(char)) count += 1;
+  return count;
+}
+
+function groupEuDigits(digits: string, sep: DateInputSeparator): string {
   const dd = digits.slice(0, 2);
   const mm = digits.slice(2, 4);
-  const yyyy = digits.slice(4, 8);
+  const yyyy = digits.slice(4);
   if (digits.length <= 2) return dd;
   if (digits.length <= 4) return `${dd}${sep}${mm}`;
   return `${dd}${sep}${mm}${sep}${yyyy}`;
+}
+
+function caretAfterDigits(text: string, digitsBefore: number): number {
+  if (digitsBefore <= 0) return 0;
+  let seen = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    if (isAsciiDigit(text[i])) {
+      seen += 1;
+      if (seen === digitsBefore) return i + 1;
+    }
+  }
+  return text.length;
+}
+
+type EuSegment = { digits: string; start: number; end: number };
+
+/** The raw text split on its separators, empty parts included, with each part's digit range. */
+function parseEuSegments(raw: string): EuSegment[] {
+  const segments: EuSegment[] = [];
+  let digits = '';
+  let start = 0;
+  for (let i = 0; i < raw.length; i += 1) {
+    if (isAsciiDigit(raw[i])) {
+      if (digits === '') start = i;
+      digits += raw[i];
+      continue;
+    }
+    segments.push({ digits, start, end: i });
+    digits = '';
+    start = i + 1;
+  }
+  segments.push({ digits, start, end: raw.length });
+  return segments;
+}
+
+export type EuPartialFormat = { text: string; caret: number };
+
+/**
+ * Formats a partially typed date and says where the caret belongs after formatting.
+ *
+ * The day, month and year keep their own places. A short day or month gets its leading zero when a
+ * later part exists, so typing into the middle of a date does not shift the digits that follow; the
+ * zero is dropped again when the second digit arrives. Extra digits stay in the text (and make it
+ * invalid) instead of being silently swallowed.
+ */
+export function formatEuPartialAt(raw: string, caret: number | null, sep: DateInputSeparator = '/'): EuPartialFormat {
+  const value = String(raw ?? '');
+  const position = Math.max(0, Math.min(caret ?? value.length, value.length));
+
+  // A plain digit run has no part boundaries yet: group it as dd/mm/yyyy.
+  if (!/[^0-9]/.test(value)) {
+    const digits = value.replace(/[^0-9]/g, '');
+    const text = groupEuDigits(digits, sep);
+    return { text, caret: caretAfterDigits(text, countDigits(value.slice(0, position))) };
+  }
+
+  if (countDigits(value) === 0) return { text: '', caret: 0 };
+
+  const parsed = parseEuSegments(value);
+  const widths = [2, 2, 4];
+  const normalized: Array<{
+    rawLength: number;
+    carriedIn: number;
+    removed: number;
+    pad: number;
+    kept: string;
+  }> = [];
+  let carry = '';
+  let partCount = Math.min(parsed.length, 3);
+  for (let i = 0; i < 3; i += 1) {
+    const rawDigits = parsed[i]?.digits ?? '';
+    const carriedIn = carry.length;
+    let combined = carry + rawDigits;
+    carry = '';
+    let removed = 0;
+    while (combined.length > widths[i] && combined.startsWith('0')) {
+      combined = combined.slice(1);
+      removed += 1;
+    }
+    const hasLater = i < parsed.length - 1;
+    let pad = 0;
+    if (i < 2 && combined.length > 0 && combined.length < widths[i] && hasLater) {
+      pad = widths[i] - combined.length;
+    }
+    let kept = combined;
+    if (kept.length > widths[i] && i < 2 && !hasLater) {
+      // The month is full and no separator follows yet: the next digit starts the year.
+      carry = kept.slice(widths[i]);
+      kept = kept.slice(0, widths[i]);
+      partCount = Math.max(partCount, i + 2);
+    }
+    normalized.push({ rawLength: rawDigits.length, carriedIn, removed, pad, kept });
+  }
+
+  const starts: number[] = [];
+  let textLength = 0;
+  for (let i = 0; i < partCount; i += 1) {
+    starts.push(textLength);
+    textLength += normalized[i].pad + normalized[i].kept.length;
+    if (i < partCount - 1) textLength += sep.length;
+  }
+
+  const parts: string[] = [];
+  for (let i = 0; i < partCount; i += 1) {
+    parts.push(`${'0'.repeat(normalized[i].pad)}${normalized[i].kept}`);
+  }
+  const text = parts.join(sep);
+
+  let segmentIndex = -1;
+  let offset = 0;
+  for (let i = 0; i < parsed.length; i += 1) {
+    if (position <= parsed[i].end) {
+      segmentIndex = i;
+      offset = countDigits(value.slice(parsed[i].start, Math.min(position, parsed[i].end)));
+      break;
+    }
+  }
+  if (segmentIndex === -1) {
+    segmentIndex = parsed.length - 1;
+    offset = parsed[segmentIndex].digits.length;
+  }
+  if (segmentIndex >= 3) return { text, caret: text.length };
+
+  const part = normalized[segmentIndex];
+  const inPart = part.pad + Math.max(0, part.carriedIn + Math.min(offset, part.rawLength) - part.removed);
+  const segmentLength = part.pad + part.kept.length;
+  if (inPart <= segmentLength) {
+    return { text, caret: Math.min(starts[segmentIndex] + inPart, text.length) };
+  }
+  const overflow = inPart - segmentLength;
+  if (segmentIndex + 1 < partCount) {
+    return { text, caret: Math.min(starts[segmentIndex + 1] + overflow, text.length) };
+  }
+  return { text, caret: text.length };
+}
+
+/** Best-effort partial formatter that inserts the separator (slashes by default) as digits are typed. */
+export function formatEuPartial(raw: string, sep: DateInputSeparator = '/'): string {
+  return formatEuPartialAt(raw, null, sep).text;
 }
