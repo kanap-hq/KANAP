@@ -16,6 +16,7 @@ import { lookupReference, COMPANY_LOOKUP } from '../common/lookup/reference-look
 import { CompanyUpsertDto } from './dto/company.dto';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('companies')
@@ -87,6 +88,7 @@ export class CompaniesController {
     return this.svc.get(id, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'member')
   @Post()
@@ -94,6 +96,7 @@ export class CompaniesController {
     return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'member')
   @Patch(':id')
@@ -101,6 +104,7 @@ export class CompaniesController {
     return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -127,6 +131,7 @@ export class CompaniesController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @Post('delete-check')
@@ -134,6 +139,7 @@ export class CompaniesController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @Delete('bulk')
@@ -141,6 +147,7 @@ export class CompaniesController {
     return this.deleteSvc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'admin')
   @Delete(':id')

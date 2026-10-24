@@ -33,6 +33,7 @@ import { exportListQuery } from './budget-file/export-file';
 import { importAnalyzeTables } from './budget-file/import-file';
 import { BudgetFileSizeInterceptor, budgetFileMulterOptions } from './budget-file/upload';
 import { BudgetLineTypeChangeService } from './budget-line-type-change.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 /**
  * The CAPEX routes, kept as aliases until the unified screens (plan planning/budget-unifie.md, lot
@@ -580,6 +581,7 @@ export class CapexItemsController {
     return this.svc.update(id, body as Record<string, unknown>, ctx.userId || undefined, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -600,6 +602,7 @@ export class CapexItemsController {
     return this.svc.copyBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -616,6 +619,7 @@ export class CapexItemsController {
     return this.svc.copyAllocations(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -630,6 +634,7 @@ export class CapexItemsController {
     return this.svc.clearBudgetColumn(body, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -641,6 +646,7 @@ export class CapexItemsController {
     return this.deleteSvc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @Delete(':id')

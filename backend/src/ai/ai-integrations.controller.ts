@@ -10,6 +10,7 @@ import {
   PrtgIntegrationTestInput,
 } from './control-plane/providers/ai-monitoring-integrations.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 type AiIntegrationsRequest = {
   tenant?: { id?: string };
@@ -21,6 +22,7 @@ type AiIntegrationsRequest = {
 // Admin endpoints for external tool integrations (monitoring adapters).
 // Gated exactly like the AI settings write path: JwtAuthGuard + the
 // ai_settings admin policy assert inside the tenant executor.
+@ReservedToUnscopedDataAccess()
 @Controller('ai/admin/integrations')
 @UseGuards(JwtAuthGuard)
 @SkipTenantTransaction()

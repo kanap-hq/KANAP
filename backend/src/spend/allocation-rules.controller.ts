@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { AllocationRulesService } from './allocation-rules.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('allocation-rules')
@@ -24,6 +25,7 @@ export class AllocationRulesController {
   }
 
   /** Body: `{ mode?: 'auto' | 'manual_company', method, company_ids? }`. */
+  @ReservedToUnscopedDataAccess()
   @Patch('active')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
@@ -37,6 +39,7 @@ export class AllocationRulesController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Delete('active')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')

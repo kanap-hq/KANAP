@@ -7,6 +7,7 @@ import { Tenant, TenantRequest } from '../common/decorators/tenant.decorator';
 import { hasLevel } from '../technologies/technologies.controller';
 import { TechnologyLinksService, type ApplicationsReach } from '../technologies/technology-links.service';
 import { requireManager } from '../technologies/technology-rows';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 /**
  * The applications of a business process (`application_business_processes`, lot S). The
@@ -42,6 +43,7 @@ export class BusinessProcessApplicationsController {
   }
 
   /** Link an application: `{ application_id }`. */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Post(':id/applications')
@@ -49,6 +51,7 @@ export class BusinessProcessApplicationsController {
     return this.links.setProcessApplication(id, String(body?.application_id ?? ''), true, this.opts(ctx), await this.requireApplications(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Delete(':id/applications/:applicationId')

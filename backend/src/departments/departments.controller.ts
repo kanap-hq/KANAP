@@ -16,6 +16,7 @@ import { Tenant, TenantRequest } from '../common/decorators';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { EntityManager } from 'typeorm';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('departments')
@@ -74,16 +75,19 @@ export class DepartmentsController {
   @Get(':id')
   get(@Param('id') id: string, @Tenant() ctx: TenantRequest) { return this.svc.get(id, { manager: ctx.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'member')
   @Post()
   create(@Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) { return this.svc.create(body, ctx.userId || undefined, { manager: ctx.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'member')
   @Patch(':id')
   update(@Param('id') id: string, @Body() body: DepartmentUpsertDto, @Tenant() ctx: TenantRequest) { return this.svc.update(id, body, ctx.userId || undefined, { manager: ctx.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -113,6 +117,7 @@ export class DepartmentsController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Post('delete-check')
@@ -120,6 +125,7 @@ export class DepartmentsController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Delete('bulk')
@@ -127,6 +133,7 @@ export class DepartmentsController {
     return this.deleteSvc.bulkDelete(body.ids, ctx.userId || null, { manager: ctx.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('departments', 'admin')
   @Delete(':id')

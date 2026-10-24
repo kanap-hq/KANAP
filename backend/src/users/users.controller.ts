@@ -24,6 +24,7 @@ import { AuditService } from '../audit/audit.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { createRequestCommitThenRun } from '../common/import-connection';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 function canViewUserAdministration(req: any): boolean {
   return req?.isAdmin === true || req?.permissionLevel === 'admin';
@@ -66,6 +67,7 @@ export class UsersController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Post('delete-check')
@@ -73,6 +75,7 @@ export class UsersController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Delete('bulk')
@@ -118,6 +121,7 @@ export class UsersController {
     return { ...user, password_hash: undefined };
   }
 
+  @ReservedToUnscopedDataAccess()
   @Post()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
@@ -134,6 +138,7 @@ export class UsersController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @Patch(':id')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'member')
@@ -149,6 +154,7 @@ export class UsersController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
   @UseGuards(PermissionGuard)
@@ -178,16 +184,19 @@ export class UsersController {
   }
 
   // Seat-controlled status endpoints (Admin only)
+  @ReservedToUnscopedDataAccess()
   @Post(':id/enable')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   async enable(@Param('id') id: string, @Req() req: any) { return this.svc.enableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @Post(':id/disable')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   async disable(@Param('id') id: string, @Req() req: any) { return this.svc.disableUser(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager }); }
 
+  @ReservedToUnscopedDataAccess()
   @Post(':id/invite')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
@@ -201,6 +210,7 @@ export class UsersController {
     });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')
   @Delete(':id')
@@ -231,6 +241,7 @@ export class UsersController {
     };
   }
 
+  @ReservedToUnscopedDataAccess()
   @Put(':id/roles')
   @UseGuards(PermissionGuard)
   @RequireLevel('users', 'admin')

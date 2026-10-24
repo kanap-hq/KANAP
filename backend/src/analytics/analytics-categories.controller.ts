@@ -37,6 +37,7 @@ import {
   AnalyticsCategoryUpdateDto,
 } from './dto/analytics.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 export function analyticsContext(ctx: TenantRequest): AnalyticsContext {
   if (!ctx.manager) throw new InternalServerErrorException('Missing request transaction.');
@@ -97,6 +98,7 @@ export class AnalyticsCategoriesController {
   }
 
   // The order of one dimension's values (same permission as PATCH :id), before the `:id` routes.
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post('reorder')
   reorder(@Body() body: AnalyticsCategoryReorderDto, @Tenant() ctx: TenantRequest) {
@@ -110,6 +112,7 @@ export class AnalyticsCategoriesController {
     return this.svc.get(id, analyticsContext(ctx));
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Post()
   create(@Body() body: AnalyticsCategoryCreateDto, @Tenant() ctx: TenantRequest) {
@@ -117,6 +120,7 @@ export class AnalyticsCategoriesController {
     return this.svc.create(body, context.userId, context);
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Post('import')
@@ -144,6 +148,7 @@ export class AnalyticsCategoriesController {
     );
   }
 
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'member')
   @Patch(':id')
   update(
@@ -156,6 +161,7 @@ export class AnalyticsCategoriesController {
   }
 
   // What a delete of `ids` would do, asked before the confirmation: `forced`, the values in use.
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @Post('delete-check')
   deleteCheck(@Body() body: { ids?: unknown }, @Tenant() ctx: TenantRequest) {
@@ -163,6 +169,7 @@ export class AnalyticsCategoriesController {
   }
 
   // `force: true` deletes values in use too: the lines lose them (analytics-forced-delete.ts).
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete('bulk')
@@ -172,6 +179,7 @@ export class AnalyticsCategoriesController {
   }
 
   // `?force=true` deletes a value in use too: the lines lose it (analytics-forced-delete.ts).
+  @ReservedToUnscopedDataAccess()
   @RequireLevel('analytics', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
   @Delete(':id')

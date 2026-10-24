@@ -25,6 +25,7 @@ import { contractRelationKindOrThrow } from './contract-relations';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
 import type { ComplianceItemPatch } from './contract-compliance';
 import { ContractsDeleteService } from './contracts-delete.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contracts')
@@ -120,6 +121,7 @@ export class ContractsController {
   }
 
   // What deleting the given contracts removes, for the confirmation; before ':id'.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Post('delete-impact')
@@ -128,6 +130,7 @@ export class ContractsController {
   }
 
   // Bulk delete before ':id'.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Delete('bulk')
@@ -135,6 +138,7 @@ export class ContractsController {
     return this.deleteSvc.bulkDelete(Array.isArray(body?.ids) ? body.ids : [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contracts', 'admin')
   @Delete(':id')

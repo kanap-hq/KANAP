@@ -14,6 +14,7 @@ import { ContactsDeleteService } from './contacts-delete.service';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { Tenant, TenantRequest } from '../common/decorators';
 import { readContactUsages } from './contact-usages';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('contacts')
@@ -65,6 +66,7 @@ export class ContactsController {
     return this.svc.create(body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'member')
   @Patch(':id')
@@ -72,6 +74,7 @@ export class ContactsController {
     return this.svc.update(id, body, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @Delete('bulk')
@@ -80,11 +83,13 @@ export class ContactsController {
     return this.del.bulkDelete(ids, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @Delete(':id')
   remove(@Param('id') id: string, @Req() req: any) { return this.svc.delete(id, { manager: req?.queryRunner?.manager, tenantId: req.tenant.id, userId: req.user?.sub ?? null }); }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('contacts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

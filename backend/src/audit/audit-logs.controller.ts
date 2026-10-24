@@ -10,6 +10,7 @@ import { RATE_LIMITS } from '../common/rate-limit';
 import { RateLimitGuard } from '../common/rate-limit.guard';
 import { ClientAbortedError } from '../common/request-finalizer.middleware';
 import { AUDIT_LOG_EXPORT_TRUNCATED_HEADER, AuditLogsService } from './audit-logs.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 /**
  * Writes one part of a streamed answer and waits until the client has taken it when the socket's
@@ -33,6 +34,7 @@ function writePart(res: Response, part: string): Promise<void> {
   });
 }
 
+@ReservedToUnscopedDataAccess()
 @UseGuards(JwtAuthGuard)
 @Controller('audit-logs')
 export class AuditLogsController {

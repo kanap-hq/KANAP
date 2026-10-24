@@ -6,6 +6,7 @@ import { RATE_LIMITS } from '../common/rate-limit';
 import { UserRateLimitGuard } from '../common/rate-limit.guard';
 import { SkipTenantTransaction } from '../common/skip-tenant-transaction.decorator';
 import { DemoDataOverview, DemoDataService, DemoDataState } from './demo-data.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 /**
  * Sample data of a cloud workspace (Administration > Sample data, and the home banner).
@@ -26,6 +27,7 @@ import { DemoDataOverview, DemoDataService, DemoDataState } from './demo-data.se
  * `<slug>.qa.kanap.net`), the dev nginx `Host $host` on `<slug>.lvh.me` and
  * `<slug>.dev.kanap.net`, and `<slug>.lvh.me` for `<slug>.localhost`.
  */
+@ReservedToUnscopedDataAccess()
 @UseGuards(MultiTenantOnlyGuard, JwtAuthGuard)
 @SkipTenantTransaction()
 @Controller('admin/sample-data')

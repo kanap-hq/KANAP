@@ -23,6 +23,7 @@ import { BudgetLinesService } from './budget-lines.service';
 import { SpendBudgetOperationsService } from './spend-budget-operations.service';
 import type { BudgetOperationScope, CopyBudgetOperation } from './budget-copy';
 import type { BudgetColumn } from './amounts-write.util';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('budget-lines')
@@ -130,6 +131,7 @@ export class BudgetLinesController {
   }
 
   // Which lines a delete would refuse (amounts in a frozen column), asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @Post('delete-check')
@@ -137,6 +139,7 @@ export class BudgetLinesController {
     return this.svc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: ctx.manager as EntityManager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -152,6 +155,7 @@ export class BudgetLinesController {
    * "Copy budget columns" of Budget administration: the amounts of a column, the allocations, or both, of
    * all lines (`scope: 'all'`) or of one nature, under one tenant lock (`budget-copy.ts`).
    */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -161,6 +165,7 @@ export class BudgetLinesController {
   }
 
   /** "Reset a column" of Budget administration, on all lines or one nature (`budget-copy.ts`). */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
