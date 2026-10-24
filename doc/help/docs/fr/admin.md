@@ -66,7 +66,7 @@ La page Journal d'audit conserve l'historique des modifications de données et d
 
 **Exports** (table **Export**) : exports CSV, documents et rapports produits par le serveur. La ligne indique ce qui a été exporté et par qui. L'export du journal d'audit est lui aussi enregistré.
 
-Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans le panneau **Après**. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
+Les lignes de connexion, de session et d'export conservent aussi l'**adresse IP** d'où venait la demande et le **navigateur** utilisé. Ouvrez la ligne pour les lire dans les lignes **Adresse IP** et **Navigateur** de son tableau. Derrière un reverse proxy, c'est l'adresse IP de la personne elle-même, tant que le proxy la transmet (on-premise : voir l'[exemple de reverse proxy](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Les mots de passe, les liens de connexion et les jetons ne sont jamais écrits dans le journal. Quand quelqu'un tente de se connecter avec une adresse e-mail sans compte, la ligne affiche **Compte inconnu** et ne conserve pas l'adresse saisie.
 
@@ -84,8 +84,9 @@ Les événements de connexion et de session sont supprimés après **365 jours**
   - Source (`user`, `system`, `webhook`)
 - Ouvrir n'importe quelle ligne pour voir les détails complets :
   - Pastilles de métadonnées (date, table, action, source, motif ou référence source, tenant, id d'enregistrement, utilisateur)
-  - Résumé des champs modifiés
-  - Payloads JSON **Avant** et **Après** côte à côte
+  - La référence métier de l'enregistrement dans l'en-tête (par exemple `PRJ-3`), quand il en a une
+  - Un tableau des champs : **Champ**, **Avant** et **Après** pour une modification, **Champ** et **Valeur** pour toute autre entrée. Les noms des champs s'affichent dans votre langue quand ils sont connus. Les dates, les valeurs oui/non et les personnes s'affichent sous une forme lisible ; les autres identifiants s'affichent comme **Identifiant**, avec la valeur dans une infobulle. Les champs techniques comme `id`, `tenant_id` et `updated_at` sont omis
+  - **Voir les données brutes** affiche le JSON complet avant et après
 - Exporter le journal en CSV (voir ci-dessous)
 
 ### Colonnes
