@@ -61,6 +61,7 @@ import { KnowledgeModule } from './knowledge/knowledge.module';
 import { AiModule } from './ai/ai.module';
 import { PlatformAiModule } from './ai/platform/platform-ai.module';
 import { ScheduledTasksModule } from './admin/scheduled-tasks/scheduled-tasks.module';
+import { DataAccessModule } from './data-access/data-access.module';
 import { CleanupModule } from './cleanup/cleanup.module';
 import { NetboxModule } from './netbox/netbox.module';
 import { ListContextsModule } from './common/list-context/list-contexts.module';
@@ -183,6 +184,7 @@ import { readPoolMax } from './common/db-pool-budget';
     CleanupModule,
     NetboxModule,
     ListContextsModule,
+    DataAccessModule,
   ],
   controllers: [HealthController, PublicController, ConfigController],
   providers: [RateLimitGuard, TurnstileService],
