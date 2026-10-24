@@ -118,8 +118,10 @@
         "kept_other": "{{count}} Anwendungen können nicht gelöscht werden und bleiben erhalten:",
         "deleted_one": "{{count}} Anwendung gelöscht",
         "deleted_other": "{{count}} Anwendungen gelöscht",
-        "warningCounted_one": "Mit ihr werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-        "warningCounted_other": "Mit ihnen werden gelöscht: {{removed}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_one": "Mit ihr werden gelöscht: {{removed}}. Dies kann nicht rückgängig gemacht werden.",
+        "warningCounted_other": "Mit ihnen werden gelöscht: {{removed}}. Dies kann nicht rückgängig gemacht werden.",
+        "links_one": "ihre Verknüpfungen zu anderen Einträgen",
+        "links_other": "ihre Verknüpfungen zu anderen Einträgen",
         "title_one": "{{count}} Anwendung löschen",
         "title_other": "{{count}} Anwendungen löschen",
         "keptDone_one": "{{count}} Anwendung bleibt erhalten",
@@ -1928,7 +1930,7 @@
         "goLive": "Inbetriebnahme"
       },
       "deleteMessage": "Damit wird {{name}} endgültig gelöscht, mit ihren Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
-      "deleteMessageWithDeployments": "Damit wird {{name}} endgültig gelöscht. Ebenfalls gelöscht werden: {{deployments}} und ihre Verknüpfungen zu anderen Einträgen. Dies kann nicht rückgängig gemacht werden.",
+      "deleteMessageWithRemoved": "Damit wird {{name}} endgültig gelöscht. Ebenfalls gelöscht werden: {{removed}}. Dies kann nicht rückgängig gemacht werden.",
       "convert": {
         "action": "In Technologie umwandeln",
         "title": "{{name}} in eine Technologie umwandeln",

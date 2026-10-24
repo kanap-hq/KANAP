@@ -243,6 +243,8 @@
       "business_processes_other": "{{count}} processus métier",
       "documents_one": "{{count}} document",
       "documents_other": "{{count}} documents",
+      "descriptions_one": "sa description",
+      "descriptions_other": "{{count}} descriptions",
       "sub_folders_one": "{{count}} sous-dossier",
       "sub_folders_other": "{{count}} sous-dossiers",
       "app_instances_one": "{{count}} déploiement",

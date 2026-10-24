@@ -118,8 +118,10 @@
         "kept_other": "{{count}} applications cannot be deleted and are kept:",
         "deleted_one": "{{count}} application deleted",
         "deleted_other": "{{count}} applications deleted",
-        "warningCounted_one": "Deleted with it: {{removed}} and its links to other records. This cannot be undone.",
-        "warningCounted_other": "Deleted with them: {{removed}} and their links to other records. This cannot be undone.",
+        "warningCounted_one": "Deleted with it: {{removed}}. This cannot be undone.",
+        "warningCounted_other": "Deleted with them: {{removed}}. This cannot be undone.",
+        "links_one": "its links to other records",
+        "links_other": "their links to other records",
         "title_one": "Delete {{count}} application",
         "title_other": "Delete {{count}} applications",
         "keptDone_one": "{{count}} application kept",
@@ -1928,7 +1930,7 @@
         "goLive": "Go live"
       },
       "deleteMessage": "This permanently deletes {{name}}, with its links to other records. This cannot be undone.",
-      "deleteMessageWithDeployments": "This permanently deletes {{name}}, with {{deployments}} and its links to other records. This cannot be undone.",
+      "deleteMessageWithRemoved": "This permanently deletes {{name}}, with {{removed}}. This cannot be undone.",
       "convert": {
         "action": "Convert to technology",
         "title": "Convert {{name}} to a technology",

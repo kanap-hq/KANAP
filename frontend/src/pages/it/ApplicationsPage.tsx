@@ -15,7 +15,7 @@ import { useQuery } from '@tanstack/react-query';
 import ForbiddenPage from '../ForbiddenPage';
 import { CsvExportDialogV2, CsvImportDialogV2 } from '../../components/csv';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
-import { refusalCounts } from '../../utils/deleteRefusal';
+import { removedWithLinks } from '../../utils/deleteRefusal';
 import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 import { APPLICATION_NAME_MAX } from './applicationLimits';
 import { applicationDeleteCheck } from './applicationDeleteCheck';
@@ -1084,7 +1084,7 @@ export default function ApplicationsPage() {
             return {
               refused,
               warning: removes.length > 0
-                ? t('pages.applications.delete.warningCounted', { count, removed: refusalCounts({ usages: removes }, t, locale) })
+                ? t('pages.applications.delete.warningCounted', { count, removed: removedWithLinks(removes, t('pages.applications.delete.links', { count }), t, locale) })
                 : t('pages.applications.delete.warningLinks', { count }),
             };
           }}

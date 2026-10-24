@@ -243,6 +243,8 @@
       "business_processes_other": "{{count}} Geschäftsprozesse",
       "documents_one": "{{count}} Dokument",
       "documents_other": "{{count}} Dokumente",
+      "descriptions_one": "ihre Beschreibung",
+      "descriptions_other": "{{count}} Beschreibungen",
       "sub_folders_one": "{{count}} Unterordner",
       "sub_folders_other": "{{count}} Unterordner",
       "app_instances_one": "{{count}} Bereitstellung",

@@ -118,8 +118,10 @@
         "kept_other": "{{count}} aplicaciones no se pueden eliminar y se conservan:",
         "deleted_one": "{{count}} aplicación eliminada",
         "deleted_other": "{{count}} aplicaciones eliminadas",
-        "warningCounted_one": "Se eliminan con ella: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-        "warningCounted_other": "Se eliminan con ellas: {{removed}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+        "warningCounted_one": "Se eliminan con ella: {{removed}}. Esta acción no se puede deshacer.",
+        "warningCounted_other": "Se eliminan con ellas: {{removed}}. Esta acción no se puede deshacer.",
+        "links_one": "sus vínculos con otros elementos",
+        "links_other": "sus vínculos con otros elementos",
         "title_one": "Eliminar {{count}} aplicación",
         "title_other": "Eliminar {{count}} aplicaciones",
         "keptDone_one": "{{count}} aplicación conservada",
@@ -1928,7 +1930,7 @@
         "goLive": "Puesta en marcha"
       },
       "deleteMessage": "Esto elimina definitivamente {{name}}, con sus vínculos con otros elementos. Esta acción no se puede deshacer.",
-      "deleteMessageWithDeployments": "Esto elimina definitivamente {{name}}, con {{deployments}} y sus vínculos con otros elementos. Esta acción no se puede deshacer.",
+      "deleteMessageWithRemoved": "Esto elimina definitivamente {{name}}, con {{removed}}. Esta acción no se puede deshacer.",
       "convert": {
         "action": "Convertir en tecnología",
         "title": "Convertir {{name}} en tecnología",

@@ -118,8 +118,10 @@
         "kept_other": "{{count}} applications ne peuvent pas être supprimées et sont conservées :",
         "deleted_one": "{{count}} application supprimée",
         "deleted_other": "{{count}} applications supprimées",
-        "warningCounted_one": "Sont supprimés avec elle : {{removed}} et ses liens vers d’autres éléments. Cette action est irréversible.",
-        "warningCounted_other": "Sont supprimés avec elles : {{removed}} et leurs liens vers d’autres éléments. Cette action est irréversible.",
+        "warningCounted_one": "Sont supprimés avec elle : {{removed}}. Cette action est irréversible.",
+        "warningCounted_other": "Sont supprimés avec elles : {{removed}}. Cette action est irréversible.",
+        "links_one": "ses liens vers d'autres éléments",
+        "links_other": "leurs liens vers d'autres éléments",
         "title_one": "Supprimer {{count}} application",
         "title_other": "Supprimer {{count}} applications",
         "keptDone_one": "{{count}} application conservée",
@@ -1928,7 +1930,7 @@
         "goLive": "Mise en service"
       },
       "deleteMessage": "Cette action supprime définitivement {{name}}, avec ses liens vers d’autres éléments. Elle est irréversible.",
-      "deleteMessageWithDeployments": "Cette action supprime définitivement {{name}}, avec {{deployments}} et ses liens vers d’autres éléments. Elle est irréversible.",
+      "deleteMessageWithRemoved": "Cette action supprime définitivement {{name}}, avec {{removed}}. Elle est irréversible.",
       "convert": {
         "action": "Convertir en technologie",
         "title": "Convertir {{name}} en technologie",

@@ -4,7 +4,7 @@ import { useTranslation } from 'react-i18next';
 import api from '../../../api';
 import { useKanapDialogs } from '../../../components/design';
 import { getApiErrorMessage } from '../../../utils/apiErrorMessage';
-import { deleteFailureReason, refusalCounts } from '../../../utils/deleteRefusal';
+import { deleteFailureReason, removedWithLinks } from '../../../utils/deleteRefusal';
 import { useLocale } from '../../../i18n/useLocale';
 import { applicationDeleteCheck } from '../applicationDeleteCheck';
 import DeleteIconButton from '../../../components/workspace/DeleteIconButton';
@@ -40,7 +40,7 @@ export default function ApplicationDeleteButton({ applicationId, applicationName
     const confirmed = await dialogs.confirm({
       title,
       message: check?.removes.length
-        ? t('workspace.application.deleteMessageWithDeployments', { name: applicationName, deployments: refusalCounts({ usages: check.removes }, t, locale) })
+        ? t('workspace.application.deleteMessageWithRemoved', { name: applicationName, removed: removedWithLinks(check.removes, t('pages.applications.delete.links', { count: 1 }), t, locale) })
         : t('workspace.application.deleteMessage', { name: applicationName }),
       confirmLabel: t('common:buttons.delete'),
       intent: 'danger',

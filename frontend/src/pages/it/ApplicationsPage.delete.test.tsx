@@ -49,7 +49,8 @@ describe('ApplicationsPage delete', () => {
     post.mockResolvedValueOnce({ data: { refused, removes: [{ type: 'app_instances', total: 3 }] } });
     expect(await props.checkDelete(['a', 'b', 'c'])).toEqual({
       refused,
-      warning: 'pages.applications.delete.warningCounted:2|common:delete.usages.app_instances:3',
+      // The links close the list of what goes.
+      warning: 'pages.applications.delete.warningCounted:2|common:delete.usages.app_instances:3 and pages.applications.delete.links:2',
     });
     expect(post).toHaveBeenCalledWith('/applications/delete-check', { ids: ['a', 'b', 'c'] });
     post.mockResolvedValueOnce({ data: { refused: [], removes: [] } });
@@ -72,7 +73,7 @@ describe('ApplicationsPage delete', () => {
       expect(errors.APPLICATION_HAS_INTERFACES_other, lang).toContain('{{usages}}');
       const words = it.pages.applications.delete;
       for (const key of ['warningCounted_one', 'warningCounted_other']) expect(words[key], `${lang} ${key}`).toContain('{{removed}}');
-      expect(it.workspace.application.deleteMessageWithDeployments, lang).toContain('{{deployments}}');
+      expect(it.workspace.application.deleteMessageWithRemoved, lang).toContain('{{removed}}');
       // The kept list names the application above its reason: the reason does not repeat it.
       for (const key of ['keptReason_one', 'keptReason_other']) {
         expect(words[key], `${lang} ${key}`).toContain('{{usages}}');
