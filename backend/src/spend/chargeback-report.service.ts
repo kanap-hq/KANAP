@@ -91,7 +91,14 @@ export type ChargebackReportOptions = { manager?: EntityManager; scope?: Chargeb
  * company report, which reads every line of the year (`withFullDataAccess`), only the lines the
  * person reads (a warning names a line or counts it).
  */
-type ComputeBaseOptions = { warnsOnLine?: (itemId: string) => boolean };
+type ComputeBaseOptions = {
+  warnsOnLine?: (itemId: string) => boolean;
+  /**
+   * The company of a limited person's report: a line they do not read but charged to it, without
+   * a rate, still counts in `amount_fx_missing` and is named by its number (`fxMissingHiddenLines`).
+   */
+  fxMissingChargedTo?: string;
+};
 
 const ALLOCATION_METHOD_LABELS: Record<ResolvedAllocationMethod, string> = {
   headcount: 'Headcount',
@@ -139,6 +146,8 @@ type ChargebackComputationContext = {
   /** Company id → its turnover in millions of the reporting currency (`convertTurnovers`). */
   turnovers: Map<string, number | null>;
   warnings: ChargebackWarning[];
+  /** The numbers of the lines left out for lack of a rate that the person cannot read (`fxMissingChargedTo`). */
+  fxMissingHiddenLines: number[];
 };
 
 export type CompanyChargebackDepartmentRow = {
@@ -235,6 +244,11 @@ export type CompanyChargebackReportResponse = {
   } | null;
   /** Set for a limited person: the shares charged to the company only, no group total. */
   dataAccessLimited?: true;
+  /**
+   * A limited person's report only: the numbers (BL-n) of the lines charged to the company that
+   * the person cannot read and that have no exchange rate, so their shares are left out.
+   */
+  fxMissingHiddenLines?: number[];
   intercompany?: {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
@@ -431,7 +445,7 @@ export class ChargebackReportService {
       : null;
     const ctx = readableLines
       ? await withFullDataAccess(manager, (full) => this.computeBase(
-        year, metric, tenantId, { ...opts, manager: full }, { warnsOnLine: (itemId) => readableLines.has(itemId) },
+        year, metric, tenantId, { ...opts, manager: full }, { warnsOnLine: (itemId) => readableLines.has(itemId), fxMissingChargedTo: companyId },
       ))
       : await this.computeBase(year, metric, tenantId, opts);
 
@@ -663,7 +677,7 @@ export class ChargebackReportService {
       kpis,
       // The group's totals would give the other companies' by difference (spec §5.3).
       globalKpi: readableLines ? null : globalKpi,
-      ...(readableLines ? { dataAccessLimited: true as const } : {}),
+      ...(readableLines ? { dataAccessLimited: true as const, fxMissingHiddenLines: ctx.fxMissingHiddenLines } : {}),
       intercompany: {
         receivables,
         payables,
@@ -758,6 +772,7 @@ export class ChargebackReportService {
         turnoverRateSetId: null,
         turnovers: new Map(),
         warnings: [],
+        fxMissingHiddenLines: [],
       };
     }
 
@@ -857,6 +872,7 @@ export class ChargebackReportService {
     const versionMeta = new Map<string, { version: SpendVersion; item?: SpendItem; method: ResolvedAllocationMethod }>();
     // `<currency>:<year>` → the lines left out of every sum for lack of a rate.
     const fxMissingLines = new Map<string, { currency: string; year: number; lines: Set<string> }>();
+    const fxMissingHiddenLines = new Set<number>();
 
     for (const version of fullVersions) {
       const allocationInfo = allocationData.get(version.id);
@@ -887,7 +903,13 @@ export class ChargebackReportService {
       // consumed, departments, intercompany), so the report balances on what it counts, and
       // the report names it once (`amount_fx_missing`).
       if (rateMissing(version, sourceCurrency)) {
-        if (!warns) continue;
+        // A line the person cannot read counts too when it is charged to their company: they see
+        // every share charged to it, so also the ones left out (by the line's number, no link).
+        const hiddenCharged = !warns && !!baseOpts?.fxMissingChargedTo && shares.some((share) => (
+          share.company_id === baseOpts.fxMissingChargedTo && Math.abs(Number(share.allocation_pct ?? 0)) >= 0.0001
+        ));
+        if (!warns && !hiddenCharged) continue;
+        if (hiddenCharged && item?.item_number != null) fxMissingHiddenLines.add(Number(item.item_number));
         const key = `${sourceCurrency}:${version.budget_year}`;
         let entry = fxMissingLines.get(key);
         if (!entry) {
@@ -1055,6 +1077,7 @@ export class ChargebackReportService {
       turnoverRateSetId: reportRateSetId(fullVersions),
       turnovers: new Map(),
       warnings,
+      fxMissingHiddenLines: [...fxMissingHiddenLines].sort((a, b) => a - b),
     };
     await this.convertCompanyTurnovers(ctx, tenantId, manager, companies);
     return ctx;

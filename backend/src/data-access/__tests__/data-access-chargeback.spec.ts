@@ -34,6 +34,8 @@ import { Seed, seed } from './data-access-line-seed';
  * - Claire ("all" node): every line readable, no group total.
  * - Ulla (mode all) and the Administrator: the report as without data access.
  * - The global report of a limited person counts the lines they read only.
+ * - No USD rate (L1, L4, L7 in USD): Marta's ES report counts L1 (hidden, charged to ES) and L4 in
+ *   `amount_fx_missing` and names L1 by its number alone; L7 (hidden, charged to FR only) stays out.
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
@@ -45,9 +47,14 @@ function clientOf(runner: QueryRunner): PgClient {
   return { query: async (sql: string, params?: unknown[]) => ({ rows: await runner.query(sql, params as any[]) }) } as unknown as PgClient;
 }
 
-function service(): ChargebackReportService {
+/** No rate for USD in the report year: the service's `missing` source. */
+const MISSING_USD = new Map([[`live:${YEAR}:USD`, {
+  rate: 1, rateSetId: null, fiscalYear: YEAR, reportingCurrency: 'EUR', source: 'missing', capturedAt: null, via: null,
+}]]);
+
+function service(fxMap: Map<string, unknown> = new Map()): ChargebackReportService {
   const fxRates = {
-    resolveRates: async () => ({ settings: { reportingCurrency: 'EUR' }, map: new Map() }),
+    resolveRates: async () => ({ settings: { reportingCurrency: 'EUR' }, map: fxMap }),
     convertValue: (value: number, rate: number) => value * rate,
   };
   const calculator = new AllocationCalculatorService(undefined as any, undefined as any, undefined as any, undefined as any);
@@ -232,6 +239,33 @@ async function testChargeback(runner: QueryRunner, s: Seed, shares: Shares): Pro
   console.log('  chargeback: company nodes see every share charged to them, hidden lines without id, no group total; others refused; global on visible lines: OK');
 }
 
+async function testFxMissing(runner: QueryRunner, s: Seed): Promise<void> {
+  const { persons: p } = s;
+  const svc = service(MISSING_USD);
+  const company = (m: EntityManager) => svc.generateCompany(YEAR, 'budget', s.es, s.tenantId, { manager: m });
+  await runner.query('SAVEPOINT usd');
+  try {
+    await runner.query(`UPDATE spend_items SET currency = 'USD' WHERE id = ANY($1::uuid[])`, [[s.lines.L1, s.lines.L4, s.lines.L7]]);
+    const numbers = new Map<string, number>((await runner.query(
+      `SELECT id::text, item_number FROM spend_items WHERE id = ANY($1::uuid[])`, [[s.lines.L1, s.lines.L7]],
+    )).map((r: any) => [r.id, Number(r.item_number)] as const));
+    const fxMissing = (report: CompanyChargebackReportResponse) => report.warnings.find((w) => typeof w !== 'string' && w.code === 'amount_fx_missing');
+
+    const ulla = await as(runner, p.ulla, (m) => company(m));
+    assert.deepEqual((fxMissing(ulla) as any)?.items, [{ currency: 'USD', year: YEAR, lines: 3 }], 'unscoped: every line without a rate counts');
+    assert.equal('fxMissingHiddenLines' in ulla, false, 'unscoped: no hidden line');
+
+    const marta = await as(runner, p.marta, (m) => company(m));
+    assert.deepEqual((fxMissing(marta) as any)?.items, [{ currency: 'USD', year: YEAR, lines: 2 }], 'Marta: L1 (hidden, charged to ES) and L4 count, not L7');
+    assert.deepEqual(marta.fxMissingHiddenLines, [numbers.get(s.lines.L1)], 'Marta: L1 named by its number alone');
+    assert.equal(marta.total, 0, 'the shares without a rate are left out');
+    assert.ok(!marta.fxMissingHiddenLines!.includes(numbers.get(s.lines.L7)!), 'L7 is not charged to ES');
+  } finally {
+    await runner.query('ROLLBACK TO SAVEPOINT usd');
+  }
+  console.log('  chargeback: a hidden line charged to the company without a rate counts and is named by its number: OK');
+}
+
 async function run() {
   await dataSource.initialize();
   const runner = dataSource.createQueryRunner();
@@ -248,6 +282,7 @@ async function run() {
       const s = await seed(clientOf(runner));
       const shares = await seedShares(runner, s);
       await testChargeback(runner, s, shares);
+      await testFxMissing(runner, s);
       await testWindow(runner, s);
     } finally {
       await runner.rollbackTransaction();

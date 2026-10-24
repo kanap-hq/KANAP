@@ -1454,7 +1454,9 @@
       "chartTitle": "Contracargo por departamento: {{name}}",
       "chartSubtitle": "Totales {{metric}}",
       "chartFootnote": "{{metric}} global: {{total}}",
-      "noCompanyInAccess": "Ninguna empresa forma parte de su acceso a los datos."
+      "noCompanyInAccess": "Ninguna empresa forma parte de su acceso a los datos.",
+      "fxMissingHiddenLines_one": "No hay tipo de cambio para {{references}}: su parte queda fuera de los totales.",
+      "fxMissingHiddenLines_other": "No hay tipo de cambio para {{references}}: sus partes quedan fuera de los totales."
     },
     "topOpex": {
       "title": "Top líneas",

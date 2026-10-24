@@ -155,6 +155,8 @@ type CompanyChargebackReportResponse = {
   } | null;
   /** Set for a limited person: the shares charged to the company only. */
   dataAccessLimited?: true;
+  /** A limited person's report: the numbers of the hidden lines charged to the company without a rate. */
+  fxMissingHiddenLines?: number[];
   intercompany?: {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
@@ -228,6 +230,8 @@ export default function CompanyChargebackReport() {
   // The lines left out for lack of a rate read as the budget reports' notice, above the report.
   const amountFxMissing = amountFxMissingOf(allWarnings);
   const warnings = allWarnings.filter((warning) => !isAmountFxMissingWarning(warning));
+  // Lines the person cannot read, charged to the company and left out for lack of a rate: by reference, no link.
+  const fxMissingHiddenLines = data?.fxMissingHiddenLines ?? [];
   const formatNumber = React.useCallback(
     (value: number | null | undefined) => baseFormatNumber(value, locale),
     [locale],
@@ -572,7 +576,7 @@ export default function CompanyChargebackReport() {
           </Paper>
         )}
 
-        {isReady && warnings.length > 0 && (
+        {isReady && (warnings.length > 0 || fxMissingHiddenLines.length > 0) && (
           <Alert severity="warning" sx={{ whiteSpace: 'pre-wrap' }}>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 0.5 }}>{t("reports.shared.warningsTitle")}</Typography>
             <Box component="ul" sx={{ pl: 3, my: 0 }}>
@@ -581,6 +585,14 @@ export default function CompanyChargebackReport() {
                   {allocationWarningText(t, warning)}
                 </Typography>
               ))}
+              {fxMissingHiddenLines.length > 0 && (
+                <Typography component="li" variant="body2">
+                  {t("reports.companyChargeback.fxMissingHiddenLines", {
+                    count: fxMissingHiddenLines.length,
+                    references: fxMissingHiddenLines.map((n) => formatItemRef('budget', n)).join(', '),
+                  })}
+                </Typography>
+              )}
             </Box>
           </Alert>
         )}
