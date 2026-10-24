@@ -37,6 +37,7 @@ import {
 import { ACTIVE_TASK_STATUSES } from './tasks/task.constants';
 import { useBudgetAggregate, useBudgetAggregates } from './reports/useBudgetAggregate';
 import FxMissingNotice, { FxMissingMark } from '../components/finance/FxMissingNotice';
+import CalculatedOnYourAccess, { isCalculatedOnAccess } from '../components/dataAccess/CalculatedOnYourAccess';
 import { mergeFxMissing, type FxMissing } from '../components/finance/fxMissing';
 
 type ServerListResponse<T> = { items: T[]; total: number; page: number; limit: number };
@@ -112,6 +113,8 @@ function useBudgetSnapshot(enabled: boolean) {
       return {
         totals: Object.fromEntries(totals) as Record<BudgetScope, Record<string, number>>,
         fxMissing: mergeFxMissing(...totals.map(([, data]) => data?.fxMissing)),
+        // Calculated on a limited person's data access.
+        calculatedOnAccess: totals.some(([, data]) => isCalculatedOnAccess(data)),
       };
     },
     staleTime: 5 * 60 * 1000,
@@ -295,7 +298,7 @@ function useCostCenterTotals(scope: BudgetScope, metric: AmountColumnKey, enable
   const request = useMemo(() => costCenterTotalsRequest(metric, 5), [metric]);
   const query = useBudgetAggregate(scope, request, { enabled });
   const rows = useMemo(() => readCostCenterTotals(query.data), [query.data]);
-  return { rows, fxMissing: query.data?.fxMissing, isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
+  return { rows, fxMissing: query.data?.fxMissing, calculatedOnAccess: isCalculatedOnAccess(query.data), isLoading: enabled && query.isLoading, isError: query.isError, refetch: query.refetch };
 }
 
 type RecentUpdate = { scope: NatureScope; id: string; ref: string; name: string; at: string | null };
@@ -545,6 +548,7 @@ export default function DashboardPage() {
                 </TableContainer>
               )}
               <FxMissingNotice items={snapshotFxMissing} sx={{ mt: 1 }} />
+              <CalculatedOnYourAccess show={!!snapshot.data?.calculatedOnAccess} sx={{ display: 'block', mt: 1 }} />
             </DashboardTile>
           </Box>
     ) : null,
@@ -807,6 +811,7 @@ export default function DashboardPage() {
                   <Typography variant="body1" color="text.secondary">{t('labels.noData')}</Typography>
                 )}
                 <FxMissingNotice items={costCenters.fxMissing} sx={{ pt: 0.5 }} />
+                <CalculatedOnYourAccess show={costCenters.calculatedOnAccess} />
               </Stack>
             </DashboardTile>
           </Box>

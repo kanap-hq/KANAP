@@ -10,9 +10,11 @@ import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../auth/AuthContext';
+import { isDataAccessLimited } from '../../auth/dataAccess';
 import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
+import CalculatedOnYourAccess, { isCalculatedOnAccess } from '../../components/dataAccess/CalculatedOnYourAccess';
 import { recordsInUseCheck } from '../../utils/deleteCheck';
 import { LinkCellRenderer } from '../../components/grid/renderers';
 import { formatItemRef } from '../../utils/item-ref';
@@ -137,7 +139,7 @@ export default function BudgetListPage() {
 }
 
 function BudgetListPageView() {
-  const { hasLevel, profile } = useAuth();
+  const { hasLevel, profile, dataAccess } = useAuth();
   const { tenantSlug } = useTenant();
   // Run before ServerDataGrid reads its saved columns.
   useMemo(() => migrateBudgetGridLayout(tenantSlug, profile?.id), [tenantSlug, profile?.id]);
@@ -326,6 +328,8 @@ function BudgetListPageView() {
   const reportingCurrency = lastCurrencyRef.current ?? 'EUR';
   // The amounts the footer totals leave out for lack of an exchange rate, named under the grid.
   const fxMissing = totals.isError ? undefined : totals.data?.fxMissing;
+  // The footer totals cover the person's access only.
+  const totalsOnAccess = !totals.isError && isCalculatedOnAccess(totals.data);
 
   const openNew = (nature: 'opex' | 'capex') => {
     const sp = buildGridSearch();
@@ -335,6 +339,8 @@ function BudgetListPageView() {
 
   const canCreate = hasLevel('budget', 'manager');
   const canAdmin = hasLevel('budget', 'admin');
+  // Deleting lines is reserved to people with access to all data (spec §2.7): no selection either.
+  const canDelete = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
       {canCreate && (
@@ -347,7 +353,7 @@ function BudgetListPageView() {
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('opex.exportCsv')}</Button>}
-      {canAdmin && (
+      {canDelete && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/budget-lines/bulk"
@@ -1041,9 +1047,14 @@ function BudgetListPageView() {
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}
-        enableRowSelection={canAdmin}
+        enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
-        footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
+        footer={fxMissing?.length || totalsOnAccess ? (
+          <>
+            <CalculatedOnYourAccess show={totalsOnAccess} sx={{ display: 'block' }} />
+            {!!fxMissing?.length && <FxMissingNotice items={fxMissing} />}
+          </>
+        ) : undefined}
       />}
       <BudgetFileExportDialog
         open={exportOpen}
