@@ -24,6 +24,7 @@ import { detectChanges, PROJECT_TRACKED_FIELDS, resolveDisplayNames } from '../.
 import { normalizeMarkdownRichText } from '../../common/markdown-worker';
 import { IntegratedDocumentsService } from '../../knowledge/integrated-documents.service';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
+import { activityBudgetLines, budgetLineActivitiesForReader } from '../budget-line-activity';
 import { budgetLineIdsOfKind, CAPEX_ITEMS_NOT_FOUND, insertProjectBudgetLinks, lockProject, OPEX_ITEMS_NOT_FOUND } from '../project-budget-links.util';
 
 /**
@@ -66,36 +67,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     return userIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
   }
 
-  private async resolveCapexLabelsByIds(mg: EntityManager, capexIds: string[]): Promise<string[]> {
-    if (capexIds.length === 0) return [];
-    // A CAPEX line's title is its `product_name` (lot Z1).
-    const rows = await mg.query<Array<{ id: string; description: string | null }>>(
-      `SELECT id, product_name AS description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'capex'`,
-      [capexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.description || row.id);
-    }
-    return capexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
-  private async resolveOpexLabelsByIds(mg: EntityManager, opexIds: string[]): Promise<string[]> {
-    if (opexIds.length === 0) return [];
-    const rows = await mg.query<Array<{ id: string; product_name: string | null; description: string | null }>>(
-      `SELECT id, product_name, description
-       FROM spend_items
-       WHERE id = ANY($1::uuid[]) AND nature = 'opex'`,
-      [opexIds],
-    );
-    const byId = new Map<string, string>();
-    for (const row of rows) {
-      byId.set(row.id, row.product_name || row.description || row.id);
-    }
-    return opexIds.map((id) => byId.get(id) ?? id).sort((a, b) => a.localeCompare(b));
-  }
 
   /**
    * Get a single project by ID with optional related data.
@@ -237,7 +209,7 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
 
     // Load activity history
     if (include.has('activities')) {
-      result.activities = await mg.query(
+      const activities = await mg.query(
         `SELECT a.*, u.email, u.first_name, u.last_name
          FROM portfolio_activities a
          LEFT JOIN users u ON u.id = a.author_id
@@ -246,6 +218,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
          ORDER BY a.created_at DESC, a.id`,
         [id]
       );
+      // Budget lines in the history: named only as far as the reader may read them.
+      result.activities = await budgetLineActivitiesForReader(mg, activities, opts?.readsBudget === true);
       const creators = await resolveRecordCreators(mg, 'portfolio_projects', [id]);
       result.created_by_name = creators.get(id) ?? null;
     }
@@ -925,8 +899,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveCapexLabelsByIds(mg, beforeSorted),
-        this.resolveCapexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'capex', beforeSorted),
+        activityBudgetLines(mg, 'capex', afterSorted),
       ]);
       await this.logActivity(mg, {
         project_id: projectId,
@@ -980,8 +954,8 @@ export class PortfolioProjectsCrudService extends PortfolioProjectsBaseService {
     const afterSorted = [...afterIds].sort();
     if (JSON.stringify(beforeSorted) !== JSON.stringify(afterSorted)) {
       const [beforeLabels, afterLabels] = await Promise.all([
-        this.resolveOpexLabelsByIds(mg, beforeSorted),
-        this.resolveOpexLabelsByIds(mg, afterSorted),
+        activityBudgetLines(mg, 'opex', beforeSorted),
+        activityBudgetLines(mg, 'opex', afterSorted),
       ]);
       await this.logActivity(mg, {
         project_id: projectId,
