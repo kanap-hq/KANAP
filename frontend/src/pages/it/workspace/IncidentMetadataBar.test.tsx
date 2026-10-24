@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { describe, expect, it, vi } from 'vitest';
 import type { Incident } from '../../../api/endpoints/incidents';
@@ -59,6 +60,20 @@ function renderBar(onDetectedAtChange: (next: string) => void) {
 }
 
 describe('IncidentMetadataBar detected date popover', () => {
+  it('replaces the saved detected date typed in the autoFocused popover', async () => {
+    const user = userEvent.setup();
+    const onDetectedAtChange = vi.fn();
+    renderBar(onDetectedAtChange);
+
+    fireEvent.click(screen.getByRole('button', { name: /2022/ }));
+    const date = screen.getByPlaceholderText('dd/mm/yyyy') as HTMLInputElement;
+    expect(date.selectionStart).toBe(0);
+    expect(date.selectionEnd).toBe(date.value.length);
+    await user.type(date, '21102026', { skipClick: true });
+    expect(date.value).toBe('21/10/2026');
+    expect(onDetectedAtChange).toHaveBeenLastCalledWith(new Date(2026, 9, 21, 14, 5).toISOString());
+  });
+
   it('leaves the saved timestamp untouched when an invalid date closes with the popover', async () => {
     const onDetectedAtChange = vi.fn();
     renderBar(onDetectedAtChange);
