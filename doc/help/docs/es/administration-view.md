@@ -67,7 +67,7 @@ La tabla lista todos los activos que no están retirados, y carga más a medida 
 | **Ref.**, **Nombre**, **Tipo** | El activo |
 | **Zona** | Su zona de administración, o **Sin zona** |
 | **Tecnologías** | Las tecnologías instaladas en el activo. Se muestran los dos primeros nombres y después el número de los demás; pase el cursor sobre la celda para ver la lista completa |
-| **Aplicaciones** | Las aplicaciones en servicio alojadas en el activo, mostradas de la misma forma. Haga clic en un nombre para abrir la aplicación |
+| **Aplicaciones** | Las aplicaciones en servicio alojadas en el activo, mostradas de la misma forma, incluidas las asignadas a su clúster. Haga clic en un nombre para abrir la aplicación |
 | **Controles** | Los puntos de control que afectan al activo. Pase el cursor sobre **Host menos sensible** para ver el motivo: **Ejecuta** nombra el activo más sensible que ejecuta, **Miembro del clúster** nombra el clúster más sensible, cada uno por su referencia y su nombre, con su zona |
 
 Busque por nombre o referencia. Filtre por **Tipo**, **Zona** (incluida **Sin zona**) y **Controles**, y ordene por **Ref.**, **Nombre**, **Tipo** o **Zona**. El orden por zona sigue el de la configuración, con los activos sin zona al final. La banda y los botones de los puntos de control aplican los mismos filtros que las columnas **Zona** y **Controles**.

@@ -43,7 +43,7 @@ La lista de activos le ofrece una visión filtrable y ordenable de cada activo d
 | **OS** | Sistema operativo: la tecnología marcada como sistema operativo del servidor, con su versión |
 | **Zona de red** | Segmento de red (derivado de la subred) |
 | **Ciclo de vida** | Estado actual del ciclo de vida |
-| **Asignaciones** | Número de asignaciones de aplicaciones |
+| **Asignaciones** | Número de asignaciones de aplicaciones, incluidas las heredadas de sus clústeres |
 | **Creado** | Cuándo se creó el registro |
 
 **Ordenación predeterminada**: **Creado** descendente (los más recientes primero).
@@ -79,7 +79,7 @@ Ordenar por **Vulnerabilidades por revisar** clasifica los activos por sus vulne
 **Acciones**:
 - **Añadir activo**: abre un menú (`infrastructure:member`). **Añadir activo** crea un activo; **Añadir clúster** crea uno con el conmutador **Clúster** ya activado
 - **Importar CSV** / **Exportar CSV**: Operaciones masivas (`infrastructure:admin`)
-- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo, y lo que los demás se llevan consigo (consulte [Eliminar un clúster o un miembro](#deleting-a-cluster-or-a-member))
+- **Eliminar activo** (filas seleccionadas): Eliminar los activos seleccionados (`infrastructure:admin`). Un activo todavía asignado a aplicaciones o vinculado a conexiones no se puede eliminar: retírelo primero de ellas. Una asignación que el activo solo hereda de su clúster no lo impide. Antes de eliminar nada, la confirmación enumera los activos que se conservan, con el motivo, y lo que los demás se llevan consigo (consulte [Eliminar un clúster o un miembro](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,7 +90,22 @@ Los activos pueden organizarse en clústeres:
 - **Activo regular**: Una instancia individual de infraestructura
 - **Clúster**: Un grupo de activos que actúan como una única unidad lógica
 
-Para crear un clúster, elija **Añadir clúster** en el menú **Añadir activo**, o active el conmutador **Clúster** en el panel de propiedades de un activo. Un clúster puede ser un extremo de conexiones. Las aplicaciones se asignan a los hosts miembros.
+Para crear un clúster, elija **Añadir clúster** en el menú **Añadir activo**, o active el conmutador **Clúster** en el panel de propiedades de un activo. Un clúster puede ser un extremo de conexiones.
+
+### Aplicaciones en un clúster { #applications-on-a-cluster }
+
+Una aplicación puede asignarse a un clúster, desde la pestaña **Despliegues** de la aplicación o la pestaña **Operación** del clúster. Sus miembros en servicio alojan entonces la aplicación con el rol de la asignación del clúster. Un miembro añadido más tarde también la aloja. Un miembro sacado del clúster deja de alojarla. Un miembro retirado no hereda nada, y un clúster retirado no transmite nada.
+
+Dónde asignar depende del clúster:
+
+- **Clúster de conmutación por error** (SQL Server Always On, por ejemplo): la aplicación se ejecuta en cada nodo. Asígnela al clúster.
+- **Clúster de virtualización** (vSphere, por ejemplo): las aplicaciones se ejecutan en las máquinas virtuales que el clúster contiene. Asigne cada aplicación a su máquina virtual. Solo la plataforma misma, como vSphere con el rol de virtualización, se asigna al clúster.
+
+Un miembro ejecuta lo que está asignado a su clúster. Un activo que el clúster contiene se ejecuta dentro de él y no hereda nada.
+
+Cuando asigna una aplicación a un miembro de un clúster, KANAP pregunta **¿Asignar al clúster?**: **Asignar al clúster** pone la asignación en el clúster para todos sus miembros, **Solo este servidor** la mantiene en ese servidor. La pregunta nombra a los miembros cuya asignación propia del mismo entorno y rol será sustituida por la del clúster. La asignación del clúster conserva entonces la fecha **Desde** más antigua y sus notas. Cuando el miembro ya aloja la aplicación con ese rol a través de su clúster, no se crea nada y un mensaje lo indica. Una asignación hecha con el asistente sigue las mismas reglas, sin la pregunta.
+
+Allí donde KANAP lee dónde se ejecuta una aplicación, cuenta los miembros del clúster: las vulnerabilidades y el fin de soporte de la aplicación, su tipo de alojamiento (un clúster sin ubicación toma el tipo de alojamiento de sus miembros), las zonas de administración, las aplicaciones de una ubicación o de un contrato sobre un servidor, el asistente y Conocimiento. En el impacto de un miembro caído, el clúster queda degradado y sus aplicaciones siguen funcionando. Consulte [Dependencias](#dependencies).
 
 Los miembros se gestionan desde la pestaña **Dependencias** del clúster. Consulte [Dependencias](#dependencies). Las reglas:
 
@@ -184,9 +199,11 @@ La pestaña Operación muestra lo que se ejecuta en el activo: las aplicaciones 
 | **Desde** | Fecha en que se asignó el servidor |
 | **Notas** | Notas de texto libre |
 
-Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación. Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación.
+Haga clic en **Añadir asignación** para vincular este activo a un despliegue de aplicación (`applications:member`). Elija la aplicación, luego el entorno (la aplicación ya debe tener un despliegue en ese entorno), luego el rol y la fecha / notas opcionales. En un miembro de un clúster, KANAP pregunta primero si asignar el clúster o solo este servidor. Consulte [Aplicaciones en un clúster](#applications-on-a-cluster). El lápiz al final de una fila abre la aplicación: la asignación se edita en su pestaña **Despliegues**. El icono de papelera quita la asignación, tras una confirmación. **Añadir asignación** no está disponible mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**.
 
-En un clúster, un aviso encima de la tabla le pide que asigne en su lugar los hosts miembros, y **Añadir asignación** no está disponible. Tampoco lo está mientras no haya ningún rol de servidor configurado en **Panorama IT > Configuración**.
+En un miembro, una aplicación asignada a su clúster se muestra «vía» el nombre del clúster, sin lápiz ni papelera: modifíquela en el clúster.
+
+En un clúster, cuando una aplicación está asignada directamente a cada uno de sus miembros en servicio, una línea bajo la tabla los nombra, con **Asignar al clúster**. Tras una confirmación, el clúster toma la asignación y se quitan las asignaciones propias de los miembros. La aplicación sigue entonces disponible mientras un miembro siga activo.
 
 **Tecnologías**: lo que lleva el servidor, por ejemplo Windows Server, SQL Server, vSphere o Active Directory. Columnas: **Ref.**, **Nombre**, **Familia**, **Versión** y, cuando el servidor lleva una tecnología a través de otro, **Vía**.
 
@@ -292,7 +309,7 @@ Los activos retirados cortan la cadena: nada cae a través de ellos. Cada tabla 
 
 **Clúster**:
 
-- En un **clúster**, la sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en un nombre para abrir ese activo. **Añadir miembros** (en un clúster sin miembros) o **Editar miembros** abre un cuadro de diálogo de búsqueda. Solo ofrece activos simples, nunca un clúster ni el propio clúster.
+- En un **clúster**, la sección **Miembros** lista los activos miembros (Nombre, Entorno, Estado, Sistema operativo). Haga clic en un nombre para abrir ese activo. **Añadir miembros** (en un clúster sin miembros) o **Editar miembros** abre un cuadro de diálogo de búsqueda. Solo ofrece activos simples, nunca un clúster ni el propio clúster. Un icono de advertencia señala un miembro cuyo entorno difiere del del clúster. Cuando quita miembros de un clúster que lleva aplicaciones, **¿Quitar miembros?** nombra las aplicaciones que cada uno dejará de alojar. **Quitar de todos modos** guarda.
 - En **cualquier otro activo**, la sección **Pertenencia al clúster** muestra los clústeres a los que pertenece este activo, con su entorno y su estado. Haga clic en un nombre para abrir el clúster.
 
 **Relaciones entre activos**, una tabla por sentido:
@@ -478,7 +495,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ## Consejos
 
 - **Nombre de forma coherente**: Incluya entorno, rol y secuencia en los nombres de los activos para facilitar la identificación.
-- **Use clústeres**: Agrupe activos relacionados (p. ej., clúster web, clúster de bases de datos) para simplificar la gestión. Asigne aplicaciones a los hosts miembros, no al clúster en sí.
+- **Use clústeres**: Agrupe activos relacionados (p. ej., clúster web, clúster de bases de datos) para simplificar la gestión. Asigne al clúster una aplicación que se ejecuta en cada nodo, y una aplicación de una máquina virtual a esa máquina.
 - **Haga seguimiento del ciclo de vida**: Marque los activos obsoletos y retirados para mantener los conteos de inventario precisos.
 - **Vincule a ubicaciones**: Asigne activos a ubicaciones para que el tipo de alojamiento, país y ciudad se rellenen automáticamente.
 - **Asigne a aplicaciones**: Use la sección **Aplicaciones alojadas** de la pestaña Operación para vincular activos a despliegues de aplicaciones. Las mismas asignaciones aparecen en la pestaña Despliegues de la aplicación.

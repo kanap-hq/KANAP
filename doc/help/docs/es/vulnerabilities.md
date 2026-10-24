@@ -59,7 +59,7 @@ Una vulnerabilidad alcanza un servidor o una aplicación solo por vínculos dire
 
 - **Servidor**: la tecnología y la versión están registradas en el propio servidor. Un servidor retirado no se cuenta.
 - **Clúster**: lo registrado en el propio clúster, más lo registrado en sus miembros en servicio. Un clúster cuenta las vulnerabilidades de sus miembros, en su columna de la lista, su insignia y su ficha. Filtrar esta página por un clúster muestra también las filas de sus miembros.
-- **Aplicación**: la aplicación declara la tecnología y la versión, o uno de sus servidores de despliegue las tiene registradas en sí mismo. Una tecnología a la vez declarada y alojada cuenta una vez. Una aplicación desactivada, o cuya fecha de desactivación ya pasó, no se cuenta.
+- **Aplicación**: la aplicación declara la tecnología y la versión, o uno de sus servidores de despliegue las tiene registradas en sí mismo. Una aplicación asignada a un clúster cuenta el clúster y sus miembros en servicio. Una tecnología a la vez declarada y alojada cuenta una vez. Una aplicación desactivada, o cuya fecha de desactivación ya pasó, no se cuenta.
 
 Los recuentos por servidor y por aplicación, en las listas, en las fichas, en el panel de control y en Plaid, siguen las mismas reglas:
 

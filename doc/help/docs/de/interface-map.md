@@ -139,7 +139,7 @@ Wenn Sie einen Knoten oder eine Kante auswählen, öffnet sich ein Seitenpanel a
 - **Beschreibung**: Was die Anwendung tut
 - **Herausgeber**: Software-Herausgeber
 - **Kritikalität**: eine Stufe der Geschäftskritikalität aus dem Katalog Ihrer Organisation, unter [Einstufungen und Kontinuität](it-ops-settings.md#einstufungen-und-kontinuitat). Die Standardstufen sind Kritisch, Hoch, Mittel und Niedrig
-- **Server**: Server, die diese App hosten, gruppiert nach Umgebung. Klicken Sie auf einen Servernamen, um seinen Arbeitsbereich zu öffnen.
+- **Server**: Server, die diese App hosten, gruppiert nach Umgebung. Ein Cluster steht zuerst, mit einem Cluster-Symbol und seinen Mitgliedern darunter. Klicken Sie auf einen Servernamen, um seinen Arbeitsbereich zu öffnen.
 - **Business-Verantwortliche** und **IT-Verantwortliche**: Verantwortliche Kontakte
 - **Support-Informationen**: Support-Kontakte mit ihren Rollen. Klicken Sie auf einen Kontaktnamen, um zum Reiter Technisch der Anwendung zu navigieren.
 - **Anwendung bearbeiten**: Öffnet den Anwendungs-Arbeitsbereich

@@ -43,7 +43,7 @@ The asset list gives you a filterable, sortable overview of every asset in your 
 | **OS** | Operating system: the technology marked as the server's operating system, with its version |
 | **Network Zone** | Network segment (derived from subnet) |
 | **Lifecycle** | Current lifecycle status |
-| **Assignments** | Number of application assignments |
+| **Assignments** | Number of application assignments, those inherited from its clusters included |
 | **Created** | When the record was created |
 
 **Default sort**: **Created** descending (newest first).
@@ -79,7 +79,7 @@ Sorting on **Vulnerabilities to review** orders the assets by their critical or 
 **Actions**:
 - **Add asset**: opens a menu (`infrastructure:member`). **Add asset** creates an asset; **Add cluster** creates one with the **Cluster** switch already on
 - **Import CSV** / **Export CSV**: Bulk operations (`infrastructure:admin`)
-- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
+- **Delete asset** (selected rows): Remove selected assets (`infrastructure:admin`). An asset still assigned to applications or linked to connections cannot be deleted: remove it from them first. An assignment the asset only inherits from its cluster does not block it. Before anything is deleted, the confirmation lists the assets kept, with the reason, and what the others take with them (see [Deleting a cluster or a member](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,7 +90,22 @@ Assets can be organized into clusters:
 - **Regular asset**: An individual infrastructure instance
 - **Cluster**: A group of assets acting as a single logical unit
 
-To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A cluster can be an endpoint in connections. Applications are assigned to the member hosts.
+To create a cluster, choose **Add cluster** in the **Add asset** menu, or turn on the **Cluster** switch in the properties drawer of an asset. A cluster can be an endpoint in connections.
+
+### Applications on a cluster { #applications-on-a-cluster }
+
+An application can be assigned to a cluster, from the **Deployments** tab of the application or the **Operations** tab of the cluster. Its members in service then host the application with the role of the cluster's assignment. A member added later hosts it too. A member taken out of the cluster no longer hosts it. A retired member inherits nothing, and a retired cluster passes nothing on.
+
+Where to assign depends on the cluster:
+
+- **Failover cluster** (SQL Server Always On, for example): the application runs on each node. Assign it to the cluster.
+- **Virtualisation cluster** (vSphere, for example): the applications run in the virtual machines the cluster contains. Assign each application to its virtual machine. Only the platform itself, such as vSphere with the virtualisation role, is assigned to the cluster.
+
+A member runs what is assigned to its cluster. An asset the cluster contains runs inside it and inherits nothing.
+
+When you assign an application to a member of a cluster, KANAP asks **Assign to the cluster?**: **Assign to the cluster** puts the assignment on the cluster for all its members, **This server only** keeps it on that server. The question names the members whose own assignment of the same environment and role the cluster's will replace. The cluster's assignment then keeps the earliest **Since** date and their notes. When the member already hosts the application in that role through its cluster, nothing is created and a message says so. An assignment made through the assistant follows the same rules, without the question.
+
+Wherever KANAP reads where an application runs, it counts the members of the cluster: the vulnerabilities and end of support of the application, its hosting type (a cluster without a location takes the hosting type of its members), the administration zones, the applications of a location or of a contract on a server, the assistant and Knowledge. In the impact of a fallen member, the cluster is degraded and its applications keep running. See [Dependencies](#dependencies).
 
 Members are managed from the **Dependencies** tab of the cluster. See [Dependencies](#dependencies). The rules:
 
@@ -184,9 +199,11 @@ The Operations tab shows what runs on the asset: the applications it hosts, the 
 | **Since** | Date the server was assigned |
 | **Notes** | Free-text notes |
 
-Click **Add assignment** to attach this asset to an application deployment. Pick the application, then the environment (the application must already have a deployment in that environment), then the role and optional date / notes. The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation.
+Click **Add assignment** to attach this asset to an application deployment (`applications:member`). Pick the application, then the environment (the application must already have a deployment in that environment), then the role and optional date / notes. On a member of a cluster, KANAP first asks whether to assign the cluster or this server only. See [Applications on a cluster](#applications-on-a-cluster). The pencil at the end of a row opens the application: the assignment is edited in its **Deployments** tab. The bin icon removes the assignment, after a confirmation. **Add assignment** is unavailable while no server role is set up in **IT Landscape > Settings**.
 
-On a cluster, a notice above the table asks you to assign the member hosts instead, and **Add assignment** is unavailable. It is also unavailable while no server role is set up in **IT Landscape > Settings**.
+On a member, an application assigned to its cluster shows "via" the cluster's name, without pencil or bin: change it on the cluster.
+
+On a cluster, when an application is assigned directly to each of its members in service, a line under the table names them, with **Assign to the cluster**. After a confirmation, the cluster takes the assignment and the members' own assignments are removed. The application then stays available as long as one member stands.
 
 **Technologies**: what the server carries, for example Windows Server, SQL Server, vSphere or Active Directory. Columns: **Ref**, **Name**, **Family**, **Version** and, when the server carries a technology through another one, **Via**.
 
@@ -292,7 +309,7 @@ Retired assets stop the chain: nothing falls through them. Each table shows its 
 
 **Cluster**:
 
-- On a **cluster**, the **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. **Add members** (on a cluster without members) or **Edit members** opens a search dialog. It offers plain assets only, never a cluster or the cluster itself.
+- On a **cluster**, the **Members** section lists the member assets (Name, Environment, Status, Operating system). Click a name to open that asset. **Add members** (on a cluster without members) or **Edit members** opens a search dialog. It offers plain assets only, never a cluster or the cluster itself. A warning icon marks a member whose environment differs from the cluster's. When you remove members from a cluster that carries applications, **Remove members?** names the applications each one will no longer host. **Remove anyway** saves.
 - On **any other asset**, the **Cluster membership** section shows the clusters this asset belongs to, with their environment and status. Click a name to open the cluster.
 
 **Relations between assets**, one table per direction:
@@ -478,7 +495,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ## Tips
 
 - **Name consistently**: Include environment, role, and sequence in asset names for easy identification.
-- **Use clusters**: Group related assets (e.g., web cluster, database cluster) to simplify management. Assign applications to member hosts, not to the cluster itself.
+- **Use clusters**: Group related assets (e.g., web cluster, database cluster) to simplify management. Assign an application that runs on every node to the cluster, and an application of a virtual machine to that machine.
 - **Track lifecycle**: Mark deprecated and retired assets to keep inventory counts accurate.
 - **Link to locations**: Assign assets to locations so hosting type, country and city are populated automatically.
 - **Assign to applications**: Use the **Hosted applications** section of the Operations tab to link assets to application deployments. The same assignments appear under the application's Deployments tab.

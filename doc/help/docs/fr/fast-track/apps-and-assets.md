@@ -209,7 +209,7 @@ Cliquez sur **Créer** pour déverrouiller l'espace de travail complet. L'onglet
 
 Allez dans l'onglet **Exploitation** pour ajouter les **Technologies** que porte le serveur, avec leurs versions. Ajoutez Windows Server, Ubuntu ou une autre technologie de la famille **Système d'exploitation** : elle devient le système d'exploitation du serveur.
 
-Si cet actif est un cluster, activez l'interrupteur **Cluster** dans le panneau **Propriétés**, puis ajoutez ses serveurs membres avec **Modifier les membres** dans l'onglet **Dépendances**.
+Si cet actif est un cluster, activez l'interrupteur **Cluster** dans le panneau **Propriétés**, puis ajoutez ses serveurs membres avec **Modifier les membres** dans l'onglet **Dépendances**. Une application qui tourne sur chaque membre s'affecte au cluster : voir [Applications sur un cluster](../assets.md#applications-on-a-cluster).
 
 ---
 

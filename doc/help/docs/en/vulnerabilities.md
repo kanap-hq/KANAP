@@ -59,7 +59,7 @@ A vulnerability reaches a server or an application through direct links only, ev
 
 - **Server**: the technology and the version are recorded on the server itself. A retired server is not counted.
 - **Cluster**: what is recorded on the cluster itself, plus what is recorded on its members in service. A cluster counts the vulnerabilities of its members, in its list column, its badge and its record. Filtering this page on a cluster shows the rows of its members too.
-- **Application**: the application declares the technology and the version, or one of its deployment servers has them recorded on itself. A technology both declared and hosted counts once. A disabled application, or one whose disable date has passed, is not counted.
+- **Application**: the application declares the technology and the version, or one of its deployment servers has them recorded on itself. An application assigned to a cluster counts the cluster and its members in service. A technology both declared and hosted counts once. A disabled application, or one whose disable date has passed, is not counted.
 
 The counts per server and per application, in the lists, on the records, on the dashboard and in Plaid, follow the same rules:
 

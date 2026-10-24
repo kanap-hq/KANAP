@@ -107,7 +107,7 @@ Eine Zelle ohne Wert zeigt einen Strich.
 - **Suites**: Übergeordnete Suites, zu denen diese Anwendung gehört
 - **Lieferant**: Verknüpfter Lieferantenname
 - **Business-Verantwortliche** / **IT-Verantwortliche**: Zugewiesene Verantwortliche (gekürzt, Mauszeiger oder Klick zum Anzeigen aller)
-- **Hosting**: Abgeleitet von Server-Standorten, die App-Bereitstellungen zugewiesen sind
+- **Hosting**: Abgeleitet von Server-Standorten, die App-Bereitstellungen zugewiesen sind. Eine Anwendung auf einem Cluster übernimmt auch die Standorte seiner Mitglieder
 - **Extern erreichbar**: Ob die App aus dem Internet zugänglich ist
 - **SSO aktiviert** / **MFA aktiviert**: Authentifizierungsfunktionen
 - **Datenintegration / ETL**: Ob die App an Datenintegrationen teilnimmt
@@ -223,7 +223,9 @@ Der Reiter Bereitstellungen dokumentiert, wo die Anwendung tatsächlich läuft: 
 | **Hosting** | Abgeleitet vom Standort des Assets |
 | **Seit** | Datum, an dem der Server dieser Bereitstellung zugewiesen wurde |
 
-Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Cluster-Assets sind ausgeschlossen. Weisen Sie stattdessen Cluster-Member-Hosts zu.
+Klicken Sie in der Bereitstellungs-Kopfzeile auf **Server hinzufügen**, um ein Asset anzuhängen. Die Auswahl listet die Cluster mit ihren Mitgliedern unter ihrem Namen. Die Zuordnung eines Clusters erreicht seine Mitglieder in Betrieb: Sie erscheinen unter der Zeile des Clusters, ohne Aktionen. Ändern Sie die Zuordnung am Cluster. Wenn Sie ein Mitglied eines Clusters wählen, fragt KANAP, ob dem Cluster oder nur diesem Server zugeordnet wird. Siehe [Anwendungen auf einem Cluster](assets.md#applications-on-a-cluster).
+
+Ist die Anwendung jedem Mitglied in Betrieb eines Clusters direkt zugeordnet, nennt eine Zeile unter der Tabelle diese Mitglieder, mit einer Schaltfläche, die die Anwendung dem Cluster zuordnet (der Name des Clusters, dann **zuordnen**). Nach einer Bestätigung übernimmt der Cluster die Zuordnung, und die eigenen Zuordnungen der Mitglieder werden entfernt. Die Anwendung bleibt dann verfügbar, solange ein Mitglied läuft.
 
 **Tipp**: Dokumentieren Sie Server zuerst in **IT-Landschaft > Assets** und verknüpfen Sie sie dann hier. Der Reiter Betrieb des Assets zeigt dieselben Zuordnungen umgekehrt an, unter **Gehostete Anwendungen**.
 
@@ -258,7 +260,7 @@ Der Reiter Betrieb enthält in dieser Reihenfolge, wie Benutzer auf die Anwendun
 **Technologien** listet, wovon die Anwendung abhängt, aus zwei Quellen, die die Spalte **Verknüpfung** angibt. Spalten: Referenz (`TEC-4`), Name, Familie, Versionen, Verknüpfung, Server, über die sie kommt (**Über**), Ende des Standardsupports.
 
 - **Deklariert**: Jemand hat die Technologie mit der Anwendung verknüpft, zum Beispiel Entra ID für eine Anwendung, deren Benutzer sich darüber anmelden.
-- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
+- **Gehostet**: Ein Server einer ihrer Bereitstellungen trägt die Technologie, auch ein Mitglied eines Clusters, dem sie zugeordnet ist. **Über** nennt den Server und den Host, wenn die Technologie auf dem Host einer virtuellen Maschine läuft. Deaktivierte Bereitstellungen zählen nicht.
 
 Eine Technologie kann beides sein. Ein Strich in der Versionsspalte bedeutet, dass die Version unbekannt ist. Das Ende des Standardsupports wird orange, sobald es überschritten ist. Der Abschnitt erfordert `infrastructure:reader`.
 
@@ -378,7 +380,7 @@ Sie benötigen `applications:admin` und `infrastructure:member`.
 
 Das Fenster prüft zuerst, was die Umwandlung ändert. Wählen Sie eine **Familie** und lesen Sie dann die drei Listen:
 
-- **Geht an die Technologie**: Verantwortliche, Supportkontakte, Verträge, Budgetzeilen, Projekte, Weblinks, Dokumente, Vorfälle und die Server ihrer aktiven Bereitstellungen. Jeder Server wird zu einem Server, der die Technologie trägt, mit unbekannter Version. Verknüpfungen in Modulen, die Sie nicht lesen dürfen, gehen ebenfalls mit.
+- **Geht an die Technologie**: Verantwortliche, Supportkontakte, Verträge, Budgetzeilen, Projekte, Weblinks, Dokumente, Vorfälle und die Server ihrer aktiven Bereitstellungen. Jeder Server wird zu einem Server, der die Technologie trägt, mit unbekannter Version. Ein Cluster gibt seine Mitglieder in Betrieb weiter. Verknüpfungen in Modulen, die Sie nicht lesen dürfen, gehen ebenfalls mit.
 - **Bleibt erhalten, ohne Verknüpfung zur Anwendung**: Verwaltete Dokumente bleiben in ihrer Bibliothek, bei den nicht abgelegten Dokumenten.
 - **Geht mit der Anwendung verloren**: Bereitstellungen und Umgebungen, Suite-Zugehörigkeit, Vorgänger und Nachfolger, Datenresidenz, die nutzenden Unternehmen und Abteilungen, Wissensverknüpfungen, verknüpfte Aufgaben und Anfragen, Geschäftsprozesse, die Technologien, von denen sie abhängt, und die Felder, die nur Anwendungen haben (Benutzer, Zugriffsarten, SSO, MFA, personenbezogene Daten). Auch ihre `APP`-Referenz entfällt.
 

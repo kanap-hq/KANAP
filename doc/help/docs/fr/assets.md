@@ -43,7 +43,7 @@ La liste des actifs vous donne une vue filtrable et triable de chaque actif de v
 | **OS** | Système d'exploitation : la technologie marquée comme système d'exploitation du serveur, avec sa version |
 | **Zone réseau** | Segment réseau (dérivé du sous-réseau) |
 | **Cycle de vie** | Statut de cycle de vie actuel |
-| **Assignations** | Nombre d'assignations d'applications |
+| **Assignations** | Nombre d'assignations d'applications, y compris celles héritées de ses clusters |
 | **Créé** | Quand l'enregistrement a été créé |
 
 **Tri par défaut** : **Créé** décroissant (le plus récent en premier).
@@ -79,7 +79,7 @@ Le tri sur **Vulnérabilités à traiter** classe les actifs par leurs vulnérab
 **Actions** :
 - **Ajouter un actif** : ouvre un menu (`infrastructure:member`). **Ajouter un actif** crée un actif ; **Ajouter un cluster** en crée un avec l'interrupteur **Cluster** déjà activé
 - **Import CSV** / **Export CSV** : Opérations en masse (`infrastructure:admin`)
-- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
+- **Supprimer un actif** (lignes sélectionnées) : Supprimer les actifs sélectionnés (`infrastructure:admin`). Un actif encore affecté à des applications ou lié à des connexions ne peut pas être supprimé : retirez-le d'abord de ces éléments. Une affectation que l'actif hérite seulement de son cluster ne bloque pas. Avant toute suppression, la confirmation liste les actifs conservés, avec la raison, et ce que les autres emportent avec eux (voir [Supprimer un cluster ou un membre](#deleting-a-cluster-or-a-member))
 
 ---
 
@@ -90,7 +90,22 @@ Les actifs peuvent être organisés en clusters :
 - **Actif standard** : Une instance d'infrastructure individuelle
 - **Cluster** : Un groupe d'actifs agissant comme une seule unité logique
 
-Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Un cluster peut être un point de terminaison dans les connexions. Les applications s'affectent aux hôtes membres.
+Pour créer un cluster, choisissez **Ajouter un cluster** dans le menu **Ajouter un actif**, ou activez l'interrupteur **Cluster** dans le tiroir des propriétés d'un actif. Un cluster peut être un point de terminaison dans les connexions.
+
+### Applications sur un cluster { #applications-on-a-cluster }
+
+Une application peut être affectée à un cluster, depuis l'onglet **Déploiements** de l'application ou l'onglet **Exploitation** du cluster. Ses membres en service hébergent alors l'application avec le rôle de l'affectation du cluster. Un membre ajouté plus tard l'héberge aussi. Un membre retiré du cluster ne l'héberge plus. Un membre retiré du parc n'hérite de rien, et un cluster retiré ne transmet rien.
+
+Où affecter dépend du cluster :
+
+- **Cluster de bascule** (SQL Server Always On, par exemple) : l'application tourne sur chaque nœud. Affectez-la au cluster.
+- **Cluster de virtualisation** (vSphere, par exemple) : les applications tournent dans les machines virtuelles que le cluster contient. Affectez chaque application à sa machine virtuelle. Seule la plateforme elle-même, comme vSphere avec le rôle virtualisation, s'affecte au cluster.
+
+Un membre exécute ce qui est affecté à son cluster. Un actif que le cluster contient tourne dedans et n'hérite de rien.
+
+Quand vous affectez une application à un membre d'un cluster, KANAP demande **Affecter au cluster ?** : **Affecter au cluster** pose l'affectation sur le cluster pour tous ses membres, **Ce serveur seulement** la garde sur ce serveur. La question nomme les membres dont l'affectation propre de même environnement et de même rôle sera remplacée par celle du cluster. L'affectation du cluster garde alors la date **Depuis** la plus ancienne et leurs notes. Quand le membre héberge déjà l'application dans ce rôle par son cluster, rien n'est créé et un message le dit. Une affectation faite par l'assistant suit les mêmes règles, sans la question.
+
+Partout où KANAP lit où tourne une application, il compte les membres du cluster : les vulnérabilités et la fin de support de l'application, son type d'hébergement (un cluster sans site prend le type d'hébergement de ses membres), les zones d'administration, les applications d'un site ou d'un contrat sur un serveur, l'assistant et Connaissances. Dans l'impact d'un membre tombé, le cluster est dégradé et ses applications continuent de tourner. Voir [Dépendances](#dependencies).
 
 Les membres se gèrent depuis l'onglet **Dépendances** du cluster. Voir [Dépendances](#dependencies). Les règles :
 
@@ -184,9 +199,11 @@ L'onglet Exploitation montre ce qui tourne sur l'actif : les applications qu'il 
 | **Depuis** | Date à laquelle le serveur a été affecté |
 | **Notes** | Notes en texte libre |
 
-Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application. Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation.
+Cliquez sur **Ajouter une affectation** pour rattacher cet actif à un déploiement d'application (`applications:member`). Choisissez l'application, puis l'environnement (l'application doit déjà avoir un déploiement dans cet environnement), puis le rôle et la date / les notes optionnelles. Sur un membre d'un cluster, KANAP demande d'abord s'il faut affecter le cluster ou ce serveur seulement. Voir [Applications sur un cluster](#applications-on-a-cluster). Le crayon en fin de ligne ouvre l'application : l'affectation se modifie dans son onglet **Déploiements**. L'icône corbeille retire l'affectation, après une confirmation. **Ajouter une affectation** est indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**.
 
-Sur un cluster, un message au-dessus du tableau vous demande d'affecter plutôt les hôtes membres, et **Ajouter une affectation** est indisponible. Le bouton est aussi indisponible tant qu'aucun rôle serveur n'est configuré dans **Cartographie SI > Paramètres**.
+Sur un membre, une application affectée à son cluster s'affiche « via » le nom du cluster, sans crayon ni corbeille : modifiez-la sur le cluster.
+
+Sur un cluster, quand une application est affectée directement à chacun de ses membres en service, une ligne sous le tableau les nomme, avec **Affecter au cluster**. Après une confirmation, le cluster prend l'affectation et les affectations propres des membres sont retirées. L'application reste alors disponible tant qu'un membre tient.
 
 **Technologies** : ce que porte le serveur, par exemple Windows Server, SQL Server, vSphere ou Active Directory. Colonnes : **Réf.**, **Nom**, **Famille**, **Version** et, quand le serveur porte une technologie par un autre, **Via**.
 
@@ -292,7 +309,7 @@ Les actifs retirés arrêtent la chaîne : rien ne tombe à travers eux. Chaque 
 
 **Cluster** :
 
-- Sur un **cluster**, la section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. **Ajouter des membres** (sur un cluster sans membre) ou **Modifier les membres** ouvre une boîte de dialogue de recherche. Elle ne propose que des actifs simples, jamais un cluster ni le cluster lui-même.
+- Sur un **cluster**, la section **Membres** liste les actifs membres (Nom, Environnement, Statut, Système d'exploitation). Cliquez sur un nom pour ouvrir cet actif. **Ajouter des membres** (sur un cluster sans membre) ou **Modifier les membres** ouvre une boîte de dialogue de recherche. Elle ne propose que des actifs simples, jamais un cluster ni le cluster lui-même. Une icône d'avertissement signale un membre dont l'environnement diffère de celui du cluster. Quand vous retirez des membres d'un cluster qui porte des applications, **Retirer des membres ?** nomme les applications que chacun n'hébergera plus. **Retirer quand même** enregistre.
 - Sur **tout autre actif**, la section **Appartenance au cluster** affiche les clusters auxquels cet actif appartient, avec leur environnement et leur statut. Cliquez sur un nom pour ouvrir le cluster.
 
 **Relations entre actifs**, un tableau par sens :
@@ -478,7 +495,7 @@ PROD-DB-01;NYC-DC1;vm;prod;active;proddb01;corp;host;10.0.1.20
 ## Conseils
 
 - **Nommez de manière cohérente** : Incluez l'environnement, le rôle et la séquence dans les noms d'actifs pour une identification facile.
-- **Utilisez les clusters** : Regroupez les actifs liés (ex. : cluster web, cluster base de données) pour simplifier la gestion. Assignez les applications aux hôtes membres, pas au cluster lui-même.
+- **Utilisez les clusters** : Regroupez les actifs liés (ex. : cluster web, cluster base de données) pour simplifier la gestion. Affectez au cluster une application qui tourne sur chaque nœud, et une application d'une machine virtuelle à cette machine.
 - **Suivez le cycle de vie** : Marquez les actifs obsolètes et retirés pour garder les comptes d'inventaire précis.
 - **Liez aux sites** : Assignez les actifs aux sites pour que le type d'hébergement, le pays et la ville soient renseignés automatiquement.
 - **Affectez aux applications** : Utilisez la section **Applications hébergées** de l'onglet Exploitation pour lier les actifs aux déploiements d'applications. Les mêmes affectations apparaissent sous l'onglet Déploiements de l'application.

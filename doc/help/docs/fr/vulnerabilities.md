@@ -59,7 +59,7 @@ Une vulnérabilité atteint un serveur ou une application par des liens directs 
 
 - **Serveur** : la technologie et la version sont renseignées sur le serveur lui-même. Un serveur retiré n'est pas compté.
 - **Cluster** : ce qui est renseigné sur le cluster lui-même, plus ce qui est renseigné sur ses membres en service. Un cluster compte les vulnérabilités de ses membres, dans sa colonne de liste, son badge et sa fiche. Filtrer cette page sur un cluster montre aussi les lignes de ses membres.
-- **Application** : l'application déclare la technologie et la version, ou l'un de ses serveurs de déploiement les a renseignées sur lui-même. Une technologie à la fois déclarée et hébergée compte une fois. Une application désactivée, ou dont la date de désactivation est passée, n'est pas comptée.
+- **Application** : l'application déclare la technologie et la version, ou l'un de ses serveurs de déploiement les a renseignées sur lui-même. Une application affectée à un cluster compte le cluster et ses membres en service. Une technologie à la fois déclarée et hébergée compte une fois. Une application désactivée, ou dont la date de désactivation est passée, n'est pas comptée.
 
 Les comptes par serveur et par application, dans les listes, sur les fiches, au tableau de bord et dans Plaid, suivent les mêmes règles :
 

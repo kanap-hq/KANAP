@@ -209,7 +209,7 @@ Click **Create** to unlock the full workspace. The **Overview** tab then gains a
 
 Go to the **Operations** tab to add the **Technologies** the server carries, with their versions. Add Windows Server, Ubuntu or another technology of the **Operating system** family: it becomes the server's operating system.
 
-If this asset is a cluster, turn on the **Cluster** switch in the **Properties** panel, then add its member servers with **Edit members** on the **Dependencies** tab.
+If this asset is a cluster, turn on the **Cluster** switch in the **Properties** panel, then add its member servers with **Edit members** on the **Dependencies** tab. An application that runs on every member is assigned to the cluster: see [Applications on a cluster](../assets.md#applications-on-a-cluster).
 
 ---
 

@@ -139,7 +139,7 @@ When you select a node or edge, a side panel opens on the right with details.
 - **Description**: What the application does
 - **Publisher**: Software publisher
 - **Criticality**: a business criticality level from your organization's catalog in [Classifications and continuity](it-ops-settings.md#classifications-and-continuity). The default levels are Critical, High, Moderate and Low
-- **Servers**: Servers hosting this app, grouped by environment. Click a server name to open its workspace.
+- **Servers**: Servers hosting this app, grouped by environment. A cluster comes first, with a cluster icon and its members under it. Click a server name to open its workspace.
 - **Business owners** and **IT owners**: Responsible contacts
 - **Support information**: Support contacts with their roles. Click a contact name to navigate to the application's Technical tab.
 - **Edit application**: Opens the application workspace
