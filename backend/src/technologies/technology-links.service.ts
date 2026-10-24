@@ -140,9 +140,12 @@ export class TechnologyLinksService {
   // ==================== ASSETS ====================
 
   /**
-   * The servers of a technology: installed (with the link) and carried through the graph (with
-   * `via`). A link to a retired asset stays listed, to be seen and removed, with `asset_status`; it
-   * takes no part in the deductions.
+   * The servers of a technology: installed (with the link, one row per link) and carried through
+   * the graph, one row per asset and version with every asset that carries it (`via_assets`, by
+   * name; `via_asset_id` and `via_asset_name` the first): a cluster is one row per version, whatever
+   * the number of its members that carry it (K2-1). Clusters stay listed here, with `is_cluster`;
+   * the counters leave them out. A link to a retired asset stays listed, to be seen and removed,
+   * with `asset_status`; it takes no part in the deductions.
    */
   async assetsOfTechnology(idOrRef: string, opts: LinkOpts) {
     const { manager: mg, tenantId } = opts;
@@ -154,10 +157,31 @@ export class TechnologyLinksService {
         WHERE at.tenant_id = $1 AND at.technology_id = $2`,
       [tenantId, tech.id],
     );
-    const reached = [...await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]), ...retired.map((r) => ({ ...r, depth: 0 }))];
-    const assets = await this.assetLabels(mg, tenantId, reached.flatMap((r) => [r.asset_id, r.via_asset_id]));
-    const versions = await this.versionLabels(mg, tenantId, reached.map((r) => r.technology_version_id));
-    const notes = await this.linkNotes(mg, tenantId, 'asset', reached.map((r) => r.link_id));
+    const all = [...await this.reach.assetsOfTechnologies(mg, tenantId, [tech.id]), ...retired.map((r) => ({ ...r, depth: 0 }))];
+    const assets = await this.assetLabels(mg, tenantId, all.flatMap((r) => [r.asset_id, r.via_asset_id]));
+    const versions = await this.versionLabels(mg, tenantId, all.map((r) => r.technology_version_id));
+    const notes = await this.linkNotes(mg, tenantId, 'asset', all.map((r) => r.link_id));
+    // The carried rows of one asset and version become one, with their carriers by name.
+    const installed = all.filter((r) => !r.via_asset_id).map((r) => ({ ...r, via: [] as ReachedAsset[] }));
+    const carried = new Map<string, ReachedAsset & { via: ReachedAsset[] }>();
+    for (const r of all.filter((row) => !!row.via_asset_id)) {
+      const key = `${r.asset_id}|${r.technology_version_id ?? ''}`;
+      const entry = carried.get(key);
+      if (!entry) carried.set(key, { ...r, via: [r] });
+      else {
+        entry.via.push(r);
+        entry.depth = Math.min(entry.depth, r.depth);
+      }
+    }
+    const viaRef = (id: string) => ({ id, name: assets.get(id)?.name ?? null, reference: assets.get(id)?.asset_reference ?? null });
+    const byName = (a: { id: string; name: string | null }, b: { id: string; name: string | null }) =>
+      String(a.name ?? '').localeCompare(String(b.name ?? ''), 'en', { sensitivity: 'base' }) || a.id.localeCompare(b.id);
+    const reached = [...installed, ...Array.from(carried.values())].map((r) => {
+      const viaAssets = r.via.map((v) => viaRef(v.via_asset_id!)).sort(byName);
+      // The first carrier names the provenance of the row, as `via`.
+      const first = r.via.find((v) => v.via_asset_id === viaAssets[0]?.id);
+      return { ...r, via_asset_id: viaAssets[0]?.id ?? null, via_assets: viaAssets, source: first?.source ?? r.source };
+    });
     const items = reached.map((r) => {
       const asset = assets.get(r.asset_id);
       return {
@@ -174,6 +198,7 @@ export class TechnologyLinksService {
         operating_system_label: asset?.operating_system ?? null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
+        via_assets: r.via_assets,
         technology_version_id: r.technology_version_id,
         version_label: r.technology_version_id ? versions.get(r.technology_version_id) ?? null : null,
         notes: r.link_id ? notes.get(r.link_id) ?? null : null,
@@ -746,7 +771,7 @@ export class TechnologyLinksService {
       ? await mg.query(`SELECT id, name, item_number, family, editor, hosting_type FROM technologies WHERE tenant_id = $1 AND id = ANY($2::uuid[])`, [tenantId, techIds])
       : [];
     const byId = new Map(techs.map((t) => [t.id, t]));
-    const assets = await this.assetLabels(mg, tenantId, rows.flatMap((r) => [r.asset_id, r.via_asset_id]));
+    const assets = await this.assetLabels(mg, tenantId, rows.flatMap((r) => [r.asset_id, r.via_asset_id, ...(r.via_asset_ids ?? [])]));
     const versions = await this.versionLabels(mg, tenantId, rows.map((r) => r.technology_version_id));
     const versionDates = await this.versionDates(mg, tenantId, rows.map((r) => r.technology_version_id));
     const notes = await this.linkNotes(mg, tenantId, subject, rows.map((r) => (r.kind === 'installed' || r.kind === 'declared' ? r.link_id : null)));
@@ -772,6 +797,9 @@ export class TechnologyLinksService {
         asset_name: r.asset_id ? assets.get(r.asset_id)?.name ?? null : null,
         via_asset_id: r.via_asset_id,
         via_asset_name: r.via_asset_id ? assets.get(r.via_asset_id)?.name ?? null : null,
+        // Every asset that carries it (a host, a cluster's members), by name; the one `via` otherwise.
+        via_assets: (r.via_asset_ids ?? (r.via_asset_id ? [r.via_asset_id] : []))
+          .map((id) => ({ id, name: assets.get(id)?.name ?? null, reference: assets.get(id)?.asset_reference ?? null })),
         notes: removable && r.link_id ? notes.get(r.link_id) ?? null : null,
         source: r.source,
         is_operating_system: subject === 'asset' && r.kind === 'installed' && r.is_operating_system === true,

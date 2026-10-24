@@ -69,6 +69,19 @@ export const REACH_FROM_TECHNOLOGIES = `
      WHERE r.depth < ${MAX_DEPTH} AND NOT e.carried = ANY(r.path)
   )`;
 
+/**
+ * The servers of the technologies `$2` (decision Q3 of the clusters pass): the assets in service
+ * that carry one, installed or carried (`reach` keeps those in service only), clusters excluded. One
+ * row per technology, version and server. The list, the versions and the end of support report
+ * count these; the Servers tab of a technology still lists the clusters.
+ */
+const SERVERS_OF_TECHNOLOGIES = `
+  servers_of AS (
+    SELECT DISTINCT r.technology_id, r.technology_version_id, r.asset_id
+      FROM reach r
+      JOIN assets sa ON sa.tenant_id = $1 AND sa.id = r.asset_id AND sa.is_cluster IS NOT TRUE
+  )`;
+
 /** Up the edges from the assets `$2`: one row per asset and carrier (the asset itself at depth 0). */
 const CARRIERS_OF_ASSETS = `
   up AS (
@@ -121,8 +134,13 @@ export type ReachingTechnology = {
   environment: string | null;
   /** Hosted (applications): the server the instance is assigned to. */
   asset_id: string | null;
-  /** Carried or hosted through a carrier: the asset the technology is installed on. */
+  /** Carried or hosted through a carrier: the asset the technology is installed on (the first of `via_asset_ids`). */
   via_asset_id: string | null;
+  /**
+   * Carried to an asset: every asset that carries this technology and version to it (a host, the
+   * members of a cluster), by name. Null otherwise.
+   */
+  via_asset_ids?: string[] | null;
   link_id: string | null;
   source: LinkSource;
   /** True when this installed link is the server's operating system. */
@@ -131,6 +149,7 @@ export type ReachingTechnology = {
 
 export type TechnologyCounts = {
   technology_id: string;
+  /** Assets in service that carry it, installed or carried, clusters excluded (`SERVERS_OF_TECHNOLOGIES`). */
   servers: number;
   applications: number;
   versions_in_use: number;
@@ -250,22 +269,40 @@ export class TechnologyReachService {
   }
 
   /**
-   * The technologies of each asset of `assetIds`: installed on it, or carried to it by the graph
-   * (`via` the asset they are installed on).
+   * The technologies of each asset of `assetIds`: installed on it (one row per link), or carried to
+   * it by the graph, one row per technology and version with every asset that carries it
+   * (`via_asset_ids`, by name; `via_asset_id` the first, `link_id` and `source` its link's): a
+   * cluster gets one row for a version its members carry, whatever their number (K2-1).
    */
   async technologiesOfAssets(mg: EntityManager, tenantId: string, assetIds: string[]): Promise<ReachingTechnology[]> {
     if (assetIds.length === 0) return [];
     return withoutJit(mg, 
-      `WITH RECURSIVE ${CARRIERS_OF_ASSETS}
-       SELECT DISTINCT ON (u.asset_id, at.id)
-              u.asset_id AS subject_id, at.technology_id,
-              CASE WHEN u.depth = 0 THEN 'installed' ELSE 'carried' END AS kind,
-              at.technology_version_id, NULL::text AS environment, NULL::uuid AS asset_id,
-              CASE WHEN u.depth = 0 THEN NULL ELSE u.carrier_id END AS via_asset_id,
-              at.id AS link_id, at.source, at.is_operating_system
-         FROM up u
-         JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
-        ORDER BY u.asset_id, at.id, u.depth`,
+      `WITH RECURSIVE ${CARRIERS_OF_ASSETS},
+       found AS (
+         SELECT DISTINCT ON (u.asset_id, at.id) u.asset_id, u.carrier_id, u.depth, at.id AS link_id, at.technology_id,
+                at.technology_version_id, at.source, at.is_operating_system
+           FROM up u
+           JOIN asset_technologies at ON at.tenant_id = $1 AND at.asset_id = u.carrier_id
+          ORDER BY u.asset_id, at.id, u.depth
+       )
+       SELECT f.asset_id AS subject_id, f.technology_id, 'installed' AS kind, f.technology_version_id,
+              NULL::text AS environment, NULL::uuid AS asset_id, NULL::uuid AS via_asset_id, NULL::uuid[] AS via_asset_ids,
+              f.link_id, f.source, f.is_operating_system
+         FROM found f
+        WHERE f.depth = 0
+       UNION ALL
+       SELECT c.asset_id, c.technology_id, 'carried', c.technology_version_id, NULL, NULL,
+              c.via_asset_ids[1], c.via_asset_ids, c.link_ids[1], c.sources[1], false
+         FROM (
+           SELECT f.asset_id, f.technology_id, f.technology_version_id,
+                  array_agg(f.carrier_id ORDER BY lower(ca.name), ca.id) AS via_asset_ids,
+                  array_agg(f.link_id ORDER BY lower(ca.name), ca.id) AS link_ids,
+                  array_agg(f.source ORDER BY lower(ca.name), ca.id) AS sources
+             FROM found f
+             JOIN assets ca ON ca.tenant_id = $1 AND ca.id = f.carrier_id
+            WHERE f.depth > 0
+            GROUP BY f.asset_id, f.technology_id, f.technology_version_id
+         ) c`,
       [tenantId, assetIds],
     );
   }
@@ -316,7 +353,21 @@ export class TechnologyReachService {
   }
 
   /**
-   * The counters of the technology list for a page of ids, in one statement: servers reached,
+   * The servers of each technology of `technologyIds` (`SERVERS_OF_TECHNOLOGIES`): one row per
+   * technology, version and server in service that carries it, clusters excluded.
+   */
+  async serversOfTechnologies(mg: EntityManager, tenantId: string, technologyIds: string[]): Promise<Array<{ technology_id: string; technology_version_id: string | null; asset_id: string }>> {
+    if (technologyIds.length === 0) return [];
+    return withoutJit(mg,
+      `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       ${SERVERS_OF_TECHNOLOGIES}
+       SELECT technology_id, technology_version_id, asset_id FROM servers_of`,
+      [tenantId, technologyIds],
+    );
+  }
+
+  /**
+   * The counters of the technology list for a page of ids, in one statement: servers (`SERVERS_OF_TECHNOLOGIES`),
    * applications (hosted or declared), versions in use (on an asset or declared), the next
    * standard end of support among them and how many have ended.
    */
@@ -325,8 +376,9 @@ export class TechnologyReachService {
     if (technologyIds.length === 0) return out;
     const rows: Array<Record<string, any>> = await withoutJit(mg, 
       `WITH RECURSIVE ${REACH_FROM_TECHNOLOGIES},
+       ${SERVERS_OF_TECHNOLOGIES},
        servers AS (
-         SELECT r.technology_id, count(DISTINCT r.asset_id)::int AS servers FROM reach r GROUP BY r.technology_id
+         SELECT s.technology_id, count(DISTINCT s.asset_id)::int AS servers FROM servers_of s GROUP BY s.technology_id
        ),
        apps AS (
          SELECT h.technology_id, count(DISTINCT h.application_id)::int AS applications

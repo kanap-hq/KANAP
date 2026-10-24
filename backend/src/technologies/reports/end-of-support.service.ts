@@ -167,11 +167,16 @@ export class EndOfSupportService {
       }
     }
 
+    // The servers of a version, an operating system or a piece of hardware are those of the list
+    // and the record (decision Q3 of the clusters pass): in service, clusters excluded; the
+    // applications above still went through the clusters. A piece of hardware is not one of its own
+    // servers (K2-7). An application keeps the servers it is assigned to.
     const servers = await this.assetNames(mg, tenantId, candidates.flatMap((c) => c.serverIds));
     const apps = applications ? await this.visibleApplications(mg, tenantId, candidates.flatMap((c) => c.applicationIds), applications) : null;
     const byName = (a: { name: string }, b: { name: string }) => a.name.localeCompare(b.name, 'en', { sensitivity: 'base' });
     const items: DeadlineRow[] = candidates.map(({ serverIds, applicationIds, ...row }) => {
-      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) ? [{ id, name: servers.get(id)! }] : [])).sort(byName);
+      const counts = (id: string) => row.type === 'application' || (!servers.get(id)!.is_cluster && id !== row.item_id);
+      const serverRefs = Array.from(new Set(serverIds)).flatMap((id) => (servers.has(id) && counts(id) ? [{ id, name: servers.get(id)!.name }] : [])).sort(byName);
       const appRefs = apps ? Array.from(new Set(applicationIds)).flatMap((id) => (apps.has(id) ? [apps.get(id)!] : [])).sort(byName) : null;
       return { ...row, server_count: serverRefs.length, servers: serverRefs, application_count: appRefs ? appRefs.length : null, applications: appRefs };
     });
@@ -513,14 +518,14 @@ export class EndOfSupportService {
     return out;
   }
 
-  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, string>> {
+  private async assetNames(mg: EntityManager, tenantId: string, ids: string[]): Promise<Map<string, { name: string; is_cluster: boolean }>> {
     const wanted = Array.from(new Set(ids));
     if (wanted.length === 0) return new Map();
-    const rows: Array<{ id: string; name: string }> = await mg.query(
-      `SELECT id, name FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
+    const rows: Array<{ id: string; name: string; is_cluster: boolean }> = await mg.query(
+      `SELECT id, name, COALESCE(is_cluster, false) AS is_cluster FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[])`,
       [tenantId, wanted],
     );
-    return new Map(rows.map((row) => [row.id, row.name]));
+    return new Map(rows.map((row) => [row.id, { name: row.name, is_cluster: row.is_cluster }]));
   }
 
   /** The applications of `ids` the caller sees, with their name and reference. */

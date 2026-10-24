@@ -110,6 +110,20 @@ describe('TechnologyServersTab', () => {
     expect(countServers(ROWS)).toBe(3);
   });
 
+  it('counts a server once whatever its versions, and leaves the clusters out of the count', () => {
+    const rows = [
+      row({ link_id: 'l-1', asset_id: 'h1', asset_name: 'ESX-01' }),
+      row({ link_id: 'l-2', asset_id: 'h2', asset_name: 'ESX-02' }),
+      row({ link_id: 'l-3', asset_id: 'h2', asset_name: 'ESX-02', technology_version_id: 'v8', version_label: '8.0' }),
+      row({ kind: 'carried', asset_id: 'vm', asset_name: 'VM-01', via_asset_id: 'h1', via_asset_name: 'ESX-01' }),
+      row({
+        kind: 'carried', asset_id: 'cl', asset_name: 'VSPHERE-CL', is_cluster: true, via_asset_id: 'h1', via_asset_name: 'ESX-01',
+        via_assets: [{ id: 'h1', name: 'ESX-01', reference: null }, { id: 'h2', name: 'ESX-02', reference: null }],
+      }),
+    ];
+    expect(countServers(rows)).toBe(3);
+  });
+
   it('removes a direct link and refuses to remove a deduced one', async () => {
     renderTab();
     await screen.findByRole('table', { name: `${S}.title` });

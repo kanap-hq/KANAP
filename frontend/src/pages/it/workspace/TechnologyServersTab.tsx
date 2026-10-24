@@ -20,8 +20,13 @@ export type TechnologyServerRow = {
   asset_status: string | null;
   environment: string | null;
   operating_system_label: string | null;
+  /** The asset is a cluster: listed, not counted. */
+  is_cluster?: boolean;
+  /** Carried: the first of `via_assets`. */
   via_asset_id: string | null;
   via_asset_name: string | null;
+  /** Carried: every asset that carries the technology and version to it (a host, a cluster's members), by name. */
+  via_assets?: Array<{ id: string; name: string | null; reference: string | null }>;
   technology_version_id: string | null;
   version_label: string | null;
   notes: string | null;
@@ -32,8 +37,12 @@ export const technologyServersKey = (id: string) => ['technology-servers', id] a
 /** A link to a retired server stays listed, to be removed; it counts nowhere. */
 export const isRetiredServer = (row: Pick<TechnologyServerRow, 'asset_status'>) => row.asset_status === 'retired';
 
-/** The tab badge and the total: distinct servers in service, directly or through another server. */
-export const countServers = (rows: TechnologyServerRow[]) => new Set(rows.filter((row) => !isRetiredServer(row)).map((row) => row.asset_id)).size;
+/**
+ * The tab badge and the total: distinct servers in service, directly or through another server,
+ * clusters excluded (the count of the technology list, its versions and the end of support report).
+ */
+export const countServers = (rows: TechnologyServerRow[]) =>
+  new Set(rows.filter((row) => !isRetiredServer(row) && !row.is_cluster).map((row) => row.asset_id)).size;
 
 /** Totals appear from this many rows on, as in the Relations tabs. */
 const TOTALS_FROM = 2;
