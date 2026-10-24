@@ -1,6 +1,7 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { EntityManager, FindOperator, ILike, In, Raw, Repository } from 'typeorm';
+import { effectiveAssignmentsSql } from '../app-asset-assignments/effective-assignments';
 import { Location } from './location.entity';
 import { LocationUserContact } from './location-user-contact.entity';
 import { LocationContactLink } from './location-contact.entity';
@@ -918,9 +919,13 @@ export class LocationsService {
         SELECT a.id, a.name,
           ARRAY_AGG(DISTINCT ai.environment ORDER BY ai.environment) AS environments
         FROM assets s
-        INNER JOIN app_asset_assignments asa ON asa.asset_id = s.id
-        INNER JOIN app_instances ai ON ai.id = asa.app_instance_id
-        INNER JOIN applications a ON a.id = ai.application_id
+        -- The deployments running on the assets here (effective: a member lists what its clusters carry).
+        INNER JOIN (${effectiveAssignmentsSql({
+          tenant: 'app_current_tenant()',
+          assets: 'ARRAY(SELECT ls.id FROM assets ls WHERE ls.tenant_id = app_current_tenant() AND ls.location_id = $1)',
+        })}) asa ON asa.asset_id = s.id AND asa.tenant_id = s.tenant_id
+        INNER JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
+        INNER JOIN applications a ON a.id = ai.application_id AND a.tenant_id = ai.tenant_id
         WHERE s.location_id = $1
         GROUP BY a.id, a.name
         ORDER BY a.name
