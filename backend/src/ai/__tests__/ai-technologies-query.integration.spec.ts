@@ -15,7 +15,9 @@ import { DataSource, QueryRunner } from 'typeorm';
 // - Every field filters and sorts: reference, name, family, publisher, hosting_type, lifecycle,
 //   admin_zone, server_count, application_count, support_status, end_of_standard_support,
 //   end_of_support, open_vulnerabilities.
-// - server_count leaves retired assets out; the support fields read the versions in use only, by
+// - server_count counts the servers as the technology list does (assets in service that carry the
+//   technology, installed or carried through `contains` and member to cluster, clusters excluded);
+//   the support fields read the versions in use only, by
 //   the End of support report's rule: a version in extended support is not out of support, and
 //   the assistant's out of support and extended support versions are the report's.
 // - application_count and the application sections stay in the caller's read scope: a Business
@@ -250,6 +252,7 @@ async function testListAndFigures(harness: Harness, runner: QueryRunner, s: Seed
   const vsphere = all.items.find((item: any) => item.label === 'VMware vSphere');
   assert.equal(vsphere.metadata.support_status, 'unknown', 'a version in use without a date');
   assert.equal(vsphere.metadata.versions_in_use, '8: no end of support date, 1 server');
+  assert.equal(vsphere.metadata.server_count, 2, 'the host and the server it contains, which carries it');
   const metadataText = JSON.stringify(all.items.map((item: any) => ({ ...item, id: undefined })));
   assert.doesNotMatch(metadataText, UUID_IN_TEXT, 'no id besides the item\'s own');
 }
@@ -265,7 +268,7 @@ async function testEveryFilter(harness: Harness, runner: QueryRunner, s: Seed) {
     [{ admin_zone: ['Tier 0'] }, ['Entra ID']],
     [{ admin_zone: [null] }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
     [{ server_count: { op: 'gte', value: 1 } }, ['PostgreSQL', 'VMware vSphere', 'Windows Server']],
-    [{ server_count: { op: 'eq', value: 2 } }, ['Windows Server']],
+    [{ server_count: { op: 'eq', value: 2 } }, ['VMware vSphere', 'Windows Server']],
     [{ server_count: { op: 'between', value: 0, valueTo: 0 } }, ['Entra ID']],
     [{ application_count: { op: 'gt', value: 0 } }, ['Entra ID', 'PostgreSQL']],
     [{ application_count: { op: 'lt', value: 1 } }, ['VMware vSphere', 'Windows Server']],
@@ -302,7 +305,7 @@ async function testEverySort(harness: Harness, runner: QueryRunner, s: Seed) {
   assert.deepEqual((await order('hosting_type', 'desc'))[0], 'Entra ID', 'saas after on_prem');
   assert.deepEqual((await order('lifecycle', 'desc'))[0], 'Entra ID', 'phase_out after active');
   assert.deepEqual((await order('admin_zone', 'asc'))[0], 'Entra ID', 'the only zone first, blanks last');
-  assert.deepEqual((await order('server_count', 'desc'))[0], 'Windows Server');
+  assert.deepEqual((await order('server_count', 'desc')).slice(0, 2).sort(), ['VMware vSphere', 'Windows Server']);
   assert.deepEqual((await order('server_count', 'asc'))[0], 'Entra ID');
   assert.deepEqual((await order('application_count', 'desc'))[0], 'PostgreSQL');
   assert.deepEqual((await order('end_of_support', 'asc')).slice(0, 2), ['PostgreSQL', 'Windows Server'], 'dates first, blanks last');
@@ -619,6 +622,33 @@ async function testContextBounds(harness: Harness, runner: QueryRunner, s: Seed)
  * only on a retired server and a disabled application; Zeta undated runs a version without date;
  * Zeta many declares 12 versions without date. Then the parity with the End of support report.
  */
+/**
+ * One servers definition with the technology list (`countsOfTechnologies`): a technology installed on
+ * a cluster and on its member counts the member only, the cluster excluded.
+ */
+async function testServersAsTheTechnologyList(harness: Harness, runner: QueryRunner, s: Seed) {
+  const t = s.tenantId;
+  const asset = (name: string, cluster: boolean) => insertId(runner,
+    `INSERT INTO assets (tenant_id, name, kind, environment, status, is_cluster) VALUES ($1, $2, 'server', 'prod', 'active', $3)`, [t, name, cluster]);
+  const cluster = await asset('cluster-c', true);
+  const member = await asset('node-m', false);
+  await runner.query(`INSERT INTO asset_cluster_members (tenant_id, cluster_id, asset_id) VALUES ($1, $2, $3)`, [t, cluster, member]);
+  for (const assetId of [cluster, member]) {
+    await runner.query(`INSERT INTO asset_technologies (tenant_id, asset_id, technology_id) VALUES ($1, $2, $3)`, [t, assetId, s.tech.entra]);
+  }
+  const all = await list(harness, runner, s, { limit: 100 });
+  const entra = all.items.find((item: any) => item.label === 'Entra ID');
+  assert.equal(entra.metadata.server_count, 1, 'the member only: the cluster is not a server');
+  const { TechnologyReachService } = require('../../technologies/technology-reach.service');
+  const ids = Object.values(s.tech);
+  const counts: Map<string, { servers: number }> = await harness.app.get(TechnologyReachService).countsOfTechnologies(runner.manager, t, ids);
+  const seeded = all.items.filter((i: any) => ids.includes(i.id));
+  assert.equal(seeded.length, ids.length, 'the four seeded technologies');
+  for (const item of seeded) {
+    assert.equal(item.metadata.server_count, counts.get(item.id)!.servers, `${item.label}: the technology list's count`);
+  }
+}
+
 async function testSupportStatus(harness: Harness, runner: QueryRunner, s: Seed) {
   const [{ today }] = await runner.query(`SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today`);
   const shift = (days: number) => {
@@ -737,6 +767,7 @@ async function run() {
       await testApplicationsReachCache(runner, s);
       await testContextBounds(harness, runner, s);
       await testSupportStatus(harness, runner, s);
+      await testServersAsTheTechnologyList(harness, runner, s);
     } finally {
       await runner.rollbackTransaction();
       await runner.release();

@@ -4,7 +4,7 @@ import { applicationParticipantCondition, type ParticipationAccessScope } from '
 import { gridTextClause } from '../../technologies/technologies.service';
 import { versionInUseSql, versionSupportSql } from '../../technologies/reports/version-support';
 import { countingRowSql, rowJoinsSql, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
-import { assetInServiceSql, inServiceSql } from '../../technologies/technology-reach.service';
+import { assetInServiceSql, inServiceSql, technologyServersCountSql } from '../../technologies/technology-reach.service';
 import type { AiContextEntityType, AiExecutionContextWithManager, AiSearchEntityType } from '../ai.types';
 import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 
@@ -13,7 +13,9 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
  * `aggregate_entities`, `get_entity_detail`): the record's columns plus figures computed at
  * read time, each one statement shared by the list, its filters, its sort and the aggregates.
  *
- * - `server_count`: the assets the technology is installed on directly, retired ones left out.
+ * - `server_count`: the servers of the technology as the technology list counts them
+ *   (`technologyServersCountSql`): assets in service that carry it, installed or carried through
+ *   the asset graph, clusters excluded.
  * - `application_count`: the applications that declare it, in service (`inServiceSql`), within the
  *   caller's read scope (a Business Contributor's own); null for a caller who cannot read
  *   applications, never a count of applications the caller cannot see.
@@ -34,11 +36,9 @@ import { resolveAiParticipationAccessScope } from './ai-query-scope.util';
 /** What the caller may see of the applications: none (null), all, or a Business Contributor's own. */
 export type AiApplicationsReach = { scope?: ParticipationAccessScope } | null;
 
+/** The servers of the technology `t`, one definition with the technology list (`technologyServersCountSql`). */
 export function technologyServerCountSql(t: string): string {
-  return `(SELECT count(DISTINCT sat.asset_id)::int
-             FROM asset_technologies sat
-             JOIN assets sa ON sa.tenant_id = sat.tenant_id AND sa.id = sat.asset_id AND ${assetInServiceSql('sa')}
-            WHERE sat.tenant_id = ${t}.tenant_id AND sat.technology_id = ${t}.id)`;
+  return technologyServersCountSql(t);
 }
 
 /** `userRef`: the bound user id of a Business Contributor, or null for every application. */
