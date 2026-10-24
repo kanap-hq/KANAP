@@ -413,9 +413,10 @@ export class AuthController {
   }
 
   @Post('refresh')
-  // Per client address and tenant (two organisations behind one NAT or VPN do not share a
-  // budget), then per refresh token (auth/refresh-session-limit.ts).
-  @UseGuards(TenantRateLimitGuard, RefreshSessionRateLimitGuard)
+  // Per refresh token first (auth/refresh-session-limit.ts): a renewal it refuses does not count
+  // against the address, so a client that loops does not block its neighbours. Then per client
+  // address and tenant (two organisations behind one NAT or VPN do not share a budget).
+  @UseGuards(RefreshSessionRateLimitGuard, TenantRateLimitGuard)
   @Throttle({ default: RATE_LIMITS.authRefresh })
   async refreshToken(@Body() body: RefreshTokenDto, @Req() req: any, @Res({ passthrough: true }) res: Response) {
     // Same origin rule as CORS, before the cookie is read (common/cors-policy.ts).
