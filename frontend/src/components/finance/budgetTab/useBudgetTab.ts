@@ -277,6 +277,8 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   // A budget reader reads the columns, with no field to change them; so does a person whose data
   // access leaves the line read only.
   const readOnly = !hasLevel('budget', 'member') || !lineEditable;
+  // Read only because the line is outside the person's edit access, not because of their role.
+  const readOnlyInAccess = hasLevel('budget', 'member') && !lineEditable;
   // The counters this tab loaded or wrote (lot 3G).
   const onBudgetRevRef = React.useRef(onBudgetRev); onBudgetRevRef.current = onBudgetRev;
   const noteRev = (forYear: number, rev: number | null | undefined) => { if (rev !== undefined) onBudgetRevRef.current?.(forYear, rev); };
@@ -1818,6 +1820,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     isFrozen,
     anyFrozen,
     readOnly,
+    readOnlyInAccess,
     months,
     totals,
     liveTotals,

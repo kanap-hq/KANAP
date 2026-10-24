@@ -136,7 +136,7 @@ export default function ColumnEditor({ tab, i18nPrefix, effectiveStart, endOfVal
           <LockOutlinedIcon sx={{ fontSize: 14, mt: '3px', color: 'kanap.text.tertiary' }} />
           <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5, minWidth: 0 }}>
             <Typography sx={{ fontSize: 14, fontWeight: 500, color: 'kanap.text.primary' }}>{frozenCol ? t('budgetTab.frozen.title', { column: label, year }) : title}</Typography>
-            <Typography sx={captionSx}>{frozenCol ? t('budgetTab.frozen.hint') : t('budgetTab.readOnlyHint')}</Typography>
+            <Typography sx={captionSx}>{frozenCol ? t('budgetTab.frozen.hint') : tab.readOnlyInAccess ? t('budgetTab.readOnlyInAccessHint') : t('budgetTab.readOnlyHint')}</Typography>
             <Box sx={{ display: 'flex', gap: 1, alignItems: 'baseline', flexWrap: 'wrap' }}>
               <Typography sx={{ fontSize: 13, fontWeight: 500, fontVariantNumeric: 'tabular-nums', color: 'kanap.text.primary' }}>{formatAmount(totals[col])}</Typography>
               <ColumnHowText tab={tab} col={col} />

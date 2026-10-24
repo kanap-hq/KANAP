@@ -1799,6 +1799,7 @@
       "hint": "Solo lectura. Un administrador puede descongelarla en Administración › Congelar / descongelar datos."
     },
     "readOnlyHint": "Solo lectura. Su rol da acceso de lectura al presupuesto.",
+    "readOnlyInAccessHint": "Solo lectura. Esta línea está fuera de su acceso de edición.",
     "atADate": "En una fecha",
     "date": "Fecha",
     "atDate": "El {{date}}",
