@@ -649,6 +649,11 @@ export class TasksUnifiedService {
     return id;
   }
 
+  /**
+   * The object a task is created on or moved to: it exists (a line of the type's nature), or 404.
+   * Callers check a line with `assertLinesEditable` first: the lock below passes the UPDATE policy
+   * of the lines, so a read-only line must answer 403 before it, and a hidden one 404 here.
+   */
   private async resolveTargetContext(
     target: { type: RelatedType; id: string | null },
     manager: EntityManager,
@@ -686,7 +691,8 @@ export class TasksUnifiedService {
     // `spend_items` (`spend/budget-nature.ts`), never a line of the other nature. `lock`: the line is
     // read FOR SHARE, so a change of its type (lot M, which holds it FOR NO KEY UPDATE and moves its
     // tasks to the other type) is waited for: the task is then refused for a line of the other
-    // nature (404) instead of being written with a type nobody reads.
+    // nature (404) instead of being written with a type nobody reads. Only a task created on the
+    // line or moved to it comes here: a task that keeps its object writes no relation.
     const tableByType: Record<'spend_item' | 'contract' | 'capex_item' | 'incident', { table: string; label: string; where?: string; lock?: string }> = {
       spend_item: { table: 'spend_items', label: 'Spend item', where: ` AND nature = 'opex'`, lock: ' FOR SHARE' },
       contract: { table: 'contracts', label: 'Contract' },
@@ -730,11 +736,12 @@ export class TasksUnifiedService {
     if (!payload?.title || !payload.title.toString().trim()) throw new BadRequestException('title required');
     // A task of a budget line: the line of the type's nature, read FOR SHARE until the task is saved,
     // so a change of the line's type (lot M) never leaves it with the type of before (see
-    // `resolveTargetContext`).
+    // `resolveTargetContext`). A task names only a line the person may modify (the placement
+    // trigger of the tasks): a plain read first, so a read-only line answers the clear 403 and a
+    // hidden one 404, as the lock alone would answer both.
     if (target.type === 'spend_item' || target.type === 'capex_item') {
-      await this.resolveTargetContext(target, manager);
-      // A task names only a line the person may modify (the placement trigger of the tasks): the clear 403 first.
       await assertLinesEditable(manager, [target.id]);
+      await this.resolveTargetContext(target, manager);
     }
 
     const isStandalone = target.type === null;
@@ -977,34 +984,34 @@ export class TasksUnifiedService {
       throw new BadRequestException('related_object_type and related_object_id must be provided together');
     }
 
-    const resolvedTarget = await this.resolveTargetContext(
-      hasRelatedType
-        ? {
-            type: (nextPayload.related_object_type ?? null) as RelatedType,
-            id: (nextPayload.related_object_id ?? null) as string | null,
-          }
-        : {
-            type: existing.related_object_type,
-            id: existing.related_object_id,
-          },
-      manager,
-    );
-    // A new object that is a line: one the person may modify (placement trigger of the tasks).
-    if (
-      hasRelatedType
-      && (resolvedTarget.type === 'spend_item' || resolvedTarget.type === 'capex_item')
-      && resolvedTarget.id !== existing.related_object_id
-    ) {
-      await assertLinesEditable(manager, [resolvedTarget.id]);
+    const requestedTarget = hasRelatedType
+      ? {
+          type: (nextPayload.related_object_type ?? null) as RelatedType,
+          id: (nextPayload.related_object_id ?? null) as string | null,
+        }
+      : { type: existing.related_object_type as RelatedType, id: existing.related_object_id };
+    const relationChanged =
+      requestedTarget.type !== existing.related_object_type ||
+      requestedTarget.id !== existing.related_object_id;
+
+    let resolvedTarget: { type: RelatedType; id: string | null; projectDefaults?: ProjectDefaults };
+    if (relationChanged) {
+      // A new object that is a line: one the person may modify (placement trigger of the tasks),
+      // read plainly before the lock (`resolveTargetContext`): read only 403, hidden 404.
+      if (requestedTarget.type === 'spend_item' || requestedTarget.type === 'capex_item') {
+        await assertLinesEditable(manager, [requestedTarget.id]);
+      }
+      resolvedTarget = await this.resolveTargetContext(requestedTarget, manager);
+    } else {
+      // The task keeps its object: no relation is written (`task-column-write.ts`), so nothing to
+      // look up or lock. Its assignee or owner may not read it, or only read it, and still updates
+      // or hands over the task (`prepareTaskWrite`, spec §6.8).
+      resolvedTarget = requestedTarget;
     }
 
     if (this.hasOwn(nextPayload, 'description')) {
       nextPayload.description = await normalizeMarkdownRichText(nextPayload.description, { fieldName: 'description' }) as any;
     }
-
-    const relationChanged =
-      resolvedTarget.type !== existing.related_object_type ||
-      resolvedTarget.id !== existing.related_object_id;
 
     delete nextPayload.related_object_type;
     delete nextPayload.related_object_id;
