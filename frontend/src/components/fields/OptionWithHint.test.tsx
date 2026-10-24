@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Autocomplete, TextField } from '@mui/material';
 import { ThemeProvider } from '@mui/material/styles';
@@ -60,13 +60,16 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
     await expectOneLineWithHint(option, 'Billing', 'active · high');
   });
 
-  it('ServerSelect: environment, kind and provider move to the tooltip; a cluster keeps its prefix', async () => {
-    apiGet.mockResolvedValue({
-      data: { items: [{ id: 's1', name: 'web-01', environment: 'prod', kind: 'vm', provider: 'azure', is_cluster: true }] },
-    });
+  it('ServerSelect: environment, kind and provider move to the tooltip; a cluster carries its mark and its members', async () => {
+    apiGet.mockImplementation(async (url: string) => (url.endsWith('/members')
+      ? { data: { items: [{ id: 'm1', name: 'PAR-SQL-01' }, { id: 'm2', name: 'PAR-SQL-02' }] } }
+      : { data: { items: [{ id: 's1', name: 'web-01', environment: 'prod', kind: 'vm', provider: 'azure', is_cluster: true }] } }));
     renderField(<ServerSelect value={null} onChange={() => undefined} />);
-    const [option] = await openList();
-    await expectOneLineWithHint(option, 'selects.cluster web-01', 'PROD · vm · azure');
+    await openList();
+    await waitFor(() => expect(screen.getByRole('option').firstChild?.textContent).toBe('web-01PAR-SQL-01, PAR-SQL-02'));
+    const option = screen.getByRole('option');
+    expect(within(option).getByRole('img', { name: 'pages.assets.columns.cluster' })).toBeTruthy();
+    expect(option).toHaveAccessibleDescription('PROD · vm · azure');
   });
 
   it('MultiRoleSelect: the role description moves to the tooltip', async () => {

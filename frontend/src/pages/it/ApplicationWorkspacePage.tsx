@@ -1787,7 +1787,7 @@ export default function ApplicationWorkspacePage() {
         )}
 
         {!isCreate && app && routeTab === 'deployments' && (
-          <DeploymentsEditor applicationId={app.id} deployments={deployments as any} onRefresh={async () => { await appQuery.refetch(); }} readOnly={!canManage} />
+          <DeploymentsEditor applicationId={app.id} deployments={deployments as any} onRefresh={async () => { await appQuery.refetch(); }} readOnly={!canManage} applicationName={app.name} />
         )}
 
         {!isCreate && app && routeTab === 'interfaces' && (

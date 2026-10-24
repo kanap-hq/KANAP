@@ -2121,7 +2121,6 @@
       },
       "assignments": {
         "addAssignment": "Ajouter une affectation",
-        "clusterCannotHost": "Les actifs de cluster ne peuvent pas héberger d'affectations d'applications. Affectez les hôtes membres.",
         "noAssignments": "Aucune affectation pour le moment.",
         "assignmentAdded": "Affectation ajoutée",
         "application": "Application",
@@ -3198,6 +3197,24 @@
     },
     "versionTimeline": {
       "title": "Historique des versions"
+    },
+    "clusterAssignment": {
+      "title": "Affecter au cluster ?",
+      "inCluster_one": "{{server}} fait partie de {{cluster}}. Son seul membre hébergera {{subject}}.",
+      "inCluster_other": "{{server}} fait partie de {{cluster}}. Ses {{count}} membres hébergeront {{subject}}.",
+      "inClusters": "{{server}} fait partie de plusieurs clusters.",
+      "memberCount_one": "{{count}} membre",
+      "memberCount_other": "{{count}} membres",
+      "assignToCluster": "Affecter au cluster",
+      "serverOnly": "Ce serveur seulement",
+      "absorbed_one": "L'affectation directe de {{names}} sera remplacée.",
+      "absorbed_other": "Les affectations directes de {{names}} seront remplacées.",
+      "via": "via",
+      "inheritedFrom": "Via {{cluster}}",
+      "groupLine": "{{subject}} sur {{members}}",
+      "groupAssignTo": "Affecter à {{cluster}}",
+      "groupConfirm": "{{application}} restera disponible tant qu'un membre tient.",
+      "thisApplication": "L'application"
     }
   },
   "enums": {

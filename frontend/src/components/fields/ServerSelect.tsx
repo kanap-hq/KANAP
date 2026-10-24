@@ -3,6 +3,7 @@ import { Autocomplete, Box, CircularProgress, TextField } from '@mui/material';
 import type { SxProps, Theme } from '@mui/material/styles';
 import { useTranslation } from 'react-i18next';
 import OptionWithHint from './OptionWithHint';
+import ClusterMark from '../workspace/ClusterMark';
 import api from '../../api';
 import { FieldLabel } from '../design';
 import { drawerAutocompleteListboxSx } from '../../theme/formSx';
@@ -61,6 +62,27 @@ function useServerOptions(search: string, opts?: { allowClusters?: boolean }) {
   return { options, loading };
 }
 
+/**
+ * The members of the clusters among `options`, by cluster id, each read once (`GET /assets/:id/members`):
+ * the picker shows who a cluster's assignment would reach. Absent until read.
+ */
+function useClusterMemberNames(options: ServerOption[]) {
+  const [names, setNames] = React.useState<Record<string, string[]>>({});
+  const asked = React.useRef(new Set<string>());
+  const mounted = React.useRef(true);
+  React.useEffect(() => () => { mounted.current = false; }, []);
+  React.useEffect(() => {
+    for (const option of options) {
+      if (!option.is_cluster || asked.current.has(option.id)) continue;
+      asked.current.add(option.id);
+      api.get<{ items: Array<{ name: string }> }>(`/assets/${option.id}/members`)
+        .then((res) => { if (mounted.current) setNames((prev) => ({ ...prev, [option.id]: (res.data?.items ?? []).map((member) => member.name) })); })
+        .catch(() => undefined);
+    }
+  }, [options]);
+  return names;
+}
+
 const ServerSelect: React.FC<ServerSelectProps> = ({
   label: labelProp,
   value,
@@ -78,6 +100,7 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
   const naked = hideLabel || label === '';
   const [inputValue, setInputValue] = React.useState('');
   const { options, loading } = useServerOptions(inputValue, { allowClusters });
+  const memberNames = useClusterMemberNames(options);
   const [selectedOption, setSelectedOption] = React.useState<ServerOption | null>(null);
 
   React.useEffect(() => {
@@ -119,14 +142,31 @@ const ServerSelect: React.FC<ServerSelectProps> = ({
       onChange={(_, newValue) => onChange(newValue?.id || null)}
       onInputChange={(_, v) => setInputValue(v)}
       getOptionLabel={(option) => (option.is_cluster ? `${t('selects.cluster')} ${option.name}` : option.name)}
-      renderOption={(props, option) => (
-        <OptionWithHint
-          key={option.id}
-          optionProps={props}
-          label={`${option.is_cluster ? `${t('selects.cluster')} ` : ''}${option.name}`}
-          hint={[option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ')}
-        />
-      )}
+      renderOption={(props, option) => {
+        const hint = [option.environment?.toUpperCase(), option.kind, option.provider].filter(Boolean).join(' · ');
+        if (!option.is_cluster) return <OptionWithHint key={option.id} optionProps={props} label={option.name} hint={hint} />;
+        const members = memberNames[option.id];
+        return (
+          <OptionWithHint
+            key={option.id}
+            optionProps={props}
+            hint={hint}
+            label={(
+              <Box component="span" sx={{ display: 'flex', flexDirection: 'column', minWidth: 0 }}>
+                <Box component="span" sx={{ display: 'flex', alignItems: 'center', gap: '6px' }}>
+                  {option.name}
+                  <ClusterMark />
+                </Box>
+                {members && (
+                  <Box component="span" sx={(theme) => ({ fontSize: 11, color: theme.palette.kanap.text.tertiary, overflow: 'hidden', textOverflow: 'ellipsis' })}>
+                    {members.length > 0 ? members.join(', ') : t('selects.noMembers')}
+                  </Box>
+                )}
+              </Box>
+            )}
+          />
+        );
+      }}
       ListboxProps={naked ? { sx: drawerAutocompleteListboxSx } : undefined}
       renderInput={(params) => (
         <TextField

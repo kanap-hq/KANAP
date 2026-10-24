@@ -2121,7 +2121,6 @@
       },
       "assignments": {
         "addAssignment": "Zuordnung hinzufügen",
-        "clusterCannotHost": "Cluster-Assets können keine Anwendungszuordnungen hosten. Weisen Sie die Mitglieds-Hosts zu.",
         "noAssignments": "Noch keine Zuordnungen.",
         "assignmentAdded": "Zuordnung hinzugefügt",
         "application": "Anwendung",
@@ -3198,6 +3197,24 @@
     },
     "versionTimeline": {
       "title": "Versionsverlauf"
+    },
+    "clusterAssignment": {
+      "title": "Dem Cluster zuordnen?",
+      "inCluster_one": "{{server}} gehört zu {{cluster}}. Das einzige Mitglied betreibt {{subject}}.",
+      "inCluster_other": "{{server}} gehört zu {{cluster}}. Die {{count}} Mitglieder betreiben {{subject}}.",
+      "inClusters": "{{server}} gehört zu mehreren Clustern.",
+      "memberCount_one": "{{count}} Mitglied",
+      "memberCount_other": "{{count}} Mitglieder",
+      "assignToCluster": "Dem Cluster zuordnen",
+      "serverOnly": "Nur diesem Server",
+      "absorbed_one": "Die direkte Zuordnung von {{names}} wird ersetzt.",
+      "absorbed_other": "Die direkten Zuordnungen von {{names}} werden ersetzt.",
+      "via": "über",
+      "inheritedFrom": "Über {{cluster}}",
+      "groupLine": "{{subject}} auf {{members}}",
+      "groupAssignTo": "{{cluster}} zuordnen",
+      "groupConfirm": "{{application}} bleibt verfügbar, solange ein Mitglied läuft.",
+      "thisApplication": "Die Anwendung"
     }
   },
   "enums": {
