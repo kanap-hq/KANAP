@@ -196,12 +196,24 @@ export function LinkCellRenderer<T = unknown>(
     href = `${hrefPrefix}${String(value)}${hrefSuffix}`;
   }
 
-  // If no href, render as plain text
+  // If no href, render as plain text, laid out like the link: same font, same alignment, same ellipsis.
   if (!href) {
     return (
-      <Typography variant="body2" sx={alignSx}>
-        {displayText}
-      </Typography>
+      <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: rightAligned ? 'flex-end' : 'flex-start', width: '100%', minWidth: 0, maxWidth }}>
+        <Box
+          component="span"
+          sx={{
+            display: 'block',
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            textAlign: rightAligned ? 'right' : undefined,
+            fontVariantNumeric: rightAligned ? 'tabular-nums' : undefined,
+          }}
+        >
+          {displayText}
+        </Box>
+      </Box>
     );
   }
 
