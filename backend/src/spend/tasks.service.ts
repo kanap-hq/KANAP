@@ -740,11 +740,14 @@ const TASK_HIDDEN_LINE_REFERENCE_SQL = `CASE
           THEN data_access_reference('task', t.id)
         END`;
 
-/** A row of the list or the detail: a hidden line shows as its reference (`related_object_hidden`). */
+/**
+ * A row of the list or the detail: a hidden line shows as its reference (`related_object_hidden`),
+ * without its id (as Plaid, MCP and the export).
+ */
 function withHiddenLineReference(row: TaskListItem & { related_object_reference?: string | null }): TaskListItem {
   const { related_object_reference: reference, ...task } = row;
   if (!reference) return task;
-  return { ...task, related_object_name: reference, related_object_hidden: true };
+  return { ...task, related_object_id: null, related_object_name: reference, related_object_hidden: true };
 }
 
 async function taskSortKey(manager: EntityManager, field: string): Promise<string> {

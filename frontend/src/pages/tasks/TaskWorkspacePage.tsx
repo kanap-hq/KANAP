@@ -936,11 +936,12 @@ export default function TaskWorkspacePage() {
     if (nextType === null && nextId !== null) {
       throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
     }
-    if (nextType !== null && !nextId) {
+    const isRelationPatch = hasRelatedType || hasRelatedId;
+    // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+    if (nextType !== null && !nextId && (isRelationPatch || !snapshot.related_object_hidden)) {
       throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
     }
 
-    const isRelationPatch = hasRelatedType || hasRelatedId;
     return {
       endpoint: isRelationPatch
         ? `/tasks/${snapshot.id}/move`
@@ -1140,7 +1141,8 @@ export default function TaskWorkspacePage() {
       if (nextType === null && nextId !== null) {
         throw new Error(t('portfolio:workspace.task.messages.invalidStandaloneRelation'));
       }
-      if (nextType !== null && !nextId) {
+      // A line the person cannot read comes without its id: the task keeps it while the relation is untouched.
+      if (nextType !== null && !nextId && (relationChanged || !task.related_object_hidden)) {
         throw new Error(t('portfolio:workspace.task.messages.relatedItemRequired'));
       }
 

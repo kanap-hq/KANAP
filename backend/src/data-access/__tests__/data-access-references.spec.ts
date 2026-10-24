@@ -81,6 +81,8 @@ async function testTasks(runner: QueryRunner, s: Seed, x: Extra): Promise<void> 
     return { byId, detail };
   };
   const pick = (row: any) => ({ name: row?.related_object_name, hidden: row?.related_object_hidden, reference: row?.related_object_reference });
+  /** The line id a row carries: none for a hidden line (review M1), as Plaid, MCP and the export. */
+  const lineId = (row: any) => row?.related_object_id;
 
   const marta = await as(runner, s.persons.marta, read);
   const bl = (id: string) => `BL-${x.numbers[id]}`;
@@ -88,12 +90,17 @@ async function testTasks(runner: QueryRunner, s: Seed, x: Extra): Promise<void> 
   assert.deepEqual(pick(marta.byId.get(x.tasks.onCapex)), { name: `BL-${x.capexNumber}`, hidden: true, reference: undefined }, 'a CAPEX line too');
   assert.deepEqual(pick(marta.byId.get(x.tasks.onL4)), { name: `DA line L4 ${s.tenantId.slice(0, 8)}`, hidden: undefined, reference: undefined }, 'a line she reads: its name');
   assert.deepEqual(pick(marta.detail), { name: bl(s.lines.L1), hidden: true, reference: undefined }, 'the detail as the list');
+  assert.equal(lineId(marta.byId.get(x.tasks.onL1)), null, 'Marta: no id of the hidden line in the list');
+  assert.equal(lineId(marta.byId.get(x.tasks.onCapex)), null, 'nor of the hidden CAPEX line');
+  assert.equal(lineId(marta.detail), null, 'nor in the detail');
+  assert.equal(lineId(marta.byId.get(x.tasks.onL4)), s.lines.L4, 'a line she reads keeps its id');
 
   const ulla = await as(runner, s.persons.ulla, read);
   assert.deepEqual(pick(ulla.byId.get(x.tasks.onL1)), { name: `DA line L1 ${s.tenantId.slice(0, 8)}`, hidden: undefined, reference: undefined }, 'Ulla: the name, no flag');
   assert.deepEqual(pick(ulla.detail), pick(ulla.byId.get(x.tasks.onL1)));
+  assert.equal(lineId(ulla.detail), s.lines.L1, 'Ulla: the id');
   assert.ok([...ulla.byId.values()].every((row) => !('related_object_hidden' in row) && !('related_object_reference' in row)), 'unscoped rows unchanged');
-  console.log('  tasks: a hidden line shows as BL-n with related_object_hidden (list and detail); unscoped unchanged: OK');
+  console.log('  tasks: a hidden line shows as BL-n with related_object_hidden and no id (list and detail); unscoped unchanged: OK');
 }
 
 async function testLineage(runner: QueryRunner, s: Seed, x: Extra): Promise<void> {
