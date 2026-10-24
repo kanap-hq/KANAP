@@ -35,6 +35,26 @@ export async function personsByReadAccess(
   return new Set(rows.map((row) => row.id));
 }
 
+/**
+ * Of these tasks, those the person can read (`data_access_can_read`), in one statement, lower-case.
+ * The person's notification lists use it (the weekly review), never a call per task.
+ */
+export async function tasksReadableBy(
+  manager: Pick<EntityManager, 'query'>,
+  userId: string,
+  taskIds: readonly string[],
+): Promise<Set<string>> {
+  const ids = Array.from(new Set(taskIds.filter(Boolean).map((id) => String(id).toLowerCase())));
+  if (ids.length === 0) return new Set();
+  const rows: Array<{ id: string }> = await manager.query(
+    `SELECT x.id::text AS id
+       FROM unnest($2::uuid[]) AS x(id)
+      WHERE data_access_can_read($1::uuid, 'task', x.id) IS TRUE`,
+    [userId, ids],
+  );
+  return new Set(rows.map((row) => row.id));
+}
+
 /** A person chosen in "Send the link", as the share routes read them. */
 export type ShareRecipientRow = { userId: string; email: string; firstName?: string | null; lastName?: string | null };
 

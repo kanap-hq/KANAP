@@ -9,7 +9,9 @@ import appDataSource from '../../data-source';
 import { applyDataAccess } from '../data-access';
 import { shareRecipientsWhoCannotOpen } from '../can-read';
 import { NotificationsService } from '../../notifications/notifications.service';
-import { CREATOR_CAN_READ } from '../../notifications/scheduled-notifications.service';
+import { ScheduledNotificationsService } from '../../notifications/scheduled-notifications.service';
+import { SpendItemsService } from '../../spend/spend-items.service';
+import { SpendItem } from '../../spend/spend-item.entity';
 import { TaskActivitiesService } from '../../tasks/task-activities.service';
 import { TasksUnifiedService } from '../../tasks/tasks-unified.service';
 import { Task } from '../../tasks/task.entity';
@@ -106,13 +108,20 @@ async function testNotificationRecipients(runner: QueryRunner, s: Seed, t: Tasks
   assert.equal(sent.length, 1, 'one comment notification');
   assert.deepEqual(sorted(sent[0].recipients.map((r: any) => r.userId)), sorted([nina, paul]), 'comment: Nina and Paul (the author is skipped later), not Marta');
 
-  // The weekly review's task list: a task Marta only created is listed when she can read it.
-  const weekly = sorted((await runner.query(
-    `SELECT t.id::text FROM tasks t WHERE t.tenant_id = $1
-        AND (t.assignee_user_id = $2 OR (t.creator_id = $2 AND ${CREATOR_CAN_READ('$2')}) OR t.owner_ids @> to_jsonb($2::text))`,
-    [s.tenantId, marta],
-  )).map((r: any) => r.id));
-  assert.deepEqual(weekly, sorted([t.l4ByMarta, t.free]), 'weekly review: the L1 task Marta created is not listed to her');
+  // The weekly review's task lists, as the service reads them: a task Marta only created is listed
+  // when she can read it, in the top tasks and in the tasks closed in the week.
+  const scheduled = new ScheduledNotificationsService(none, none, none, none, none, none);
+  const week = { start: new Date(Date.now() - 7 * 86400000).toISOString(), end: new Date(Date.now() + 86400000).toISOString() };
+  const top = await scheduled.weeklyReviewTasks(runner.manager, s.tenantId, marta, week.start, week.end);
+  assert.deepEqual(sorted(top.topTasks.map((r) => r.id)), sorted([t.l4ByMarta, t.free]), 'weekly review: the L1 task Marta created is not listed to her');
+  await as(runner, null, async (m) => {
+    await m.query(`UPDATE tasks SET status = 'done', updated_at = now() WHERE tenant_id = $1`, [s.tenantId]);
+    const closed = await scheduled.weeklyReviewTasks(m, s.tenantId, marta, week.start, week.end);
+    assert.deepEqual(sorted(closed.tasksClosed.map((r) => r.id)), sorted([t.l4ByMarta, t.free]), 'weekly review, closed tasks: nor the closed one');
+    // Paul is the L1 task's owner: named, it is listed to him whatever his access.
+    const paulClosed = await scheduled.weeklyReviewTasks(m, s.tenantId, paul, week.start, week.end);
+    assert.deepEqual(paulClosed.tasksClosed.map((r) => r.id), [t.l1ByMarta], 'weekly review: a named person is listed');
+  });
   console.log('  notifications: named persons always, the creator of a line task only when she can read it (recipients, comment, weekly review): OK');
 }
 
@@ -158,9 +167,13 @@ async function testShare(runner: QueryRunner, s: Seed, t: Tasks): Promise<void> 
   assert.deepEqual(hiddenLine, { success: true }, 'a task of a line hidden to the sender: no cannot_open list');
   assert.deepEqual(sorted(shares[2].recipients.map((r: any) => r.userId)), sorted([nina, paul]), 'sent to all');
 
-  // A line: Paul shares L4 with Nina (no access) and Marta.
-  const line = await as(runner, paul, (m) => shareRecipientsWhoCannotOpen(m, 'spend_item', s.lines.L4, [row(nina), row(marta)]));
-  assert.deepEqual(line, [{ id: nina, name: 'Nina Noel' }], 'L4: Nina cannot open it, named by her name');
+  // A line, through its share route: Paul shares L4 with Nina (no access) and Marta; sent to both.
+  const lines = new SpendItemsService(
+    runner.manager.getRepository(SpendItem), none, none, none, none, none, none, none, none, { notifyShare: (p: any) => { shares.push(p); } } as any, none,
+  );
+  const line = await as(runner, paul, (m) => lines.share(s.lines.L4, { recipient_user_ids: [nina, marta] } as any, s.tenantId, paul, { manager: m }));
+  assert.deepEqual(line, { success: true, cannot_open: [{ id: nina, name: 'Nina Noel' }] }, 'L4: Nina cannot open it, named by her name');
+  assert.deepEqual(sorted(shares[shares.length - 1].recipients.map((r: any) => r.userId)), sorted([nina, marta]), 'the line: sent to both');
   // Ulla (unscoped sender) shares L1 with Marta.
   const unscoped = await as(runner, ulla, (m) => shareRecipientsWhoCannotOpen(m, 'spend_item', s.lines.L1, [row(marta), row(paul)]));
   assert.deepEqual(unscoped, [{ id: marta, name: nameOf(marta) }], 'an unscoped sender is warned too');
