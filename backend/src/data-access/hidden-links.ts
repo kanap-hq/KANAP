@@ -50,7 +50,7 @@ export class DataAccessHiddenLinesException extends DataAccessLimitedException {
 
 /** The lines linked to the object that the person cannot read: 0 for an unscoped person, without a query. */
 export async function hiddenLineCount(manager: EntityManager, owner: HiddenLineOwner, ownerId: string): Promise<number> {
-  return (await hiddenLineCounts(manager, owner, [ownerId])).get(ownerId) ?? 0;
+  return (await hiddenLineCounts(manager, owner, [ownerId])).get(ownerId.toLowerCase()) ?? 0;
 }
 
 /** The same count for several objects of one type, in one query. */
@@ -61,7 +61,8 @@ export async function hiddenLineCounts(manager: EntityManager, owner: HiddenLine
     `SELECT o.id, data_access_hidden_count($1, o.id) AS n FROM unnest($2::uuid[]) AS o(id)`,
     [owner, Array.from(new Set(ownerIds))],
   );
-  for (const row of rows) counts.set(row.id, Number(row.n ?? 0));
+  // Keyed by the id as PostgreSQL writes it (lower case), whatever case the caller gave.
+  for (const row of rows) counts.set(String(row.id).toLowerCase(), Number(row.n ?? 0));
   return counts;
 }
 
