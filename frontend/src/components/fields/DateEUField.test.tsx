@@ -1,5 +1,6 @@
 import React from 'react';
 import { fireEvent, render, screen, waitFor } from '@testing-library/react';
+import userEvent from '@testing-library/user-event';
 import { ThemeProvider } from '@mui/material/styles';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import i18n from '../../i18n';
@@ -61,6 +62,149 @@ describe('DateEUField calendar', () => {
     expect(screen.getByRole('button', { name: 'Open calendar' })).toBeDisabled();
     fireEvent.keyDown(screen.getByRole('textbox'), { key: 'ArrowDown', altKey: true });
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+});
+
+describe('DateEUField replaces the saved date on the first keystroke', () => {
+  it('selects the whole date when the field is clicked', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    expect(input.value).toBe('15/03/2022');
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    await user.type(input, '21102026', { skipClick: true });
+    expect(input.value).toBe('21/10/2026');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+  });
+
+  it('does not select the whole date again when the focused field is clicked', async () => {
+    const user = userEvent.setup();
+    renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(3, 3);
+    fireEvent.mouseDown(input);
+    fireEvent.mouseUp(input);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+  });
+
+  it('selects the whole date when the field is autoFocused', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15', autoFocus: true });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    expect(input.selectionStart).toBe(0);
+    expect(input.selectionEnd).toBe(input.value.length);
+    await user.type(input, '21102026', { skipClick: true });
+    expect(input.value).toBe('21/10/2026');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+  });
+});
+
+describe('DateEUField keeps the rest of the date while editing the middle', () => {
+  it('retypes the selected day without shifting the month and year', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(0, 2);
+    await user.keyboard('21');
+    expect(input.value).toBe('21/03/2022');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2022-03-21');
+  });
+
+  it('deletes a month digit with backspace instead of padding it back', async () => {
+    const user = userEvent.setup();
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(5, 5);
+    await user.keyboard('{Backspace}');
+    expect(input.value).toBe('15/0/2022');
+    await user.keyboard('{Backspace}');
+    expect(input.value).toBe('15//2022');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('keeps an extra digit visible instead of swallowing it', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    input.setSelectionRange(input.value.length, input.value.length);
+    fireEvent.change(input, { target: { value: '15/03/20221' } });
+    expect(input.value).toBe('15/03/20221');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+});
+
+describe('DateEUField reports an invalid date on blur', () => {
+  it('keeps the typed text visible, marks the field invalid and leaves the saved date alone', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(onChangeYmd).not.toHaveBeenCalled();
+
+    fireEvent.blur(input);
+    expect(input).toHaveAttribute('aria-invalid', 'true');
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+    expect(input.value).toBe('21/10/26');
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('clears the error when the text becomes valid', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+
+    fireEvent.focus(input);
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    fireEvent.change(input, { target: { value: '21/10/2026' } });
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(input).not.toHaveAttribute('aria-invalid', 'true');
+    expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
+  });
+
+  it('clears an emptied field on blur', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '' } });
+    fireEvent.blur(input);
+    expect(onChangeYmd).toHaveBeenLastCalledWith('');
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+  });
+
+  it('restores the saved date on Escape', () => {
+    const { onChangeYmd } = renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('Invalid date')).toBeInTheDocument();
+
+    fireEvent.focus(input);
+    fireEvent.keyDown(input, { key: 'Escape' });
+    expect(input.value).toBe('15/03/2022');
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(onChangeYmd).not.toHaveBeenCalled();
+  });
+
+  it('keeps the error and helper text given by the caller', () => {
+    renderField({ valueYmd: '2022-03-15', error: true, helperText: 'The contract starts later.' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    fireEvent.focus(input);
+    fireEvent.change(input, { target: { value: '21/10/26' } });
+    fireEvent.blur(input);
+    expect(screen.getByText('The contract starts later.')).toBeInTheDocument();
+    expect(screen.queryByText('Invalid date')).not.toBeInTheDocument();
+    expect(input).toHaveAttribute('aria-invalid', 'true');
   });
 });
 

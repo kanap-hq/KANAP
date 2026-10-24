@@ -66,7 +66,7 @@ La página de Registro de auditoría conserva el historial de los cambios de dat
 
 **Exportaciones** (tabla **Exportación**): exportaciones CSV, documentos e informes que genera el servidor. La fila indica qué se exportó y quién lo hizo. La exportación del propio registro de auditoría también se registra.
 
-Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en el panel **Después**. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
+Las filas de acceso, de sesión y de exportación guardan además la **dirección IP** desde la que llegó la solicitud y el **navegador** utilizado. Abra la fila para leerlos en las filas **Dirección IP** y **Navegador** de su tabla. Detrás de un proxy inverso, es la dirección IP de la propia persona, siempre que el proxy la transmita (on-premise: consulte el [ejemplo de proxy inverso](on-premise/installation.md#reverse-proxy-example-nginx)).
 
 Las contraseñas, los enlaces de acceso y los tokens nunca se escriben en el registro. Cuando alguien intenta iniciar sesión con una dirección de correo electrónico que no tiene cuenta, la fila muestra **Cuenta desconocida** y no conserva la dirección escrita.
 
@@ -84,8 +84,9 @@ Los eventos de acceso y de sesión se eliminan después de **365 días**. Los ca
   - Origen (`user`, `system`, `webhook`)
 - Abrir cualquier fila para ver los detalles completos:
   - Chips de metadatos (fecha, tabla, acción, origen, motivo o referencia de origen, espacio de trabajo, ID de registro, usuario)
-  - Resumen de campos modificados
-  - Comparación lado a lado de los datos JSON **Antes** y **Después**
+  - La referencia de negocio del registro en el encabezado (por ejemplo `PRJ-3`), cuando la tiene
+  - Una tabla de los campos: **Campo**, **Antes** y **Después** para una modificación, **Campo** y **Valor** para cualquier otra entrada. Los nombres de los campos aparecen en su idioma cuando se conocen. Las fechas, los valores sí/no y las personas se muestran de forma legible; los demás identificadores aparecen como **Identificador**, con el valor en una información emergente. Los campos técnicos como `id`, `tenant_id` y `updated_at` se omiten
+  - **Ver datos sin formato** muestra el JSON completo antes y después
 - Exportar el registro a CSV (véase más abajo)
 
 ### Columnas

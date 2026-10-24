@@ -220,6 +220,11 @@ export default function ProtectedRoute() {
       interfaces: 'applications',
       'interface-map': 'applications',
       netbox: 'infrastructure',
+      // Technologies, their end of support, vulnerabilities and the administration view are
+      // infrastructure screens: their API asks for that right.
+      technologies: 'infrastructure',
+      vulnerabilities: 'infrastructure',
+      'administration-view': 'infrastructure',
       settings: 'settings',
     };
     const masterDataAliases: Record<string, string> = {

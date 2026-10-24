@@ -1,0 +1,225 @@
+import { describe, expect, it } from 'vitest';
+import i18n from '../../i18n';
+import de from '../../locales/de/admin.json';
+import en from '../../locales/en/admin.json';
+import es from '../../locales/es/admin.json';
+import fr from '../../locales/fr/admin.json';
+import type { Translate } from './auditLogLabels';
+import {
+  auditFields,
+  auditHasNonObjectPayload,
+  auditRecordLabel,
+  auditRecordRef,
+  auditSnapshot,
+  auditUserIds,
+  formatAuditValue,
+  type AuditValueContext,
+} from './auditLogValues';
+
+const t = i18n.getFixedT('en', 'admin') as unknown as Translate;
+const uuid = '11111111-1111-4111-8111-111111111111';
+const otherUuid = '22222222-2222-4222-8222-222222222222';
+
+function context(overrides: Partial<AuditValueContext> = {}): AuditValueContext {
+  return { locale: 'en', t, snapshot: undefined, users: undefined, ...overrides };
+}
+
+describe('formatAuditValue', () => {
+  it('marks every empty value with the empty-cell glyph', () => {
+    expect(formatAuditValue(null, 'notes', context()).text).toBe('—');
+    expect(formatAuditValue(undefined, 'notes', context()).text).toBe('—');
+    expect(formatAuditValue('', 'notes', context()).text).toBe('—');
+    expect(formatAuditValue('   ', 'notes', context()).text).toBe('—');
+  });
+
+  it('writes a boolean as yes or no', () => {
+    expect(formatAuditValue(true, 'mfa_supported', context())).toEqual({ text: 'Yes' });
+    expect(formatAuditValue(false, 'mfa_supported', context())).toEqual({ text: 'No' });
+  });
+
+  it('formats short dates and date-times with the page locale', () => {
+    expect(formatAuditValue('2020-03-31', 'go_live_date', context()).text).toBe('31 Mar 2020');
+    expect(formatAuditValue('2020-03-31T14:30:00', 'created_at', context()).text).toBe('31 Mar 2020, 02:30 PM');
+  });
+
+  it('always shows the year of a date and reads UTC midnight as a date', () => {
+    const thisYear = new Date().getFullYear();
+    expect(formatAuditValue(`${thisYear}-09-30`, 'created_at', context()).text).toBe(`30 Sep ${thisYear}`);
+    expect(formatAuditValue('2028-06-30T00:00:00.000Z', 'created_at', context()).text).toBe('30 Jun 2028');
+    expect(formatAuditValue('2028-06-30T00:00:00Z', 'created_at', context()).text).toBe('30 Jun 2028');
+  });
+
+  it('formats numbers with the page locale, except a year', () => {
+    expect(formatAuditValue(1234.5, 'amount', context()).text).toBe('1,234.5');
+    expect(formatAuditValue(2026, 'users_year', context()).text).toBe('2026');
+    expect(formatAuditValue(2026, 'year', context()).text).toBe('2026');
+  });
+
+  it('joins a list of scalars and keeps dates readable inside it', () => {
+    expect(formatAuditValue(['a', 'b'], 'label', context()).text).toBe('a, b');
+    expect(formatAuditValue([1, 2], 'year', context()).text).toBe('1, 2');
+    expect(formatAuditValue([true, false], 'mfa_supported', context()).text).toBe('Yes, No');
+    expect(formatAuditValue(['2020-03-31'], 'start_date', context()).text).toBe('31 Mar 2020');
+    expect(formatAuditValue([], 'label', context()).text).toBe('—');
+  });
+
+  it('renders an object or a list of objects as one line of JSON', () => {
+    expect(formatAuditValue({ a: 1, b: 'two' }, 'notes', context()).text).toBe('{"a":1,"b":"two"}');
+    expect(formatAuditValue([{ a: 1 }, { b: 2 }], 'notes', context()).text).toBe('[{"a":1},{"b":2}]');
+  });
+
+  it('truncates long JSON and keeps the full value in the title', () => {
+    const value = { note: 'x'.repeat(180) };
+    const display = formatAuditValue(value, 'notes', context());
+    expect(display.text).toHaveLength(120);
+    expect(display.text.endsWith('…')).toBe(true);
+    expect(display.title).toBe(JSON.stringify(value));
+  });
+
+  it('never shows an id when a readable neighbour names it', () => {
+    const display = formatAuditValue(uuid, 'supplier_id', context({ snapshot: { supplier_id: uuid, supplier_name: 'Acme' } }));
+    expect(display).toEqual({ text: 'Acme' });
+  });
+
+  it('shows a secondary identifier, with the id in the title, when no neighbour names it', () => {
+    const display = formatAuditValue(uuid, 'company_id', context({ snapshot: { company_id: uuid } }));
+    expect(display).toEqual({ text: 'Identifier', title: uuid, secondary: true });
+  });
+
+  it('resolves the people named by the dialog in one lookup', () => {
+    const users = new Map([[uuid, 'Alice Martin']]);
+    expect(formatAuditValue(uuid, 'user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'updated_by', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'owner_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'assigned_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'created_by', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'creator_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'reporter_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'requestor_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+  });
+
+  it('falls back to the identifier when a person cannot be read', () => {
+    const display = formatAuditValue(otherUuid, 'user_id', context({ users: new Map() }));
+    expect(display).toEqual({ text: 'Identifier', title: otherUuid, secondary: true });
+  });
+
+  it('keeps a non-id string as it is', () => {
+    expect(formatAuditValue('on_premise', 'hosting_model', context()).text).toBe('on_premise');
+  });
+});
+
+describe('audit entry helpers', () => {
+  const updateRow = {
+    action: 'update',
+    table_name: 'tasks',
+    record_id: uuid,
+    before_json: { id: uuid, tenant_id: otherUuid, status: 'draft', created_at: '2020-01-01', notes: 'same' },
+    after_json: { id: uuid, tenant_id: otherUuid, status: 'active', created_at: '2020-01-01', notes: 'same', updated_at: '2020-01-02' },
+  };
+
+  it('reads the changed fields of an update, without the technical ids', () => {
+    const fields = auditFields(updateRow);
+    expect(fields.mode).toBe('change');
+    expect(fields.rows.map((row) => row.key)).toEqual(['status']);
+    expect(fields.rows[0]).toMatchObject({ before: 'draft', after: 'active' });
+  });
+
+  it('drops empty update rows and technical noise keys', () => {
+    const fields = auditFields({
+      action: 'update',
+      before_json: {
+        status: null, notes: '', tags: [], name: 'Old', __typename: 'Old',
+        search_vector: 'old', content_plain: 'old', content_markdown: 'old',
+      },
+      after_json: {
+        status: '', notes: '   ', tags: null, name: 'New', __typename: 'New',
+        search_vector: 'new', content_plain: 'new', content_markdown: 'new',
+      },
+    });
+    expect(fields.rows.map((row) => row.key)).toEqual(['name', 'content_markdown']);
+  });
+
+  it('reads one side for a create, keeping created_at there only', () => {
+    const fields = auditFields({
+      action: 'create',
+      before_json: null,
+      after_json: { id: uuid, tenant_id: otherUuid, name: 'Acme', created_at: '2020-01-01', updated_at: '2020-01-02' },
+    });
+    expect(fields.mode).toBe('single');
+    expect(fields.rows.map((row) => row.key)).toEqual(['name', 'created_at']);
+  });
+
+  it('reads the before side of a delete', () => {
+    const fields = auditFields({
+      action: 'delete',
+      before_json: { id: uuid, name: 'Acme', created_at: '2020-01-01' },
+      after_json: null,
+    });
+    expect(fields.rows.map((row) => row.key)).toEqual(['name']);
+  });
+
+  it('reads the metadata of a sign-in or export event', () => {
+    const fields = auditFields({
+      action: 'export',
+      table_name: 'export',
+      after_json: { resource: 'users', format: 'csv', created_at: '2020-01-01' },
+    });
+    expect(fields.mode).toBe('single');
+    expect(fields.rows.map((row) => row.key)).toEqual(['resource', 'format']);
+  });
+
+  it('detects a payload that is not an object', () => {
+    expect(auditHasNonObjectPayload({ before_json: ['x'], after_json: null })).toBe(true);
+    expect(auditHasNonObjectPayload({ before_json: { a: 1 }, after_json: { b: 2 } })).toBe(false);
+  });
+
+  it('names the record with its item number when the table has one', () => {
+    expect(auditRecordRef({ table_name: 'tasks', record_id: uuid, after_json: { item_number: 4 } })).toBe('T-4');
+    expect(auditRecordRef({ table_name: 'portfolio_projects', record_id: uuid, after_json: { item_number: 3 } })).toBe('PRJ-3');
+    expect(auditRecordRef({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } })).toBeNull();
+  });
+
+  it('shows an identifier label, with the id in the title, when the record has no business reference', () => {
+    expect(auditRecordLabel({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } }, t))
+      .toEqual({ text: 'Identifier', title: uuid });
+    expect(auditRecordLabel({ table_name: 'tasks', record_id: uuid, after_json: { item_number: 4 } }, t))
+      .toEqual({ text: 'T-4' });
+    expect(auditRecordLabel({ table_name: 'suppliers', record_id: null }, t)).toBeNull();
+  });
+
+  it('merges the two payloads for the readable neighbours', () => {
+    expect(auditSnapshot({
+      before_json: { supplier_name: 'Acme', old: true },
+      after_json: { supplier_id: uuid, new: true },
+    })).toEqual({ supplier_name: 'Acme', old: true, supplier_id: uuid, new: true });
+  });
+
+  it('collects the people of the rows once each', () => {
+    const fields = auditFields({
+      action: 'update',
+      before_json: { user_id: uuid, owner_user_id: otherUuid },
+      after_json: { user_id: otherUuid, owner_user_id: otherUuid },
+    });
+    expect(auditUserIds(fields)).toEqual([uuid, otherUuid].sort());
+  });
+});
+
+describe('audit field labels', () => {
+  const newFields = [
+    'severity', 'detected_at', 'started_at', 'resolved_at', 'closed_at', 'confidential',
+    'personal_data_affected', 'planned_start', 'planned_end', 'it_lead_id', 'business_lead_id',
+    'created_by', 'creator_id', 'reporter_user_id', 'purpose', 'content_markdown', 'is_suite',
+    'users_mode', 'users_year', 'users_override', 'external_facing', 'access_methods',
+    'etl_enabled', 'classification_justification', 'classification_review',
+    'classification_revision',
+  ];
+  const locales = { en, fr, de, es } as Record<string, any>;
+
+  it('has a product label for the new fields in the four languages', () => {
+    for (const [language, admin] of Object.entries(locales)) {
+      for (const key of newFields) {
+        expect(admin.auditLogs.fields[key], `${language} ${key}`).toBeTruthy();
+      }
+    }
+  });
+});

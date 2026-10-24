@@ -106,6 +106,8 @@ Plaid va mostrando su respuesta carácter a carácter. Mientras la genera:
 
 Cuando termina la generación, el foco vuelve al cuadro de redacción para que pueda continuar la conversación sin recurrir al ratón.
 
+Las imágenes almacenadas en KANAP, como los archivos adjuntos, se muestran con normalidad. Una imagen alojada en otro sitio web no se carga por sí sola, ni en una respuesta, ni en sus propios mensajes, ni en la vista previa de un cambio propuesto. Aparece como un enlace con un icono de imagen: haga clic en él para abrir la imagen en una pestaña nueva. No se envía ninguna solicitud a ese sitio hasta que usted hace clic.
+
 ### Llamadas a herramientas { #tool-calls }
 
 Plaid usa un pequeño conjunto de herramientas internas para responder preguntas: `Search all`, `Search knowledge`, `Get document`, `Get entity context` y algunas otras. Cada llamada a herramienta aparece como una línea compacta debajo del mensaje ("ha usado Buscar todo · 8 resultados"). Normalmente no necesita leer los detalles de las herramientas, pero están ahí si quiere ver exactamente en qué registros se basó la respuesta.
