@@ -198,6 +198,23 @@ async function testErrors() {
     assert.equal(loaded.ok, true, JSON.stringify(loaded.errors));
     assert.deepEqual(await memberships(runner, tenantId), ['cl-a>node-1', 'cl-os>node-2']);
     assert.equal(await operatingSystems.labelOf(runner.manager, tenantId, clOs), null);
+
+    // A member added between the check and the write: the write checks again, on the locked rows,
+    // and stops the import before anything is written (the check is skipped here to stand for it).
+    const late = { ...assetCsvConfig, afterValidate: undefined };
+    const lateImport = (rows: string[], head = header) => importer.import(late, csvFile([head, ...rows].join('\n')),
+      { dryRun: false, mode: 'enrich', operation: 'upsert' },
+      { manager: runner.manager, tenantId, userId: null, isAdmin: true, itOpsSettings: csvSettings });
+    const switched = await lateImport(['cl-a;LOC-1;vm;prod;no;']);
+    assert.deepEqual(switched.errors.map((e) => [e.code, (e.params as any)?.reason]), [
+      ['CSV_IMPORT_FAILED', 'cl-a: This cluster still has 1 member(s). Remove them first.'],
+    ]);
+    assert.equal((await runner.query(`SELECT is_cluster FROM assets WHERE id = $1`, [clA]))[0].is_cluster, true);
+    const withOsLate = await lateImport(['cl-a;LOC-1;vm;prod;yes;;Debian 12'], `${header};operating_system`);
+    assert.deepEqual(withOsLate.errors.map((e) => [e.code, (e.params as any)?.reason]), [
+      ['CSV_IMPORT_FAILED', 'cl-a: This cluster has members: it has no operating system.'],
+    ]);
+    assert.equal(await operatingSystems.labelOf(runner.manager, tenantId, clA), null);
   });
 }
 

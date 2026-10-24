@@ -353,6 +353,45 @@ async function checkClusterSwitchAndOs(rows: ImportRow[], context: CsvImportCont
 }
 
 /**
+ * The same cluster rules again at the write, on the rows locked `FOR UPDATE`: the check ran
+ * without lock, so a member added or a switch saved since then is seen here. A refusal stops the
+ * import before anything is written (`CSV_IMPORT_FAILED`, its reason names the asset). New assets
+ * have no member and are not checked.
+ */
+async function recheckClusterRulesAtWrite(entities: any[], context: CsvImportContext): Promise<void> {
+  const updated = entities.filter((entity) => entity.id);
+  if (updated.length === 0) return;
+  const ids = Array.from(new Set(updated.map((entity) => String(entity.id))));
+  const locked: Array<{ id: string; is_cluster: boolean }> = await context.manager.query(
+    `SELECT id, COALESCE(is_cluster, false) AS is_cluster FROM assets
+      WHERE tenant_id = $1 AND id = ANY($2::uuid[])
+      ORDER BY id
+      FOR UPDATE`,
+    [context.tenantId, ids],
+  );
+  const stored = new Map(locked.map((row) => [row.id, row.is_cluster === true]));
+  const switches: ClusterSwitch[] = [];
+  for (const entity of updated) {
+    const id = String(entity.id);
+    if (!stored.has(id)) continue;
+    const from = stored.get(id) === true;
+    const to = entity.is_cluster === true;
+    if (from !== to) switches.push({ id, from, to });
+  }
+  const refusals = await clusterSwitchRefusals(context.manager, context.tenantId, switches);
+  const settingOs = updated.filter((entity) =>
+    entity.is_cluster === true
+    && Object.prototype.hasOwnProperty.call(entity, 'operating_system')
+    && String(entity.operating_system ?? '').trim() !== '');
+  const withMembers = await clustersWithMembers(context.manager, context.tenantId, settingOs.map((entity) => String(entity.id)));
+  for (const entity of updated) {
+    const id = String(entity.id);
+    const refusal = refusals.get(id) ?? (withMembers.has(id) ? osClusterWithMembersRefusal() : null);
+    if (refusal) throw new Error(`${entity.name}: ${refusal.message}`);
+  }
+}
+
+/**
  * CSV configuration for Assets entity
  *
  * Field order matches AssetWorkspacePage.tsx tabs:
@@ -727,6 +766,9 @@ export const assetCsvConfig: CsvEntityConfig = {
    * - Holds the operating-system text and the cluster names aside: they are not columns
    */
   beforeCommit: async (entities: any[], context: CsvImportContext) => {
+    // 0. The cluster rules, again under the lock of the rows.
+    await recheckClusterRulesAtWrite(entities, context);
+
     // 1. Effective IT Ops catalogs (defaults included), preloaded by the assets CSV service.
     const settings = await requireImportCatalogs(context);
 
