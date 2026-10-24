@@ -13,11 +13,13 @@ import {
   seedTree,
   sqlState,
 } from './data-access-test-helpers';
+import { LABELS, applyPerson, nextItemNumber, seed as seedLines } from './data-access-line-seed';
 
 /**
  * Data-scoped access fails closed (planning/data-scoped-access/spec.md §2.6, §6.3, §10.6): with the
  * limited role missing or inherited by the application role, a limited person is refused with
- * KDA01, and the sync does nothing without the role.
+ * KDA01; the sync does nothing without the role, and drops every policy on it when inherited, so
+ * the persons without scope keep everything.
  *
  * Each scenario runs on an admin connection inside a transaction that is always rolled back:
  * `ALTER ROLE ... RENAME` and the membership change are transactional, so nothing is ever
@@ -69,21 +71,60 @@ async function testRoleMissing(admin: PgClient): Promise<void> {
   console.log('  role missing: limited person refused, sync does nothing: OK');
 }
 
+async function setInheritance(admin: PgClient, pg16: boolean): Promise<void> {
+  if (pg16) {
+    await admin.query(`GRANT ${LIMITED_ROLE} TO "${APP_ROLE}" WITH INHERIT TRUE`);
+  } else {
+    await admin.query(`ALTER ROLE "${APP_ROLE}" INHERIT`);
+  }
+}
+
+async function policiesOnRole(admin: PgClient): Promise<number> {
+  const { rows } = await admin.query(`SELECT count(*)::int AS n FROM pg_policy WHERE to_regrole($1) = ANY (polroles)`, [LIMITED_ROLE]);
+  return rows[0].n;
+}
+
+/**
+ * The application role inherits the limited role (§10.6: detected, function unavailable, nothing
+ * broken for the persons without scope). The policies on the role then apply to the application
+ * role itself, without context, and hide every line from everyone; the sync drops them and creates
+ * none, so an unscoped person reads and writes as before and a limited one is refused (KDA01).
+ */
 async function testRoleInherited(admin: PgClient): Promise<void> {
   const { rows } = await admin.query(`SELECT current_setting('server_version_num')::int >= 160000 AS pg16`);
   await inRolledBack(admin, async () => {
-    if (rows[0].pg16) {
-      await admin.query(`GRANT ${LIMITED_ROLE} TO "${APP_ROLE}" WITH INHERIT TRUE`);
-    } else {
-      await admin.query(`ALTER ROLE "${APP_ROLE}" INHERIT`);
-    }
+    // The lines first, as the application role: the data exists before the membership changes.
+    await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
+    const s = await seedLines(admin);
+    await admin.query('RESET ROLE');
+    await setInheritance(admin, rows[0].pg16);
     await admin.query(`SET LOCAL ROLE "${APP_ROLE}"`);
     const { rows: inherit } = await admin.query(`SELECT pg_has_role(current_user, $1, 'USAGE') AS inherits`, [LIMITED_ROLE]);
     assert.equal(inherit[0].inherits, true, 'the scenario makes the application role inherit');
-    const person = await limitedPerson(admin);
-    assert.equal(await sqlState(() => admin.query(`SELECT data_access_apply($1)`, [person])), 'KDA01', 'role inherited: KDA01');
+    assert.ok(await policiesOnRole(admin) > 0, 'the policies of the limited role exist');
+    const count = async () => (await admin.query(`SELECT count(*)::int AS n FROM spend_items`)).rows[0].n;
+    assert.equal(await count(), 0, 'inherited policies: the application role sees no line (the failure the sync removes)');
+
+    await admin.query(`SELECT data_access_sync_policies()`);
+    assert.equal(await policiesOnRole(admin), 0, 'role inherited: the sync drops every policy on the role and creates none');
+
+    assert.equal(await applyPerson(admin, s.persons.ulla), 'all', 'unscoped person: everything');
+    assert.equal(await count(), LABELS.length, 'unscoped person: every line');
+    assert.equal((await admin.query(`SELECT count(*)::int AS n FROM spend_versions`)).rows[0].n, LABELS.length, 'unscoped person: every version');
+    const updated = await admin.query(`UPDATE spend_items SET description = 'checked' RETURNING id`);
+    assert.equal(updated.rows.length, LABELS.length, 'unscoped person: updates every line');
+    await admin.query(
+      `INSERT INTO spend_items (tenant_id, product_name, currency, effective_start, item_number)
+       VALUES (app_current_tenant(), 'Created under inheritance', 'EUR', '2026-01-01', $1)`,
+      [nextItemNumber()],
+    );
+    assert.equal(await count(), LABELS.length + 1, 'unscoped person: creates a line');
+
+    await admin.query('SAVEPOINT apply');
+    assert.equal(await sqlState(() => admin.query(`SELECT data_access_apply($1)`, [s.persons.marta])), 'KDA01', 'role inherited: KDA01');
+    await admin.query('ROLLBACK TO SAVEPOINT apply');
   });
-  console.log(`  role inherited (${rows[0].pg16 ? 'membership INHERIT TRUE' : 'ALTER ROLE INHERIT'}): limited person refused: OK`);
+  console.log(`  role inherited (${rows[0].pg16 ? 'membership INHERIT TRUE' : 'ALTER ROLE INHERIT'}): sync drops the policies, unscoped person served, limited person refused: OK`);
 }
 
 async function run(): Promise<void> {

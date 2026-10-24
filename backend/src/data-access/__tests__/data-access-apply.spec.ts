@@ -298,6 +298,8 @@ async function testEndOfTransaction(): Promise<void> {
 }
 
 async function testExpectedPolicies(): Promise<void> {
+  const countExpected = async () => (await client.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`)).rows[0].n;
+  const before = await countExpected();
   const setExpected = (row: string) => client.query(`
     CREATE OR REPLACE FUNCTION data_access_expected_policies()
     RETURNS TABLE (policy_name text, table_name text, command text)
@@ -324,8 +326,7 @@ async function testExpectedPolicies(): Promise<void> {
     await client.query(`CREATE POLICY companies_data_access_select ON companies AS RESTRICTIVE FOR SELECT TO ${LIMITED_ROLE} USING (true)`);
     assert.equal(await apply(p), 'limited', 'expected policy in place');
   });
-  const { rows } = await client.query(`SELECT count(*)::int AS n FROM data_access_expected_policies()`);
-  assert.equal(rows[0].n, 0, 'the expected list is empty again after the rollback');
+  assert.equal(await countExpected(), before, 'the expected list is restored by the rollback');
   console.log('  expected policies checked (missing, permissive, present): OK');
 }
 

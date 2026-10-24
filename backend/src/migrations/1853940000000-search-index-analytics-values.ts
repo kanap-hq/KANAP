@@ -7,7 +7,9 @@ const LOG_PREFIX = '[Migration] SearchIndexAnalyticsValues:';
  * statement triggers (1853850000000; rules in doc/architecture.md, "Budget statement triggers and
  * stale statistics"): public first, pg_temp last; each statement that reads a variable of the
  * function planned again on every call, with the arrays as constants. SECURITY INVOKER (the
- * default): they run as the writer, under its row level security.
+ * default): they run as the writer, under its row level security. Since 1854500000000
+ * (data-scoped access) the trigger functions are SECURITY DEFINER, so a limited person's change
+ * recalculates over the whole tenant; this migration's SQL is left as it was.
  */
 const FUNCTION_SETTINGS = 'SET search_path = public, pg_temp SET plan_cache_mode = force_custom_plan';
 
@@ -474,7 +476,7 @@ async function reindexLines(queryRunner: QueryRunner): Promise<number> {
  *      follow the rules of the budget statement triggers (1853850000000): no join of the
  *      transition tables, one read over all the keys, keys de-duplicated, SET search_path =
  *      public, pg_temp and plan_cache_mode = force_custom_plan, SECURITY INVOKER under the
- *      writer's row level security. A line's `row_version` bump by its values (1853740000000)
+ *      writer's row level security (SECURITY DEFINER since 1854500000000, data-scoped access). A line's `row_version` bump by its values (1853740000000)
  *      still skips the line's own search trigger: the values' trigger refreshes the line itself.
  *    - At the daily reindex (`cleanup/search-index-reindex.service.ts`, 03:00), at the line's
  *      next write, or at once through the admin rebuild (`POST /ai/admin/search-index/reindex`):

@@ -11,6 +11,7 @@ import {
   SearchIndexAnalyticsValues1853940000000 as Migration,
 } from '../../migrations/1853940000000-search-index-analytics-values';
 import { BudgetLineSearchRef1854020000000 as NativeMigration } from '../../migrations/1854020000000-budget-line-search-ref';
+import { DataAccessLinePolicies1854500000000 } from '../../migrations/1854500000000-data-access-line-policies';
 import { BudgetLineNature1853950000000 as LaterMigration } from '../../migrations/1853950000000-budget-line-nature';
 import { undoLotZ1 } from '../../spend/__tests__/undo-lot-z1.fixtures';
 import { writeItemAnalyticsValues } from '../../spend/item-analytics.util';
@@ -498,6 +499,8 @@ async function testMigration() {
     const lines = { opex: await seedLine(runner, 'opex', d.tenantId), capex: await seedLine(runner, 'capex', d.tenantId) };
     for (const kind of KINDS) await linkValue(runner, kind, d.tenantId, lines[kind], d.nature, d.materiel);
     // Lot Z1 undone, newest first (other specs' residue repaired first): the CAPEX line and its value back in capex_*, with their ids.
+    // 1854500000000 made these trigger functions SECURITY DEFINER (data-scoped access): undone first.
+    await asMigration(runner, () => new DataAccessLinePolicies1854500000000().down(runner));
     await asMigration(runner, () => new NativeMigration().down(runner));
     await asMigration(runner, () => undoLotZ1(runner));
 
