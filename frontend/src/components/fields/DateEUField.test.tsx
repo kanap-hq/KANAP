@@ -79,6 +79,18 @@ describe('DateEUField replaces the saved date on the first keystroke', () => {
     expect(onChangeYmd).toHaveBeenLastCalledWith('2026-10-21');
   });
 
+  it('does not select the whole date again when the focused field is clicked', async () => {
+    const user = userEvent.setup();
+    renderField({ valueYmd: '2022-03-15' });
+    const input = screen.getByRole('textbox') as HTMLInputElement;
+    await user.click(input);
+    input.setSelectionRange(3, 3);
+    fireEvent.mouseDown(input);
+    fireEvent.mouseUp(input);
+    expect(input.selectionStart).toBe(3);
+    expect(input.selectionEnd).toBe(3);
+  });
+
   it('selects the whole date when the field is autoFocused', async () => {
     const user = userEvent.setup();
     const { onChangeYmd } = renderField({ valueYmd: '2022-03-15', autoFocus: true });
