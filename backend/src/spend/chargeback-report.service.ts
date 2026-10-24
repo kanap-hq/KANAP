@@ -14,6 +14,12 @@ import { BUDGET_COLUMN_MEASURE, BudgetColumn } from './amounts-write.util';
 import { DEFAULT_BUDGET_COLUMNS, readBudgetColumns } from '../budget-columns/budget-columns.util';
 import { BudgetNature, naturesAnd } from './budget-nature';
 import { AllocationWarning, amountFxMissingWarning, convertTurnovers, turnoverFxMissingWarning, turnoverMissingItems } from './allocation-distribution';
+import { transactionDataAccessMode } from '../data-access/data-access';
+import { DataAccessLimitedException } from '../data-access/line-write-checks';
+import { withFullDataAccess } from '../data-access/full-data-access';
+
+/** A limited person asks the chargeback of a company their company nodes do not cover (spec §5.2). */
+export const DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE = 'The chargeback of this company is outside your data access.';
 
 /**
  * A warning of the report: a sentence, or a structured warning the screen words in the user's
@@ -80,6 +86,13 @@ export function resolveChargebackScope(raw: unknown): ChargebackScope {
 /** The options of a report: the request's manager, and the lines it spreads (OPEX when none is given). */
 export type ChargebackReportOptions = { manager?: EntityManager; scope?: ChargebackScope };
 
+/**
+ * How `computeBase` names lines in its warnings: by default every line; for a limited person's
+ * company report, which reads every line of the year (`withFullDataAccess`), only the lines the
+ * person reads (a warning names a line or counts it).
+ */
+type ComputeBaseOptions = { warnsOnLine?: (itemId: string) => boolean };
+
 const ALLOCATION_METHOD_LABELS: Record<ResolvedAllocationMethod, string> = {
   headcount: 'Headcount',
   it_users: 'IT users',
@@ -108,6 +121,10 @@ type ChargebackComputationContext = {
   companyDepartmentTotalsRaw: Map<string, Map<string | null, number>>;
   versionCompanyTotals: Map<string, Map<string, number>>;
   versionCompanyTotalsRaw: Map<string, Map<string, number>>;
+  /** Version → company → the allocation percentage charged to it (the sum of its shares). */
+  versionCompanyPct: Map<string, Map<string, number>>;
+  /** Version → company → the departments its shares go down to. */
+  versionCompanyDepartments: Map<string, Map<string, Set<string>>>;
   intercompanyRaw: Map<string, Map<string, number>>; // payer -> consumer -> raw
   intercompany: Map<string, Map<string, number>>;     // payer -> consumer -> converted
   companyById: Map<string, Company>;
@@ -136,6 +153,7 @@ export type CompanyChargebackDepartmentRow = {
 
 export type CompanyChargebackItemRow = {
   versionId: string;
+  /** The line's id; null when the line is not read, or not readable by a limited person (no link). */
   itemId: string | null;
   /** The line's number, its BL-n reference; null when the line is not read. */
   itemNumber: number | null;
@@ -147,6 +165,17 @@ export type CompanyChargebackItemRow = {
   amount: number;
   amountRaw: number;
   sharePct: number | null;
+  /**
+   * A limited person's report only (spec §5.2), where a line may be charged to the company while
+   * the person cannot read it: whether they read it (false: reference and label without a link),
+   * the paying company, the allocation percentage charged to the company and the departments the
+   * shares go down to.
+   */
+  readable?: boolean;
+  payingCompanyId?: string | null;
+  payingCompanyName?: string | null;
+  allocationPct?: number | null;
+  departments?: string[];
 };
 
 export type CompanyChargebackReportResponse = {
@@ -191,6 +220,7 @@ export type CompanyChargebackReportResponse = {
     costPerItUser: number | null;
     costVsTurnoverPct: number | null;
   }>;
+  /** The group's totals; null for a limited person (spec §5.2, §5.3: no group total). */
   globalKpi: {
     amount: number;
     amountRaw: number;
@@ -201,7 +231,9 @@ export type CompanyChargebackReportResponse = {
     costPerUser: number | null;
     costPerItUser: number | null;
     costVsTurnoverPct: number | null;
-  };
+  } | null;
+  /** Set for a limited person: the shares charged to the company only, no group total. */
+  dataAccessLimited?: true;
   intercompany?: {
     receivables: Array<{ consumerId: string; consumerName: string; amount: number; amountRaw: number }>;
     payables: Array<{ payerId: string; payerName: string; amount: number; amountRaw: number }>;
@@ -389,8 +421,18 @@ export class ChargebackReportService {
       throw new BadRequestException('companyId is required');
     }
 
-    const ctx = await this.computeBase(year, metric, tenantId, opts);
     const manager = opts?.manager ?? this.versionsRepo.manager;
+    const limited = (await transactionDataAccessMode(manager)) === 'limited';
+    // A limited person (spec §5.2): the companies of their company nodes (or all), every share
+    // charged to them, the lines they do not read as a reference and a label without a link.
+    const readableLines = limited
+      ? await this.readableCompanyChargeback(manager, tenantId, companyId, year)
+      : null;
+    const ctx = readableLines
+      ? await withFullDataAccess(manager, (full) => this.computeBase(
+        year, metric, tenantId, { ...opts, manager: full }, { warnsOnLine: (itemId) => readableLines.has(itemId) },
+      ))
+      : await this.computeBase(year, metric, tenantId, opts);
 
     let company = ctx.companyById.get(companyId);
     if (!company) {
@@ -492,7 +534,7 @@ export class ChargebackReportService {
       const method = meta?.method ?? 'headcount';
       const sharePct = total > 0 ? (amount / total) * 100 : null;
       const item = meta?.item;
-      items.push({
+      const row: CompanyChargebackItemRow = {
         versionId,
         itemId: item?.id ?? null,
         itemNumber: item?.item_number != null ? Number(item.item_number) : null,
@@ -503,7 +545,22 @@ export class ChargebackReportService {
         amount: toCurrency(amount),
         amountRaw,
         sharePct: sharePct != null ? Math.round(sharePct * 100) / 100 : null,
-      });
+      };
+      if (readableLines) {
+        const readable = !!item && readableLines.has(item.id);
+        const payerId = item?.paying_company_id ?? null;
+        const pct = ctx.versionCompanyPct.get(versionId)?.get(companyId);
+        const departmentIds = ctx.versionCompanyDepartments.get(versionId)?.get(companyId) ?? new Set<string>();
+        row.itemId = readable ? row.itemId : null;
+        row.readable = readable;
+        row.payingCompanyId = payerId;
+        row.payingCompanyName = payerId ? (ctx.companyById.get(payerId)?.name ?? null) : null;
+        row.allocationPct = pct != null ? Math.round(pct * 100) / 100 : null;
+        row.departments = [...departmentIds]
+          .map((id) => ctx.departmentById.get(id)?.name ?? 'Unknown department')
+          .sort((a, b) => a.localeCompare(b));
+      }
+      items.push(row);
       itemsTotal += amount;
       itemsTotalRaw += amountRaw;
     }
@@ -601,7 +658,9 @@ export class ChargebackReportService {
       itemsTotal: toCurrency(itemsTotal),
       itemsTotalRaw,
       kpis,
-      globalKpi,
+      // The group's totals would give the other companies' by difference (spec §5.3).
+      globalKpi: readableLines ? null : globalKpi,
+      ...(readableLines ? { dataAccessLimited: true as const } : {}),
       intercompany: {
         receivables,
         payables,
@@ -611,12 +670,34 @@ export class ChargebackReportService {
     };
   }
 
+  /**
+   * A limited person's company report (spec §5.2): refused (403) unless their company nodes, or an
+   * "all" node, cover the company (a cost-centre node does not); else the ids of the lines of the
+   * year they read, under their access, before the report reads every line.
+   */
+  private async readableCompanyChargeback(manager: EntityManager, tenantId: string, companyId: string, year: number): Promise<Set<string>> {
+    const [coverage] = await manager.query(
+      `SELECT coalesce(NULLIF(current_setting('app.da_read_all', true), '')::boolean, false)
+              OR $1::uuid = ANY (coalesce(NULLIF(current_setting('app.da_read_companies', true), '')::uuid[], '{}'::uuid[])) AS covered`,
+      [companyId],
+    );
+    if (coverage?.covered !== true) throw new DataAccessLimitedException(DATA_ACCESS_CHARGEBACK_COMPANY_MESSAGE);
+    const yr = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
+    const rows: Array<{ id: string }> = await manager.query(
+      `SELECT DISTINCT v.spend_item_id AS id FROM spend_versions v WHERE v.tenant_id = $1 AND v.budget_year = $2`,
+      [tenantId, yr],
+    );
+    return new Set(rows.map((row) => row.id));
+  }
+
   private async computeBase(
     year: number,
     metric: ChargebackMetricKey,
     tenantId: string,
     opts?: ChargebackReportOptions,
+    baseOpts?: ComputeBaseOptions,
   ): Promise<ChargebackComputationContext> {
+    const warnsOnLine = baseOpts?.warnsOnLine ?? (() => true);
     const yr = Number.isFinite(year) ? Math.trunc(year) : new Date().getFullYear();
     if (!isMetric(metric)) throw invalidMetric(metric);
     if (!tenantId) throw new InternalServerErrorException('A chargeback report needs a tenant.');
@@ -660,6 +741,8 @@ export class ChargebackReportService {
         companyDepartmentTotalsRaw: new Map(),
         versionCompanyTotals: new Map(),
         versionCompanyTotalsRaw: new Map(),
+        versionCompanyPct: new Map(),
+        versionCompanyDepartments: new Map(),
         intercompanyRaw: new Map(),
         intercompany: new Map(),
         companyById: new Map(),
@@ -762,6 +845,8 @@ export class ChargebackReportService {
     const companyDepartmentTotals = new Map<string, Map<string | null, number>>();
     const versionCompanyTotalsRaw = new Map<string, Map<string, number>>();
     const versionCompanyTotals = new Map<string, Map<string, number>>();
+    const versionCompanyPct = new Map<string, Map<string, number>>();
+    const versionCompanyDepartments = new Map<string, Map<string, Set<string>>>();
     const intercompanyRaw = new Map<string, Map<string, number>>();
     const intercompany = new Map<string, Map<string, number>>();
     const companyIds = new Set<string>();
@@ -787,7 +872,8 @@ export class ChargebackReportService {
       fxByVersion.set(version.id, fx);
 
       const shares = allocationInfo?.shares ?? [];
-      if (allocationInfo?.error) {
+      const warns = warnsOnLine(version.spend_item_id);
+      if (allocationInfo?.error && warns) {
         const itemLabel = item?.product_name?.trim() || item?.description?.trim() || version.spend_item_id;
         const verb = shares.length > 0 ? 'Used stored allocation for' : 'Skipped allocations for';
         recordWarning(`${verb} "${itemLabel}" (year ${version.budget_year}): ${allocationInfo.error}`);
@@ -798,6 +884,7 @@ export class ChargebackReportService {
       // consumed, departments, intercompany), so the report balances on what it counts, and
       // the report names it once (`amount_fx_missing`).
       if (rateMissing(version, sourceCurrency)) {
+        if (!warns) continue;
         const key = `${sourceCurrency}:${version.budget_year}`;
         let entry = fxMissingLines.get(key);
         if (!entry) {
@@ -813,8 +900,10 @@ export class ChargebackReportService {
       // Track paid totals for the paying company of the item version
       const payerId = (item as any)?.paying_company_id as string | null | undefined;
       if (!payerId) {
-        const itemLabel = item?.product_name?.trim() || item?.description?.trim() || version.spend_item_id;
-        recordWarning(`Missing paying company for "${itemLabel}" (year ${version.budget_year}). Paid totals excluded for this item.`);
+        if (warns) {
+          const itemLabel = item?.product_name?.trim() || item?.description?.trim() || version.spend_item_id;
+          recordWarning(`Missing paying company for "${itemLabel}" (year ${version.budget_year}). Paid totals excluded for this item.`);
+        }
       } else {
         companyIds.add(payerId);
         const paidConverted = this.fxRates.convertValue(versionTotalRaw, fx.rate);
@@ -865,6 +954,23 @@ export class ChargebackReportService {
           versionCompanyTotals.set(version.id, versionMap);
         }
         versionMap.set(companyId, (versionMap.get(companyId) ?? 0) + amount);
+
+        let pctMap = versionCompanyPct.get(version.id);
+        if (!pctMap) {
+          pctMap = new Map<string, number>();
+          versionCompanyPct.set(version.id, pctMap);
+        }
+        pctMap.set(companyId, (pctMap.get(companyId) ?? 0) + pct);
+        if (departmentId) {
+          let deptsByCompany = versionCompanyDepartments.get(version.id);
+          if (!deptsByCompany) {
+            deptsByCompany = new Map<string, Set<string>>();
+            versionCompanyDepartments.set(version.id, deptsByCompany);
+          }
+          const depts = deptsByCompany.get(companyId) ?? new Set<string>();
+          depts.add(departmentId);
+          deptsByCompany.set(companyId, depts);
+        }
 
         // Intercompany flow (gross): payer -> consumer, exclude self-consumption
         if (payerId && payerId !== companyId) {
@@ -932,6 +1038,8 @@ export class ChargebackReportService {
       companyDepartmentTotalsRaw,
       versionCompanyTotals,
       versionCompanyTotalsRaw,
+      versionCompanyPct,
+      versionCompanyDepartments,
       intercompanyRaw,
       intercompany,
       companyById,

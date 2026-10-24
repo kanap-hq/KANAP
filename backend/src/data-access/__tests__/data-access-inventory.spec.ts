@@ -14,7 +14,9 @@ import {
  * 1. `data_access_apply` is called once, from `data-access/data-access.ts`, and `applyDataAccess`
  *    only from the call points of spec §6.3: a new call site is added here on purpose.
  * 2. Role changes (`SET ROLE`, `RESET ROLE`, `set_config('role'`) appear only in the foundations
- *    migration (inside `data_access_apply`) and in the data-access specs.
+ *    migration (inside `data_access_apply`), in `withFullDataAccess` (`data-access/full-data-access.ts`)
+ *    and in the data-access specs; `withFullDataAccess` is called from the chargeback report only
+ *    (spec §6.6, §10.3 "Divulgations").
  * 3. Every path outside the tenant interceptor (`@SkipTenantTransaction()`, `{ transaction: false }`,
  *    `tenantExecutor.run(`, `withTenantExecution(`, `withTenant(`) is classified in
  *    `data-access/data-access-paths.inventory.ts`, and the inventory names no site that is gone.
@@ -122,7 +124,14 @@ const ROLE_CHANGE_ALLOWED = new Set([
   'src/migrations/1854400000000-data-access-foundations.ts',
   // The availability check tries SET LOCAL ROLE in a rolled-back transaction (spec §6.2).
   'src/data-access/data-access-availability.ts',
+  // withFullDataAccess leaves the limited role for one read-only window (spec §6.6).
+  'src/data-access/full-data-access.ts',
 ]);
+
+/** `withFullDataAccess(` calls per file, outside its definition: the chargeback report only (spec §6.6). */
+const FULL_DATA_ACCESS_CALLS: Record<string, number> = {
+  'spend/chargeback-report.service.ts': 1,
+};
 
 function testRoleChanges(): void {
   const root = backendPath();
@@ -134,8 +143,17 @@ function testRoleChanges(): void {
     if (rel.startsWith('src/data-access/__tests__/')) return false;
     return ROLE_CHANGE.test(fs.readFileSync(path.join(root, rel), 'utf8'));
   });
-  assert.deepEqual(found.sort(), [...ROLE_CHANGE_ALLOWED].sort(), 'role changes only in data_access_apply (and the data-access specs)');
-  console.log('  role changes: OK');
+  assert.deepEqual(found.sort(), [...ROLE_CHANGE_ALLOWED].sort(), 'role changes only in data_access_apply and withFullDataAccess (and the data-access specs)');
+
+  const calls: Record<string, number> = {};
+  for (const rel of sourceFiles()) {
+    if (rel.startsWith('migrations/')) continue;
+    const code = codeOf(fs.readFileSync(path.join(SRC, rel), 'utf8'));
+    const n = count(code, /\bwithFullDataAccess\s*(?:<[^()]*>)?\s*\(/) - count(code, /\bfunction\s+withFullDataAccess\s*(?:<[^()]*>)?\s*\(/);
+    if (n) calls[rel] = n;
+  }
+  assert.deepEqual(calls, FULL_DATA_ACCESS_CALLS, 'withFullDataAccess is called from the chargeback report only');
+  console.log('  role changes, withFullDataAccess called from the chargeback report only: OK');
 }
 
 // ---------------------------------------------------------------------------------------------
