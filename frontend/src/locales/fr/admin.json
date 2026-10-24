@@ -268,7 +268,7 @@
       "noFieldChanges": "Aucun champ modifié",
       "rawData": "Voir les données brutes",
       "reason": "Motif : {{value}}",
-      "recordId": "ID enregistrement : {{value}}",
+      "record": "Enregistrement : {{value}}",
       "source": "Source : {{value}}",
       "sourceRef": "Réf. source : {{value}}",
       "table": "Table : {{value}}",
@@ -602,8 +602,11 @@
     },
     "title": "Journal d'audit",
     "values": {
+      "identifier": "Identifiant",
+      "no": "Non",
       "unknownAccount": "Compte inconnu",
-      "unknownUser": "Inconnu ({{id}}…)"
+      "unknownUser": "Inconnu ({{id}}…)",
+      "yes": "Oui"
     }
   },
   "auth": {

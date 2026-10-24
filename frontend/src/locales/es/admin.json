@@ -268,7 +268,7 @@
       "noFieldChanges": "Ningún campo modificado",
       "rawData": "Ver datos sin formato",
       "reason": "Motivo: {{value}}",
-      "recordId": "ID del registro: {{value}}",
+      "record": "Registro: {{value}}",
       "source": "Origen: {{value}}",
       "sourceRef": "Ref. de origen: {{value}}",
       "table": "Tabla: {{value}}",
@@ -602,8 +602,11 @@
     },
     "title": "Registro de auditoría",
     "values": {
+      "identifier": "Identificador",
+      "no": "No",
       "unknownAccount": "Cuenta desconocida",
-      "unknownUser": "Desconocido ({{id}}…)"
+      "unknownUser": "Desconocido ({{id}}…)",
+      "yes": "Sí"
     }
   },
   "auth": {

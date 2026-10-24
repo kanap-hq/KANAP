@@ -23,9 +23,12 @@ import CheckboxSetFilter from '../../components/CheckboxSetFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { MONO_FONT_FAMILY } from '../../config/ThemeContext';
 import { useLocale } from '../../i18n/useLocale';
+import { useLookupHydration } from '../../hooks/useLookupPicker';
 import { formatShortDateTime } from '../../lib/dateFormat';
 import { getWithListContext, withListContext } from '../../lib/listContext';
 import { downloadBlob, extractFilenameFromDisposition } from '../../utils/downloadBlob';
+import { formatUserName } from '../../utils/userDisplay';
+import { USERS_LOOKUP_ENDPOINT, type UserOption } from '../../components/fields/userLookup';
 import {
   AUTH_EVENT_TABLE,
   EXPORT_EVENT_TABLE,
@@ -39,8 +42,12 @@ import {
 import {
   auditFields as buildAuditFields,
   auditHasNonObjectPayload,
+  auditRecordRef,
+  auditSnapshot,
+  auditUserIds,
   formatAuditValue,
   type AuditFields,
+  type AuditValueContext,
 } from './auditLogValues';
 
 type AuditLogItem = {
@@ -63,6 +70,7 @@ type AuditLogItem = {
 const EXPORT_TRUNCATED_HEADER = 'x-export-truncated';
 /** Plain text in the secondary colour, like the other text columns of the grid. */
 const SECONDARY_CELL_STYLE: Record<string, string> = { color: 'var(--kanap-text-secondary)' };
+const KNOWN_USERS: ReadonlyMap<string, UserOption> = new Map();
 
 function formatJson(value: any): string {
   if (value == null) return 'null';
@@ -108,15 +116,16 @@ const unknownFieldSx = {
   color: 'kanap.text.secondary',
 } as const;
 
-function AuditValueCell({ value }: { value: unknown }) {
+function AuditValueCell({ value, field, context }: { value: unknown; field: string; context: AuditValueContext }) {
+  const display = formatAuditValue(value, field, context);
   return (
-    <Box component="td" sx={{ color: 'kanap.text.primary' }}>
-      {formatAuditValue(value)}
+    <Box component="td" sx={{ color: display.secondary ? 'kanap.text.secondary' : 'kanap.text.primary' }} title={display.title}>
+      {display.text}
     </Box>
   );
 }
 
-function AuditFieldsTable({ fields, t }: { fields: AuditFields; t: Translate }) {
+function AuditFieldsTable({ fields, t, context }: { fields: AuditFields; t: Translate; context: AuditValueContext }) {
   const twoSided = fields.mode === 'change';
   return (
     <Box sx={{ overflowX: 'auto' }}>
@@ -144,11 +153,11 @@ function AuditFieldsTable({ fields, t }: { fields: AuditFields; t: Translate }) 
                 </Box>
                 {twoSided ? (
                   <>
-                    <AuditValueCell value={row.before} />
-                    <AuditValueCell value={row.after} />
+                    <AuditValueCell value={row.before} field={row.key} context={context} />
+                    <AuditValueCell value={row.after} field={row.key} context={context} />
                   </>
                 ) : (
-                  <AuditValueCell value={row.value} />
+                  <AuditValueCell value={row.value} field={row.key} context={context} />
                 )}
               </Box>
             );
@@ -265,6 +274,29 @@ export default function AuditLogsPage() {
   const fields = React.useMemo<AuditFields>(() => buildAuditFields(detail), [detail]);
   const rawPayload = React.useMemo(() => auditHasNonObjectPayload(detail), [detail]);
   const rawVisible = rawPayload || showRaw;
+  const recordRef = detail ? auditRecordRef(detail) : null;
+
+  // Every person the detail names, read in one lookup: no id ever reaches the cells.
+  const userIds = React.useMemo(() => auditUserIds(fields), [fields]);
+  const userLookup = useLookupHydration<UserOption>({
+    endpoint: USERS_LOOKUP_ENDPOINT,
+    ids: userIds,
+    known: KNOWN_USERS,
+    enabled: open && userIds.length > 0,
+  });
+  const userNames = React.useMemo(() => {
+    const names = new Map<string, string>();
+    for (const user of userLookup.items) {
+      const name = formatUserName(user);
+      if (name) names.set(user.id, name);
+    }
+    return names;
+  }, [userLookup.items]);
+  const snapshot = React.useMemo(() => auditSnapshot(detail), [detail]);
+  const valueContext = React.useMemo<AuditValueContext>(
+    () => ({ locale, t, snapshot, users: userNames }),
+    [locale, t, snapshot, userNames],
+  );
 
   const getFilterValues = React.useCallback((field: 'table_name' | 'action' | 'source') => {
     return async ({ context }: any) => {
@@ -472,7 +504,7 @@ export default function AuditLogsPage() {
                 {detail.source_ref && detail.table_name === AUTH_EVENT_TABLE && <Typography variant="body2" color="text.secondary">{t('auditLogs.details.reason', { value: auditReasonLabel(detail, t) })}</Typography>}
                 {detail.source_ref && detail.table_name !== AUTH_EVENT_TABLE && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.sourceRef', { value: detail.source_ref })}</Typography>}
                 <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.tenant', { value: detail.tenant_id })}</Typography>
-                {detail.record_id && <Typography component="span" variant="body2" sx={{ fontFamily: "'JetBrains Mono Variable', ui-monospace, monospace", fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.recordId', { value: detail.record_id })}</Typography>}
+                {recordRef && <Typography component="span" variant="body2" sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: '12px', color: 'text.secondary' }}>{t('auditLogs.details.record', { value: recordRef })}</Typography>}
                 <Typography variant="body2" color="text.secondary">{t('auditLogs.details.user', { value: auditUserLabel(detail, t) })}</Typography>
               </Stack>
 
@@ -485,7 +517,7 @@ export default function AuditLogsPage() {
                     {fields.rows.length === 0 ? (
                       <Typography variant="body2" color="text.secondary">{t('auditLogs.details.noFieldChanges')}</Typography>
                     ) : (
-                      <AuditFieldsTable fields={fields} t={t} />
+                      <AuditFieldsTable fields={fields} t={t} context={valueContext} />
                     )}
                     <Box sx={{ mt: 1 }}>
                       <Button

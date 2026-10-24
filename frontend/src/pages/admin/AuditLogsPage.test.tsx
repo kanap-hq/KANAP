@@ -222,7 +222,7 @@ describe('AuditLogsPage', () => {
   it('shows the changed fields in a table and the raw JSON only on demand', async () => {
     const entry = auditRow({
       before_json: { status: 'draft', go_live_date: null, mfa_supported: false, name: 'Same name' },
-      after_json: { status: 'active', go_live_date: '2026-11-01', mfa_supported: true, name: 'Same name' },
+      after_json: { status: 'active', go_live_date: '2020-11-01', mfa_supported: true, name: 'Same name' },
     });
     await openDetail(entry);
 
@@ -232,6 +232,11 @@ describe('AuditLogsPage', () => {
     expect(screen.getByText('Status')).toBeTruthy();
     expect(screen.getByText('Go-live date')).toBeTruthy();
     expect(screen.getByText('MFA supported')).toBeTruthy();
+    expect(screen.getByText('draft')).toBeTruthy();
+    expect(screen.getByText('active')).toBeTruthy();
+    expect(screen.getByText('1 Nov 2020')).toBeTruthy();
+    expect(screen.getByText('No')).toBeTruthy();
+    expect(screen.getByText('Yes')).toBeTruthy();
     expect(screen.queryByText('Name')).toBeNull();
     expect(document.querySelector('pre')).toBeNull();
 
@@ -271,6 +276,68 @@ describe('AuditLogsPage', () => {
     });
     await openDetail(entry);
     expect(screen.getByText('foo_bar')).toBeTruthy();
+  });
+
+  it('never shows an id without a readable neighbour', async () => {
+    const id = '11111111-1111-4111-8111-111111111111';
+    const entry = auditRow({
+      before_json: { company_id: null },
+      after_json: { company_id: id },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Identifier')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+    expect(screen.getAllByTitle(id).length).toBeGreaterThan(0);
+  });
+
+  it('names the people of its fields with one grouped lookup', async () => {
+    const previousOwner = '22222222-2222-4222-8222-222222222222';
+    const nextOwner = '44444444-4444-4444-8444-444444444444';
+    const entry = auditRow({
+      before_json: { owner_user_id: previousOwner },
+      after_json: { owner_user_id: nextOwner },
+    });
+    getMock.mockImplementation(async (url: string) => {
+      if (url === '/users/lookup') {
+        return {
+          data: {
+            items: [
+              { id: previousOwner, first_name: 'Alice', last_name: 'Martin' },
+              { id: nextOwner, first_name: 'Bob', last_name: 'Durand' },
+            ],
+            has_more: false,
+          },
+        };
+      }
+      return { data: entry };
+    });
+    renderPage();
+    act(() => {
+      grid.props?.onCellClicked({ data: entry });
+    });
+
+    expect(await screen.findByText('Alice Martin')).toBeTruthy();
+    expect(await screen.findByText('Bob Durand')).toBeTruthy();
+    const lookups = getMock.mock.calls.filter(([url]) => url === '/users/lookup');
+    expect(lookups).toHaveLength(1);
+    expect(lookups[0][1]?.params).toEqual({ ids: [previousOwner, nextOwner].sort().join(',') });
+    expect(screen.queryByText(previousOwner)).toBeNull();
+    expect(screen.queryByText(nextOwner)).toBeNull();
+  });
+
+  it('names the record with its item number when the table has one', async () => {
+    const id = '33333333-3333-4333-8333-333333333333';
+    const entry = auditRow({
+      table_name: 'tasks',
+      record_id: id,
+      before_json: { status: 'draft' },
+      after_json: { status: 'active', item_number: 4 },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Record: T-4')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
   });
 
   it('shows the raw JSON directly when a payload is not an object', async () => {

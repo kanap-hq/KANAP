@@ -268,7 +268,7 @@
       "noFieldChanges": "Keine Felder geändert",
       "rawData": "Rohdaten anzeigen",
       "reason": "Grund: {{value}}",
-      "recordId": "Datensatz-ID: {{value}}",
+      "record": "Datensatz: {{value}}",
       "source": "Quelle: {{value}}",
       "sourceRef": "Quellreferenz: {{value}}",
       "table": "Tabelle: {{value}}",
@@ -602,8 +602,11 @@
     },
     "title": "Audit-Protokoll",
     "values": {
+      "identifier": "Kennung",
+      "no": "Nein",
       "unknownAccount": "Unbekanntes Konto",
-      "unknownUser": "Unbekannt ({{id}}…)"
+      "unknownUser": "Unbekannt ({{id}}…)",
+      "yes": "Ja"
     }
   },
   "auth": {

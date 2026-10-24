@@ -268,7 +268,7 @@
       "noFieldChanges": "No fields changed",
       "rawData": "View raw data",
       "reason": "Reason: {{value}}",
-      "recordId": "Record ID: {{value}}",
+      "record": "Record: {{value}}",
       "source": "Source: {{value}}",
       "sourceRef": "Source ref: {{value}}",
       "table": "Table: {{value}}",
@@ -602,8 +602,11 @@
     },
     "title": "Audit log",
     "values": {
+      "identifier": "Identifier",
+      "no": "No",
       "unknownAccount": "Unknown account",
-      "unknownUser": "Unknown ({{id}}…)"
+      "unknownUser": "Unknown ({{id}}…)",
+      "yes": "Yes"
     }
   },
   "auth": {
