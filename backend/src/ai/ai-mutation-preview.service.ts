@@ -23,7 +23,9 @@ import { AiPolicyService } from './ai-policy.service';
 import { LEGACY_GLPI_TICKETING_PROVIDER_KEY } from './control-plane/providers/provider-constants';
 import { AiMutationOperationRegistry } from './mutation/ai-mutation-operation.registry';
 import { AiPreparedMutationPreview } from './mutation/ai-mutation-operation.types';
-import { mapDatabaseError } from '../common/filters/database-error.mapping';
+import { dataAccessRefusalMessage, mapDatabaseError } from '../common/filters/database-error.mapping';
+import { assertUnscopedDataAccess } from '../data-access/reserved-operations';
+import { isReservedAiMutation } from './mutation/ai-mutation-reserved';
 
 const PREVIEW_TTL_MS = 10 * 60 * 1000;
 const MAX_CONVERSATION_PREVIEWS = 50;
@@ -205,6 +207,20 @@ export class AiMutationPreviewService {
       rejected_at: toIso(preview.rejected_at),
       executed_at: toIso(preview.executed_at),
     };
+  }
+
+  /**
+   * A write reserved to unscoped persons (spec §2.7, §5.6: organisation data, closed-list dimension
+   * values, supplier and contact updates): refused to a limited person with 403
+   * `DATA_ACCESS_LIMITED`, as the matching route is (`ai/mutation/ai-mutation-reserved.ts`).
+   */
+  private async assertNotReservedForPerson(
+    context: AiExecutionContextWithManager,
+    toolName: string,
+    entityType: unknown,
+  ): Promise<void> {
+    if (!isReservedAiMutation(toolName, entityType)) return;
+    await assertUnscopedDataAccess({ manager: context.manager, userId: context.userId });
   }
 
   private getOperationBusinessResource<TInput>(
@@ -422,6 +438,7 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { input }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, operation.toolName, (input as { entity_type?: unknown } | null)?.entity_type);
     await this.assertPendingCapacityAvailable(context, context.conversationId ?? null);
 
     const prepared = await operation.prepareCreatePreview(context, input);
@@ -609,7 +626,7 @@ export class AiMutationPreviewService {
         }
       } catch (error: any) {
         step.status = 'failed';
-        step.error_message = error?.message || 'Preview creation failed.';
+        step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
         step.updated_at = new Date();
         await stepRepo.save(step);
         errors.push({
@@ -895,7 +912,7 @@ export class AiMutationPreviewService {
           progressed = true;
         } catch (error: any) {
           step.status = 'failed';
-          step.error_message = error?.message || 'Preview creation failed.';
+          step.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview creation failed.');
           step.updated_at = new Date();
           await stepRepo.save(step);
           progressed = true;
@@ -967,7 +984,7 @@ export class AiMutationPreviewService {
       }
       preview.status = 'failed';
       preview.approved_at = new Date();
-      preview.error_message = error?.message || 'Preview execution failed.';
+      preview.error_message = dataAccessRefusalMessage(error) ?? (error?.message || 'Preview execution failed.');
       const saved = await repo.save(preview);
       const dto = this.toPreviewDto(saved);
       const followUps = await this.advanceMutationPlanAfterPreview(context, saved);
@@ -989,6 +1006,7 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { preview }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
     this.assertConversationScope(preview, context.conversationId ?? null);
 
     if (preview.status !== 'pending') {
@@ -1048,6 +1066,7 @@ export class AiMutationPreviewService {
         this.getOperationBusinessResource(operation, { preview }),
         context.manager,
       );
+      await this.assertNotReservedForPerson(context, preview.tool_name, preview.target_entity_type);
       this.assertConversationScope(preview, context.conversationId ?? null);
 
       if (preview.status !== 'pending') {
@@ -1137,6 +1156,7 @@ export class AiMutationPreviewService {
       this.getOperationBusinessResource(operation, { preview: original }),
       context.manager,
     );
+    await this.assertNotReservedForPerson(context, original.tool_name, original.target_entity_type);
     this.assertConversationScope(original, context.conversationId ?? null);
 
     if (original.status !== 'executed') {

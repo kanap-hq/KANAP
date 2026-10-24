@@ -69,6 +69,8 @@ export type BudgetTabHandle = {
 
 export type BudgetTabProps = {
   id: string; // resolved finance item UUID
+  /** False when the person's data access leaves the line read only (`editable: false`). */
+  lineEditable?: boolean;
   year: number;
   currency?: string;
   availableYears?: number[];
@@ -263,7 +265,7 @@ const isWholeYear = (year: number, period: Period) => period.start === `${year}-
 type FocusRequest = { kind: 'amount' } | { kind: 'cell'; month: number };
 
 export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<BudgetTabHandle>) {
-  const { id, year, onYearChange, config, effectiveStart, endOfValidity, held, openings, onBudgetRev } = props;
+  const { id, year, onYearChange, config, effectiveStart, endOfValidity, held, openings, onBudgetRev, lineEditable = true } = props;
   const { t } = useTranslation(['ops', 'common']);
   const locale = useLocale();
   const queryClient = useQueryClient();
@@ -272,8 +274,11 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   const dialogs = useKanapDialogs();
   const { profile, hasLevel } = useAuth();
   const userId = profile?.id ?? null;
-  // A budget reader reads the columns, with no field to change them.
-  const readOnly = !hasLevel('budget', 'member');
+  // A budget reader reads the columns, with no field to change them; so does a person whose data
+  // access leaves the line read only.
+  const readOnly = !hasLevel('budget', 'member') || !lineEditable;
+  // Read only because the line is outside the person's edit access, not because of their role.
+  const readOnlyInAccess = hasLevel('budget', 'member') && !lineEditable;
   // The counters this tab loaded or wrote (lot 3G).
   const onBudgetRevRef = React.useRef(onBudgetRev); onBudgetRevRef.current = onBudgetRev;
   const noteRev = (forYear: number, rev: number | null | undefined) => { if (rev !== undefined) onBudgetRevRef.current?.(forYear, rev); };
@@ -1815,6 +1820,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
     isFrozen,
     anyFrozen,
     readOnly,
+    readOnlyInAccess,
     months,
     totals,
     liveTotals,

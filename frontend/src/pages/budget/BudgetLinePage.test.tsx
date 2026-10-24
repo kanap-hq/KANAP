@@ -1,5 +1,5 @@
 import React from 'react';
-import { act, fireEvent, render, screen, waitFor } from '@testing-library/react';
+import { act, cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react';
 import { MemoryRouter, Route, Routes, useLocation, useNavigate, type NavigateFunction } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { ThemeProvider } from '@mui/material/styles';
@@ -16,6 +16,13 @@ vi.mock('react-i18next', async () => {
   return { useTranslation: () => translation, Trans };
 });
 vi.mock('../../api', () => ({ default: { get: vi.fn(), post: vi.fn(), patch: vi.fn() } }));
+// A limited data access that allows company-1 only through a cost center (null: unscoped, no filter).
+const placement = vi.hoisted(() => ({ centreOnly: false }));
+vi.mock('../../hooks/usePlacementOptions', () => ({
+  useLinePlacementFilter: (companyId: string | null) => (placement.centreOnly && companyId === 'company-1'
+    ? { companyIds: new Set(['company-1']), isCostCenterAllowed: () => true, costCenterRequired: true }
+    : null),
+}));
 // The page asks before leaving with changes it could not save.
 const dialogs = vi.hoisted(() => ({ confirm: vi.fn(async () => true), alert: vi.fn(async () => undefined), prompt: vi.fn(async () => null) }));
 vi.mock('../../components/design', async (importOriginal) => ({
@@ -130,7 +137,7 @@ const budgetStandIn = vi.hoisted(() => ({ rev: 3, reloads: 0, typed: false, fail
 vi.mock('../../components/finance/BudgetTab', async () => {
   const React = await import('react');
   type Held = { current: { lineId: string; labels: string[] } | null };
-  const BudgetTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void }, ref) => {
+  const BudgetTabStandIn = React.forwardRef(({ id, year, held, onBudgetRev, lineEditable }: { id: string; year: number; held?: Held; onBudgetRev?: (year: number, rev: number | null) => void; lineEditable?: boolean }, ref) => {
     const waiting = React.useRef<string[]>(held?.current?.lineId === id ? held.current.labels : []);
     const [, redraw] = React.useState(0);
     React.useEffect(() => {
@@ -152,7 +159,7 @@ vi.mock('../../components/finance/BudgetTab', async () => {
       },
     }));
     return (
-      <div>
+      <div data-testid="budget-tab" data-line-editable={String(lineEditable)}>
         <span data-testid="budget-waiting">{waiting.current.join(',')}</span>
         <button type="button" onClick={() => { waiting.current = ['Budget']; redraw((n) => n + 1); }}>budget refused</button>
         <button type="button" onClick={() => { budgetStandIn.typed = true; }}>budget typed</button>
@@ -162,7 +169,9 @@ vi.mock('../../components/finance/BudgetTab', async () => {
   return { default: BudgetTabStandIn };
 });
 vi.mock('../../components/finance/AllocationsTab', () => ({ default: () => null }));
-vi.mock('./workspace/BudgetLineRelationsTab', () => ({ default: () => null }));
+vi.mock('./workspace/BudgetLineRelationsTab', () => ({
+  default: (p: { lineEditable?: boolean }) => <div data-testid="relations-tab" data-line-editable={String(p.lineEditable)} />,
+}));
 vi.mock('../../components/EntityTasksPanel', () => ({
   default: ({ disabled }: { disabled?: boolean }) => <div data-testid="tasks-panel" data-disabled={String(!!disabled)} />,
 }));// The change type dialog (lot M) stands in: open, it says for which line, and « confirm type change »
@@ -450,6 +459,26 @@ describe('BudgetLinePage create', () => {
     expect(mocked.post).not.toHaveBeenCalled();
   });
 
+  it('refuses to create a line without a cost center when the access allows its company only through one', async () => {
+    placement.centreOnly = true;
+    try {
+      renderAt(`/ops/budget/new/overview`);
+      fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+      fireEvent.click(screen.getByRole('button', { name: 'pick company' }));
+      fireEvent.click(screen.getByRole('button', { name: 'pick account' }));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      expect(await screen.findByText('opex.editor.dimensionRequired')).toBeInTheDocument();
+      expect(mocked.post).not.toHaveBeenCalled();
+
+      fireEvent.click(screen.getByRole('button', { name: 'pick cost center' }));
+      fireEvent.click(screen.getByRole('button', { name: 'common:buttons.create' }));
+      await waitFor(() => expect(mocked.post).toHaveBeenCalledTimes(1));
+      expect(mocked.post.mock.calls[0][1]).toMatchObject({ paying_company_id: 'company-1', cost_center_id: 'cc-2' });
+    } finally {
+      placement.centreOnly = false;
+    }
+  });
+
   it('refuses to create a line without an account', async () => {
     renderAt(`/ops/budget/new/overview`);
     fireEvent.click(screen.getByRole('button', { name: 'set title' }));
@@ -645,6 +674,58 @@ describe('BudgetLinePage for a budget reader', () => {
     expect(await screen.findByDisplayValue('Probes')).toBeEnabled();
     expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-disabled', 'false');
     expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'true');
+  });
+});
+
+// A member whose data access leaves the line read only (`editable: false`, lot 3 of data-scoped access).
+describe('BudgetLinePage for a line read only in the data access', () => {
+  const detail = (extra: Record<string, unknown>) => ({
+    id: ITEM_ID, item_number: 7, product_name: 'Monitoring', supplier_id: 'supplier-1', description: 'Probes', notes: 'Renewal',
+    paying_company_id: 'company-1', account_id: 'account-1', currency: 'EUR', effective_start: '2026-01-01', ...extra,
+  });
+  beforeEach(() => {
+    auth.canEdit = true;
+    mocked.get.mockReset();
+    mocked.patch.mockReset();
+    mocked.patch.mockResolvedValue({ data: {} });
+  });
+  const answer = (extra: Record<string, unknown>) => mocked.get.mockImplementation(async (url: string) => (
+    url === `/budget-lines/${ITEM_ID}` ? { data: detail(extra) } : { data: {} }
+  ));
+
+  it('shows the line with no edit command and says it is read only in the access', async () => {
+    answer({ editable: false });
+    renderAt(`/ops/budget/${ITEM_ID}/overview`);
+    expect(await screen.findByDisplayValue('Probes')).toBeDisabled();
+    expect(screen.getByDisplayValue('Renewal')).toBeDisabled();
+    expect(document.querySelector('[data-mode="edit"]')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'false');
+    expect(screen.queryByRole('button', { name: 'budget.changeType' })).not.toBeInTheDocument();
+    expect(screen.getByTestId('tasks-panel')).toHaveAttribute('data-disabled', 'true');
+    expect(screen.getByTestId('line-read-only')).toHaveTextContent('budget.readOnlyInYourAccess');
+    fireEvent.click(screen.getByRole('button', { name: 'set title' }));
+    await new Promise((resolve) => { setTimeout(resolve, 50); });
+    expect(mocked.patch).not.toHaveBeenCalled();
+  });
+
+  it('passes the read-only state to the Budget and Relations tabs', async () => {
+    answer({ editable: false });
+    renderAt(`/ops/budget/${ITEM_ID}/budget`);
+    expect(await screen.findByTestId('budget-tab')).toHaveAttribute('data-line-editable', 'false');
+    cleanup();
+    renderAt(`/ops/budget/${ITEM_ID}/relations`);
+    expect(await screen.findByTestId('relations-tab')).toHaveAttribute('data-line-editable', 'false');
+  });
+
+  it('keeps today\'s screen for an unscoped person (no editable field) and an editable line', async () => {
+    for (const extra of [{}, { editable: true }]) {
+      answer(extra);
+      renderAt(`/ops/budget/${ITEM_ID}/overview`);
+      expect(await screen.findByDisplayValue('Probes')).toBeEnabled();
+      expect(screen.getByTestId('workspace-shell')).toHaveAttribute('data-can-edit-title', 'true');
+      expect(screen.queryByTestId('line-read-only')).not.toBeInTheDocument();
+      cleanup();
+    }
   });
 });
 

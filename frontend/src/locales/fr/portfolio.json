@@ -856,7 +856,8 @@
         "notFound": "Tâche introuvable",
         "relatedItemRequired": "Veuillez sélectionner un élément lié",
         "saveFailed": "Échec de l'enregistrement de la tâche",
-        "titleRequired": "Le titre est obligatoire"
+        "titleRequired": "Le titre est obligatoire",
+        "stillFollowing": "Vous suivez toujours cette tâche."
       },
       "sidebar": {
         "fields": {

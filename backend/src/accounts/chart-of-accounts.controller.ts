@@ -12,6 +12,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { Response } from 'express';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
 import { languageOf, parseDateOrder, parseDecimalMark } from '../common/csv-sheet';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('chart-of-accounts')
@@ -41,6 +42,7 @@ export class ChartOfAccountsController {
     return this.svc.get(id, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Post()
@@ -48,6 +50,7 @@ export class ChartOfAccountsController {
     return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Patch(':id')
@@ -56,6 +59,7 @@ export class ChartOfAccountsController {
   }
 
   // Chart roles. Set Global Default ("Default for other countries", GLOBAL charts only)
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Patch(':id/global-default')
@@ -63,6 +67,7 @@ export class ChartOfAccountsController {
     return this.svc.setGlobalDefault(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Delete(':id/global-default')
@@ -71,6 +76,7 @@ export class ChartOfAccountsController {
   }
 
   // Consolidation chart (one per tenant, any scope): set (with resync), clear, preview
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Patch(':id/consolidation')
@@ -78,6 +84,7 @@ export class ChartOfAccountsController {
     return this.svc.setConsolidation(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Delete(':id/consolidation')
@@ -85,6 +92,7 @@ export class ChartOfAccountsController {
     return this.svc.clearConsolidation(id, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Get(':id/consolidation-impact')
@@ -93,6 +101,7 @@ export class ChartOfAccountsController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Post('delete-check')
@@ -100,6 +109,7 @@ export class ChartOfAccountsController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Delete('bulk')
@@ -107,6 +117,7 @@ export class ChartOfAccountsController {
     return this.deleteSvc.bulkDelete(body.ids || [], req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @Delete(':id')
@@ -134,6 +145,7 @@ export class ChartOfAccountsController {
   }
 
   // CoA-scoped Accounts CSV import
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -159,6 +171,7 @@ export class ChartOfAccountsController {
   }
 
   // Load from template into selected CoA
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -178,6 +191,7 @@ export class ChartOfAccountsController {
   }
 
   // Preflight import-from-template for creating a new CoA or targeting an existing one
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('accounts', 'member')
   @Post('import-template/preflight')

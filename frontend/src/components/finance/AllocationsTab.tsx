@@ -124,6 +124,8 @@ type Props = {
   onBudgetRev?: (year: number, budgetRev: number | null) => void;
   /** The counter the item page knows for a year: a cached copy older than it is read again. */
   knownBudgetRev?: (year: number) => number | null | undefined;
+  /** False when the person's data access leaves the line read only (`editable: false`). */
+  lineEditable?: boolean;
 };
 
 type Method = 'default' | 'headcount' | 'it_users' | 'turnover' | 'manual_company' | 'manual_department' | 'manual_pct';
@@ -209,12 +211,13 @@ function withStored(version: Version, answer: AllocationsAnswer): Version {
 const keyOf = (companyId: string | null, departmentId: string | null) => `${companyId ?? ''}|${departmentId ?? ''}`;
 const round2 = (n: number) => Math.round(n * 100) / 100;
 
-export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held, onBudgetRev, knownBudgetRev }, ref) {
+export default forwardRef<AllocationsTabHandle, Props>(function AllocationsTab({ id, year, currency, availableYears, onYearChange, config, held, onBudgetRev, knownBudgetRev, lineEditable = true }, ref) {
   const { t } = useTranslation(['ops', 'common']);
   const { defaultColumn } = useBudgetColumns();
   const { profile, hasLevel } = useAuth();
-  // A budget reader sees the split, with no control to change it.
-  const readOnly = !hasLevel('budget', 'member');
+  // A budget reader sees the split, with no control to change it; so does a person whose data
+  // access leaves the line read only.
+  const readOnly = !hasLevel('budget', 'member') || !lineEditable;
   const dialogs = useKanapDialogs();
 
   const queryClient = useQueryClient();

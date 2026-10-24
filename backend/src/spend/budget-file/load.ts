@@ -8,6 +8,8 @@ import { AMOUNT_MEASURES } from '../amounts-write.util';
 import { buildCostCenterTree, CostCenterTreeRow } from '../../cost-centers/cost-center-tree.util';
 import { columnOfMeasure } from './columns';
 import { ItemNumberCell } from './interpret';
+import { loadFileAccess } from './access';
+import type { BudgetFileAccess } from './preflight';
 import {
   BudgetCatalog,
   BudgetFileExportScope,
@@ -42,6 +44,8 @@ export interface LoadedPreflight {
   names: LineHint[];
   labels: Record<string, string>;
   dimensionCodes: string[];
+  /** A limited person's access to the stored lines (`access.ts`); undefined for an unscoped person. */
+  access?: BudgetFileAccess;
 }
 
 /** A file's dimension column: its code and the lines it is for. */
@@ -81,8 +85,10 @@ export async function loadPreflight(
   const catalog = await loadCatalog(manager, tenantId, allowedCurrencies);
   const names = await loadNames(manager, tenantId);
   const labels = await loadColumnLabels(manager, tenantId);
+  // Read under the person's policies: a line out of their read access is not there at all.
   const stored = await loadLinesByNumber(manager, tenantId, numbers);
-  return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code) };
+  const access = await loadFileAccess(manager, stored);
+  return { catalog, stored, names, labels, dimensionCodes: catalog.dimensions.map((dimension) => dimension.code), access };
 }
 
 /** The export's lines in id order: one route's nature, or explicitly both for the unified list. */
@@ -263,6 +269,8 @@ async function hydrate(manager: EntityManager, tenantId: string, rows: ItemSql[]
       analytics: byCode,
       ownerItEmail: row.owner_it_id ? email.get(row.owner_it_id) ?? null : null,
       ownerBusinessEmail: row.owner_business_id ? email.get(row.owner_business_id) ?? null : null,
+      ownerItId: row.owner_it_id,
+      ownerBusinessId: row.owner_business_id,
       projectNumber: row.project_id ? projectNumber.get(row.project_id) ?? null : null,
       currency: (row.currency ?? '').trim(),
       effectiveStart: row.effective_start ?? '',
@@ -394,6 +402,7 @@ async function loadDimensions(manager: EntityManager, tenantId: string): Promise
     appliesTo: axis.applies_to ?? null,
     required: axis.required,
     axisName: axis.name,
+    openValues: axis.open_values,
     values: values.filter((value) => value.code === axis.code).map((value) => ({
       id: value.id,
       name: value.name,

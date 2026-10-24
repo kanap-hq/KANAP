@@ -10,6 +10,7 @@ import { withCostCenterGroups } from '../../components/grid/costCenterFilter';
 import CheckboxSetFloatingFilter from '../../components/CheckboxSetFloatingFilter';
 import { keepPreviousData, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../auth/AuthContext';
+import { isDataAccessLimited } from '../../auth/dataAccess';
 import BudgetFileExportDialog from '../../components/finance/BudgetFileExportDialog';
 import BudgetFileImportDialog from '../../components/finance/BudgetFileImportDialog';
 import DeleteSelectedButton from '../../components/DeleteSelectedButton';
@@ -137,7 +138,7 @@ export default function BudgetListPage() {
 }
 
 function BudgetListPageView() {
-  const { hasLevel, profile } = useAuth();
+  const { hasLevel, profile, dataAccess } = useAuth();
   const { tenantSlug } = useTenant();
   // Run before ServerDataGrid reads its saved columns.
   useMemo(() => migrateBudgetGridLayout(tenantSlug, profile?.id), [tenantSlug, profile?.id]);
@@ -335,6 +336,8 @@ function BudgetListPageView() {
 
   const canCreate = hasLevel('budget', 'manager');
   const canAdmin = hasLevel('budget', 'admin');
+  // Deleting lines is reserved to people with access to all data (spec §2.7): no selection either.
+  const canDelete = canAdmin && !isDataAccessLimited(dataAccess);
   const actions = (
     <Stack direction="row" spacing={1} useFlexGap flexWrap="wrap">
       {canCreate && (
@@ -347,7 +350,7 @@ function BudgetListPageView() {
       )}
       {canAdmin && <Button variant="action" onClick={() => setImportOpen(true)}>{t('opex.importCsv')}</Button>}
       {canAdmin && <Button variant="action" onClick={() => setExportOpen(true)}>{t('opex.exportCsv')}</Button>}
-      {canAdmin && (
+      {canDelete && (
         <DeleteSelectedButton
           selectedRows={selectedRows}
           endpoint="/budget-lines/bulk"
@@ -1041,7 +1044,7 @@ function BudgetListPageView() {
           // Before the grid is ready it reports its URL sync without the initial filter yet.
           if (gridApiRef.current) followTotalsQuery({ q: state.q || '', filters: filtersString, statusScope: scope });
         }}
-        enableRowSelection={canAdmin}
+        enableRowSelection={canDelete}
         onSelectionChanged={setSelectedRows}
         footer={fxMissing?.length ? <FxMissingNotice items={fxMissing} /> : undefined}
       />}

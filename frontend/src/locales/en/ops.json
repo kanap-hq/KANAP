@@ -1058,7 +1058,7 @@
       "suppliersMissing_one": "{{count}} supplier does not exist. Create it in Master data > Suppliers, or tick Create missing suppliers.",
       "suppliersMissingNoCreate": "{{count}} suppliers do not exist. They must first be created in Master data > Suppliers.",
       "suppliersMissingNoCreate_one": "{{count}} supplier does not exist. It must first be created in Master data > Suppliers.",
-      "deletedLine": "Line {{line}}: {{ref}} was deleted after the file was exported.",
+      "deletedLine": "Line {{line}}: {{ref}} is no longer available since the export.",
       "changesTitle": "Changes",
       "toCreate": "{{count}} to create",
       "toUpdate": "{{count}} to update",
@@ -1088,7 +1088,9 @@
       "oldLayout": "This file comes from an earlier version of KANAP. Export a fresh file from this list, copy your changes into it, and import it again.",
       "exportFailed": "The file could not be exported. Try again.",
       "checkFailed": "The file could not be checked. Try again.",
-      "loadFailed": "The file could not be loaded. Try again."
+      "loadFailed": "The file could not be loaded. Try again.",
+      "dimensionValuesCreated": "{{dimension}}, will be created: {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, refused: {{names}}"
     },
     "budgetAdminOnly": "You need budget administrator rights to use this page.",
     "budgetColumnsSettings": {
@@ -1853,6 +1855,7 @@
       "kept_other": "{{count}} budget lines cannot be deleted and are kept:",
       "deleted_one": "{{count}} budget line deleted",
       "deleted_other": "{{count}} budget lines deleted"
-    }
+    },
+    "readOnlyInYourAccess": "Read only in your access"
   }
 }

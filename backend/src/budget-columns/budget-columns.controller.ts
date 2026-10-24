@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { BudgetColumnsService } from './budget-columns.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 function requireTenantId(req: any): string {
   const tenantId: string | undefined = req?.tenant?.id;
@@ -25,6 +26,7 @@ export class BudgetColumnsController {
     return this.svc.get(requireTenantId(req), req?.queryRunner?.manager);
   }
 
+  @ReservedToUnscopedDataAccess()
   @Patch()
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')

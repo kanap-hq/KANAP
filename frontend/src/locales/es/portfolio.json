@@ -856,7 +856,8 @@
         "notFound": "Tarea no encontrada",
         "relatedItemRequired": "Seleccione un elemento relacionado",
         "saveFailed": "Error al guardar la tarea",
-        "titleRequired": "El título es obligatorio"
+        "titleRequired": "El título es obligatorio",
+        "stillFollowing": "Todavía sigue esta tarea."
       },
       "sidebar": {
         "fields": {

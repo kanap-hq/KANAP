@@ -810,7 +810,8 @@
       "description": "Beschreibung",
       "dimension": "Dimension",
       "lifecycle": "Lebenszyklus",
-      "required": "Erforderlich"
+      "required": "Erforderlich",
+      "openValues": "Offene Werte"
     },
     "hints": {
       "nameDefault": "Leer lassen, um „{{label}}“ in der Sprache jeder Person anzuzeigen.",
@@ -822,7 +823,8 @@
       "valueDimensionAppliesTo": {
         "opex": "Die Dimension {{dimension}} gilt nur für OPEX-Zeilen.",
         "capex": "Die Dimension {{dimension}} gilt nur für CAPEX-Zeilen."
-      }
+      },
+      "openValues": "Jede Person, die eine Zeile bearbeiten kann, kann einen Wert hinzufügen, über die Zeile oder die Budgetdatei."
     },
     "placeholders": {
       "dimensionName": "z. B. Kostenart",
@@ -918,7 +920,8 @@
       "nameRequired": "Geben Sie einen Namen ein.",
       "codeRequired": "Geben Sie einen Code ein.",
       "codeInvalid": "Verwenden Sie Kleinbuchstaben, Ziffern, - oder _ (höchstens 40).",
-      "dimensionRequired": "Wählen Sie eine Dimension."
+      "dimensionRequired": "Wählen Sie eine Dimension.",
+      "valueAddFailed": "Der Wert konnte nicht hinzugefügt werden."
     },
     "recommended": {
       "action": "Empfohlene Dimensionen",
@@ -948,7 +951,8 @@
       "nothingCreated": "Nichts hinzugefügt: Diese Dimensionen sind bereits vorhanden.",
       "failed": "Die Dimensionen konnten nicht hinzugefügt werden.",
       "loadFailed": "Die empfohlenen Dimensionen konnten nicht geladen werden."
-    }
+    },
+    "addValue": "„{{value}}“ hinzufügen"
   },
   "businessProcesses": {
     "title": "Geschäftsprozesse",

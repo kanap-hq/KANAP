@@ -7,6 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
 import useAutosave, { useAutosaveRegistry } from '../../hooks/useAutosave';
 import { useSupplierNav } from '../../hooks/useSupplierNav';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -73,8 +74,10 @@ function SupplierEditor({ id, tab }: { id: string; tab: TabKey }) {
   const queryClient = useQueryClient();
   const [searchParams] = useSearchParams();
   const { hasLevel } = useAuth();
-  const canEdit = hasLevel('suppliers', 'manager');
-  const canDelete = hasLevel('suppliers', 'admin');
+  // Changing or deleting a shared supplier is reserved to people with access to all data (spec §2.7).
+  const dataAccessLimited = useDataAccessLimited();
+  const canEdit = hasLevel('suppliers', 'manager') && !dataAccessLimited;
+  const canDelete = hasLevel('suppliers', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
 
   const nav = useSupplierNav({

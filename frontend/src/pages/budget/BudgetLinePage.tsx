@@ -21,6 +21,7 @@ import { sendPatchBuffer, useSharedPatchBuffer } from '../../hooks/patchBuffer';
 import { ConflictChoice, EditConflict, conflictCompanions, useEditConflicts, useOtherConflictTargets } from '../../hooks/editConflicts';
 import { useLeaveGuard } from '../../hooks/leaveGuard';
 import { useRequiredDimensionsLeave } from '../../hooks/useRequiredDimensionsLeave';
+import { useLinePlacementFilter } from '../../hooks/usePlacementOptions';
 import EditConflictBanner, { OtherConflictsNotice } from '../../components/workspace/EditConflictBanner';
 import OthersChangesNotice from '../../components/workspace/OthersChangesNotice';
 import { useLineOthersChanges } from '../../components/finance/useLineOthersChanges';
@@ -315,6 +316,8 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const [createForm, setCreateForm] = React.useState<BudgetLineForm>(() => createEmptyBudgetLineForm());
   const [createCurrencyTouched, setCreateCurrencyTouched] = React.useState(false);
   const [createCompanyFromCostCenter, setCreateCompanyFromCostCenter] = React.useState(false);
+  // A limited data access that allows the paying company only through cost centers: one is required.
+  const createPlacement = useLinePlacementFilter(isCreate ? createForm.paying_company_id || null : null);
   const [createSubmitting, setCreateSubmitting] = React.useState(false);
   const [saveError, setSaveError] = React.useState<string | null>(null);
   React.useEffect(() => {
@@ -450,8 +453,11 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
   const dialogs = useKanapDialogs();
   const autosaveRegistry = useAutosaveRegistry();
   const { profile, hasLevel } = useAuth();
-  // A budget reader sees the line with no field, menu or tab control that writes.
-  const canEdit = hasLevel('budget', 'member');
+  // A budget reader sees the line with no field, menu or tab control that writes; so does a person
+  // whose data access leaves this line read only (`editable: false`, absent for unscoped persons).
+  const lineEditable = isCreate || data?.editable !== false;
+  const readOnlyInAccess = !isCreate && !!data && data.editable === false && hasLevel('budget', 'member');
+  const canEdit = hasLevel('budget', 'member') && lineEditable;
   // Fields edited and not saved yet, each with the line it was edited on (the page
   // stays mounted from one line to the next): a field only ever goes to its own line.
   // Each also keeps the value the screen showed when its edit began (its base, lot 3C):
@@ -871,6 +877,10 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
       setSaveError(t('opex.editor.accountRequired'));
       return;
     }
+    if (createPlacement?.costCenterRequired && !createForm.cost_center_id) {
+      setSaveError(t('opex.editor.dimensionRequired', { name: t('opex.fields.costCenter') }));
+      return;
+    }
     if (!createForm.effective_start) {
       setSaveError(t('opex.editor.effectiveStartRequired'));
       return;
@@ -920,7 +930,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
     } finally {
       setCreateSubmitting(false);
     }
-  }, [analyticsAxes, buildListContextParams, createForm, createSubmitting, navigate, queryClient, t, nature, config]);
+  }, [analyticsAxes, buildListContextParams, createForm, createPlacement, createSubmitting, navigate, queryClient, t, nature, config]);
 
   // ----- Status lifecycle handlers -----
   const handleStatusChange = (next: StatusValue) => {
@@ -1094,6 +1104,11 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                 currentUserId={profile?.id ?? null}
               />
             )}
+            {readOnlyInAccess && (
+              <Typography data-testid="line-read-only" sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>
+                {t('budget.readOnlyInYourAccess')}
+              </Typography>
+            )}
             {savingHint && (
               <Typography sx={{ fontSize: 12, color: 'kanap.text.tertiary', alignSelf: 'center', mr: 0.5 }}>
                 {savingHint}
@@ -1162,6 +1177,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
             nature={nature}
             onChangeType={canChangeType ? () => { void openChangeType(); } : undefined}
             mode="edit"
+            lineId={data?.id ?? null}
             disabled={!canEdit}
             references={references}
             analyticsOptions={analyticsOptions}
@@ -1249,7 +1265,7 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
                   sx={composerSx}
                 />
               </Box>
-              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} disabled={!hasLevel('tasks', 'member')} />}
+              {!stale && uuid && <EntityTasksPanel key={uuid} entityType={config.taskType} entityId={uuid} disabled={!hasLevel('tasks', 'member') || !lineEditable} />}
             </Stack>
           )
         )}
@@ -1258,13 +1274,13 @@ export default function BudgetLinePage({ nature }: { nature: LineType }) {
         <WorkspaceTabBoundary resetKey={routeTab} onRetry={retryTabs}>
           <React.Suspense fallback={null}>
             {routeTab === 'budget' && !isCreate && !stale && uuid && (
-              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} openings={heldChoices.openings} onBudgetRev={noteBudgetRev} ref={budgetRef} />
+              <BudgetTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} effectiveStart={form.effective_start} endOfValidity={isoToLocalDateInput(form.disabled_at)} payingCompanyCountry={payingCompanyCountry} held={heldChoices.budget} openings={heldChoices.openings} onBudgetRev={noteBudgetRev} lineEditable={lineEditable} ref={budgetRef} />
             )}
             {routeTab === 'allocations' && !isCreate && !stale && uuid && (
-              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} ref={allocRef} />
+              <AllocationsTab key={uuid} id={uuid} year={currentYear} currency={form.currency} availableYears={availableYears} onYearChange={setYear} config={config.finance} held={heldChoices.allocation} onBudgetRev={noteBudgetRev} knownBudgetRev={knownBudgetRev} lineEditable={lineEditable} ref={allocRef} />
             )}
             {routeTab === 'relations' && !isCreate && !stale && uuid && (
-              <RelationsTab key={uuid} lineId={uuid} nature={nature} onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
+              <RelationsTab key={uuid} lineId={uuid} nature={nature} lineEditable={lineEditable} onRelationsChange={() => { void relationsCountQuery.refetch(); }} />
             )}
           </React.Suspense>
         </WorkspaceTabBoundary>

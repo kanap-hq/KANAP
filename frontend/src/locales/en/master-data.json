@@ -810,7 +810,8 @@
       "description": "Description",
       "dimension": "Dimension",
       "lifecycle": "Lifecycle",
-      "required": "Required"
+      "required": "Required",
+      "openValues": "Open values"
     },
     "hints": {
       "nameDefault": "Leave empty to show \"{{label}}\" in each person's language.",
@@ -822,7 +823,8 @@
       "valueDimensionAppliesTo": {
         "opex": "The {{dimension}} dimension is for OPEX lines only.",
         "capex": "The {{dimension}} dimension is for CAPEX lines only."
-      }
+      },
+      "openValues": "Anyone who can edit a line can add a value, from the line or the budget file."
     },
     "placeholders": {
       "dimensionName": "e.g., Nature",
@@ -918,7 +920,8 @@
       "nameRequired": "Enter a name.",
       "codeRequired": "Enter a code.",
       "codeInvalid": "Use lowercase letters, digits, - or _ (40 at most).",
-      "dimensionRequired": "Choose a dimension."
+      "dimensionRequired": "Choose a dimension.",
+      "valueAddFailed": "The value could not be added."
     },
     "recommended": {
       "action": "Recommended dimensions",
@@ -948,7 +951,8 @@
       "nothingCreated": "Nothing added: these dimensions are already present.",
       "failed": "The dimensions could not be added.",
       "loadFailed": "The recommended dimensions could not be loaded."
-    }
+    },
+    "addValue": "Add “{{value}}”"
   },
   "businessProcesses": {
     "title": "Business processes",

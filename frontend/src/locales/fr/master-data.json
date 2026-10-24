@@ -810,7 +810,8 @@
       "description": "Description",
       "dimension": "Dimension",
       "lifecycle": "Cycle de vie",
-      "required": "Obligatoire"
+      "required": "Obligatoire",
+      "openValues": "Valeurs ouvertes"
     },
     "hints": {
       "nameDefault": "Laissez vide pour afficher « {{label}} » dans la langue de chaque personne.",
@@ -822,7 +823,8 @@
       "valueDimensionAppliesTo": {
         "opex": "La dimension {{dimension}} est réservée aux lignes OPEX.",
         "capex": "La dimension {{dimension}} est réservée aux lignes CAPEX."
-      }
+      },
+      "openValues": "Toute personne qui peut modifier une ligne peut ajouter une valeur, depuis la ligne ou le fichier budget."
     },
     "placeholders": {
       "dimensionName": "ex. Nature",
@@ -918,7 +920,8 @@
       "nameRequired": "Saisissez un nom.",
       "codeRequired": "Saisissez un code.",
       "codeInvalid": "Utilisez des lettres minuscules, des chiffres, - ou _ (40 au maximum).",
-      "dimensionRequired": "Choisissez une dimension."
+      "dimensionRequired": "Choisissez une dimension.",
+      "valueAddFailed": "La valeur n'a pas pu être ajoutée."
     },
     "recommended": {
       "action": "Dimensions recommandées",
@@ -948,7 +951,8 @@
       "nothingCreated": "Rien n'a été ajouté : ces dimensions sont déjà présentes.",
       "failed": "Les dimensions n'ont pas pu être ajoutées.",
       "loadFailed": "Les dimensions recommandées n'ont pas pu être chargées."
-    }
+    },
+    "addValue": "Ajouter « {{value}} »"
   },
   "businessProcesses": {
     "title": "Processus métier",

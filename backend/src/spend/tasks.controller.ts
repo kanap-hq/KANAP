@@ -25,6 +25,7 @@ import { DataSource } from 'typeorm';
 import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 import { Public } from '../auth/public.decorator';
 import { TasksService } from './tasks.service';
 import { TasksDeleteService } from '../tasks/tasks-delete.service';
@@ -221,8 +222,11 @@ export class TasksController {
   }
 
   /**
-   * Import tasks from CSV
+   * Import tasks from CSV. It updates existing tasks by their reference, whatever the person's
+   * access: reserved to unscoped persons, like the supplier and contact imports (spec §2.7 of
+   * planning/data-scoped-access).
    */
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('tasks', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)

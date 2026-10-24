@@ -129,8 +129,19 @@ function LocationProbe() {
 }
 
 function IdentityProbe() {
-  const { profile, claims } = useAuth();
-  return <div data-testid="identity">{profile || claims ? `identity loaded ${profile?.id ?? ''}` : 'no identity'}</div>;
+  const { profile, claims, dataAccess, hasLevel } = useAuth();
+  return (
+    <div
+      data-testid="identity"
+      data-mode={dataAccess?.mode ?? 'none'}
+      data-companies-admin={String(hasLevel('companies', 'admin'))}
+      data-companies-reader={String(hasLevel('companies', 'reader'))}
+      data-budget-admin={String(hasLevel('budget', 'admin'))}
+      data-agents={String(hasLevel('ai_agents', 'reader'))}
+    >
+      {profile || claims ? `identity loaded ${profile?.id ?? ''}` : 'no identity'}
+    </div>
+  );
 }
 
 function LoginPageStub() {
@@ -354,6 +365,27 @@ describe('AuthProvider and ProtectedRoute', () => {
       expect(screen.getByText('Home Page')).toBeInTheDocument();
       expect(screen.queryByText(rateLimitedLine)).not.toBeInTheDocument();
     });
+  });
+
+  it('reads the data access from /auth/me: a limited person keeps the reads of a reserved module, not its writes', async () => {
+    const permissions = { companies: 'admin', budget: 'admin', ai_agents: 'admin' };
+    const limitedMe = { data: { ...otherUser.data, claims: { ...otherUser.data.claims, permissions }, dataAccess: { available: true, mode: 'limited', nodes: [], modules: ['budget'] } } };
+    http.instance.get.mockResolvedValue(limitedMe);
+    await renderSignedIn();
+    const identity = screen.getByTestId('identity');
+    expect(identity).toHaveAttribute('data-mode', 'limited');
+    expect(identity).toHaveAttribute('data-companies-admin', 'false');
+    expect(identity).toHaveAttribute('data-companies-reader', 'true');
+    expect(identity).toHaveAttribute('data-budget-admin', 'true');
+    expect(identity).toHaveAttribute('data-agents', 'false');
+  });
+
+  it('an unscoped person keeps every right of their roles', async () => {
+    const permissions = { companies: 'admin', ai_agents: 'admin' };
+    http.instance.get.mockResolvedValue({ data: { ...otherUser.data, claims: { ...otherUser.data.claims, permissions }, dataAccess: { available: true, mode: 'all', nodes: [], modules: ['budget'] } } });
+    await renderSignedIn();
+    expect(screen.getByTestId('identity')).toHaveAttribute('data-companies-admin', 'true');
+    expect(screen.getByTestId('identity')).toHaveAttribute('data-agents', 'true');
   });
 
   it('logout while a refresh waits to retry: the server coming back does not sign the user in again', async () => {

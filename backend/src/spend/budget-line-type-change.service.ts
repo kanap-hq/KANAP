@@ -29,6 +29,7 @@ import {
 } from './item-analytics.util';
 import { resolveItemWrite } from './item-write.util';
 import { readSuccessor, type LineSuccessor } from './budget-line-lineage';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
 import { SpendItem } from './spend-item.entity';
 import { CapexItemsService, SpendItemsService } from './spend-items.service';
 
@@ -128,6 +129,17 @@ export type ChangeTypeResult = { id: string; reference: string | null; nature: B
 
 /** The line read for the change: the entity (what its nature's audit shows) and its hidden columns. */
 type Line = SpendItem & { legacy_number: string | null; predecessor_id: string | null };
+
+/** The unique key of `spend_items.predecessor_id`: one successor per line. */
+const PREDECESSOR_KEY = 'uq_spend_items_tenant_predecessor';
+export const HIDDEN_SUCCESSOR_MESSAGE = 'This line is already replaced by a line outside your access.';
+
+function isUniqueViolationOf(error: unknown, constraint: string): boolean {
+  const e = error as { code?: unknown; constraint?: unknown; driverError?: { code?: unknown; constraint?: unknown } } | null;
+  const code = e?.driverError?.code ?? e?.code;
+  const name = e?.driverError?.constraint ?? e?.constraint;
+  return code === '23505' && name === constraint;
+}
 
 type CurrentValue = {
   axis_id: string;
@@ -522,7 +534,15 @@ export class BudgetLineTypeChangeService {
       `UPDATE spend_items SET predecessor_id = $3${target === 'capex' ? ', description = $4' : ''}
         WHERE tenant_id = $1 AND id = $2${natureAnd(null, target)}`,
       target === 'capex' ? [tenantId, newId, line.id, line.description] : [tenantId, newId, line.id],
-    );
+    ).catch(async (error: unknown) => {
+      // One successor per line: a limited person does not read a successor out of their access, so
+      // the check above let it through and the unique key refuses it. Said so, without naming it.
+      // (The mode is known from the runner; a lookup in the failed transaction would fail: not limited.)
+      if (isUniqueViolationOf(error, PREDECESSOR_KEY) && (await isLimitedTransaction(manager).catch(() => false))) {
+        throw new ConflictException({ code: 'LINE_ALREADY_REPLACED', message: HIDDEN_SUCCESSOR_MESSAGE });
+      }
+      throw error;
+    });
     const newLine = (await readLine(manager, target, tenantId, newId))!;
     const oldLine = (await readLine(manager, nature, tenantId, line.id))!;
 

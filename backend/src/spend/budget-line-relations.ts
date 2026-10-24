@@ -22,6 +22,7 @@ import {
 import { parseTargetId } from '../common/relations/relation-target';
 import { resolveBudgetLine } from '../common/resolve-item-id';
 import { auditTableOf, linkedLineOf, natureAnd, naturesAnd, BUDGET_NATURES, type BudgetNature } from './budget-nature';
+import { assertLinesEditable } from '../data-access/line-write-checks';
 
 /**
  * The Relations tab of a budget line (OPEX or CAPEX, one table). One round trip lists every
@@ -363,7 +364,11 @@ async function setAssetLink(
     `SELECT 1 FROM spend_items WHERE tenant_id = $1 AND id = $2${natureAnd(null, line.nature)} FOR NO KEY UPDATE`,
     [line.tenant_id, line.id],
   );
-  if (locked.length === 0) throw new NotFoundException(LINE_NOT_FOUND);
+  if (locked.length === 0) {
+    // A readable line the person may not modify takes no lock: the clear 403, else absent.
+    await assertLinesEditable(deps.manager, [line.id]);
+    throw new NotFoundException(LINE_NOT_FOUND);
+  }
   const exists: unknown[] = await deps.manager.query(
     `SELECT 1 FROM assets WHERE tenant_id = $1 AND id = $2`,
     [line.tenant_id, assetId],

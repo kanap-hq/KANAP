@@ -17,6 +17,7 @@ import { AiPolicyService } from './ai-policy.service';
 import { AiMcpAuditService } from './control-plane/mcp/ai-mcp-audit.service';
 import { AiTenantExecutionService } from './execution/ai-tenant-execution.service';
 import { AiExecutionContext } from './ai.types';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @Controller('ai')
 @UseGuards(JwtAuthGuard)
@@ -102,6 +103,7 @@ export class AiApiKeysController {
   }
 
   // Admin endpoints
+  @ReservedToUnscopedDataAccess()
   @Get('admin/keys')
   async adminList(@Req() req: any) {
     const context = this.buildContext(req);
@@ -111,6 +113,7 @@ export class AiApiKeysController {
     });
   }
 
+  @ReservedToUnscopedDataAccess()
   @Delete('admin/keys/:id')
   async adminRevoke(@Param('id') id: string, @Req() req: any) {
     const context = this.buildContext(req);
@@ -129,6 +132,7 @@ export class AiApiKeysController {
     });
   }
 
+  @ReservedToUnscopedDataAccess()
   @Get('admin/mcp-audit')
   async adminMcpAudit(@Query() query: Record<string, unknown>, @Req() req: any) {
     const context = this.buildContext(req);

@@ -51,6 +51,53 @@ export function isDuplicateError(error: unknown): boolean {
   return response?.status === 409 && response.data?.code === 'duplicate';
 }
 
+/**
+ * The sentences of a refused data access (403 `DATA_ACCESS_LIMITED`), by the server's English text:
+ * one code carries several messages, each translated here (`errors:dataAccess.*`). A message not
+ * listed shows as the server wrote it.
+ */
+const DATA_ACCESS_MESSAGE_KEYS: Record<string, string> = {
+  'This item is outside your data access.': 'outside',
+  'This line is read only in your access.': 'readOnlyLine',
+  'This company or cost center is not part of your access.': 'placement',
+  'This action is reserved to people with access to all data.': 'reserved',
+  'This task is read only in your access.': 'readOnlyTask',
+  'Only someone who can modify the line or contract of this task can delete it.': 'taskDelete',
+  'This change would take the line out of your access. Keep yourself as an owner, or ask someone with access to its company.': 'leavesAccess',
+};
+/** `BL-12 is read only in your access.` (budget file). */
+const DATA_ACCESS_READ_ONLY_REF = /^(\S+) is read only in your access\.$/;
+/** `OPX-12 is no longer available since the export.` (budget file: deleted, or out of the person's access). */
+const DATA_ACCESS_NO_LONGER_AVAILABLE = /^(\S+) is no longer available since the export\.$/;
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * A data access sentence of the server in the screen language: a refusal (`DATA_ACCESS_LIMITED`)
+ * or a budget file row error of the same words. Null when the sentence is none of them.
+ */
+export function dataAccessSentence(message: string, t: Translate): string | null {
+  const key = DATA_ACCESS_MESSAGE_KEYS[message];
+  if (key) return t(`errors:dataAccess.${key}`, { defaultValue: message });
+  const readOnly = DATA_ACCESS_READ_ONLY_REF.exec(message);
+  if (readOnly) return t('errors:dataAccess.readOnlyRef', { ref: readOnly[1], defaultValue: message });
+  const gone = DATA_ACCESS_NO_LONGER_AVAILABLE.exec(message);
+  if (gone) return t('errors:dataAccess.noLongerAvailable', { ref: gone[1], defaultValue: message });
+  return null;
+}
+
+function dataAccessRefusalMessage(message: string, t: TFunction): string {
+  return dataAccessSentence(message, t)
+    || message
+    || t('errors:dataAccess.outside', { defaultValue: 'This item is outside your data access.' });
+}
+
+/** A refusal for data outside the person's access (403 `DATA_ACCESS_LIMITED`). */
+export function isDataAccessRefusal(error: unknown): boolean {
+  const response = (error as ApiErrorLike | null | undefined)?.response;
+  return response?.status === 403 && response.data?.code === 'DATA_ACCESS_LIMITED';
+}
+
 export function getApiErrorMessage(error: unknown, t: TFunction, fallback: string): string {
   const apiError = error as ApiErrorLike | null | undefined;
   const payload = apiError?.response?.data;
@@ -65,6 +112,13 @@ export function getApiErrorMessage(error: unknown, t: TFunction, fallback: strin
   const answerCode = getApiErrorCode({ response: apiError?.response });
   if (status === 403 && (!answerCode || answerCode === 'Forbidden')) {
     const translated = t('errors:forbidden', { defaultValue: message || fallback });
+    if (typeof translated === 'string' && translated.trim()) {
+      return translated;
+    }
+  }
+
+  if (answerCode === 'DATA_ACCESS_LIMITED') {
+    const translated = dataAccessRefusalMessage(stringifyErrorValue(payload?.message), t);
     if (typeof translated === 'string' && translated.trim()) {
       return translated;
     }

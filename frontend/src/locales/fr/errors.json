@@ -243,5 +243,17 @@
     "rpo_minutes": "L'objectif de point de reprise (RPO)",
     "maxMtdMinutes": "La durée maximale d'interruption admissible",
     "since_date": "La date « Depuis »"
+  },
+  "DATA_ACCESS_UNAVAILABLE": "L'accès aux données est momentanément indisponible. Contactez la personne qui exploite KANAP.",
+  "dataAccess": {
+    "outside": "Cet élément est hors de votre accès aux données.",
+    "readOnlyLine": "Cette ligne est en lecture seule dans votre accès.",
+    "placement": "Cette société ou ce centre de coûts ne fait pas partie de votre accès.",
+    "reserved": "Cette action est réservée aux personnes qui ont accès à toutes les données.",
+    "readOnlyTask": "Cette tâche est en lecture seule dans votre accès.",
+    "taskDelete": "Seule une personne qui peut modifier la ligne ou le contrat de cette tâche peut la supprimer.",
+    "leavesAccess": "Ce changement sortirait la ligne de votre accès. Restez l'un de ses responsables, ou demandez à une personne qui a accès à sa société.",
+    "readOnlyRef": "{{ref}} est en lecture seule dans votre accès.",
+    "noLongerAvailable": "{{ref}} n'est plus disponible depuis l'export."
   }
 }

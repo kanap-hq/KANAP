@@ -58,6 +58,7 @@ import { loadAnalyticsAxes } from '../analytics/analytics-axes.util';
 import { analyticsDimensionsAiContext, AnalyticsDimensionsPromptContext } from './ai-analytics-dimensions-context';
 import { findMarkdownPathLinks, replaceDataImageTags, replaceMarkdownDataImages } from '../common/text-scan';
 import { assertMarkdownSize } from '../common/markdown-limits';
+import { dataAccessRefusalMessage } from '../common/filters/database-error.mapping';
 
 const MAX_TOOL_ITERATIONS = parsePositiveIntEnv(process.env.AI_CHAT_MAX_TOOL_ITERATIONS, 40);
 /**
@@ -2922,7 +2923,7 @@ export class AiChatOrchestratorService {
                 };
               }
             } catch (err: any) {
-              result = { error: err.message || 'Tool execution failed.' };
+              result = { error: dataAccessRefusalMessage(err) ?? (err.message || 'Tool execution failed.') };
             } finally {
               toolExecutionMs += Math.max(0, Date.now() - toolStartedAt);
               const trace = buildDebugTrace('tool_execution_completed', {

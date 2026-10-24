@@ -31,6 +31,7 @@ import { contentDisposition } from '../common/content-disposition';
 import { BusinessProcessCategoriesService } from './business-process-categories.service';
 import { BusinessProcessCategoryUpsertDto } from './dto/business-process-category.dto';
 import { LongRunningRequest, BULK_WRITE_TIMEOUTS } from '../common/request-db-timeouts';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('business-processes')
@@ -90,6 +91,7 @@ export class BusinessProcessesController {
     return this.svc.get(id, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Post()
@@ -97,6 +99,7 @@ export class BusinessProcessesController {
     return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Patch(':id')
@@ -105,6 +108,7 @@ export class BusinessProcessesController {
   }
 
   // What a delete of `ids` would refuse, asked before the confirmation.
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @Post('delete-check')
@@ -112,6 +116,7 @@ export class BusinessProcessesController {
     return this.deleteSvc.deleteCheck(Array.isArray(body?.ids) ? body.ids : [], { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @Delete('bulk')
@@ -119,6 +124,7 @@ export class BusinessProcessesController {
     return this.deleteSvc.bulkDelete(body.ids, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @Delete(':id')
@@ -126,6 +132,7 @@ export class BusinessProcessesController {
     return this.deleteSvc.delete(id, { manager: req?.queryRunner?.manager, userId: req.user?.sub ?? null });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @LongRunningRequest(BULK_WRITE_TIMEOUTS)
@@ -167,6 +174,7 @@ export class BusinessProcessCategoriesController {
     return this.svc.list(query, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Post()
@@ -174,6 +182,7 @@ export class BusinessProcessCategoriesController {
     return this.svc.create(body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'member')
   @Patch(':id')
@@ -181,6 +190,7 @@ export class BusinessProcessCategoriesController {
     return this.svc.update(id, body, req.user?.sub ?? null, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @UseGuards(PermissionGuard)
   @RequireLevel('business_processes', 'admin')
   @Delete(':id')

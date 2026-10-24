@@ -1058,7 +1058,7 @@
       "suppliersMissing_one": "{{count}} fournisseur n'existe pas. Créez-le dans Données de référence > Fournisseurs, ou cochez Créer les fournisseurs manquants.",
       "suppliersMissingNoCreate": "{{count}} fournisseurs n'existent pas. Ils doivent d'abord être créés dans Données de référence > Fournisseurs.",
       "suppliersMissingNoCreate_one": "{{count}} fournisseur n'existe pas. Il doit d'abord être créé dans Données de référence > Fournisseurs.",
-      "deletedLine": "Ligne {{line}} : {{ref}} a été supprimé après l'export du fichier.",
+      "deletedLine": "Ligne {{line}} : {{ref}} n'est plus disponible depuis l'export.",
       "changesTitle": "Modifications",
       "toCreate": "{{count}} à créer",
       "toUpdate": "{{count}} à mettre à jour",
@@ -1089,7 +1089,9 @@
       "oldLayout": "Ce fichier provient d'une version antérieure de KANAP. Exportez un nouveau fichier depuis cette liste, reportez-y vos modifications, puis importez-le de nouveau.",
       "exportFailed": "Le fichier n'a pas pu être exporté. Réessayez.",
       "checkFailed": "Le fichier n'a pas pu être vérifié. Réessayez.",
-      "loadFailed": "Le fichier n'a pas pu être chargé. Réessayez."
+      "loadFailed": "Le fichier n'a pas pu être chargé. Réessayez.",
+      "dimensionValuesCreated": "{{dimension}}, seront créées : {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, refusées : {{names}}"
     },
     "budgetAdminOnly": "Vous devez disposer des droits d'administrateur budgétaire pour utiliser cette page.",
     "budgetColumnsSettings": {
@@ -1854,6 +1856,7 @@
       "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :",
       "deleted_one": "{{count}} ligne budgétaire supprimée",
       "deleted_other": "{{count}} lignes budgétaires supprimées"
-    }
+    },
+    "readOnlyInYourAccess": "Lecture seule dans votre accès"
   }
 }

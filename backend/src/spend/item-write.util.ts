@@ -4,6 +4,14 @@ import { validate as isUuid } from 'uuid';
 import { deriveStatusFromDisabledAt, isActiveAt, StatusState } from '../common/status';
 import { assertEffectiveStart } from './dto/effective-start';
 import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analytics.util';
+import {
+  assertLineContractReadable,
+  DATA_ACCESS_LEAVES_ACCESS_MESSAGE,
+  DATA_ACCESS_PLACEMENT_MESSAGE,
+  DATA_ACCESS_READ_ONLY_LINE_MESSAGE,
+  DataAccessLimitedException,
+  isLimitedTransaction,
+} from '../data-access/line-write-checks';
 
 /**
  * The one gate of every OPEX and CAPEX line write (API create and update, the
@@ -28,7 +36,11 @@ import { ItemAnalyticsChange, resolveItemAnalyticsChanges } from './item-analyti
  *   one keeps it and takes other edits);
  * - analytics values (`analytics_values`, and the legacy
  *   `analytics_category_id` of the default dimension) are resolved into link
- *   changes, which the caller writes after the line (`item-analytics.util.ts`).
+ *   changes, which the caller writes after the line (`item-analytics.util.ts`);
+ * - for a person whose data access is limited (`assertLineDataAccess`): the
+ *   line modifiable, a new place allowed, the line still modifiable after the
+ *   write, a new contract readable; a clear 403 (or the 404 of a missing
+ *   contract) before the database refuses.
  */
 
 export type ItemWriteScope = 'opex' | 'capex';
@@ -149,6 +161,41 @@ async function readCostCenter(manager: EntityManager, tenantId: string, id: stri
 }
 
 /**
+ * Data-scoped access (spec §2.3, §4.1, §6.7, §6.8), in a limited transaction only (an unscoped
+ * person costs no query), with the SQL functions of the database, in one statement:
+ * - an update needs the line modifiable (`data_access_line_editable` on the stored values; the
+ *   update path already locked it, which refuses a read-only line the same way);
+ * - a create, or a change of company or cost center, needs the new place allowed
+ *   (`data_access_placable_line`); a participation never places (the placement trigger);
+ * - the line must stay modifiable after the write: an owner who hands the line over without an edit
+ *   node on its place would make the row fail the policy (42501, spec §6.8);
+ * - a contract named anew must be readable (`data_access_contract_visible`), with the answer of a
+ *   missing contract (spec §5.4).
+ */
+async function assertLineDataAccess(
+  manager: EntityManager,
+  existing: ExistingItem | null,
+  next: { companyId: string | null; costCenterId: string | null; ownerItId: string | null; ownerBusinessId: string | null; contractId?: string | null },
+): Promise<void> {
+  if (!(await isLimitedTransaction(manager))) return;
+  const stored = (column: string) => ((existing?.[column] as string | null | undefined) ?? null);
+  const moved = !existing || next.companyId !== stored('paying_company_id') || next.costCenterId !== stored('cost_center_id');
+  const [row] = await manager.query(
+    `SELECT data_access_line_editable($1::uuid, $2::uuid, $3::uuid, $4::uuid) AS editable_before,
+            data_access_placable_line($5::uuid, $6::uuid) AS placable,
+            data_access_line_editable($5::uuid, $6::uuid, $7::uuid, $8::uuid) AS editable_after`,
+    [
+      stored('paying_company_id'), stored('cost_center_id'), stored('owner_it_id'), stored('owner_business_id'),
+      next.companyId, next.costCenterId, next.ownerItId, next.ownerBusinessId,
+    ],
+  );
+  if (existing && row?.editable_before !== true) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_LINE_MESSAGE);
+  if (moved && row?.placable !== true) throw new DataAccessLimitedException(DATA_ACCESS_PLACEMENT_MESSAGE);
+  if (existing && row?.editable_after !== true) throw new DataAccessLimitedException(DATA_ACCESS_LEAVES_ACCESS_MESSAGE);
+  if (next.contractId && next.contractId !== stored('contract_id')) await assertLineContractReadable(manager, next.contractId);
+}
+
+/**
  * The columns a create (`existing` null) or an update of one line writes,
  * checked as described above. Throws a 400 on the first problem.
  */
@@ -208,6 +255,14 @@ export async function resolveItemWrite(
   }
   const companyId = next('paying_company_id');
   if (!companyId) throw new BadRequestException('Paying company is required.');
+  if ('contract_id' in values) values.contract_id = idValue(values.contract_id, REFERENCES.contract_id.label);
+  await assertLineDataAccess(manager, existing, {
+    companyId,
+    costCenterId,
+    ownerItId: next('owner_it_id'),
+    ownerBusinessId: next('owner_business_id'),
+    contractId: 'contract_id' in values ? (values.contract_id as string | null) : undefined,
+  });
   const accountId = next('account_id');
   const storedOf = (column: string) => ((existing?.[column] as string | null | undefined) ?? null);
   const checkChart = !!accountId && (!existing || companyId !== storedOf('paying_company_id') || accountId !== storedOf('account_id'));

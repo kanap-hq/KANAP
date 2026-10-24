@@ -856,7 +856,8 @@
         "notFound": "Aufgabe nicht gefunden",
         "relatedItemRequired": "Bitte wählen Sie ein verknüpftes Element aus",
         "saveFailed": "Aufgabe konnte nicht gespeichert werden",
-        "titleRequired": "Titel ist erforderlich"
+        "titleRequired": "Titel ist erforderlich",
+        "stillFollowing": "Sie folgen dieser Aufgabe weiterhin."
       },
       "sidebar": {
         "fields": {

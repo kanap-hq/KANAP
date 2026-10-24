@@ -246,6 +246,8 @@ export default function TaskWorkspacePage() {
   const [dirty, setDirty] = React.useState(false);
   const [saving, setSaving] = React.useState(false);
   const [error, setError] = React.useState<string | null>(null);
+  // Handed over a task whose line or contract the person cannot read: they stay an observer.
+  const [stillFollowing, setStillFollowing] = React.useState(false);
   const [initialized, setInitialized] = React.useState(false);
   const dirtyRef = React.useRef(false);
   const createInitKeyRef = React.useRef<string | null>(null);
@@ -966,7 +968,8 @@ export default function TaskWorkspacePage() {
     sidebarSaveQueueRef.current = sidebarSaveQueueRef.current.then(async () => {
       try {
         const { endpoint, payload, nextType, nextId, isRelationPatch } = buildSidebarPatchRequest(snapshot, requestPatch);
-        await api.patch(endpoint, payload);
+        const res = await api.patch(endpoint, payload);
+        if ((res?.data as { stillFollowing?: unknown } | undefined)?.stillFollowing === true) setStillFollowing(true);
         pendingSidebarPatchCountRef.current = Math.max(0, pendingSidebarPatchCountRef.current - 1);
         if (isRelationPatch) {
           invalidateTaskRelationQueries(
@@ -1813,6 +1816,11 @@ export default function TaskWorkspacePage() {
       {error && (
         <Alert severity="error" onClose={() => setError(null)} sx={{ mx: 2, mt: 1 }}>
           {error}
+        </Alert>
+      )}
+      {stillFollowing && (
+        <Alert severity="info" onClose={() => setStillFollowing(false)} sx={{ mx: 2, mt: 1 }} data-testid="task-still-following">
+          {t('portfolio:workspace.task.messages.stillFollowing')}
         </Alert>
       )}
 

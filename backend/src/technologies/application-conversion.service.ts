@@ -12,6 +12,10 @@ import { BUDGET_NATURES, naturesAnd } from '../spend/budget-nature';
 import { isActiveHostingType, resolveHostingType } from './hosting-type';
 import { TechnologiesService } from './technologies.service';
 import { UUID_RE } from './technology-rows';
+import { DataAccessLimitedException, isLimitedTransaction } from '../data-access/line-write-checks';
+
+export const CONVERSION_HIDDEN_LINES_MESSAGE =
+  'This application is linked to budget lines outside your access. Ask someone with access to them to convert it.';
 
 /** The modules whose counts the caller may read in the preview (`null` otherwise, as the Relations tab). */
 export type ConversionAccess = { contracts: boolean; budget_lines: boolean; projects: boolean; incidents: boolean };
@@ -171,6 +175,12 @@ export class ApplicationConversionService {
         message: 'This application cannot be converted to a technology.',
         refusals: preview.refusals,
       });
+    }
+    // A limited person copies only the links to the lines they can read; the delete of the
+    // application below would drop the others. The count of hidden lines is a disclosure (spec §6.6).
+    if (await isLimitedTransaction(mg)) {
+      const [hidden] = await mg.query(`SELECT data_access_hidden_count('application', $1::uuid) AS n`, [app.id]);
+      if (Number(hidden?.n ?? 0) > 0) throw new DataAccessLimitedException(CONVERSION_HIDDEN_LINES_MESSAGE);
     }
     const reference = app.sequential_id || null;
     const files: ConversionFiles = { copies: [], originals: [] };

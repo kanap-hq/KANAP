@@ -40,6 +40,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
+import { assertLinesEditable, lineEditableField } from '../data-access/line-write-checks';
 import { updateItemUnderLock } from './item-locked-update';
 import {
   itemAnalyticsAuditFields,
@@ -59,6 +60,7 @@ import { auditTableOf, LEGACY_PREFIX, lineNumberSql, type BudgetNature } from '.
 import { auditLine, findBudgetLine, presentChild, presentChildren, presentLine, presentNativeLine, selectLineColumns } from './budget-line-presentation';
 import type { CopyColumnOperation } from './budget-column-operations';
 import type { CopyAllocationsOperation } from './budget-allocation-operations';
+import { sqlStateOf } from '../common/filters/database-error.mapping';
 
 /**
  * What differs between the lines of the two natures, the one service apart (plan
@@ -306,7 +308,13 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const item = await this.findItem(id, mg, opts?.native);
     const line = await this.withAnalytics(mg, item, opts?.native);
-    return { ...line, references: await loadItemReferences(mg, item), lineage: await readLineLineage(mg, item.tenant_id, item.id) };
+    return {
+      ...line,
+      references: await loadItemReferences(mg, item),
+      lineage: await readLineLineage(mg, item.tenant_id, item.id),
+      // Limited access only: whether the person may modify the line (spec §6.7).
+      ...(await lineEditableField(mg, item.id)),
+    };
   }
 
   /** The line's meta (lot 3G, `item-meta.ts`): its freshness counters, who changed it and when. */
@@ -636,7 +644,8 @@ export class SpendItemsService {
     try {
       return await this.budgetOps.copyAllocations(operation, userId, { manager });
     } catch (err) {
-      if (err instanceof Error) {
+      // A refusal of the person's data access stays a 403 (the exception filter maps it).
+      if (err instanceof Error && sqlStateOf(err) !== '42501') {
         throw new BadRequestException(err.message);
       }
       throw err;
@@ -663,6 +672,8 @@ export class SpendItemsService {
     // The OPEX route requires the url; the CAPEX one stored it trimmed, empty when missing (as before).
     if (this.nature === 'opex' && !body?.url) throw new BadRequestException('url is required');
     const line = await this.findItem(itemId, mg);
+    // A line the person reads only: a clear 403 before the policy refuses the insert.
+    await assertLinesEditable(mg, [line.id]);
     const url = this.nature === 'opex' ? body.url : String(body?.url || '').trim();
     const entity = repo.create({ tenant_id: line.tenant_id, spend_item_id: line.id, url, description: (body?.description ?? null) as any } as any);
     const saved = await repo.save(entity as any);
@@ -712,6 +723,8 @@ export class SpendItemsService {
     await budgetLineOfChild(mg, this.nature, 'link', tenantId, linkId, 'Link not found');
     const existing = await repo.findOne({ where: { id: linkId, spend_item_id: itemId, tenant_id: tenantId } as any });
     if (!existing) return { ok: true };
+    // A read-only line: the policy would delete nothing and the answer would say it did.
+    await assertLinesEditable(mg, [existing.spend_item_id]);
     await repo.delete({ id: linkId, spend_item_id: itemId, tenant_id: tenantId } as any);
     await this.audit.log({
       table: auditTableOf(this.nature, 'spend_links'), recordId: linkId, action: 'delete',
@@ -734,6 +747,8 @@ export class SpendItemsService {
     const repo = mg.getRepository(SpendAttachment);
     if (!file) throw new BadRequestException('No file uploaded');
     const line = await this.findItem(itemId, mg);
+    // Before the file is stored: a read-only line keeps no orphan object.
+    await assertLinesEditable(mg, [line.id]);
     const tenant_id = line.tenant_id;
     const id = randomUUID();
     const now = new Date();
@@ -788,6 +803,8 @@ export class SpendItemsService {
     await budgetLineOfChild(mg, this.nature, 'attachment', tenantId, attachmentId, 'Attachment not found');
     const found = await repo.findOne({ where: { id: attachmentId, tenant_id: tenantId } as any });
     if (!found) return { ok: true };
+    // A read-only line: the policy would delete nothing and the file would go anyway.
+    await assertLinesEditable(mg, [(found as any).spend_item_id]);
     await repo.delete({ id: attachmentId, tenant_id: tenantId } as any);
     try { await this.storage.deleteObject((found as any).storage_path); } catch {}
     await this.audit.log({

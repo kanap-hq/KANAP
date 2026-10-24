@@ -15,6 +15,7 @@ import {
   CsvFieldType,
 } from '../common/csv';
 import { taskCsvConfig } from './task-csv.config';
+import { assertTaskWritten } from './task-data-access';
 
 /**
  * Service for importing and exporting Tasks via CSV
@@ -282,10 +283,13 @@ export class TasksCsvService {
         }
 
         if (updates.length > 0) {
-          await manager.query(
-            `UPDATE tasks SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1`,
+          const [{ n }] = await manager.query(
+            `WITH c AS (UPDATE tasks SET ${updates.join(', ')}, updated_at = NOW() WHERE id = $1 RETURNING 1)
+             SELECT count(*)::int AS n FROM c`,
             params,
           );
+          // A task the person reads but may not modify: the clear 403, never a silent success.
+          await assertTaskWritten(manager, Number(n));
         }
       }
     }

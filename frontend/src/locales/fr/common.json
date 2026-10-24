@@ -943,7 +943,8 @@
     "manuallyAdded": "Ajouté manuellement",
     "removeContact": "Retirer le contact",
     "insufficientPermission": "Autorisation insuffisante",
-    "syncFromSupplier": "Reprendre les contacts du fournisseur"
+    "syncFromSupplier": "Reprendre les contacts du fournisseur",
+    "saveFailed": "Impossible d'enregistrer les contacts."
   },
   "export": {
     "button": "Exporter",

@@ -26,6 +26,11 @@ export type AnalyticsAxis = {
    * is enabled, on the lines it applies to (`axisRequiredFor`). Lines without a value stay editable.
    */
   required: boolean;
+  /**
+   * Open values: anyone who may modify a budget line adds a value, from the line's picker or the
+   * budget file. Closed (false, the default): values come from the dimension page.
+   */
+  open_values?: boolean;
   status: AnalyticsStatus;
   disabled_at: string | null;
   created_at?: string;
@@ -53,6 +58,8 @@ export type AnalyticsAxisWrite = {
   applies_to?: LineType | null;
   /** Absent on a patch leaves it unchanged. */
   required?: boolean;
+  /** Absent on a patch leaves it unchanged. Reserved to people with access to all data. */
+  open_values?: boolean;
   status?: AnalyticsStatus;
   disabled_at?: string | null;
 };
@@ -172,6 +179,23 @@ export async function getAnalyticsValue(id: string): Promise<AnalyticsValueDetai
 
 export async function createAnalyticsValue(body: AnalyticsValueWrite): Promise<AnalyticsValueDetail> {
   const res = await api.post<AnalyticsValueDetail>(ANALYTICS_VALUES_ENDPOINT, body);
+  return res.data;
+}
+
+/**
+ * `POST /analytics-categories/from-line`: the value of `name` in an open dimension, found regardless
+ * of case or created, for the line it goes on (`line_id`) or the place of a line being created.
+ */
+export type AnalyticsValueFromLine = {
+  axis_id: string;
+  name: string;
+  line_id?: string;
+  paying_company_id?: string;
+  cost_center_id?: string;
+};
+
+export async function createAnalyticsValueFromLine(body: AnalyticsValueFromLine): Promise<AnalyticsValueDetail & { created: boolean }> {
+  const res = await api.post<AnalyticsValueDetail & { created: boolean }>(`${ANALYTICS_VALUES_ENDPOINT}/from-line`, body);
   return res.data;
 }
 

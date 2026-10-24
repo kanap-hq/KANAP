@@ -10,6 +10,7 @@ import type { AnalyticsAxisDetail } from '../../services/analytics';
 const navigateMock = vi.hoisted(() => vi.fn());
 const axesState = vi.hoisted(() => ({ list: [] as unknown[] }));
 const levels = vi.hoisted(() => ({ value: 'admin' as 'reader' | 'member' | 'admin' }));
+const dataAccessState = vi.hoisted(() => ({ limited: false }));
 
 vi.mock('react-i18next', () => ({
   initReactI18next: { type: '3rdParty', init: () => undefined },
@@ -35,6 +36,7 @@ vi.mock('../../auth/AuthContext', () => ({
       const rank: Record<string, number> = { reader: 1, member: 2, manager: 3, admin: 4 };
       return rank[levels.value] >= rank[level];
     },
+    dataAccess: dataAccessState.limited ? { available: true, mode: 'limited', nodes: [], modules: ['budget'] } : null,
   }),
 }));
 vi.mock('../../services/analytics', async (importOriginal) => ({
@@ -126,6 +128,7 @@ describe('AnalyticsDimensionWorkspacePage', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     levels.value = 'admin';
+    dataAccessState.limited = false;
     axesState.list = [DEFAULT, NATURE];
     // The server keeps what it saved: a read after a save returns it.
     const stored: Record<string, AnalyticsAxisDetail> = { 'ax-default': DEFAULT, 'ax-nature': NATURE };
@@ -607,5 +610,31 @@ describe('AnalyticsDimensionWorkspacePage', () => {
     expect(await screen.findByText('analytics.messages.nameRequired')).toBeInTheDocument();
     expect(await screen.findByText('analytics.messages.codeRequired')).toBeInTheDocument();
     expect(mocked.createAnalyticsAxis).not.toHaveBeenCalled();
+  });
+
+  it('turns open values on and off from its switch, off by default, with what it means', async () => {
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    const openSwitch = await screen.findByRole('checkbox', { name: 'analytics.fields.openValues' });
+    expect(openSwitch).not.toBeChecked();
+    expect(screen.getByText('analytics.hints.openValues')).toBeInTheDocument();
+    fireEvent.click(openSwitch);
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenCalledWith('ax-nature', { open_values: true }));
+    await waitFor(() => expect(screen.getByRole('checkbox', { name: 'analytics.fields.openValues' })).toBeChecked());
+    fireEvent.click(screen.getByRole('checkbox', { name: 'analytics.fields.openValues' }));
+    await waitFor(() => expect(mocked.updateAnalyticsAxis).toHaveBeenLastCalledWith('ax-nature', { open_values: false }));
+  });
+
+  it('shows no open values switch to a limited person or to a reader', async () => {
+    dataAccessState.limited = true;
+    const { unmount } = renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByLabelText('analytics.fields.code')).toBeInTheDocument();
+    expect(screen.queryByRole('checkbox', { name: 'analytics.fields.openValues' })).toBeNull();
+    expect(screen.queryByText('analytics.hints.openValues')).toBeNull();
+    unmount();
+    dataAccessState.limited = false;
+    levels.value = 'reader';
+    renderAt('/master-data/analytics/dimensions/ax-nature/overview');
+    expect(await screen.findByLabelText('analytics.fields.code')).toBeDisabled();
+    expect(screen.queryByRole('checkbox', { name: 'analytics.fields.openValues' })).toBeNull();
   });
 });

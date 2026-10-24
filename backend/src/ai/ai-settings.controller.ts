@@ -13,6 +13,7 @@ import { AiProviderRegistry } from './providers/ai-provider-registry.service';
 import { GlpiService } from './glpi/glpi.service';
 import { BraveSearchService } from './web-search/brave-search.service';
 import { AiExecutionContext } from './ai.types';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 type AiSettingsRequest = {
   tenant?: { id?: string };
@@ -21,6 +22,7 @@ type AiSettingsRequest = {
   id?: string | null;
 };
 
+@ReservedToUnscopedDataAccess()
 @Controller('ai/settings')
 @UseGuards(JwtAuthGuard)
 @SkipTenantTransaction()

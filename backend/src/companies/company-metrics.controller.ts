@@ -3,6 +3,7 @@ import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { PermissionGuard } from '../auth/permission.guard';
 import { RequireLevel } from '../auth/require-level.decorator';
 import { CompanyMetricsService } from './company-metrics.service';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 @UseGuards(JwtAuthGuard)
 @Controller('company-metrics')
@@ -29,6 +30,7 @@ export class CompanyMetricsController {
     return this.svc.getForCompany(companyId, year, { manager: req?.queryRunner?.manager });
   }
 
+  @ReservedToUnscopedDataAccess()
   @Patch(':companyId')
   @UseGuards(PermissionGuard)
   @RequireLevel('companies', 'member')

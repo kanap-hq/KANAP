@@ -15,6 +15,7 @@ function axis(id: string, patch: Partial<AnalyticsAxisInfo> = {}): AnalyticsAxis
     is_default: false,
     applies_to: null,
     required: true,
+    open_values: false,
     status: 'enabled',
     disabled_at: null,
     sort_order: 1,

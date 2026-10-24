@@ -37,6 +37,11 @@ export type CostCenterSelectProps = {
   companyId?: string | null;
   /** Nodes left out of the list (e.g. a node's own subtree when picking its parent). */
   excludeIds?: ReadonlySet<string> | string[];
+  /**
+   * With `cost_centers`: only the cost centers it accepts are listed, with the groups above them (a
+   * limited data access, `usePlacementOptions`). The current value stays listed. Absent: every one.
+   */
+  isAllowed?: ((node: CostCenterNode) => boolean) | null;
   disabled?: boolean;
   error?: boolean;
   helperText?: React.ReactNode;
@@ -122,6 +127,7 @@ export default function CostCenterSelect({
   selectable = 'cost_centers',
   companyId,
   excludeIds,
+  isAllowed,
   disabled,
   error,
   helperText,
@@ -150,7 +156,7 @@ export default function CostCenterSelect({
   }, [excludeIds]);
 
   const byCompany = selectable === 'cost_centers' && !!companyId;
-  const options = React.useMemo(() => {
+  const listed = React.useMemo(() => {
     const list = excluded ? tree.nodes.filter((node) => !excluded.has(node.id)) : tree.nodes;
     // Parent picking only needs the groups; their tree order and depth stay meaningful.
     if (selectable === 'groups') return list.filter((node) => node.kind === 'group');
@@ -164,6 +170,17 @@ export default function CostCenterSelect({
     }
     return list.filter((node) => keep.has(node.id));
   }, [byCompany, companyId, excluded, selectable, tree.nodes, value]);
+  // A limited data access: the cost centers it accepts (and the current value), with their groups.
+  const options = React.useMemo(() => {
+    if (!isAllowed || selectable !== 'cost_centers') return listed;
+    const keep = new Set<string>();
+    for (const node of listed) {
+      if (node.kind !== 'cost_center' || (!isAllowed(node) && node.id !== value)) continue;
+      for (const id of node.path_ids) keep.add(id);
+      keep.add(node.id);
+    }
+    return listed.filter((node) => keep.has(node.id));
+  }, [isAllowed, listed, selectable, value]);
 
   const isPickable = React.useCallback(
     (node: CostCenterNode) => {

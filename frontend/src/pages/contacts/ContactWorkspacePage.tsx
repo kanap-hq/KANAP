@@ -7,6 +7,7 @@ import { useTheme } from '@mui/material/styles';
 import CloseIcon from '@mui/icons-material/Close';
 import api from '../../api';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
 import useAutosave, { useAutosaveRegistry } from '../../hooks/useAutosave';
 import { useFieldDraft } from '../../hooks/useFieldDraft';
 import PortfolioDetailWorkspaceShell from '../portfolio/workspace/PortfolioDetailWorkspaceShell';
@@ -84,8 +85,10 @@ function ContactEditor({ id }: { id: string }) {
   const navigate = useNavigate();
   const queryClient = useQueryClient();
   const { hasLevel } = useAuth();
-  const canEdit = hasLevel('contacts', 'manager');
-  const canDelete = hasLevel('contacts', 'admin');
+  // Changing or deleting a shared contact is reserved to people with access to all data (spec §2.7).
+  const dataAccessLimited = useDataAccessLimited();
+  const canEdit = hasLevel('contacts', 'manager') && !dataAccessLimited;
+  const canDelete = hasLevel('contacts', 'admin') && !dataAccessLimited;
   const withContext = useListContext();
   const roleOptions = useContactRoleOptions();
 

@@ -1,7 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
-import { Repository, SelectQueryBuilder } from 'typeorm';
+import { EntityManager, Repository, SelectQueryBuilder } from 'typeorm';
+import { assertLinePlacement, assertLinesEditable, isLimitedTransaction } from '../data-access/line-write-checks';
+import { DataAccessReservedException, isReservedDimensionValueWrite } from '../data-access/reserved-operations';
 import { AuditService } from '../audit/audit.service';
 import { compileAgFilterCondition, createParamNameGenerator } from '../common/ag-grid-filtering';
 import { BulkDeleteResult } from '../common/delete.types';
@@ -79,6 +81,8 @@ export interface AnalyticsAxisRef {
   applies_to: AxisAppliesTo | null;
   status: string;
   disabled_at: Date | string | null;
+  /** Anyone who may modify a line adds a value (spec §3.5 of planning/data-scoped-access). */
+  open_values?: boolean;
 }
 
 export interface AnalyticsCategoryInput {
@@ -189,6 +193,41 @@ export function valueDeleteRefusal(name: string, lines: { opex: number; capex: n
     `${name} is used by ${lineUsageText(lines.opex, lines.capex)}. Disable it instead.`);
 }
 
+/** The body of the line picker's route (`POST /analytics-categories/from-line`). */
+export interface AnalyticsLineValueInput {
+  axis_id?: unknown;
+  name?: unknown;
+  /** The line the value goes on. */
+  line_id?: unknown;
+  /** A line being created: its place. */
+  paying_company_id?: unknown;
+  cost_center_id?: unknown;
+}
+
+const optionalUuid = (raw: unknown, field: string): string | null => {
+  if (raw == null || raw === '') return null;
+  const value = String(raw);
+  if (!isUUID(value)) throw analyticsRefusal(`${field} must be an id.`, field);
+  return value;
+};
+
+/**
+ * The person may modify the line the value goes on (spec §3.5): a stored line readable and
+ * modifiable (`data_access_line_editable`), or the place of a line being created allowed
+ * (`data_access_placable_line`). The checks run in a limited transaction only; a line out of read
+ * access answers as a missing one.
+ */
+async function assertLineContext(manager: EntityManager, tenantId: string, body: AnalyticsLineValueInput): Promise<void> {
+  const lineId = optionalUuid(body?.line_id, 'line_id');
+  if (lineId) {
+    const [line] = await manager.query(`SELECT id FROM spend_items WHERE tenant_id = $1 AND id = $2`, [tenantId, lineId]);
+    if (!line) throw new NotFoundException('Budget line not found.');
+    await assertLinesEditable(manager, [lineId]);
+    return;
+  }
+  await assertLinePlacement(manager, optionalUuid(body?.paying_company_id, 'paying_company_id'), optionalUuid(body?.cost_center_id, 'cost_center_id'));
+}
+
 @Injectable()
 export class AnalyticsCategoriesService {
   constructor(
@@ -271,6 +310,45 @@ export class AnalyticsCategoriesService {
     await this.assertNameFree(ctx, values, axis, null);
     const saved = await this.persist(ctx, null, values, axis);
     return this.detail(ctx, saved.id);
+  }
+
+  /**
+   * The line's picker (spec §3.5, §7.7 of planning/data-scoped-access): the value of `name` in a
+   * dimension with open values, found (any case) or created, for a person who may modify the line
+   * it goes on. `line_id` names that line; a line being created names its place instead
+   * (`paying_company_id`, `cost_center_id`). A dimension with a closed list gets no value from a
+   * line, whoever asks: 403 `DATA_ACCESS_LIMITED` for a limited person, 400 otherwise (its values
+   * are added on the dimension's page).
+   */
+  async createFromLine(body: AnalyticsLineValueInput, userId?: string | null, opts?: AnalyticsCallOptions): Promise<AnalyticsCategoryDetail & { created: boolean }> {
+    const ctx = await this.context(opts, userId ?? null);
+    const axisId = String(body?.axis_id ?? '');
+    const axis = isUUID(axisId) ? await this.loadAxis(ctx, axisId) : undefined;
+    if (!axis) throw analyticsRefusal('Dimension not found.', 'axis_id');
+    const name = normalizeAnalyticsName(body?.name);
+    await assertLineContext(ctx.manager, ctx.tenantId, body);
+    const [found] = await ctx.manager.query(
+      `SELECT id FROM analytics_categories WHERE tenant_id = $1 AND axis_id = $2 AND lower(name) = lower($3) ORDER BY created_at, id LIMIT 1`,
+      [ctx.tenantId, axis.id, name],
+    );
+    if (found) return { ...(await this.detail(ctx, found.id)), created: false };
+    if (isReservedDimensionValueWrite(axis)) {
+      if (await isLimitedTransaction(ctx.manager)) throw new DataAccessReservedException();
+      throw analyticsRefusal(`${analyticsAxisSubject(axis)} has a closed list of values. Add the value on its page, or turn on open values.`, 'axis_id');
+    }
+    if (!isAxisActive(axis)) {
+      throw analyticsRefusal(`${analyticsAxisSubject(axis)} is disabled. Enable it to add values.`, 'axis_id');
+    }
+    const values: AnalyticsCategoryValues = {
+      axis_id: axis.id,
+      name,
+      description: null,
+      applies_to: null,
+      status: StatusState.ENABLED,
+      disabled_at: null,
+    };
+    const saved = await this.persist(ctx, null, values, axis);
+    return { ...(await this.detail(ctx, saved.id)), created: true };
   }
 
   /** PATCH semantics. A value never moves to another dimension. */
@@ -558,7 +636,7 @@ export class AnalyticsCategoriesService {
   async loadAxis(ctx: AnalyticsContext, axisId: string): Promise<AnalyticsAxisRef | undefined> {
     if (!isUUID(String(axisId))) return undefined;
     const [row] = await ctx.manager.query(
-      `SELECT id, code, name, is_default, applies_to, status, disabled_at FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
+      `SELECT id, code, name, is_default, applies_to, status, disabled_at, open_values FROM analytics_axes WHERE tenant_id = $1 AND id = $2::uuid`,
       [ctx.tenantId, axisId],
     );
     return row;

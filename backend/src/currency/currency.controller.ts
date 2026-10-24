@@ -9,6 +9,7 @@ import { LongRunningRequest, OUTSIDE_WORK_TIMEOUTS } from '../common/request-db-
 import { EntityManager, Repository } from 'typeorm';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CurrencyRateSet } from './currency-rate-set.entity';
+import { ReservedToUnscopedDataAccess } from '../data-access/reserved-operations';
 
 // Currencies are a budget setting: every budget reader sees them (the OPEX and
 // CAPEX forms read the default and allowed currencies of their currency picker),
@@ -67,6 +68,7 @@ export class CurrencyController {
    * (every year in use for a new reporting currency, otherwise the current one);
    * `POST /currency/rates/refresh` with those years waits for the result.
    */
+  @ReservedToUnscopedDataAccess()
   @Patch('settings')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
@@ -107,6 +109,7 @@ export class CurrencyController {
   }
 
   /** What a change of reporting currency does to manual rates, frozen versions and the allowed list. */
+  @ReservedToUnscopedDataAccess()
   @Get('reporting-change-impact')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
@@ -139,6 +142,7 @@ export class CurrencyController {
     return { items };
   }
 
+  @ReservedToUnscopedDataAccess()
   @Put('rates/manual')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
@@ -156,6 +160,7 @@ export class CurrencyController {
     return { ...this.presentSet(set), frozenVersions };
   }
 
+  @ReservedToUnscopedDataAccess()
   @Delete('rates/manual/:year/:currency')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')
@@ -180,6 +185,7 @@ export class CurrencyController {
    * transaction only reads and holds no row lock while it waits. `failed`: the
    * run captured nothing (source unreachable, job error).
    */
+  @ReservedToUnscopedDataAccess()
   @Post('rates/refresh')
   @UseGuards(PermissionGuard)
   @RequireLevel('budget_ops', 'admin')

@@ -248,7 +248,7 @@ async function testAmounts() {
 async function testIdentity() {
   const deleted = await preflight('opex', 'item_number,name,currency,kanap_token\nOPX-9,Gone,EUR,v1\n', []);
   assert.equal(deleted.deletedCount, 1);
-  assert.ok(deleted.errors.some((error) => error.message === 'OPX-9 was deleted since the export.'));
+  assert.ok(deleted.errors.some((error) => error.message === 'OPX-9 is no longer available since the export.'));
   assert.ok(!deleted.errors.some((error) => error.message.includes('does not match')));
   const unknown = await preflight('opex', 'item_number,name,currency\nOPX-9,Gone,EUR\n', []);
   assert.equal(unknown.deletedCount, 0);
@@ -666,7 +666,7 @@ async function testItemNumbers() {
   const bareCpx = await preflight('capex', 'item_number,name\n120,Racks\n', stored, { cat });
   assert.deepEqual(rowErrors(bareCpx), [[2, 'item_number', "item_number '120' does not match a line."]], 'on the CAPEX list of before, 120 is CPX-120');
   const deletedCpx = await preflight('capex', 'item_number,name,kanap_token\n9,Gone,v1\n', stored, { cat });
-  assert.deepEqual(rowErrors(deletedCpx), [[2, 'item_number', 'CPX-9 was deleted since the export.']], 'named as before');
+  assert.deepEqual(rowErrors(deletedCpx), [[2, 'item_number', 'CPX-9 is no longer available since the export.']], 'named as before');
   // A CAPEX line moved from OPEX keeps its OPX number (lot M): found by it, still a CAPEX line.
   const moved = line({ id: 'line-9', nature: 'capex', itemNumber: 9, legacyNumber: 'OPX-9', name: 'Moved' });
   const byOpx = await preflight('capex', 'item_number,name\nOPX-9,Moved\n', [moved], { cat });

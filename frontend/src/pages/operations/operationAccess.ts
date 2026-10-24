@@ -25,12 +25,17 @@ const OPERATION_ACCESS: Record<string, (hasLevel: HasLevel) => boolean> = {
   'metrics-copy': masterDataAdmin,
 };
 
-/** Whether the user can use the administration page at `/ops/operations/<page>`. */
-export function canUseOperation(page: string, hasLevel: HasLevel): boolean {
+/**
+ * Whether the user can use the administration page at `/ops/operations/<page>`. Every one of them
+ * is reserved to people with access to all data (spec §2.7): none for a limited person.
+ */
+export function canUseOperation(page: string, hasLevel: HasLevel, dataAccessLimited = false): boolean {
+  if (dataAccessLimited) return false;
   return OPERATION_ACCESS[page]?.(hasLevel) ?? false;
 }
 
 /** Whether the administration landing has at least one page for the user. */
-export function canUseAnyOperation(hasLevel: HasLevel): boolean {
+export function canUseAnyOperation(hasLevel: HasLevel, dataAccessLimited = false): boolean {
+  if (dataAccessLimited) return false;
   return Object.values(OPERATION_ACCESS).some((canUse) => canUse(hasLevel));
 }

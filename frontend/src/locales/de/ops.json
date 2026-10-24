@@ -1058,7 +1058,7 @@
       "suppliersMissing_one": "{{count}} Lieferant existiert nicht. Legen Sie ihn unter Stammdaten > Lieferanten an oder aktivieren Sie Fehlende Lieferanten anlegen.",
       "suppliersMissingNoCreate": "{{count}} Lieferanten existieren nicht. Sie müssen zuerst unter Stammdaten > Lieferanten angelegt werden.",
       "suppliersMissingNoCreate_one": "{{count}} Lieferant existiert nicht. Er muss zuerst unter Stammdaten > Lieferanten angelegt werden.",
-      "deletedLine": "Zeile {{line}}: {{ref}} wurde nach dem Export der Datei gelöscht.",
+      "deletedLine": "Zeile {{line}}: {{ref}} ist seit dem Export nicht mehr verfügbar.",
       "changesTitle": "Änderungen",
       "toCreate": "{{count}} neu anzulegen",
       "toUpdate": "{{count}} zu aktualisieren",
@@ -1088,7 +1088,9 @@
       "oldLayout": "Diese Datei stammt aus einer früheren Version von KANAP. Exportieren Sie eine neue Datei aus dieser Liste, übertragen Sie Ihre Änderungen hinein und importieren Sie sie erneut.",
       "exportFailed": "Die Datei konnte nicht exportiert werden. Versuchen Sie es erneut.",
       "checkFailed": "Die Datei konnte nicht geprüft werden. Versuchen Sie es erneut.",
-      "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut."
+      "loadFailed": "Die Datei konnte nicht geladen werden. Versuchen Sie es erneut.",
+      "dimensionValuesCreated": "{{dimension}}, werden angelegt: {{names}}",
+      "dimensionValuesRefused": "{{dimension}}, abgelehnt: {{names}}"
     },
     "budgetAdminOnly": "Sie benötigen Budgetadministrator-Rechte, um diese Seite zu verwenden.",
     "budgetColumnsSettings": {
@@ -1853,6 +1855,7 @@
       "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Budgetzeile gelöscht",
       "deleted_other": "{{count}} Budgetzeilen gelöscht"
-    }
+    },
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
   }
 }
