@@ -1203,6 +1203,11 @@ export default function AssetWorkspacePage() {
     load();
   };
 
+  // Autosaves run one at a time, in the order they were made: a field changed while another saves
+  // waits for it, and keeps its new value while that first answer arrives (`pendingPatches`).
+  const saveTail = React.useRef<Promise<unknown> | null>(null);
+  const pendingPatches = React.useRef<Array<{ patch: Record<string, unknown> }>>([]);
+
   const patchAsset = React.useCallback(async (patch: Partial<AssetRecord> & { sub_location_id?: string | null }) => {
     if (isCreate) {
       setDirty(true);
@@ -1222,21 +1227,39 @@ export default function AssetWorkspacePage() {
     setSaving(true);
     setError(null);
     setData((prev) => (prev ? ({ ...prev, ...safePatch } as AssetRecord) : prev));
-    try {
-      const res = await api.patch(`/assets/${id}`, safePatch);
-      setData(res.data as AssetRecord);
-      setDirty(false);
-      // Retiring an asset, or bringing it back, changes what it counts.
-      if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
-    } catch (e: any) {
-      const message = getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
-      // The read clears the error: the refusal shows once the asset is back to what the server holds.
-      await load();
-      setError(message);
-      throw e;
-    } finally {
-      setSaving(false);
-    }
+    const entry = { patch: safePatch as Record<string, unknown> };
+    pendingPatches.current.push(entry);
+    const settle = () => {
+      pendingPatches.current = pendingPatches.current.filter((pending) => pending !== entry);
+      if (pendingPatches.current.length === 0) setSaving(false);
+    };
+    const run = async () => {
+      try {
+        const res = await api.patch(`/assets/${id}`, safePatch);
+        settle();
+        // The changes still waiting for their own save stay shown over this answer.
+        const waiting = Object.assign({}, ...pendingPatches.current.map((pending) => pending.patch));
+        setData({ ...(res.data as AssetRecord), ...waiting } as AssetRecord);
+        if (pendingPatches.current.length === 0) setDirty(false);
+        // Retiring an asset, or bringing it back, changes what it counts.
+        if ('status' in safePatch) void queryClient.invalidateQueries({ queryKey: assetVulnerabilitiesKey });
+      } catch (e: any) {
+        settle();
+        const message = getApiErrorMessage(e, t, t('messages.saveAssetFailed'));
+        // The read clears the error: the refusal shows once the asset is back to what the server holds.
+        await load();
+        setError(message);
+        throw e;
+      }
+    };
+    const previous = saveTail.current;
+    const result = previous ? previous.then(run, run) : run();
+    const tail = result.catch(() => undefined);
+    saveTail.current = tail;
+    void tail.then(() => {
+      if (saveTail.current === tail) saveTail.current = null;
+    });
+    return result;
   }, [assetVulnerabilitiesKey, id, isCreate, load, netboxManaged, netboxOwns, queryClient, t]);
 
   const handleNotesChange = React.useCallback((value: string) => {
