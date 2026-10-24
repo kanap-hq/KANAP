@@ -38,6 +38,9 @@ import OptionWithHint from '../../components/fields/OptionWithHint';
 import DateEUField from '../../components/fields/DateEUField';
 import DateCalendarPopover from '../../components/fields/DateCalendarPopover';
 import { ServerOption } from '../../components/fields/ServerSelect';
+import ViaAssetNames from '../../components/workspace/ViaAssetNames';
+import ClusterGroupLine from './components/ClusterGroupLine';
+import useClusterAssignmentQuestion from './components/useClusterAssignmentQuestion';
 import HardwareInfoPanel from './editors/HardwareInfoPanel';
 import SupportInfoPanel from './editors/SupportInfoPanel';
 import AssetDependenciesTab from './workspace/AssetDependenciesTab';
@@ -119,6 +122,18 @@ type AssignmentRow = {
   notes: string | null;
   application: { id: string; name: string };
   environment: string;
+  /** True on a row the server gets through its cluster: `id` is then the cluster's row. */
+  inherited?: boolean;
+  via_clusters?: Array<{ id: string; name: string }>;
+};
+
+/** A deployment and role assigned directly to every member of a cluster (A7). */
+type GroupableSet = {
+  cluster_id: string;
+  cluster_name: string;
+  app_instance_id: string;
+  role: string;
+  member_ids: string[];
 };
 
 type ApplicationInstance = {
@@ -269,7 +284,7 @@ const denseTableSx = {
 } as const;
 
 export default function AssetWorkspacePage() {
-  const { t } = useTranslation(['it', 'common']);
+  const { t } = useTranslation(['it', 'common', 'errors']);
   const notSetLabel = t('common:selects.notSet');
   const ENV_OPTIONS = ENV_OPTION_KEYS.map((option) => ({ value: option.value, label: t(option.labelKey) }));
   const environmentLabel = (value: string | null | undefined) =>
@@ -293,6 +308,8 @@ export default function AssetWorkspacePage() {
   const id = isCreate ? routeId : (assetReferenceRoute ? canonicalAssetId || '' : routeId);
   const canManage = hasLevel('infrastructure', 'member');
   const canDelete = hasLevel('infrastructure', 'admin');
+  // Assignments belong to the applications module: a reader sees them, inherited ones included, and changes none.
+  const canAssign = hasLevel('applications', 'member');
 
   const notesSaveTimerRef = React.useRef<number | null>(null);
 
@@ -328,6 +345,9 @@ export default function AssetWorkspacePage() {
   const [saving, setSaving] = React.useState(false);
   const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
   const [assignmentsError, setAssignmentsError] = React.useState<string | null>(null);
+  const [groupable, setGroupable] = React.useState<GroupableSet[]>([]);
+  // The application, environment and members of each set of direct rows that could move to this cluster.
+  const [groupInfo, setGroupInfo] = React.useState<Record<string, { application: string; environment: string }>>({});
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
@@ -430,14 +450,34 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id) return;
     setAssignmentsError(null);
     try {
-      const res = await api.get<{ items: AssignmentRow[] }>(`/assets/${id}/assignments`);
+      const res = await api.get<{ items: AssignmentRow[]; groupable?: GroupableSet[] }>(`/assets/${id}/assignments`);
       setAssignments(res.data?.items ?? []);
+      setGroupable(res.data?.groupable ?? []);
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.loadAssignmentsFailed')));
     }
   }, [id, isCreate]);
 
   React.useEffect(() => { void refreshAssignments(); }, [refreshAssignments]);
+
+  // A set names a deployment, not its application: one member's rows tell it.
+  React.useEffect(() => {
+    if (groupable.length === 0) {
+      setGroupInfo({});
+      return undefined;
+    }
+    let cancelled = false;
+    const members = Array.from(new Set(groupable.map((set) => set.member_ids[0]).filter(Boolean)));
+    void Promise.all(members.map((memberId) => api.get<{ items: AssignmentRow[] }>(`/assets/${memberId}/assignments`)
+      .then((res) => res.data?.items ?? [])
+      .catch(() => [] as AssignmentRow[]))).then((lists) => {
+      if (cancelled) return;
+      const info: Record<string, { application: string; environment: string }> = {};
+      for (const row of lists.flat()) info[`${row.app_instance_id}|${row.role}`] = { application: row.application.name, environment: row.environment };
+      setGroupInfo(info);
+    });
+    return () => { cancelled = true; };
+  }, [groupable]);
 
   const [name, setName] = React.useState('');
   const [kind, setKind] = React.useState('');
@@ -936,7 +976,9 @@ export default function AssetWorkspacePage() {
     }
   };
 
+  const { resolveTargets, questionDialog } = useClusterAssignmentQuestion();
   const [assignDialogOpen, setAssignDialogOpen] = React.useState(false);
+  const [appNames, setAppNames] = React.useState<Record<string, string>>({});
   const [assigning, setAssigning] = React.useState(false);
   const [selectedAppId, setSelectedAppId] = React.useState<string | null>(null);
   const [appInstances, setAppInstances] = React.useState<Record<string, ApplicationInstance[]>>({});
@@ -956,6 +998,7 @@ export default function AssetWorkspacePage() {
         environment: i.environment,
       }));
       setAppInstances((prev) => ({ ...prev, [appId]: instances }));
+      setAppNames((prev) => ({ ...prev, [appId]: String(res.data?.name || '') }));
     } catch (e: any) {
       setAssignError(getApiErrorMessage(e, t, t('messages.loadAppInstancesFailed')));
       setAppInstances((prev) => ({ ...prev, [appId]: [] }));
@@ -1002,8 +1045,26 @@ export default function AssetWorkspacePage() {
     setAssigning(true);
     setAssignError(null);
     try {
+      let serverId = id;
+      // A member of a cluster: assign to the cluster, or to this server only (A2, A3).
+      if (!isCluster) {
+        const deployment = (await api.get<{ items: Array<{ app_instance_id: string; server_id: string; role: string }> }>(`/applications/${selectedAppId}/deployment-servers`)).data?.items ?? [];
+        const environment = environmentLabel(instances.find((instance) => instance.id === instanceId)?.environment);
+        const outcome = await resolveTargets({
+          assetIds: [id],
+          subject: `${appNames[selectedAppId] || t('components.clusterAssignment.thisApplication')} (${environment}, ${labelFor('serverRole', assignRole) || assignRole})`,
+          role: assignRole,
+          rows: deployment.filter((row) => row.app_instance_id === instanceId).map((row) => ({ asset_id: row.server_id, role: row.role })),
+        });
+        if (outcome.status === 'cancelled') return;
+        if (outcome.status === 'inherited') {
+          setAssignError(t('errors:assignment_inherited', { cluster: outcome.cluster }));
+          return;
+        }
+        serverId = outcome.targets[0];
+      }
       await api.post(`/app-instances/${instanceId}/assets`, {
-        server_id: id,
+        server_id: serverId,
         role: assignRole,
         since_date: assignSince || null,
         notes: assignNotes || null,
@@ -1017,6 +1078,23 @@ export default function AssetWorkspacePage() {
       setAssignError(getApiErrorMessage(e, t, t('messages.addAssignmentFailed')));
     } finally {
       setAssigning(false);
+    }
+  };
+
+  /** A7: this cluster takes the assignment its members carry one by one (the server replaces their rows). */
+  const assignGroupToCluster = async (set: GroupableSet, application: string) => {
+    if (!id) return;
+    if (!(await dialogs.confirm({
+      message: t('components.clusterAssignment.groupConfirm', { application }),
+      confirmLabel: t('components.clusterAssignment.assignToCluster'),
+    }))) return;
+    try {
+      await api.post(`/app-instances/${set.app_instance_id}/assets`, { server_id: id, role: set.role });
+      await refreshAssignments();
+      // The impact reads the applications the asset hosts.
+      void queryClient.invalidateQueries({ queryKey: ['asset-impact', id] });
+    } catch (e: any) {
+      setAssignmentsError(getApiErrorMessage(e, t, t('messages.addAssignmentFailed')));
     }
   };
 
@@ -2032,22 +2110,19 @@ export default function AssetWorkspacePage() {
                 <Box>
                   {assignmentsError && <Alert severity="error" sx={{ mb: 2 }}>{assignmentsError}</Alert>}
                   {assignMessage && <Alert severity="success" sx={{ mb: 2 }} onClose={() => setAssignMessage(null)}>{assignMessage}</Alert>}
-                  {isCluster && (
-                    <Alert severity="info" sx={{ mb: 2 }}>
-                      {t('workspace.asset.assignments.clusterCannotHost')}
-                    </Alert>
-                  )}
                   <Stack direction="row" justifyContent="space-between" alignItems="center" sx={{ mb: 1 }}>
                     <SectionLabel>{t('workspace.asset.operations.hostedApplications')}</SectionLabel>
-                    <Button
-                      variant="action"
-                      size="small"
-                      startIcon={<AddIcon />}
-                      onClick={openAssignDialog}
-                      disabled={serverRoleOptions.length === 0 || isCluster}
-                    >
-                      {t('workspace.asset.assignments.addAssignment')}
-                    </Button>
+                    {canAssign && (
+                      <Button
+                        variant="action"
+                        size="small"
+                        startIcon={<AddIcon />}
+                        onClick={openAssignDialog}
+                        disabled={serverRoleOptions.length === 0}
+                      >
+                        {t('workspace.asset.assignments.addAssignment')}
+                      </Button>
+                    )}
                   </Stack>
                   <Table size="small" sx={denseTableSx}>
                     <TableHead>
@@ -2057,29 +2132,37 @@ export default function AssetWorkspacePage() {
                         <TableCell>{t('workspace.asset.assignments.role')}</TableCell>
                         <TableCell>{t('workspace.asset.assignments.since')}</TableCell>
                         <TableCell>{t('workspace.asset.assignments.notes')}</TableCell>
-                        <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>
+                        {canAssign && <TableCell align="right">{t('workspace.asset.assignments.actions')}</TableCell>}
                       </TableRow>
                     </TableHead>
                     <TableBody>
                       {assignments.length === 0 && (
                         <TableRow>
-                          <TableCell colSpan={6}>
+                          <TableCell colSpan={canAssign ? 6 : 5}>
                             <Typography variant="body2" color="text.secondary">{t('workspace.asset.assignments.noAssignments')}</Typography>
                           </TableCell>
                         </TableRow>
                       )}
                       {assignments.map((assignment) => (
-                        <TableRow key={assignment.id}>
+                        <TableRow key={`${assignment.id}|${assignment.inherited ? 'via' : 'own'}`}>
                           <TableCell>
                             <Button size="small" onClick={() => navigate(`/it/applications/${assignment.application.id}/deployments`)}>
                               {assignment.application.name}
                             </Button>
+                            {assignment.inherited && (assignment.via_clusters?.length ?? 0) > 0 && (
+                              <Box component="span" sx={(muiTheme) => ({ ml: 0.5, fontSize: 12, color: muiTheme.palette.kanap.text.tertiary })}>
+                                {t('components.clusterAssignment.via')} <ViaAssetNames assets={assignment.via_clusters ?? []} />
+                              </Box>
+                            )}
                           </TableCell>
                           <TableCell>{environmentLabel(assignment.environment)}</TableCell>
                           <TableCell>{labelFor('serverRole', assignment.role) || assignment.role}</TableCell>
                           <TableCell>{assignment.since_date ? formatShortDate(assignment.since_date, locale, { year: 'always' }) : '-'}</TableCell>
                           <TableCell>{assignment.notes || '-'}</TableCell>
+                          {canAssign && (
                           <TableCell align="right">
+                            {!assignment.inherited && (
+                            <>
                             <Tooltip title={t('workspace.asset.assignments.editAssignment')}>
                               <span>
                                 <IconButton
@@ -2101,11 +2184,28 @@ export default function AssetWorkspacePage() {
                                 </IconButton>
                               </span>
                             </Tooltip>
+                            </>
+                            )}
                           </TableCell>
+                          )}
                         </TableRow>
                       ))}
                     </TableBody>
                   </Table>
+                  {canAssign && isCluster && groupable.map((set) => {
+                    const info = groupInfo[`${set.app_instance_id}|${set.role}`];
+                    if (!info) return null;
+                    const names = set.member_ids.map((memberId) => clusterMembers.find((member) => member.id === memberId)?.name).filter(Boolean).join(', ');
+                    const subject = `${info.application} (${environmentLabel(info.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
+                    return (
+                      <ClusterGroupLine
+                        key={`${set.app_instance_id}|${set.role}`}
+                        text={t('components.clusterAssignment.groupLine', { subject, members: names })}
+                        actionLabel={t('components.clusterAssignment.assignToCluster')}
+                        onAssign={() => void assignGroupToCluster(set, info.application)}
+                      />
+                    );
+                  })}
                 </Box>
               )}
               {!isCreate && id && (
@@ -2512,6 +2612,8 @@ export default function AssetWorkspacePage() {
             {memberSaveError && <Alert severity="error">{memberSaveError}</Alert>}
           </Stack>
       </KanapDialog>
+
+      {questionDialog}
 
       <KanapDialog
         open={assignDialogOpen}
