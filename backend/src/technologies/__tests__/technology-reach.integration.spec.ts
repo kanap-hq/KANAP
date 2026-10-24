@@ -59,14 +59,19 @@ async function testApplications() {
     const rows = await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [g.tech.sql]);
     const got = rows.map((row) => `${row.application_id}|${row.kind}|${row.asset_id ?? '-'}|${row.via_asset_id ?? '-'}|${row.technology_version_id ?? '-'}`).sort();
     assert.deepEqual(got, [
-      // The ERP on the SQL cluster: both versions, through each node (over-approximation shown).
-      `${g.apps.erp}|hosted|${g.ids.sqlCluster}|${g.ids.sqlNode1}|${g.versions.sql2019}`,
-      `${g.apps.erp}|hosted|${g.ids.sqlCluster}|${g.ids.sqlNode2}|${g.versions.sql2016}`,
-      // And on each node, which runs it too (clusters pass, lot B2: effective assignments).
+      // The ERP on the SQL cluster runs on each node (clusters pass, lot B2: effective assignments):
+      // one row per node, its version. The cluster, carried by the nodes, adds no row.
       `${g.apps.erp}|hosted|${g.ids.sqlNode1}|-|${g.versions.sql2019}`,
       `${g.apps.erp}|hosted|${g.ids.sqlNode2}|-|${g.versions.sql2016}`,
       // The portal declares SQL Server without a version.
       `${g.apps.portal}|declared|-|-|-`,
+    ].sort());
+
+    // The other way: the ERP's SQL Server, one row per node, none through the cluster.
+    const ofErp = await reach.technologiesOfApplications(runner.manager, g.tenantId, [g.apps.erp]);
+    assert.deepEqual(ofErp.map((row) => `${row.technology_id}|${row.kind}|${row.asset_id}|${row.via_asset_id ?? '-'}|${row.technology_version_id}`).sort(), [
+      `${g.tech.sql}|hosted|${g.ids.sqlNode1}|-|${g.versions.sql2019}`,
+      `${g.tech.sql}|hosted|${g.ids.sqlNode2}|-|${g.versions.sql2016}`,
     ].sort());
 
     // The other way: the portal's technologies are vSphere through its VM (via each host) and SQL Server declared.
@@ -81,9 +86,9 @@ async function testApplications() {
     // The tab of the technology names the server, the environment and the version, unknown included.
     const tab = await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, {});
     const items = tab.items!;
-    assert.equal(items.length, 5);
+    assert.equal(items.length, 3);
     assert.ok(items.some((item) => item.kind === 'declared' && item.version_label === null));
-    const servers = [g.ids.sqlCluster, g.ids.sqlNode1, g.ids.sqlNode2];
+    const servers = [g.ids.sqlNode1, g.ids.sqlNode2];
     assert.ok(items.filter((item) => item.kind === 'hosted').every((item) => item.environment === 'prod' && servers.includes(item.asset_id!)));
     // Without the applications read right, no row; a Business Contributor sees its applications only.
     assert.equal((await links.applicationsOfTechnology(g.tech.sql, { manager: runner.manager, tenantId: g.tenantId }, null)).items, null);
@@ -299,6 +304,19 @@ async function testThroughHost() {
     assert.deepEqual(winTab.map((item) => `${item.asset_id}|${item.kind}|${item.through_host}`).sort(), [
       `${vmA}|installed|false`, `${vmB}|installed|false`, `${cluster}|carried|false`,
     ].sort());
+
+    // An application on the cluster runs on both VMs: Windows on each, ESXi through each VM's host
+    // (the platform underneath), and nothing through the cluster, which the VMs carry.
+    const onCluster = await application(runner, g.tenantId, 'On WIN-CL reach-host');
+    await assign(runner, g.tenantId, onCluster, cluster);
+    const ofApp = await reach.technologiesOfApplications(runner.manager, g.tenantId, [onCluster]);
+    assert.deepEqual(ofApp.map((r) => `${r.technology_id}|${r.asset_id}|${r.via_asset_id ?? '-'}`).sort(), [
+      `${esxi}|${vmA}|${hostA}`, `${esxi}|${vmB}|${hostB}`, `${windows}|${vmA}|-`, `${windows}|${vmB}|-`,
+    ].sort());
+    for (const [tech, expected] of [[esxi, [`${vmA}|${hostA}`, `${vmB}|${hostB}`]], [windows, [`${vmA}|-`, `${vmB}|-`]]] as const) {
+      const apps = (await reach.applicationsOfTechnologies(runner.manager, g.tenantId, [tech])).filter((r) => r.application_id === onCluster);
+      assert.deepEqual(apps.map((r) => `${r.asset_id}|${r.via_asset_id ?? '-'}`).sort(), [...expected].sort());
+    }
 
     // A path without `contains` wins: Windows also on host A (same version) reaches the cluster
     // through VM-A's host too, and the line stays plain.
