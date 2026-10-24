@@ -26,9 +26,10 @@ export type ClusterQuestionOutcome =
   | { status: 'ok'; targets: string[] };
 
 type ClusterChoice = { id: string; name: string; count: number; absorbed: string[] };
-type Pending = { server: string; subject: string; clusters: ClusterChoice[]; resolve: (answer: string | null) => void };
+/** `direct`: the cluster itself was chosen; only the members' rows it replaces are said (A4). */
+type Pending = { server: string; subject: string; clusters: ClusterChoice[]; direct?: boolean; resolve: (answer: string | null) => void };
 
-type AssetRef = { id: string; name: string; status?: string };
+type AssetRef = { id: string; name: string; status?: string; is_cluster?: boolean };
 
 const SERVER_ONLY = 'server';
 
@@ -45,14 +46,14 @@ function QuestionDialog({ pending }: { pending: Pending }) {
       onSave={() => pending.resolve(cluster.id)}
       saveLabel={t('components.clusterAssignment.assignToCluster')}
       saveAutoFocus
-      secondaryActions={(
+      secondaryActions={pending.direct ? undefined : (
         <Button variant="action" onClick={() => pending.resolve(SERVER_ONLY)}>
           {t('components.clusterAssignment.serverOnly')}
         </Button>
       )}
     >
       <Box sx={{ display: 'grid', gap: 1 }}>
-        <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>
+        {!pending.direct && <Typography sx={(theme) => ({ fontSize: 13, color: theme.palette.kanap.text.secondary })}>
           {several
             ? t('components.clusterAssignment.inClusters', { server: pending.server })
             : t('components.clusterAssignment.inCluster', {
@@ -61,7 +62,7 @@ function QuestionDialog({ pending }: { pending: Pending }) {
               count: cluster.count,
               subject: pending.subject,
             })}
-        </Typography>
+        </Typography>}
         {several && (
           <RadioGroup value={selected} onChange={(event) => setSelected(event.target.value)}>
             {pending.clusters.map((choice) => (
@@ -92,44 +93,62 @@ function QuestionDialog({ pending }: { pending: Pending }) {
  *
  * `resolveTargets` reads the clusters of each chosen server (`GET /assets/:id/clusters`) and their
  * members, then asks one question per server (the cluster to choose when it belongs to several).
- * A server of no cluster, or a cluster, needs no question. Render `questionDialog` once.
+ * A server of no cluster needs no question. A cluster chosen directly asks only when it would
+ * replace direct rows of its members (A4), in one sentence. Render `questionDialog` once.
  */
 export default function useClusterAssignmentQuestion() {
   const [pending, setPending] = React.useState<Pending | null>(null);
 
   const resolveTargets = React.useCallback(async (input: ClusterQuestionInput): Promise<ClusterQuestionOutcome> => {
     const targets: string[] = [];
+    const ask = (question: Omit<Pending, 'resolve'>) => new Promise<string | null>((resolve) => {
+      setPending({ ...question, resolve });
+    }).finally(() => setPending(null));
+    const membersInService = async (clusterId: string) =>
+      ((await api.get<{ items: AssetRef[] }>(`/assets/${clusterId}/members`)).data?.items ?? [])
+        .filter((member) => member.status !== 'retired');
+    const holding = (memberId: string) => input.rows.some((row) => row.asset_id === memberId && row.role === input.role);
     for (const assetId of input.assetIds) {
       const clusters = ((await api.get<{ items: AssetRef[] }>(`/assets/${assetId}/clusters`)).data?.items ?? [])
         .filter((cluster) => cluster.status !== 'retired');
-      const carrying = clusters.find((cluster) => input.rows.some((row) => row.asset_id === cluster.id && row.role === input.role));
-      if (carrying) return { status: 'inherited', cluster: carrying.name };
+      if (clusters.length === 0) {
+        // A cluster chosen directly takes the place of its members' identical rows: said first.
+        const asset = (await api.get<AssetRef>(`/assets/${assetId}`)).data;
+        const absorbed = asset?.is_cluster && asset.status !== 'retired'
+          ? (await membersInService(assetId)).filter((member) => holding(member.id)).map((member) => member.name)
+          : [];
+        if (absorbed.length > 0) {
+          const choice = { id: assetId, name: asset.name, count: 0, absorbed };
+          if ((await ask({ server: asset.name, subject: input.subject, clusters: [choice], direct: true })) === null) return { status: 'cancelled' };
+        }
+        targets.push(assetId);
+        continue;
+      }
       const choices: ClusterChoice[] = [];
       let server = '';
+      let carrying: AssetRef | null = null;
       for (const cluster of clusters) {
-        const members = ((await api.get<{ items: AssetRef[] }>(`/assets/${cluster.id}/members`)).data?.items ?? [])
-          .filter((member) => member.status !== 'retired');
+        const members = await membersInService(cluster.id);
         const self = members.find((member) => member.id === assetId);
-        // A retired server inherits nothing: its cluster is no choice for it.
+        // A retired server inherits nothing: its cluster is no choice for it, and refuses nothing.
         if (!self) continue;
         server = self.name;
+        if (!carrying && input.rows.some((row) => row.asset_id === cluster.id && row.role === input.role)) carrying = cluster;
         choices.push({
           id: cluster.id,
           name: cluster.name,
           count: members.length,
           absorbed: members
-            .filter((member) => member.id !== assetId && input.rows.some((row) => row.asset_id === member.id && row.role === input.role))
+            .filter((member) => member.id !== assetId && holding(member.id))
             .map((member) => member.name),
         });
       }
+      if (carrying) return { status: 'inherited', cluster: carrying.name };
       if (choices.length === 0) {
         targets.push(assetId);
         continue;
       }
-      const answer = await new Promise<string | null>((resolve) => {
-        setPending({ server, subject: input.subject, clusters: choices, resolve });
-      });
-      setPending(null);
+      const answer = await ask({ server, subject: input.subject, clusters: choices });
       if (answer === null) return { status: 'cancelled' };
       targets.push(answer === SERVER_ONLY ? assetId : answer);
     }

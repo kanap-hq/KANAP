@@ -61,9 +61,9 @@ describe('picker options: one line, the description in a delayed tooltip', () =>
   });
 
   it('ServerSelect: environment, kind and provider move to the tooltip; a cluster carries its mark and its members', async () => {
-    apiGet.mockImplementation(async (url: string) => (url.endsWith('/members')
-      ? { data: { items: [{ id: 'm1', name: 'PAR-SQL-01' }, { id: 'm2', name: 'PAR-SQL-02' }] } }
-      : { data: { items: [{ id: 's1', name: 'web-01', environment: 'prod', kind: 'vm', provider: 'azure', is_cluster: true }] } }));
+    apiGet.mockResolvedValue({
+      data: { items: [{ id: 's1', name: 'web-01', environment: 'prod', kind: 'vm', provider: 'azure', is_cluster: true, member_names: ['PAR-SQL-01', 'PAR-SQL-02'] }] },
+    });
     renderField(<ServerSelect value={null} onChange={() => undefined} />);
     await openList();
     await waitFor(() => expect(screen.getByRole('option').firstChild?.textContent).toBe('web-01PAR-SQL-01, PAR-SQL-02'));

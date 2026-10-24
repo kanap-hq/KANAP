@@ -66,7 +66,11 @@ function route(url: string) {
   if (clusters) return { data: { items: wire.clusters[clusters[1]] ?? [] } };
   const members = url.match(/^\/assets\/([^/]+)\/members$/);
   if (members) return { data: { items: wire.members[members[1]] ?? [] } };
-  return { data: { items: [{ ...wire.picked, environment: 'prod', kind: 'vm', provider: 'on_prem' }] } };
+  if (url === `/assets/${wire.picked.id}`) return { data: { ...wire.picked, status: 'active' } };
+  const memberNames = (wire.picked as { is_cluster?: boolean }).is_cluster
+    ? { member_names: (wire.members[wire.picked.id] ?? []).map((member) => member.name) }
+    : {};
+  return { data: { items: [{ ...wire.picked, environment: 'prod', kind: 'vm', provider: 'on_prem', ...memberNames }] } };
 }
 
 function renderEditor(readOnly = false) {
@@ -225,6 +229,22 @@ describe('DeploymentsEditor: clusters', () => {
     expect(within(option).getByRole('img', { name: 'Cluster' })).toBeTruthy();
     const filters = apiGet.mock.calls.filter(([url]) => url === '/assets').map(([, config]) => config.params.filters);
     expect(filters.every((value) => value === undefined)).toBe(true);
+    // The members come with the list, in one read.
+    expect(apiGet.mock.calls.filter(([url]) => url === '/assets').every(([, config]) => config.params.include === 'member_names')).toBe(true);
+    expect(apiGet).not.toHaveBeenCalledWith('/assets/cl-1/members', expect.anything());
+  });
+
+  it('says which direct rows a cluster chosen directly replaces, and posts it on the answer', async () => {
+    wire.picked = { id: 'cl-1', name: 'PAR-SQL-CL01', is_cluster: true } as any;
+    wire.members['cl-1'] = [SQL1, SQL2];
+    wire.rows = [row('a-1', 'sql-1', 'PAR-SQL-01', 'db')];
+    renderEditor();
+    await addPickedServer();
+    const dialog = (await screen.findByText('The direct assignment of PAR-SQL-01 will be replaced.')).closest('[role="dialog"]') as HTMLElement;
+    expect(within(dialog).queryByRole('button', { name: 'This server only' })).toBeNull();
+    expect(apiPost).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Assign to the cluster' }));
+    await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/app-deployments/dep-1/servers', expect.objectContaining({ server_id: 'cl-1', role: 'db' })));
   });
 
   it('proposes to group the direct rows on the cluster, after a confirmation', async () => {

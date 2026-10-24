@@ -453,9 +453,12 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id) return;
     setAssignmentsError(null);
     try {
-      const res = await api.get<{ items: AssignmentRow[]; groupable?: GroupableSet[] }>(`/assets/${id}/assignments`);
-      setAssignments(res.data?.items ?? []);
-      setGroupable(res.data?.groupable ?? []);
+      const [rows, sets] = await Promise.all([
+        api.get<AssignmentRow[]>(`/assets/${id}/assignments`),
+        api.get<{ items: GroupableSet[] }>(`/assets/${id}/assignments/groupable`),
+      ]);
+      setAssignments(Array.isArray(rows.data) ? rows.data : []);
+      setGroupable(sets.data?.items ?? []);
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.loadAssignmentsFailed')));
     }
@@ -1030,8 +1033,9 @@ export default function AssetWorkspacePage() {
     setAssignError(null);
     try {
       let serverId = id;
-      // A member of a cluster: assign to the cluster, or to this server only (A2, A3).
-      if (!isCluster) {
+      // A member of a cluster: assign to the cluster, or to this server only (A2, A3). A cluster:
+      // say the members' rows it replaces (A4).
+      {
         const deployment = (await api.get<{ items: Array<{ app_instance_id: string; server_id: string; role: string }> }>(`/applications/${selectedAppId}/deployment-servers`)).data?.items ?? [];
         const environment = environmentLabel(instances.find((instance) => instance.id === instanceId)?.environment);
         const outcome = await resolveTargets({
@@ -1118,15 +1122,27 @@ export default function AssetWorkspacePage() {
     confirmLabel: t('workspace.asset.editMembersDialog.removeOsConfirm'),
   });
 
-  /** A8: the applications a cluster carries on its own rows (what its members inherit), by name. */
-  const clusterApplicationNames = async (): Promise<string[]> => {
-    let rows = assignments;
+  /** The rows of a server (`GET /assets/:id/assignments`); `fallback` when the read fails. */
+  const readAssignments = async (assetId: string, fallback: AssignmentRow[]): Promise<AssignmentRow[]> => {
     try {
-      rows = (await api.get<{ items: AssignmentRow[] }>(`/assets/${id}/assignments`)).data?.items ?? assignments;
+      const rows = (await api.get<AssignmentRow[]>(`/assets/${assetId}/assignments`)).data;
+      return Array.isArray(rows) ? rows : fallback;
     } catch {
-      // The rows read with the page stand in.
+      return fallback;
     }
-    return Array.from(new Set(rows.filter((row) => !row.inherited).map((row) => row.application.name)))
+  };
+
+  /**
+   * A8: the applications a removed member stops hosting, by name: those the cluster carries on its
+   * own rows, except those the member also holds directly or through another cluster.
+   */
+  const lostApplicationNames = async (clusterRows: AssignmentRow[], memberId: string): Promise<string[]> => {
+    const kept = new Set((await readAssignments(memberId, []))
+      .filter((row) => !row.inherited || (row.via_clusters ?? []).some((via) => via.id !== id))
+      .map((row) => row.application.id));
+    return Array.from(new Set(clusterRows
+      .filter((row) => !row.inherited && !kept.has(row.application.id))
+      .map((row) => row.application.name)))
       .sort((a, b) => a.localeCompare(b));
   };
 
@@ -1163,10 +1179,14 @@ export default function AssetWorkspacePage() {
     let removeOperatingSystem = false;
     // A8: the members taken out stop hosting what the cluster carries.
     const removed = clusterMembers.filter((m) => !ids.includes(m.id));
-    const applications = removed.length > 0 ? await clusterApplicationNames() : [];
-    const lines = applications.length > 0
-      ? removed.map((m) => t('workspace.asset.editMembersDialog.removeMemberLine', { member: m.name, applications: applicationList(applications) }))
-      : [];
+    const clusterRows = removed.length > 0 && id ? await readAssignments(id, assignments) : [];
+    const lines: string[] = [];
+    for (const m of removed) {
+      const applications = clusterRows.length > 0 ? await lostApplicationNames(clusterRows, m.id) : [];
+      if (applications.length > 0) {
+        lines.push(t('workspace.asset.editMembersDialog.removeMemberLine', { member: m.name, applications: applicationList(applications) }));
+      }
+    }
     // The first members of a cluster that carries an operating system take it away.
     const os = ids.length > 0 && data?.operating_system ? data.operating_system : null;
     if (lines.length > 0 || os) {

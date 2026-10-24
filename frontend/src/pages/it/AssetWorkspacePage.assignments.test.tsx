@@ -78,6 +78,8 @@ const ASSET = {
 const wire = {
   asset: ASSET as typeof ASSET,
   assignments: { items: [] as unknown[], groupable: [] as unknown[] },
+  /** The rows of the member PAR-SQL-02 (`GET /assets/sql-2/assignments`). */
+  memberRows: [] as unknown[],
   clusters: [] as unknown[],
   members: [] as unknown[],
   deploymentServers: [] as unknown[],
@@ -95,7 +97,9 @@ const inherited = {
 function renderOperations(tab = 'operations') {
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return { data: wire.asset };
-    if (url === '/assets/asset-1/assignments') return { data: wire.assignments };
+    if (url === '/assets/asset-1/assignments') return { data: wire.assignments.items };
+    if (url === '/assets/asset-1/assignments/groupable') return { data: { items: wire.assignments.groupable } };
+    if (url === '/assets/sql-2/assignments') return { data: wire.memberRows };
     if (url === '/applications/app-1') return { data: { id: 'app-1', name: 'CheeseTrack', instances: [{ id: 'dep-1', environment: 'prod' }] } };
     if (url === '/applications/app-1/deployment-servers') return { data: { items: wire.deploymentServers, groupable: [] } };
     if (url === '/assets/asset-1/clusters') return { data: { items: wire.clusters } };
@@ -141,6 +145,7 @@ describe('Asset workspace: assignments and clusters', () => {
     auth.assign = true;
     wire.asset = ASSET;
     wire.assignments = { items: [], groupable: [] };
+    wire.memberRows = [];
     wire.clusters = [];
     wire.members = [];
     wire.deploymentServers = [];
@@ -219,6 +224,29 @@ describe('Asset workspace: assignments and clusters', () => {
     expect(post).not.toHaveBeenCalled();
   });
 
+  it('lets a retired member take its own row though its cluster carries the role', async () => {
+    wire.clusters = [{ id: 'cl-1', name: 'PAR-SQL-CL01', status: 'active' }];
+    wire.members = [{ id: 'asset-1', name: 'PAR-SQL-01', status: 'retired' }, { id: 'sql-2', name: 'PAR-SQL-02', status: 'active' }];
+    wire.deploymentServers = [{ id: 'as-cl', app_instance_id: 'dep-1', server_id: 'cl-1', role: 'db' }];
+    renderOperations();
+    await addAssignment();
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/dep-1/assets', expect.objectContaining({ server_id: 'asset-1' })));
+    expect(screen.queryByText('Already hosted by this server through PAR-SQL-CL01.')).toBeNull();
+  });
+
+  it('says which direct rows a cluster replaces before assigning it, and posts it on the answer', async () => {
+    wire.asset = { ...ASSET, is_cluster: true };
+    wire.members = [{ id: 'sql-2', name: 'PAR-SQL-02', status: 'active' }];
+    wire.deploymentServers = [{ id: 'as-2', app_instance_id: 'dep-1', server_id: 'sql-2', role: 'db' }];
+    renderOperations();
+    await addAssignment();
+    const dialog = (await screen.findByText('The direct assignment of PAR-SQL-02 will be replaced.')).closest('[role="dialog"]') as HTMLElement;
+    expect(within(dialog).queryByRole('button', { name: 'This server only' })).toBeNull();
+    expect(post).not.toHaveBeenCalled();
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Assign to the cluster' }));
+    await waitFor(() => expect(post).toHaveBeenCalledWith('/app-instances/dep-1/assets', expect.objectContaining({ server_id: 'asset-1', role: 'db' })));
+  });
+
   it('proposes to group on the cluster page and posts the cluster after a confirmation', async () => {
     wire.asset = { ...ASSET, id: 'asset-1', name: 'PAR-SQL-CL01', is_cluster: true };
     wire.assignments = {
@@ -261,6 +289,19 @@ describe('Asset workspace: assignments and clusters', () => {
       expect(post).not.toHaveBeenCalled();
       fireEvent.click(screen.getByRole('button', { name: 'Remove anyway' }));
       await waitFor(() => expect(post).toHaveBeenCalledWith('/assets/asset-1/members', { server_ids: ['sql-1'] }));
+    });
+
+    it('leaves out what the removed member also holds directly or through another cluster', async () => {
+      wire.assignments = { items: [row('b', 'Sage X3'), row('a', 'CheeseTrack'), row('c', 'Intranet')], groupable: [] };
+      wire.memberRows = [
+        { ...row('b', 'Sage X3'), id: 'own-b' },
+        { ...row('c', 'Intranet'), id: 'other-c', inherited: true, via_clusters: [{ id: 'cl-9', name: 'OTHER-CL' }] },
+        { ...row('a', 'CheeseTrack'), id: 'via-a', inherited: true, via_clusters: [{ id: 'asset-1', name: 'PAR-SQL-CL01' }] },
+      ];
+      const dialog = await openMembers();
+      removeSecond(dialog);
+      save(dialog);
+      expect(await screen.findByText('PAR-SQL-02 will no longer host CheeseTrack.')).toBeTruthy();
     });
 
     it('names three applications and counts the others', async () => {

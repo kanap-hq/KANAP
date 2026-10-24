@@ -326,8 +326,9 @@ export default function DeploymentsEditor({
       const stored = assignments[assignmentDraft.deploymentId] || [];
       const original = assignmentDraft.assignmentId ? stored.find((row) => row.id === assignmentDraft.assignmentId) : undefined;
       let serverId = assignmentDraft.server_id;
-      // A server that is a member of a cluster: assign to the cluster, or to this server only (A2, A3).
-      if (serverId && (!original || original.server_id !== serverId)) {
+      // A member of a cluster: assign to the cluster, or to this server only (A2, A3). A cluster:
+      // say the members' rows it replaces (A4).
+      if (serverId && (!original || original.server_id !== serverId || original.role !== assignmentDraft.role)) {
         const deployment = deployments.find((candidate) => candidate.id === assignmentDraft.deploymentId);
         const outcome = await resolveTargets({
           assetIds: [serverId],
