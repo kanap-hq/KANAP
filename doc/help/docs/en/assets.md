@@ -103,7 +103,7 @@ Installations upgraded from an earlier version keep their clusters. Memberships 
 
 ### Deleting a cluster or a member { #deleting-a-cluster-or-a-member }
 
-Before you delete an asset, the confirmation says what goes with it: the clusters it leaves, the members that lose their cluster, and the relations with other assets that are removed. Confirm with **Delete anyway**. These losses are recorded in the [Audit log](admin.md#audit-log), on each asset concerned.
+Before you delete an asset, the confirmation says what goes with it: the clusters it leaves, the members that lose their cluster, and the relations with other assets that are removed. Confirm with **Delete anyway**. The [Audit log](admin.md#audit-log) records these losses: on each cluster it leaves and each asset that held a relation to it, and, for its own members and relations, in the entry of its deletion.
 
 ---
 

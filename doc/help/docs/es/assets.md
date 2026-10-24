@@ -103,7 +103,7 @@ Las instalaciones actualizadas desde una versión anterior conservan sus clúste
 
 ### Eliminar un clúster o un miembro { #deleting-a-cluster-or-a-member }
 
-Antes de eliminar un activo, la confirmación indica lo que se va con él: los clústeres que abandona, los miembros que pierden su clúster y las relaciones con otros activos que se eliminan. Confirme con **Eliminar de todos modos**. Estas pérdidas quedan registradas en el [Registro de auditoría](admin.md#registro-de-auditoria), en cada activo afectado.
+Antes de eliminar un activo, la confirmación indica lo que se va con él: los clústeres que abandona, los miembros que pierden su clúster y las relaciones con otros activos que se eliminan. Confirme con **Eliminar de todos modos**. El [Registro de auditoría](admin.md#registro-de-auditoria) registra estas pérdidas: en cada clúster que abandona y en cada activo que tenía una relación con él, y, para sus propios miembros y relaciones, en la entrada de su eliminación.
 
 ---
 

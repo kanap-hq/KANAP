@@ -103,7 +103,7 @@ Installationen, die von einer früheren Version aktualisiert wurden, behalten ih
 
 ### Einen Cluster oder ein Mitglied löschen { #deleting-a-cluster-or-a-member }
 
-Bevor Sie ein Asset löschen, sagt die Bestätigung, was mit ihm verschwindet: die Cluster, die es verlässt, die Mitglieder, die ihren Cluster verlieren, und die Beziehungen zu anderen Assets, die entfernt werden. Bestätigen Sie mit **Trotzdem löschen**. Diese Verluste werden im [Audit-Protokoll](admin.md#audit-protokoll) bei jedem betroffenen Asset erfasst.
+Bevor Sie ein Asset löschen, sagt die Bestätigung, was mit ihm verschwindet: die Cluster, die es verlässt, die Mitglieder, die ihren Cluster verlieren, und die Beziehungen zu anderen Assets, die entfernt werden. Bestätigen Sie mit **Trotzdem löschen**. Das [Audit-Protokoll](admin.md#audit-protokoll) erfasst diese Verluste: bei jedem Cluster, den es verlässt, und bei jedem Asset, das eine Beziehung zu ihm hatte, und für seine eigenen Mitglieder und Beziehungen im Eintrag seiner Löschung.
 
 ---
 

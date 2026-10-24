@@ -103,7 +103,7 @@ Les installations mises à jour depuis une version antérieure gardent leurs clu
 
 ### Supprimer un cluster ou un membre { #deleting-a-cluster-or-a-member }
 
-Avant la suppression d'un actif, la confirmation dit ce qui part avec lui : les clusters qu'il quitte, les membres qui perdent leur cluster et les relations avec d'autres actifs qui sont retirées. Confirmez avec **Supprimer quand même**. Ces pertes sont inscrites au [Journal d'audit](admin.md#journal-daudit), sur chaque actif concerné.
+Avant la suppression d'un actif, la confirmation dit ce qui part avec lui : les clusters qu'il quitte, les membres qui perdent leur cluster et les relations avec d'autres actifs qui sont retirées. Confirmez avec **Supprimer quand même**. Le [Journal d'audit](admin.md#journal-daudit) inscrit ces pertes : sur chaque cluster qu'il quitte et chaque actif qui avait une relation vers lui, et, pour ses propres membres et relations, dans l'entrée de sa suppression.
 
 ---
 
