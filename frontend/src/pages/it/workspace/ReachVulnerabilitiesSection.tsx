@@ -38,8 +38,11 @@ export type ReachVulnerabilities = {
   indirect?: ReachVulnerabilityRow[];
   /** Distinct CVE over the direct lines; null when the asset or application is out of service. */
   totals: { open: number; severe: number; exploited_severe: number } | null;
-  /** A cluster only: distinct CVE over the direct links of its members in service; null when retired. */
-  member_totals?: { open: number; severe: number; exploited_severe: number } | null;
+  /**
+   * A cluster only: distinct CVE over its own direct links and those of its members in service,
+   * `critical` among them; null when retired.
+   */
+  member_totals?: { open: number; severe: number; exploited_severe: number; critical?: number } | null;
 };
 
 /** The anchor of the section. */

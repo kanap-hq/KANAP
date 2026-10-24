@@ -873,6 +873,32 @@ describe('Asset workspace: section placement', () => {
       expect((await screen.findByTestId('reach-vulnerabilities-count')).textContent).toBe('11');
     });
 
+    it('colours a cluster badge by the critical CVE its count holds, not by the carried lines', async () => {
+      // A critical CVE carried by a host of a member VM is listed, not counted: the badge stays high.
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        rows: [],
+        indirect: [{ ...REACH.rows[0], open: { ...OPEN, critical: 1 } }],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 4, severe: 2, exploited_severe: 0, critical: 0 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.querySelector('[data-severity="high"]')).not.toBeNull();
+      expect(badge.querySelector('[data-severity="critical"]')).toBeNull();
+    });
+
+    it('colours a cluster badge critical when its count holds a critical CVE', async () => {
+      renderAt('/it/assets/asset-1/operations', {
+        ...REACH,
+        rows: [],
+        indirect: [],
+        totals: { open: 0, severe: 0, exploited_severe: 0 },
+        member_totals: { open: 4, severe: 2, exploited_severe: 0, critical: 1 },
+      });
+      const badge = await screen.findByTestId('vulnerability-severe-badge');
+      expect(badge.querySelector('[data-severity="critical"]')).not.toBeNull();
+    });
+
     it('links the section count to the Vulnerabilities page filtered on the asset', async () => {
       renderAt('/it/assets/asset-1/operations');
       const count = await screen.findByTestId('reach-vulnerabilities-count');

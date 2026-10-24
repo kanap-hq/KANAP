@@ -1840,7 +1840,9 @@ export default function AssetWorkspacePage() {
                 severe={badgeTotals.severe}
                 exploitedSevere={badgeTotals.exploited_severe}
                 includesMembers={!!reachVulnerabilities.member_totals}
-                highestSeverity={highestSevereOf(reachVulnerabilities.member_totals ? [...reachVulnerabilities.rows, ...(reachVulnerabilities.indirect ?? [])] : reachVulnerabilities.rows)}
+                highestSeverity={reachVulnerabilities.member_totals
+                  ? ((reachVulnerabilities.member_totals.critical ?? 0) > 0 ? 'critical' : 'high')
+                  : highestSevereOf(reachVulnerabilities.rows)}
                 to={`/it/vulnerabilities?asset=${encodeURIComponent(data?.asset_reference || id)}`}
               />
             )}
