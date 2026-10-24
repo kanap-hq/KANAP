@@ -135,6 +135,7 @@ export const DATA_ACCESS_WRITES: DataAccessWriteEntry[] = [
 
 /** Links to a line written from the other object's side, outside `spend/` and `tasks/`. */
 export const DATA_ACCESS_LINK_WRITES: DataAccessWriteEntry[] = [
+  { file: 'ai/mutation/ai-relation-mutation-support.service.ts', member: 'replaceSimpleRelation', count: 2, handling: 'visible_links', reason: 'Plaid relation writes (update_entity_relations): a line named is resolved under the policies (an unreadable one matches nothing, as a missing one), the links read and compared are the visible ones, the DELETE reaches the visible links only (link policies, or the EXISTS on spend_items for contract_spend_items), so the hidden links stay; from the line side the preview refuses a read-only line (assertLinesEditable) and the execution locks it (lockBudgetLine)' },
   { file: 'applications/services/applications-instances.service.ts', member: 'replaceLinkedItems', count: 2, handling: 'visible_links', reason: 'application to lines: ids read under the policies (400 when one is missing), DELETE of the visible links only' },
   { file: 'assets/services/assets-relations.service.ts', member: 'bulkReplaceLinkedCapexItems', count: 2, handling: 'visible_links', reason: 'asset to CAPEX lines: ids read under the policies, DELETE of the visible links only' },
   { file: 'assets/services/assets-relations.service.ts', member: 'bulkReplaceLinkedSpendItems', count: 2, handling: 'visible_links', reason: 'asset to OPEX lines: ids read under the policies, DELETE of the visible links only' },
