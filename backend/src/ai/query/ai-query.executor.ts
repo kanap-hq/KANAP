@@ -2309,13 +2309,13 @@ export class AiQueryExecutor {
    */
   private async readableLinks(context: AiExecutionContextWithManager): Promise<AiReadableLinks> {
     const reads = this.readProbe(context);
-    const [budget, contracts, projects, applications] = await Promise.all([
-      reads('spend_items'),
-      reads('contracts'),
-      reads('projects'),
-      reads('applications'),
-    ]);
-    return { budget, contracts, projects, applications };
+    // One after the other: the probes share the request's connection.
+    return {
+      budget: await reads('spend_items'),
+      contracts: await reads('contracts'),
+      projects: await reads('projects'),
+      applications: await reads('applications'),
+    };
   }
 
   async executeDetail(

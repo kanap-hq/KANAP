@@ -2792,7 +2792,9 @@ export class AiEntityService {
     const kept: AiEntityRelationshipGroupDto[] = [];
     for (const group of groups) {
       const types = Array.from(new Set(group.items.map((item) => item.type)));
-      if ((await Promise.all(types.map(canRead))).every(Boolean)) kept.push(group);
+      let readable = true;
+      for (const type of types) readable = readable && await canRead(type);
+      if (readable) kept.push(group);
     }
     return kept;
   }
