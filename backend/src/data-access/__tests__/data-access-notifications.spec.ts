@@ -30,7 +30,8 @@ import { nextItemNumber, Seed, seed } from './data-access-line-seed';
  *   persons, not Marta. The weekly review lists a task Marta only created on L4, not on L1.
  * - "Send the link": the task and line shares answer `cannot_open` with the chosen persons who
  *   cannot open the object, by name; the link goes to everyone. A sender asking about an object
- *   out of their own access learns nothing.
+ *   out of their own access learns nothing, nor does one sharing a task whose line is hidden to
+ *   them (no `cannot_open` at all).
  * - Recent items: a limited person gets back only the records they can read (a hidden line and a
  *   hidden task leave the list like deleted ones); Ulla gets every existing record.
  * - Object history: the task history and the line meta answer the same 404 (or null) for a hidden
@@ -143,6 +144,19 @@ async function testShare(runner: QueryRunner, s: Seed, t: Tasks): Promise<void> 
   ));
   assert.deepEqual(paulShare, { success: true, cannot_open: [{ id: marta, name: nameOf(marta) }] }, 'Marta cannot open the L1 task');
   assert.deepEqual(sorted(shares[1].recipients.map((r: any) => r.userId)), sorted([marta, ulla]), 'never blocked');
+
+  // Marta takes part in a task of L1, a line she cannot read: sharing it says nothing of who can
+  // open it (that would tell where L1 sits); sent to all the same.
+  const l1ForMarta = (await runner.query(
+    `INSERT INTO tasks (tenant_id, title, item_number, related_object_type, related_object_id, creator_id, assignee_user_id)
+     VALUES ($1, 'L1 task for Marta', $2, 'spend_item', $3, $4, $5) RETURNING id`,
+    [s.tenantId, nextItemNumber(), s.lines.L1, ulla, marta],
+  ))[0].id as string;
+  const hiddenLine = await as(runner, marta, (m) => unified.share(
+    l1ForMarta, { recipient_user_ids: [nina, paul] } as any, s.tenantId, marta, { manager: m },
+  ));
+  assert.deepEqual(hiddenLine, { success: true }, 'a task of a line hidden to the sender: no cannot_open list');
+  assert.deepEqual(sorted(shares[2].recipients.map((r: any) => r.userId)), sorted([nina, paul]), 'sent to all');
 
   // A line: Paul shares L4 with Nina (no access) and Marta.
   const line = await as(runner, paul, (m) => shareRecipientsWhoCannotOpen(m, 'spend_item', s.lines.L4, [row(nina), row(marta)]));

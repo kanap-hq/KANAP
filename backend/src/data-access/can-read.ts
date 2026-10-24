@@ -43,15 +43,33 @@ export type ShareRecipientRow = { userId: string; email: string; firstName?: str
  * (names only; the email for a person without a name), so the screen warns the sender. The link is
  * sent to them anyway. Budget lines, tasks and contracts only: the other objects are not scoped.
  * Read in the sender's transaction, one statement for all the persons.
+ *
+ * No list at all (`undefined`) for a task the sender sees while its budget line is hidden to them
+ * (they take part in it): who can open it would tell where that line sits.
  */
 export async function shareRecipientsWhoCannotOpen(
   manager: Pick<EntityManager, 'query'>,
   type: CanReadObjectType,
   id: string,
   recipients: readonly ShareRecipientRow[],
-): Promise<Array<{ id: string; name: string }>> {
+): Promise<Array<{ id: string; name: string }> | undefined> {
+  if (type === 'task' && recipients.length > 0 && (await taskLineHiddenToCaller(manager, id))) return undefined;
   const cannot = await personsByReadAccess(manager, type, id, recipients.map((r) => r.userId), false);
   return recipients
     .filter((r) => cannot.has(String(r.userId).toLowerCase()))
     .map((r) => ({ id: r.userId, name: `${r.firstName ?? ''} ${r.lastName ?? ''}`.trim() || r.email }));
+}
+
+/** The task is linked to a budget line the caller cannot read (their policies hide the line). */
+async function taskLineHiddenToCaller(manager: Pick<EntityManager, 'query'>, taskId: string): Promise<boolean> {
+  const [row]: Array<{ hidden: boolean }> = await manager.query(
+    `SELECT EXISTS (
+       SELECT 1 FROM tasks t
+        WHERE t.tenant_id = app_current_tenant() AND t.id = $1
+          AND t.related_object_type IN ('spend_item', 'capex_item') AND t.related_object_id IS NOT NULL
+          AND NOT EXISTS (SELECT 1 FROM spend_items i WHERE i.tenant_id = t.tenant_id AND i.id = t.related_object_id)
+     ) AS hidden`,
+    [taskId],
+  );
+  return row?.hidden === true;
 }

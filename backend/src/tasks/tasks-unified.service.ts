@@ -1219,7 +1219,9 @@ export class TasksUnifiedService {
       });
     }
 
-    // The chosen persons who cannot open the task: the screen warns the sender (spec §5.6).
-    return { success: true, cannot_open: await shareRecipientsWhoCannotOpen(manager, 'task', taskId, recipientRows) };
+    // The chosen persons who cannot open the task: the screen warns the sender (spec §5.6). No list
+    // when the task's line is hidden to the sender.
+    const cannotOpen = await shareRecipientsWhoCannotOpen(manager, 'task', taskId, recipientRows);
+    return cannotOpen ? { success: true, cannot_open: cannotOpen } : { success: true };
   }
 }
