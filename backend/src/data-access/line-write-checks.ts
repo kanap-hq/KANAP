@@ -89,6 +89,17 @@ export async function assertRoundInputsEditable(manager: EntityManager, roundInp
   );
 }
 
+/**
+ * `editable` for a line read by id (spec §6.7): whether the person may modify it, by the same SQL
+ * function as the policies, in a limited transaction only; nothing (no query) for an unscoped
+ * person, whose lines are all editable as before.
+ */
+export async function lineEditableField(manager: EntityManager, lineId: string): Promise<{ editable?: boolean }> {
+  if (!(await isLimitedTransaction(manager))) return {};
+  const [row] = await manager.query(`SELECT ${lineEditableSql('i.')} AS editable FROM spend_items i WHERE i.id = $1`, [lineId]);
+  return { editable: row?.editable === true };
+}
+
 async function refuseReadOnly(manager: EntityManager, sql: string, params: unknown[]): Promise<void> {
   const rows = await manager.query(sql, params);
   if (rows.length > 0) throw new DataAccessLimitedException(DATA_ACCESS_READ_ONLY_LINE_MESSAGE);

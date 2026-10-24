@@ -40,7 +40,7 @@ import { ShareItemDto } from '../notifications/dto/share-item.dto';
 import { shareRecipientsOf } from '../notifications/share-recipients';
 import type { BudgetColumn } from './amounts-write.util';
 import { ItemWriteFields, resolveItemWrite } from './item-write.util';
-import { assertLinesEditable } from '../data-access/line-write-checks';
+import { assertLinesEditable, lineEditableField } from '../data-access/line-write-checks';
 import { updateItemUnderLock } from './item-locked-update';
 import {
   itemAnalyticsAuditFields,
@@ -308,7 +308,13 @@ export class SpendItemsService {
     const mg = opts?.manager ?? this.repo.manager;
     const item = await this.findItem(id, mg, opts?.native);
     const line = await this.withAnalytics(mg, item, opts?.native);
-    return { ...line, references: await loadItemReferences(mg, item), lineage: await readLineLineage(mg, item.tenant_id, item.id) };
+    return {
+      ...line,
+      references: await loadItemReferences(mg, item),
+      lineage: await readLineLineage(mg, item.tenant_id, item.id),
+      // Limited access only: whether the person may modify the line (spec §6.7).
+      ...(await lineEditableField(mg, item.id)),
+    };
   }
 
   /** The line's meta (lot 3G, `item-meta.ts`): its freshness counters, who changed it and when. */
