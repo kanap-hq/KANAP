@@ -48,6 +48,7 @@ export type AuditValueContext = {
 const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const DATE_ONLY_PATTERN = /^\d{4}-\d{2}-\d{2}$/;
 const DATE_TIME_PATTERN = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}/;
+const MIDNIGHT_UTC_PATTERN = /^\d{4}-\d{2}-\d{2}T00:00:00(?:\.\d+)?(?:Z|\+00:00)$/i;
 const JSON_MAX_LENGTH = 120;
 
 /** Fields that hold a person: resolved through the user lookup, never shown as an id. */
@@ -55,12 +56,18 @@ const USER_ID_FIELDS = new Set([
   'user_id',
   'updated_by',
   'owner_user_id',
+  'created_by',
   'created_by_user_id',
+  'creator_id',
+  'reporter_user_id',
+  'requestor_id',
   'revoked_by_user_id',
 ]);
 
 /** Noise that stays in the raw JSON (created_at stays in a create, where it is the record's date). */
 const OMITTED_FIELDS = new Set(['id', 'tenant_id', 'updated_at']);
+/** Derived or internal columns the table never shows; the raw JSON keeps them. */
+const NOISE_FIELDS = new Set(['search_vector', 'content_plain']);
 
 /** Tables whose record is named by `item_number`, and the reference prefix of each. */
 const RECORD_ITEM_TYPES: Record<string, Parameters<typeof formatItemRef>[0]> = {
@@ -79,8 +86,18 @@ export function isPlainObject(value: unknown): value is Record<string, unknown> 
 }
 
 function omitted(key: string, action: string): boolean {
-  if (OMITTED_FIELDS.has(key)) return true;
+  if (OMITTED_FIELDS.has(key) || NOISE_FIELDS.has(key) || key.startsWith('__')) return true;
   return key === 'created_at' && action !== 'create';
+}
+
+function isEmptyValue(value: unknown): boolean {
+  if (value === null || value === undefined) return true;
+  if (typeof value === 'string') return value.trim() === '';
+  return Array.isArray(value) && value.length === 0;
+}
+
+function isYearField(field: string): boolean {
+  return field === 'year' || field.endsWith('_year');
 }
 
 function changedKeys(before: Record<string, unknown>, after: Record<string, unknown>): string[] {
@@ -107,6 +124,7 @@ export function auditFields(row: AuditPayloadRow | null | undefined): AuditField
       mode: 'change',
       rows: changedKeys(before, after)
         .filter((key) => !omitted(key, action))
+        .filter((key) => !isEmptyValue(before[key]) || !isEmptyValue(after[key]))
         .map((key) => ({ key, before: before[key], after: after[key] })),
     };
   }
@@ -148,7 +166,7 @@ export function auditUserIds(fields: AuditFields): string[] {
   return Array.from(ids).sort();
 }
 
-/** The business reference of the audited record (T-4, PRJ-3…), else its stored id. */
+/** The business reference of the audited record (T-4, PRJ-3…), when the table has one. */
 export function auditRecordRef(row: AuditPayloadRow | null | undefined): string | null {
   if (!row) return null;
   const type = RECORD_ITEM_TYPES[String(row.table_name || '')];
@@ -159,7 +177,19 @@ export function auditRecordRef(row: AuditPayloadRow | null | undefined): string 
       return formatItemRef(type, Number(itemNumber));
     }
   }
-  return row.record_id ?? null;
+  return null;
+}
+
+/** The record header: the business reference, else the identifier label with the stored id in the title. */
+export function auditRecordLabel(
+  row: AuditPayloadRow | null | undefined,
+  t: Translate,
+): { text: string; title?: string } | null {
+  if (!row) return null;
+  const ref = auditRecordRef(row);
+  if (ref) return { text: ref };
+  if (!row.record_id) return null;
+  return { text: t('auditLogs.values.identifier'), title: row.record_id };
 }
 
 function identifier(context: AuditValueContext, id: string): AuditValue {
@@ -178,7 +208,11 @@ function neighbourName(snapshot: unknown, field: string): string | null {
 }
 
 function dateText(value: string, locale: string): string | null {
-  if (DATE_ONLY_PATTERN.test(value)) return formatShortDate(value, locale) || null;
+  if (DATE_ONLY_PATTERN.test(value)) return formatShortDate(value, locale, { year: 'always' }) || null;
+  // A UTC midnight is a date, not a time that shifts with the reader's timezone.
+  if (MIDNIGHT_UTC_PATTERN.test(value)) {
+    return formatShortDate(value.slice(0, 10), locale, { year: 'always' }) || null;
+  }
   if (DATE_TIME_PATTERN.test(value)) return formatShortDateTime(value, locale) || null;
   return null;
 }
@@ -222,7 +256,9 @@ export function formatAuditValue(value: unknown, field: string, context: AuditVa
   if (value === null || value === undefined) return { text: DASH };
   if (typeof value === 'boolean') return { text: context.t(value ? 'auditLogs.values.yes' : 'auditLogs.values.no') };
   if (typeof value === 'number') {
-    return { text: Number.isFinite(value) ? value.toLocaleString(context.locale) : String(value) };
+    if (!Number.isFinite(value)) return { text: String(value) };
+    // A year is a label, not a quantity: 2026, never 2,026.
+    return { text: isYearField(field) ? String(value) : value.toLocaleString(context.locale) };
   }
   if (typeof value === 'string') {
     const text = value.trim();

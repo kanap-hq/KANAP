@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import i18n from '../../i18n';
+import de from '../../locales/de/admin.json';
+import en from '../../locales/en/admin.json';
+import es from '../../locales/es/admin.json';
+import fr from '../../locales/fr/admin.json';
 import type { Translate } from './auditLogLabels';
 import {
   auditFields,
   auditHasNonObjectPayload,
+  auditRecordLabel,
   auditRecordRef,
   auditSnapshot,
   auditUserIds,
@@ -37,8 +42,17 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue('2020-03-31T14:30:00', 'created_at', context()).text).toBe('31 Mar 2020, 02:30 PM');
   });
 
-  it('formats numbers with the page locale', () => {
+  it('always shows the year of a date and reads UTC midnight as a date', () => {
+    const thisYear = new Date().getFullYear();
+    expect(formatAuditValue(`${thisYear}-09-30`, 'created_at', context()).text).toBe(`30 Sep ${thisYear}`);
+    expect(formatAuditValue('2028-06-30T00:00:00.000Z', 'created_at', context()).text).toBe('30 Jun 2028');
+    expect(formatAuditValue('2028-06-30T00:00:00Z', 'created_at', context()).text).toBe('30 Jun 2028');
+  });
+
+  it('formats numbers with the page locale, except a year', () => {
     expect(formatAuditValue(1234.5, 'amount', context()).text).toBe('1,234.5');
+    expect(formatAuditValue(2026, 'users_year', context()).text).toBe('2026');
+    expect(formatAuditValue(2026, 'year', context()).text).toBe('2026');
   });
 
   it('joins a list of scalars and keeps dates readable inside it', () => {
@@ -78,6 +92,10 @@ describe('formatAuditValue', () => {
     expect(formatAuditValue(uuid, 'updated_by', context({ users }))).toEqual({ text: 'Alice Martin' });
     expect(formatAuditValue(uuid, 'owner_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
     expect(formatAuditValue(uuid, 'assigned_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'created_by', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'creator_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'reporter_user_id', context({ users }))).toEqual({ text: 'Alice Martin' });
+    expect(formatAuditValue(uuid, 'requestor_id', context({ users }))).toEqual({ text: 'Alice Martin' });
   });
 
   it('falls back to the identifier when a person cannot be read', () => {
@@ -104,6 +122,21 @@ describe('audit entry helpers', () => {
     expect(fields.mode).toBe('change');
     expect(fields.rows.map((row) => row.key)).toEqual(['status']);
     expect(fields.rows[0]).toMatchObject({ before: 'draft', after: 'active' });
+  });
+
+  it('drops empty update rows and technical noise keys', () => {
+    const fields = auditFields({
+      action: 'update',
+      before_json: {
+        status: null, notes: '', tags: [], name: 'Old', __typename: 'Old',
+        search_vector: 'old', content_plain: 'old', content_markdown: 'old',
+      },
+      after_json: {
+        status: '', notes: '   ', tags: null, name: 'New', __typename: 'New',
+        search_vector: 'new', content_plain: 'new', content_markdown: 'new',
+      },
+    });
+    expect(fields.rows.map((row) => row.key)).toEqual(['name', 'content_markdown']);
   });
 
   it('reads one side for a create, keeping created_at there only', () => {
@@ -143,7 +176,15 @@ describe('audit entry helpers', () => {
   it('names the record with its item number when the table has one', () => {
     expect(auditRecordRef({ table_name: 'tasks', record_id: uuid, after_json: { item_number: 4 } })).toBe('T-4');
     expect(auditRecordRef({ table_name: 'portfolio_projects', record_id: uuid, after_json: { item_number: 3 } })).toBe('PRJ-3');
-    expect(auditRecordRef({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } })).toBe(uuid);
+    expect(auditRecordRef({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } })).toBeNull();
+  });
+
+  it('shows an identifier label, with the id in the title, when the record has no business reference', () => {
+    expect(auditRecordLabel({ table_name: 'suppliers', record_id: uuid, after_json: { name: 'Acme' } }, t))
+      .toEqual({ text: 'Identifier', title: uuid });
+    expect(auditRecordLabel({ table_name: 'tasks', record_id: uuid, after_json: { item_number: 4 } }, t))
+      .toEqual({ text: 'T-4' });
+    expect(auditRecordLabel({ table_name: 'suppliers', record_id: null }, t)).toBeNull();
   });
 
   it('merges the two payloads for the readable neighbours', () => {
@@ -160,5 +201,25 @@ describe('audit entry helpers', () => {
       after_json: { user_id: otherUuid, owner_user_id: otherUuid },
     });
     expect(auditUserIds(fields)).toEqual([uuid, otherUuid].sort());
+  });
+});
+
+describe('audit field labels', () => {
+  const newFields = [
+    'severity', 'detected_at', 'started_at', 'resolved_at', 'closed_at', 'confidential',
+    'personal_data_affected', 'planned_start', 'planned_end', 'it_lead_id', 'business_lead_id',
+    'created_by', 'creator_id', 'reporter_user_id', 'purpose', 'content_markdown', 'is_suite',
+    'users_mode', 'users_year', 'users_override', 'external_facing', 'access_methods',
+    'etl_enabled', 'classification_justification', 'classification_review',
+    'classification_revision',
+  ];
+  const locales = { en, fr, de, es } as Record<string, any>;
+
+  it('has a product label for the new fields in the four languages', () => {
+    for (const [language, admin] of Object.entries(locales)) {
+      for (const key of newFields) {
+        expect(admin.auditLogs.fields[key], `${language} ${key}`).toBeTruthy();
+      }
+    }
   });
 });

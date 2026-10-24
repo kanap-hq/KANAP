@@ -340,6 +340,22 @@ describe('AuditLogsPage', () => {
     expect(screen.queryByText(id)).toBeNull();
   });
 
+  it('shows an identifier, not a record uuid, and keeps the tenant line', async () => {
+    const id = '55555555-5555-4555-8555-555555555555';
+    const entry = auditRow({
+      table_name: 'suppliers',
+      record_id: id,
+      before_json: { status: 'draft' },
+      after_json: { status: 'active' },
+    });
+    await openDetail(entry);
+
+    expect(screen.getByText('Record: Identifier')).toBeTruthy();
+    expect(screen.queryByText(id)).toBeNull();
+    expect(screen.getAllByTitle(id).length).toBeGreaterThan(0);
+    expect(screen.getByText('Tenant: t-1')).toBeTruthy();
+  });
+
   it('shows the raw JSON directly when a payload is not an object', async () => {
     const entry = auditRow({
       action: 'update',
