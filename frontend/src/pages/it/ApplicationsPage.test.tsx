@@ -197,8 +197,8 @@ describe('ApplicationsPage', () => {
     features.vulnerabilityFeed = true;
     renderPage();
     const fields = lastProps().columns.map((column) => column.field);
-    expect(fields.slice(0, 2)).toEqual(['name', 'vulnerabilities_to_review']);
-    const column = lastProps().columns[1];
+    expect(fields.slice(0, 3)).toEqual(['sequential_id', 'name', 'vulnerabilities_to_review']);
+    const column = lastProps().columns[2];
     expect(column.sortable).not.toBe(false);
     expect(await column.filterParams.getValues()).toEqual([
       { value: 'severe', label: 'pages.technologies.vulnerabilityFilter.severe' },

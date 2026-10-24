@@ -3,7 +3,7 @@ import React, { useEffect, useRef, useCallback, useMemo, useState } from 'react'
 import { Alert, Box, Button, Snackbar, Stack, Chip, Tooltip, Typography, RadioGroup, FormControlLabel, Radio, Link, useTheme } from '@mui/material';
 import PageHeader from '../../components/PageHeader';
 import ServerDataGrid, { EnhancedColDef, type ListRequest } from '../../components/ServerDataGrid';
-import { ICellRendererParams } from 'ag-grid-community';
+import type { CellStyle, ICellRendererParams } from 'ag-grid-community';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { LinkCellRenderer, wholeCellLinkSx, aboveCellLinkSx } from '../../components/grid/renderers';
 import { getEnvDotColor } from '../../components/grid/renderers/StatusCellRenderer';
@@ -699,6 +699,19 @@ export default function ApplicationsPage() {
 
   const currentYear = new Date().getFullYear();
   const columns: EnhancedColDef<AppRow>[] = useMemo(() => [
+    {
+      // The business reference (APP-n), as the assets list shows AST-n. Sorted by its number on the server.
+      field: 'sequential_id',
+      headerName: '#',
+      width: 90,
+      valueGetter: (p) => p.data?.sequential_id || '',
+      cellStyle: {
+        fontFamily: "'JetBrains Mono Variable', 'JetBrains Mono', ui-monospace, monospace",
+        fontSize: '12px',
+        color: 'var(--kanap-text-secondary)',
+        fontVariantNumeric: 'tabular-nums',
+      } as CellStyle,
+    },
     {
       headerName: t('common.name'), field: 'name', minWidth: 200,
       cellRenderer: NameWithSuiteCell,
