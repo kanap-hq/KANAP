@@ -423,7 +423,7 @@ function UserMessage({
           />
         ) : (
           <>
-            {message.content && <MarkdownContent content={message.content} />}
+            {message.content && <MarkdownContent content={message.content} externalImages="link" />}
             <MessageAttachments message={message} />
           </>
         )}
@@ -768,7 +768,7 @@ function AssistantMessage({
               color: 'kanap.text.primary',
             }}
           >
-            <MarkdownContent content={message.content} />
+            <MarkdownContent content={message.content} externalImages="link" />
           </Box>
         )}
 
