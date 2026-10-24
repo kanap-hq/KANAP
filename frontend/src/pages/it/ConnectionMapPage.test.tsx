@@ -41,6 +41,18 @@ const MAP = {
   }],
 };
 
+// What the summary of each node lists: a cluster its own rows, a member its own and the ones it inherits.
+const APPLICATIONS: Record<string, unknown[]> = {
+  'cl-1': [
+    { id: 'app-1', name: 'CheeseTrack', environment: 'prod', inherited: false, via_clusters: [] },
+    { id: 'app-2', name: 'Sage X3', environment: 'prod', inherited: false, via_clusters: [] },
+  ],
+  'srv-1': [
+    { id: 'app-1', name: 'CheeseTrack', environment: 'prod', inherited: true, via_clusters: [{ id: 'cl-1', name: 'QA-CL-A' }] },
+    { id: 'app-3', name: 'Intranet', environment: 'prod', inherited: false, via_clusters: [] },
+  ],
+};
+
 function Where() {
   const location = useLocation();
   return <div data-testid="where">{location.pathname}</div>;
@@ -51,7 +63,7 @@ function renderPage() {
     if (url === '/connections/map') return { data: MAP };
     if (url.endsWith('/map-summary')) {
       const id = url.split('/')[2];
-      return { data: { id, name: id, kind: 'vm', environment: 'prod', operating_system: null, ip_addresses: null, location_reference: null, location_name: null, assigned_applications: [], is_cluster: id === 'cl-1' } };
+      return { data: { id, name: id, kind: 'vm', environment: 'prod', operating_system: null, ip_addresses: null, location_reference: null, location_name: null, assigned_applications: APPLICATIONS[id] ?? [], is_cluster: id === 'cl-1' } };
     }
     return { data: { items: [] } };
   });
@@ -91,5 +103,24 @@ describe('ConnectionMapPage node panel', () => {
     fireEvent.click(await screen.findByRole('button', { name: 'node QA-VM1' }));
     fireEvent.click(await screen.findByRole('button', { name: 'pages.connectionMap.editServer' }));
     await waitFor(() => expect(screen.getByTestId('where').textContent).toBe('/it/assets/srv-1/overview'));
+  });
+
+  it('lists the applications of a cluster in its panel', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node QA-CL-A' }));
+    expect(await screen.findByRole('button', { name: 'CheeseTrack' })).toBeTruthy();
+    expect(screen.getByRole('button', { name: 'Sage X3' })).toBeTruthy();
+    expect(screen.queryByText('components.clusterAssignment.via')).toBeNull();
+  });
+
+  it('lists the applications of a member with the ones it inherits, through their cluster', async () => {
+    renderPage();
+    fireEvent.click(await screen.findByRole('button', { name: 'node QA-VM1' }));
+    const inheritedApp = await screen.findByRole('button', { name: 'CheeseTrack' });
+    expect(screen.getByRole('button', { name: 'Intranet' })).toBeTruthy();
+    const line = inheritedApp.parentElement as HTMLElement;
+    expect(line.textContent).toBe('CheeseTrackcomponents.clusterAssignment.via QA-CL-A');
+    expect(screen.getAllByText('components.clusterAssignment.via').length).toBe(1);
+    expect(line.querySelector('a')?.getAttribute('href')).toBe('/it/assets/cl-1/overview');
   });
 });

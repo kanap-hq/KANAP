@@ -28,7 +28,9 @@ import CenterFocusStrongIcon from '@mui/icons-material/CenterFocusStrong';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import GridOnIcon from '@mui/icons-material/GridOn';
+import SubdirectoryArrowRightIcon from '@mui/icons-material/SubdirectoryArrowRight';
 import PageHeader from '../../components/PageHeader';
+import ClusterMark from '../../components/workspace/ClusterMark';
 import LightModeIsland from '../../components/LightModeIsland';
 import api from '../../api';
 import InterfaceMapGraph, { GraphControlsApi, MapGraphLink, MapGraphNode } from './components/InterfaceMapGraph';
@@ -148,7 +150,8 @@ type ApplicationMapSummary = {
   description: string | null;
   editor: string | null;
   criticality: string;
-  assigned_servers: Array<{ id: string; name: string; environment: string }>;
+  /** A cluster comes with its members: they carry `inherited` and the clusters in `via_clusters`. */
+  assigned_servers: Array<{ id: string; name: string; environment: string; is_cluster?: boolean; inherited?: boolean; via_clusters?: Array<{ id: string; name: string }> }>;
   business_owners: Array<{ user_id: string; name: string; email?: string | null }>;
   it_owners: Array<{ user_id: string; name: string; email?: string | null }>;
   support_contacts: Array<{ id?: string; contact_id: string; role?: string | null; contact?: { first_name?: string | null; last_name?: string | null; email?: string | null } }>;
@@ -856,20 +859,42 @@ export default function InterfaceMapPage() {
                                     <Box key={env}>
                                       <Typography variant="caption" color="text.secondary">{env.toUpperCase()}</Typography>
                                       <Stack spacing={0.25} sx={{ mt: 0.25 }}>
-                                        {grouped[env]
-                                          .slice()
-                                          .sort((a, b) => a.name.localeCompare(b.name))
-                                          .map((srv) => (
+                                        {(() => {
+                                          // The clusters first, each followed by the members that inherit it, then the other servers.
+                                          const list = grouped[env].slice().sort((a, b) => a.name.localeCompare(b.name));
+                                          const clusters = list.filter((srv) => srv.is_cluster);
+                                          const clusterIds = new Set(clusters.map((srv) => srv.id));
+                                          const throughCluster = (srv: (typeof list)[number]) => (srv.via_clusters ?? []).some((via) => clusterIds.has(via.id));
+                                          const serverButton = (srv: (typeof list)[number]) => (
                                             <Button
-                                              key={`${srv.id}-${srv.environment}`}
                                               variant="text"
                                               size="small"
                                               onClick={() => navigate(`/it/assets/${srv.id}/overview`)}
-                                              sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0 }}
+                                              sx={{ justifyContent: 'flex-start', textAlign: 'left', px: 0, minWidth: 0 }}
                                             >
                                               {srv.name}
                                             </Button>
-                                          ))}
+                                          );
+                                          return [
+                                            ...clusters.flatMap((cluster) => [
+                                              <Box key={`${cluster.id}-${cluster.environment}`} sx={{ display: 'flex', alignItems: 'center', gap: '6px', minWidth: 0 }}>
+                                                {serverButton(cluster)}
+                                                <ClusterMark />
+                                              </Box>,
+                                              ...list
+                                                .filter((srv) => !srv.is_cluster && (srv.via_clusters ?? []).some((via) => via.id === cluster.id))
+                                                .map((member) => (
+                                                  <Box key={`${cluster.id}-${member.id}`} sx={{ display: 'flex', alignItems: 'center', gap: '4px', minWidth: 0, pl: '12px' }}>
+                                                    <SubdirectoryArrowRightIcon aria-hidden sx={(muiTheme) => ({ fontSize: 13, color: muiTheme.palette.kanap.text.tertiary })} />
+                                                    {serverButton(member)}
+                                                  </Box>
+                                                )),
+                                            ]),
+                                            ...list
+                                              .filter((srv) => !srv.is_cluster && !throughCluster(srv))
+                                              .map((srv) => <Box key={`${srv.id}-${srv.environment}`}>{serverButton(srv)}</Box>),
+                                          ];
+                                        })()}
                                       </Stack>
                                     </Box>
                                   ));
