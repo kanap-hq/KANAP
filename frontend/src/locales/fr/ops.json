@@ -1854,6 +1854,7 @@
       "kept_other": "{{count}} lignes budgétaires ne peuvent pas être supprimées et sont conservées :",
       "deleted_one": "{{count}} ligne budgétaire supprimée",
       "deleted_other": "{{count}} lignes budgétaires supprimées"
-    }
+    },
+    "readOnlyInYourAccess": "Lecture seule dans votre accès"
   }
 }

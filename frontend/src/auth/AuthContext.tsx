@@ -20,6 +20,7 @@ import {
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import { changeAppLanguage, detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
 import { clearUserClientState } from './userClientState';
+import { isDataAccessLimited, type DataAccessProfile } from './dataAccess';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
 type Claims = {
@@ -122,6 +123,8 @@ type AuthContextType = {
   claims: Claims | null;
   subscription: Subscription | null;
   tenantAuth: TenantAuth | null;
+  /** Null until `/auth/me` answers, and for a server that does not send it: read as unscoped. */
+  dataAccess: DataAccessProfile | null;
   login: (response: LoginResponse) => void;
   logout: () => void;
   refreshMe: () => Promise<void>;
@@ -135,6 +138,21 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
+
+/**
+ * Reserved to people with access to all data (spec §2.7, `backend/src/data-access/data-access-reserved.inventory.ts`):
+ * for a limited person these modules read as reader at most, so their edit commands are hidden and
+ * their reads stay. Organisation data (companies, departments, cost centers, accounts and charts,
+ * processes, dimensions), the budget settings (`budget_ops`: currencies, columns, freeze, default
+ * allocation rule), persons and the tenant administration behind `users` (users, roles, audit log,
+ * branding, scheduled tasks) and the AI administration.
+ */
+const DATA_ACCESS_RESERVED_WRITES = new Set([
+  'companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics',
+  'budget_ops', 'users', 'ai_settings',
+]);
+/** Closed to a limited person entirely: the agent screens (spec §2.7). */
+const DATA_ACCESS_RESERVED_MODULES = new Set(['ai_agents']);
 
 function clearLegacyTokenStorage(): void {
   localStorage.removeItem('token');
@@ -172,6 +190,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [claims, setClaims] = useState<Claims | null>(null);
   const [subscription, setSubscription] = useState<Subscription | null>(null);
   const [tenantAuth, setTenantAuth] = useState<TenantAuth | null>(null);
+  const [dataAccess, setDataAccess] = useState<DataAccessProfile | null>(null);
   // The user whose state this tab holds: another user behind a new token drops it.
   const stateUserIdRef = useRef<string | null>(null);
 
@@ -199,6 +218,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setClaims(null);
     setSubscription(null);
     setTenantAuth(null);
+    setDataAccess(null);
   }, [clearUserState]);
 
   const applyAccessToken = useCallback((accessToken: string, expiresIn: number, refreshExpiresIn?: number) => {
@@ -235,6 +255,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setClaims(res.data?.claims ?? null);
       setSubscription(res.data?.subscription ?? null);
       setTenantAuth(res.data?.tenantAuth ?? null);
+      setDataAccess(res.data?.dataAccess ?? null);
     } catch (e: any) {
       // Log out only when the refresh behind this 401 ended the session (token cleared); an
       // unreachable server keeps it.
@@ -282,6 +303,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     setClaims(null);
     setSubscription(null);
     setTenantAuth(null);
+    setDataAccess(null);
     touchLastActivity();
     applyAccessToken(response.access_token, response.expires_in, response.refresh_expires_in);
     // refreshMe will be called by useEffect when token changes
@@ -403,6 +425,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasLevel = (resource: string, level: PermissionLevel) => {
     if (claims?.isGlobalAdmin || claims?.isPlatformAdmin) return true;
+    if (isDataAccessLimited(dataAccess)) {
+      if (DATA_ACCESS_RESERVED_MODULES.has(resource)) return false;
+      if (DATA_ACCESS_RESERVED_WRITES.has(resource) && level !== 'reader') return false;
+    }
     const map = claims?.permissions || {};
     // Support both 'member' (new) and 'manager' (legacy) - backend uses 'member' since RBAC overhaul
     const rank = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 } as const;
@@ -418,8 +444,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     : !!(claims.isGlobalAdmin || claims.isPlatformAdmin || Object.keys(claims.permissions || {}).length > 0);
 
   const value = useMemo(
-    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
-    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
+    () => ({ token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, dataAccess, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess }),
+    [token, tokenExpiresAt, isAuthenticating, serverUnavailable, refreshRateLimited, retryRefresh, sessionExpired, profile, claims, subscription, tenantAuth, dataAccess, login, logout, refreshMe, refreshAccessToken, hasLevel, hasAnyAccess]
   );
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
 }

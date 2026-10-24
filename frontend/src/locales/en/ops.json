@@ -1853,6 +1853,7 @@
       "kept_other": "{{count}} budget lines cannot be deleted and are kept:",
       "deleted_one": "{{count}} budget line deleted",
       "deleted_other": "{{count}} budget lines deleted"
-    }
+    },
+    "readOnlyInYourAccess": "Read only in your access"
   }
 }

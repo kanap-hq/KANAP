@@ -1,11 +1,34 @@
 import '../i18n';
 import i18n from 'i18next';
 import { describe, expect, it } from 'vitest';
-import { getApiErrorMessage, getDocumentSaveErrorMessage } from './apiErrorMessage';
+import { getApiErrorMessage, getDocumentSaveErrorMessage, isDataAccessRefusal } from './apiErrorMessage';
 
 const t = i18n.getFixedT('en');
 
 describe('getApiErrorMessage', () => {
+  it('words each refusal of a limited data access in the language of the screen', () => {
+    const refusal = (message: string) => ({ response: { status: 403, data: { statusCode: 403, error: 'Forbidden', code: 'DATA_ACCESS_LIMITED', message } } });
+    const fr = i18n.getFixedT('fr');
+    expect(getApiErrorMessage(refusal('This line is read only in your access.'), fr, 'fallback')).toBe('Cette ligne est en lecture seule dans votre accès.');
+    expect(getApiErrorMessage(refusal('This company or cost center is not part of your access.'), fr, 'fallback'))
+      .toBe('Cette société ou ce centre de coûts ne fait pas partie de votre accès.');
+    expect(getApiErrorMessage(refusal('This action is reserved to people with access to all data.'), fr, 'fallback'))
+      .toBe('Cette action est réservée aux personnes qui ont accès à toutes les données.');
+    expect(getApiErrorMessage(refusal('This item is outside your data access.'), i18n.getFixedT('de'), 'fallback'))
+      .toBe('Dieses Element liegt außerhalb Ihres Datenzugriffs.');
+    expect(getApiErrorMessage(refusal('This task is read only in your access.'), i18n.getFixedT('es'), 'fallback'))
+      .toBe('Esta tarea es de solo lectura en su acceso.');
+    expect(getApiErrorMessage(refusal('BL-12 is read only in your access.'), fr, 'fallback')).toBe('BL-12 est en lecture seule dans votre accès.');
+    // A sentence the screen does not know shows as the server wrote it, never the generic refusal.
+    expect(getApiErrorMessage(refusal('Some new refusal.'), fr, 'fallback')).toBe('Some new refusal.');
+    expect(getApiErrorMessage(refusal(''), t, 'fallback')).toBe('This item is outside your data access.');
+    expect(isDataAccessRefusal(refusal('x'))).toBe(true);
+    expect(isDataAccessRefusal({ response: { status: 403, data: { code: 'NO_ACCESS' } } })).toBe(false);
+    const unavailable = { response: { status: 503, data: { code: 'DATA_ACCESS_UNAVAILABLE', message: 'Data access is temporarily unavailable. Contact the person who runs KANAP.' } } };
+    expect(getApiErrorMessage(unavailable, fr, 'fallback'))
+      .toBe("L'accès aux données est momentanément indisponible. Contactez la personne qui exploite KANAP.");
+  });
+
   it('words a refusal without a code as a missing right, in each language', () => {
     const forbidden = { response: { status: 403, data: { statusCode: 403, message: 'Forbidden resource', error: 'Forbidden' } } };
     expect(getApiErrorMessage(forbidden, t, 'fallback')).toBe('You do not have the rights for this action.');

@@ -856,7 +856,8 @@
         "notFound": "Task not found",
         "relatedItemRequired": "Please select a related item",
         "saveFailed": "Failed to save task",
-        "titleRequired": "Title is required"
+        "titleRequired": "Title is required",
+        "stillFollowing": "You still follow this task."
       },
       "sidebar": {
         "fields": {

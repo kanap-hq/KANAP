@@ -1853,6 +1853,7 @@
       "kept_other": "{{count}} líneas presupuestarias no se pueden eliminar y se conservan:",
       "deleted_one": "{{count}} línea presupuestaria eliminada",
       "deleted_other": "{{count}} líneas presupuestarias eliminadas"
-    }
+    },
+    "readOnlyInYourAccess": "Solo lectura en su acceso"
   }
 }

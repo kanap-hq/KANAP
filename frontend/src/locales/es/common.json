@@ -943,7 +943,8 @@
     "manuallyAdded": "Añadido manualmente",
     "removeContact": "Quitar contacto",
     "insufficientPermission": "Permiso insuficiente",
-    "syncFromSupplier": "Añadir los contactos del proveedor"
+    "syncFromSupplier": "Añadir los contactos del proveedor",
+    "saveFailed": "No se pudieron guardar los contactos."
   },
   "export": {
     "button": "Exportar",
@@ -1303,5 +1304,8 @@
     "linksTitle": "Enlaces web",
     "linksEmpty": "Ningún enlace web.",
     "removeFileNamed": "Eliminar el archivo {{name}}"
+  },
+  "dataAccess": {
+    "calculatedOnYourAccess": "Calculado sobre su acceso"
   }
 }

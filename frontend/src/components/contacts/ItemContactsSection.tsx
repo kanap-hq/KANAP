@@ -1,5 +1,6 @@
 import React from 'react';
 import {
+  Alert,
   Box,
   Button,
   IconButton,
@@ -22,6 +23,7 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import { useNavigate } from 'react-router-dom';
 import { drawerFieldValueSx, drawerSelectSx, drawerMenuItemSx, inlineControlSx } from '../../theme/formSx';
 import RelationsSectionTitle from '../../pages/portfolio/components/RelationsSectionTitle';
+import { getApiErrorMessage } from '../../utils/apiErrorMessage';
 
 type SupplierContactRole = 'commercial' | 'technical' | 'support' | 'other';
 type ContactOrigin = 'supplier' | 'manual';
@@ -57,6 +59,16 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
   const { t } = useTranslation('common');
   const navigate = useNavigate();
   const qc = useQueryClient();
+  // A refused add or removal (a line read only in the person's access) says why; nothing changed.
+  const [error, setError] = React.useState<string | null>(null);
+  const run = React.useCallback(async (write: () => Promise<unknown>) => {
+    setError(null);
+    try {
+      await write();
+    } catch (e) {
+      setError(getApiErrorMessage(e, t, t('contacts.saveFailed')));
+    }
+  }, [t]);
 
   const { data: contacts = [], isLoading } = useQuery({
     queryKey: ['item-contacts', itemType, itemId],
@@ -107,6 +119,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
   return (
     <Stack spacing={1.25}>
       <RelationsSectionTitle>{t('contacts.title')}</RelationsSectionTitle>
+      {!!error && <Alert severity="error" onClose={() => setError(null)}>{error}</Alert>}
 
       {contacts.length === 0 ? (
         <Typography variant="body2" sx={{ fontSize: 13, color: 'kanap.text.tertiary' }}>
@@ -157,7 +170,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
                           size="small"
                           aria-label={t('contacts.removeContact')}
                           disabled={!canManage}
-                          onClick={() => detach(link.id)}
+                          onClick={() => { void run(() => detach(link.id)); }}
                           sx={{ opacity: 0, transition: 'opacity 120ms', color: 'kanap.text.tertiary', '&:hover': { color: 'kanap.danger' } }}
                         >
                           <DeleteIcon fontSize="small" />
@@ -174,7 +187,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
 
       {canManage && syncFromSupplier && (
         <Button
-          onClick={() => { void syncSupplier(); }}
+          onClick={() => { void run(() => syncSupplier()); }}
           disabled={syncing}
           sx={{ p: 0, minWidth: 0, fontSize: 12, alignSelf: 'flex-start' }}
         >
@@ -202,7 +215,7 @@ export default function ItemContactsSection({ itemType, itemId, canManage, syncF
               value=""
               onChange={(e) => {
                 const role = e.target.value as SupplierContactRole;
-                if (role) void attach({ contactId: selectedContact, role });
+                if (role) void run(() => attach({ contactId: selectedContact, role }));
               }}
               disabled={attaching}
               SelectProps={{

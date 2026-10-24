@@ -243,5 +243,16 @@
     "rpo_minutes": "Das Wiederherstellungspunktziel (RPO)",
     "maxMtdMinutes": "Die maximal tolerierbare Ausfallzeit",
     "since_date": "Das Datum „Seit“"
+  },
+  "DATA_ACCESS_UNAVAILABLE": "Der Datenzugriff ist vorübergehend nicht verfügbar. Wenden Sie sich an die Person, die KANAP betreibt.",
+  "dataAccess": {
+    "outside": "Dieses Element liegt außerhalb Ihres Datenzugriffs.",
+    "readOnlyLine": "Diese Zeile ist in Ihrem Zugriff schreibgeschützt.",
+    "placement": "Dieses Unternehmen oder diese Kostenstelle gehört nicht zu Ihrem Zugriff.",
+    "reserved": "Diese Aktion ist Personen mit Zugriff auf alle Daten vorbehalten.",
+    "readOnlyTask": "Diese Aufgabe ist in Ihrem Zugriff schreibgeschützt.",
+    "taskDelete": "Nur wer die Zeile oder den Vertrag dieser Aufgabe ändern kann, darf sie löschen.",
+    "leavesAccess": "Diese Änderung würde die Zeile aus Ihrem Zugriff nehmen. Bleiben Sie einer ihrer Verantwortlichen, oder fragen Sie jemanden mit Zugriff auf ihr Unternehmen.",
+    "readOnlyRef": "{{ref}} ist in Ihrem Zugriff schreibgeschützt."
   }
 }

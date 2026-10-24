@@ -1853,6 +1853,7 @@
       "kept_other": "{{count}} Budgetzeilen können nicht gelöscht werden und bleiben erhalten:",
       "deleted_one": "{{count}} Budgetzeile gelöscht",
       "deleted_other": "{{count}} Budgetzeilen gelöscht"
-    }
+    },
+    "readOnlyInYourAccess": "Schreibgeschützt in Ihrem Zugriff"
   }
 }
