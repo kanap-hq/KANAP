@@ -101,6 +101,29 @@ describe('getApiErrorMessage', () => {
     }
   });
 
+  it('translates the cluster refusals, with their values', () => {
+    const fr = i18n.getFixedT('fr');
+    const members = { response: { status: 400, data: { code: 'cluster_has_members', message: 'server words', params: { count: 3 } } } };
+    expect(getApiErrorMessage(members, fr, 'fallback')).toBe('Retirez d\'abord ses 3 membres.');
+    expect(getApiErrorMessage(members, t, 'fallback')).toBe('Remove its 3 members first.');
+    const member = { response: { status: 400, data: { code: 'cluster_switch_member', message: 'server words', params: { cluster: 'ESX-PAR' } } } };
+    expect(getApiErrorMessage(member, fr, 'fallback')).toBe('Membre de ESX-PAR : il ne peut pas devenir un cluster.');
+    const os = { response: { status: 400, data: { code: 'os_cluster_with_members', message: 'server words' } } };
+    expect(getApiErrorMessage(os, fr, 'fallback')).toBe('Ce cluster a des membres : pas de système d\'exploitation.');
+    const codes = [
+      'cluster_has_members', 'cluster_switch_member', 'cluster_member_self', 'cluster_member_is_cluster',
+      'cluster_member_not_found', 'cluster_os_with_members', 'os_cluster_with_members',
+    ];
+    for (const code of codes) {
+      for (const language of ['en', 'fr', 'de', 'es']) {
+        const params = { count: 1, cluster: 'ESX-PAR', name: 'ESX-LYO', os: 'Ubuntu 22.04' };
+        const text = getApiErrorMessage({ response: { status: 400, data: { code, message: 'server words', params } } }, i18n.getFixedT(language), 'fallback');
+        expect(text, `${code} in ${language}`).not.toBe('server words');
+        expect(text).not.toMatch(/{{|—/);
+      }
+    }
+  });
+
   it('translates a turnover that cannot be compared because every selected company lacks a rate', () => {
     const missing = {
       response: {

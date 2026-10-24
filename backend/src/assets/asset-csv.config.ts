@@ -12,6 +12,7 @@ import { ItOpsSettings, ItOpsSettingsService } from '../it-ops-settings/it-ops-s
 import { TechnologyCatalogService } from '../technologies/catalog/technology-catalog.service';
 import { OperatingSystemService } from '../technologies/operating-system.service';
 import { vulnerabilityCsvFields } from '../vulnerabilities/vulnerability-list-column';
+import { clusterSwitchRefusals, clustersWithMembers, codedRowError, osClusterWithMembersRefusal, type ClusterSwitch } from './asset-rules';
 
 /**
  * The operating system is not a column. `beforeCommit` keeps the text here and takes it off the
@@ -394,6 +395,45 @@ export const assetCsvConfig: CsvEntityConfig = {
       ],
     },
   ],
+
+  /**
+   * The cluster rules, at the check as at the load, as row errors (the codes of the API):
+   * - the Cluster switch (`cluster_has_members`, `cluster_switch_member`, `asset-rules.ts`);
+   * - an operating system on a cluster that has members (`os_cluster_with_members`).
+   * A row a matched insert-only import skips is not checked. A new asset has no member.
+   */
+  afterValidate: async (rows, context) => {
+    const checked = rows.filter((row) =>
+      row.errors.length === 0
+      && !row.isInsert
+      && row.existingEntity?.id
+      && context.params.operation !== 'insert_only');
+    if (checked.length === 0) return;
+    const has = (row: (typeof rows)[number], key: string) => Object.prototype.hasOwnProperty.call(row.parsed, key);
+    const finalCluster = (row: (typeof rows)[number]) => (has(row, 'is_cluster') ? row.parsed.is_cluster === true : row.existingEntity.is_cluster === true);
+    const switches: ClusterSwitch[] = [];
+    for (const row of checked) {
+      const from = row.existingEntity.is_cluster === true;
+      const to = finalCluster(row);
+      if (from !== to) switches.push({ id: String(row.existingEntity.id), from, to });
+    }
+    const refusals = await clusterSwitchRefusals(context.manager, context.tenantId, switches);
+    const settingOs = checked.filter((row) =>
+      !refusals.has(String(row.existingEntity.id))
+      && finalCluster(row)
+      && has(row, 'operating_system')
+      && String(row.parsed.operating_system ?? '').trim() !== '');
+    const withMembers = await clustersWithMembers(context.manager, context.tenantId, settingOs.map((row) => String(row.existingEntity.id)));
+    for (const row of checked) {
+      const id = String(row.existingEntity.id);
+      const refusal = refusals.get(id);
+      if (refusal) {
+        row.errors.push({ row: row.rowNumber, column: 'is_cluster', ...codedRowError(refusal) });
+      } else if (withMembers.has(id) && settingOs.includes(row)) {
+        row.errors.push({ row: row.rowNumber, column: 'operating_system', ...codedRowError(osClusterWithMembersRefusal()) });
+      }
+    }
+  },
 
   /**
    * The row as the commit stores it: catalog names resolved, provider kept (filled only when blank).
