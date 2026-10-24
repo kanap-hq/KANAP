@@ -2,6 +2,7 @@ import { BadRequestException, ForbiddenException, NotFoundException } from '@nes
 import type { EntityManager } from 'typeorm';
 import { ParticipationAccessScope, projectParticipantCondition } from '../../auth/business-contributor-scope';
 import { BUDGET_NATURES, linkedLineOf, naturesAnd, type BudgetNature } from '../../spend/budget-nature';
+import { assertLinesEditable } from '../../data-access/line-write-checks';
 import { binder } from './related-objects';
 import { parseTargetId } from './relation-target';
 
@@ -69,7 +70,8 @@ export async function assertProjectVisible(
  * business process the owner holds.
  *
  * (1) `allowed` false → 403. (2) A bad target id → 400, before the owner is read.
- * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE. (5) A budget line's nature,
+ * (3) `loadOwner`, then the owner row locked FOR NO KEY UPDATE (a budget line read but not
+ * modifiable: 403). (5) A budget line's nature,
  * or 400. (6) A contract's existence. (7) A project's visibility. An application, an asset, a
  * technology or a business process exists in the tenant, or 400 with `notFound`. (8) The stored set
  * (a budget line: the links of that nature only). (9) Linking what is linked, or unlinking
@@ -107,7 +109,12 @@ export async function setOwnedLink(args: {
     `SELECT 1 FROM ${args.owner.table} WHERE tenant_id = $1 AND ${args.owner.idColumn} = $2 FOR NO KEY UPDATE`,
     [tenantId, loaded.id],
   );
-  if (locked.length === 0) throw new NotFoundException(args.ownerNotFound);
+  if (locked.length === 0) {
+    // The lock passes the UPDATE policy: a budget line the person reads but may not modify takes
+    // none. The clear 403 for it (a plain read), else absent (data-scoped access, spec §6.7).
+    if (args.owner.table === 'spend_items') await assertLinesEditable(args.manager, [loaded.id]);
+    throw new NotFoundException(args.ownerNotFound);
+  }
 
   let nature: BudgetNature | undefined;
   if (args.kind === 'budget_lines') {

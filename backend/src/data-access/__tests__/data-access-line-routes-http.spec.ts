@@ -29,6 +29,8 @@ import { DATA_ACCESS_READ_ONLY_TASK_MESSAGE } from '../../tasks/task-data-access
 import { TasksController } from '../../spend/tasks.controller';
 import { SpendTasksController } from '../../spend/spend-tasks.controller';
 import { SpendTasksService } from '../../spend/spend-tasks.service';
+import { BudgetLinesController } from '../../spend/budget-lines.controller';
+import { BudgetLinesService } from '../../spend/budget-lines.service';
 import { DATA_ACCESS_READ_ONLY_LINE_MESSAGE } from '../line-write-checks';
 import { LIMITED_ROLE, PgClient, APP_URL, connect, roleExists } from './data-access-test-helpers';
 import { Seed, seed } from './data-access-line-seed';
@@ -40,7 +42,8 @@ import { Seed, seed } from './data-access-line-seed';
  * (`data-access-line-seed.ts`), committed for the requests and purged after.
  *
  * Rita (INF-FR edit, INF read) modifies L1, reads L3 only, does not read L5. Paul (INF read)
- * modifies nothing. Ulla has access to all data.
+ * modifies nothing. Marta (ES edit) reads L2 only, modifies L4, does not read L1. Ulla has access
+ * to all data.
  *
  * - `PATCH /tasks/:id` of a task that keeps its line: the line is neither looked up nor locked (the
  *   lock passes the UPDATE policy of the lines, which hid every line the person cannot modify). The
@@ -50,6 +53,9 @@ import { Seed, seed } from './data-access-line-seed';
  * - A move of a task to a read-only line: 403; to a hidden line: 404, as a missing one.
  * - `POST /spend-items/:id/tasks`: read-only line 403, editable line 201, hidden line 404.
  * - Ulla is served as before.
+ * - The Relations tab of a line (`/budget-lines/:id/relations/:kind`): an application, a technology
+ *   or a project added to or removed from a read-only line 403, an editable line 201 / 200, a hidden
+ *   line 404 as a missing one (the owner lock passes the UPDATE policy, `owned-link.ts`).
  *
  * Needs the role kanap_data_limited (CI installs it); skipped without it, failed in CI.
  */
@@ -68,11 +74,13 @@ type Tasks = {
   ullaL5: string;
 };
 let tasks: Tasks;
+type Targets = { applications: string; technologies: string; projects: string };
+let targets: Targets;
 
 // ---------------------------------------------------------------------------------------------
 // The real controllers, with the services they do not need for these routes stubbed.
 
-const CONTROLLERS = [TasksController, SpendTasksController];
+const CONTROLLERS = [TasksController, SpendTasksController, BudgetLinesController];
 
 /** A stand-in for any service: every member is a function resolving to undefined. Not a thenable. */
 function stub(): unknown {
@@ -122,6 +130,8 @@ function testModule(): any {
   const real = new Map<unknown, unknown>([
     [TasksUnifiedService, unified],
     [SpendTasksService, new SpendTasksService(unified, audit)],
+    // The Relations tab needs the audit only (`setRelation`).
+    [BudgetLinesService, new BudgetLinesService(null as any, null as any, null as any, null as any, null as any, null as any, audit)],
     [DataSource, dataSource],
   ]);
   const enhancers = new Set<any>();
@@ -154,6 +164,8 @@ async function createApp(): Promise<INestApplication> {
     req.tenant = { id: s.tenantId, slug: 'da-line-routes', name: 'Data access line routes' };
     const user = req.headers['x-da-user'];
     if (typeof user === 'string' && user) req.user = { sub: user };
+    // What the permission guard sets (stubbed above): the modules the Relations tab reads.
+    req.permissions = { budget: 'admin', tasks: 'admin', applications: 'admin', infrastructure: 'admin', portfolio_projects: 'admin', contracts: 'admin' };
     next();
   });
   app.useGlobalGuards(new TenantInitGuard(dataSource, reflector));
@@ -225,6 +237,27 @@ async function seedTasks(): Promise<Tasks> {
       ritaAssigneeL1: await task(lines.L1, { assignee: persons.rita }),
       ullaL5: await task(lines.L5, {}),
   }));
+}
+
+async function seedTargets(): Promise<Targets> {
+  const one = async (sql: string, params: unknown[]) => (await client.query(sql, params)).rows[0].id as string;
+  return inTenant(async () => {
+    const out = {
+      applications: await one(`INSERT INTO applications (tenant_id, name) VALUES (app_current_tenant(), 'DA HTTP application') RETURNING id`, []),
+      technologies: await one(`INSERT INTO technologies (tenant_id, name, item_number) VALUES (app_current_tenant(), 'DA HTTP technology', 900001) RETURNING id`, []),
+      projects: await one(`INSERT INTO portfolio_projects (tenant_id, name, item_number) VALUES (app_current_tenant(), 'DA HTTP project', 900001) RETURNING id`, []),
+    };
+    // L2 holds each link, so a removal there has something to remove.
+    const line = s.lines.L2;
+    await client.query(`INSERT INTO application_spend_items (tenant_id, application_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [out.applications, line]);
+    await client.query(`INSERT INTO technology_spend_items (tenant_id, technology_id, spend_item_id) VALUES (app_current_tenant(), $1, $2)`, [out.technologies, line]);
+    await client.query(`INSERT INTO portfolio_project_opex (tenant_id, project_id, opex_id) VALUES (app_current_tenant(), $1, $2)`, [out.projects, line]);
+    return out;
+  });
+}
+
+async function linkCount(table: string, ownerColumn: string, line: string): Promise<number> {
+  return inTenant(async () => Number((await client.query(`SELECT count(*)::int AS n FROM ${table} WHERE ${ownerColumn} = $1`, [line])).rows[0].n));
 }
 
 async function taskRow(id: string): Promise<{ title: string; status: string; assignee_user_id: string | null; owner_ids: string[]; viewer_ids: string[]; related_object_id: string }> {
@@ -312,6 +345,50 @@ async function testTaskCreation(app: INestApplication) {
   console.log('  task creation: read-only line 403, editable 201, hidden 404 as a missing one, Ulla 201: OK');
 }
 
+const LINKS: Record<keyof Targets, [string, string]> = {
+  applications: ['application_spend_items', 'spend_item_id'],
+  technologies: ['technology_spend_items', 'spend_item_id'],
+  projects: ['portfolio_project_opex', 'opex_id'],
+};
+
+async function testRelations(app: INestApplication) {
+  const { persons, lines } = s;
+  const marta = persons.marta;
+  for (const kind of Object.keys(LINKS) as Array<keyof Targets>) {
+    const [table, ownerColumn] = LINKS[kind];
+    const target = targets[kind];
+    // L2: read only for Marta.
+    const add = await call(app, 'POST', `budget-lines/${lines.L2}/relations/${kind}`, marta, { id: target });
+    expectLimited(add, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta adds ${kind} to a read-only line`);
+    const remove = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${target}`, marta);
+    expectLimited(remove, DATA_ACCESS_READ_ONLY_LINE_MESSAGE, `Marta removes ${kind} from a read-only line`);
+    assert.equal(await linkCount(table, ownerColumn, lines.L2), 1, `${kind}: the link of L2 is kept`);
+    // L4: editable.
+    const added = await call(app, 'POST', `budget-lines/${lines.L4}/relations/${kind}`, marta, { id: target });
+    assert.equal(added.status, 201, `Marta adds ${kind} to an editable line: ${added.text}`);
+    assert.equal(added.body?.changed, true, added.text);
+    assert.equal(await linkCount(table, ownerColumn, lines.L4), 1);
+    const removed = await call(app, 'DELETE', `budget-lines/${lines.L4}/relations/${kind}/${target}`, marta);
+    assert.equal(removed.status, 200, `Marta removes ${kind} from an editable line: ${removed.text}`);
+    assert.equal(removed.body?.changed, true, removed.text);
+    assert.equal(await linkCount(table, ownerColumn, lines.L4), 0);
+    // L1: hidden from Marta, answered as a random id.
+    const hidden = await call(app, 'POST', `budget-lines/${lines.L1}/relations/${kind}`, marta, { id: target });
+    const missing = await call(app, 'POST', `budget-lines/${randomUUID()}/relations/${kind}`, marta, { id: target });
+    assert.equal(hidden.status, 404, `Marta adds ${kind} to a hidden line: ${hidden.text}`);
+    assert.equal(missing.status, 404, missing.text);
+    assert.equal(hidden.body?.message, missing.body?.message, 'a hidden line answers as a missing one');
+    const hiddenRemove = await call(app, 'DELETE', `budget-lines/${lines.L1}/relations/${kind}/${target}`, marta);
+    assert.equal(hiddenRemove.status, 404, hiddenRemove.text);
+  }
+  // Ulla (all data) removes the links of L2 as before.
+  for (const kind of Object.keys(LINKS) as Array<keyof Targets>) {
+    const res = await call(app, 'DELETE', `budget-lines/${lines.L2}/relations/${kind}/${targets[kind]}`, persons.ulla);
+    assert.equal(res.status, 200, res.text);
+  }
+  console.log('  Relations tab (applications, technologies, projects): read-only line 403, editable 201 / 200, hidden 404 as a missing one: OK');
+}
+
 // ---------------------------------------------------------------------------------------------
 // Run.
 
@@ -345,9 +422,11 @@ async function run() {
       throw error;
     }
     tasks = await seedTasks();
+    targets = await seedTargets();
     app = await createApp();
     await testTaskUpdates(app);
     await testTaskCreation(app);
+    await testRelations(app);
     console.log('data access line routes over HTTP: all scenarios passed');
   } finally {
     if (app) await app.close();
