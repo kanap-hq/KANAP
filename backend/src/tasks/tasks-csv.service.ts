@@ -16,6 +16,10 @@ import {
 } from '../common/csv';
 import { taskCsvConfig } from './task-csv.config';
 import { assertTaskWritten } from './task-data-access';
+import { isLimitedTransaction } from '../data-access/line-write-checks';
+
+/** The task types of a budget line, which a limited person may see tasks of without the line. */
+const LINE_TYPES = new Set(['spend_item', 'capex_item']);
 
 /**
  * Service for importing and exporting Tasks via CSV
@@ -135,6 +139,10 @@ export class TasksCsvService {
       incident: { table: 'incidents', nameColumn: "'INC-' || item_number::text" },
     };
 
+    // A limited person's export shows no trace of a line out of access (spec §5.4, §5.6): a task
+    // they see (a participation) of a line they cannot read exports neither its name nor its id.
+    const limited = await isLimitedTransaction(manager);
+
     // Load names for each type
     for (const [type, typeTasks] of byType.entries()) {
       const mapping = tableMap[type];
@@ -155,6 +163,9 @@ export class TasksCsvService {
       // Attach names to tasks
       for (const task of typeTasks) {
         const relatedObjectId = task.related_object_id;
+        if (limited && LINE_TYPES.has(type) && relatedObjectId && !nameById.has(relatedObjectId)) {
+          task.related_object_id = null;
+        }
         (task as any)._relatedObjectName = relatedObjectId ? (nameById.get(relatedObjectId) ?? '') : '';
       }
     }
