@@ -44,6 +44,8 @@ export type ImpactCluster = {
   state: 'degraded' | 'down';
   members: number;
   fallen_members: number;
+  /** Applications assigned to the cluster itself; null when the caller cannot read applications. */
+  applications: number | null;
   /** The fallen members. */
   via: ImpactRef[];
   via_total: number;
@@ -146,6 +148,11 @@ export class AssetImpactService {
     const applications = ctx.applications ? await this.applicationsOf(mg, tenantId, fallen, ctx.applications.scope, ref, rank) : null;
     const technologies = await this.technologiesOf(mg, tenantId, fallen, ref);
     const processes = ctx.processes && applications ? await this.processesOf(mg, tenantId, applications) : null;
+    // What a cluster carries itself, so a member's page can say the applications stay up while it is degraded.
+    if (ctx.applications && clusters.length > 0) {
+      const onClusters = await this.applicationsOf(mg, tenantId, clusters.map((c) => c.id), ctx.applications.scope, ref, new Map());
+      for (const cluster of clusters) cluster.applications = onClusters.filter((app) => app.via.some((via) => via.id === cluster.id)).length;
+    }
 
     const cap = <T extends { via: ImpactRef[]; via_total: number }>(rows: T[]) =>
       rows.slice(0, IMPACT_ROW_LIMIT).map((row) => ({ ...row, via: row.via.slice(0, IMPACT_VIA_LIMIT), via_total: row.via.length }));
@@ -302,6 +309,7 @@ export class AssetImpactService {
       state: row.fallen.length >= Number(row.members) ? 'down' : 'degraded',
       members: Number(row.members),
       fallen_members: row.fallen.length,
+      applications: null,
       via: row.fallen,
       via_total: row.fallen.length,
     }));

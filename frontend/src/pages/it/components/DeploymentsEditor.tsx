@@ -335,6 +335,7 @@ export default function DeploymentsEditor({
           subject: `${applicationName || t('components.clusterAssignment.thisApplication')} (${envLabel(deployment?.environment || '')}, ${labelFor('serverRole', assignmentDraft.role) || assignmentDraft.role})`,
           role: assignmentDraft.role,
           rows: stored.filter((row) => row.id !== assignmentDraft.assignmentId).map((row) => ({ asset_id: row.server_id, role: row.role })),
+          movingFrom: original?.server_id,
         });
         if (outcome.status === 'cancelled') return;
         if (outcome.status === 'inherited') {
@@ -371,12 +372,13 @@ export default function DeploymentsEditor({
   const assignGroupToCluster = React.useCallback(async (set: GroupableSet) => {
     if (!(await dialogs.confirm({
       message: t('components.clusterAssignment.groupConfirm', { application: applicationName || t('components.clusterAssignment.thisApplication') }),
+      title: t('components.clusterAssignment.title'),
       confirmLabel: t('components.clusterAssignment.assignToCluster'),
     }))) return;
     setError(null);
     try {
       await api.post(`/app-deployments/${set.app_instance_id}/servers`, { server_id: set.cluster_id, role: set.role });
-      feedback.info(t('components.serverAssignments.serverAssigned'));
+      feedback.info(t('components.clusterAssignment.assignedToCluster'));
       await loadAssignments();
       await onRefresh();
       void invalidateTechnologyLinks(queryClient);

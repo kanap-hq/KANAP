@@ -1074,6 +1074,7 @@ export default function AssetWorkspacePage() {
     if (!id) return;
     if (!(await dialogs.confirm({
       message: t('components.clusterAssignment.groupConfirm', { application }),
+      title: t('components.clusterAssignment.title'),
       confirmLabel: t('components.clusterAssignment.assignToCluster'),
     }))) return;
     try {
@@ -2713,9 +2714,15 @@ export default function AssetWorkspacePage() {
                 onChange={(e) => setInstanceId(e.target.value)}
                 disabled={!selectedAppId}
                 required
-                helperText={!selectedAppId ? t('workspace.asset.assignments.selectAppForEnv') : undefined}
                 variant="standard"
                 sx={drawerFieldValueSx}
+                SelectProps={{
+                  displayEmpty: true,
+                  renderValue: (value) => {
+                    if (value) return environmentLabel((selectedAppId ? appInstances[selectedAppId] : undefined)?.find((inst) => inst.id === value)?.environment);
+                    return selectedAppId ? '' : <Box component="span" sx={{ color: 'kanap.text.tertiary' }}>{t('workspace.asset.assignments.selectAppForEnv')}</Box>;
+                  },
+                }}
               >
                 {(selectedAppId ? appInstances[selectedAppId] || [] : []).map((inst) => (
                   <MenuItem key={inst.id} value={inst.id} sx={drawerMenuItemSx}>{environmentLabel(inst.environment)}</MenuItem>

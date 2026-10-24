@@ -16,6 +16,8 @@ export type ClusterQuestionInput = {
   role: string;
   /** The rows stored on the deployment: a cluster that carries the role refuses its members (A3), a member's own row is replaced (A4). */
   rows: DeploymentRow[];
+  /** The asset the edited row sits on today. A cluster whose member is chosen next: the user is taking the row off it, nothing is asked. */
+  movingFrom?: string;
 };
 
 export type ClusterQuestionOutcome =
@@ -121,6 +123,10 @@ export default function useClusterAssignmentQuestion() {
           const choice = { id: assetId, name: asset.name, count: 0, absorbed };
           if ((await ask({ server: asset.name, subject: input.subject, clusters: [choice], direct: true })) === null) return { status: 'cancelled' };
         }
+        targets.push(assetId);
+        continue;
+      }
+      if (input.movingFrom && clusters.some((cluster) => cluster.id === input.movingFrom)) {
         targets.push(assetId);
         continue;
       }

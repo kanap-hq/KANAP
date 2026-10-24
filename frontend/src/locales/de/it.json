@@ -3212,6 +3212,7 @@
       "memberCount_one": "{{count}} Mitglied",
       "memberCount_other": "{{count}} Mitglieder",
       "assignToCluster": "Dem Cluster zuordnen",
+      "assignedToCluster": "Dem Cluster zugeordnet",
       "serverOnly": "Nur diesem Server",
       "absorbed_one": "Die direkte Zuordnung von {{names}} wird ersetzt.",
       "absorbed_other": "Die direkten Zuordnungen von {{names}} werden ersetzt.",

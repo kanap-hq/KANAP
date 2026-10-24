@@ -260,6 +260,7 @@ describe('Asset workspace: assignments and clusters', () => {
     expect(get).not.toHaveBeenCalledWith('/assets/sql-1/assignments', expect.anything());
     fireEvent.click(screen.getByRole('button', { name: 'Assign to the cluster' }));
     expect(await screen.findByText('CheeseTrack will stay available as long as one member stands.')).toBeTruthy();
+    expect(screen.getByText('Assign to the cluster?')).toBeTruthy();
     expect(post).not.toHaveBeenCalled();
     const buttons = screen.getAllByRole('button', { name: 'Assign to the cluster' });
     fireEvent.click(buttons[buttons.length - 1]);

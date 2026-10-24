@@ -6,6 +6,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { MemoryRouter } from 'react-router-dom';
 import { createAppTheme } from '../../../config/ThemeContext';
 import { KanapDialogProvider } from '../../../components/design/KanapDialogProvider';
+import { ApplicationFeedbackProvider } from '../applicationFeedback';
 import DeploymentsEditor, { type DeploymentRecord } from './DeploymentsEditor';
 
 const apiGet = vi.hoisted(() => vi.fn());
@@ -66,6 +67,8 @@ function route(url: string) {
   if (clusters) return { data: { items: wire.clusters[clusters[1]] ?? [] } };
   const members = url.match(/^\/assets\/([^/]+)\/members$/);
   if (members) return { data: { items: wire.members[members[1]] ?? [] } };
+  // The server picker reads the asset of the row being edited.
+  if (url === '/assets/cl-1') return { data: { id: 'cl-1', name: 'PAR-SQL-CL01', status: 'active', is_cluster: true } };
   if (url === `/assets/${wire.picked.id}`) return { data: { ...wire.picked, status: 'active' } };
   const memberNames = (wire.picked as { is_cluster?: boolean }).is_cluster
     ? { member_names: (wire.members[wire.picked.id] ?? []).map((member) => member.name) }
@@ -79,7 +82,9 @@ function renderEditor(readOnly = false) {
       <MemoryRouter>
         <ThemeProvider theme={createAppTheme('light')}>
           <KanapDialogProvider>
-            <DeploymentsEditor applicationId="app-1" applicationName="CheeseTrack" deployments={[deployment]} onRefresh={vi.fn()} readOnly={readOnly} />
+            <ApplicationFeedbackProvider onError={vi.fn()}>
+              <DeploymentsEditor applicationId="app-1" applicationName="CheeseTrack" deployments={[deployment]} onRefresh={vi.fn()} readOnly={readOnly} />
+            </ApplicationFeedbackProvider>
           </KanapDialogProvider>
         </ThemeProvider>
       </MemoryRouter>
@@ -254,9 +259,28 @@ describe('DeploymentsEditor: clusters', () => {
     expect(await screen.findByText('db on PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
     fireEvent.click(screen.getByRole('button', { name: 'Assign to PAR-SQL-CL01' }));
     expect(await screen.findByText('CheeseTrack will stay available as long as one member stands.')).toBeTruthy();
+    expect(screen.getByText('Assign to the cluster?')).toBeTruthy();
     expect(apiPost).not.toHaveBeenCalled();
     fireEvent.click(screen.getByRole('button', { name: 'Assign to the cluster' }));
     await waitFor(() => expect(apiPost).toHaveBeenCalledWith('/app-deployments/dep-1/servers', { server_id: 'cl-1', role: 'db' }));
+    // The toast says what happened to the cluster, not that a server was added.
+    expect(await screen.findByText('Assigned to the cluster')).toBeTruthy();
+    expect(screen.queryByText('Server added')).toBeNull();
+  });
+
+  it('saves a cluster\'s row moved onto one of its members without a question', async () => {
+    wire.rows = [row('a-cl', 'cl-1', 'PAR-SQL-CL01', 'db', { asset: { is_cluster: true } })];
+    wire.clusters['sql-1'] = [CL01];
+    wire.members['cl-1'] = [SQL1, SQL2];
+    apiPatch.mockResolvedValue({ data: {} });
+    renderEditor();
+    fireEvent.click(await screen.findByRole('button', { name: 'Edit PAR-SQL-CL01' }));
+    const dialog = await screen.findByRole('dialog');
+    fireEvent.mouseDown(within(dialog).getAllByRole('combobox')[0]);
+    fireEvent.click(await screen.findByRole('option', { name: new RegExp(wire.picked.name) }));
+    fireEvent.click(within(dialog).getByRole('button', { name: 'Save' }));
+    await waitFor(() => expect(apiPatch).toHaveBeenCalledWith('/app-deployments/dep-1/servers/a-cl', expect.objectContaining({ server_id: 'sql-1', role: 'db' })));
+    expect(screen.queryByText('Assign to the cluster?')).toBeNull();
   });
 
   it('shows a reader the inherited rows and no group line or button', async () => {

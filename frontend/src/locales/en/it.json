@@ -3212,6 +3212,7 @@
       "memberCount_one": "{{count}} member",
       "memberCount_other": "{{count}} members",
       "assignToCluster": "Assign to the cluster",
+      "assignedToCluster": "Assigned to the cluster",
       "serverOnly": "This server only",
       "absorbed_one": "The direct assignment of {{names}} will be replaced.",
       "absorbed_other": "The direct assignments of {{names}} will be replaced.",
