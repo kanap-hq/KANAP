@@ -347,7 +347,7 @@ export default function DeploymentsEditor({
         const lifecycleColor = getDotColor(LIFECYCLE_COLORS[deployment.lifecycle] || 'default', theme.palette.mode);
         return (
           <Box key={deployment.id}>
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: '18px', mb: 1.25, minWidth: 0 }}>
+            <Box sx={{ display: 'flex', flexWrap: 'wrap', alignItems: 'center', columnGap: '18px', rowGap: '8px', mb: 1.25, minWidth: 0 }}>
               <Box sx={{ fontFamily: MONO_FONT_FAMILY, fontSize: 14, fontWeight: 500, minWidth: 76 }}>
                 {envLabel(deployment.environment)}
               </Box>
@@ -371,7 +371,8 @@ export default function DeploymentsEditor({
                 <Box component="span" sx={{ width: 8, height: 8, borderRadius: '50%', bgcolor: lifecycleColor }} />
                 {labelFor('lifecycleStatus', deployment.lifecycle) || deployment.lifecycle}
               </Box>
-              <Box sx={{ display: 'inline-flex', gap: '6px', fontSize: 12, minWidth: 0 }}>
+              {/* The base URL keeps room for its domain: the next items wrap before it is cut short; it never grows past its text. */}
+              <Box sx={{ display: 'inline-flex', gap: '6px', fontSize: 12, flex: '1 1 240px', minWidth: 0, maxWidth: 'fit-content' }}>
                 <Box component="span" sx={(muiTheme) => ({ color: muiTheme.palette.kanap.text.tertiary, flexShrink: 0, whiteSpace: 'nowrap' })}>{t('components.instances.baseUrl')}</Box>
                 <Tooltip title={deployment.base_url || ''} disableHoverListener={!deployment.base_url}>
                   <Box component="span" sx={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
