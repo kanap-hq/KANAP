@@ -653,7 +653,7 @@ async function testAi() {
     const context: any = { manager: runner.manager, tenantId: w.tenantId, userId: w.budgetUser, isPlatformHost: false, surface: 'chat', authMethod: 'jwt' };
     const fin: any = new AiFinancialPlanMutationSupportService(audit, none, none, none, none, none, none);
     const task: any = new AiTaskMutationSupportService();
-    const rel: any = new AiRelationMutationSupportService(audit, none, task);
+    const rel: any = new AiRelationMutationSupportService(audit, none, task, undefined as any);
     const biz: any = new (AiBusinessRecordMutationSupportService as any)(...Array.from({ length: 20 }, (_, i) => (i === 2 ? audit : undefined)));
     const aggregate: any = new (AiAggregateExecutor as any)();
     const appSpendItems = {

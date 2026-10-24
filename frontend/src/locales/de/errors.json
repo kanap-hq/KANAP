@@ -233,7 +233,7 @@
   "forbidden": "Sie haben keine Berechtigung für diese Aktion.",
   "NO_ACCESS": "Diesem Konto wurde noch kein Zugriff gewährt. Wenden Sie sich an einen Administrator.",
   "assignment_duplicate": "Dieser Server hat diese Rolle in dieser Bereitstellung bereits.",
-  "assignment_cluster": "Ein Cluster kann nicht zugeordnet werden: Wählen Sie einen bestimmten Server.",
+  "assignment_inherited": "Wird bereits über {{cluster}} auf diesem Server betrieben.",
   "cluster_has_members_one": "Entfernen Sie zuerst sein Mitglied.",
   "cluster_has_members_other": "Entfernen Sie zuerst seine {{count}} Mitglieder.",
   "cluster_switch_member": "Mitglied von {{cluster}}: Es kann kein Cluster werden.",

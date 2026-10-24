@@ -1,6 +1,6 @@
 import { Injectable, InternalServerErrorException, NotFoundException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, Repository } from 'typeorm';
+import { EntityManager, In, Repository } from 'typeorm';
 import { AppAssetAssignment } from './app-asset-assignment.entity';
 import { AppInstance } from '../app-instances/app-instance.entity';
 import { Asset } from '../assets/asset.entity';
@@ -12,6 +12,13 @@ import {
 } from '../auth/business-contributor-scope';
 import { applicationBadRequest, applicationConflict } from '../applications/application-rules';
 import { effectiveAssignmentsSql, groupableAssignmentsSql, ViaCluster } from './effective-assignments';
+import {
+  assertNotInherited,
+  inheritingMembersOf,
+  lockAssignmentClusters,
+  mergeAbsorbed,
+  normalizeServerRole,
+} from './cluster-assignment-rules';
 
 type AssignmentRow = {
   id: string;
@@ -66,6 +73,9 @@ const EFFECTIVE_SERVER_JOINS = `JOIN assets a ON a.tenant_id = e.tenant_id AND a
        LEFT JOIN locations l ON l.tenant_id = a.tenant_id AND l.id = a.location_id`;
 
 type ServiceOpts = { manager?: EntityManager; tenantId?: string | null };
+
+/** A member whose direct row a cluster's row replaced (A4), for the message of the screen. */
+export type AbsorbedMember = { asset_id: string; name: string };
 
 @Injectable()
 export class AppAssetAssignmentsService {
@@ -158,16 +168,9 @@ export class AppAssetAssignmentsService {
   }
 
   private async normalizeRole(value: unknown, tenantId: string, manager?: EntityManager): Promise<string> {
-    const normalized = String(value || '').trim().toLowerCase();
-    if (!normalized) {
-      throw applicationBadRequest('assignment_role_invalid', 'role is required', { value: '' });
-    }
+    if (!String(value || '').trim()) return normalizeServerRole(value, []);
     const settings = await this.itOpsSettings.getSettingsForWrite(tenantId, manager);
-    const allowed = new Set((settings.serverRoles || []).map((item) => item.code));
-    if (!allowed.has(normalized)) {
-      throw applicationBadRequest('assignment_role_invalid', `Invalid role "${value}"`, { value: String(value ?? '') });
-    }
-    return normalized;
+    return normalizeServerRole(value, settings.serverRoles);
   }
 
   /** No date when none is given; a refusal (`date_invalid`) when one is given that is not a date. */
@@ -180,17 +183,60 @@ export class AppAssetAssignmentsService {
     return date;
   }
 
-  private assertNotCluster(asset: Asset) {
-    if (asset.is_cluster) {
-      throw applicationBadRequest(
-        'assignment_cluster',
-        'Cannot assign application instances to a cluster asset; select a specific host',
-      );
+  private duplicateRefusal() {
+    return applicationConflict('assignment_duplicate', 'Asset already assigned with this role');
+  }
+
+  /** Saves `row`; two writers racing on one server and role meet the unique key: `assignment_duplicate`. */
+  private async saveRow(repo: Repository<AppAssetAssignment>, row: AppAssetAssignment): Promise<AppAssetAssignment> {
+    try {
+      return await repo.save(row);
+    } catch (error: any) {
+      if ((error?.code ?? error?.driverError?.code) === '23505') throw this.duplicateRefusal();
+      throw error;
     }
   }
 
-  private duplicateRefusal() {
-    return applicationConflict('assignment_duplicate', 'Asset already assigned with this role');
+  /**
+   * The cluster rules (`cluster-assignment-rules.ts`) for `row`, about to be saved on its server,
+   * after `lockAssignmentClusters`:
+   * - on a member, A3: no direct row for what one of its clusters carries (`assignment_inherited`);
+   * - on a cluster, A4: the direct rows of the same deployment and role on its members are deleted
+   *   (each audited as a deletion), `row` takes the earliest date and their notes after its own.
+   * Returns the members absorbed, by name.
+   */
+  private async applyClusterRules(
+    mg: EntityManager,
+    tenantId: string,
+    row: AppAssetAssignment,
+    isCluster: boolean,
+    userId: string | null,
+  ): Promise<AbsorbedMember[]> {
+    if (!isCluster) {
+      await assertNotInherited(mg, tenantId, row.app_instance_id, row.asset_id, row.role);
+      return [];
+    }
+    const members = (await inheritingMembersOf(mg, tenantId, [row.asset_id])).get(row.asset_id) ?? [];
+    if (members.length === 0) return [];
+    const repo = this.getRepo(mg);
+    const rows = await repo.find({
+      where: { tenant_id: tenantId, app_instance_id: row.app_instance_id, role: row.role, asset_id: In(members.map((m) => m.id)) },
+    });
+    const absorbed = members.flatMap((member) => rows
+      .filter((candidate) => candidate.asset_id === member.id && candidate.id !== row.id)
+      .map((candidate) => ({ member, row: candidate })));
+    if (absorbed.length === 0) return [];
+    const merged = mergeAbsorbed(row, absorbed.map((item) => item.row));
+    row.since_date = merged.since_date as any;
+    row.notes = merged.notes;
+    await repo.delete({ tenant_id: tenantId, id: In(absorbed.map((item) => item.row.id)) } as any);
+    for (const { row: gone } of absorbed) {
+      await this.audit.log(
+        { table: 'app_asset_assignments', recordId: gone.id, action: 'delete', before: gone, after: null, userId },
+        { manager: mg },
+      );
+    }
+    return absorbed.map(({ member }) => ({ asset_id: member.id, name: member.name }));
   }
 
   private normalizeNotes(value: unknown): string | null {
@@ -335,10 +381,11 @@ export class AppAssetAssignmentsService {
     // Accept both asset_id and server_id for backwards compatibility
     const assetId = this.normalizeNullableId(payload.asset_id ?? payload.assetId ?? payload.server_id ?? payload.serverId);
     if (!assetId) throw applicationBadRequest('asset_required', 'asset_id is required');
-    const asset = await this.ensureAsset(assetId, tenantId, mg);
-    this.assertNotCluster(asset);
     const role = await this.normalizeRole(payload.role, instance.tenant_id, mg);
     const sinceDate = this.parseDate(payload.since_date, 'since_date');
+    // The cluster, or the clusters of a member, are locked before the server and its rows are read.
+    await lockAssignmentClusters(mg, tenantId, [assetId]);
+    const asset = await this.ensureAsset(assetId, tenantId, mg);
     const existing = await repo.findOne({ where: { tenant_id: tenantId, app_instance_id: instanceId, asset_id: assetId, role } as any });
     if (existing) {
       throw this.duplicateRefusal();
@@ -351,12 +398,13 @@ export class AppAssetAssignmentsService {
       since_date: sinceDate,
       notes: this.normalizeNotes(payload.notes),
     });
-    const saved = await repo.save(assignment);
+    const absorbed = await this.applyClusterRules(mg, tenantId, assignment, !!asset.is_cluster, userId);
+    const saved = await this.saveRow(repo, assignment);
     await this.audit.log(
       { table: 'app_asset_assignments', recordId: saved.id, action: 'create', before: null, after: saved, userId },
       { manager: mg },
     );
-    return saved;
+    return { ...saved, absorbed };
   }
 
   async update(
@@ -381,8 +429,7 @@ export class AppAssetAssignmentsService {
       if (!assetId) {
         throw applicationBadRequest('asset_required', 'asset_id is required');
       }
-      const asset = await this.ensureAsset(assetId, tenantId, mg);
-      this.assertNotCluster(asset);
+      await this.ensureAsset(assetId, tenantId, mg);
       patch.asset_id = assetId;
     }
     if (payload.role !== undefined) {
@@ -396,7 +443,12 @@ export class AppAssetAssignmentsService {
     }
     const nextAssetId = patch.asset_id ?? assignment.asset_id;
     const nextRole = patch.role ?? assignment.role;
-    if (nextAssetId !== assignment.asset_id || nextRole !== assignment.role) {
+    const moved = nextAssetId !== assignment.asset_id || nextRole !== assignment.role;
+    let nextIsCluster = false;
+    if (moved) {
+      // As in create: the clusters first, then the server and the rows.
+      await lockAssignmentClusters(mg, tenantId, [nextAssetId]);
+      nextIsCluster = !!(await this.ensureAsset(nextAssetId, tenantId, mg)).is_cluster;
       const duplicate = await repo.findOne({
         where: { tenant_id: tenantId, app_instance_id: instanceId, asset_id: nextAssetId, role: nextRole } as any,
       });
@@ -406,12 +458,14 @@ export class AppAssetAssignmentsService {
     }
     const before = { ...assignment };
     Object.assign(assignment, patch);
-    const saved = await repo.save(assignment);
+    // A row that changes server or role follows the cluster rules of a new row (A3, A4).
+    const absorbed = moved ? await this.applyClusterRules(mg, tenantId, assignment, nextIsCluster, userId) : [];
+    const saved = await this.saveRow(repo, assignment);
     await this.audit.log(
       { table: 'app_asset_assignments', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
     );
-    return saved;
+    return { ...saved, absorbed };
   }
 
   /**
@@ -420,11 +474,15 @@ export class AppAssetAssignmentsService {
    * row, which only the cluster edits). A Business Contributor sees the rows of the applications
    * they take part in, inherited or not. `groupable`, on a direct row of a member: the set that
    * could move to its cluster (`groupableAssignmentsSql`), else null.
+   *
+   * Answer: `{ items, groupable }`. `groupable`, for a cluster: the sets of direct rows on its
+   * members that could move to it (`groupableAssignmentsSql`, limited to the applications a
+   * Business Contributor takes part in); `[]` for any other server.
    */
   async listByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
-    await this.ensureAsset(assetId, tenantId, mg);
+    const asset = await this.ensureAsset(assetId, tenantId, mg);
     const params: unknown[] = [assetId, tenantId];
     const accessScopeSql = opts?.accessScope
       ? (() => {
@@ -471,7 +529,7 @@ export class AppAssetAssignmentsService {
       const set = groupable.find((g) => g.app_instance_id === row.app_instance_id && g.role === row.role && g.member_ids.includes(assetId));
       return set ? { cluster_id: set.cluster_id, cluster_name: set.cluster_name, member_ids: set.member_ids } : null;
     };
-    return rows.map((row) => ({
+    const items = rows.map((row) => ({
       id: row.id,
       app_instance_id: row.app_instance_id,
       asset_id: row.asset_id,
@@ -487,6 +545,23 @@ export class AppAssetAssignmentsService {
       via_clusters: row.via_clusters ?? [],
       groupable: groupableOf(row),
     }));
+    const clusterGroupable: GroupableAssignment[] = asset.is_cluster
+      ? await mg.query(
+        groupableAssignmentsSql({
+          tenant: '$1',
+          clusters: 'ARRAY[$2::uuid]',
+          ...(opts?.accessScope
+            ? {
+              instances: `ARRAY(SELECT gi.id FROM app_instances gi
+                 JOIN applications a ON a.tenant_id = gi.tenant_id AND a.id = gi.application_id
+                WHERE gi.tenant_id = $1 AND ${applicationParticipantCondition('a', '$3')})`,
+            }
+            : {}),
+        }),
+        opts?.accessScope ? [tenantId, assetId, opts.accessScope.userId] : [tenantId, assetId],
+      )
+      : [];
+    return { items, groupable: clusterGroupable };
   }
 
   // Backwards compatibility alias

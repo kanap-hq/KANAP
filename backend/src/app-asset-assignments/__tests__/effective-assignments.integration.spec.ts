@@ -155,7 +155,7 @@ async function run() {
     assert.deepEqual((await assignments.listByApplication(crm, opts)).groupable, expectedGroup);
 
     // --- The Operations tab of a member: direct and inherited rows; of a cluster: its own.
-    const ofM2 = await assignments.listByAsset(m2, opts);
+    const ofM2 = (await assignments.listByAsset(m2, opts)).items;
     assert.deepEqual(ofM2.map((row) => [row.application.name, row.inherited]), [['CRM', false], ['ERP', true]]);
     const inheritedRow = ofM2.find((row) => row.inherited)!;
     assert.equal(inheritedRow.id, onA, 'an inherited row names the cluster row');
@@ -163,8 +163,11 @@ async function run() {
     assert.equal(inheritedRow.groupable, null);
     assert.deepEqual(ofM2.find((row) => !row.inherited)!.groupable, { cluster_id: clA, cluster_name: 'cl-a', member_ids: [m1, m2] });
     const ofA = await assignments.listByAsset(clA, opts);
-    assert.deepEqual(ofA.map((row) => [row.application.name, row.inherited, row.id]), [['ERP', false, onA]]);
-    assert.deepEqual(await assignments.listByAsset(m3, opts), [], 'a retired member inherits nothing');
+    assert.deepEqual(ofA.items.map((row) => [row.application.name, row.inherited, row.id]), [['ERP', false, onA]]);
+    assert.deepEqual(ofA.groupable, expectedGroup, 'a cluster: the sets of its members that could move to it');
+    assert.deepEqual((await assignments.listByAsset(clB, opts)).groupable, [], 'a cluster with one member: nothing to group');
+    assert.deepEqual((await assignments.listByAsset(m2, opts)).groupable, [], 'a member: no set of its own');
+    assert.deepEqual(await assignments.listByAsset(m3, opts), { items: [], groupable: [] }, 'a retired member inherits nothing');
 
     // A Business Contributor sees the inherited row of an application they take part in, only.
     const roleId = await one(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Contributor', 'Contributor') RETURNING id`, [t]);
@@ -172,7 +175,9 @@ async function run() {
       `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Bea', 'Tester', $3, 'enabled') RETURNING id`,
       [t, `bea-${t.slice(0, 8)}@example.test`, roleId]);
     await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [t, erp, userId]);
-    const scoped = await assignments.listByAsset(m2, { ...opts, accessScope: { userId } });
+    const scoped = (await assignments.listByAsset(m2, { ...opts, accessScope: { userId } })).items;
+    assert.deepEqual((await assignments.listByAsset(clA, { ...opts, accessScope: { userId } })).groupable, [],
+      'a Business Contributor of ERP sees no set of CRM');
     assert.deepEqual(scoped.map((row) => [row.application.name, row.inherited]), [['ERP', true]]);
 
     // --- The assets list: count and filter, effective; the summary; the connection map preselection.
@@ -198,6 +203,15 @@ async function run() {
     assert.equal((await effective(runner, t, p)).some((row) => row.asset_id === m4), false, 'a member taken out loses it');
     await runner.query(`DELETE FROM asset_cluster_members WHERE tenant_id = $1 AND cluster_id = $2 AND asset_id = $3`, [t, clB, m2]);
     assert.deepEqual((await effective(runner, t, p)).find((row) => row.asset_id === m2)!.via_clusters.map((via) => via.name), ['cl-a']);
+
+    // --- A retired cluster passes nothing on: it keeps its own row, its members inherit nothing
+    // from it, and nothing groups onto it.
+    await runner.query(`UPDATE assets SET status = 'retired' WHERE tenant_id = $1 AND id = $2`, [t, clA]);
+    const afterRetire = await effective(runner, t, p);
+    assert.equal(afterRetire.find((row) => row.asset_id === clA)?.inherited, false, 'the retired cluster keeps its own row');
+    assert.equal(afterRetire.some((row) => row.asset_id === m2), false, 'its member inherits nothing from it');
+    assert.deepEqual(afterRetire.find((row) => row.asset_id === m1)!.via_clusters, [], 'the direct row of a member names no retired cluster');
+    assert.deepEqual((await assignments.list(q, opts)).groupable, [], 'nothing groups onto a retired cluster');
   } finally {
     await runner.rollbackTransaction();
     await runner.release();

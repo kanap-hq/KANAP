@@ -32,6 +32,10 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
 
   'src/app-asset-assignments/assignment-readers.inventory.ts': { status: 'direct', reason: 'This inventory.' },
   'src/app-asset-assignments/app-asset-assignment.entity.ts': { status: 'direct', reason: 'The entity of the stored rows.' },
+  'src/app-asset-assignments/cluster-assignment-rules.ts': {
+    status: 'direct',
+    reason: 'The cluster rules of the writers: whether a cluster already carries the stored row a member would get.',
+  },
   'src/ai/mutation/ai-relation-mutation-support.service.ts': { status: 'direct', reason: 'The assistant\'s writes, and the stored rows they edit.' },
   'src/assets/services/asset-impact.service.ts': { status: 'direct', reason: 'The impact already reads the applications of a fallen cluster.' },
   'src/assets/assets-delete.service.ts': {

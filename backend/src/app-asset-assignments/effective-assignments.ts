@@ -11,8 +11,8 @@ import { assetInServiceSql } from '../technologies/technology-reach.service';
  *   marked as coming through them (`inherited`, `via_clusters`). A member added to a cluster
  *   inherits at once; a member taken out loses everything it inherited. A member is never a
  *   cluster, so nothing goes further.
- * - A retired member (`assetInServiceSql`) inherits nothing. A direct row on a retired asset
- *   stays as it is.
+ * - A retired member (`assetInServiceSql`) inherits nothing, and a retired cluster passes nothing
+ *   on: it keeps its own row only. A direct row on a retired asset stays as it is.
  * - One effective row per (tenant, deployment, server, role). A member of two clusters that carry
  *   the same deployment and role: one row, `via_clusters` names both. A direct row and an inherited
  *   one alike (older data): the direct one wins (`inherited` false, its id, date and notes), and
@@ -61,7 +61,7 @@ export function effectiveAssignmentsSql(p: EffectiveAssignmentScope): string {
                 ea_y.created_at, ea_y.updated_at, true, ea_cl.id, ea_cl.name
            FROM app_asset_assignments ea_y
            JOIN asset_cluster_members ea_m ON ea_m.tenant_id = ea_y.tenant_id AND ea_m.cluster_id = ea_y.asset_id
-           JOIN assets ea_cl ON ea_cl.tenant_id = ea_y.tenant_id AND ea_cl.id = ea_y.asset_id
+           JOIN assets ea_cl ON ea_cl.tenant_id = ea_y.tenant_id AND ea_cl.id = ea_y.asset_id AND ${assetInServiceSql('ea_cl')}
            JOIN assets ea_ma ON ea_ma.tenant_id = ea_m.tenant_id AND ea_ma.id = ea_m.asset_id AND ${assetInServiceSql('ea_ma')}
            ${applications('ea_y', 'ea_yi')}
           WHERE ea_y.tenant_id = ${p.tenant}${instances('ea_y')}${p.assets ? ` AND ea_m.asset_id = ANY(${p.assets}::uuid[])` : ''}
@@ -80,7 +80,8 @@ export type GroupableScope = { tenant: string; clusters?: string; instances?: st
 
 /**
  * The direct assignments that could move to their cluster (A7): a deployment and role assigned
- * directly to every member in service of a cluster that has at least two. One row per
+ * directly to every member in service of a cluster in service that has at least two (a retired
+ * cluster passes nothing on, so nothing moves to it). One row per
  * `(cluster_id, app_instance_id, role)`, with `cluster_name` and `member_ids` (sorted by name).
  * Whether the cluster carries the row itself already does not matter.
  */
@@ -90,7 +91,7 @@ export function groupableAssignmentsSql(p: GroupableScope): string {
                  array_agg(ga_m.asset_id ORDER BY ga_ma.name, ga_m.asset_id) AS member_ids
             FROM asset_cluster_members ga_m
             JOIN assets ga_ma ON ga_ma.tenant_id = ga_m.tenant_id AND ga_ma.id = ga_m.asset_id AND ${assetInServiceSql('ga_ma')}
-            JOIN assets ga_c ON ga_c.tenant_id = ga_m.tenant_id AND ga_c.id = ga_m.cluster_id
+            JOIN assets ga_c ON ga_c.tenant_id = ga_m.tenant_id AND ga_c.id = ga_m.cluster_id AND ${assetInServiceSql('ga_c')}
             JOIN app_asset_assignments ga_x ON ga_x.tenant_id = ga_m.tenant_id AND ga_x.asset_id = ga_m.asset_id
             JOIN (SELECT ga_s.cluster_id, count(*)::int AS n
                     FROM asset_cluster_members ga_s

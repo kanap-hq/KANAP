@@ -430,8 +430,8 @@ export default function AssetWorkspacePage() {
     if (isCreate || !id) return;
     setAssignmentsError(null);
     try {
-      const res = await api.get<AssignmentRow[]>(`/assets/${id}/assignments`);
-      setAssignments(res.data as any);
+      const res = await api.get<{ items: AssignmentRow[] }>(`/assets/${id}/assignments`);
+      setAssignments(res.data?.items ?? []);
     } catch (e: any) {
       setAssignmentsError(getApiErrorMessage(e, t, t('messages.loadAssignmentsFailed')));
     }

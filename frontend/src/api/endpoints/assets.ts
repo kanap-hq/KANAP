@@ -259,8 +259,8 @@ export const assetsApi = {
   /**
    * Get asset assignments
    */
-  getAssignments: (id: string): Promise<ServerAssignment[]> =>
-    api.get<ServerAssignment[]>(`/assets/${id}/assignments`),
+  getAssignments: (id: string): Promise<{ items: ServerAssignment[] }> =>
+    api.get<{ items: ServerAssignment[] }>(`/assets/${id}/assignments`),
 
   /**
    * Get cluster members (if asset is a cluster)
