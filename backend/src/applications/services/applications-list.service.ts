@@ -24,6 +24,7 @@ import { ApplicationsBaseService, ServiceOpts } from './applications-base.servic
 import { buildDerivedUsersByApp, derivedTotalUsersSql } from './derived-users';
 import { textSortKey } from '../../common/list-sort';
 import { applicationCountsForTenantSql, applicationVulnerabilityCounts, vulnerabilityCountsEnabled } from '../../vulnerabilities/vulnerability-reach-counts';
+import { effectiveAssignmentsSql } from '../../app-asset-assignments/effective-assignments';
 import {
   VULNERABILITIES_LIST_FIELD,
   vulnerabilityFilterPredicateSql,
@@ -214,6 +215,14 @@ const compileEnvironmentsSetFilter = (model: any, nextParam: ParamNameFactory): 
   };
 };
 
+/**
+ * The servers an application `a` (an alias of the outer query) runs on, joined to `ai`: its
+ * effective assignments (`effectiveAssignmentsSql`), so that the members of a cluster give their
+ * site when the cluster has none. The hosting type of an application is the type of those sites.
+ */
+const APPLICATION_SERVERS_JOIN = `JOIN (${effectiveAssignmentsSql({ tenant: 'a.tenant_id', applications: 'ARRAY[a.id]' })}) aaa
+        ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id`;
+
 const compileHostingTypesSetFilter = (model: any, nextParam: ParamNameFactory): CompiledCondition | null => {
   const normalized = normalizeSetFilterModel(model);
   if (!normalized) return null;
@@ -224,7 +233,7 @@ const compileHostingTypesSetFilter = (model: any, nextParam: ParamNameFactory): 
     sql: `EXISTS (
       SELECT 1
       FROM app_instances ai
-      JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+      ${APPLICATION_SERVERS_JOIN}
       JOIN assets ast ON ast.id = aaa.asset_id AND ast.tenant_id = ai.tenant_id
       LEFT JOIN locations l ON l.id = ast.location_id AND l.tenant_id = ai.tenant_id
       WHERE ai.application_id = a.id
@@ -445,7 +454,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
       expression: 'a.id',
       textExpression: `COALESCE((SELECT string_agg(DISTINCT l.hosting_type, ',')
         FROM app_instances ai
-        JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+        ${APPLICATION_SERVERS_JOIN}
         JOIN assets ast ON ast.id = aaa.asset_id AND ast.tenant_id = ai.tenant_id
         LEFT JOIN locations l ON l.id = ast.location_id AND l.tenant_id = ai.tenant_id
         WHERE ai.application_id = a.id AND ai.tenant_id = a.tenant_id AND l.hosting_type IS NOT NULL), '')`,
@@ -943,7 +952,7 @@ export class ApplicationsListService extends ApplicationsBaseService {
         expression: 'a.id',
         textExpression: `COALESCE((SELECT string_agg(DISTINCT l.hosting_type, ',')
           FROM app_instances ai
-          JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+          ${APPLICATION_SERVERS_JOIN}
           JOIN assets ast ON ast.id = aaa.asset_id AND ast.tenant_id = ai.tenant_id
           LEFT JOIN locations l ON l.id = ast.location_id AND l.tenant_id = ai.tenant_id
           WHERE ai.application_id = a.id AND ai.tenant_id = a.tenant_id AND l.hosting_type IS NOT NULL), '')`,
@@ -1067,7 +1076,10 @@ export class ApplicationsListService extends ApplicationsBaseService {
       if (field === 'hosting_types') {
         const qb = baseQb.clone();
         qb.innerJoin('app_instances', 'ai', 'ai.application_id = a.id AND ai.tenant_id = a.tenant_id');
-        qb.innerJoin('app_asset_assignments', 'aaa', 'aaa.app_instance_id = ai.id AND aaa.tenant_id = a.tenant_id');
+        // The effective servers of the tenant (`APPLICATION_SERVERS_JOIN`, here as a joined table).
+        qb.innerJoin(`(${effectiveAssignmentsSql({ tenant: tenantId ? ':hostingTypesTenant' : 'app_current_tenant()' })})`, 'aaa',
+          'aaa.app_instance_id = ai.id AND aaa.tenant_id = a.tenant_id');
+        if (tenantId) qb.setParameter('hostingTypesTenant', tenantId);
         qb.innerJoin('assets', 'ast', 'ast.id = aaa.asset_id AND ast.tenant_id = a.tenant_id');
         qb.leftJoin('locations', 'l', 'l.id = ast.location_id AND l.tenant_id = a.tenant_id');
         qb.andWhere('l.hosting_type IS NOT NULL');
@@ -1219,7 +1231,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       const hostingRows: Array<{ application_id: string; hosting_type: string }> = await mg.query(
         `SELECT DISTINCT ai.application_id, l.hosting_type
          FROM app_instances ai
-         JOIN app_asset_assignments aaa ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
+         JOIN (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: '$1' })}) aaa
+           ON aaa.app_instance_id = ai.id AND aaa.tenant_id = ai.tenant_id
          JOIN assets ast ON ast.id = aaa.asset_id AND ast.tenant_id = ai.tenant_id
          LEFT JOIN locations l ON l.id = ast.location_id AND l.tenant_id = ai.tenant_id
          WHERE ai.application_id = ANY($1) AND l.hosting_type IS NOT NULL
@@ -1382,11 +1395,15 @@ export class ApplicationsListService extends ApplicationsBaseService {
       },
     }));
 
-    const assetRows: Array<{ asset_id: string; asset_name: string; environment: string }> = await mg.query(
-      `SELECT s.id AS asset_id, s.name AS asset_name, ai.environment
-       FROM app_asset_assignments asa
-       JOIN app_instances ai ON ai.id = asa.app_instance_id
-       JOIN assets s ON s.id = asa.asset_id
+    // The servers the application runs on (effective: a cluster and its members in service), an
+    // inherited one marked with the clusters it comes through.
+    const assetRows: Array<{
+      asset_id: string; asset_name: string; environment: string; inherited: boolean; via_clusters: Array<{ id: string; name: string }>;
+    }> = await mg.query(
+      `SELECT s.id AS asset_id, s.name AS asset_name, ai.environment, asa.inherited, asa.via_clusters
+       FROM (${effectiveAssignmentsSql({ tenant: 'app_current_tenant()', applications: 'ARRAY[$1::uuid]' })}) asa
+       JOIN app_instances ai ON ai.id = asa.app_instance_id AND ai.tenant_id = asa.tenant_id
+       JOIN assets s ON s.id = asa.asset_id AND s.tenant_id = asa.tenant_id
        WHERE ai.application_id = $1
          AND s.status <> 'retired'
        ORDER BY array_position(ARRAY['prod','pre_prod','qa','test','dev','sandbox'], ai.environment), s.name ASC`,
@@ -1397,6 +1414,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
       id: row.asset_id,
       name: row.asset_name,
       environment: row.environment,
+      inherited: row.inherited,
+      via_clusters: row.via_clusters,
     }));
 
     const reviewState = classificationReadState(app);
@@ -1449,6 +1468,8 @@ export class ApplicationsListService extends ApplicationsBaseService {
         ai.environment
       FROM applications a
       INNER JOIN app_instances ai ON ai.application_id = a.id
+      -- The stored rows: a deployment has an effective server exactly when it has a stored row
+      -- (a member inherits only what its cluster carries), and this list names no server.
       INNER JOIN app_asset_assignments asa ON asa.app_instance_id = ai.id
       WHERE (a.disabled_at IS NULL OR a.disabled_at > NOW())
         AND a.lifecycle <> 'retired'
