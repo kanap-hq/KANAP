@@ -1160,16 +1160,21 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   });
 
   // Each commit of the amount editor writes the spread: the amount on leaving the field, the
-  // distribution, "When" and the dates on change. A blank or zero amount, a frozen column, a column
-  // not built from an amount or a period that does not work writes nothing. `also`: the columns
-  // that take the same period and distribution, each spread from its own stored total.
+  // distribution, "When" and the dates on change. A frozen column, a column not built from an amount
+  // or a period that does not work writes nothing. A blank or zero amount writes zero over the period
+  // when the column holds a total (shown, or just written), and nothing on a column already at zero.
+  // `also`: the columns that take the same period and distribution, each spread from its own stored total.
   const commitSpread = (next: { amount?: number | ''; profile?: 'flat' | '4-4-5'; dates?: Period; also?: AmountCol[]; switching?: boolean } = {}) => {
     const measure = activeColRef.current;
     const typed = next.amount !== undefined ? next.amount : spreadAmount;
     const dates = next.dates ?? spreadPeriod;
     const amount = Number(typed || 0);
-    if (!amount || isFrozen(measure) || isWaiting(measure) || columnPeriodProblem(year, dates.start, dates.end)) return;
+    if (isFrozen(measure) || isWaiting(measure) || columnPeriodProblem(year, dates.start, dates.end)) return;
     if (!next.switching && modeOf(measure) !== 'amount') return;
+    if (!amount && currentCents(measure) === 0 && !Number(committedAmountRef.current || 0)) {
+      committedAmountRef.current = typed;
+      return;
+    }
     // The total in cents, sent as a two-decimal string: no float sum reaches the server. The other
     // columns are spread by the server from their stored totals (never the screen's); those that
     // follow their lines keep them.
@@ -1204,7 +1209,7 @@ export function useBudgetTab(props: BudgetTabProps, ref: React.ForwardedRef<Budg
   };
   // Leaving the field writes only a changed amount, so tabbing through writes nothing; Enter always writes.
   const commitSpreadAmount = () => {
-    if (spreadAmount === committedAmountRef.current) return;
+    if (Number(spreadAmount || 0) === Number(committedAmountRef.current || 0)) return;
     commitSpread();
   };
   const onSpreadAmountChange = (value: number | '') => {
