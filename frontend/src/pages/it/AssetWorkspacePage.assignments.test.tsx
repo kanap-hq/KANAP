@@ -76,7 +76,6 @@ const ASSET = {
 const wire = {
   asset: ASSET as typeof ASSET,
   assignments: { items: [] as unknown[], groupable: [] as unknown[] },
-  memberAssignments: [] as unknown[],
   clusters: [] as unknown[],
   members: [] as unknown[],
   deploymentServers: [] as unknown[],
@@ -95,7 +94,6 @@ function renderOperations() {
   get.mockImplementation(async (url: string) => {
     if (url === '/assets/asset-1' || url === '/assets/by-ref/AST-1') return { data: wire.asset };
     if (url === '/assets/asset-1/assignments') return { data: wire.assignments };
-    if (url === '/assets/sql-1/assignments') return { data: { items: wire.memberAssignments, groupable: [] } };
     if (url === '/applications/app-1') return { data: { id: 'app-1', name: 'CheeseTrack', instances: [{ id: 'dep-1', environment: 'prod' }] } };
     if (url === '/applications/app-1/deployment-servers') return { data: { items: wire.deploymentServers, groupable: [] } };
     if (url === '/assets/asset-1/clusters') return { data: { items: wire.clusters } };
@@ -141,7 +139,6 @@ describe('Asset workspace: assignments and clusters', () => {
     auth.assign = true;
     wire.asset = ASSET;
     wire.assignments = { items: [], groupable: [] };
-    wire.memberAssignments = [];
     wire.clusters = [];
     wire.members = [];
     wire.deploymentServers = [];
@@ -224,12 +221,13 @@ describe('Asset workspace: assignments and clusters', () => {
     wire.asset = { ...ASSET, id: 'asset-1', name: 'PAR-SQL-CL01', is_cluster: true };
     wire.assignments = {
       items: [],
-      groupable: [{ cluster_id: 'asset-1', cluster_name: 'PAR-SQL-CL01', app_instance_id: 'dep-1', role: 'db', member_ids: ['sql-1', 'sql-2'] }],
+      groupable: [{ cluster_id: 'asset-1', cluster_name: 'PAR-SQL-CL01', app_instance_id: 'dep-1', role: 'db', application_id: 'app-1', application_name: 'CheeseTrack', environment: 'prod', member_ids: ['sql-1', 'sql-2'] }],
     };
     wire.members = [{ id: 'sql-1', name: 'PAR-SQL-01' }, { id: 'sql-2', name: 'PAR-SQL-02' }];
-    wire.memberAssignments = [{ ...direct, id: 'as-m', app_instance_id: 'dep-1', role: 'db', application: { id: 'app-1', name: 'CheeseTrack' } }];
     renderOperations();
     expect(await screen.findByText('CheeseTrack (Prod, db) on PAR-SQL-01, PAR-SQL-02')).toBeTruthy();
+    // The set names its application: no read of a member's assignments.
+    expect(get).not.toHaveBeenCalledWith('/assets/sql-1/assignments', expect.anything());
     fireEvent.click(screen.getByRole('button', { name: 'Assign to the cluster' }));
     expect(await screen.findByText('CheeseTrack will stay available as long as one member stands.')).toBeTruthy();
     expect(post).not.toHaveBeenCalled();

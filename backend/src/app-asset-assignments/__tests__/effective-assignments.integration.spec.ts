@@ -150,7 +150,7 @@ async function run() {
 
     // Groupable: CRM is on both members in service of cl-a (the retired one does not count), and
     // cl-b has a single member.
-    const expectedGroup = [{ cluster_id: clA, cluster_name: 'cl-a', app_instance_id: q, role: 'app', member_ids: [m1, m2] }];
+    const expectedGroup = [{ cluster_id: clA, cluster_name: 'cl-a', app_instance_id: q, role: 'app', application_id: crm, application_name: 'CRM', environment: 'prod', member_ids: [m1, m2] }];
     assert.deepEqual((await assignments.list(q, opts)).groupable, expectedGroup);
     assert.deepEqual((await assignments.listByApplication(crm, opts)).groupable, expectedGroup);
 

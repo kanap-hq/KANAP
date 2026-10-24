@@ -82,17 +82,21 @@ export type GroupableScope = { tenant: string; clusters?: string; instances?: st
  * The direct assignments that could move to their cluster (A7): a deployment and role assigned
  * directly to every member in service of a cluster in service that has at least two (a retired
  * cluster passes nothing on, so nothing moves to it). One row per
- * `(cluster_id, app_instance_id, role)`, with `cluster_name` and `member_ids` (sorted by name).
+ * `(cluster_id, app_instance_id, role)`, with `cluster_name`, the deployment's `application_id`,
+ * `application_name` and `environment`, and `member_ids` (sorted by name).
  * Whether the cluster carries the row itself already does not matter.
  */
 export function groupableAssignmentsSql(p: GroupableScope): string {
   const clusters = (column: string) => (p.clusters ? ` AND ${column} = ANY(${p.clusters}::uuid[])` : '');
   return `SELECT ga_m.cluster_id, ga_c.name AS cluster_name, ga_x.app_instance_id, ga_x.role,
+                 ga_ai.application_id, ga_ap.name AS application_name, ga_ai.environment,
                  array_agg(ga_m.asset_id ORDER BY ga_ma.name, ga_m.asset_id) AS member_ids
             FROM asset_cluster_members ga_m
             JOIN assets ga_ma ON ga_ma.tenant_id = ga_m.tenant_id AND ga_ma.id = ga_m.asset_id AND ${assetInServiceSql('ga_ma')}
             JOIN assets ga_c ON ga_c.tenant_id = ga_m.tenant_id AND ga_c.id = ga_m.cluster_id AND ${assetInServiceSql('ga_c')}
             JOIN app_asset_assignments ga_x ON ga_x.tenant_id = ga_m.tenant_id AND ga_x.asset_id = ga_m.asset_id
+            JOIN app_instances ga_ai ON ga_ai.tenant_id = ga_x.tenant_id AND ga_ai.id = ga_x.app_instance_id
+            JOIN applications ga_ap ON ga_ap.tenant_id = ga_ai.tenant_id AND ga_ap.id = ga_ai.application_id
             JOIN (SELECT ga_s.cluster_id, count(*)::int AS n
                     FROM asset_cluster_members ga_s
                     JOIN assets ga_sa ON ga_sa.tenant_id = ga_s.tenant_id AND ga_sa.id = ga_s.asset_id AND ${assetInServiceSql('ga_sa')}
@@ -100,7 +104,7 @@ export function groupableAssignmentsSql(p: GroupableScope): string {
                    GROUP BY ga_s.cluster_id
                   HAVING count(*) >= 2) ga_n ON ga_n.cluster_id = ga_m.cluster_id
            WHERE ga_m.tenant_id = ${p.tenant}${clusters('ga_m.cluster_id')}${p.instances ? ` AND ga_x.app_instance_id = ANY(${p.instances}::uuid[])` : ''}
-           GROUP BY ga_m.cluster_id, ga_c.name, ga_x.app_instance_id, ga_x.role, ga_n.n
+           GROUP BY ga_m.cluster_id, ga_c.name, ga_x.app_instance_id, ga_x.role, ga_ai.application_id, ga_ap.name, ga_ai.environment, ga_n.n
           HAVING count(*) = ga_n.n
            ORDER BY ga_c.name, ga_m.cluster_id, ga_x.app_instance_id, ga_x.role`;
 }

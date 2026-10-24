@@ -133,6 +133,9 @@ type GroupableSet = {
   cluster_name: string;
   app_instance_id: string;
   role: string;
+  application_id: string;
+  application_name: string;
+  environment: string;
   member_ids: string[];
 };
 
@@ -346,8 +349,6 @@ export default function AssetWorkspacePage() {
   const [assignments, setAssignments] = React.useState<AssignmentRow[]>([]);
   const [assignmentsError, setAssignmentsError] = React.useState<string | null>(null);
   const [groupable, setGroupable] = React.useState<GroupableSet[]>([]);
-  // The application, environment and members of each set of direct rows that could move to this cluster.
-  const [groupInfo, setGroupInfo] = React.useState<Record<string, { application: string; environment: string }>>({});
   const [clusterMembers, setClusterMembers] = React.useState<ClusterMember[]>([]);
   const [clusterError, setClusterError] = React.useState<string | null>(null);
   const [clusterLoading, setClusterLoading] = React.useState(false);
@@ -459,25 +460,6 @@ export default function AssetWorkspacePage() {
   }, [id, isCreate]);
 
   React.useEffect(() => { void refreshAssignments(); }, [refreshAssignments]);
-
-  // A set names a deployment, not its application: one member's rows tell it.
-  React.useEffect(() => {
-    if (groupable.length === 0) {
-      setGroupInfo({});
-      return undefined;
-    }
-    let cancelled = false;
-    const members = Array.from(new Set(groupable.map((set) => set.member_ids[0]).filter(Boolean)));
-    void Promise.all(members.map((memberId) => api.get<{ items: AssignmentRow[] }>(`/assets/${memberId}/assignments`)
-      .then((res) => res.data?.items ?? [])
-      .catch(() => [] as AssignmentRow[]))).then((lists) => {
-      if (cancelled) return;
-      const info: Record<string, { application: string; environment: string }> = {};
-      for (const row of lists.flat()) info[`${row.app_instance_id}|${row.role}`] = { application: row.application.name, environment: row.environment };
-      setGroupInfo(info);
-    });
-    return () => { cancelled = true; };
-  }, [groupable]);
 
   const [name, setName] = React.useState('');
   const [kind, setKind] = React.useState('');
@@ -2193,16 +2175,14 @@ export default function AssetWorkspacePage() {
                     </TableBody>
                   </Table>
                   {canAssign && isCluster && groupable.map((set) => {
-                    const info = groupInfo[`${set.app_instance_id}|${set.role}`];
-                    if (!info) return null;
                     const names = set.member_ids.map((memberId) => clusterMembers.find((member) => member.id === memberId)?.name).filter(Boolean).join(', ');
-                    const subject = `${info.application} (${environmentLabel(info.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
+                    const subject = `${set.application_name} (${environmentLabel(set.environment)}, ${labelFor('serverRole', set.role) || set.role})`;
                     return (
                       <ClusterGroupLine
                         key={`${set.app_instance_id}|${set.role}`}
                         text={t('components.clusterAssignment.groupLine', { subject, members: names })}
                         actionLabel={t('components.clusterAssignment.assignToCluster')}
-                        onAssign={() => void assignGroupToCluster(set, info.application)}
+                        onAssign={() => void assignGroupToCluster(set, set.application_name)}
                       />
                     );
                   })}

@@ -59,6 +59,9 @@ type GroupableAssignment = {
   cluster_name: string;
   app_instance_id: string;
   role: string;
+  application_id: string;
+  application_name: string;
+  environment: string;
   member_ids: string[];
 };
 
