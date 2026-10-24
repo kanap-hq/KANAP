@@ -20,7 +20,7 @@ import {
 import { getAccessToken, getAccessTokenExpiresAt, setAccessToken, subscribeAccessToken } from './accessTokenStore';
 import { changeAppLanguage, detectBrowserLocale, LANGUAGE_OVERRIDE_STORAGE_KEY, SupportedLocale } from '../i18n';
 import { clearUserClientState } from './userClientState';
-import { isDataAccessLimited, type DataAccessProfile } from './dataAccess';
+import { isDataAccessLimited, isReservedInLimitedAccess, type DataAccessProfile } from './dataAccess';
 
 type PermissionLevel = 'reader' | 'contributor' | 'member' | 'manager' | 'admin';
 type Claims = {
@@ -138,21 +138,6 @@ type AuthContextType = {
 };
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
-
-/**
- * Reserved to people with access to all data (spec §2.7, `backend/src/data-access/data-access-reserved.inventory.ts`):
- * for a limited person these modules read as reader at most, so their edit commands are hidden and
- * their reads stay. Organisation data (companies, departments, cost centers, accounts and charts,
- * processes, dimensions), the budget settings (`budget_ops`: currencies, columns, freeze, default
- * allocation rule), persons and the tenant administration behind `users` (users, roles, audit log,
- * branding, scheduled tasks) and the AI administration.
- */
-const DATA_ACCESS_RESERVED_WRITES = new Set([
-  'companies', 'departments', 'cost_centers', 'accounts', 'business_processes', 'analytics',
-  'budget_ops', 'users', 'ai_settings',
-]);
-/** Closed to a limited person entirely: the agent screens (spec §2.7). */
-const DATA_ACCESS_RESERVED_MODULES = new Set(['ai_agents']);
 
 function clearLegacyTokenStorage(): void {
   localStorage.removeItem('token');
@@ -425,10 +410,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const hasLevel = (resource: string, level: PermissionLevel) => {
     if (claims?.isGlobalAdmin || claims?.isPlatformAdmin) return true;
-    if (isDataAccessLimited(dataAccess)) {
-      if (DATA_ACCESS_RESERVED_MODULES.has(resource)) return false;
-      if (DATA_ACCESS_RESERVED_WRITES.has(resource) && level !== 'reader') return false;
-    }
+    if (isDataAccessLimited(dataAccess) && isReservedInLimitedAccess(resource, level)) return false;
     const map = claims?.permissions || {};
     // Support both 'member' (new) and 'manager' (legacy) - backend uses 'member' since RBAC overhaul
     const rank = { reader: 1, contributor: 2, member: 3, manager: 3, admin: 4 } as const;

@@ -2,6 +2,7 @@ import { Box, Link, Tooltip, type SxProps, type Theme } from '@mui/material';
 import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
 import { canUseOperation } from '../../pages/operations/operationAccess';
 import { attentionDotSx } from '../../theme/formSx';
 import { formatAmount } from '../../i18n/formatters';
@@ -36,10 +37,11 @@ export default function FxMissingNotice({
 }) {
   const { t } = useTranslation('ops');
   const { hasLevel } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
   const list = items ?? [];
   if (!message && !list.length) return null;
   const text = message || fxMissingText(t, list);
-  const canEnterRate = canUseOperation('currency', hasLevel);
+  const canEnterRate = canUseOperation('currency', hasLevel, dataAccessLimited);
   return (
     <Box
       role="status"

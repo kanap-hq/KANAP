@@ -4,6 +4,7 @@ import { Link as RouterLink } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import PageHeader from '../../components/PageHeader';
 import { useAuth } from '../../auth/AuthContext';
+import { useDataAccessLimited } from '../../auth/dataAccess';
 import { canUseOperation } from './operationAccess';
 
 type OperationCard = {
@@ -23,6 +24,7 @@ const sectionTitleSx = { fontSize: 16, fontWeight: 500, color: 'kanap.text.prima
 export default function BudgetOperationsLandingPage() {
   const { t } = useTranslation(['ops']);
   const { hasLevel } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
 
   const sections: OperationSection[] = [
     {
@@ -51,7 +53,7 @@ export default function BudgetOperationsLandingPage() {
   const visibleSections = sections
     .map((section) => ({
       ...section,
-      cards: section.cards.filter((card) => canUseOperation(card.to.split('/').pop() ?? '', hasLevel)),
+      cards: section.cards.filter((card) => canUseOperation(card.to.split('/').pop() ?? '', hasLevel, dataAccessLimited)),
     }))
     .filter((section) => section.cards.length > 0);
 

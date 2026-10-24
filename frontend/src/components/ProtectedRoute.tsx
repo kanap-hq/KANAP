@@ -2,6 +2,7 @@ import React from 'react';
 import { Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useTranslation } from 'react-i18next';
 import { useAuth } from '../auth/AuthContext';
+import { useDataAccessLimited } from '../auth/dataAccess';
 import { useTenant } from '../tenant/TenantContext';
 import { useFeatures } from '../config/FeaturesContext';
 import { Box, Button, CircularProgress, Stack, Typography } from '@mui/material';
@@ -30,6 +31,7 @@ export default function ProtectedRoute() {
     hasAnyAccess,
     subscription,
   } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
   const location = useLocation();
   const { isPlatformHost } = useTenant();
   const { config } = useFeatures();
@@ -270,13 +272,13 @@ export default function ProtectedRoute() {
       requirement = { resource: 'ai_agents', level: 'reader' };
     } else if (path === '/ops/operations' || path === '/ops/operations/') {
       // The administration landing opens when at least one of its pages can be used.
-      if (!canUseAnyOperation(hasLevel)) {
+      if (!canUseAnyOperation(hasLevel, dataAccessLimited)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;
     } else if (path.startsWith('/ops/operations/')) {
       // Each administration page opens only to the users who can act on it.
-      if (!canUseOperation(path.split('/')[3] ?? '', hasLevel)) {
+      if (!canUseOperation(path.split('/')[3] ?? '', hasLevel, dataAccessLimited)) {
         return <Navigate to="/403" replace />;
       }
       requirement = null;

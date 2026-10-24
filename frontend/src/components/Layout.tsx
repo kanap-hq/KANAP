@@ -45,6 +45,7 @@ import AutoAwesomeIcon from '@mui/icons-material/AutoAwesome';
 import ExtensionIcon from '@mui/icons-material/Extension';
 import ReportProblemOutlinedIcon from '@mui/icons-material/ReportProblemOutlined';
 import { useAuth } from '../auth/AuthContext';
+import { useDataAccessLimited } from '../auth/dataAccess';
 import AccountCircleIcon from '@mui/icons-material/AccountCircle';
 import HelpOutlineIcon from '@mui/icons-material/HelpOutline';
 import DarkModeOutlinedIcon from '@mui/icons-material/DarkModeOutlined';
@@ -126,6 +127,7 @@ export default function Layout() {
   useInAppLinkGuard(navigate);
   const guardedLeave = useGuardedLeave();
   const { logout, token, hasLevel, claims, profile } = useAuth();
+  const dataAccessLimited = useDataAccessLimited();
   const { isPlatformHost, tenantName, logoUrl, useLogoInDark } = useTenant();
   const { config } = useFeatures();
   const { mode, resolvedMode, setMode } = useThemeMode();
@@ -573,7 +575,7 @@ export default function Layout() {
                 if (entry.to === '/admin/auth' && !config.features.sso) return false;
                 if (entry.to === '/admin/integrations') return canShowIntegrations;
               // Administration shows only when one of its pages can be used.
-              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
                 if (aiAdminRoutes.includes(entry.to) && !aiSettingsAvailable) return false;
                 return true;
               });
@@ -606,7 +608,7 @@ export default function Layout() {
               if (!isNavItem(entry)) return true;
               if (entry.to === '/admin/integrations') return canShowIntegrations;
               // Administration shows only when one of its pages can be used.
-              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel);
+              if (entry.to === '/ops/operations') return canUseAnyOperation(hasLevel, dataAccessLimited);
               if (['/admin/ai', '/admin/ai-models', '/admin/ai-usage'].includes(entry.to)) {
                 return aiCapabilities.data?.surfaces.settings.available === true;
               }
