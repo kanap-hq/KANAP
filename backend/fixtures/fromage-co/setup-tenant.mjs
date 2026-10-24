@@ -1036,9 +1036,14 @@ async function ensureAssets(locationIdByFixtureCode) {
   for (const row of readCsv('18-assets.csv')) {
     if (existing.has(row.name)) {
       // Older fixtures marked the firewalls PAR-FW-01 and PAR-FW-02 as clusters (with no member):
-      // an asset the file no longer calls a cluster becomes a plain asset again.
+      // an asset the file no longer calls a cluster becomes a plain asset again, unless someone
+      // gave it members since (the server refuses the switch then).
       const asset = existingAssets.find((item) => item.name === row.name);
-      if (asset?.is_cluster && !boolValue(row.is_cluster)) await apiPatch(`/assets/${asset.id}`, { is_cluster: false });
+      if (asset?.is_cluster && !boolValue(row.is_cluster)) {
+        const members = items(await apiGet(`/assets/${asset.id}/members`));
+        if (members.length > 0) warn(`'${row.name}' has members; it stays a cluster`);
+        else await apiPatch(`/assets/${asset.id}`, { is_cluster: false });
+      }
       continue;
     }
     const locationId = locationIdByFixtureCode.get(row.location_code);
