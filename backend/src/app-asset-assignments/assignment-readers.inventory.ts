@@ -51,6 +51,10 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/locations/locations.service.ts': { status: 'effective', reason: 'The applications of a location.' },
   'src/knowledge/knowledge.service.ts': { status: 'effective', reason: 'The context sources of an application (its servers) and of an asset (its applications).' },
   'src/ai/ai-entity.service.ts': { status: 'effective', reason: 'The assistant\'s context: the servers of an application, the applications of an asset.' },
+  'src/technologies/application-conversion.service.ts': {
+    status: 'effective',
+    reason: 'Converting an application installs the technology on its effective servers, clusters excluded (a cluster gives its members); the preview counts and the hosting type follow the same set.',
+  },
 
   'src/app-asset-assignments/assignment-readers.inventory.ts': { status: 'direct', reason: 'This inventory.' },
   'src/app-asset-assignments/app-asset-assignment.entity.ts': { status: 'direct', reason: 'The entity of the stored rows.' },
@@ -63,10 +67,6 @@ export const ASSIGNMENT_READERS: Readonly<Record<string, AssignmentReader>> = {
   'src/assets/assets-delete.service.ts': {
     status: 'direct',
     reason: 'Deletion guard: a server carrying rows stays; a member that only inherits can be deleted.',
-  },
-  'src/technologies/application-conversion.service.ts': {
-    status: 'direct',
-    reason: 'Converting an application installs the technology on its stored servers; the preview counts and the hosting type follow the same rows.',
   },
   'src/it-ops-settings/catalog-usage.ts': { status: 'direct', reason: 'Usage of a server role: the stored rows name it.' },
   'src/common/tenant-isolation.inventory.ts': { status: 'direct', reason: 'Tenant isolation inventory.' },
