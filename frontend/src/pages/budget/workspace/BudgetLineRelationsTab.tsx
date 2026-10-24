@@ -74,10 +74,13 @@ const SECTION_READ: Record<string, string> = {
 export default function BudgetLineRelationsTab({
   lineId,
   nature,
+  lineEditable = true,
   onRelationsChange,
 }: {
   lineId: string;
   nature: LineType;
+  /** False when the person's data access leaves the line read only: no add, remove or upload. */
+  lineEditable?: boolean;
   /** The page reads the relations badge again. */
   onRelationsChange: () => void;
 }) {
@@ -88,7 +91,7 @@ export default function BudgetLineRelationsTab({
   const labels = useRelationLabels();
   const { itemsApi } = BUDGET_NATURE_CONFIG[nature];
   const contactsItemType = nature === 'opex' ? 'spend-items' : 'capex-items';
-  const canEdit = hasLevel('budget', 'member');
+  const canEdit = hasLevel('budget', 'member') && lineEditable;
   const [uploading, setUploading] = React.useState(0);
   const relationsKey = ['budget-line-relations', lineId] as const;
   const linksKey = ['budget-line-links', itemsApi, lineId] as const;

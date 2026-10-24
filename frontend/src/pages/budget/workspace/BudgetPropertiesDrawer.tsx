@@ -20,6 +20,7 @@ import { useLocale } from '../../../i18n/useLocale';
 import { useCostCenterNode } from '../../../hooks/useCostCenterTree';
 import type { CostCenterNode } from '../../../services/costCenters';
 import { axisRequiredFor, useAnalyticsAxes } from '../../../hooks/useAnalyticsAxes';
+import { useLinePlacementFilter } from '../../../hooks/usePlacementOptions';
 import { drawerMenuItemSx, drawerSelectSx } from '../../../theme/formSx';
 import { matching, type ItemReferences } from '../../../components/finance/itemReferences';
 
@@ -147,6 +148,8 @@ export default function BudgetPropertiesDrawer({
   // dimension, or one for the other nature only, shows no select; its value stays on the line. When the
   // dimensions cannot be loaded, one line says so.
   const analyticsAxes = useAnalyticsAxes({ scope: nature });
+  // A limited data access offers only the companies and cost centers the line may be placed on.
+  const placement = useLinePlacementFilter(payingCompanyId || null);
 
   return (
     <>
@@ -191,13 +194,14 @@ export default function BudgetPropertiesDrawer({
               value={costCenterId || null}
               selectedOption={matching(references?.cost_center, costCenterId)}
               onChange={(v, node) => onCostCenterChange(v ?? '', node)}
+              isAllowed={placement?.isCostCenterAllowed}
               disabled={disabled}
             />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.payingCompany')} required>
           <Box sx={hideInnerLabelSx}>
-            <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
+            <CompanySelect hideLabel label={t('opex.fields.payingCompany')} value={payingCompanyId || null} onChange={(v) => onPayingCompanyChange(v ?? '')} allowedCompanyIds={placement?.companyIds} disabled={disabled} required disableClearable={mode === 'edit'} selectedOption={matching(references?.paying_company, payingCompanyId)} />
           </Box>
         </PropertyRow>
         <PropertyRow label={t('opex.fields.account')} required>

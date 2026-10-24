@@ -17,9 +17,26 @@ vi.mock('../../../components/fields/SupplierSelect', () => ({
   ),
 }));
 vi.mock('../../../components/fields/CompanySelect', () => ({
-  default: (p: { disableClearable?: boolean; hideLabel?: boolean; label?: string }) => (
-    <div data-testid="company-select" data-clearable={String(!p.disableClearable)} data-hide-label={String(!!p.hideLabel)} data-label={p.label ?? ''} />
+  default: (p: { disableClearable?: boolean; hideLabel?: boolean; label?: string; allowedCompanyIds?: ReadonlySet<string> | null }) => (
+    <div
+      data-testid="company-select"
+      data-clearable={String(!p.disableClearable)}
+      data-hide-label={String(!!p.hideLabel)}
+      data-label={p.label ?? ''}
+      data-allowed={p.allowedCompanyIds ? [...p.allowedCompanyIds].sort().join(',') : 'all'}
+    />
   ),
+}));
+// The placements a limited data access allows (null: unscoped, no filter).
+const placement = vi.hoisted(() => ({
+  filter: null as null | { companyIds: ReadonlySet<string>; isCostCenterAllowed: (node: { id: string; company_id: string | null }) => boolean },
+  companies: [] as Array<string | null>,
+}));
+vi.mock('../../../hooks/usePlacementOptions', () => ({
+  useLinePlacementFilter: (companyId: string | null) => {
+    placement.companies.push(companyId);
+    return placement.filter;
+  },
 }));
 vi.mock('../../../components/fields/AccountSelect', () => ({
   default: (p: { disableClearable?: boolean; required?: boolean; nature?: string; hideLabel?: boolean; label?: string }) => (
@@ -54,9 +71,16 @@ vi.mock('../../../components/fields/CostCenterSelect', () => ({
     selectable?: string;
     companyId?: string | null;
     selectedOption?: { code: string } | null;
+    isAllowed?: ((node: { id: string; company_id: string | null }) => boolean) | null;
     onChange: (v: string | null, node: unknown) => void;
   }) => (
-    <div data-testid="cost-center-select" data-selectable={p.selectable} data-company={p.companyId ?? ''} data-known={p.selectedOption?.code ?? ''}>
+    <div
+      data-testid="cost-center-select"
+      data-selectable={p.selectable}
+      data-company={p.companyId ?? ''}
+      data-known={p.selectedOption?.code ?? ''}
+      data-allowed={p.isAllowed ? [{ id: 'cc-1', company_id: 'company-1' }, { id: 'cc-2', company_id: 'company-2' }].filter((n) => p.isAllowed!(n)).map((n) => n.id).join(',') : 'all'}
+    >
       {p.value ?? ''}
       <button type="button" onClick={() => p.onChange('cc-2', { id: 'cc-2', company_id: 'company-2' })}>pick cost center</button>
       <button type="button" onClick={() => p.onChange(null, null)}>clear cost center</button>
@@ -427,4 +451,29 @@ describe('BudgetPropertiesDrawer analytics dimensions', () => {
     expect(onNatureChange).toHaveBeenCalledWith(otherNature());
   });
 
+});
+
+describe('BudgetPropertiesDrawer limited data access', () => {
+  beforeEach(() => {
+    nature = 'opex';
+    placement.filter = null;
+    placement.companies = [];
+  });
+
+  it('offers every company and cost center to an unscoped person', () => {
+    renderDrawer({ payingCompanyId: 'company-1' });
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-allowed', 'all');
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-allowed', 'all');
+  });
+
+  it('offers only the placements of a limited access, for the chosen paying company', () => {
+    placement.filter = {
+      companyIds: new Set(['company-2']),
+      isCostCenterAllowed: (node) => node.id === 'cc-2',
+    };
+    renderDrawer({ payingCompanyId: 'company-2', mode: 'create' });
+    expect(screen.getByTestId('company-select')).toHaveAttribute('data-allowed', 'company-2');
+    expect(screen.getByTestId('cost-center-select')).toHaveAttribute('data-allowed', 'cc-2');
+    expect(placement.companies).toContain('company-2');
+  });
 });
