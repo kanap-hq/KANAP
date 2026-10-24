@@ -110,6 +110,14 @@ export class AppAssetAssignmentsController {
 
   @UseGuards(PermissionGuard)
   @RequireLevel('applications', 'reader')
+  @Get('assets/:assetId/assignments/groupable')
+  async listGroupableByAsset(@Param('assetId') assetId: string, @Req() req: any) {
+    const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');
+    return this.svc.listGroupableByAsset(assetId, { ...this.opts(req), accessScope });
+  }
+
+  @UseGuards(PermissionGuard)
+  @RequireLevel('applications', 'reader')
   @Get('assets/:assetId/assignments')
   async listByAsset(@Param('assetId') assetId: string, @Req() req: any) {
     const accessScope = await resolveBusinessContributorScope(req, 'applications', 'reader');

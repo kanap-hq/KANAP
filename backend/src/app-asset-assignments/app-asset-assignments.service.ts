@@ -216,7 +216,7 @@ export class AppAssetAssignmentsService {
     userId: string | null,
   ): Promise<AbsorbedMember[]> {
     if (!isCluster) {
-      await assertNotInherited(mg, tenantId, row.app_instance_id, row.asset_id, row.role);
+      await assertNotInherited(mg, tenantId, row.app_instance_id, row.asset_id, row.role, row.id ?? null);
       return [];
     }
     const members = (await inheritingMembersOf(mg, tenantId, [row.asset_id])).get(row.asset_id) ?? [];
@@ -240,6 +240,29 @@ export class AppAssetAssignmentsService {
       );
     }
     return absorbed.map(({ member }) => ({ asset_id: member.id, name: member.name }));
+  }
+
+  /**
+   * Writes `row` over its stored row by id (`UPDATE ... WHERE id`), never re-inserting it: a row
+   * deleted meanwhile (absorbed by its cluster's row) is `404`.
+   */
+  private async updateRow(repo: Repository<AppAssetAssignment>, tenantId: string, row: AppAssetAssignment): Promise<AppAssetAssignment> {
+    let result;
+    try {
+      result = await repo.createQueryBuilder()
+        .update(AppAssetAssignment)
+        .set({ asset_id: row.asset_id, role: row.role, since_date: row.since_date, notes: row.notes, updated_at: () => 'now()' })
+        .where('tenant_id = :tenantId AND id = :id', { tenantId, id: row.id })
+        .returning(['updated_at'])
+        .execute();
+    } catch (error: any) {
+      if ((error?.code ?? error?.driverError?.code) === '23505') throw this.duplicateRefusal();
+      throw error;
+    }
+    const stored = Array.isArray(result.raw) ? result.raw[0] : null;
+    if (!stored) throw new NotFoundException('Assignment not found');
+    row.updated_at = stored.updated_at;
+    return row;
   }
 
   private normalizeNotes(value: unknown): string | null {
@@ -391,7 +414,17 @@ export class AppAssetAssignmentsService {
     const asset = await this.ensureAsset(assetId, tenantId, mg);
     const existing = await repo.findOne({ where: { tenant_id: tenantId, app_instance_id: instanceId, asset_id: assetId, role } as any });
     if (existing) {
-      throw this.duplicateRefusal();
+      // The cluster already carries the row (older data, or "Assign to the cluster" on a set it
+      // carries): its members' identical direct rows join it (A4). Nothing to absorb: a duplicate.
+      const before = { ...existing };
+      const absorbed = asset.is_cluster ? await this.applyClusterRules(mg, tenantId, existing, true, userId) : [];
+      if (absorbed.length === 0) throw this.duplicateRefusal();
+      const saved = await this.updateRow(repo, tenantId, existing);
+      await this.audit.log(
+        { table: 'app_asset_assignments', recordId: saved.id, action: 'update', before, after: saved, userId },
+        { manager: mg },
+      );
+      return { ...saved, absorbed };
     }
     const assignment = repo.create({
       tenant_id: tenantId,
@@ -463,7 +496,7 @@ export class AppAssetAssignmentsService {
     Object.assign(assignment, patch);
     // A row that changes server or role follows the cluster rules of a new row (A3, A4).
     const absorbed = moved ? await this.applyClusterRules(mg, tenantId, assignment, nextIsCluster, userId) : [];
-    const saved = await this.saveRow(repo, assignment);
+    const saved = await this.updateRow(repo, tenantId, assignment);
     await this.audit.log(
       { table: 'app_asset_assignments', recordId: saved.id, action: 'update', before, after: saved, userId },
       { manager: mg },
@@ -478,14 +511,12 @@ export class AppAssetAssignmentsService {
    * they take part in, inherited or not. `groupable`, on a direct row of a member: the set that
    * could move to its cluster (`groupableAssignmentsSql`), else null.
    *
-   * Answer: `{ items, groupable }`. `groupable`, for a cluster: the sets of direct rows on its
-   * members that could move to it (`groupableAssignmentsSql`, limited to the applications a
-   * Business Contributor takes part in); `[]` for any other server.
+   * Answer: the rows, an array (`listGroupableByAsset` gives a cluster's sets).
    */
   async listByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
     const mg = opts?.manager ?? this.repo.manager;
     const tenantId = await this.tenantOf(mg, opts?.tenantId);
-    const asset = await this.ensureAsset(assetId, tenantId, mg);
+    await this.ensureAsset(assetId, tenantId, mg);
     const params: unknown[] = [assetId, tenantId];
     const accessScopeSql = opts?.accessScope
       ? (() => {
@@ -532,7 +563,7 @@ export class AppAssetAssignmentsService {
       const set = groupable.find((g) => g.app_instance_id === row.app_instance_id && g.role === row.role && g.member_ids.includes(assetId));
       return set ? { cluster_id: set.cluster_id, cluster_name: set.cluster_name, member_ids: set.member_ids } : null;
     };
-    const items = rows.map((row) => ({
+    return rows.map((row) => ({
       id: row.id,
       app_instance_id: row.app_instance_id,
       asset_id: row.asset_id,
@@ -548,7 +579,18 @@ export class AppAssetAssignmentsService {
       via_clusters: row.via_clusters ?? [],
       groupable: groupableOf(row),
     }));
-    const clusterGroupable: GroupableAssignment[] = asset.is_cluster
+  }
+
+  /**
+   * The sets of direct rows on the members of a cluster that could move to it
+   * (`groupableAssignmentsSql`, limited to the applications a Business Contributor takes part in),
+   * as `{ items }`; `[]` for any other server.
+   */
+  async listGroupableByAsset(assetId: string, opts?: ServiceOpts & { accessScope?: ParticipationAccessScope }) {
+    const mg = opts?.manager ?? this.repo.manager;
+    const tenantId = await this.tenantOf(mg, opts?.tenantId);
+    const asset = await this.ensureAsset(assetId, tenantId, mg);
+    const items: GroupableAssignment[] = asset.is_cluster
       ? await mg.query(
         groupableAssignmentsSql({
           tenant: '$1',
@@ -564,7 +606,7 @@ export class AppAssetAssignmentsService {
         opts?.accessScope ? [tenantId, assetId, opts.accessScope.userId] : [tenantId, assetId],
       )
       : [];
-    return { items, groupable: clusterGroupable };
+    return { items };
   }
 
   // Backwards compatibility alias

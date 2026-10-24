@@ -103,8 +103,9 @@ export function assignmentInheritedRefusal(cluster: string) {
 
 /**
  * A3 against the stored rows: refuses a direct row of `instanceId` and `role` on `assetId` when
- * one of the clusters it inherits from carries that deployment and role. Call it after
- * `lockAssignmentClusters`.
+ * one of the clusters it inherits from carries that deployment and role. `exceptId`: the row being
+ * moved, which no longer counts where it stands (a cluster's row moved onto one of its members).
+ * Call it after `lockAssignmentClusters`.
  */
 export async function assertNotInherited(
   mg: EntityManager,
@@ -112,13 +113,15 @@ export async function assertNotInherited(
   instanceId: string,
   assetId: string,
   role: string,
+  exceptId: string | null = null,
 ): Promise<void> {
   const clusters = (await inheritedClustersOf(mg, tenantId, [assetId])).get(assetId) ?? [];
   if (clusters.length === 0) return;
   const rows: Array<{ asset_id: string }> = await mg.query(
     `SELECT asset_id FROM app_asset_assignments
-      WHERE tenant_id = $1 AND app_instance_id = $2 AND role = $3 AND asset_id = ANY($4::uuid[])`,
-    [tenantId, instanceId, role, clusters.map((cluster) => cluster.id)],
+      WHERE tenant_id = $1 AND app_instance_id = $2 AND role = $3 AND asset_id = ANY($4::uuid[])
+        AND ($5::uuid IS NULL OR id <> $5::uuid)`,
+    [tenantId, instanceId, role, clusters.map((cluster) => cluster.id), exceptId],
   );
   const carrying = clusters.find((cluster) => rows.some((row) => row.asset_id === cluster.id));
   if (carrying) throw assignmentInheritedRefusal(carrying.name);

@@ -26,7 +26,10 @@ import { Tenant } from '../../tenants/tenant.entity';
 //   create and in update; the Deployments and Operations tabs then show the inherited row.
 // - A duplicate on the cluster and a role outside the catalog are coded refusals.
 // - The assistant follows the same rules, at the preview and again at execution.
-// - Two writers on a cluster and its member, on two connections, decide one after the other.
+// - Two writers on a cluster and its member, on two connections, decide one after the other; a
+//   member's row edited while it is absorbed is not written again.
+// - A cluster's row moved onto one of its members; a create on a cluster that already carries the
+//   row absorbs instead of refusing; the assistant keeps hyphenated catalog roles.
 // - A10: a cluster that carries rows cannot be deleted.
 
 type AuditEntry = { table: string; action: string; recordId: string; before?: any; after?: any };
@@ -162,7 +165,7 @@ async function testServiceRules() {
     assert.equal(entries.find((e) => e.recordId === d1)?.before?.notes, 'Node A');
 
     // The B1a reads after the absorption: the member sees the inherited row, the cluster its members.
-    const ofM1 = (await assignments.listByAsset(m1, opts)).items;
+    const ofM1 = (await assignments.listByAsset(m1, opts));
     assert.deepEqual(ofM1.map((row) => [row.role, row.inherited, row.id]).sort(), [['app', true, onCluster.id], ['db', false, ofM1.find((r) => r.role === 'db')!.id]]);
     const tab = (await assignments.list(prod, opts)).items.find((item) => item.asset_id === cl)!;
     assert.deepEqual(tab.members.map((member) => member.name), ['node-1', 'node-2', 'node-3']);
@@ -171,6 +174,17 @@ async function testServiceRules() {
     assert.deepEqual(await refusal(() => assignments.create(prod, { asset_id: cl, role: 'app' }, null, opts), runner),
       { status: 409, code: 'assignment_duplicate', params: undefined, message: 'Asset already assigned with this role' });
     assert.equal((await refusal(() => assignments.create(prod, { asset_id: cl, role: 'nope' }, null, opts), runner)).code, 'assignment_role_invalid');
+
+    // The cluster already carries the row (older data, or "Assign to the cluster" on a set it
+    // carries): the members' identical rows join it instead of a duplicate refusal.
+    const legacy = await assign(m, t, prod, m1, 'app', '2020-05-05', 'Legacy');
+    entries.length = 0;
+    const regroup = await assignments.create(prod, { asset_id: cl, role: 'app' }, null, opts);
+    assert.equal(regroup.id, onCluster.id, 'the cluster keeps its row');
+    assert.deepEqual(regroup.absorbed, [{ asset_id: m1, name: 'node-1' }]);
+    assert.deepEqual(await storedRow(m, t, prod, cl, 'app').then((row) => [row?.since, row?.notes]), ['2020-05-05', 'Own\nNode A\nNode B\nLegacy']);
+    assert.equal(await storedRow(m, t, prod, m1, 'app'), undefined);
+    assert.deepEqual(entries.map((e) => `${e.action}:${e.recordId}`).sort(), [`delete:${legacy}`, `update:${onCluster.id}`].sort());
 
     // A3 in create: the member already runs it through the cluster; another role is free.
     assert.deepEqual(await refusal(() => assignments.create(prod, { asset_id: m2, role: 'app' }, null, opts), runner),
@@ -203,6 +217,15 @@ async function testServiceRules() {
     assert.deepEqual(lifted.absorbed, [{ asset_id: m1, name: 'node-1' }]);
     assert.equal(lifted.id, m3Web.id);
     assert.equal((await storedRow(m, t, prod, cl, 'web'))?.since, '2024-02-02');
+
+    // And back down: the cluster's row moved onto one of its members ("This server only" on the
+    // cluster's row) is not refused as inherited from itself.
+    const lowered = await assignments.update(prod, lifted.id, { asset_id: m2 }, null, opts);
+    assert.deepEqual(lowered.absorbed, []);
+    assert.equal((await storedRow(m, t, prod, m2, 'web'))?.id, lifted.id);
+    assert.equal(await storedRow(m, t, prod, cl, 'web'), undefined);
+    // Another row of the cluster still refuses it.
+    assert.equal((await refusal(() => assignments.update(prod, lifted.id, { role: 'app' }, null, opts), runner)).code, 'assignment_inherited');
 
     // A10: a cluster that carries rows stays.
     await refusal(() => deletes.deleteAsset(cl, t, null, { manager: m }), runner);
@@ -261,7 +284,7 @@ async function testAssistantRules() {
     await execute(absorbing);
     assert.deepEqual(await stored(m, t, prod), ['ai-node-3:app', 'ai-solo:db', 'cl-ai:app']);
     assert.deepEqual(await storedRow(m, t, prod, cl, 'app').then((row) => [row?.since, row?.notes]), ['2025-11-01', 'own\nn1']);
-    assert.deepEqual((await assignments.listByAsset(m1, opts)).items.map((row) => [row.role, row.inherited]), [['app', true]]);
+    assert.deepEqual((await assignments.listByAsset(m1, opts)).map((row) => [row.role, row.inherited]), [['app', true]]);
 
     // A3 at the preview: the member already runs it through the cluster.
     assert.deepEqual(await refusal(() => prepare([{ environment: 'prod', asset_ref: m2, role: 'app' }]), runner),
@@ -272,6 +295,28 @@ async function testAssistantRules() {
     await addMember(m, t, cl, m4);
     assert.deepEqual((await refusal(() => execute(late), runner)).code, 'assignment_inherited');
     assert.equal((await storedRow(m, t, prod, m4, 'app')), undefined);
+    await m.query(`DELETE FROM asset_cluster_members WHERE tenant_id = $1 AND asset_id = $2`, [t, m4]);
+
+    // A catalog role with a hyphen keeps it, and is found again to remove it.
+    await execute(await prepare([{ environment: 'prod', asset_ref: solo, role: 'Domain-Controller' }]));
+    assert.ok((await storedRow(m, t, prod, solo, 'domain-controller'))?.id);
+    await execute(await assistant.prepareUpdatePreview(context, {
+      entity_type: 'applications', ref: app, relation: 'asset_assignments', remove: [{ environment: 'prod', asset_ref: solo, role: 'domain-controller' }],
+    }));
+    assert.equal(await storedRow(m, t, prod, solo, 'domain-controller'), undefined);
+
+    // The cluster already carries the row: naming it again absorbs the members' identical rows,
+    // keeping its stored date and notes; each deleted row is audited as a deletion.
+    const legacy = await assign(m, t, prod, m2, 'app', '2019-09-09', 'old n2');
+    entries.length = 0;
+    const regroup = await prepare([{ environment: 'prod', asset_ref: cl, role: 'app' }]);
+    assert.deepEqual(nextOf(regroup).filter((item) => item.payload.asset_id === m2), [], 'the member\'s row leaves the list');
+    await execute(regroup);
+    assert.equal(await storedRow(m, t, prod, m2, 'app'), undefined);
+    assert.deepEqual(await storedRow(m, t, prod, cl, 'app').then((row) => [row?.since, row?.notes]), ['2019-09-09', 'own\nn1\nold n2']);
+    const deletion = entries.find((e) => e.table === 'app_asset_assignments' && e.action === 'delete');
+    assert.equal(deletion?.recordId, legacy);
+    assert.equal(deletion?.before?.notes, 'old n2');
   });
 }
 
@@ -329,6 +374,17 @@ async function testRaces() {
       const result = await overlap(s.tenantId, create(s.tenantId, s.prod, s.node), create(s.tenantId, s.prod, s.cl));
       assert.ok(result.ok, `the cluster's row is written (${(result as any).message})`);
       assert.deepEqual((result.value as any).absorbed, [{ asset_id: s.node, name: 'race-node' }]);
+      assert.deepEqual(await rows(s), ['race-cluster:app']);
+    }
+    // The member's notes edited while the cluster absorbs its row: the edit waits, then finds the
+    // row gone (404); the row is not written again.
+    {
+      const s = await seed('notes-during-absorption');
+      const rowId = await withTenantExecution(dataSource, s.tenantId, (m) => assign(m, s.tenantId, s.prod, s.node, 'app'));
+      const editNotes = (m: EntityManager) =>
+        services(m, []).assignments.update(s.prod, rowId, { notes: 'late' }, null, { manager: m, tenantId: s.tenantId });
+      const result = await overlap(s.tenantId, create(s.tenantId, s.prod, s.cl), editNotes);
+      assert.equal(result.ok ? 'ok' : result.status, 404);
       assert.deepEqual(await rows(s), ['race-cluster:app']);
     }
   } finally {

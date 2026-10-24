@@ -155,7 +155,7 @@ async function run() {
     assert.deepEqual((await assignments.listByApplication(crm, opts)).groupable, expectedGroup);
 
     // --- The Operations tab of a member: direct and inherited rows; of a cluster: its own.
-    const ofM2 = (await assignments.listByAsset(m2, opts)).items;
+    const ofM2 = await assignments.listByAsset(m2, opts);
     assert.deepEqual(ofM2.map((row) => [row.application.name, row.inherited]), [['CRM', false], ['ERP', true]]);
     const inheritedRow = ofM2.find((row) => row.inherited)!;
     assert.equal(inheritedRow.id, onA, 'an inherited row names the cluster row');
@@ -163,11 +163,12 @@ async function run() {
     assert.equal(inheritedRow.groupable, null);
     assert.deepEqual(ofM2.find((row) => !row.inherited)!.groupable, { cluster_id: clA, cluster_name: 'cl-a', member_ids: [m1, m2] });
     const ofA = await assignments.listByAsset(clA, opts);
-    assert.deepEqual(ofA.items.map((row) => [row.application.name, row.inherited, row.id]), [['ERP', false, onA]]);
-    assert.deepEqual(ofA.groupable, expectedGroup, 'a cluster: the sets of its members that could move to it');
-    assert.deepEqual((await assignments.listByAsset(clB, opts)).groupable, [], 'a cluster with one member: nothing to group');
-    assert.deepEqual((await assignments.listByAsset(m2, opts)).groupable, [], 'a member: no set of its own');
-    assert.deepEqual(await assignments.listByAsset(m3, opts), { items: [], groupable: [] }, 'a retired member inherits nothing');
+    assert.ok(Array.isArray(ofA), 'the Operations tab read answers an array (API contract)');
+    assert.deepEqual(ofA.map((row) => [row.application.name, row.inherited, row.id]), [['ERP', false, onA]]);
+    assert.deepEqual((await assignments.listGroupableByAsset(clA, opts)).items, expectedGroup, 'a cluster: the sets of its members that could move to it');
+    assert.deepEqual((await assignments.listGroupableByAsset(clB, opts)).items, [], 'a cluster with one member: nothing to group');
+    assert.deepEqual((await assignments.listGroupableByAsset(m2, opts)).items, [], 'a member: no set of its own');
+    assert.deepEqual(await assignments.listByAsset(m3, opts), [], 'a retired member inherits nothing');
 
     // A Business Contributor sees the inherited row of an application they take part in, only.
     const roleId = await one(runner, `INSERT INTO roles (tenant_id, role_name, role_description) VALUES ($1, 'Contributor', 'Contributor') RETURNING id`, [t]);
@@ -175,8 +176,8 @@ async function run() {
       `INSERT INTO users (tenant_id, email, first_name, last_name, role_id, status) VALUES ($1, $2, 'Bea', 'Tester', $3, 'enabled') RETURNING id`,
       [t, `bea-${t.slice(0, 8)}@example.test`, roleId]);
     await runner.query(`INSERT INTO application_owners (tenant_id, application_id, user_id, owner_type) VALUES ($1, $2, $3, 'business')`, [t, erp, userId]);
-    const scoped = (await assignments.listByAsset(m2, { ...opts, accessScope: { userId } })).items;
-    assert.deepEqual((await assignments.listByAsset(clA, { ...opts, accessScope: { userId } })).groupable, [],
+    const scoped = await assignments.listByAsset(m2, { ...opts, accessScope: { userId } });
+    assert.deepEqual((await assignments.listGroupableByAsset(clA, { ...opts, accessScope: { userId } })).items, [],
       'a Business Contributor of ERP sees no set of CRM');
     assert.deepEqual(scoped.map((row) => [row.application.name, row.inherited]), [['ERP', true]]);
 

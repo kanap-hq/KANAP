@@ -445,7 +445,9 @@ export class AiRelationMutationSupportService {
    * - the role comes from the server roles catalog (`assignment_role_invalid`);
    * - a row added to a cluster absorbs the next items of the same deployment and role on its
    *   members (A4): they leave the list, so their rows are deleted, and the cluster's row takes the
-   *   earliest date and their notes after its own;
+   *   earliest date and their notes after its own. A cluster's row the request names again (an
+   *   item with no stored `id`) absorbs the same way, keeping its stored date and notes unless the
+   *   request gives others, as the service's create does;
    * - a row added to a member, for a deployment and role one of its clusters carries in the next
    *   items, is refused (A3, `assignment_inherited`).
    * The clusters are locked first (`lockAssignmentClusters`). Returns the next items; the other
@@ -458,28 +460,35 @@ export class AiRelationMutationSupportService {
     nextItems: RelationItem[],
   ): Promise<RelationItem[]> {
     if (config.kind !== 'app_asset_assignments') return nextItems;
-    const currentKeys = new Set(currentItems.map((item) => item.key));
-    const added = nextItems.filter((item) => !currentKeys.has(item.key));
-    if (added.length === 0) return nextItems;
+    const currentByKey = new Map(currentItems.map((item) => [item.key, item]));
+    const added = nextItems.filter((item) => !currentByKey.has(item.key));
+    // Named again by the request: resolved from its input, so without the stored row's id.
+    const named = nextItems.filter((item) => currentByKey.has(item.key) && !item.payload.id);
+    const touched = [...added, ...named];
+    if (touched.length === 0) return nextItems;
     const settings = await this.itOpsSettings.getSettingsForWrite(context.tenantId, context.manager);
-    for (const item of added) normalizeServerRole(item.payload.role, settings.serverRoles);
+    for (const item of touched) normalizeServerRole(item.payload.role, settings.serverRoles);
     const assetOf = (item: RelationItem) => String(item.payload.asset_id);
     const sameSlot = (a: RelationItem, b: RelationItem) =>
       a.payload.app_instance_id === b.payload.app_instance_id && a.payload.role === b.payload.role;
-    await lockAssignmentClusters(context.manager, context.tenantId, added.map(assetOf));
+    await lockAssignmentClusters(context.manager, context.tenantId, touched.map(assetOf));
     const clusterRows: Array<{ id: string }> = await context.manager.query(
       `SELECT id FROM assets WHERE tenant_id = $1 AND id = ANY($2::uuid[]) AND COALESCE(is_cluster, false)`,
-      [context.tenantId, Array.from(new Set(added.map(assetOf)))],
+      [context.tenantId, Array.from(new Set(touched.map(assetOf)))],
     );
     const clusters = new Set(clusterRows.map((row) => row.id));
-    const clusterAdds = added.filter((item) => clusters.has(assetOf(item)));
+    const clusterAdds = touched.filter((item) => clusters.has(assetOf(item)));
     const members = await inheritingMembersOf(context.manager, context.tenantId, clusterAdds.map(assetOf));
     let next = nextItems;
     for (const item of clusterAdds) {
       const memberIds = new Set((members.get(assetOf(item)) ?? []).map((member) => member.id));
       const absorbed = next.filter((other) => memberIds.has(assetOf(other)) && sameSlot(other, item));
       if (absorbed.length === 0) continue;
-      const merged = mergeAbsorbed(item.payload, absorbed.map((other) => other.payload));
+      const stored = currentByKey.get(item.key)?.payload;
+      const own = stored
+        ? { since_date: item.payload.since_date ?? stored.since_date, notes: item.payload.notes ?? stored.notes }
+        : item.payload;
+      const merged = mergeAbsorbed(own, absorbed.map((other) => other.payload));
       next = next
         .filter((other) => !absorbed.includes(other))
         .map((other) => (other.key === item.key
@@ -747,7 +756,8 @@ export class AiRelationMutationSupportService {
     const assetRef = textOrNull(item.asset_ref ?? item.asset_id ?? item.server_ref ?? item.server_id ?? item.ref);
     if (!assetRef) throw new BadRequestException('Asset reference is required.');
     const asset = await this.resolveReference(context, 'assets', assetRef);
-    const role = normalizeKey(String(item.role ?? ''));
+    // As the service (`normalizeServerRole`): catalog codes keep their hyphens (`domain-controller`).
+    const role = String(item.role ?? '').trim().toLowerCase();
     if (!role) throw new BadRequestException('Asset assignment role is required.');
     const key = `${instances[0].id}:${asset.id}:${role}`;
     const existing = currentItems.find((candidate) => candidate.key === key);
@@ -1089,7 +1099,7 @@ export class AiRelationMutationSupportService {
         await this.replaceSubLocations(context, sourceId, nextItems);
         return;
       case 'app_asset_assignments':
-        await this.replaceAppAssetAssignments(context, sourceId, nextItems);
+        await this.replaceAppAssetAssignments(context, sourceId, nextItems, audit);
         return;
       default:
         throw new BadRequestException(`Unsupported relation kind ${(config as any).kind}.`);
@@ -1272,13 +1282,37 @@ export class AiRelationMutationSupportService {
     }
   }
 
-  private async replaceAppAssetAssignments(context: AiExecutionContextWithManager, applicationId: string, nextItems: RelationItem[]): Promise<void> {
+  /** Each deleted row (removed, or absorbed by its cluster's row) is audited as the service audits a deletion. */
+  private async replaceAppAssetAssignments(
+    context: AiExecutionContextWithManager,
+    applicationId: string,
+    nextItems: RelationItem[],
+    audit: AiMutationAuditOptions,
+  ): Promise<void> {
     const current = await this.loadAppAssetAssignments(context, applicationId);
     const currentKeys = new Set(current.map((item) => item.key));
     const nextKeys = new Set(nextItems.map((item) => item.key));
     for (const item of current) {
       if (!nextKeys.has(item.key)) {
-        await context.manager.query(`DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2`, [context.tenantId, item.payload.id]);
+        const deleted: Array<Record<string, unknown>> = await context.manager.query(
+          `WITH gone AS (DELETE FROM app_asset_assignments WHERE tenant_id = $1 AND id = $2 RETURNING *) SELECT * FROM gone`,
+          [context.tenantId, item.payload.id],
+        );
+        for (const row of deleted) {
+          await this.audit.log(
+            {
+              table: 'app_asset_assignments',
+              recordId: String(row.id),
+              action: 'delete',
+              before: row,
+              after: null,
+              userId: context.userId,
+              source: audit.source,
+              sourceRef: audit.sourceRef,
+            },
+            { manager: context.manager },
+          );
+        }
       }
     }
     for (const item of nextItems) {
